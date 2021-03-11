@@ -1,9 +1,9 @@
 [submodule "common"]
 	path = common
-	url = git@git.chainmaker.org.cn/chainmaker/chainmaker-common.git
+	url = git@git.chainmaker.org.cn:chainmaker/chainmaker-common.git
 [submodule "tools/sdk"]
 	path = tools/sdk
-	url = git@git.chainmaker.org.cn/chainmaker/chainmaker-sdk-go.git
+	url = git@git.chainmaker.org.cn:chainmaker/chainmaker-sdk-go.git
 [submodule "pb/proto"]
 	path = pb/proto
-	url = git@git.chainmaker.org.cn/chainmaker/chainmaker-pb.git
+	url = git@git.chainmaker.org.cn:chainmaker/chainmaker-pb.git
