@@ -6,8 +6,8 @@ ChainMaker aims to use standardized and modularized components to build a blockc
 
 # Quick Start
 Please visit the following links to get started with ChainMaker.
-- [User Manul](https://git.code.tencent.com/ChainMaker/docs/blob/master/%E7%94%A8%E6%88%B7%E6%89%8B%E5%86%8C/chainmaker-user-manual.md)
-- [Deploy Maunl](https://git.code.tencent.com/ChainMaker/docs/blob/master/%E9%83%A8%E7%BD%B2%E6%89%8B%E5%86%8C/chainmaker-deploy-manual.md)
+- [User Manul](https://git.chainmaker.org.cn/chainmaker/chainmaker-docs/-/blob/master/ChainMaker_User_Manual.md)
+- [Deploy Maunl](https://git.chainmaker.org.cn/chainmaker/chainmaker-docs/-/blob/master/ChainMaker_Deploy_Manual.md)
 
 # License
 
