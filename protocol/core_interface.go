@@ -44,3 +44,10 @@ const (
 	CONSENSUS_VERIFY VerifyMode = iota
 	SYNC_VERIFY
 )
+
+type CoreExecutor interface {
+	Package(txBatch []*common.Transaction) error   //output cache
+	Scheduling() (map[string]*common.TxRWSet, error) //output cache
+	Verify(block *common.Block) error               //output cache
+	Commit() (*common.BlockInfo, error)
+}
