@@ -1,4 +1,4 @@
-package verifier
+package hbbft
 
 type Verifier struct {
 

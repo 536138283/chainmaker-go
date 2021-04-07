@@ -1,4 +1,4 @@
-package committer
+package hbbft
 
 type Committer struct {
 

@@ -32,7 +32,7 @@ type CoreEngine struct {
 	BlockCommitter protocol.BlockCommitter // block committer, to commit block to store after consensus
 	txScheduler    protocol.TxScheduler    // transaction scheduler, schedule transactions run in vm
 
-	coreExecutor protocol.CoreExecutor     //execution module of assembleable core engine
+	coreExecutor protocol.CoreExecutor //execution module of assembleable core engine
 
 	msgBus msgbus.MessageBus // message bus, transfer messages with other modules
 

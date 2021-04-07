@@ -1,4 +1,4 @@
-package scheduler
+package hbbft
 
 type Scheduler struct {
 
