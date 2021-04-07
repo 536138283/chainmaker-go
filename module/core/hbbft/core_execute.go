@@ -43,8 +43,8 @@ func (ce *CoreExecute) Package(txBatch []*commonpb.Transaction) error {
 }
 
 func (ce *CoreExecute) Schedule() (map[string]*commonpb.TxRWSet, error) {
-	//to do
-	return nil, nil
+	//todo
+	return ce.scheduler.Schedule()
 }
 
 func (ce *CoreExecute) Verify(block *commonpb.Block) error {
