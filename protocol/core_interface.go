@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package protocol
 
 import (
+	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/txpool"
 )
@@ -46,8 +47,7 @@ const (
 )
 
 type CoreExecutor interface {
-	Package() error                                //output cache
-	Schedule() (map[string]*common.TxRWSet, error) //output cache
-	Verify(block *common.Block) error              //output cache
-	Commit() error
+	Start()
+	Stop()
+	msgbus.Subscriber
 }

@@ -169,6 +169,7 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.TxPoolSignal, c)
 	c.msgBus.Register(msgbus.BuildProposal, c)
 	c.blockProposer.Start()
+	c.coreExecutor.Start()
 }
 
 // Stop, stop core engine

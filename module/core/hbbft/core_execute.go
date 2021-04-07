@@ -11,7 +11,7 @@ import (
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	txpoolpb "chainmaker.org/chainmaker-go/pb/protogo/txpool"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
 	"chainmaker.org/chainmaker-go/protocol"
 )
 
@@ -91,35 +91,28 @@ func (c *CoreExecute) OnQuit() {
 
 // OnMessage consume a message from message bus
 func (c *CoreExecute) OnMessage(message *msgbus.Message) {
-	// 1. receive proposal status from consensus
-	// 2. receive verify block from consensus
-	// 3. receive commit block message from consensus
-	// 4. receive propose signal from txpool
-	// 5. receive build proposal signal from chained bft consensus
 
 	switch message.Topic {
 	case msgbus.PackageSignal:
-		if proposeStatus, ok := message.Payload.(bool); ok {
-			c.blockProposer.OnReceiveProposeStatusChange(proposeStatus)
+		if packagedSignal, ok := message.Payload.(hbbft.PackagedSignal); ok {
+			c.Packager.packagedSignal = &packagedSignal
 		}
 	case msgbus.VerifyBlock:
-		if block, ok := message.Payload.(*commonpb.Block); ok {
-			c.BlockVerifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
-		}
-	case msgbus.CommitBlock:
-		if block, ok := message.Payload.(*commonpb.Block); ok {
-			if err := c.BlockCommitter.AddBlock(block); err != nil {
-				c.log.Warnf("put block(%d,%x) error %s",
-					block.Header.BlockHeight,
-					block.Header.BlockHash,
-					err.Error())
-			}
-		}
-	case msgbus.TxPoolSignal:
-		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
-			c.blockProposer.OnReceiveTxPoolSignal(signal)
-		}
-	case msgbus.BuildProposal:
+
+	case msgbus.CommitedTxBatchs:
 
 	}
+}
+
+func (c *CoreExecute) Stop() {
+	c.log.Info("on quit")
+}
+
+// OnMessage consume a message from message bus
+func (c *CoreExecute) Start() {
+
+}
+
+func (ce *CoreExecute) SetPackageStatus(status bool) {
+	ce.Packager.packageStatus = status
 }
