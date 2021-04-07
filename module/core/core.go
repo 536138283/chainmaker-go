@@ -9,6 +9,7 @@ package core
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/committer"
 	"chainmaker.org/chainmaker-go/core/proposer"
 	"chainmaker.org/chainmaker-go/core/scheduler"
@@ -45,6 +46,22 @@ type CoreEngine struct {
 	proposedCache protocol.ProposalCache      // cache proposed block and proposal status
 	log           *logger.CMLogger            // logger
 	subscriber    *subscriber.EventSubscriber // block subsriber
+}
+
+
+type CoreExecuteConfig struct {
+	ChainId         string
+	TxPool          protocol.TxPool
+	SnapshotManager protocol.SnapshotManager
+	MsgBus          msgbus.MessageBus
+	Identity        protocol.SigningMember
+	LedgerCache     protocol.LedgerCache
+	HbbftCache      cache.HbbftCache
+	ChainConf       protocol.ChainConf
+	AC              protocol.AccessControlProvider
+	BlockchainStore protocol.BlockchainStore
+	Log             *logger.CMLogger
+	VmMgr           protocol.VmManager
 }
 
 // NewCoreEngine new a core engine.

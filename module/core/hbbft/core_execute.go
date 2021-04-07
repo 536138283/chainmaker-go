@@ -8,9 +8,9 @@ package hbbft
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
 	"chainmaker.org/chainmaker-go/protocol"
 )
@@ -23,6 +23,7 @@ type CoreExecute struct {
 	snapshotManager protocol.SnapshotManager // snapshot manager
 	identity        protocol.SigningMember   // identity manager
 	msgBus          msgbus.MessageBus        // channel to give out proposed block
+	vmMgr           protocol.VmManager
 	ac              protocol.AccessControlProvider
 	blockchainStore protocol.BlockchainStore
 	chainConf       protocol.ChainConf // chain config
@@ -34,21 +35,7 @@ type CoreExecute struct {
 	Verifier  Verifier
 }
 
-type CoreExecuteConfig struct {
-	ChainId         string
-	TxPool          protocol.TxPool
-	SnapshotManager protocol.SnapshotManager
-	MsgBus          msgbus.MessageBus
-	Identity        protocol.SigningMember
-	LedgerCache     protocol.LedgerCache
-	HbbftCache      cache.HbbftCache
-	ChainConf       protocol.ChainConf
-	AC              protocol.AccessControlProvider
-	BlockchainStore protocol.BlockchainStore
-	Log             *logger.CMLogger
-}
-
-func NewCoreExecute(ceConfig *CoreExecuteConfig) *CoreExecute {
+func NewCoreExecute(ceConfig *core.CoreExecuteConfig) *CoreExecute {
 	ce := &CoreExecute{
 		chainId:         ceConfig.ChainId,
 		hbbftCache:      ceConfig.HbbftCache,
@@ -61,27 +48,10 @@ func NewCoreExecute(ceConfig *CoreExecuteConfig) *CoreExecute {
 		blockchainStore: ceConfig.BlockchainStore,
 		chainConf:       ceConfig.ChainConf,
 		log:             ceConfig.Log,
+		vmMgr:           ceConfig.VmMgr,
 	}
 
 	return ce
-}
-
-func (ce *CoreExecute) Package() error {
-	return nil
-}
-
-func (ce *CoreExecute) Schedule() (map[string]*commonpb.TxRWSet, error) {
-	//todo
-	return ce.scheduler.Schedule()
-}
-
-func (ce *CoreExecute) Verify(block *commonpb.Block) error {
-	//
-	return nil
-}
-
-func (ce *CoreExecute) Commit() error {
-	return nil, nil
 }
 
 // OnQuit called when quit subsribe message from message bus
@@ -97,6 +67,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		if packagedSignal, ok := message.Payload.(hbbft.PackagedSignal); ok {
 			c.Packager.packagedSignal = &packagedSignal
 		}
+
 	case msgbus.VerifyBlock:
 
 	case msgbus.CommitedTxBatchs:
@@ -113,6 +84,21 @@ func (c *CoreExecute) Start() {
 
 }
 
-func (ce *CoreExecute) SetPackageStatus(status bool) {
+func (ce *CoreExecute) SetPackageStatus(status PackageStatus) {
 	ce.Packager.packageStatus = status
+}
+func (ce *CoreExecute) GetPackageStatus() PackageStatus {
+	return ce.Packager.packageStatus
+}
+
+func (ce *CoreExecute) NewPackager() *Packager {
+	return &Packager{
+		chainId:     ce.chainId,
+		txPool:      ce.txPool,
+		ledgerCache: ce.ledgerCache,
+		log:         ce.log,
+		identity:    ce.identity,
+		chainConf:   ce.chainConf,
+		vmMgr:       ce.vmMgr,
+	}
 }
