@@ -17,10 +17,21 @@ import (
 	"fmt"
 	"github.com/panjf2000/ants/v2"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"runtime"
 	"sync"
 	"time"
 )
+
+type TxScheduler struct {
+	lock            sync.Mutex
+	VmManager       protocol.VmManager
+	scheduleFinishC chan bool
+	log             *logger.CMLogger
+	scheduleTimeOut time.Duration
+	scheduleWithDagTimeout time.Duration
+	metricVMRunTime *prometheus.HistogramVec
+}
 
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]bool
@@ -40,17 +51,14 @@ func newTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, t
 }
 
 // Schedule according to a batch of transactions, and generating DAG according to the conflict relationship
-func Schedule(block *commonpb.Block, txBatch []*commonpb.Transaction,
-	snapshot protocol.Snapshot, lock sync.Mutex,
-	scheduleTimeOut time.Duration, vmManager protocol.VmManager,
-	scheduleFinishC chan bool, metricVMRunTime *prometheus.HistogramVec,
-	log *logger.CMLogger) (map[string]*commonpb.TxRWSet, error) {
+func Schedule(txScheduler *TxScheduler, block *commonpb.Block, txBatch []*commonpb.Transaction,
+	snapshot protocol.Snapshot) (map[string]*commonpb.TxRWSet, error) {
 
-	lock.Lock()
-	defer lock.Unlock()
+	txScheduler.lock.Lock()
+	defer txScheduler.lock.Unlock()
 	txBatchSize := len(txBatch)
 	runningTxC := make(chan *commonpb.Transaction, txBatchSize)
-	timeoutC := time.After(scheduleTimeOut * time.Second)
+	timeoutC := time.After(txScheduler.scheduleTimeOut * time.Second)
 	finishC := make(chan bool)
 	log.Infof("schedule tx batch start, size %d", txBatchSize)
 	var goRoutinePool *ants.Pool
@@ -70,7 +78,7 @@ func Schedule(block *commonpb.Block, txBatch []*commonpb.Transaction,
 						return
 					}
 					log.Debugf("run vm for tx id:%s", tx.Header.GetTxId())
-					txSimContext := newTxSimContext(vmManager, snapshot, tx)
+					txSimContext := newTxSimContext(txScheduler.VmManager, snapshot, tx)
 					runVmSuccess := true
 					var txResult *commonpb.Result
 					var err error
@@ -78,7 +86,7 @@ func Schedule(block *commonpb.Block, txBatch []*commonpb.Transaction,
 					if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 						start = time.Now()
 					}
-					if txResult, err = runVM(tx, txSimContext, vmManager, log); err != nil {
+					if txResult, err = runVM(tx, txSimContext, txScheduler.VmManager, txScheduler.log); err != nil {
 						runVmSuccess = false
 						tx.Result = txResult
 						txSimContext.SetTxResult(txResult)
@@ -93,7 +101,7 @@ func Schedule(block *commonpb.Block, txBatch []*commonpb.Transaction,
 					} else {
 						if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 							elapsed := time.Since(start)
-							metricVMRunTime.WithLabelValues(tx.Header.ChainId).Observe(elapsed.Seconds())
+							txScheduler.metricVMRunTime.WithLabelValues(tx.Header.ChainId).Observe(elapsed.Seconds())
 						}
 						log.Debugf("apply to snapshot tx id:%s, result:%+v, apply count:%d", tx.Header.GetTxId(), txResult, applySize)
 					}
@@ -106,12 +114,12 @@ func Schedule(block *commonpb.Block, txBatch []*commonpb.Transaction,
 					log.Warnf("failed to submit tx id %s during schedule, %+v", tx.Header.GetTxId(), err)
 				}
 			case <-timeoutC:
-				scheduleFinishC <- true
+				txScheduler.scheduleFinishC <- true
 				log.Debugf("schedule reached time limit")
 				return
 			case <-finishC:
 				log.Debugf("schedule finish")
-				scheduleFinishC <- true
+				txScheduler.scheduleFinishC <- true
 				return
 			}
 		}
@@ -123,7 +131,7 @@ func Schedule(block *commonpb.Block, txBatch []*commonpb.Transaction,
 		}
 	}()
 	// Wait for schedule finish signal
-	<-scheduleFinishC
+	<-txScheduler.scheduleFinishC
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)

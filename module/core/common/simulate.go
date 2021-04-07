@@ -7,24 +7,20 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"github.com/panjf2000/ants/v2"
-	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/common/log"
 	"runtime"
-	"sync"
 	"time"
 )
 
 // SimulateWithDag based on the dag in the block, perform scheduling and execution transactions
-func SimulateWithDag(block *commonpb.Block, snapshot protocol.Snapshot, lock sync.Mutex,
-	scheduleWithDagTimeout time.Duration, vmManager protocol.VmManager,
-	scheduleFinishC chan bool, metricVMRunTime *prometheus.HistogramVec,
-	log *logger.CMLogger) (map[string]*commonpb.TxRWSet, map[string]*commonpb.Result, error) {
+func SimulateWithDag(txScheduler *TxScheduler, block *commonpb.Block,
+	snapshot protocol.Snapshot) (map[string]*commonpb.TxRWSet, map[string]*commonpb.Result, error) {
 
-	lock.Lock()
-	defer lock.Unlock()
+	txScheduler.lock.Lock()
+	defer txScheduler.lock.Unlock()
 
 	startTime := time.Now()
 	log.Debugf("simulate with dag start, size %d", len(block.Txs))
@@ -48,7 +44,7 @@ func SimulateWithDag(block *commonpb.Block, snapshot protocol.Snapshot, lock syn
 	runningTxC := make(chan int, txBatchSize)
 	doneTxC := make(chan int, txBatchSize)
 
-	timeoutC := time.After(scheduleWithDagTimeout * time.Second)
+	timeoutC := time.After(txScheduler.scheduleWithDagTimeout * time.Second)
 	finishC := make(chan bool)
 
 	var goRoutinePool *ants.Pool
@@ -65,13 +61,13 @@ func SimulateWithDag(block *commonpb.Block, snapshot protocol.Snapshot, lock syn
 				tx := txMapping[txIndex]
 				err := goRoutinePool.Submit(func() {
 					log.Debugf("run vm with dag for tx id %s", tx.Header.GetTxId())
-					txSimContext := newTxSimContext(vmManager, snapshot, tx)
+					txSimContext := newTxSimContext(txScheduler.VmManager, snapshot, tx)
 
 					runVmSuccess := true
 					var txResult *commonpb.Result
 					var err error
 
-					if txResult, err = runVM(tx, txSimContext, vmManager, log); err != nil {
+					if txResult, err = runVM(tx, txSimContext, txScheduler.VmManager, txScheduler.log); err != nil {
 						runVmSuccess = false
 						txSimContext.SetTxResult(txResult)
 						log.Errorf("failed to run vm for tx id:%s during simulate with dag, tx result:%+v, error:%+v", tx.Header.GetTxId(), txResult, err)
@@ -106,11 +102,11 @@ func SimulateWithDag(block *commonpb.Block, snapshot protocol.Snapshot, lock syn
 				}
 			case <-finishC:
 				log.Debugf("schedule with dag finish")
-				scheduleFinishC <- true
+				txScheduler.scheduleFinishC <- true
 				return
 			case <-timeoutC:
 				log.Errorf("schedule with dag timeout")
-				scheduleFinishC <- true
+				txScheduler.scheduleFinishC <- true
 				return
 			}
 		}
@@ -124,7 +120,7 @@ func SimulateWithDag(block *commonpb.Block, snapshot protocol.Snapshot, lock syn
 		}
 	}()
 
-	<-scheduleFinishC
+	<-txScheduler.scheduleFinishC
 	snapshot.Seal()
 
 	log.Infof("simulate with dag end, size %d, time cost %+v", len(block.Txs), time.Since(startTime))
