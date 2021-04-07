@@ -34,9 +34,9 @@ func (ce *CoreExecute) Package(txBatch []*commonpb.Transaction) error {
 	return nil
 }
 
-func (ce *CoreExecute) Scheduling() (map[string]*commonpb.TxRWSet, error) {
-	//to do
-	return nil, nil
+func (ce *CoreExecute) Schedule() (map[string]*commonpb.TxRWSet, error) {
+	//todo
+	return ce.scheduler.Schedule()
 }
 
 func (ce *CoreExecute) Verify(block *commonpb.Block) error {
