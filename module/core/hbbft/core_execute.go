@@ -1,3 +1,9 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package hbbft
 
 import (
@@ -7,6 +13,7 @@ import (
 	"chainmaker.org/chainmaker-go/core/hbbft/packager"
 	"chainmaker.org/chainmaker-go/core/hbbft/scheduler"
 	"chainmaker.org/chainmaker-go/core/hbbft/verifier"
+	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 )
@@ -22,6 +29,7 @@ type CoreExecute struct {
 	ac              protocol.AccessControlProvider
 	blockchainStore protocol.BlockchainStore
 	chainConf       protocol.ChainConf // chain config
+	log             *logger.CMLogger   // logger
 
 	committer committer.Committer
 	packager  packager.Packager
@@ -34,7 +42,7 @@ func (ce *CoreExecute) Package(txBatch []*commonpb.Transaction) error {
 	return nil
 }
 
-func (ce *CoreExecute) Scheduling() (map[string]*commonpb.TxRWSet, error) {
+func (ce *CoreExecute) Schedule() (map[string]*commonpb.TxRWSet, error) {
 	//to do
 	return nil, nil
 }
