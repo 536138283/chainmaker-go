@@ -1,14 +1,13 @@
 package hbbft
 
 import (
-	commonErrors "chainmaker.org/chainmaker-go/common/errors"
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"errors"
 	"sync"
 )
 
@@ -20,33 +19,28 @@ type Verifier struct {
 }
 
 func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) {
-	get
+	currentHeight, err := v.ledgerCache.CurrentHeight()
+	if err != nil {
+		return false, err
+	}
+	if currentHeight+1 != block.Header.BlockHeight {
+		return false, errors.New("the packaging signal height is inconsistent with the cache")
+	}
+	return true, nil
 }
 
 func (v *Verifier) verifier(block *commonPb.Block) {
 	defer v.wg.Done()
 	startTick := utils.CurrentTimeMillisSeconds()
-	var err error
-	if err = utils.IsEmptyBlock(block); err != nil {
-		v.log.Error(err)
+	if err := utils.IsEmptyBlock(block); err != nil {
+		v.log.Errorf("verify txBatch failed: %s, height: %d", err, block.Header.BlockHeight)
 	}
-
-	v.log.Debugf("verify receive [%d](%x,%d,%d), from sync %d",
-		block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount, len(block.Txs), mode)
-
-	var isValid bool
-	// to check if the block has verified before
-	if b, _ := v.proposalCache.GetProposedBlock(block); b != nil &&
-		consensuspb.ConsensusType_SOLO != v.chainConf.ChainConfig().Consensus.Type {
-		// the block has verified before
-		v.log.Infof("verify success repeat [%d](%x)", block.Header.BlockHeight, block.Header.BlockHash)
-		isValid = true
-		if protocol.CONSENSUS_VERIFY == mode {
-			// consensus mode, publish verify result to message bus
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
-		}
-		return nil
+	ok, err := v.checkHeight(block)
+	if !ok {
+		v.log.Errorf("verify txBatch failed: %s, height: %d", err, block.Header.BlockHeight)
 	}
+	v.log.Debugf("verify receive [%d](%x,%d,%d)",
+		block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount, len(block.Txs))
 
 	txRWSetMap, timeLasts, err := v.validateBlock(block)
 	if err != nil {
