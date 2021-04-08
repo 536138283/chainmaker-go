@@ -21,6 +21,8 @@ type hbbftTxBatch struct {
 var hbbftTxBatchCacheMap sync.Map //string 交易批次哈希
 type HbbftCache struct
 {
+	txBatchCache *commonpb.Block
+
 	hbbftTxBatchCacheMap 	sync.Map
 }
 
