@@ -9,6 +9,8 @@ package common
 import (
 	"bytes"
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
+	"chainmaker.org/chainmaker-go/core/cache"
+	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
@@ -57,7 +59,7 @@ func InitNewBlock(lastBlock *commonpb.Block, identity protocol.SigningMember, ch
 	return block, nil
 }
 
-func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSet, aclFailTxs []*commonpb.Transaction, hashType string) (*commonpb.Block, error) {
+func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSet, aclFailTxs []*commonpb.Transaction, hashType string) error {
 
 	if aclFailTxs != nil && len(aclFailTxs) > 0 {
 		// append acl check failed txs to the end of block.Txs
@@ -83,39 +85,39 @@ func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSe
 		}
 		rwSetHash, err := utils.CalcRWSetHash(hashType, rwSet)
 		if err != nil {
-			return nil, fmt.Errorf("failed to calc rwset hash: %s", err.Error())
+			return fmt.Errorf("failed to calc rwset hash: %s", err.Error())
 		}
 		if tx.Result == nil {
 			// in case tx.Result is nil, avoid panic
 			e := fmt.Errorf("tx(%s) result == nil", tx.Header.TxId)
-			return nil, e
+			return e
 		}
 		tx.Result.RwSetHash = rwSetHash
 		// calculate complete tx hash, include tx.Header, tx.Payload, tx.Result
 		txHash, err := utils.CalcTxHash(hashType, tx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to calc tx hash: %s", err.Error())
+			return fmt.Errorf("failed to calc tx hash: %s", err.Error())
 		}
 		txHashes[i] = txHash
 	}
 
 	block.Header.TxRoot, err = hash.GetMerkleRoot(hashType, txHashes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merkle root hash: %s", err.Error())
+		return fmt.Errorf("failed to get merkle root hash: %s", err.Error())
 	}
 	block.Header.RwSetRoot, err = utils.CalcRWSetRoot(hashType, block.Txs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calc rwset root hash: %s", err.Error())
+		return fmt.Errorf("failed to calc rwset root hash: %s", err.Error())
 	}
 
 	// DagDigest
 	dagHash, err := utils.CalcDagHash(hashType, block.Dag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calc dag hash: %s", err.Error())
+		return fmt.Errorf("failed to calc dag hash: %s", err.Error())
 	}
 	block.Header.DagHash = dagHash
 
-	return block, nil
+	return nil
 }
 
 // IsTxCountValid, to check if txcount in block is valid
@@ -220,4 +222,109 @@ func getChainVersion(chainConf protocol.ChainConf) []byte {
 		return []byte(DEFAULTVERSION)
 	}
 	return []byte(chainConf.ChainConfig().Version)
+}
+
+type ValidateBlock struct {
+	chainConf   protocol.ChainConf
+	log         *logger.CMLogger
+	ledgerCache *cache.LedgerCache
+	ac          protocol.AccessControlProvider
+}
+
+// validateBlock, validate block and transactions
+func validateBlock(block *commonpb.Block, v *ValidateBlock) (map[string]*commonpb.TxRWSet, []int64, error) {
+	hashType := v.chainConf.ChainConfig().Crypto.Hash
+	timeLasts := make([]int64, 0)
+	var err error
+	var lastBlock *commonpb.Block
+	txCapacity := int64(v.chainConf.ChainConfig().Block.BlockTxCapacity)
+	if block.Header.TxCount > txCapacity {
+		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+	}
+
+	if err = IsTxCountValid(block); err != nil {
+		return nil, timeLasts, err
+	}
+
+	lastBlock = v.ledgerCache.GetLastCommittedBlock()
+
+	// proposed height == proposing height - 1
+	proposedHeight := lastBlock.Header.BlockHeight
+	// check if this block height is 1 bigger than last block height
+	lastBlockHash := lastBlock.Header.BlockHash
+	err = v.checkPreBlock(block, lastBlock, err, lastBlockHash, proposedHeight)
+	if err != nil {
+		return nil, timeLasts, err
+	}
+
+	if err = IsBlockHashValid(block, chainConf.ChainConfig().Crypto.Hash); err != nil {
+		return nil, timeLasts, err
+	}
+
+	// verify block sig and also verify identity and auth of block proposer
+	startSigTick := utils.CurrentTimeMillisSeconds()
+
+	log.Debugf("verify block \n %s", utils.FormatBlock(block))
+	if ok, err := utils.VerifyBlockSig(hashType, block, v.ac); !ok || err != nil {
+		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+	}
+	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
+	timeLasts = append(timeLasts, sigLasts)
+
+	err = v.checkVacuumBlock(block)
+	if err != nil {
+		return nil, timeLasts, err
+	}
+	if len(block.Txs) == 0 {
+		return nil, timeLasts, nil
+	}
+
+	// verify if txs are duplicate in this block
+	if v.blockValidator.IsTxDuplicate(block.Txs) {
+		err := fmt.Errorf("tx duplicate")
+		return nil, timeLasts, err
+	}
+
+	// simulate with DAG, and verify read write set
+	startVMTick := utils.CurrentTimeMillisSeconds()
+	snapshot := v.snapshotManager.NewSnapshot(lastBlock, block)
+	txRWSetMap, txResultMap, err := v.txScheduler.SimulateWithDag(block, snapshot)
+	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
+	timeLasts = append(timeLasts, vmLasts)
+	if err != nil {
+		return nil, timeLasts, fmt.Errorf("simulate %s", err)
+	}
+	if block.Header.TxCount != int64(len(txRWSetMap)) {
+		err = fmt.Errorf("simulate txcount expect %d, got %d", block.Header.TxCount, len(txRWSetMap))
+		return nil, timeLasts, err
+	}
+
+	// 2.transaction verify
+	startTxTick := utils.CurrentTimeMillisSeconds()
+	txHashes, _, errTxs, err := v.txValidator.VerifyTxs(block, txRWSetMap, txResultMap)
+	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
+	timeLasts = append(timeLasts, txLasts)
+	if err != nil {
+		// verify failed, need to put transactions back to txpool
+		if len(errTxs) > 0 {
+			v.log.Warn("[Duplicate txs] delete the err txs")
+			v.txPool.RetryAndRemoveTxs(nil, errTxs)
+		}
+		return nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
+			block.Header.BlockHeight, block.Header.PreBlockHash, err)
+	}
+	//if protocol.CONSENSUS_VERIFY == mode && len(newAddTx) > 0 {
+	//	v.txPool.AddTrustedTx(newAddTx)
+	//}
+
+	// verify TxRoot
+	startRootsTick := utils.CurrentTimeMillisSeconds()
+	err = v.checkBlockDigests(block, txHashes, hashType)
+	if err != nil {
+		return txRWSetMap, timeLasts, err
+	}
+	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
+	timeLasts = append(timeLasts, rootsLast)
+	return txRWSetMap, timeLasts, nil
 }

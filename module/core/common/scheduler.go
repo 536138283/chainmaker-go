@@ -9,6 +9,7 @@ package common
 import (
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
+	"chainmaker.org/chainmaker-go/monitor"
 	acpb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
@@ -24,13 +25,29 @@ import (
 )
 
 type TxScheduler struct {
-	lock            sync.Mutex
-	VmManager       protocol.VmManager
-	scheduleFinishC chan bool
-	log             *logger.CMLogger
-	scheduleTimeOut time.Duration
+	chainId                string
+	lock                   sync.Mutex
+	VmManager              protocol.VmManager
+	scheduleFinishC        chan bool
+	log                    *logger.CMLogger
+	scheduleTimeOut        time.Duration
 	scheduleWithDagTimeout time.Duration
-	metricVMRunTime *prometheus.HistogramVec
+	metricVMRunTime        *prometheus.HistogramVec
+}
+
+func NewTxScheduler(vmMgr protocol.VmManager, chainId string) *TxScheduler {
+	txScheduler := &TxScheduler{
+		lock:            sync.Mutex{},
+		VmManager:       vmMgr,
+		scheduleFinishC: make(chan bool),
+		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
+		chainId:         chainId,
+	}
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		txScheduler.metricVMRunTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER, "metric_vm_run_time",
+			"VM run time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
+	}
+	return txScheduler
 }
 
 // Transaction dependency in adjacency table representation
