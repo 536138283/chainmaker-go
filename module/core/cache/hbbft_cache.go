@@ -65,24 +65,24 @@ func (hc *HbbftCache) GetVerifiedhbbftTxBatchsByCode(c uint32) protocol.HbbftCac
 // Get Block's information
 func (hc *HbbftCache) GetVerifiedTxBatch(b *commonpb.Block) (*commonpb.Block, uint32, map[string]*commonpb.TxRWSet) {
 	if b == nil || b.Header == nil {
-		return nil, -1, nil
+		return nil, 2, nil
 	}
 	blockHash := b.Header.BlockHash
 	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(blockHash)); ok {
 		return VerifiedTxBatch.(hbbftTxBatch).txBatch, VerifiedTxBatch.(hbbftTxBatch).code, VerifiedTxBatch.(hbbftTxBatch).rwSetMap
 	}
-	return nil, -1, nil
+	return nil, 2, nil
 }
 
 // Get block by BlockHash
 func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*commonpb.Block, uint32, map[string]*commonpb.TxRWSet){
 	if hash == nil {
-		return nil, -1, nil
+		return nil, 2, nil
 	}
 	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash)); ok {
 		return VerifiedTxBatch.(hbbftTxBatch).txBatch, VerifiedTxBatch.(hbbftTxBatch).code, VerifiedTxBatch.(hbbftTxBatch).rwSetMap
 	}
-	return nil, -1, nil
+	return nil, 2, nil
 }
 
 // return if a TxBatch has cached
