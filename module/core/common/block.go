@@ -57,7 +57,7 @@ func InitNewBlock(lastBlock *commonpb.Block, identity protocol.SigningMember, ch
 	return block, nil
 }
 
-func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSet, aclFailTxs []*commonpb.Transaction, hashType string) (*commonpb.Block, error) {
+func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSet, aclFailTxs []*commonpb.Transaction, hashType string) error {
 
 	if aclFailTxs != nil && len(aclFailTxs) > 0 {
 		// append acl check failed txs to the end of block.Txs
@@ -83,39 +83,39 @@ func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSe
 		}
 		rwSetHash, err := utils.CalcRWSetHash(hashType, rwSet)
 		if err != nil {
-			return nil, fmt.Errorf("failed to calc rwset hash: %s", err.Error())
+			return fmt.Errorf("failed to calc rwset hash: %s", err.Error())
 		}
 		if tx.Result == nil {
 			// in case tx.Result is nil, avoid panic
 			e := fmt.Errorf("tx(%s) result == nil", tx.Header.TxId)
-			return nil, e
+			return e
 		}
 		tx.Result.RwSetHash = rwSetHash
 		// calculate complete tx hash, include tx.Header, tx.Payload, tx.Result
 		txHash, err := utils.CalcTxHash(hashType, tx)
 		if err != nil {
-			return nil, fmt.Errorf("failed to calc tx hash: %s", err.Error())
+			return fmt.Errorf("failed to calc tx hash: %s", err.Error())
 		}
 		txHashes[i] = txHash
 	}
 
 	block.Header.TxRoot, err = hash.GetMerkleRoot(hashType, txHashes)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get merkle root hash: %s", err.Error())
+		return fmt.Errorf("failed to get merkle root hash: %s", err.Error())
 	}
 	block.Header.RwSetRoot, err = utils.CalcRWSetRoot(hashType, block.Txs)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calc rwset root hash: %s", err.Error())
+		return fmt.Errorf("failed to calc rwset root hash: %s", err.Error())
 	}
 
 	// DagDigest
 	dagHash, err := utils.CalcDagHash(hashType, block.Dag)
 	if err != nil {
-		return nil, fmt.Errorf("failed to calc dag hash: %s", err.Error())
+		return fmt.Errorf("failed to calc dag hash: %s", err.Error())
 	}
 	block.Header.DagHash = dagHash
 
-	return block, nil
+	return nil
 }
 
 // IsTxCountValid, to check if txcount in block is valid

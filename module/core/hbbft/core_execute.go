@@ -11,6 +11,7 @@ import (
 	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
 	"chainmaker.org/chainmaker-go/protocol"
 )
@@ -69,6 +70,9 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		}
 
 	case msgbus.VerifyBlock:
+		if block, ok := message.Payload.(commonPb.Block); ok {
+			//TODO 并发校验区块
+		}
 
 	case msgbus.CommitedTxBatchs:
 
@@ -82,23 +86,4 @@ func (c *CoreExecute) Stop() {
 // OnMessage consume a message from message bus
 func (c *CoreExecute) Start() {
 
-}
-
-func (ce *CoreExecute) SetPackageStatus(status PackageStatus) {
-	ce.Packager.packageStatus = status
-}
-func (ce *CoreExecute) GetPackageStatus() PackageStatus {
-	return ce.Packager.packageStatus
-}
-
-func (ce *CoreExecute) NewPackager() *Packager {
-	return &Packager{
-		chainId:     ce.chainId,
-		txPool:      ce.txPool,
-		ledgerCache: ce.ledgerCache,
-		log:         ce.log,
-		identity:    ce.identity,
-		chainConf:   ce.chainConf,
-		vmMgr:       ce.vmMgr,
-	}
 }

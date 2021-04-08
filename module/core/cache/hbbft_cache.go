@@ -8,38 +8,37 @@ import (
 )
 
 type hbbftTxBatch struct {
-	txBatch 	*commonpb.Block
-	code 		uint32 //校验是否成功
-	rwSetMap 	map[string]*commonpb.TxRWSet //该交易批次读写集Map
+	txBatch  *commonpb.Block
+	code     uint32                       //校验是否成功
+	rwSetMap map[string]*commonpb.TxRWSet //该交易批次读写集Map //
 }
 
 var hbbftTxBatchCacheMap sync.Map //string 交易批次哈希
-type HbbftCache struct
-{
-	hbbftTxBatchCacheMap 	sync.Map
-	order 					[]string
+type HbbftCache struct {
+	hbbftTxBatchCacheMap sync.Map
+	order                []string
 }
 
 func NewhbbftCacheMap() protocol.HbbftCache {
 	hc := &HbbftCache{
-		hbbftTxBatchCacheMap: 	sync.Map{},
-		order: 					make([]string,0),
+		hbbftTxBatchCacheMap: sync.Map{},
+		order:                make([]string, 0),
 	}
 	return hc
 }
 
 // Set the TxBatch after honey badger bft
-func (hc *HbbftCache) SethbbftTxBatch(b *commonpb.Block, c uint32, rwSetMap map[string]*commonpb.TxRWSet) error{
+func (hc *HbbftCache) SethbbftTxBatch(b *commonpb.Block, c uint32, rwSetMap map[string]*commonpb.TxRWSet) error {
 	if b == nil || b.Header == nil {
 		return nil
 	}
 	hb := &hbbftTxBatch{
-		txBatch: 	b,
-		code: 		c,
-		rwSetMap: 	rwSetMap,
+		txBatch:  b,
+		code:     c,
+		rwSetMap: rwSetMap,
 	}
 	blockHash := b.Header.BlockHash
-	hc.hbbftTxBatchCacheMap.Store(string(blockHash),hb)
+	hc.hbbftTxBatchCacheMap.Store(string(blockHash), hb)
 	hc.order = append(hc.order, string(blockHash))
 	return nil
 }
@@ -75,7 +74,7 @@ func (hc *HbbftCache) GetVerifiedTxBatch(b *commonpb.Block) (*commonpb.Block, ui
 }
 
 // Get block by BlockHash
-func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*commonpb.Block, uint32, map[string]*commonpb.TxRWSet){
+func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*commonpb.Block, uint32, map[string]*commonpb.TxRWSet) {
 	if hash == nil {
 		return nil, -1, nil
 	}
