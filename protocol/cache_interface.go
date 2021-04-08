@@ -45,23 +45,3 @@ type LedgerCache interface {
 	// Return current block height
 	CurrentHeight() (int64, error)
 }
-
-// Cache TxBatchs after hbbft
-type HbbftCache interface {
-	// Set the TxBatch after honey badger bft
-	SethbbftTxBatch(b *common.Block, c uint32, rwSetMap map[string]*common.TxRWSet) error
-	// Get the whole TxBatchs after hbbft
-	GetVerifiedhbbftTxBatchs() HbbftCache
-	// Get the TxBatch by code
-	GetVerifiedhbbftTxBatchsByCode(c uint32) HbbftCache
-	// Get Block's information
-	GetVerifiedTxBatch(b *common.Block) (*common.Block, uint32, map[string]*common.TxRWSet)
-	// Get block by BlockHash
-	GetVerifiedTxBatchByHash(hash []byte) (*common.Block, uint32, map[string]*common.TxRWSet)
-	// return if a TxBatch has cached
-	HasVerifiedTxBatch(hash []byte) bool
-	// return if this block is success after RBC verification
-	IsVerifiedTxBatchSuccess(hash []byte) (bool, error)
-	// Get the TxBatch that is most recently set
-	GetLastVerifiedTxBatch() (*common.Block, uint32, map[string]*common.TxRWSet)
-}
