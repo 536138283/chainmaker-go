@@ -12,6 +12,7 @@ import (
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"fmt"
@@ -224,7 +225,43 @@ func getChainVersion(chainConf protocol.ChainConf) []byte {
 	return []byte(chainConf.ChainConfig().Version)
 }
 
-type ValidateBlock struct {
+func checkPreBlock(block *commonpb.Block, lastBlock *commonpb.Block) error {
+	if consensuspb.ConsensusType_HOTSTUFF != v.chainConf.ChainConfig().Consensus.Type {
+		if err = v.blockValidator.IsHeightValid(block, proposedHeight); err != nil {
+			return err
+		}
+		// check if this block pre hash is equal with last block hash
+		return v.blockValidator.IsPreHashValid(block, lastBlockHash)
+	}
+
+	if block.Header.BlockHeight == lastBlock.Header.BlockHeight+1 {
+		if err := v.blockValidator.IsPreHashValid(block, lastBlock.Header.BlockHash); err != nil {
+			return err
+		}
+	} else {
+		// for chained bft consensus type
+		proposedBlock, _ := v.proposalCache.GetProposedBlockByHashAndHeight(block.Header.PreBlockHash, block.Header.BlockHeight-1)
+		if proposedBlock == nil {
+			return fmt.Errorf("no last block found [%d](%x) %s", block.Header.BlockHeight-1, block.Header.PreBlockHash, err)
+		}
+	}
+
+	// remove unconfirmed block from proposal cache and txpool
+	cutBlocks := v.proposalCache.KeepProposedBlock(lastBlockHash, lastBlock.Header.BlockHeight)
+	if len(cutBlocks) > 0 {
+		cutTxs := make([]*commonpb.Transaction, 0)
+		for _, cutBlock := range cutBlocks {
+			cutTxs = append(cutTxs, cutBlock.Txs...)
+		}
+		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
+	}
+	return nil
+	cache.HbbftTxBatch{
+
+	}
+}
+
+type ValidateBlockConf struct {
 	chainConf   protocol.ChainConf
 	log         *logger.CMLogger
 	ledgerCache *cache.LedgerCache
@@ -232,7 +269,7 @@ type ValidateBlock struct {
 }
 
 // validateBlock, validate block and transactions
-func validateBlock(block *commonpb.Block, v *ValidateBlock) (map[string]*commonpb.TxRWSet, []int64, error) {
+func ValidateBlock(block *commonpb.Block, v *ValidateBlockConf) (map[string]*commonpb.TxRWSet, []int64, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make([]int64, 0)
 	var err error
