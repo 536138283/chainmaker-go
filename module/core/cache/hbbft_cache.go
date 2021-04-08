@@ -58,8 +58,8 @@ func (hc *HbbftCache) GetVerifiedhbbftTxBatchsByCode(c uint32) *HbbftCache {
 	Newhc := NewhbbftCacheMap()
 
 	hc.hbbftTxBatchCacheMap.Range(func(_, hb interface{}) bool {
-		if hb.(hbbftTxBatch).code == c {
-			Newhc.SethbbftTxBatch(hb.(hbbftTxBatch).txBatch, c, hb.(hbbftTxBatch).rwSetMap)
+		if hb.(*hbbftTxBatch).code == c {
+			Newhc.SethbbftTxBatch(hb.(*hbbftTxBatch).txBatch, c, hb.(*hbbftTxBatch).rwSetMap)
 		}
 		return true
 	})
@@ -72,7 +72,7 @@ func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*commonpb.Block, ui
 		return nil, 2, nil
 	}
 	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash)); ok {
-		return VerifiedTxBatch.(hbbftTxBatch).txBatch, VerifiedTxBatch.(hbbftTxBatch).code, VerifiedTxBatch.(hbbftTxBatch).rwSetMap
+		return VerifiedTxBatch.(*hbbftTxBatch).txBatch, VerifiedTxBatch.(*hbbftTxBatch).code, VerifiedTxBatch.(*hbbftTxBatch).rwSetMap
 	}
 	return nil, 2, nil
 }
@@ -87,7 +87,7 @@ func (hc *HbbftCache) HasVerifiedTxBatch(hash []byte) bool {
 func (hc *HbbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
 	VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash))
 	if ok {
-		return VerifiedTxBatch.(hbbftTxBatch).code == 1, nil
+		return VerifiedTxBatch.(*hbbftTxBatch).code == 1, nil
 	}
 	return false, errors.New("TxBatch not exist")
 }
