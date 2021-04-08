@@ -12,7 +12,6 @@ import (
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"fmt"
@@ -226,142 +225,188 @@ func getChainVersion(chainConf protocol.ChainConf) []byte {
 }
 
 func checkPreBlock(block *commonpb.Block, lastBlock *commonpb.Block) error {
-	if consensuspb.ConsensusType_HOTSTUFF != v.chainConf.ChainConfig().Consensus.Type {
-		if err = v.blockValidator.IsHeightValid(block, proposedHeight); err != nil {
-			return err
-		}
-		// check if this block pre hash is equal with last block hash
-		return v.blockValidator.IsPreHashValid(block, lastBlockHash)
-	}
 
-	if block.Header.BlockHeight == lastBlock.Header.BlockHeight+1 {
-		if err := v.blockValidator.IsPreHashValid(block, lastBlock.Header.BlockHash); err != nil {
-			return err
-		}
-	} else {
-		// for chained bft consensus type
-		proposedBlock, _ := v.proposalCache.GetProposedBlockByHashAndHeight(block.Header.PreBlockHash, block.Header.BlockHeight-1)
-		if proposedBlock == nil {
-			return fmt.Errorf("no last block found [%d](%x) %s", block.Header.BlockHeight-1, block.Header.PreBlockHash, err)
-		}
+	if err := IsHeightValid(block, lastBlock.Header.BlockHeight); err != nil {
+		return err
 	}
-
-	// remove unconfirmed block from proposal cache and txpool
-	cutBlocks := v.proposalCache.KeepProposedBlock(lastBlockHash, lastBlock.Header.BlockHeight)
-	if len(cutBlocks) > 0 {
-		cutTxs := make([]*commonpb.Transaction, 0)
-		for _, cutBlock := range cutBlocks {
-			cutTxs = append(cutTxs, cutBlock.Txs...)
-		}
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
+	// check if this block pre hash is equal with last block hash
+	if err := IsPreHashValid(block, lastBlock.Header.BlockHash); err != nil {
+		return err
 	}
 	return nil
-	cache.HbbftTxBatch{
+}
 
+func checkVacuumBlock(block *commonpb.Block, chainConf protocol.ChainConf) error {
+	if 0 == block.Header.TxCount {
+		if utils.CanProposeEmptyBlock(chainConf.ChainConfig().Consensus.Type) {
+			// for consensus that allows empty block, skip txs verify
+			return nil
+		} else {
+			// for consensus that NOT allows empty block, return error
+			return fmt.Errorf("tx must not empty")
+		}
 	}
+	return nil
 }
 
 type ValidateBlockConf struct {
-	chainConf   protocol.ChainConf
-	log         *logger.CMLogger
-	ledgerCache *cache.LedgerCache
-	ac          protocol.AccessControlProvider
+	Block           *commonpb.Block
+	ChainConf       protocol.ChainConf
+	Log             *logger.CMLogger
+	LedgerCache     *cache.LedgerCache
+	Ac              protocol.AccessControlProvider
+	SnapshotManager protocol.SnapshotManager
+	VmMgr           protocol.VmManager
+	TxPool          protocol.TxPool
+	BlockchainStore protocol.BlockchainStore
+}
+
+type VerifyBlock struct {
+	block           *commonpb.Block
+	chainConf       protocol.ChainConf
+	log             *logger.CMLogger
+	ledgerCache     *cache.LedgerCache
+	ac              protocol.AccessControlProvider
+	snapshotManager protocol.SnapshotManager
+	vmMgr           protocol.VmManager
+	txScheduler     protocol.TxScheduler
+	txPool          protocol.TxPool
+	blockchainStore protocol.BlockchainStore
+}
+
+func NewVerifyBlock(conf *ValidateBlockConf) *VerifyBlock {
+	verifyBlock := &VerifyBlock{
+		block:           conf.Block,
+		chainConf:       conf.ChainConf,
+		log:             conf.Log,
+		ledgerCache:     conf.LedgerCache,
+		ac:              conf.Ac,
+		snapshotManager: conf.SnapshotManager,
+		vmMgr:           conf.VmMgr,
+		txPool:          conf.TxPool,
+		blockchainStore: conf.BlockchainStore,
+	}
+	verifyBlock.txScheduler = NewTxScheduler(verifyBlock.vmMgr, verifyBlock.chainConf.ChainConfig().ChainId)
+	return verifyBlock
 }
 
 // validateBlock, validate block and transactions
-func ValidateBlock(block *commonpb.Block, v *ValidateBlockConf) (map[string]*commonpb.TxRWSet, []int64, error) {
-	hashType := v.chainConf.ChainConfig().Crypto.Hash
+func (vb *VerifyBlock) ValidateBlock() (map[string]*commonpb.TxRWSet, []int64, error) {
+	hashType := vb.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make([]int64, 0)
 	var err error
 	var lastBlock *commonpb.Block
-	txCapacity := int64(v.chainConf.ChainConfig().Block.BlockTxCapacity)
-	if block.Header.TxCount > txCapacity {
-		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+	txCapacity := int64(vb.chainConf.ChainConfig().Block.BlockTxCapacity)
+	if vb.block.Header.TxCount > txCapacity {
+		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, vb.block.Header.TxCount)
 	}
 
-	if err = IsTxCountValid(block); err != nil {
+	if err = IsTxCountValid(vb.block); err != nil {
 		return nil, timeLasts, err
 	}
 
-	lastBlock = v.ledgerCache.GetLastCommittedBlock()
+	lastBlock = vb.ledgerCache.GetLastCommittedBlock()
 
-	// proposed height == proposing height - 1
-	proposedHeight := lastBlock.Header.BlockHeight
-	// check if this block height is 1 bigger than last block height
-	lastBlockHash := lastBlock.Header.BlockHash
-	err = v.checkPreBlock(block, lastBlock, err, lastBlockHash, proposedHeight)
+	err = checkPreBlock(vb.block, lastBlock)
 	if err != nil {
 		return nil, timeLasts, err
 	}
 
-	if err = IsBlockHashValid(block, chainConf.ChainConfig().Crypto.Hash); err != nil {
+	if err = IsBlockHashValid(vb.block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
 		return nil, timeLasts, err
 	}
 
 	// verify block sig and also verify identity and auth of block proposer
 	startSigTick := utils.CurrentTimeMillisSeconds()
 
-	log.Debugf("verify block \n %s", utils.FormatBlock(block))
-	if ok, err := utils.VerifyBlockSig(hashType, block, v.ac); !ok || err != nil {
+	vb.log.Debugf("verify block \n %s", utils.FormatBlock(vb.block))
+	if ok, err := utils.VerifyBlockSig(hashType, vb.block, v.ac); !ok || err != nil {
 		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+			vb.block.Header.BlockHeight, vb.block.Header.BlockHash, vb.block.Header.Proposer, vb.block.Header.Signature)
 	}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts = append(timeLasts, sigLasts)
 
-	err = v.checkVacuumBlock(block)
+	err = checkVacuumBlock(vb.block, vb.chainConf)
 	if err != nil {
 		return nil, timeLasts, err
 	}
-	if len(block.Txs) == 0 {
+	if len(vb.block.Txs) == 0 {
 		return nil, timeLasts, nil
 	}
 
 	// verify if txs are duplicate in this block
-	if v.blockValidator.IsTxDuplicate(block.Txs) {
+	if IsTxDuplicate(vb.block.Txs) {
 		err := fmt.Errorf("tx duplicate")
 		return nil, timeLasts, err
 	}
 
 	// simulate with DAG, and verify read write set
 	startVMTick := utils.CurrentTimeMillisSeconds()
-	snapshot := v.snapshotManager.NewSnapshot(lastBlock, block)
-	txRWSetMap, txResultMap, err := v.txScheduler.SimulateWithDag(block, snapshot)
+	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, vb.block)
+
+	txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(vb.block, snapshot)
+
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts = append(timeLasts, vmLasts)
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("simulate %s", err)
 	}
-	if block.Header.TxCount != int64(len(txRWSetMap)) {
-		err = fmt.Errorf("simulate txcount expect %d, got %d", block.Header.TxCount, len(txRWSetMap))
+	if vb.block.Header.TxCount != int64(len(txRWSetMap)) {
+		err = fmt.Errorf("simulate txcount expect %d, got %d", vb.block.Header.TxCount, len(txRWSetMap))
 		return nil, timeLasts, err
 	}
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
-	txHashes, _, errTxs, err := v.txValidator.VerifyTxs(block, txRWSetMap, txResultMap)
+	verifyTxConf := &VerifyTxConfig{
+		Block:       vb.block,
+		TxResultMap: txResultMap,
+		TxRWSetMap:  txRWSetMap,
+		ChainConf:   vb.chainConf,
+		Log:         vb.log,
+		Ac:          vb.ac,
+		TxPool:      vb.txPool,
+		Store:       vb.blockchainStore,
+	}
+	verifytx := NewVerifyTx(verifyTxConf)
+	txHashes, _, errTxs, err := verifytx.VerifyTxs()
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts = append(timeLasts, txLasts)
 	if err != nil {
 		// verify failed, need to put transactions back to txpool
 		if len(errTxs) > 0 {
-			v.log.Warn("[Duplicate txs] delete the err txs")
-			v.txPool.RetryAndRemoveTxs(nil, errTxs)
+			vb.log.Warn("[Duplicate txs] delete the err txs")
+			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
 		}
 		return nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
-			block.Header.BlockHeight, block.Header.PreBlockHash, err)
+			vb.block.Header.BlockHeight, vb.block.Header.PreBlockHash, err)
 	}
-	//if protocol.CONSENSUS_VERIFY == mode && len(newAddTx) > 0 {
-	//	v.txPool.AddTrustedTx(newAddTx)
-	//}
-
 	// verify TxRoot
 	startRootsTick := utils.CurrentTimeMillisSeconds()
-	err = v.checkBlockDigests(block, txHashes, hashType)
+	err = checkBlockDigests(vb.block, txHashes, hashType, vb.log)
 	if err != nil {
 		return txRWSetMap, timeLasts, err
 	}
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts = append(timeLasts, rootsLast)
 	return txRWSetMap, timeLasts, nil
+}
+
+func checkBlockDigests(block *commonpb.Block, txHashes [][]byte, hashType string, log *logger.CMLogger) error {
+	if err := IsMerkleRootValid(block, txHashes, hashType); err != nil {
+		log.Error(err)
+		return err
+	}
+	// verify DAG hash
+	if err := IsDagHashValid(block, hashType); err != nil {
+		log.Error(err)
+		return err
+	}
+	// verify read write set, check if simulate result is equal with rwset in block header
+	if err := IsRWSetHashValid(block, hashType); err != nil {
+		log.Error(err)
+		return err
+	}
+	return nil
 }
