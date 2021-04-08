@@ -1,10 +1,16 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package cache
 
 import (
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
 	"errors"
 	"sync"
+
+	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 )
 
 type hbbftTxBatch struct {
@@ -15,14 +21,14 @@ type hbbftTxBatch struct {
 
 var hbbftTxBatchCacheMap sync.Map //string 交易批次哈希
 type HbbftCache struct {
+	txBatchCache *commonpb.Block
+
 	hbbftTxBatchCacheMap sync.Map
-	order                []string
 }
 
-func NewhbbftCacheMap() protocol.HbbftCache {
+func NewhbbftCacheMap() *HbbftCache {
 	hc := &HbbftCache{
 		hbbftTxBatchCacheMap: sync.Map{},
-		order:                make([]string, 0),
 	}
 	return hc
 }
@@ -39,17 +45,16 @@ func (hc *HbbftCache) SethbbftTxBatch(b *commonpb.Block, c uint32, rwSetMap map[
 	}
 	blockHash := b.Header.BlockHash
 	hc.hbbftTxBatchCacheMap.Store(string(blockHash), hb)
-	hc.order = append(hc.order, string(blockHash))
 	return nil
 }
 
 // Get the whole TxBatchs after hbbft
-func (hc *HbbftCache) GetVerifiedhbbftTxBatchs() protocol.HbbftCache {
+func (hc *HbbftCache) GetVerifiedhbbftTxBatchs() *HbbftCache {
 	return hc
 }
 
 // Get the TxBatch by code
-func (hc *HbbftCache) GetVerifiedhbbftTxBatchsByCode(c uint32) protocol.HbbftCache {
+func (hc *HbbftCache) GetVerifiedhbbftTxBatchsByCode(c uint32) *HbbftCache {
 	Newhc := NewhbbftCacheMap()
 
 	hc.hbbftTxBatchCacheMap.Range(func(_, hb interface{}) bool {
@@ -61,27 +66,15 @@ func (hc *HbbftCache) GetVerifiedhbbftTxBatchsByCode(c uint32) protocol.HbbftCac
 	return Newhc
 }
 
-// Get Block's information
-func (hc *HbbftCache) GetVerifiedTxBatch(b *commonpb.Block) (*commonpb.Block, uint32, map[string]*commonpb.TxRWSet) {
-	if b == nil || b.Header == nil {
-		return nil, -1, nil
-	}
-	blockHash := b.Header.BlockHash
-	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(blockHash)); ok {
-		return VerifiedTxBatch.(hbbftTxBatch).txBatch, VerifiedTxBatch.(hbbftTxBatch).code, VerifiedTxBatch.(hbbftTxBatch).rwSetMap
-	}
-	return nil, -1, nil
-}
-
 // Get block by BlockHash
 func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*commonpb.Block, uint32, map[string]*commonpb.TxRWSet) {
 	if hash == nil {
-		return nil, -1, nil
+		return nil, 2, nil
 	}
 	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash)); ok {
 		return VerifiedTxBatch.(hbbftTxBatch).txBatch, VerifiedTxBatch.(hbbftTxBatch).code, VerifiedTxBatch.(hbbftTxBatch).rwSetMap
 	}
-	return nil, -1, nil
+	return nil, 2, nil
 }
 
 // return if a TxBatch has cached
@@ -97,10 +90,4 @@ func (hc *HbbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
 		return VerifiedTxBatch.(hbbftTxBatch).code == 1, nil
 	}
 	return false, errors.New("TxBatch not exist")
-}
-
-// Get the TxBatch that is most recently set
-func (hc *HbbftCache) GetLastVerifiedTxBatch() (*commonpb.Block, uint32, map[string]*commonpb.TxRWSet) {
-	hash := hc.order[len(hc.order)-1]
-	return hc.GetVerifiedTxBatchByHash([]byte(hash))
 }
