@@ -14,11 +14,12 @@ func TestHbbft(t *testing.T) {
 	hash0 := b0.Header.BlockHash
 	hc := hbbftCache.GetVerifiedhbbftTxBatchs()
 	b1 := CreateNewTestBlock(1)
+	b1.Header.BlockHash = []byte{'1','2','3','4','5','6','7','8','9','0'}
 	hash1 := b1.Header.BlockHash
 	hc.SethbbftTxBatch(b1,1,rwSetMap)
 	b, c, m := hc.GetVerifiedTxBatchByHash(hash1)
 	hbbftCache.SethbbftTxBatch(b,c,m)
-	hc0 := hbbftCache.GetVerifiedhbbftTxBatchsByCode(0)
+	hc0 := hbbftCache.GetVerifiedhbbftTxBatchsByCode(1)
 	hc0.hbbftTxBatchCacheMap.Range(func(k, _ interface{}) bool {
 		fmt.Println(k)
 		return true
