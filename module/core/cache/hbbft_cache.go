@@ -18,21 +18,21 @@ const (
 	SUCCESS
 )
 
-type hbbftTxBatch struct {
-	txBatch  *commonpb.Block
-	code     uint32                       //校验是否成功
-	rwSetMap map[string]*commonpb.TxRWSet //该交易批次读写集Map
+type HbbftTxBatch struct {
+	TxBatch  *commonpb.Block
+	Code     uint32                       //校验是否成功
+	RwSetMap map[string]*commonpb.TxRWSet //该交易批次读写集Map
 }
 
 type HbbftCache struct {
-	txBatchCache *commonpb.Block
+	TxBatchCache *commonpb.Block
 
-	hbbftTxBatchCacheMap sync.Map
+	HbbftTxBatchCacheMap sync.Map
 }
 
 func NewhbbftCacheMap() *HbbftCache {
 	hc := &HbbftCache{
-		hbbftTxBatchCacheMap: sync.Map{},
+		HbbftTxBatchCacheMap: sync.Map{},
 	}
 	return hc
 }
@@ -42,13 +42,13 @@ func (hc *HbbftCache) SethbbftTxBatch(b *commonpb.Block, c uint32, rwSetMap map[
 	if b == nil || b.Header == nil {
 		return errors.New("set the tx batch failed,block can't be empty")
 	}
-	hb := &hbbftTxBatch{
-		txBatch:  b,
-		code:     c,
-		rwSetMap: rwSetMap,
+	hb := &HbbftTxBatch{
+		TxBatch:  b,
+		Code:     c,
+		RwSetMap: rwSetMap,
 	}
 	blockHash := b.Header.BlockHash
-	hc.hbbftTxBatchCacheMap.Store(string(blockHash), hb)
+	hc.HbbftTxBatchCacheMap.Store(string(blockHash), hb)
 	return nil
 }
 
@@ -61,9 +61,9 @@ func (hc *HbbftCache) GetVerifiedhbbftTxBatchs() *HbbftCache {
 func (hc *HbbftCache) GetVerifiedhbbftTxBatchsByCode(c uint32) *HbbftCache {
 	Newhc := NewhbbftCacheMap()
 
-	hc.hbbftTxBatchCacheMap.Range(func(_, hb interface{}) bool {
-		if hb.(*hbbftTxBatch).code == c {
-			Newhc.SethbbftTxBatch(hb.(*hbbftTxBatch).txBatch, c, hb.(*hbbftTxBatch).rwSetMap)
+	hc.HbbftTxBatchCacheMap.Range(func(_, hb interface{}) bool {
+		if hb.(HbbftTxBatch).Code == c {
+			Newhc.SethbbftTxBatch(hb.(HbbftTxBatch).TxBatch, c, hb.(HbbftTxBatch).RwSetMap)
 		}
 		return true
 	})
@@ -71,27 +71,27 @@ func (hc *HbbftCache) GetVerifiedhbbftTxBatchsByCode(c uint32) *HbbftCache {
 }
 
 // Get block by BlockHash
-func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*hbbftTxBatch, error) {
+func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*HbbftTxBatch, error) {
 	if hash == nil {
 		return nil, errors.New("get verified tx batch failed, tx batch can't be empty")
 	}
-	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash)); ok {
-		return VerifiedTxBatch.(*hbbftTxBatch), nil
+	if VerifiedTxBatch, ok := hc.HbbftTxBatchCacheMap.Load(string(hash)); ok {
+		return VerifiedTxBatch.(*HbbftTxBatch), nil
 	}
 	return nil, nil
 }
 
 // return if a TxBatch has cached
 func (hc *HbbftCache) HasVerifiedTxBatch(hash []byte) bool {
-	_, ok := hc.hbbftTxBatchCacheMap.Load(string(hash))
+	_, ok := hc.HbbftTxBatchCacheMap.Load(string(hash))
 	return ok
 }
 
 // return if this block is success after RBC verification
 func (hc *HbbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
-	VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash))
+	VerifiedTxBatch, ok := hc.HbbftTxBatchCacheMap.Load(string(hash))
 	if ok {
-		return VerifiedTxBatch.(hbbftTxBatch).code == SUCCESS, nil
+		return VerifiedTxBatch.(HbbftTxBatch).Code == SUCCESS, nil
 	}
 	return false, errors.New("TxBatch not exist")
 }
