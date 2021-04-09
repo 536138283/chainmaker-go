@@ -9,7 +9,6 @@ package common
 import (
 	"bytes"
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
-	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
@@ -250,10 +249,9 @@ func checkVacuumBlock(block *commonpb.Block, chainConf protocol.ChainConf) error
 }
 
 type ValidateBlockConf struct {
-	Block           *commonpb.Block
 	ChainConf       protocol.ChainConf
 	Log             *logger.CMLogger
-	LedgerCache     *cache.LedgerCache
+	LedgerCache     protocol.LedgerCache
 	Ac              protocol.AccessControlProvider
 	SnapshotManager protocol.SnapshotManager
 	VmMgr           protocol.VmManager
@@ -262,21 +260,19 @@ type ValidateBlockConf struct {
 }
 
 type VerifyBlock struct {
-	block           *commonpb.Block
 	chainConf       protocol.ChainConf
 	log             *logger.CMLogger
-	ledgerCache     *cache.LedgerCache
+	ledgerCache     protocol.LedgerCache
 	ac              protocol.AccessControlProvider
 	snapshotManager protocol.SnapshotManager
 	vmMgr           protocol.VmManager
-	txScheduler     protocol.TxScheduler
+	txScheduler     *TxScheduler
 	txPool          protocol.TxPool
 	blockchainStore protocol.BlockchainStore
 }
 
 func NewVerifyBlock(conf *ValidateBlockConf) *VerifyBlock {
 	verifyBlock := &VerifyBlock{
-		block:           conf.Block,
 		chainConf:       conf.ChainConf,
 		log:             conf.Log,
 		ledgerCache:     conf.LedgerCache,
@@ -291,76 +287,76 @@ func NewVerifyBlock(conf *ValidateBlockConf) *VerifyBlock {
 }
 
 // validateBlock, validate block and transactions
-func (vb *VerifyBlock) ValidateBlock() (map[string]*commonpb.TxRWSet, []int64, error) {
+func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonpb.TxRWSet, []int64, error) {
 	hashType := vb.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make([]int64, 0)
 	var err error
 	var lastBlock *commonpb.Block
 	txCapacity := int64(vb.chainConf.ChainConfig().Block.BlockTxCapacity)
-	if vb.block.Header.TxCount > txCapacity {
-		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, vb.block.Header.TxCount)
+	if block.Header.TxCount > txCapacity {
+		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
 	}
 
-	if err = IsTxCountValid(vb.block); err != nil {
+	if err = IsTxCountValid(block); err != nil {
 		return nil, timeLasts, err
 	}
 
 	lastBlock = vb.ledgerCache.GetLastCommittedBlock()
 
-	err = checkPreBlock(vb.block, lastBlock)
+	err = checkPreBlock(block, lastBlock)
 	if err != nil {
 		return nil, timeLasts, err
 	}
 
-	if err = IsBlockHashValid(vb.block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
+	if err = IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
 		return nil, timeLasts, err
 	}
 
 	// verify block sig and also verify identity and auth of block proposer
 	startSigTick := utils.CurrentTimeMillisSeconds()
 
-	vb.log.Debugf("verify block \n %s", utils.FormatBlock(vb.block))
-	if ok, err := utils.VerifyBlockSig(hashType, vb.block, v.ac); !ok || err != nil {
+	vb.log.Debugf("verify block \n %s", utils.FormatBlock(block))
+	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
 		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			vb.block.Header.BlockHeight, vb.block.Header.BlockHash, vb.block.Header.Proposer, vb.block.Header.Signature)
+			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts = append(timeLasts, sigLasts)
 
-	err = checkVacuumBlock(vb.block, vb.chainConf)
+	err = checkVacuumBlock(block, vb.chainConf)
 	if err != nil {
 		return nil, timeLasts, err
 	}
-	if len(vb.block.Txs) == 0 {
+	if len(block.Txs) == 0 {
 		return nil, timeLasts, nil
 	}
 
 	// verify if txs are duplicate in this block
-	if IsTxDuplicate(vb.block.Txs) {
+	if IsTxDuplicate(block.Txs) {
 		err := fmt.Errorf("tx duplicate")
 		return nil, timeLasts, err
 	}
 
 	// simulate with DAG, and verify read write set
 	startVMTick := utils.CurrentTimeMillisSeconds()
-	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, vb.block)
+	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 
-	txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(vb.block, snapshot)
+	txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(block, snapshot)
 
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts = append(timeLasts, vmLasts)
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("simulate %s", err)
 	}
-	if vb.block.Header.TxCount != int64(len(txRWSetMap)) {
-		err = fmt.Errorf("simulate txcount expect %d, got %d", vb.block.Header.TxCount, len(txRWSetMap))
+	if block.Header.TxCount != int64(len(txRWSetMap)) {
+		err = fmt.Errorf("simulate txcount expect %d, got %d", block.Header.TxCount, len(txRWSetMap))
 		return nil, timeLasts, err
 	}
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
 	verifyTxConf := &VerifyTxConfig{
-		Block:       vb.block,
+		Block:       block,
 		TxResultMap: txResultMap,
 		TxRWSetMap:  txRWSetMap,
 		ChainConf:   vb.chainConf,
@@ -380,11 +376,11 @@ func (vb *VerifyBlock) ValidateBlock() (map[string]*commonpb.TxRWSet, []int64, e
 			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
 		}
 		return nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
-			vb.block.Header.BlockHeight, vb.block.Header.PreBlockHash, err)
+			block.Header.BlockHeight, block.Header.PreBlockHash, err)
 	}
 	// verify TxRoot
 	startRootsTick := utils.CurrentTimeMillisSeconds()
-	err = checkBlockDigests(vb.block, txHashes, hashType, vb.log)
+	err = checkBlockDigests(block, txHashes, hashType, vb.log)
 	if err != nil {
 		return txRWSetMap, timeLasts, err
 	}

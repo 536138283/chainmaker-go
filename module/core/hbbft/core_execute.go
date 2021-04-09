@@ -18,7 +18,7 @@ import (
 
 type CoreExecute struct {
 	chainId         string // chain id, to identity this chain
-	hbbftCache      cache.HbbftCache
+	hbbftCache      *cache.HbbftCache
 	ledgerCache     protocol.LedgerCache     // ledger cache
 	txPool          protocol.TxPool          // tx pool provides tx batch
 	snapshotManager protocol.SnapshotManager // snapshot manager
@@ -68,7 +68,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		if packagedSignal, ok := message.Payload.(hbbft.PackagedSignal); ok {
 			c.Packager.packagedSignal = &packagedSignal
 		}
-
+		c.Packager.Package()
 	case msgbus.VerifyBlock:
 		if block, ok := message.Payload.(commonPb.Block); ok {
 			//TODO 并发校验区块

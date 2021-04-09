@@ -31,13 +31,6 @@ type HbbftCache struct {
 	hbbftTxBatchCacheMap sync.Map
 }
 
-func NewhbbftCacheMap() *HbbftCache {
-	hc := &HbbftCache{
-		hbbftTxBatchCacheMap: sync.Map{},
-	}
-	return hc
-}
-
 // Add the TxBatch after honey badger bft
 func (hc *HbbftCache) AddHbbftTxBatch(b *commonpb.Block, c uint32, rwSetMap map[string]*commonpb.TxRWSet) error {
 	if b == nil || b.Header == nil {
@@ -108,4 +101,12 @@ func (hc *HbbftCache) GetTxBatchCache() *commonpb.Block {
 
 func (hc *HbbftCache) GetTxBatchCacheMap() sync.Map {
 	return hc.hbbftTxBatchCacheMap
+}
+
+func (hc *HbbftCache) SetTxBatchCache(txBatch *commonpb.Block) {
+	hc.txBatchCache = txBatch
+}
+
+func (hc *HbbftCache) ClearHbbftCache() {
+
 }
