@@ -56,7 +56,7 @@ type CoreExecuteConfig struct {
 	MsgBus          msgbus.MessageBus
 	Identity        protocol.SigningMember
 	LedgerCache     protocol.LedgerCache
-	HbbftCache      cache.HbbftCache
+	HbbftCache      *cache.HbbftCache
 	ChainConf       protocol.ChainConf
 	AC              protocol.AccessControlProvider
 	BlockchainStore protocol.BlockchainStore

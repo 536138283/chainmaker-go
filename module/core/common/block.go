@@ -320,7 +320,7 @@ func (vb *VerifyBlock) ValidateBlock() (map[string]*commonpb.TxRWSet, []int64, e
 	startSigTick := utils.CurrentTimeMillisSeconds()
 
 	vb.log.Debugf("verify block \n %s", utils.FormatBlock(vb.block))
-	if ok, err := utils.VerifyBlockSig(hashType, vb.block, v.ac); !ok || err != nil {
+	if ok, err := utils.VerifyBlockSig(hashType, vb.block, vb.ac); !ok || err != nil {
 		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 			vb.block.Header.BlockHeight, vb.block.Header.BlockHash, vb.block.Header.Proposer, vb.block.Header.Signature)
 	}

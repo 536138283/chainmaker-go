@@ -14,11 +14,12 @@ import (
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
 	"chainmaker.org/chainmaker-go/protocol"
+	"encoding/hex"
 )
 
 type CoreExecute struct {
 	chainId         string // chain id, to identity this chain
-	hbbftCache      cache.HbbftCache
+	hbbftCache      *cache.HbbftCache
 	ledgerCache     protocol.LedgerCache     // ledger cache
 	txPool          protocol.TxPool          // tx pool provides tx batch
 	snapshotManager protocol.SnapshotManager // snapshot manager
@@ -30,10 +31,10 @@ type CoreExecute struct {
 	chainConf       protocol.ChainConf // chain config
 	log             *logger.CMLogger   // logger
 
-	Committer Committer
-	Packager  Packager
-	Scheduler Scheduler
-	Verifier  Verifier
+	Committer *Committer
+	Packager  *Packager
+	Scheduler *Scheduler
+	Verifier  *Verifier
 }
 
 func NewCoreExecute(ceConfig *core.CoreExecuteConfig) *CoreExecute {
@@ -75,7 +76,19 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		}
 
 	case msgbus.CommitedTxBatchs:
+		if txBatchAfterABA, ok := message.Payload.(hbbft.TxBatchAfterABA); ok {
+			c.Committer.blockHeight = txBatchAfterABA.BlockHeight
+			c.Committer.scheduler = c.Scheduler
+			for i, _ := range txBatchAfterABA.TxBatchHash {
+				c.Committer.getConfirmedBranchInfo(txBatchAfterABA.TxBatchHash[i]) // branchInfo After ABA
+				c.Committer.branchIDList = append(c.Committer.branchIDList, hex.EncodeToString(txBatchAfterABA.TxBatchHash[i])) // branchIDList After ABA
+			}
 
+			if err := c.Committer.Commit(); err != nil {
+				c.log.Warnf("commit fail, error %s",
+					err.Error())
+			}
+		}
 	}
 }
 
