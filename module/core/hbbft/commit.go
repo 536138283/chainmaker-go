@@ -52,7 +52,7 @@ func (c *Committer) Commit() error {
 	c.scheduler.block = block
 
 	// get the new RWSetMap after conflict detection
-	newRWSetMap, txMap, err := c.scheduler.Schedule()
+	newRWSetMap, err := c.scheduler.Schedule()
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (c *Committer) Commit() error {
 	branchIDListFailABA := c.getTheABAFailBranchID(branchIDListBeforeABA)
 
 	// handle the tx which ABA fail
-	c.handelABAFailTranstraction(branchIDListFailABA, txBranchMapBeforeABA, txMap)
+	c.handelABAFailTranstraction(branchIDListFailABA, txBranchMapBeforeABA)
 
 	var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
 	err = common.FinalizeBlock(block, newRWSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)
@@ -120,15 +120,14 @@ func (c *Committer) getTheABAFailBranchID(branchIDListBeforeABA []string) []stri
 	return failedBranchIDs
 }
 
-func (c *Committer) handelABAFailTranstraction(failBranchIDList []string, txBranchMapBeforeABA map[string]*commonpb.Block, txMap map[string]*commonpb.Transaction) {
+func (c *Committer) handelABAFailTranstraction(failBranchIDList []string, txBranchMapBeforeABA map[string]*commonpb.Block) {
 	// find the repeat tx and delete it and put the other tx back to the txpool
 	for _, branchID := range failBranchIDList {
 		branch := txBranchMapBeforeABA[branchID]
 		for _, tx := range branch.Txs {
-			if _, ok := txMap[tx.Header.TxId]; !ok {
+			if _, ok := c.scheduler.allTransMap[tx.Header.TxId]; !ok {
 				c.retryList = append(c.retryList, tx)
 			}
 		}
 	}
-
 }

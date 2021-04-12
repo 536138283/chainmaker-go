@@ -8,18 +8,20 @@ package hbbft
 
 import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"encoding/hex"
+	"sort"
 	"sync"
 )
 
 type Scheduler struct {
-	block *commonpb.Block // the commited block
-	branchInfo    map[string]*BranchInfo // key -> branchId
+	block        *commonpb.Block        // the commited block
+	branchInfo   map[string]*BranchInfo // key -> branchId
 	branchIDList []string
+	retryList    []*commonpb.Transaction
+	allTransMap  map[string]*commonpb.Transaction // record all transaction(branchID->Transaction)
 }
 
 type BranchInfo struct {
-	confirmedBranch *commonpb.Block
+	branch   *commonpb.Block
 	rwSetMap map[string]*commonpb.TxRWSet // key->txId
 }
 
@@ -30,78 +32,173 @@ func NewScheduler(block *commonpb.Block, branchMap sync.Map, branchIDList []stri
 	}
 }
 
-func (s *Scheduler) Schedule() (map[string]*commonpb.TxRWSet, map[string]bool, error) {
-	// todo change english
-	// 1. 根据第一批次，后续批次进行去重操作
-	// 2. 冲突检测，不同批次的DAG按顺序将冲突的DAG剔除（将排在后面的剔除）
-	// 3. 按照顺序依次合并各个批次的DAG
-	// 4. 重新生成读写集
-	// 5. 返回新生成的读写集
+func (s *Scheduler) Schedule() (map[string]*commonpb.TxRWSet, error) {
+	// prepare
+	repeatTrans := prepareForShedule(s.branchIDList, s.branchInfo, s.allTransMap)
 
-	// 去除重复交易(todo DAG 进行去重的冲突检测)
+	// delete repeat transaction
+	s.delRepeatTransactions(repeatTrans)
 
-	txMap := make(map[string]bool)        // 用于检验是否有重复交易(branchID->bool)
-	repeatTrans := make(map[string][]int) // 用于记录被删除的重复交易(branchID->这笔交易所在批次的位置)
+	//merge DAG & RWSet
+	txRWSetMap := s.mergeRwSetMapAndDAG()
 
+	return txRWSetMap, nil
+}
+
+func (s *Scheduler) delRepeatTransactions(repeatTrans map[string][]int) {
+	for branchID, site := range repeatTrans {
+		delRepeatTransaction(branchID, site, s.branchInfo[branchID].branch, s.branchInfo[branchID].rwSetMap, s.retryList)
+	}
+}
+
+func delRepeatTransaction(
+	branchID string,
+	deleteSites []int,
+	branch *commonpb.Block,
+	rwSetMap map[string]*commonpb.TxRWSet,
+	retryList []*commonpb.Transaction) {
+
+	// record the related Transaction' s position
+	relatedTranSiteMap := recordTheReleatedTrans(deleteSites, branch)
+
+	// record the relatedTransaction which need to be taken back to txpool
+	for index, _ := range relatedTranSiteMap {
+		// the conflict transaction 's position list
+		deleteSites = append(deleteSites, index)
+		retryList = append(retryList, branch.Txs[index])
+	}
+
+	// merge transaction's DAG & RWSet
+	mergeRwSetMapAndDAG(
+		deleteSites,
+		branch,
+		rwSetMap)
+}
+
+func recordTheReleatedTrans(deleteSites []int, branch *commonpb.Block) map[int]struct{} {
+	relatedTranSiteMap := make(map[int]struct{})
+	for _, site := range deleteSites {
+		neighbors := branch.Dag.Vertexes[site].Neighbors
+		for _, relatedTranSite := range neighbors {
+			if _, ok := relatedTranSiteMap[int(relatedTranSite)]; !ok {
+				relatedTranSiteMap[int(relatedTranSite)] = struct{}{}
+			}
+		}
+	}
+	return relatedTranSiteMap
+}
+
+func mergeRwSetMapAndDAG(deleteSites []int,
+	branch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
+	sort.Ints(deleteSites)
+	for i := len(deleteSites) - 1; i >= 0; i-- {
+		// delete the RWSetMap
+		txId := branch.Txs[i].Header.TxId
+		delete(rwSetMap, txId)
+
+		// delete the transaction & delete the DAG
+		if i != len(branch.Txs)-1 {
+			branch.Txs = append(branch.Txs[:i], branch.Txs[i+1])
+			branch.Dag.Vertexes = append(branch.Dag.Vertexes[:i], branch.Dag.Vertexes[i+1:]...)
+		} else {
+			branch.Txs = branch.Txs[:i]
+			branch.Dag.Vertexes = branch.Dag.Vertexes[:i]
+		}
+	}
+}
+
+func (s *Scheduler) mergeRwSetMapAndDAG() map[string]*commonpb.TxRWSet {
+	//  get the base writeTable
+	baseBranchID := s.branchIDList[0]
+	baseWriteTable := getBaseWriteTable(s.branchInfo[baseBranchID].rwSetMap)
+
+	finalRWSetMap := s.branchInfo[baseBranchID].rwSetMap
+	finalDAG := s.branchInfo[baseBranchID].branch.Dag
+	finalTxs := s.branchInfo[baseBranchID].branch.Txs
 	for _, branchID := range s.branchIDList {
-		if branchInfo, ok := s.branchInfo[branchID]; ok{
-			newTxs := make([]*commonpb.Transaction, 0)
-			txs := branchInfo.confirmedBranch.Txs
+		if branchID != baseBranchID {
+			handleRWSetConflict(
+				s.branchInfo[branchID].branch,
+				s.branchInfo[branchID].rwSetMap,
+				finalRWSetMap,
+				baseWriteTable,
+				s.retryList,
+				s.allTransMap)
+		}
+	}
+
+	// merge to the final DAG & Txs
+	for _, branchID := range s.branchIDList[0:] {
+		branch := s.branchInfo[branchID].branch
+		finalDAG.Vertexes = append(finalDAG.Vertexes, branch.Dag.Vertexes...)
+		finalTxs = append(finalTxs, branch.Txs...)
+	}
+
+	s.block.Txs = finalTxs
+	s.block.Dag = finalDAG
+
+	return finalRWSetMap
+}
+
+func handleRWSetConflict(branch *commonpb.Block, rwSetMap, finalRWSetMap map[string]*commonpb.TxRWSet, writeTable map[string]struct{},
+	retryList []*commonpb.Transaction, allTransMap map[string]*commonpb.Transaction) {
+
+	delSiteList := make([]int, 0)
+	for site, tx := range branch.Txs {
+		txId := tx.Header.TxId
+		rwSet := rwSetMap[txId]
+		for _, txRead := range rwSet.TxReads {
+			finalKey := constructKey(txRead.ContractName, txRead.Key)
+			// check if RWSet conflict
+			if _, ok := writeTable[finalKey]; ok {
+				// record the conflict transaction
+				retryList = append(retryList, allTransMap[txId])
+				delSiteList = append(delSiteList, site)
+			} else {
+				writeTable[finalKey] = struct{}{}
+				finalRWSetMap[txId] = rwSet
+			}
+		}
+	}
+
+	// merge the DAG & RWSet
+	mergeRwSetMapAndDAG(delSiteList, branch, rwSetMap)
+}
+
+func constructKey(contractName string, key []byte) string {
+	return contractName + string(key)
+}
+
+func prepareForShedule(
+	branchIDList []string,
+	branchInfo map[string]*BranchInfo,
+	allTransMap map[string]*commonpb.Transaction) map[string][]int {
+
+	repeatTrans := make(map[string][]int) // record the deleted & repeated transaction(branchID->deleted tranction 's position)
+	for _, branchID := range branchIDList {
+		if info, ok := branchInfo[branchID]; ok {
+			txs := info.branch.Txs
 			for i, _ := range txs {
-				if _, ok := txMap[txs[i].Header.TxId]; !ok {
-					txMap[txs[i].Header.TxId] = true
-					newTxs = append(newTxs, txs[i])
+				txID := txs[i].Header.TxId
+				if _, ok := allTransMap[txID]; !ok {
+					allTransMap[txID] = txs[i]
 				} else {
-					branchID := hex.EncodeToString(branchInfo.confirmedBranch.Header.BlockHash)
 					repeatTrans[branchID] = append(repeatTrans[branchID], i)
 				}
 			}
-			branchInfo.confirmedBranch.Txs = newTxs
-			s.branchInfo[branchID] = branchInfo
 		}
-
 	}
 
-	// 除第一批次外，把其余批次的DAG中因重复引起的冲突的DAG删除（只针对重复冲突）
-	for branchID, v := range repeatTrans {
-		branch := s.branchInfo[branchID].confirmedBranch
-		rwSetMap := s.branchInfo[branchID].rwSetMap
-		s.deleteRepeatDAG(branch.Dag, v, rwSetMap)
+	return repeatTrans
+}
+
+func getBaseWriteTable(rwSetMap map[string]*commonpb.TxRWSet) map[string]struct{} {
+	writeTable := make(map[string]struct{})
+	for _, rwSet := range rwSetMap {
+		for _, txWrite := range rwSet.TxWrites {
+			finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+			writeTable[finalKey] = struct{}{}
+		}
 	}
-
-	//todo DAG进行键对的冲突检测 + 合并DAG
-	dag, txs := s.mergeTheDag()
-
-	//todo 重新生成读写集
-	txRWSetMap := s.rebuiltRwSetMap()
-
-	s.block.Dag = dag
-	s.block.Txs = txs
-
-	return txRWSetMap, txMap, nil
-}
-
-// todo 第一版 ，出现重复交易后，该批次这笔交易后的所有交易全部丢弃；后续需要完善
-func (s *Scheduler) deleteRepeatDAG(dag *commonpb.DAG, repeatTrans []int, rwSetMap map[string]*commonpb.TxRWSet) {
-
-	//for i, _ := range dag.Vertexes {
-	//
-	//}
-
-}
-
-func (s *Scheduler) mergeTheDag() (*commonpb.DAG, []*commonpb.Transaction) {
-
-	//todo
-	var dag *commonpb.DAG
-
-	txs := make([]*commonpb.Transaction, 0)
-
-	return dag, txs
-}
-
-func (s *Scheduler) rebuiltRwSetMap() map[string]*commonpb.TxRWSet {
-	txRWSetMap := make(map[string]*commonpb.TxRWSet)
-
-	return txRWSetMap
+	return writeTable
 }
