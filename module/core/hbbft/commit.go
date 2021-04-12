@@ -22,6 +22,7 @@ type Committer struct {
 	identity      protocol.SigningMember
 	chainConf     protocol.ChainConf
 	blockCommiter protocol.BlockCommitter
+	retryList     []*commonpb.Transaction
 }
 
 func NewCommitter(coreExecute *CoreExecute) (*Committer, error) {
@@ -50,11 +51,14 @@ func (c *Committer) Commit() error {
 	}
 	c.scheduler.block = block
 
-	// 冲突检测后，返回新的读写集
-	newTxRWSetMap, txMap, err := c.scheduler.Schedule()
+	// get the new RWSetMap after conflict detection
+	newRWSetMap, txMap, err := c.scheduler.Schedule()
 	if err != nil {
 		return err
 	}
+
+	// get the	retryList after schedule
+	c.retryList = c.scheduler.retryList
 
 	// get the verified branch from cache
 	branchCacheList := c.hbbftCache.GetVerifiedHbbftTxBatchsByCode(cache.SUCCESS)
@@ -75,11 +79,12 @@ func (c *Committer) Commit() error {
 	c.handelABAFailTranstraction(branchIDListFailABA, txBranchMapBeforeABA, txMap)
 
 	var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
-	err = common.FinalizeBlock(block, newTxRWSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)
+	err = common.FinalizeBlock(block, newRWSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)
 	if err != nil {
 		return err
 	}
 
+	// todo RetryAndRemove
 	// todo AddBlock
 
 	return nil
@@ -97,7 +102,7 @@ func (c *Committer) getConfirmedBranchInfo(branchID []byte) error {
 
 	if branch.GetCode() == cache.SUCCESS {
 		var branchInfo *BranchInfo
-		branchInfo.confirmedBranch = branch.GetTxBatch()
+		branchInfo.branch = branch.GetTxBatch()
 		branchInfo.rwSetMap = branch.GetTxBatchRwSet()
 		c.scheduler.branchInfo[hex.EncodeToString(branchID)] = branchInfo
 	}
@@ -115,18 +120,15 @@ func (c *Committer) getTheABAFailBranchID(branchIDListBeforeABA []string) []stri
 	return failedBranchIDs
 }
 
-func (c *Committer) handelABAFailTranstraction(failBranchIDList []string, txBranchMapBeforeABA map[string]*commonpb.Block, txMap map[string]bool) {
+func (c *Committer) handelABAFailTranstraction(failBranchIDList []string, txBranchMapBeforeABA map[string]*commonpb.Block, txMap map[string]*commonpb.Transaction) {
 	// find the repeat tx and delete it and put the other tx back to the txpool
-
-	retryTxList := make([]*commonpb.Transaction, 0)
 	for _, branchID := range failBranchIDList {
 		branch := txBranchMapBeforeABA[branchID]
 		for _, tx := range branch.Txs {
 			if _, ok := txMap[tx.Header.TxId]; !ok {
-				retryTxList = append(retryTxList, tx)
+				c.retryList = append(c.retryList, tx)
 			}
 		}
 	}
 
-	c.txPool.RetryAndRemoveTxs(retryTxList, nil)
 }
