@@ -8,13 +8,14 @@ package common
 
 import (
 	"bytes"
+	"fmt"
+	"time"
+
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
-	"fmt"
-	"time"
 )
 
 const (

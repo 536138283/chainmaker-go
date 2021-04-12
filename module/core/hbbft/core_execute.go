@@ -14,6 +14,7 @@ import (
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
 	"chainmaker.org/chainmaker-go/protocol"
+	"encoding/hex"
 )
 
 type CoreExecute struct {
@@ -75,7 +76,19 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 			c.Verifier.verifier(&block)
 		}
 	case msgbus.CommitedTxBatchs:
+		if txBatchAfterABA, ok := message.Payload.(hbbft.TxBatchAfterABA); ok {
+			c.Committer.blockHeight = txBatchAfterABA.BlockHeight
+			c.Committer.scheduler = c.Scheduler
+			for i, _ := range txBatchAfterABA.TxBatchHash {
+				c.Committer.getConfirmedBranchInfo(txBatchAfterABA.TxBatchHash[i]) // branchInfo After ABA
+				c.Committer.branchIDList = append(c.Committer.branchIDList, hex.EncodeToString(txBatchAfterABA.TxBatchHash[i])) // branchIDList After ABA
+			}
 
+			if err := c.Committer.Commit(); err != nil {
+				c.log.Warnf("commit fail, error %s",
+					err.Error())
+			}
+		}
 	}
 }
 
