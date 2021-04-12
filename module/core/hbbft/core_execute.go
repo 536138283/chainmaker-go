@@ -30,10 +30,10 @@ type CoreExecute struct {
 	chainConf       protocol.ChainConf // chain config
 	log             *logger.CMLogger   // logger
 
-	Committer Committer
-	Packager  Packager
-	Scheduler Scheduler
-	Verifier  Verifier
+	Committer *Committer
+	Packager  *Packager
+	Scheduler *Scheduler
+	Verifier  *Verifier
 }
 
 func NewCoreExecute(ceConfig *core.CoreExecuteConfig) *CoreExecute {
@@ -51,7 +51,8 @@ func NewCoreExecute(ceConfig *core.CoreExecuteConfig) *CoreExecute {
 		log:             ceConfig.Log,
 		vmMgr:           ceConfig.VmMgr,
 	}
-
+	ce.Packager = NewPackager(ce)
+	ce.Verifier = NewVerifier(ce)
 	return ce
 }
 
@@ -71,9 +72,8 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		c.Packager.Package()
 	case msgbus.VerifyBlock:
 		if block, ok := message.Payload.(commonPb.Block); ok {
-			//TODO 并发校验区块
+			c.Verifier.verifier(&block)
 		}
-
 	case msgbus.CommitedTxBatchs:
 
 	}

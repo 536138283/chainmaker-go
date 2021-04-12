@@ -135,6 +135,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonpb.Block) error {
 		chain.log.Errorf("block illegal [%d](hash:%x), %s", height, block.Header.BlockHash, err)
 		return err
 	}
+
 	lastProposed, rwSetMap := chain.proposalCache.GetProposedBlock(block)
 	if err = chain.checkLastProposedBlock(block, lastProposed, err, height, rwSetMap); err != nil {
 		return err
