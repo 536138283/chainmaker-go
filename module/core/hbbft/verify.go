@@ -4,7 +4,9 @@ import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
+	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
+	"chainmaker.org/chainmaker-go/monitor"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
@@ -12,6 +14,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"github.com/panjf2000/ants/v2"
+	"github.com/prometheus/client_golang/prometheus"
 	"runtime"
 	"sync"
 	"time"
@@ -20,14 +23,17 @@ import (
 const DEFAULT_VERIFY_TIMEOUT = time.Second * 10
 
 type Verifier struct {
-	wg            sync.WaitGroup
-	log           *logger.CMLogger
-	hbbftCache    *cache.HbbftCache
-	verifyBlock   *common.VerifyBlock
-	ledgerCache   protocol.LedgerCache
-	msgBus        msgbus.MessageBus
-	verifyTimeout time.Duration
-	finishVerifyC chan struct{}
+	chainId               string
+	wg                    sync.WaitGroup
+	log                   *logger.CMLogger
+	hbbftCache            *cache.HbbftCache
+	verifyBlock           *common.VerifyBlock
+	ledgerCache           protocol.LedgerCache
+	msgBus                msgbus.MessageBus
+	verifyTimeout         time.Duration
+	txPool                protocol.TxPool
+	finishVerifyC         chan struct{}
+	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
 }
 
 func NewVerifier(ce *CoreExecute) *Verifier {
@@ -38,6 +44,8 @@ func NewVerifier(ce *CoreExecute) *Verifier {
 		ledgerCache:   ce.ledgerCache,
 		msgBus:        ce.msgBus,
 		verifyTimeout: DEFAULT_VERIFY_TIMEOUT,
+		txPool:        ce.txPool,
+		chainId:       ce.chainId,
 	}
 	verifier.finishVerifyC = make(chan struct{})
 	conf := &common.ValidateBlockConf{
@@ -51,6 +59,10 @@ func NewVerifier(ce *CoreExecute) *Verifier {
 		BlockchainStore: ce.blockchainStore,
 	}
 	verifier.verifyBlock = common.NewVerifyBlock(conf)
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		verifier.metricBlockVerifyTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_VERIFIER, "metric_block_verify_time",
+			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
+	}
 	return verifier
 }
 
@@ -91,9 +103,11 @@ func (v *Verifier) verify(block *commonPb.Block) error {
 		}
 		return err
 	}
+	// mark transactions in block as pending status in txpool
+	v.txPool.AddTxsToPendingCache(block.Txs, block.Header.BlockHeight)
 	isValid = true
 	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
-	err = v.hbbftCache.AddHbbftTxBatch(block, cache.FAIL, txRWSetMap)
+	err = v.hbbftCache.AddHbbftTxBatch(block, cache.SUCCESS, txRWSetMap)
 	if err != nil {
 		v.log.Warnf("add hbbft cache tx batch [%d](%x),preBlockHash:%x, %s",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
@@ -101,6 +115,9 @@ func (v *Verifier) verify(block *commonPb.Block) error {
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	v.log.Infof("verify success [%d,%x](%v,%d)", block.Header.BlockHeight, block.Header.BlockHash,
 		timeLasts, elapsed)
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
+	}
 	return nil
 }
 
@@ -132,16 +149,15 @@ func (v *Verifier) verifier(block *commonPb.Block) {
 
 	ticker := time.NewTicker(v.verifyTimeout)
 
-	for {
-		select {
-		case <-ticker.C:
-			v.log.Warnf("wait tx batch verify timeout,height: %d", block.Header.BlockHeight)
-			return
-		case <-v.finishVerifyC:
-			v.log.Infof("all tx batch verify completed,height: %d", block.Header.BlockHeight)
-			return
-		}
+	select {
+	case <-ticker.C:
+		v.log.Warnf("wait tx batch verify timeout,height: %d", block.Header.BlockHeight)
+		return
+	case <-v.finishVerifyC:
+		v.log.Infof("all tx batch verify completed,height: %d", block.Header.BlockHeight)
+		return
 	}
+	
 }
 
 func (v *Verifier) verifyTask(block *commonPb.Block) func() {

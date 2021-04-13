@@ -9,7 +9,6 @@ package hbbft
 import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"sort"
-	"sync"
 )
 
 type Scheduler struct {
@@ -25,7 +24,7 @@ type BranchInfo struct {
 	rwSetMap map[string]*commonpb.TxRWSet // key->txId
 }
 
-func NewScheduler(block *commonpb.Block, branchMap sync.Map, branchIDList []string) *Scheduler {
+func NewScheduler(block *commonpb.Block, branchIDList []string) *Scheduler {
 	return &Scheduler{
 		block:        block,
 		branchIDList: branchIDList,

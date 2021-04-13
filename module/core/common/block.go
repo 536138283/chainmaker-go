@@ -8,14 +8,12 @@ package common
 
 import (
 	"bytes"
-	"fmt"
-	"time"
-
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"fmt"
 )
 
 const (
@@ -85,7 +83,8 @@ func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSe
 		}
 		rwSetHash, err := utils.CalcRWSetHash(hashType, rwSet)
 		if err != nil {
-			return fmt.Errorf("failed to calc rwset hash: %s", err.Error())
+			return fmt.Errorf("failed to calc rwset hash: %s, blockHeight: (%d), txId: (%s)",
+				err.Error(), block.Header.BlockHeight, tx.Header.TxId)
 		}
 		if tx.Result == nil {
 			// in case tx.Result is nil, avoid panic
@@ -96,24 +95,28 @@ func FinalizeBlock(block *commonpb.Block, txRWSetMap map[string]*commonpb.TxRWSe
 		// calculate complete tx hash, include tx.Header, tx.Payload, tx.Result
 		txHash, err := utils.CalcTxHash(hashType, tx)
 		if err != nil {
-			return fmt.Errorf("failed to calc tx hash: %s", err.Error())
+			return fmt.Errorf("failed to calc tx hash: %s, blockHeight: (%d), txId: (%s)",
+				err.Error(), block.Header.BlockHeight, tx.Header.TxId)
 		}
 		txHashes[i] = txHash
 	}
 
 	block.Header.TxRoot, err = hash.GetMerkleRoot(hashType, txHashes)
 	if err != nil {
-		return fmt.Errorf("failed to get merkle root hash: %s", err.Error())
+		return fmt.Errorf("failed to get merkle root hash: %s, blockHeight: (%d)",
+			err.Error(), block.Header.BlockHeight)
 	}
 	block.Header.RwSetRoot, err = utils.CalcRWSetRoot(hashType, block.Txs)
 	if err != nil {
-		return fmt.Errorf("failed to calc rwset root hash: %s", err.Error())
+		return fmt.Errorf("failed to calc rwset root hash: %s, blockHeight: (%d)",
+			err.Error(), block.Header.BlockHeight)
 	}
 
 	// DagDigest
 	dagHash, err := utils.CalcDagHash(hashType, block.Dag)
 	if err != nil {
-		return fmt.Errorf("failed to calc dag hash: %s", err.Error())
+		return fmt.Errorf("failed to calc dag hash: %s, blockHeight: (%d)",
+			err.Error(), block.Header.BlockHeight)
 	}
 	block.Header.DagHash = dagHash
 
@@ -198,21 +201,6 @@ func IsRWSetHashValid(block *commonpb.Block, hashType string) error {
 		return fmt.Errorf("rwset expect %x, got %x", block.Header.RwSetRoot, rwSetRoot)
 	}
 	return nil
-}
-
-// getDuration, get propose duration from config.
-// If not access from config, use default value.
-func getDuration(chainConf protocol.ChainConf) time.Duration {
-	if chainConf == nil || chainConf.ChainConfig() == nil {
-		return DEFAULTDURATION * time.Millisecond
-	}
-	chainConfig := chainConf.ChainConfig()
-	duration := chainConfig.Block.BlockInterval
-	if duration <= 0 {
-		return DEFAULTDURATION * time.Millisecond
-	} else {
-		return time.Duration(duration) * time.Millisecond
-	}
 }
 
 // getChainVersion, get chain version from config.
@@ -315,7 +303,6 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 
 	// verify block sig and also verify identity and auth of block proposer
 	startSigTick := utils.CurrentTimeMillisSeconds()
-
 	vb.log.Debugf("verify block \n %s", utils.FormatBlock(block))
 	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
 		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
@@ -331,7 +318,6 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 	if len(block.Txs) == 0 {
 		return nil, timeLasts, nil
 	}
-
 	// verify if txs are duplicate in this block
 	if IsTxDuplicate(block.Txs) {
 		err := fmt.Errorf("tx duplicate")
@@ -341,9 +327,7 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 	// simulate with DAG, and verify read write set
 	startVMTick := utils.CurrentTimeMillisSeconds()
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
-
 	txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(block, snapshot)
-
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts = append(timeLasts, vmLasts)
 	if err != nil {
@@ -367,18 +351,10 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 		Store:       vb.blockchainStore,
 	}
 	verifytx := NewVerifyTx(verifyTxConf)
-	txHashes, _, errTxs, err := verifytx.VerifyTxs()
+	txHashes, _, err := verifytx.VerifyTxs()
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts = append(timeLasts, txLasts)
-	if err != nil {
-		// verify failed, need to put transactions back to txpool
-		if len(errTxs) > 0 {
-			vb.log.Warn("[Duplicate txs] delete the err txs")
-			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
-		}
-		return nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
-			block.Header.BlockHeight, block.Header.PreBlockHash, err)
-	}
+
 	// verify TxRoot
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = checkBlockDigests(block, txHashes, hashType, vb.log)

@@ -33,14 +33,12 @@ type CoreExecute struct {
 
 	Committer *Committer
 	Packager  *Packager
-	Scheduler *Scheduler
 	Verifier  *Verifier
 }
 
 func NewCoreExecute(ceConfig *core.CoreExecuteConfig) *CoreExecute {
 	ce := &CoreExecute{
 		chainId:         ceConfig.ChainId,
-		hbbftCache:      ceConfig.HbbftCache,
 		ledgerCache:     ceConfig.LedgerCache,
 		txPool:          ceConfig.TxPool,
 		snapshotManager: ceConfig.SnapshotManager,
@@ -52,8 +50,10 @@ func NewCoreExecute(ceConfig *core.CoreExecuteConfig) *CoreExecute {
 		log:             ceConfig.Log,
 		vmMgr:           ceConfig.VmMgr,
 	}
+	ce.hbbftCache = cache.NewHbbftCache()
 	ce.Packager = NewPackager(ce)
 	ce.Verifier = NewVerifier(ce)
+	ce.Committer = NewCommitter(ce, ce.Packager)
 	return ce
 }
 
@@ -73,14 +73,19 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		c.Packager.Package()
 	case msgbus.VerifyBlock:
 		if block, ok := message.Payload.(commonPb.Block); ok {
+			c.hbbftCache.AddTxBatch(&block)
 			c.Verifier.verifier(&block)
 		}
 	case msgbus.CommitedTxBatchs:
 		if txBatchAfterABA, ok := message.Payload.(hbbft.TxBatchAfterABA); ok {
+			ok, err := c.Committer.verifyHeight(txBatchAfterABA.BlockHeight)
+			if !ok {
+				c.log.Errorf("after ABA the tx batch height is wrong: %s, height: (%d)", err.Error(), txBatchAfterABA.BlockHeight)
+				return
+			}
 			c.Committer.blockHeight = txBatchAfterABA.BlockHeight
-			c.Committer.scheduler = c.Scheduler
 			for i, _ := range txBatchAfterABA.TxBatchHash {
-				c.Committer.getConfirmedBranchInfo(txBatchAfterABA.TxBatchHash[i]) // branchInfo After ABA
+				c.Committer.getConfirmedBranchInfo(txBatchAfterABA.TxBatchHash[i])                                              // branchInfo After ABA
 				c.Committer.branchIDList = append(c.Committer.branchIDList, hex.EncodeToString(txBatchAfterABA.TxBatchHash[i])) // branchIDList After ABA
 			}
 
@@ -98,5 +103,9 @@ func (c *CoreExecute) Stop() {
 
 // OnMessage consume a message from message bus
 func (c *CoreExecute) Start() {
-
+	c.msgBus.Register(msgbus.ProposeState, c)
+	c.msgBus.Register(msgbus.VerifyBlock, c)
+	c.msgBus.Register(msgbus.CommitBlock, c)
+	c.msgBus.Register(msgbus.PackageSignal, c)
+	c.msgBus.Register(msgbus.CommitedTxBatchs, c)
 }

@@ -26,9 +26,17 @@ type HbbftTxBatch struct {
 }
 
 type HbbftCache struct {
-	txBatchCache *commonpb.Block
+	txBatchCache         *commonpb.Block            //节点打包的单个批次缓存
+	txBatchCacheMap      map[string]*commonpb.Block //节点收到RBC后需要校验的批次集合（防止校验遗漏）
+	hbbftTxBatchCacheMap sync.Map                   //节点校验后的批次集合
+}
 
-	hbbftTxBatchCacheMap sync.Map
+func NewHbbftCache() *HbbftCache {
+	return &HbbftCache{
+		txBatchCache:         nil,
+		txBatchCacheMap:      make(map[string]*commonpb.Block, 0),
+		hbbftTxBatchCacheMap: sync.Map{},
+	}
 }
 
 // Add the TxBatch after honey badger bft
@@ -64,7 +72,7 @@ func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*HbbftTxBatch, erro
 	if hash == nil {
 		return nil, errors.New("get verified tx batch failed, tx batch can't be empty")
 	}
-	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash)); ok {
+	if VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(hex.EncodeToString(hash)); ok {
 		return VerifiedTxBatch.(*HbbftTxBatch), nil
 	}
 	return nil, nil
@@ -72,17 +80,21 @@ func (hc *HbbftCache) GetVerifiedTxBatchByHash(hash []byte) (*HbbftTxBatch, erro
 
 // return if a TxBatch has verified
 func (hc *HbbftCache) HasVerifiedTxBatch(hash []byte) bool {
-	_, ok := hc.hbbftTxBatchCacheMap.Load(string(hash))
+	_, ok := hc.hbbftTxBatchCacheMap.Load(hex.EncodeToString(hash))
 	return ok
 }
 
 // return if this block is success after RBC verification
 func (hc *HbbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
-	VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(string(hash))
+	VerifiedTxBatch, ok := hc.hbbftTxBatchCacheMap.Load(hex.EncodeToString(hash))
 	if ok {
 		return VerifiedTxBatch.(*HbbftTxBatch).code == SUCCESS, nil
 	}
 	return false, errors.New("TxBatch not exist")
+}
+
+func (hc *HbbftCache) AddTxBatch(txBatch *commonpb.Block) {
+	hc.txBatchCacheMap[hex.EncodeToString(txBatch.Header.BlockHash)] = txBatch
 }
 
 func (htb *HbbftTxBatch) GetTxBatch() *commonpb.Block {
@@ -93,6 +105,16 @@ func (htb *HbbftTxBatch) GetCode() uint32 {
 }
 func (htb *HbbftTxBatch) GetTxBatchRwSet() map[string]*commonpb.TxRWSet {
 	return htb.rwSetMap
+}
+
+func (htb *HbbftTxBatch) SetTxBatch(txBatch *commonpb.Block) {
+	htb.txBatch = txBatch
+}
+func (htb *HbbftTxBatch) SetCode(code uint32) {
+	htb.code = code
+}
+func (htb *HbbftTxBatch) SetTxBatchRwSet(rwSet map[string]*commonpb.TxRWSet) {
+	htb.rwSetMap = rwSet
 }
 
 func (hc *HbbftCache) GetTxBatchCache() *commonpb.Block {
@@ -108,5 +130,7 @@ func (hc *HbbftCache) SetTxBatchCache(txBatch *commonpb.Block) {
 }
 
 func (hc *HbbftCache) ClearHbbftCache() {
-
+	hc.txBatchCacheMap = make(map[string]*commonpb.Block, 0)
+	hc.txBatchCache = nil
+	hc.hbbftTxBatchCacheMap = sync.Map{}
 }

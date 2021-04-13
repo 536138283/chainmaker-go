@@ -9,13 +9,14 @@ package core
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
-	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/committer"
+	"chainmaker.org/chainmaker-go/core/hbbft"
 	"chainmaker.org/chainmaker-go/core/proposer"
 	"chainmaker.org/chainmaker-go/core/scheduler"
 	"chainmaker.org/chainmaker-go/core/verifier"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	txpoolpb "chainmaker.org/chainmaker-go/pb/protogo/txpool"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/subscriber"
@@ -55,7 +56,6 @@ type CoreExecuteConfig struct {
 	MsgBus          msgbus.MessageBus
 	Identity        protocol.SigningMember
 	LedgerCache     protocol.LedgerCache
-	HbbftCache      *cache.HbbftCache
 	ChainConf       protocol.ChainConf
 	AC              protocol.AccessControlProvider
 	BlockchainStore protocol.BlockchainStore
@@ -133,7 +133,22 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if core.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_POW {
+		ceConf := &CoreExecuteConfig{
+			ChainId:         core.chainId,
+			TxPool:          core.txPool,
+			SnapshotManager: core.snapshotManager,
+			MsgBus:          core.msgBus,
+			Identity:        cf.identity,
+			LedgerCache:     cf.ledgerCache,
+			ChainConf:       core.chainConf,
+			AC:              cf.ac,
+			BlockchainStore: core.blockchainStore,
+			Log:             core.log,
+			VmMgr:           core.vmMgr,
+		}
+		core.coreExecutor = hbbft.NewCoreExecute(ceConf)
+	}
 	return core, nil
 }
 
@@ -179,13 +194,16 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 
 // Start, initialize core engine
 func (c *CoreEngine) Start() {
-	c.msgBus.Register(msgbus.ProposeState, c)
-	c.msgBus.Register(msgbus.VerifyBlock, c)
-	c.msgBus.Register(msgbus.CommitBlock, c)
-	c.msgBus.Register(msgbus.TxPoolSignal, c)
-	c.msgBus.Register(msgbus.BuildProposal, c)
-	c.blockProposer.Start()
-	c.coreExecutor.Start()
+	if c.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_POW {
+		c.msgBus.Register(msgbus.ProposeState, c)
+		c.msgBus.Register(msgbus.VerifyBlock, c)
+		c.msgBus.Register(msgbus.CommitBlock, c)
+		c.msgBus.Register(msgbus.TxPoolSignal, c)
+		c.msgBus.Register(msgbus.BuildProposal, c)
+		c.blockProposer.Start()
+	} else {
+		c.coreExecutor.Start()
+	}
 }
 
 // Stop, stop core engine

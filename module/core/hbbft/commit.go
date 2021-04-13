@@ -7,36 +7,50 @@ import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"encoding/hex"
+	"errors"
 	"sort"
 )
 
 type Committer struct {
-	chainID       string
-	blockHeight   int64
-	branchIDList  []string // branchID After ABA
-	ledgerCache   protocol.LedgerCache
-	hbbftCache    cache.HbbftCache
-	scheduler     *Scheduler
-	log           *logger.CMLogger // logger
-	txPool        protocol.TxPool
-	identity      protocol.SigningMember
-	chainConf     protocol.ChainConf
-	blockCommiter protocol.BlockCommitter
-	retryList     []*commonpb.Transaction
+	chainID      string
+	blockHeight  int64
+	branchIDList []string // branchID After ABA
+	ledgerCache  protocol.LedgerCache
+	hbbftCache   cache.HbbftCache
+	scheduler    *Scheduler
+	log          *logger.CMLogger // logger
+	txPool       protocol.TxPool
+	identity     protocol.SigningMember
+	chainConf    protocol.ChainConf
+	retryList    []*commonpb.Transaction
+	commonCommit *common.CommitBlock
+	packager     *Packager
 }
 
-func NewCommitter(coreExecute *CoreExecute) (*Committer, error) {
-	return &Committer{
+func NewCommitter(coreExecute *CoreExecute, packager *Packager) *Committer {
+	committer := &Committer{
 		chainID:      coreExecute.chainId,
 		blockHeight:  0,
-		branchIDList: nil,
+		branchIDList: make([]string, 0),
 		ledgerCache:  coreExecute.ledgerCache,
 		hbbftCache:   *coreExecute.hbbftCache,
 		log:          coreExecute.log,
 		txPool:       coreExecute.txPool,
 		identity:     coreExecute.identity,
 		chainConf:    coreExecute.chainConf,
-	}, nil
+		packager:     packager,
+	}
+	cbConf := &common.CommitBlockConf{
+		Store:           coreExecute.blockchainStore,
+		Log:             coreExecute.log,
+		SnapshotManager: coreExecute.snapshotManager,
+		TxPool:          coreExecute.txPool,
+		LedgerCache:     coreExecute.ledgerCache,
+		ChainConf:       coreExecute.chainConf,
+		MsgBus:          coreExecute.msgBus,
+	}
+	committer.commonCommit = common.NewCommitBlock(cbConf)
+	return committer
 }
 
 func (c *Committer) Commit() error {
@@ -49,7 +63,7 @@ func (c *Committer) Commit() error {
 	if err != nil {
 		return err
 	}
-	c.scheduler.block = block
+	c.scheduler = NewScheduler(block, c.branchIDList)
 
 	// get the new RWSetMap after conflict detection
 	newRWSetMap, err := c.scheduler.Schedule()
@@ -84,9 +98,20 @@ func (c *Committer) Commit() error {
 		return err
 	}
 
-	// todo RetryAndRemove
-	// todo AddBlock
+	//clear hbbft catche
+	c.hbbftCache.ClearHbbftCache()
 
+	//CommitBlock the action that all consensus types do when a block is committed
+	err = c.commonCommit.CommitBlock(block, newRWSetMap)
+	if err != nil {
+		c.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
+	}
+
+	//sync txpool
+	c.txPool.RetryAndRemoveTxs(c.retryList, block.Txs)
+
+	//set package status
+	c.packager.SetPackageStatus(Packaged)
 	return nil
 }
 
@@ -130,4 +155,15 @@ func (c *Committer) handelABAFailTranstraction(failBranchIDList []string, txBran
 			}
 		}
 	}
+}
+
+func (c *Committer) verifyHeight(height int64) (bool, error) {
+	currentHeight, err := c.ledgerCache.CurrentHeight()
+	if err != nil {
+		return false, err
+	}
+	if currentHeight+1 != height {
+		return false, errors.New("the ABA signal height is inconsistent with the cache")
+	}
+	return true, nil
 }
