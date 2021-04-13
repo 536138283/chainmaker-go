@@ -144,4 +144,5 @@ func (p *Packager) Package() error {
 		p.log.Infof("proposer success [%d](txs:%d)", txBatch.Header.BlockHeight, txBatch.Header.TxCount)
 	}
 
+	return nil
 }

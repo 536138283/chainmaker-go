@@ -16,7 +16,7 @@ type Scheduler struct {
 	branchInfo   map[string]*BranchInfo // key -> branchId
 	branchIDList []string
 	retryList    []*commonpb.Transaction
-	allTransMap  map[string]*commonpb.Transaction // record all transaction(branchID->Transaction)
+	allTransMap  map[string]*commonpb.Transaction // record all transaction(txId->Transaction)
 }
 
 type BranchInfo struct {
@@ -28,6 +28,9 @@ func NewScheduler(block *commonpb.Block, branchIDList []string) *Scheduler {
 	return &Scheduler{
 		block:        block,
 		branchIDList: branchIDList,
+		branchInfo: make(map[string]*BranchInfo),
+		retryList: make([]*commonpb.Transaction, 0),
+		allTransMap: make(map[string]*commonpb.Transaction),
 	}
 }
 
@@ -173,7 +176,7 @@ func prepareForShedule(
 	branchInfo map[string]*BranchInfo,
 	allTransMap map[string]*commonpb.Transaction) map[string][]int {
 
-	repeatTrans := make(map[string][]int) // record the deleted & repeated transaction(branchID->deleted tranction 's position)
+	repeatTrans := make(map[string][]int) // record the deleted & repeated transaction(branchID->deleted transaction 's position)
 	for _, branchID := range branchIDList {
 		if info, ok := branchInfo[branchID]; ok {
 			txs := info.branch.Txs
