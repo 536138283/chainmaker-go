@@ -75,19 +75,23 @@ func (p *Packager) verifyHeight() (bool, error) {
 }
 
 func (p *Packager) checkPackageStatus() bool {
-	if p.packageStatus == NoPackaging {
+	switch p.packageStatus {
+	case NoPackaging:
 		p.SetPackageStatus(Packaging)
 		return true
-	}
-	if p.packageStatus == Packaging {
+	case Packaging:
 		return false
-	}
-	if p.packageStatus == Packaged {
+	case Packaged:
 		txBatch := p.hbbftCache.GetTxBatchCache()
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		return false
+	default:
+		p.log.Errorf(
+			"Invalid Package Status: %v",
+			p.packageStatus,
+		)
+		return false
 	}
-	return false
 }
 
 func (p *Packager) Package() error {

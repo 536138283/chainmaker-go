@@ -55,15 +55,16 @@ func (s *Scheduler) delRepeatTransactions(repeatTrans map[string][]int) {
 
 func delRepeatTransaction(
 	branchID string,
-	deleteSites []int,
+	repeatTrans []int,
 	branch *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
 	retryList []*commonpb.Transaction) {
 
 	// record the related Transaction' s position
-	relatedTranSiteMap := recordTheReleatedTrans(deleteSites, branch)
+	relatedTranSiteMap := recordTheReleatedTrans(repeatTrans, branch)
 
 	// record the relatedTransaction which need to be taken back to txpool
+	deleteSites := make([]int, 0) //the index of transaction which need to deleted
 	for index, _ := range relatedTranSiteMap {
 		// the conflict transaction 's position list
 		deleteSites = append(deleteSites, index)
@@ -80,6 +81,10 @@ func delRepeatTransaction(
 func recordTheReleatedTrans(deleteSites []int, branch *commonpb.Block) map[int]struct{} {
 	relatedTranSiteMap := make(map[int]struct{})
 	for _, site := range deleteSites {
+		if _, ok := relatedTranSiteMap[site]; !ok {
+			relatedTranSiteMap[site] = struct{}{}
+		}
+
 		neighbors := branch.Dag.Vertexes[site].Neighbors
 		for _, relatedTranSite := range neighbors {
 			if _, ok := relatedTranSiteMap[int(relatedTranSite)]; !ok {
@@ -92,6 +97,7 @@ func recordTheReleatedTrans(deleteSites []int, branch *commonpb.Block) map[int]s
 
 func mergeRwSetMapAndDAG(deleteSites []int,
 	branch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
+
 	sort.Ints(deleteSites)
 	for i := len(deleteSites) - 1; i >= 0; i-- {
 		// delete the RWSetMap
