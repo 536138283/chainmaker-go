@@ -7,8 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package hbbft
 
 import (
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"sort"
+
+	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 )
 
 type Scheduler struct {
@@ -16,7 +17,7 @@ type Scheduler struct {
 	branchInfo   map[string]*BranchInfo // key -> branchId
 	branchIDList []string
 	retryList    []*commonpb.Transaction
-	allTransMap  map[string]*commonpb.Transaction // record all transaction(branchID->Transaction)
+	allTransMap  map[string]*commonpb.Transaction // record all transaction(txId->Transaction)
 }
 
 type BranchInfo struct {
@@ -58,9 +59,10 @@ func delRepeatTransaction(
 	retryList []*commonpb.Transaction) {
 
 	// record the related Transaction' s position
-	relatedTranSiteMap := recordTheReleatedTrans(deleteSites, branch)
+	relatedTranSiteMap := recordTheReleatedTrans(repeatTrans, branch)
 
 	// record the relatedTransaction which need to be taken back to txpool
+	deleteSites := make([]int, 0) //the index of transaction which need to deleted
 	for index, _ := range relatedTranSiteMap {
 		// the conflict transaction 's position list
 		deleteSites = append(deleteSites, index)
@@ -77,6 +79,10 @@ func delRepeatTransaction(
 func recordTheReleatedTrans(deleteSites []int, branch *commonpb.Block) map[int]struct{} {
 	relatedTranSiteMap := make(map[int]struct{})
 	for _, site := range deleteSites {
+		if _, ok := relatedTranSiteMap[site]; !ok {
+			relatedTranSiteMap[site] = struct{}{}
+		}
+
 		neighbors := branch.Dag.Vertexes[site].Neighbors
 		for _, relatedTranSite := range neighbors {
 			if _, ok := relatedTranSiteMap[int(relatedTranSite)]; !ok {
@@ -89,19 +95,21 @@ func recordTheReleatedTrans(deleteSites []int, branch *commonpb.Block) map[int]s
 
 func mergeRwSetMapAndDAG(deleteSites []int,
 	branch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
+
 	sort.Ints(deleteSites)
 	for i := len(deleteSites) - 1; i >= 0; i-- {
+		index := deleteSites[i]
 		// delete the RWSetMap
-		txId := branch.Txs[i].Header.TxId
+		txId := branch.Txs[index].Header.TxId
 		delete(rwSetMap, txId)
 
 		// delete the transaction & delete the DAG
 		if i != len(branch.Txs)-1 {
-			branch.Txs = append(branch.Txs[:i], branch.Txs[i+1])
-			branch.Dag.Vertexes = append(branch.Dag.Vertexes[:i], branch.Dag.Vertexes[i+1:]...)
+			branch.Txs = append(branch.Txs[:index], branch.Txs[index+1])
+			branch.Dag.Vertexes = append(branch.Dag.Vertexes[:index], branch.Dag.Vertexes[index+1:]...)
 		} else {
-			branch.Txs = branch.Txs[:i]
-			branch.Dag.Vertexes = branch.Dag.Vertexes[:i]
+			branch.Txs = branch.Txs[:index]
+			branch.Dag.Vertexes = branch.Dag.Vertexes[:index]
 		}
 	}
 }
@@ -172,7 +180,7 @@ func prepareForShedule(
 	branchInfo map[string]*BranchInfo,
 	allTransMap map[string]*commonpb.Transaction) map[string][]int {
 
-	repeatTrans := make(map[string][]int) // record the deleted & repeated transaction(branchID->deleted tranction 's position)
+	repeatTrans := make(map[string][]int) // record the deleted & repeated transaction(branchID->deleted transaction 's position)
 	for _, branchID := range branchIDList {
 		if info, ok := branchInfo[branchID]; ok {
 			txs := info.branch.Txs

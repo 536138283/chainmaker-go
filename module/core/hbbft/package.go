@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package hbbft
 
 import (
+	"encoding/hex"
+
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
@@ -14,10 +16,10 @@ import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
 	"chainmaker.org/chainmaker-go/utils"
-	"encoding/hex"
+
+	"errors"
 
 	"chainmaker.org/chainmaker-go/protocol"
-	"errors"
 )
 
 type PackageStatus int32
@@ -75,19 +77,23 @@ func (p *Packager) verifyHeight() (bool, error) {
 }
 
 func (p *Packager) checkPackageStatus() bool {
-	if p.packageStatus == NoPackaging {
+	switch p.packageStatus {
+	case NoPackaging:
 		p.SetPackageStatus(Packaging)
 		return true
-	}
-	if p.packageStatus == Packaging {
+	case Packaging:
 		return false
-	}
-	if p.packageStatus == Packaged {
+	case Packaged:
 		txBatch := p.hbbftCache.GetTxBatchCache()
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		return false
+	default:
+		p.log.Errorf(
+			"Invalid Package Status: %v",
+			p.packageStatus,
+		)
+		return false
 	}
-	return false
 }
 
 func (p *Packager) Package() error {

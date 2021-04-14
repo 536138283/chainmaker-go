@@ -82,7 +82,10 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		if packagedSignal, ok := message.Payload.(hbbft.PackagedSignal); ok {
 			c.Packager.packagedSignal = &packagedSignal
 		}
-		c.Packager.Package()
+		if err := c.Packager.Package(); err != nil {
+			c.log.Warnf("pack fail, error %s",
+				err.Error())
+		}
 	case msgbus.VerifyBlock:
 		if block, ok := message.Payload.(commonPb.Block); ok {
 			c.Verifier.verifier(&block)
