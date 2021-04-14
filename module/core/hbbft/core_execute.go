@@ -34,7 +34,6 @@ type CoreExecute struct {
 	Packager  *Packager
 	Verifier  *Verifier
 }
-
 type CoreExecuteConfig struct {
 	ChainId         string
 	TxPool          protocol.TxPool
