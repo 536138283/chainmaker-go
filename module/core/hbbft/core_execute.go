@@ -73,7 +73,6 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		c.Packager.Package()
 	case msgbus.VerifyBlock:
 		if block, ok := message.Payload.(commonPb.Block); ok {
-			c.hbbftCache.AddTxBatch(&block)
 			c.Verifier.verifier(&block)
 		}
 	case msgbus.CommitedTxBatchs:

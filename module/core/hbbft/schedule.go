@@ -24,10 +24,11 @@ type BranchInfo struct {
 	rwSetMap map[string]*commonpb.TxRWSet // key->txId
 }
 
-func NewScheduler(block *commonpb.Block, branchIDList []string) *Scheduler {
+func NewScheduler() *Scheduler {
 	return &Scheduler{
-		block:        block,
-		branchIDList: branchIDList,
+		branchInfo:  make(map[string]*BranchInfo),
+		retryList:   make([]*commonpb.Transaction, 0),
+		allTransMap: make(map[string]*commonpb.Transaction),
 	}
 }
 

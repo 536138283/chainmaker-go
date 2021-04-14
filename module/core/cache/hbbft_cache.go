@@ -26,15 +26,15 @@ type HbbftTxBatch struct {
 }
 
 type HbbftCache struct {
-	txBatchCache         *commonpb.Block            //节点打包的单个批次缓存
-	txBatchCacheMap      map[string]*commonpb.Block //节点收到RBC后需要校验的批次集合（防止校验遗漏）
-	hbbftTxBatchCacheMap sync.Map                   //节点校验后的批次集合
+	txBatchCache *commonpb.Block //节点打包的单个批次缓存
+	//txBatchCacheMap      map[string]*commonpb.Block //节点收到RBC后需要校验的批次集合（防止校验遗漏）
+	hbbftTxBatchCacheMap sync.Map //节点校验后的批次集合
 }
 
 func NewHbbftCache() *HbbftCache {
 	return &HbbftCache{
-		txBatchCache:         nil,
-		txBatchCacheMap:      make(map[string]*commonpb.Block, 0),
+		txBatchCache: nil,
+		//txBatchCacheMap:      make(map[string]*commonpb.Block),
 		hbbftTxBatchCacheMap: sync.Map{},
 	}
 }
@@ -93,9 +93,9 @@ func (hc *HbbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
 	return false, errors.New("TxBatch not exist")
 }
 
-func (hc *HbbftCache) AddTxBatch(txBatch *commonpb.Block) {
-	hc.txBatchCacheMap[hex.EncodeToString(txBatch.Header.BlockHash)] = txBatch
-}
+//func (hc *HbbftCache) AddTxBatch(txBatch *commonpb.Block) {
+//	hc.txBatchCacheMap[hex.EncodeToString(txBatch.Header.BlockHash)] = txBatch
+//}
 
 func (htb *HbbftTxBatch) GetTxBatch() *commonpb.Block {
 	return htb.txBatch
@@ -121,16 +121,27 @@ func (hc *HbbftCache) GetTxBatchCache() *commonpb.Block {
 	return hc.txBatchCache
 }
 
-func (hc *HbbftCache) GetTxBatchCacheMap() sync.Map {
+//func (hc *HbbftCache) GetTxBatchCacheMap() map[string]*commonpb.Block {
+//	return hc.txBatchCacheMap
+//}
+func (hc *HbbftCache) GetHbbftTxBatchCacheMap() sync.Map {
 	return hc.hbbftTxBatchCacheMap
 }
-
 func (hc *HbbftCache) SetTxBatchCache(txBatch *commonpb.Block) {
 	hc.txBatchCache = txBatch
 }
 
 func (hc *HbbftCache) ClearHbbftCache() {
-	hc.txBatchCacheMap = make(map[string]*commonpb.Block, 0)
+	//hc.txBatchCacheMap = make(map[string]*commonpb.Block, 0)
 	hc.txBatchCache = nil
 	hc.hbbftTxBatchCacheMap = sync.Map{}
 }
+
+//func (hc *HbbftCache) GetTxBatchCacheByHash(hash []byte) *commonpb.Block {
+//	txBatch, ok := hc.txBatchCacheMap[hex.EncodeToString(hash)]
+//	if ok {
+//		return txBatch
+//	} else {
+//		return nil
+//	}
+//}

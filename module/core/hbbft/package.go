@@ -143,5 +143,5 @@ func (p *Packager) Package() error {
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("proposer success [%d](txs:%d)", txBatch.Header.BlockHeight, txBatch.Header.TxCount)
 	}
-
+	return nil
 }

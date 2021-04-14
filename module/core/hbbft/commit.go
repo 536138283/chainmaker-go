@@ -29,16 +29,15 @@ type Committer struct {
 
 func NewCommitter(coreExecute *CoreExecute, packager *Packager) *Committer {
 	committer := &Committer{
-		chainID:      coreExecute.chainId,
-		blockHeight:  0,
-		branchIDList: make([]string, 0),
-		ledgerCache:  coreExecute.ledgerCache,
-		hbbftCache:   *coreExecute.hbbftCache,
-		log:          coreExecute.log,
-		txPool:       coreExecute.txPool,
-		identity:     coreExecute.identity,
-		chainConf:    coreExecute.chainConf,
-		packager:     packager,
+		chainID:     coreExecute.chainId,
+		blockHeight: 0,
+		ledgerCache: coreExecute.ledgerCache,
+		hbbftCache:  *coreExecute.hbbftCache,
+		log:         coreExecute.log,
+		txPool:      coreExecute.txPool,
+		identity:    coreExecute.identity,
+		chainConf:   coreExecute.chainConf,
+		packager:    packager,
 	}
 	cbConf := &common.CommitBlockConf{
 		Store:           coreExecute.blockchainStore,
@@ -50,6 +49,7 @@ func NewCommitter(coreExecute *CoreExecute, packager *Packager) *Committer {
 		MsgBus:          coreExecute.msgBus,
 	}
 	committer.commonCommit = common.NewCommitBlock(cbConf)
+	committer.scheduler = NewScheduler()
 	return committer
 }
 
@@ -63,8 +63,9 @@ func (c *Committer) Commit() error {
 	if err != nil {
 		return err
 	}
-	c.scheduler = NewScheduler(block, c.branchIDList)
 
+	c.scheduler.block = block
+	c.scheduler.branchIDList = c.branchIDList
 	// get the new RWSetMap after conflict detection
 	newRWSetMap, err := c.scheduler.Schedule()
 	if err != nil {
@@ -131,7 +132,6 @@ func (c *Committer) getConfirmedBranchInfo(branchID []byte) error {
 		branchInfo.rwSetMap = branch.GetTxBatchRwSet()
 		c.scheduler.branchInfo[hex.EncodeToString(branchID)] = branchInfo
 	}
-
 	return nil
 }
 

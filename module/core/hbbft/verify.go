@@ -23,16 +23,16 @@ import (
 const DEFAULT_VERIFY_TIMEOUT = time.Second * 10
 
 type Verifier struct {
-	chainId               string
-	wg                    sync.WaitGroup
-	log                   *logger.CMLogger
-	hbbftCache            *cache.HbbftCache
-	verifyBlock           *common.VerifyBlock
-	ledgerCache           protocol.LedgerCache
-	msgBus                msgbus.MessageBus
-	verifyTimeout         time.Duration
-	txPool                protocol.TxPool
-	finishVerifyC         chan struct{}
+	chainId       string
+	wg            sync.WaitGroup
+	log           *logger.CMLogger
+	hbbftCache    *cache.HbbftCache
+	verifyBlock   *common.VerifyBlock
+	ledgerCache   protocol.LedgerCache
+	msgBus        msgbus.MessageBus
+	verifyTimeout time.Duration
+	txPool        protocol.TxPool
+	//finishVerifyC         chan struct{}
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
 }
 
@@ -47,7 +47,7 @@ func NewVerifier(ce *CoreExecute) *Verifier {
 		txPool:        ce.txPool,
 		chainId:       ce.chainId,
 	}
-	verifier.finishVerifyC = make(chan struct{})
+	//verifier.finishVerifyC = make(chan struct{})
 	conf := &common.ValidateBlockConf{
 		ChainConf:       ce.chainConf,
 		Log:             ce.log,
@@ -145,19 +145,17 @@ func (v *Verifier) verifier(block *commonPb.Block) {
 	defer goRoutinePool.Release()
 	v.wg.Add(1)
 	goRoutinePool.Submit(v.verifyTask(block))
-	go v.isFinishVerify()
-
-	ticker := time.NewTicker(v.verifyTimeout)
-
-	select {
-	case <-ticker.C:
-		v.log.Warnf("wait tx batch verify timeout,height: %d", block.Header.BlockHeight)
-		return
-	case <-v.finishVerifyC:
-		v.log.Infof("all tx batch verify completed,height: %d", block.Header.BlockHeight)
-		return
-	}
-	
+	v.wg.Wait()
+	//go v.isFinishVerify()
+	//ticker := time.NewTicker(v.verifyTimeout)
+	//select {
+	//case <-ticker.C:
+	//	v.log.Warnf("wait tx batch verify timeout,height: %d", block.Header.BlockHeight)
+	//	return
+	//case <-v.finishVerifyC:
+	//	v.log.Infof("all tx batch verify completed,height: %d", block.Header.BlockHeight)
+	//	return
+	//}
 }
 
 func (v *Verifier) verifyTask(block *commonPb.Block) func() {
@@ -171,7 +169,7 @@ func (v *Verifier) verifyTask(block *commonPb.Block) func() {
 	}
 }
 
-func (v *Verifier) isFinishVerify() {
-	v.wg.Wait()
-	v.finishVerifyC <- struct{}{}
-}
+//func (v *Verifier) isFinishVerify() {
+//	v.wg.Wait()
+//	v.finishVerifyC <- struct{}{}
+//}
