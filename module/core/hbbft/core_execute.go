@@ -8,7 +8,6 @@ package hbbft
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
-	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
@@ -35,8 +34,21 @@ type CoreExecute struct {
 	Packager  *Packager
 	Verifier  *Verifier
 }
+type CoreExecuteConfig struct {
+	ChainId         string
+	TxPool          protocol.TxPool
+	SnapshotManager protocol.SnapshotManager
+	MsgBus          msgbus.MessageBus
+	Identity        protocol.SigningMember
+	LedgerCache     protocol.LedgerCache
+	ChainConf       protocol.ChainConf
+	AC              protocol.AccessControlProvider
+	BlockchainStore protocol.BlockchainStore
+	Log             *logger.CMLogger
+	VmMgr           protocol.VmManager
+}
 
-func NewCoreExecute(ceConfig *core.CoreExecuteConfig) *CoreExecute {
+func NewCoreExecute(ceConfig *CoreExecuteConfig) *CoreExecute {
 	ce := &CoreExecute{
 		chainId:         ceConfig.ChainId,
 		ledgerCache:     ceConfig.LedgerCache,

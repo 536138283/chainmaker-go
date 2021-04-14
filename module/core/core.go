@@ -11,6 +11,7 @@ import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/committer"
 	"chainmaker.org/chainmaker-go/core/hbbft"
+
 	"chainmaker.org/chainmaker-go/core/proposer"
 	"chainmaker.org/chainmaker-go/core/scheduler"
 	"chainmaker.org/chainmaker-go/core/verifier"
@@ -47,20 +48,6 @@ type CoreEngine struct {
 	proposedCache protocol.ProposalCache      // cache proposed block and proposal status
 	log           *logger.CMLogger            // logger
 	subscriber    *subscriber.EventSubscriber // block subsriber
-}
-
-type CoreExecuteConfig struct {
-	ChainId         string
-	TxPool          protocol.TxPool
-	SnapshotManager protocol.SnapshotManager
-	MsgBus          msgbus.MessageBus
-	Identity        protocol.SigningMember
-	LedgerCache     protocol.LedgerCache
-	ChainConf       protocol.ChainConf
-	AC              protocol.AccessControlProvider
-	BlockchainStore protocol.BlockchainStore
-	Log             *logger.CMLogger
-	VmMgr           protocol.VmManager
 }
 
 // NewCoreEngine new a core engine.
@@ -134,7 +121,7 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 		return nil, err
 	}
 	if core.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_POW {
-		ceConf := &CoreExecuteConfig{
+		ceConf := &hbbft.CoreExecuteConfig{
 			ChainId:         core.chainId,
 			TxPool:          core.txPool,
 			SnapshotManager: core.snapshotManager,

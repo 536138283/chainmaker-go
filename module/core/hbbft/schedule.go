@@ -47,12 +47,11 @@ func (s *Scheduler) Schedule() (map[string]*commonpb.TxRWSet, error) {
 
 func (s *Scheduler) delRepeatTransactions(repeatTrans map[string][]int) {
 	for branchID, site := range repeatTrans {
-		delRepeatTransaction(branchID, site, s.branchInfo[branchID].branch, s.branchInfo[branchID].rwSetMap, s.retryList)
+		delRepeatTransaction(site, s.branchInfo[branchID].branch, s.branchInfo[branchID].rwSetMap, s.retryList)
 	}
 }
 
 func delRepeatTransaction(
-	branchID string,
 	deleteSites []int,
 	branch *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
@@ -155,7 +154,6 @@ func handleRWSetConflict(branch *commonpb.Block, rwSetMap, finalRWSetMap map[str
 				retryList = append(retryList, allTransMap[txId])
 				delSiteList = append(delSiteList, site)
 			} else {
-				writeTable[finalKey] = struct{}{}
 				finalRWSetMap[txId] = rwSet
 			}
 		}
@@ -188,7 +186,6 @@ func prepareForShedule(
 			}
 		}
 	}
-
 	return repeatTrans
 }
 

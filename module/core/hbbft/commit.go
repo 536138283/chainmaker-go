@@ -29,15 +29,16 @@ type Committer struct {
 
 func NewCommitter(coreExecute *CoreExecute, packager *Packager) *Committer {
 	committer := &Committer{
-		chainID:     coreExecute.chainId,
-		blockHeight: 0,
-		ledgerCache: coreExecute.ledgerCache,
-		hbbftCache:  *coreExecute.hbbftCache,
-		log:         coreExecute.log,
-		txPool:      coreExecute.txPool,
-		identity:    coreExecute.identity,
-		chainConf:   coreExecute.chainConf,
-		packager:    packager,
+		chainID:      coreExecute.chainId,
+		blockHeight:  0,
+		branchIDList: make([]string, 0),
+		ledgerCache:  coreExecute.ledgerCache,
+		hbbftCache:   *coreExecute.hbbftCache,
+		log:          coreExecute.log,
+		txPool:       coreExecute.txPool,
+		identity:     coreExecute.identity,
+		chainConf:    coreExecute.chainConf,
+		packager:     packager,
 	}
 	cbConf := &common.CommitBlockConf{
 		Store:           coreExecute.blockchainStore,
@@ -112,7 +113,7 @@ func (c *Committer) Commit() error {
 	c.txPool.RetryAndRemoveTxs(c.retryList, block.Txs)
 
 	//set package status
-	c.packager.SetPackageStatus(Packaged)
+	c.packager.SetPackageStatus(NoPackaging)
 	return nil
 }
 

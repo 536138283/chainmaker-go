@@ -142,6 +142,7 @@ func (p *Packager) Package() error {
 		p.hbbftCache.SetTxBatchCache(txBatch)
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("proposer success [%d](txs:%d)", txBatch.Header.BlockHeight, txBatch.Header.TxCount)
+		p.SetPackageStatus(Packaged)
 	}
 	return nil
 }
