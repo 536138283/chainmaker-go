@@ -100,17 +100,18 @@ func mergeRwSetMapAndDAG(deleteSites []int,
 
 	sort.Ints(deleteSites)
 	for i := len(deleteSites) - 1; i >= 0; i-- {
+		index := deleteSites[i]
 		// delete the RWSetMap
-		txId := branch.Txs[i].Header.TxId
+		txId := branch.Txs[index].Header.TxId
 		delete(rwSetMap, txId)
 
 		// delete the transaction & delete the DAG
 		if i != len(branch.Txs)-1 {
-			branch.Txs = append(branch.Txs[:i], branch.Txs[i+1])
-			branch.Dag.Vertexes = append(branch.Dag.Vertexes[:i], branch.Dag.Vertexes[i+1:]...)
+			branch.Txs = append(branch.Txs[:index], branch.Txs[index+1])
+			branch.Dag.Vertexes = append(branch.Dag.Vertexes[:index], branch.Dag.Vertexes[index+1:]...)
 		} else {
-			branch.Txs = branch.Txs[:i]
-			branch.Dag.Vertexes = branch.Dag.Vertexes[:i]
+			branch.Txs = branch.Txs[:index]
+			branch.Dag.Vertexes = branch.Dag.Vertexes[:index]
 		}
 	}
 }
