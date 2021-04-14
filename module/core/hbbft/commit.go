@@ -12,6 +12,7 @@ import (
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
 	"errors"
 	"sort"
@@ -106,7 +107,20 @@ func (c *Committer) Commit() error {
 		return err
 	}
 
-	//clear hbbft catche
+	hash, sig, err := utils.SignBlock(c.chainConf.ChainConfig().Crypto.Hash, c.identity, block)
+	if err != nil {
+		c.log.Errorf("[%s]sign block failed, %s", c.identity.GetMemberId(), err)
+	}
+
+	// get the base branch info
+	baseBranchId := c.branchIDList[0]
+	baseBranchInfo := c.scheduler.branchInfo[baseBranchId].branch
+
+	block.Header.BlockHash = hash[:]
+	block.Header.Signature = sig
+	block.Header.BlockTimestamp = baseBranchInfo.Header.BlockTimestamp
+
+	//ear hbbft catche
 	c.hbbftCache.ClearHbbftCache()
 
 	//CommitBlock the action that all consensus types do when a block is committed

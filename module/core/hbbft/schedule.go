@@ -53,7 +53,7 @@ func (s *Scheduler) delRepeatTransactions(repeatTrans map[string][]int) {
 }
 
 func delRepeatTransaction(
-	deleteSites []int,
+	repeatTrans []int,
 	branch *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
 	retryList []*commonpb.Transaction) {
@@ -162,6 +162,10 @@ func handleRWSetConflict(branch *commonpb.Block, rwSetMap, finalRWSetMap map[str
 				retryList = append(retryList, allTransMap[txId])
 				delSiteList = append(delSiteList, site)
 			} else {
+				// update write table
+				updateWriteTable(writeTable, rwSet)
+
+				// update the final RWSetMap
 				finalRWSetMap[txId] = rwSet
 			}
 		}
@@ -169,6 +173,13 @@ func handleRWSetConflict(branch *commonpb.Block, rwSetMap, finalRWSetMap map[str
 
 	// merge the DAG & RWSet
 	mergeRwSetMapAndDAG(delSiteList, branch, rwSetMap)
+}
+
+func updateWriteTable(writeTable map[string]struct{}, rwSet *commonpb.TxRWSet) {
+	for _, txWrite := range rwSet.TxWrites {
+		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+		writeTable[finalKey] = struct{}{}
+	}
 }
 
 func constructKey(contractName string, key []byte) string {
