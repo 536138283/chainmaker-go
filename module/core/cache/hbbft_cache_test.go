@@ -1,27 +1,77 @@
 package cache
 
 import (
+	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"fmt"
 	"testing"
 )
 
 func TestHbbft(t *testing.T) {
-	//hbbftCache := NewhbbftCacheMap()
-	//rwSetMap := make(map[string]*commonpb.TxRWSet)
-	//b0 := CreateNewTestBlock(0)
-	//hbbftCache.SethbbftTxBatch(b0, 0, rwSetMap)
-	//hash0 := b0.Header.BlockHash
-	//hc := hbbftCache.GetVerifiedhbbftTxBatchs()
-	//b1 := CreateNewTestBlock(1)
-	//b1.Header.BlockHash = []byte{'1','2','3','4','5','6','7','8','9','0'}
-	//hash1 := b1.Header.BlockHash
-	//hc.SethbbftTxBatch(b1,1,rwSetMap)
-	//b, c, m := hc.GetVerifiedTxBatchByHash(hash1)
-	//hbbftCache.SethbbftTxBatch(b,c,m)
-	//hc0 := hbbftCache.GetVerifiedhbbftTxBatchsByCode(1)
-	//hc0.hbbftTxBatchCacheMap.Range(func(k, _ interface{}) bool {
-	//	fmt.Println(k)
-	//	return true
-	//})
-	//fmt.Println(hbbftCache.HasVerifiedTxBatch(hash1))
-	//fmt.Println(hbbftCache.IsVerifiedTxBatchSuccess(hash0))
+	hc := NewHbbftCache()
+	rwSetMap := make(map[string]*commonpb.TxRWSet)
+	b0 := CreateNewTestBlock(0)
+	hash0 := b0.Header.BlockHash
+	ok := hc.AddHbbftTxBatch(b0, FAIL, rwSetMap)
+	fmt.Println(ok)
+	b1 := CreateNewTestBlock(1)
+	hash1 := []byte{'1','2','3','4','5','6','7','8','9','0'}
+	b1.Header.BlockHash = hash1
+	ok = hc.AddHbbftTxBatch(b1,SUCCESS,rwSetMap)
+	fmt.Println(ok)
+	b2 := CreateNewTestBlock(2)
+	hash2 := []byte{'2','3','4','5','6','7','8','9','0','1'}
+	b2.Header.BlockHash = hash2
+	ok = hc.AddHbbftTxBatch(b2,SUCCESS,rwSetMap)
+	fmt.Println(ok)
+	b3 := CreateNewTestBlock(3)
+	hash3 := []byte{'3','4','5','6','7','8','9','0','1','2'}
+	b3.Header.BlockHash = hash3
+	ok = hc.AddHbbftTxBatch(b3,FAIL,rwSetMap)
+	fmt.Println(ok)
+
+	fmt.Println("Get TxBatch by FAIL code")
+	tb0 := hc.GetVerifiedHbbftTxBatchsByCode(FAIL)
+	for i := 0; i < len(tb0); i++ {
+		fmt.Println(tb0[i].txBatch.Header.BlockHash)
+	}
+	fmt.Println("Get TxBatch by SUCCESS code")
+	tb1 := hc.GetVerifiedHbbftTxBatchsByCode(SUCCESS)
+	for i := 0; i < len(tb1); i++ {
+		fmt.Println(tb1[i].txBatch.Header.BlockHash)
+	}
+
+	fmt.Println("Get TxBatch by Hash")
+	htb0, ok := hc.GetVerifiedTxBatchByHash(hash0)
+	if ok == nil {
+		b := htb0.GetTxBatch()
+		fmt.Println(b.Header.BlockHeight)
+		fmt.Println(htb0.GetCode())
+		fmt.Println(len(htb0.GetTxBatchRwSet()))
+	} else {
+		fmt.Println(ok)
+	}
+	htb1, ok := hc.GetVerifiedTxBatchByHash(hash1)
+	if ok == nil {
+		htb1.SetCode(FAIL)
+		b := htb1.GetTxBatch()
+		b.Header.BlockHash = []byte{'4','5','6','7','8','9','0','1','2','3'}
+		htb1.SetTxBatch(b)
+		rw := htb1.GetTxBatchRwSet()
+		htb1.SetTxBatchRwSet(rw)
+	} else {
+		fmt.Println(ok)
+	}
+
+	fmt.Println(hc.HasVerifiedTxBatch(hash2))
+	fmt.Println(hc.IsVerifiedTxBatchSuccess(hash3))
+
+	hc.SetTxBatchCache(CreateNewTestBlock(4))
+	tbc := hc.GetTxBatchCache()
+	fmt.Println(tbc.Header.BlockHash)
+	hcMap := hc.GetHbbftTxBatchCacheMap()
+	b,ok0 := hcMap.Load(string(hash2))
+	if ok0 {
+		fmt.Println(b.(commonpb.Block).Header.BlockHeight)
+	}
+	hc.ClearHbbftCache()
 }
