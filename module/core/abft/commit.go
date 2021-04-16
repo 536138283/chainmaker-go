@@ -4,7 +4,7 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package hbbft
+package abft
 
 import (
 	"chainmaker.org/chainmaker-go/core/cache"
@@ -83,7 +83,7 @@ func (c *Committer) Commit() error {
 	// get the	retryList after schedule
 	c.retryList = c.scheduler.retryList
 
-	// get the verified branch from cache
+	// get the verified branch from cache TODO ABFT
 	branchCacheList := c.hbbftCache.GetVerifiedHbbftTxBatchsByCode(cache.SUCCESS)
 
 	// get the branchID list before ABA
@@ -101,6 +101,7 @@ func (c *Committer) Commit() error {
 	// handle the tx which ABA fail
 	c.handelABAFailTranstraction(branchIDListFailABA, txBranchMapBeforeABA)
 
+	block.Header.BlockTimestamp = baseBranchInfo.Header.BlockTimestamp
 	var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
 	err = common.FinalizeBlock(block, newRWSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)
 	if err != nil {
@@ -114,13 +115,11 @@ func (c *Committer) Commit() error {
 
 	// get the base branch info
 	baseBranchId := c.branchIDList[0]
-	baseBranchInfo := c.scheduler.branchInfo[baseBranchId].branch
 
 	block.Header.BlockHash = hash[:]
 	block.Header.Signature = sig
-	block.Header.BlockTimestamp = baseBranchInfo.Header.BlockTimestamp
 
-	//ear hbbft catche
+	//ear abft catche
 	c.hbbftCache.ClearHbbftCache()
 
 	//CommitBlock the action that all consensus types do when a block is committed

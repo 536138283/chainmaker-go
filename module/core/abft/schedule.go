@@ -4,7 +4,7 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package hbbft
+package abft
 
 import (
 	"sort"
@@ -69,6 +69,8 @@ func delRepeatTransaction(
 		retryList = append(retryList, branch.Txs[index])
 	}
 
+	//TODO CHECK RELATED TRANSACTIONS
+
 	// merge transaction's DAG & RWSet
 	mergeRwSetMapAndDAG(
 		deleteSites,
@@ -79,9 +81,9 @@ func delRepeatTransaction(
 func recordTheReleatedTrans(deleteSites []int, branch *commonpb.Block) map[int]struct{} {
 	relatedTranSiteMap := make(map[int]struct{})
 	for _, site := range deleteSites {
-		if _, ok := relatedTranSiteMap[site]; !ok {
-			relatedTranSiteMap[site] = struct{}{}
-		}
+		//if _, ok := relatedTranSiteMap[site]; !ok {
+		//	relatedTranSiteMap[site] = struct{}{}
+		//}
 
 		neighbors := branch.Dag.Vertexes[site].Neighbors
 		for _, relatedTranSite := range neighbors {

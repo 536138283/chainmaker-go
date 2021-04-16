@@ -4,7 +4,7 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package hbbft
+package abft
 
 import (
 	"encoding/hex"
@@ -76,7 +76,9 @@ func (p *Packager) verifyHeight() (bool, error) {
 	return true, nil
 }
 
+//优化
 func (p *Packager) checkPackageStatus() bool {
+	//TODO
 	switch p.packageStatus {
 	case NoPackaging:
 		p.SetPackageStatus(Packaging)
@@ -96,6 +98,7 @@ func (p *Packager) checkPackageStatus() bool {
 	}
 }
 
+//TODO IF 优化
 func (p *Packager) Package() error {
 	ok, err := p.verifyHeight()
 	if !ok {
@@ -114,6 +117,8 @@ func (p *Packager) Package() error {
 			p.log.Debugf("no txs in tx pool, packaging txBatch stoped")
 			return nil
 		}
+		//TODO check batch
+
 		timeLasts := make([]int64, 0)
 		ssStartTick := utils.CurrentTimeMillisSeconds()
 		snapshot := p.snapshotManager.NewSnapshot(lastBlock, txBatch)

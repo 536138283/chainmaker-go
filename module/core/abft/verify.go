@@ -4,7 +4,7 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package hbbft
+package abft
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
@@ -84,6 +84,8 @@ func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) {
 }
 
 func (v *Verifier) verify(block *commonPb.Block) error {
+
+	///TODO CHONGFUJIAOYAN
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err := utils.IsEmptyBlock(block); err != nil {
 		return err
@@ -104,7 +106,7 @@ func (v *Verifier) verify(block *commonPb.Block) error {
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
 		err := v.hbbftCache.AddHbbftTxBatch(block, cache.FAIL, txRWSetMap)
 		if err != nil {
-			v.log.Warnf("add hbbft cache tx batch [%d](%x),preBlockHash:%x, %s",
+			v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
 		}
 		return err
@@ -115,7 +117,7 @@ func (v *Verifier) verify(block *commonPb.Block) error {
 	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
 	err = v.hbbftCache.AddHbbftTxBatch(block, cache.SUCCESS, txRWSetMap)
 	if err != nil {
-		v.log.Warnf("add hbbft cache tx batch [%d](%x),preBlockHash:%x, %s",
+		v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
@@ -149,19 +151,7 @@ func (v *Verifier) verifier(block *commonPb.Block) {
 		return
 	}
 	defer goRoutinePool.Release()
-	v.wg.Add(1)
 	goRoutinePool.Submit(v.verifyTask(block))
-	v.wg.Wait()
-	//go v.isFinishVerify()
-	//ticker := time.NewTicker(v.verifyTimeout)
-	//select {
-	//case <-ticker.C:
-	//	v.log.Warnf("wait tx batch verify timeout,height: %d", block.Header.BlockHeight)
-	//	return
-	//case <-v.finishVerifyC:
-	//	v.log.Infof("all tx batch verify completed,height: %d", block.Header.BlockHeight)
-	//	return
-	//}
 }
 
 func (v *Verifier) verifyTask(block *commonPb.Block) func() {

@@ -4,7 +4,7 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-package hbbft
+package abft
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
@@ -80,6 +80,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 
 	switch message.Topic {
 	case msgbus.PackageSignal:
+		//TODO !ok
 		if packagedSignal, ok := message.Payload.(hbbft.PackagedSignal); ok {
 			c.Packager.packagedSignal = &packagedSignal
 		}

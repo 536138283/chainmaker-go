@@ -254,7 +254,7 @@ func VerifyTxResult(tx *commonpb.Transaction, result *commonpb.Result, hashType 
 func IsTxRWSetValid(block *commonpb.Block, tx *commonpb.Transaction, rwSet *commonpb.TxRWSet, result *commonpb.Result,
 	rwsetHash []byte) error {
 	if rwSet == nil || result == nil {
-		return fmt.Errorf("txresult, rwset == nil (tx:%s)",
+		return fmt.Errorf("txresult, rwset == nil (blockHeight: %d) (blockHash: %s) (tx:%s)",
 			block.Header.BlockHeight, block.Header.BlockHash, tx.Header.TxId)
 	}
 	if !bytes.Equal(tx.Result.RwSetHash, rwsetHash) {
