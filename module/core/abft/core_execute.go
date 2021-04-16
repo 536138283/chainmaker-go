@@ -7,18 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"encoding/hex"
+
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/protocol"
-	"encoding/hex"
 )
 
 type CoreExecute struct {
 	chainId         string // chain id, to identity this chain
-	hbbftCache      *cache.HbbftCache
+	abftCache       *cache.AbftCache
 	ledgerCache     protocol.LedgerCache     // ledger cache
 	txPool          protocol.TxPool          // tx pool provides tx batch
 	snapshotManager protocol.SnapshotManager // snapshot manager
@@ -31,7 +32,7 @@ type CoreExecute struct {
 	log             *logger.CMLogger   // logger
 
 	Committer *Committer
-	Packager  *Packager
+	Proposer  *Proposer
 	Verifier  *Verifier
 }
 
@@ -63,10 +64,10 @@ func NewCoreExecute(ceConfig *CoreExecuteConfig) *CoreExecute {
 		log:             ceConfig.Log,
 		vmMgr:           ceConfig.VmMgr,
 	}
-	ce.hbbftCache = cache.NewHbbftCache()
-	ce.Packager = NewPackager(ce)
+	ce.abftCache = cache.NewAbftCache()
+	ce.Proposer = NewProposer(ce)
 	ce.Verifier = NewVerifier(ce)
-	ce.Committer = NewCommitter(ce, ce.Packager)
+	ce.Committer = NewCommitter(ce, ce.Proposer)
 	return ce
 }
 
@@ -81,10 +82,10 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 	switch message.Topic {
 	case msgbus.PackageSignal:
 		//TODO !ok
-		if packagedSignal, ok := message.Payload.(hbbft.PackagedSignal); ok {
-			c.Packager.packagedSignal = &packagedSignal
+		if proposedSignal, ok := message.Payload.(abft.PackagedSignal); ok {
+			c.Proposer.proposedSignal = &proposedSignal
 		}
-		if err := c.Packager.Package(); err != nil {
+		if err := c.Proposer.Propose(); err != nil {
 			c.log.Warnf("pack fail, error %s",
 				err.Error())
 		}
@@ -93,7 +94,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 			c.Verifier.verifier(&block)
 		}
 	case msgbus.CommitedTxBatchs:
-		if txBatchAfterABA, ok := message.Payload.(hbbft.TxBatchAfterABA); ok {
+		if txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA); ok {
 			ok, err := c.Committer.verifyHeight(txBatchAfterABA.BlockHeight)
 			if !ok {
 				c.log.Errorf("after ABA the tx batch height is wrong: %s, height: (%d)", err.Error(), txBatchAfterABA.BlockHeight)

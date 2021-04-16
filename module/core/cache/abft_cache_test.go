@@ -1,41 +1,42 @@
 package cache
 
 import (
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"fmt"
 	"testing"
+
+	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 )
 
-func TestHbbft(t *testing.T) {
-	hc := NewHbbftCache()
+func TestAbft(t *testing.T) {
+	hc := NewAbftCache()
 	rwSetMap := make(map[string]*commonpb.TxRWSet)
 	b0 := CreateNewTestBlock(0)
 	hash0 := b0.Header.BlockHash
-	ok := hc.AddHbbftTxBatch(b0, FAIL, rwSetMap)
+	ok := hc.AddAbftTxBatch(b0, FAIL, rwSetMap)
 	fmt.Println(ok)
 	b1 := CreateNewTestBlock(1)
-	hash1 := []byte{'1','2','3','4','5','6','7','8','9','0'}
+	hash1 := []byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
 	b1.Header.BlockHash = hash1
-	ok = hc.AddHbbftTxBatch(b1,SUCCESS,rwSetMap)
+	ok = hc.AddAbftTxBatch(b1, SUCCESS, rwSetMap)
 	fmt.Println(ok)
 	b2 := CreateNewTestBlock(2)
-	hash2 := []byte{'2','3','4','5','6','7','8','9','0','1'}
+	hash2 := []byte{'2', '3', '4', '5', '6', '7', '8', '9', '0', '1'}
 	b2.Header.BlockHash = hash2
-	ok = hc.AddHbbftTxBatch(b2,SUCCESS,rwSetMap)
+	ok = hc.AddAbftTxBatch(b2, SUCCESS, rwSetMap)
 	fmt.Println(ok)
 	b3 := CreateNewTestBlock(3)
-	hash3 := []byte{'3','4','5','6','7','8','9','0','1','2'}
+	hash3 := []byte{'3', '4', '5', '6', '7', '8', '9', '0', '1', '2'}
 	b3.Header.BlockHash = hash3
-	ok = hc.AddHbbftTxBatch(b3,FAIL,rwSetMap)
+	ok = hc.AddAbftTxBatch(b3, FAIL, rwSetMap)
 	fmt.Println(ok)
 
 	fmt.Println("Get TxBatch by FAIL code")
-	tb0 := hc.GetVerifiedHbbftTxBatchsByCode(FAIL)
+	tb0 := hc.GetVerifiedAbftTxBatchsByCode(FAIL)
 	for i := 0; i < len(tb0); i++ {
 		fmt.Println(tb0[i].txBatch.Header.BlockHash)
 	}
 	fmt.Println("Get TxBatch by SUCCESS code")
-	tb1 := hc.GetVerifiedHbbftTxBatchsByCode(SUCCESS)
+	tb1 := hc.GetVerifiedAbftTxBatchsByCode(SUCCESS)
 	for i := 0; i < len(tb1); i++ {
 		fmt.Println(tb1[i].txBatch.Header.BlockHash)
 	}
@@ -54,7 +55,7 @@ func TestHbbft(t *testing.T) {
 	if ok == nil {
 		htb1.SetCode(FAIL)
 		b := htb1.GetTxBatch()
-		b.Header.BlockHash = []byte{'4','5','6','7','8','9','0','1','2','3'}
+		b.Header.BlockHash = []byte{'4', '5', '6', '7', '8', '9', '0', '1', '2', '3'}
 		htb1.SetTxBatch(b)
 		rw := htb1.GetTxBatchRwSet()
 		htb1.SetTxBatchRwSet(rw)
@@ -68,10 +69,10 @@ func TestHbbft(t *testing.T) {
 	hc.SetTxBatchCache(CreateNewTestBlock(4))
 	tbc := hc.GetTxBatchCache()
 	fmt.Println(tbc.Header.BlockHash)
-	hcMap := hc.GetHbbftTxBatchCacheMap()
-	b,ok0 := hcMap.Load(string(hash2))
+	hcMap := hc.GetAbftTxBatchCacheMap()
+	b, ok0 := hcMap.Load(string(hash2))
 	if ok0 {
 		fmt.Println(b.(commonpb.Block).Header.BlockHeight)
 	}
-	hc.ClearHbbftCache()
+	hc.ClearAbftCache()
 }

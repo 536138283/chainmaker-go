@@ -9,8 +9,8 @@ package core
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/core/abft"
 	"chainmaker.org/chainmaker-go/core/committer"
-	"chainmaker.org/chainmaker-go/core/hbbft"
 
 	"chainmaker.org/chainmaker-go/core/proposer"
 	"chainmaker.org/chainmaker-go/core/scheduler"
@@ -120,8 +120,8 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 	if err != nil {
 		return nil, err
 	}
-	if core.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_POW {
-		ceConf := &hbbft.CoreExecuteConfig{
+	if core.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_ABFT {
+		ceConf := &abft.CoreExecuteConfig{
 			ChainId:         core.chainId,
 			TxPool:          core.txPool,
 			SnapshotManager: core.snapshotManager,
@@ -134,7 +134,7 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 			Log:             core.log,
 			VmMgr:           core.vmMgr,
 		}
-		core.coreExecutor = hbbft.NewCoreExecute(ceConf)
+		core.coreExecutor = abft.NewCoreExecute(ceConf)
 	}
 	return core, nil
 }

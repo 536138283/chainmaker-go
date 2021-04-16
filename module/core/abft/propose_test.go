@@ -1,11 +1,12 @@
 package abft
 
 import (
+	"testing"
+
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/mock"
 	"github.com/golang/mock/gomock"
-	"testing"
 )
 
 var (
@@ -17,7 +18,7 @@ func TestVerifyHeight(t *testing.T) {
 
 }
 
-func NewPackagerTest(t *testing.T) *Packager {
+func NewProposerTest(t *testing.T) *Proposer {
 	ctl := gomock.NewController(t)
 	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
 	txPool := mock.NewMockTxPool(ctl)
@@ -42,6 +43,6 @@ func NewPackagerTest(t *testing.T) *Packager {
 		log:             log,
 		vmMgr:           vmMgr,
 	}
-	packager := NewPackager(ce)
-	return packager
+	proposer := NewProposer(ce)
+	return proposer
 }

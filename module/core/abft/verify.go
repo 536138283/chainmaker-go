@@ -7,6 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"encoding/hex"
+	"errors"
+	"runtime"
+	"sync"
+	"time"
+
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
@@ -17,13 +23,8 @@ import (
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
-	"encoding/hex"
-	"errors"
 	"github.com/panjf2000/ants/v2"
 	"github.com/prometheus/client_golang/prometheus"
-	"runtime"
-	"sync"
-	"time"
 )
 
 const DEFAULT_VERIFY_TIMEOUT = time.Second * 10
@@ -32,7 +33,7 @@ type Verifier struct {
 	chainId       string
 	wg            sync.WaitGroup
 	log           *logger.CMLogger
-	hbbftCache    *cache.HbbftCache
+	abftCache     *cache.AbftCache
 	verifyBlock   *common.VerifyBlock
 	ledgerCache   protocol.LedgerCache
 	msgBus        msgbus.MessageBus
@@ -46,7 +47,7 @@ func NewVerifier(ce *CoreExecute) *Verifier {
 	verifier := &Verifier{
 		wg:            sync.WaitGroup{},
 		log:           ce.log,
-		hbbftCache:    ce.hbbftCache,
+		abftCache:     ce.abftCache,
 		ledgerCache:   ce.ledgerCache,
 		msgBus:        ce.msgBus,
 		verifyTimeout: DEFAULT_VERIFY_TIMEOUT,
@@ -104,7 +105,7 @@ func (v *Verifier) verify(block *commonPb.Block) error {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
-		err := v.hbbftCache.AddHbbftTxBatch(block, cache.FAIL, txRWSetMap)
+		err := v.abftCache.AddAbftTxBatch(block, cache.FAIL, txRWSetMap)
 		if err != nil {
 			v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
@@ -115,7 +116,7 @@ func (v *Verifier) verify(block *commonPb.Block) error {
 	v.txPool.AddTxsToPendingCache(block.Txs, block.Header.BlockHeight)
 	isValid = true
 	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
-	err = v.hbbftCache.AddHbbftTxBatch(block, cache.SUCCESS, txRWSetMap)
+	err = v.abftCache.AddAbftTxBatch(block, cache.SUCCESS, txRWSetMap)
 	if err != nil {
 		v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())

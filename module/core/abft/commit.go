@@ -7,15 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"encoding/hex"
+	"errors"
+	"sort"
+
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
-	"encoding/hex"
-	"errors"
-	"sort"
 )
 
 type Committer struct {
@@ -23,7 +24,7 @@ type Committer struct {
 	blockHeight  int64
 	branchIDList []string // branchID After ABA
 	ledgerCache  protocol.LedgerCache
-	hbbftCache   cache.HbbftCache
+	abftCache    cache.AbftCache
 	scheduler    *Scheduler
 	log          *logger.CMLogger // logger
 	txPool       protocol.TxPool
@@ -31,21 +32,21 @@ type Committer struct {
 	chainConf    protocol.ChainConf
 	retryList    []*commonpb.Transaction
 	commonCommit *common.CommitBlock
-	packager     *Packager
+	proposer     *Proposer
 }
 
-func NewCommitter(coreExecute *CoreExecute, packager *Packager) *Committer {
+func NewCommitter(coreExecute *CoreExecute, proposer *Proposer) *Committer {
 	committer := &Committer{
 		chainID:      coreExecute.chainId,
 		blockHeight:  0,
 		branchIDList: make([]string, 0),
 		ledgerCache:  coreExecute.ledgerCache,
-		hbbftCache:   *coreExecute.hbbftCache,
+		abftCache:    *coreExecute.abftCache,
 		log:          coreExecute.log,
 		txPool:       coreExecute.txPool,
 		identity:     coreExecute.identity,
 		chainConf:    coreExecute.chainConf,
-		packager:     packager,
+		proposer:     proposer,
 	}
 	cbConf := &common.CommitBlockConf{
 		Store:           coreExecute.blockchainStore,
@@ -84,7 +85,7 @@ func (c *Committer) Commit() error {
 	c.retryList = c.scheduler.retryList
 
 	// get the verified branch from cache TODO ABFT
-	branchCacheList := c.hbbftCache.GetVerifiedHbbftTxBatchsByCode(cache.SUCCESS)
+	branchCacheList := c.abftCache.GetVerifiedAbftTxBatchsByCode(cache.SUCCESS)
 
 	// get the branchID list before ABA
 	branchIDListBeforeABA := make([]string, 0)
@@ -120,7 +121,7 @@ func (c *Committer) Commit() error {
 	block.Header.Signature = sig
 
 	//ear abft catche
-	c.hbbftCache.ClearHbbftCache()
+	c.abftCache.ClearAbftCache()
 
 	//CommitBlock the action that all consensus types do when a block is committed
 	err = c.commonCommit.CommitBlock(block, newRWSetMap)
@@ -131,8 +132,8 @@ func (c *Committer) Commit() error {
 	//sync txpool
 	c.txPool.RetryAndRemoveTxs(c.retryList, block.Txs)
 
-	//set package status
-	c.packager.SetPackageStatus(NoPackaging)
+	//set propose status
+	c.proposer.SetProposeStatus(NoPackaging)
 	return nil
 }
 
@@ -141,7 +142,7 @@ func (c *Committer) sortBranchID() {
 }
 
 func (c *Committer) getConfirmedBranchInfo(branchID []byte) error {
-	branch, err := c.hbbftCache.GetVerifiedTxBatchByHash(branchID)
+	branch, err := c.abftCache.GetVerifiedTxBatchByHash(branchID)
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,7 @@ import (
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus/hbbft"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/utils"
 
 	"errors"
@@ -22,18 +22,18 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 )
 
-type PackageStatus int32
+type ProposeStatus int32
 
 const (
-	NoPackaging PackageStatus = iota
+	NoPackaging ProposeStatus = iota
 	Packaging
-	Packaged
+	Proposed
 )
 
-type Packager struct {
+type Proposer struct {
 	chainId         string
-	packagedSignal  *hbbft.PackagedSignal
-	packageStatus   PackageStatus
+	proposedSignal  *abft.PackagedSignal
+	proposeStatus   ProposeStatus
 	txPool          protocol.TxPool
 	ledgerCache     protocol.LedgerCache
 	log             *logger.CMLogger
@@ -41,12 +41,12 @@ type Packager struct {
 	snapshotManager protocol.SnapshotManager
 	chainConf       protocol.ChainConf
 	vmMgr           protocol.VmManager
-	hbbftCache      *cache.HbbftCache
+	abftCache       *cache.AbftCache
 	msgBus          msgbus.MessageBus
 }
 
-func NewPackager(ce *CoreExecute) *Packager {
-	return &Packager{
+func NewProposer(ce *CoreExecute) *Proposer {
+	return &Proposer{
 		chainId:         ce.chainId,
 		txPool:          ce.txPool,
 		ledgerCache:     ce.ledgerCache,
@@ -56,55 +56,55 @@ func NewPackager(ce *CoreExecute) *Packager {
 		vmMgr:           ce.vmMgr,
 		snapshotManager: ce.snapshotManager,
 		msgBus:          ce.msgBus,
-		hbbftCache:      ce.hbbftCache,
+		abftCache:       ce.abftCache,
 	}
 }
-func (p *Packager) SetPackageStatus(status PackageStatus) {
-	p.packageStatus = status
+func (p *Proposer) SetProposeStatus(status ProposeStatus) {
+	p.proposeStatus = status
 }
-func (p *Packager) GetPackageStatus() PackageStatus {
-	return p.packageStatus
+func (p *Proposer) GetProposeStatus() ProposeStatus {
+	return p.proposeStatus
 }
-func (p *Packager) verifyHeight() (bool, error) {
+func (p *Proposer) verifyHeight() (bool, error) {
 	currentHeight, err := p.ledgerCache.CurrentHeight()
 	if err != nil {
 		return false, err
 	}
-	if currentHeight+1 != p.packagedSignal.BlockHeight {
+	if currentHeight+1 != p.proposedSignal.BlockHeight {
 		return false, errors.New("the packaging signal height is inconsistent with the cache")
 	}
 	return true, nil
 }
 
 //优化
-func (p *Packager) checkPackageStatus() bool {
+func (p *Proposer) checkProposeStatus() bool {
 	//TODO
-	switch p.packageStatus {
+	switch p.proposeStatus {
 	case NoPackaging:
-		p.SetPackageStatus(Packaging)
+		p.SetProposeStatus(Packaging)
 		return true
 	case Packaging:
 		return false
-	case Packaged:
-		txBatch := p.hbbftCache.GetTxBatchCache()
+	case Proposed:
+		txBatch := p.abftCache.GetTxBatchCache()
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		return false
 	default:
 		p.log.Errorf(
-			"Invalid Package Status: %v",
-			p.packageStatus,
+			"Invalid Propose Status: %v",
+			p.proposeStatus,
 		)
 		return false
 	}
 }
 
 //TODO IF 优化
-func (p *Packager) Package() error {
+func (p *Proposer) Propose() error {
 	ok, err := p.verifyHeight()
 	if !ok {
 		return err
 	}
-	ok = p.checkPackageStatus()
+	ok = p.checkProposeStatus()
 	if ok {
 
 		lastBlock := p.ledgerCache.GetLastCommittedBlock()
@@ -112,7 +112,7 @@ func (p *Packager) Package() error {
 		if err != nil {
 			return err
 		}
-		checkedBatch := p.txPool.FetchTxBatch(p.packagedSignal.BlockHeight)
+		checkedBatch := p.txPool.FetchTxBatch(p.proposedSignal.BlockHeight)
 		if checkedBatch == nil || len(checkedBatch) == 0 {
 			p.log.Debugf("no txs in tx pool, packaging txBatch stoped")
 			return nil
@@ -150,10 +150,10 @@ func (p *Packager) Package() error {
 			}
 			p.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
-		p.hbbftCache.SetTxBatchCache(txBatch)
+		p.abftCache.SetTxBatchCache(txBatch)
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("proposer success [%d](txs:%d)", txBatch.Header.BlockHeight, txBatch.Header.TxCount)
-		p.SetPackageStatus(Packaged)
+		p.SetProposeStatus(Proposed)
 	}
 	return nil
 }
