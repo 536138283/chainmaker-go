@@ -14,20 +14,20 @@ import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 )
 
-const (
-	FAIL uint32 = iota
-	SUCCESS
-)
-
 type AbftTxBatch struct {
+	txBatch      *commonpb.Block
+	verifyResult bool                         //校验是否成功
+	rwSetMap     map[string]*commonpb.TxRWSet //该交易批次读写集Map
+}
+
+type TxBatchCache struct { //单个批次的缓存结构
 	txBatch  *commonpb.Block
-	code     uint32                       //校验是否成功
-	rwSetMap map[string]*commonpb.TxRWSet //该交易批次读写集Map
+	rwSetMap map[string]*commonpb.TxRWSet
 }
 
 type AbftCache struct {
-	txBatchCache        *commonpb.Block //节点打包的单个批次缓存
-	abftTxBatchCacheMap sync.Map        //节点校验后的批次集合
+	txBatchCache        *TxBatchCache //节点打包的单个批次缓存
+	abftTxBatchCacheMap sync.Map      //节点校验后的批次集合
 }
 
 func NewAbftCache() *AbftCache {
@@ -38,26 +38,26 @@ func NewAbftCache() *AbftCache {
 }
 
 // Add the TxBatch after honey badger bft
-func (hc *AbftCache) AddAbftTxBatch(b *commonpb.Block, c uint32, rwSetMap map[string]*commonpb.TxRWSet) error {
+func (hc *AbftCache) AddAbftTxBatch(b *commonpb.Block, c bool, rwSetMap map[string]*commonpb.TxRWSet) error {
 	if b == nil || b.Header == nil {
 		return errors.New("set the tx batch failed,block can't be empty")
 	}
 	hb := &AbftTxBatch{
-		txBatch:  b,
-		code:     c,
-		rwSetMap: rwSetMap,
+		txBatch:      b,
+		verifyResult: c,
+		rwSetMap:     rwSetMap,
 	}
 	hc.abftTxBatchCacheMap.Store(hex.EncodeToString(b.Header.BlockHash), hb)
 	return nil
 }
 
-// Get the TxBatch by code
-func (hc *AbftCache) GetVerifiedAbftTxBatchsByCode(c uint32) []*AbftTxBatch {
+// Get the TxBatch by result
+func (hc *AbftCache) GetVerifiedAbftTxBatchsByResult(c bool) []*AbftTxBatch {
 
 	txBatch := make([]*AbftTxBatch, 0)
 
 	hc.abftTxBatchCacheMap.Range(func(_, hb interface{}) bool {
-		if hb.(*AbftTxBatch).code == c {
+		if hb.(*AbftTxBatch).verifyResult == c {
 			txBatch = append(txBatch, hb.(*AbftTxBatch))
 		}
 		return true
@@ -90,14 +90,14 @@ func (hc *AbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
 	if !ok {
 		return false, errors.New("TxBatch not exist")
 	}
-	return VerifiedTxBatch.(*AbftTxBatch).code == SUCCESS, nil
+	return VerifiedTxBatch.(*AbftTxBatch).verifyResult, nil
 }
 
 func (htb *AbftTxBatch) GetTxBatch() *commonpb.Block {
 	return htb.txBatch
 }
-func (htb *AbftTxBatch) GetCode() uint32 {
-	return htb.code
+func (htb *AbftTxBatch) GetVerifyResult() bool {
+	return htb.verifyResult
 }
 func (htb *AbftTxBatch) GetTxBatchRwSet() map[string]*commonpb.TxRWSet {
 	return htb.rwSetMap
@@ -106,22 +106,29 @@ func (htb *AbftTxBatch) GetTxBatchRwSet() map[string]*commonpb.TxRWSet {
 func (htb *AbftTxBatch) SetTxBatch(txBatch *commonpb.Block) {
 	htb.txBatch = txBatch
 }
-func (htb *AbftTxBatch) SetCode(code uint32) {
-	htb.code = code
+func (htb *AbftTxBatch) SetVerifyResult(result bool) {
+	htb.verifyResult = result
 }
 func (htb *AbftTxBatch) SetTxBatchRwSet(rwSet map[string]*commonpb.TxRWSet) {
 	htb.rwSetMap = rwSet
 }
-
-func (hc *AbftCache) GetTxBatchCache() *commonpb.Block {
+func (tbc *TxBatchCache) GetTxBatch() *commonpb.Block {
+	return tbc.txBatch
+}
+func (tbc *TxBatchCache) GetRwSetMap() map[string]*commonpb.TxRWSet {
+	return tbc.rwSetMap
+}
+func (hc *AbftCache) GetTxBatchCache() *TxBatchCache {
 	return hc.txBatchCache
 }
-
 func (hc *AbftCache) GetAbftTxBatchCacheMap() sync.Map {
 	return hc.abftTxBatchCacheMap
 }
-func (hc *AbftCache) SetTxBatchCache(txBatch *commonpb.Block) {
-	hc.txBatchCache = txBatch
+func (hc *AbftCache) SetTxBatchCache(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
+	hc.txBatchCache = &TxBatchCache{
+		txBatch:  txBatch,
+		rwSetMap: rwSetMap,
+	}
 }
 
 func (hc *AbftCache) ClearAbftCache() {

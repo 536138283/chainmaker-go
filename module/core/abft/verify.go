@@ -7,11 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"bytes"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/Workiva/go-datastructures/threadsafe/err"
-	"runtime"
 	"sync"
 	"time"
 
@@ -56,7 +56,6 @@ func NewVerifier(ce *CoreExecute) (*Verifier, error) {
 		txPool:        ce.txPool,
 		chainId:       ce.chainId,
 	}
-	//verifier.finishVerifyC = make(chan struct{})
 	conf := &common.ValidateBlockConf{
 		ChainConf:       ce.chainConf,
 		Log:             ce.log,
@@ -71,13 +70,13 @@ func NewVerifier(ce *CoreExecute) (*Verifier, error) {
 	var err error
 	verifier.goRoutinePool, err = ants.NewPool(len(ce.chainConf.ChainConfig().Consensus.Nodes), ants.WithPreAlloc(true))
 	if err != nil {
-		return fmt.Errorf('')
+		return nil, fmt.Errorf("new verifier failed: %s", err.Error())
 	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		verifier.metricBlockVerifyTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_VERIFIER, "metric_block_verify_time",
 			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
 	}
-	return verifier
+	return verifier, nil
 }
 
 func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) {
@@ -91,49 +90,45 @@ func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) {
 	return true, nil
 }
 
-func (v *Verifier) verify(block *commonPb.Block) error {
-
+func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err := utils.IsEmptyBlock(block); err != nil {
-		return err
+		return false, nil, err
 	}
 	ok, err := v.checkHeight(block)
 	if !ok {
-		return err
+		return false, nil, err
 	}
 	v.log.Debugf("verify receive [%d](%x,%d,%d)",
 		block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount, len(block.Txs))
 
-	txRWSetMap, timeLasts, err := v.verifyBlock.ValidateBlock(block)
-	var isValid bool
-	if err != nil {
-		isValid = false
-		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
-		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
-		err := v.abftCache.AddAbftTxBatch(block, cache.FAIL, txRWSetMap)
-		if err != nil {
-			v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
-				block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
+	var (
+		txRwSetMap map[string]*commonPb.TxRWSet
+		timeLasts  []int64
+	)
+	//nodes that pack the txBatch do not need to verify
+	txBatchCache := v.abftCache.GetTxBatchCache()
+	if txBatchCache.GetTxBatch() != nil {
+		if bytes.Equal(txBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
+			txRwSetMap = txBatchCache.GetRwSetMap()
 		}
-		return err
+	} else {
+		txRwSetMap, timeLasts, err = v.verifyBlock.ValidateBlock(block)
+		if err != nil {
+			return false, nil, err
+		}
 	}
 	// mark transactions in block as pending status in txpool
 	v.txPool.AddTxsToPendingCache(block.Txs, block.Header.BlockHeight)
-	isValid = true
-	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid))
-	err = v.abftCache.AddAbftTxBatch(block, cache.SUCCESS, txRWSetMap)
-	if err != nil {
-		v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
-	}
+
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	v.log.Infof("verify success [%d,%x](%v,%d)", block.Header.BlockHeight, block.Header.BlockHash,
 		timeLasts, elapsed)
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
-	return nil
+	return true, txRwSetMap, nil
 }
 
 func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyResult {
@@ -151,22 +146,31 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 }
 
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
-	var goRoutinePool *ants.Pool
 	var err error
-	if goRoutinePool, err = ants.NewPool(runtime.NumCPU()*4, ants.WithPreAlloc(true)); err != nil {
-		v.log.Errorf("ants new go routine pool failed: %s", err.Error())
-		return err
+	verifyResult, rwSetMap, err := v.verify(block)
+	if mode == protocol.CONSENSUS_VERIFY {
+		err = v.verifyResult(block, rwSetMap, verifyResult)
 	}
-	defer goRoutinePool.Release()
-	goRoutinePool.Submit(v.verifyTask(block))
+	return err
 }
 
-func (v *Verifier) verifyTask(block *commonPb.Block) func() {
+func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) func() {
 	return func() {
-		err := v.verify(block)
+		err := v.VerifyBlock(block, mode)
 		if err != nil {
 			v.log.Errorf("verify txBatch failed: %s, height: %d, txBatchHash: %s", err, block.Header.BlockHeight,
 				hex.EncodeToString(block.Header.BlockHash))
 		}
 	}
+}
+
+func (v *Verifier) verifyResult(block *commonPb.Block, rwSet map[string]*commonPb.TxRWSet, verifyResult bool) error {
+	err := v.abftCache.AddAbftTxBatch(block, verifyResult, rwSet)
+	if err != nil {
+		v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
+			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
+		return err
+	}
+	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
+	return nil
 }

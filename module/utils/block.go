@@ -198,7 +198,7 @@ func IsEmptyBlock(block *commonPb.Block) error {
 
 // CanProposeEmptyBlock can empty blocks be packed
 func CanProposeEmptyBlock(consensusType consensusPb.ConsensusType) bool {
-	return consensusPb.ConsensusType_HOTSTUFF == consensusType || consensusPb.ConsensusType_POW == consensusType
+	return consensusPb.ConsensusType_HOTSTUFF == consensusType || consensusPb.ConsensusType_POW == consensusType || consensusPb.ConsensusType_ABFT == consensusType
 }
 
 func VerifyBlockSig(hashType string, b *commonPb.Block, ac protocol.AccessControlProvider) (bool, error) {

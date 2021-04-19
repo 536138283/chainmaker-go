@@ -73,10 +73,10 @@ func (p *Proposer) verifyHeight() (bool, error) {
 
 func (p *Proposer) proposeStatus() (*commonpb.Block, bool) {
 	txBatch := p.abftCache.GetTxBatchCache()
-	if txBatch == nil {
+	if txBatch.GetTxBatch() == nil {
 		return nil, true
 	}
-	return txBatch, false
+	return txBatch.GetTxBatch(), false
 }
 
 func (p *Proposer) Propose() error {
@@ -110,7 +110,7 @@ func (p *Proposer) Propose() error {
 	select {
 	case <-ticker.C:
 		cancel()
-		p.log.Infof("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", height)
+		p.log.Infof("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", txBatch.Header.BlockHeight)
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		return nil
 	case <-p.getTxBatchC:
@@ -147,7 +147,7 @@ func (p *Proposer) Propose() error {
 			}
 			p.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
-		p.abftCache.SetTxBatchCache(txBatch)
+		p.abftCache.SetTxBatchCache(txBatch, txRWSetMap)
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("proposer success [%d](txs:%d)", txBatch.Header.BlockHeight, txBatch.Header.TxCount)
 	}

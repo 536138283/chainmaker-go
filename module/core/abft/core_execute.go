@@ -14,7 +14,6 @@ import (
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/protocol"
 	"encoding/hex"
-	"github.com/panjf2000/ants/v2"
 )
 
 type CoreExecute struct {
@@ -50,7 +49,7 @@ type CoreExecuteConfig struct {
 	VmMgr           protocol.VmManager
 }
 
-func NewCoreExecute(ceConfig *CoreExecuteConfig) *CoreExecute {
+func NewCoreExecute(ceConfig *CoreExecuteConfig) (*CoreExecute, error) {
 	ce := &CoreExecute{
 		chainId:         ceConfig.ChainId,
 		ledgerCache:     ceConfig.LedgerCache,
@@ -64,11 +63,15 @@ func NewCoreExecute(ceConfig *CoreExecuteConfig) *CoreExecute {
 		log:             ceConfig.Log,
 		vmMgr:           ceConfig.VmMgr,
 	}
+	var err error
 	ce.abftCache = cache.NewAbftCache()
 	ce.Proposer = NewProposer(ce)
-	ce.Verifier = NewVerifier(ce)
+	ce.Verifier, err = NewVerifier(ce)
+	if err != nil {
+		return nil, err
+	}
 	ce.Committer = NewCommitter(ce, ce.Proposer)
-	return ce
+	return ce, nil
 }
 
 // OnQuit called when quit subsribe message from message bus
@@ -90,7 +93,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		}
 	case msgbus.VerifyBlock:
 		if block, ok := message.Payload.(commonPb.Block); ok {
-			c.Verifier.goRoutinePool.Submit(c.Verifier.verifyTask())
+			c.Verifier.goRoutinePool.Submit(c.Verifier.verifyTask(&block, protocol.CONSENSUS_VERIFY))
 		}
 	case msgbus.CommitedTxBatchs:
 		if txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA); ok {
