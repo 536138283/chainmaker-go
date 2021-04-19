@@ -13,7 +13,6 @@ import (
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/protocol"
-	"encoding/hex"
 )
 
 type CoreExecute struct {
@@ -97,18 +96,9 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		}
 	case msgbus.CommitedTxBatchs:
 		if txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA); ok {
-			ok, err := c.Committer.verifyHeight(txBatchAfterABA.BlockHeight)
-			if !ok {
-				c.log.Errorf("after ABA the tx batch height is wrong: %s, height: (%d)", err.Error(), txBatchAfterABA.BlockHeight)
-				return
-			}
-			c.Committer.blockHeight = txBatchAfterABA.BlockHeight
-			for i, _ := range txBatchAfterABA.TxBatchHash {
-				c.Committer.getConfirmedBranchInfo(txBatchAfterABA.TxBatchHash[i])                                              // branchInfo After ABA
-				c.Committer.branchIDList = append(c.Committer.branchIDList, hex.EncodeToString(txBatchAfterABA.TxBatchHash[i])) // branchIDList After ABA
-			}
-
-			if err := c.Committer.Commit(); err != nil {
+			if err := c.Committer.Commit(
+				txBatchAfterABA.BlockHeight,
+				txBatchAfterABA.TxBatchHash); err != nil {
 				c.log.Warnf("commit fail, error %s",
 					err.Error())
 			}
