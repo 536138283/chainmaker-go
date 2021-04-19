@@ -7,8 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/localconf"
 	"encoding/hex"
 	"errors"
+	"fmt"
 	"sort"
 
 	"chainmaker.org/chainmaker-go/core/cache"
@@ -187,4 +190,83 @@ func (c *Committer) verifyHeight(height int64) (bool, error) {
 		return false, errors.New("the ABA signal height is inconsistent with the cache")
 	}
 	return true, nil
+}
+
+func (c *Committer) AddBlock(block *commonpb.Block) error {
+	startTick := utils.CurrentTimeMillisSeconds()
+	c.log.Debugf("add block(%d,%x)=(%x,%d,%d)",
+		block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, block.Header.TxCount, len(block.Txs))
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	var err error
+
+	height := block.Header.BlockHeight
+	if err = chain.isBlockLegal(block); err != nil {
+		chain.log.Errorf("block illegal [%d](hash:%x), %s", height, block.Header.BlockHash, err)
+		return err
+	}
+
+	lastProposed, rwSetMap := chain.proposalCache.GetProposedBlock(block)
+	if err = chain.checkLastProposedBlock(block, lastProposed, err, height, rwSetMap); err != nil {
+		return err
+	}
+
+	// record block
+	rwSet := chain.rearrangeRWSet(block, rwSetMap)
+
+	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
+	startDBTick := utils.CurrentTimeMillisSeconds()
+	if err = chain.blockchainStore.PutBlock(block, rwSet); err != nil {
+		// if put db error, then panic
+		chain.log.Error(err)
+		panic(err)
+	}
+	dbLasts := utils.CurrentTimeMillisSeconds() - startDBTick
+
+	// clear snapshot
+	startSnapshotTick := utils.CurrentTimeMillisSeconds()
+	if err = chain.snapshotManager.NotifyBlockCommitted(block); err != nil {
+		err = fmt.Errorf("notify snapshot error [%d](hash:%x)",
+			lastProposed.Header.BlockHeight, lastProposed.Header.BlockHash)
+		chain.log.Error(err)
+		return err
+	}
+	snapshotLasts := utils.CurrentTimeMillisSeconds() - startSnapshotTick
+
+	// notify chainConf to update config when config block committed
+	startConfTick := utils.CurrentTimeMillisSeconds()
+	if err = chain.notifyChainConf(block, err); err != nil {
+		return err
+	}
+	confLasts := utils.CurrentTimeMillisSeconds() - startConfTick
+
+	// Remove txs from txpool. Remove will invoke proposeSignal from txpool if pool size > txcount
+	startPoolTick := utils.CurrentTimeMillisSeconds()
+	txRetry := chain.syncWithTxPool(block, height)
+	chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(block.Txs), len(txRetry))
+	chain.txPool.RetryAndRemoveTxs(txRetry, block.Txs)
+	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick
+
+	startOtherTick := utils.CurrentTimeMillisSeconds()
+	chain.ledgerCache.SetLastCommittedBlock(block)
+	chain.proposalCache.ClearProposedBlockAt(height)
+	bi := &commonpb.BlockInfo{
+		Block:     block,
+		RwsetList: rwSet,
+	}
+	// synchronize new block height to consensus and sync module
+	chain.msgBus.Publish(msgbus.BlockInfo, bi)
+
+	if err = chain.monitorCommit(bi); err != nil {
+		return err
+	}
+
+	otherLasts := utils.CurrentTimeMillisSeconds() - startOtherTick
+	elapsed := utils.CurrentTimeMillisSeconds() - startTick
+	chain.log.Infof("commit block [%d](count:%d,hash:%x), time used(check:%d,db:%d,ss:%d,conf:%d,pool:%d,other:%d,total:%d)",
+		height, block.Header.TxCount, block.Header.BlockHash, checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, otherLasts, elapsed)
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
+	}
+	return nil
 }

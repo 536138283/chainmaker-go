@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Workiva/go-datastructures/threadsafe/err"
 	"sync"
 	"time"
 
