@@ -7,14 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
-	"encoding/hex"
-
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/protocol"
+	"encoding/hex"
+	"github.com/panjf2000/ants/v2"
 )
 
 type CoreExecute struct {
@@ -81,17 +81,16 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 
 	switch message.Topic {
 	case msgbus.PackageSignal:
-		//TODO !ok
 		if proposedSignal, ok := message.Payload.(abft.PackagedSignal); ok {
 			c.Proposer.proposedSignal = &proposedSignal
 		}
 		if err := c.Proposer.Propose(); err != nil {
-			c.log.Warnf("pack fail, error %s",
+			c.log.Warnf("propose failed, error %s",
 				err.Error())
 		}
 	case msgbus.VerifyBlock:
 		if block, ok := message.Payload.(commonPb.Block); ok {
-			c.Verifier.verifier(&block)
+			c.Verifier.goRoutinePool.Submit(c.Verifier.verifyTask())
 		}
 	case msgbus.CommitedTxBatchs:
 		if txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA); ok {

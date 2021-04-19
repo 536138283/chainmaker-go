@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"context"
 	"encoding/hex"
+	"sync"
+	"time"
 
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/cache"
@@ -22,18 +25,12 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 )
 
-type ProposeStatus int32
-
-const (
-	NoPackaging ProposeStatus = iota
-	Packaging
-	Proposed
-)
+const DEFAULT_WAIT_TXS_TIMEOUT = time.Second * 2
 
 type Proposer struct {
+	lock            sync.Mutex
 	chainId         string
 	proposedSignal  *abft.PackagedSignal
-	proposeStatus   ProposeStatus
 	txPool          protocol.TxPool
 	ledgerCache     protocol.LedgerCache
 	log             *logger.CMLogger
@@ -43,10 +40,13 @@ type Proposer struct {
 	vmMgr           protocol.VmManager
 	abftCache       *cache.AbftCache
 	msgBus          msgbus.MessageBus
+	txBatch         []*commonpb.Transaction
+	getTxBatchC     chan struct{}
 }
 
 func NewProposer(ce *CoreExecute) *Proposer {
 	return &Proposer{
+		lock:            sync.Mutex{},
 		chainId:         ce.chainId,
 		txPool:          ce.txPool,
 		ledgerCache:     ce.ledgerCache,
@@ -59,74 +59,71 @@ func NewProposer(ce *CoreExecute) *Proposer {
 		abftCache:       ce.abftCache,
 	}
 }
-func (p *Proposer) SetProposeStatus(status ProposeStatus) {
-	p.proposeStatus = status
-}
-func (p *Proposer) GetProposeStatus() ProposeStatus {
-	return p.proposeStatus
-}
+
 func (p *Proposer) verifyHeight() (bool, error) {
 	currentHeight, err := p.ledgerCache.CurrentHeight()
 	if err != nil {
 		return false, err
 	}
 	if currentHeight+1 != p.proposedSignal.BlockHeight {
-		return false, errors.New("the packaging signal height is inconsistent with the cache")
+		return false, errors.New("the propose signal height is inconsistent with the cache")
 	}
 	return true, nil
 }
 
-//优化
-func (p *Proposer) checkProposeStatus() bool {
-	//TODO
-	switch p.proposeStatus {
-	case NoPackaging:
-		p.SetProposeStatus(Packaging)
-		return true
-	case Packaging:
-		return false
-	case Proposed:
-		txBatch := p.abftCache.GetTxBatchCache()
-		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
-		return false
-	default:
-		p.log.Errorf(
-			"Invalid Propose Status: %v",
-			p.proposeStatus,
-		)
-		return false
+func (p *Proposer) proposeStatus() (*commonpb.Block, bool) {
+	txBatch := p.abftCache.GetTxBatchCache()
+	if txBatch == nil {
+		return nil, true
 	}
+	return txBatch, false
 }
 
-//TODO IF 优化
 func (p *Proposer) Propose() error {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
+	//check height
 	ok, err := p.verifyHeight()
 	if !ok {
 		return err
 	}
-	ok = p.checkProposeStatus()
-	if ok {
+	//check propose status
+	txBatch, ok := p.proposeStatus()
+	if !ok {
+		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
+		p.log.Infof("The proposal has been completed, height: (%d)", txBatch.Header.BlockHeight)
+		return nil
+	}
 
-		lastBlock := p.ledgerCache.GetLastCommittedBlock()
-		txBatch, err := common.InitNewBlock(lastBlock, p.identity, p.chainId, p.chainConf)
-		if err != nil {
-			return err
-		}
-		checkedBatch := p.txPool.FetchTxBatch(p.proposedSignal.BlockHeight)
-		if checkedBatch == nil || len(checkedBatch) == 0 {
-			p.log.Debugf("no txs in tx pool, packaging txBatch stoped")
-			return nil
-		}
-		//TODO check batch
+	//start propose
+	lastBlock := p.ledgerCache.GetLastCommittedBlock()
+	txBatch, err = common.InitNewBlock(lastBlock, p.identity, p.chainId, p.chainConf)
+	if err != nil {
+		return err
+	}
 
+	//get a random number of transactions
+	ticker := time.NewTicker(DEFAULT_WAIT_TXS_TIMEOUT)
+	ctx, cancel := context.WithCancel(context.Background())
+	go p.getTxBatchFromTxPool(p.proposedSignal.BlockHeight, ctx)
+	select {
+	case <-ticker.C:
+		cancel()
+		p.log.Infof("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", height)
+		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
+		return nil
+	case <-p.getTxBatchC:
 		timeLasts := make([]int64, 0)
 		ssStartTick := utils.CurrentTimeMillisSeconds()
+
 		snapshot := p.snapshotManager.NewSnapshot(lastBlock, txBatch)
+
 		vmStartTick := utils.CurrentTimeMillisSeconds()
 		ssLasts := vmStartTick - ssStartTick
 
 		txScheduler := common.NewTxScheduler(p.vmMgr, p.chainId)
-		txRWSetMap, err := txScheduler.Schedule(txBatch, checkedBatch, snapshot)
+		txRWSetMap, err := txScheduler.Schedule(txBatch, p.txBatch, snapshot)
 
 		vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
 		timeLasts = append(timeLasts, ssLasts, vmLasts)
@@ -142,8 +139,8 @@ func (p *Proposer) Propose() error {
 				txBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), err)
 		}
 		var txsTimeout = make([]*commonpb.Transaction, 0)
-		if len(txRWSetMap) < len(checkedBatch) {
-			for _, tx := range checkedBatch {
+		if len(txRWSetMap) < len(p.txBatch) {
+			for _, tx := range p.txBatch {
 				if _, ok := txRWSetMap[tx.Header.TxId]; !ok {
 					txsTimeout = append(txsTimeout, tx)
 				}
@@ -153,7 +150,23 @@ func (p *Proposer) Propose() error {
 		p.abftCache.SetTxBatchCache(txBatch)
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("proposer success [%d](txs:%d)", txBatch.Header.BlockHeight, txBatch.Header.TxCount)
-		p.SetProposeStatus(Proposed)
 	}
 	return nil
+}
+
+func (p *Proposer) getTxBatchFromTxPool(height int64, ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+			txBatch := p.txPool.FetchTxBatch(height)
+			if txBatch != nil || len(txBatch) != 0 {
+				p.txBatch = txBatch
+				p.getTxBatchC <- struct{}{}
+				return
+			}
+			time.Sleep(time.Millisecond * 100)
+		}
+	}
 }

@@ -9,6 +9,8 @@ package abft
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
+	"github.com/Workiva/go-datastructures/threadsafe/err"
 	"runtime"
 	"sync"
 	"time"
@@ -30,20 +32,20 @@ import (
 const DEFAULT_VERIFY_TIMEOUT = time.Second * 10
 
 type Verifier struct {
-	chainId       string
-	wg            sync.WaitGroup
-	log           *logger.CMLogger
-	abftCache     *cache.AbftCache
-	verifyBlock   *common.VerifyBlock
-	ledgerCache   protocol.LedgerCache
-	msgBus        msgbus.MessageBus
-	verifyTimeout time.Duration
-	txPool        protocol.TxPool
-	//finishVerifyC         chan struct{}
+	chainId               string
+	wg                    sync.WaitGroup
+	log                   *logger.CMLogger
+	abftCache             *cache.AbftCache
+	verifyBlock           *common.VerifyBlock
+	ledgerCache           protocol.LedgerCache
+	msgBus                msgbus.MessageBus
+	verifyTimeout         time.Duration
+	txPool                protocol.TxPool
+	goRoutinePool         *ants.Pool
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
 }
 
-func NewVerifier(ce *CoreExecute) *Verifier {
+func NewVerifier(ce *CoreExecute) (*Verifier, error) {
 	verifier := &Verifier{
 		wg:            sync.WaitGroup{},
 		log:           ce.log,
@@ -66,6 +68,11 @@ func NewVerifier(ce *CoreExecute) *Verifier {
 		BlockchainStore: ce.blockchainStore,
 	}
 	verifier.verifyBlock = common.NewVerifyBlock(conf)
+	var err error
+	verifier.goRoutinePool, err = ants.NewPool(len(ce.chainConf.ChainConfig().Consensus.Nodes), ants.WithPreAlloc(true))
+	if err != nil {
+		return fmt.Errorf('')
+	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		verifier.metricBlockVerifyTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_VERIFIER, "metric_block_verify_time",
 			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
@@ -86,7 +93,6 @@ func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) {
 
 func (v *Verifier) verify(block *commonPb.Block) error {
 
-	///TODO CHONGFUJIAOYAN
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err := utils.IsEmptyBlock(block); err != nil {
 		return err
@@ -144,19 +150,18 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 	return verifyResult
 }
 
-func (v *Verifier) verifier(block *commonPb.Block) {
+func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
 	var goRoutinePool *ants.Pool
 	var err error
 	if goRoutinePool, err = ants.NewPool(runtime.NumCPU()*4, ants.WithPreAlloc(true)); err != nil {
 		v.log.Errorf("ants new go routine pool failed: %s", err.Error())
-		return
+		return err
 	}
 	defer goRoutinePool.Release()
 	goRoutinePool.Submit(v.verifyTask(block))
 }
 
 func (v *Verifier) verifyTask(block *commonPb.Block) func() {
-	defer v.wg.Done()
 	return func() {
 		err := v.verify(block)
 		if err != nil {
@@ -165,8 +170,3 @@ func (v *Verifier) verifyTask(block *commonPb.Block) func() {
 		}
 	}
 }
-
-//func (v *Verifier) isFinishVerify() {
-//	v.wg.Wait()
-//	v.finishVerifyC <- struct{}{}
-//}

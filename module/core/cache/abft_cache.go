@@ -26,15 +26,13 @@ type AbftTxBatch struct {
 }
 
 type AbftCache struct {
-	txBatchCache *commonpb.Block //节点打包的单个批次缓存
-	//txBatchCacheMap      map[string]*commonpb.Block //节点收到RBC后需要校验的批次集合（防止校验遗漏）
-	abftTxBatchCacheMap sync.Map //节点校验后的批次集合
+	txBatchCache        *commonpb.Block //节点打包的单个批次缓存
+	abftTxBatchCacheMap sync.Map        //节点校验后的批次集合
 }
 
 func NewAbftCache() *AbftCache {
 	return &AbftCache{
-		txBatchCache: nil,
-		//txBatchCacheMap:      make(map[string]*commonpb.Block),
+		txBatchCache:        nil,
 		abftTxBatchCacheMap: sync.Map{},
 	}
 }
@@ -72,10 +70,12 @@ func (hc *AbftCache) GetVerifiedTxBatchByHash(hash []byte) (*AbftTxBatch, error)
 	if hash == nil {
 		return nil, errors.New("get verified tx batch failed, tx batch can't be empty")
 	}
-	if VerifiedTxBatch, ok := hc.abftTxBatchCacheMap.Load(hex.EncodeToString(hash)); ok {
-		return VerifiedTxBatch.(*AbftTxBatch), nil
+	VerifiedTxBatch, ok := hc.abftTxBatchCacheMap.Load(hex.EncodeToString(hash))
+	if !ok {
+		return nil, nil
 	}
-	return nil, nil
+	return VerifiedTxBatch.(*AbftTxBatch), nil
+
 }
 
 // return if a TxBatch has verified
@@ -87,15 +87,11 @@ func (hc *AbftCache) HasVerifiedTxBatch(hash []byte) bool {
 // return if this block is success after RBC verification
 func (hc *AbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
 	VerifiedTxBatch, ok := hc.abftTxBatchCacheMap.Load(hex.EncodeToString(hash))
-	if ok {
-		return VerifiedTxBatch.(*AbftTxBatch).code == SUCCESS, nil
+	if !ok {
+		return false, errors.New("TxBatch not exist")
 	}
-	return false, errors.New("TxBatch not exist")
+	return VerifiedTxBatch.(*AbftTxBatch).code == SUCCESS, nil
 }
-
-//func (hc *AbftCache) AddTxBatch(txBatch *commonpb.Block) {
-//	hc.txBatchCacheMap[hex.EncodeToString(txBatch.Header.BlockHash)] = txBatch
-//}
 
 func (htb *AbftTxBatch) GetTxBatch() *commonpb.Block {
 	return htb.txBatch
@@ -121,9 +117,6 @@ func (hc *AbftCache) GetTxBatchCache() *commonpb.Block {
 	return hc.txBatchCache
 }
 
-//func (hc *AbftCache) GetTxBatchCacheMap() map[string]*commonpb.Block {
-//	return hc.txBatchCacheMap
-//}
 func (hc *AbftCache) GetAbftTxBatchCacheMap() sync.Map {
 	return hc.abftTxBatchCacheMap
 }
@@ -132,16 +125,6 @@ func (hc *AbftCache) SetTxBatchCache(txBatch *commonpb.Block) {
 }
 
 func (hc *AbftCache) ClearAbftCache() {
-	//hc.txBatchCacheMap = make(map[string]*commonpb.Block, 0)
 	hc.txBatchCache = nil
 	hc.abftTxBatchCacheMap = sync.Map{}
 }
-
-//func (hc *AbftCache) GetTxBatchCacheByHash(hash []byte) *commonpb.Block {
-//	txBatch, ok := hc.txBatchCacheMap[hex.EncodeToString(hash)]
-//	if ok {
-//		return txBatch
-//	} else {
-//		return nil
-//	}
-//}
