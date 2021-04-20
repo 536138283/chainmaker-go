@@ -9,7 +9,10 @@ package abft
 import (
 	"encoding/hex"
 	"errors"
+	"fmt"
+
 	"sort"
+	"sync"
 
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
@@ -33,6 +36,7 @@ type Committer struct {
 	retryList     []*commonpb.Transaction
 	commonCommit  *common.CommitBlock
 	proposer      *Proposer
+	lock          sync.Mutex
 }
 
 func NewCommitter(coreExecute *CoreExecute, proposer *Proposer) *Committer {
@@ -47,6 +51,7 @@ func NewCommitter(coreExecute *CoreExecute, proposer *Proposer) *Committer {
 		identity:      coreExecute.identity,
 		chainConf:     coreExecute.chainConf,
 		proposer:      proposer,
+		lock:          sync.Mutex{},
 	}
 	cbConf := &common.CommitBlockConf{
 		Store:           coreExecute.blockchainStore,
@@ -63,6 +68,9 @@ func NewCommitter(coreExecute *CoreExecute, proposer *Proposer) *Committer {
 }
 
 func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+
 	// check block height
 	ok, err := c.verifyHeight(blockHeight)
 	if !ok {
@@ -234,4 +242,28 @@ func getABAFailTxBatchIDs(txBatchIDListBeforeABA []string, txBatchInfo map[strin
 		}
 	}
 	return failedBatchIDs
+}
+
+func (c *Committer) AddBlock(block *commonpb.Block) error {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	//verify height
+	ok, err := c.verifyHeight(block.Header.BlockHeight)
+	if !ok {
+		return err
+	}
+	abftBlock, err := c.abftCache.GetVerifiedTxBatchByHash(block.Header.BlockHash)
+	if err != nil {
+		return err
+	}
+	if abftBlock == nil {
+		return fmt.Errorf("[AddBlock] the block is not in the cache, blockHeight(%d), blockHash(%s)", block.Header.BlockHeight,
+			hex.EncodeToString(block.Header.BlockHash))
+	}
+	err = c.commonCommit.CommitBlock(abftBlock.GetTxBatch(), abftBlock.GetTxBatchRwSet())
+	if err != nil {
+		c.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
+		return err
+	}
+	return nil
 }

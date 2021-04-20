@@ -184,7 +184,7 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 
 // Start, initialize core engine
 func (c *CoreEngine) Start() {
-	if c.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_POW {
+	if c.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
 		c.msgBus.Register(msgbus.ProposeState, c)
 		c.msgBus.Register(msgbus.VerifyBlock, c)
 		c.msgBus.Register(msgbus.CommitBlock, c)
