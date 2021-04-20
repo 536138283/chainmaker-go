@@ -11,7 +11,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/Workiva/go-datastructures/threadsafe/err"
 	"sync"
 	"time"
 
@@ -150,6 +149,11 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 	verifyResult, rwSetMap, err := v.verify(block)
 	if mode == protocol.CONSENSUS_VERIFY {
 		err = v.verifyResult(block, rwSetMap, verifyResult)
+	} else {
+		//after verifing block,sync nodes cache the block
+		err = v.abftCache.AddAbftTxBatch(block, verifyResult, rwSetMap)
+		err = fmt.Errorf("sync cache the verified block faield: %s, blockHeight(%d), blockHash(%s)", err.Error(),
+			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 	}
 	return err
 }
@@ -167,9 +171,8 @@ func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) f
 func (v *Verifier) verifyResult(block *commonPb.Block, rwSet map[string]*commonPb.TxRWSet, verifyResult bool) error {
 	err := v.abftCache.AddAbftTxBatch(block, verifyResult, rwSet)
 	if err != nil {
-		v.log.Warnf("add abft cache tx batch [%d](%x),preBlockHash:%x, %s",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash, err.Error())
-		return err
+		return fmt.Errorf("abft add tx batch faield: %s, blockHeight(%d), txBatchHash(%s)", err.Error(),
+			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 	}
 	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
 	return nil
