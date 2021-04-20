@@ -79,7 +79,7 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 	c.sortTxBatchID()
 
 	var block *commonpb.Block
-	var rwSetMap map[string]*commonpb.TxRWSet
+	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
 	if !c.isEmptyBlock() {
 		// new block
 		lastBlock := c.ledgerCache.GetLastCommittedBlock()
@@ -170,12 +170,14 @@ func (c *Committer) getConfirmedTxBatchInfo(txBatchID []byte) error {
 		return err
 	}
 
-	if txBatch.GetVerifyResult() == true {
-		var txBatchInfo *TxBatchInfo
-		txBatchInfo.txBatch = txBatch.GetTxBatch()
-		txBatchInfo.rwSetMap = txBatch.GetTxBatchRwSet()
-		c.merger.txBatchInfo[hex.EncodeToString(txBatchID)] = txBatchInfo
+	if !txBatch.GetVerifyResult() {
+		return nil
 	}
+
+	txBatchInfo := new(TxBatchInfo)
+	txBatchInfo.txBatch = txBatch.GetTxBatch()
+	txBatchInfo.rwSetMap = txBatch.GetTxBatchRwSet()
+	c.merger.txBatchInfo[hex.EncodeToString(txBatchID)] = txBatchInfo
 	return nil
 }
 
