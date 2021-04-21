@@ -60,7 +60,7 @@ func newTx(txId string, contractId *commonpb.ContractId, parameterMap map[string
 		},
 		RequestPayload:   payloadBytes,
 		RequestSignature: nil,
-		Result:           nil,
+		Result: nil,
 	}
 }
 
@@ -98,7 +98,6 @@ func prepare(t *testing.T) (*mock.MockVmManager, []*commonpb.TxRWSet, []*commonp
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
-
 	scheduler := NewTxScheduler(vmMgr, "Chain1")
 
 	contractId := &commonpb.ContractId{
@@ -116,7 +115,7 @@ func prepare(t *testing.T) (*mock.MockVmManager, []*commonpb.TxRWSet, []*commonp
 
 	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
-	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
+	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(2)
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
 
@@ -125,7 +124,6 @@ func prepare(t *testing.T) (*mock.MockVmManager, []*commonpb.TxRWSet, []*commonp
 }
 
 func TestSchedule(t *testing.T) {
-
 	vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t)
 
 	parameters := make(map[string]string, 8)
@@ -170,12 +168,22 @@ func TestSchedule(t *testing.T) {
 
 	txBatch := []*commonpb.Transaction{tx0, tx1}
 
-	txSimCache0 := newTxSimContext(vmMgr, snapshot, tx0)
-	txSimCache1 := newTxSimContext(vmMgr, snapshot, tx1)
+	txSimCache0 := NewTxSimContext(vmMgr, snapshot, tx0)
+	txSimCache1 := NewTxSimContext(vmMgr, snapshot, tx1)
+	result := &commonpb.Result{
+		Code: commonpb.TxStatusCode_SUCCESS,
+		ContractResult: &commonpb.ContractResult{
+			Code:    0,
+			Result:  nil,
+			Message: "",
+		},
+		RwSetHash: nil,
+	}
+	txSimCache0.SetTxResult(result)
+	txSimCache1.SetTxResult(result)
 
 	snapshot.EXPECT().ApplyTxSimContext(txSimCache0, true).Return(true, 1)
-	snapshot.EXPECT().ApplyTxSimContext(txSimCache1, true).Return(false, 1)
-	snapshot.EXPECT().ApplyTxSimContext(txSimCache1, true).Return(true, 2)
+	snapshot.EXPECT().ApplyTxSimContext(txSimCache1, true).Return(true, 1)
 
 	dag := &commonpb.DAG{
 		Vertexes: []*commonpb.DAG_Neighbor{{}},
@@ -183,14 +191,14 @@ func TestSchedule(t *testing.T) {
 
 	snapshot.EXPECT().BuildDAG().Return(dag)
 
-	_, err := scheduler.Schedule(block, txBatch, snapshot)
+	txRWSetMap, err := scheduler.Schedule(block, txBatch, snapshot)
 
 	if err != nil {
 		fmt.Printf("error : %s", err.Error())
 	}
 
-	fmt.Printf("GetTxRWSet 0: %q", txSimCache0.GetTxRWSet())
-	fmt.Printf("GetTxRWSet 1: %q", txSimCache1.GetTxRWSet())
+	fmt.Printf("GetTxRWSet 0: %v", txRWSetMap[tx0.Header.TxId])
+	fmt.Printf("GetTxRWSet 1: %v", txRWSetMap[tx1.Header.TxId])
 }
 
 func TestSimulateWithDag(t *testing.T) {
@@ -221,55 +229,31 @@ func TestSimulateWithDag(t *testing.T) {
 	txSimCache1 := newTxSimContext(vmMgr, snapshot, tx1)
 	txSimCache2 := newTxSimContext(vmMgr, snapshot, tx2)
 
+	result := &commonpb.Result{
+		Code: commonpb.TxStatusCode_SUCCESS,
+		ContractResult: &commonpb.ContractResult{
+			Code:    0,
+			Result:  nil,
+			Message: "",
+		},
+		RwSetHash: nil,
+	}
+
+	txResultMap := make(map[string]*commonpb.Result, 3)
+	txResultMap[tx0.Header.TxId] = result
+	txResultMap[tx1.Header.TxId] = result
+	txResultMap[tx2.Header.TxId] = result
+
+	txSimCache0.SetTxResult(result)
+	txSimCache1.SetTxResult(result)
+	txSimCache2.SetTxResult(result)
+
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
 	snapshot.EXPECT().ApplyTxSimContext(txSimCache0, true).Return(true, 1)
 	snapshot.EXPECT().ApplyTxSimContext(txSimCache1, true).Return(true, 2)
 	snapshot.EXPECT().ApplyTxSimContext(txSimCache2, true).Return(true, 3)
+	snapshot.EXPECT().GetTxResultMap().Return(txResultMap)
 
 	scheduler.SimulateWithDag(block, snapshot)
-}
-
-func testPrepare(t *testing.T) () {
-	ctl := gomock.NewController(t)
-	vmMgr := mock.NewMockVmManager(ctl)
-	scheduler := NewTxScheduler(vmMgr, "Chain1")
-	tx0 := newTx("a0000000000000000000000000000001", contractId, parameters)
-	tx1 := newTx("a0000000000000000000000000000002", contractId, parameters)
-
-	txTable[0] = tx0
-	txTable[1] = tx1
-	txRWSetTable[0] = &commonpb.TxRWSet{
-		TxId: tx0.Header.TxId,
-		TxReads: []*commonpb.TxRead{{
-			ContractName: contractId.ContractName,
-			Key:          []byte("K1"),
-			Value:        []byte("V"),
-		}},
-		TxWrites: []*commonpb.TxWrite{{
-			ContractName: contractId.ContractName,
-			Key:          []byte("K2"),
-			Value:        []byte("V"),
-		}},
-	}
-	txRWSetTable[1] = &commonpb.TxRWSet{
-		TxId: tx1.Header.TxId,
-		TxReads: []*commonpb.TxRead{
-			{
-				ContractName: contractId.ContractName,
-				Key:          []byte("K2"),
-				Value:        []byte("V"),
-			},
-			{
-				ContractName: contractId.ContractName,
-				Key:          []byte("K2"),
-				Value:        []byte("V"),
-			},
-		},
-		TxWrites: []*commonpb.TxWrite{{
-			ContractName: contractId.ContractName,
-			Key:          []byte("K3"),
-			Value:        []byte("V"),
-		}},
-	}
 }

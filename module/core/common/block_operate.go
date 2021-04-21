@@ -13,6 +13,7 @@ import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"encoding/hex"
 	"fmt"
 )
 
@@ -150,6 +151,7 @@ func IsPreHashValid(block *commonpb.Block, preHash []byte) error {
 // IsBlockHashValid, to check if block hash equals with result calculated from block
 func IsBlockHashValid(block *commonpb.Block, hashType string) error {
 	hash, err := utils.CalcBlockHash(hashType, block)
+	fmt.Println("hash: " + hex.EncodeToString(hash))
 	if err != nil {
 		return fmt.Errorf("calc block hash error")
 	}

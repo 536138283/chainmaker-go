@@ -60,7 +60,7 @@ func NewTxScheduler(vmMgr protocol.VmManager, chainId string) *TxScheduler {
 	return txScheduler
 }
 
-func newTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, tx *commonpb.Transaction) protocol.TxSimContext {
+func NewTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, tx *commonpb.Transaction) protocol.TxSimContext {
 	return &txSimContextImpl{
 		txExecSeq:     snapshot.GetSnapshotSize(),
 		tx:            tx,
@@ -100,7 +100,7 @@ func (ts *TxScheduler) Schedule(block *commonpb.Block, txBatch []*commonpb.Trans
 						return
 					}
 					ts.log.Debugf("run vm for tx id:%s", tx.Header.GetTxId())
-					txSimContext := newTxSimContext(ts.VmManager, snapshot, tx)
+					txSimContext := NewTxSimContext(ts.VmManager, snapshot, tx)
 					runVmSuccess := true
 					var txResult *commonpb.Result
 					var err error
@@ -217,7 +217,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonpb.Block, snapshot protocol.
 				tx := txMapping[txIndex]
 				err := goRoutinePool.Submit(func() {
 					ts.log.Debugf("run vm with dag for tx id %s", tx.Header.GetTxId())
-					txSimContext := newTxSimContext(ts.VmManager, snapshot, tx)
+					txSimContext := NewTxSimContext(ts.VmManager, snapshot, tx)
 
 					runVmSuccess := true
 					var txResult *commonpb.Result
