@@ -7,19 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
-	"encoding/hex"
-	"errors"
-	"fmt"
-
-	"sort"
-	"sync"
-
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"encoding/hex"
+	"errors"
+	"fmt"
+	"sort"
+	"sync"
 )
 
 type Committer struct {
@@ -89,14 +87,13 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 
 	var block *commonpb.Block
 	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
+	// new block
+	lastBlock := c.ledgerCache.GetLastCommittedBlock()
+	block, err = common.InitNewBlock(lastBlock, c.identity, c.chainID, c.chainConf)
+	if err != nil {
+		return err
+	}
 	if !c.isEmptyBlock() {
-		// new block
-		lastBlock := c.ledgerCache.GetLastCommittedBlock()
-		block, err = common.InitNewBlock(lastBlock, c.identity, c.chainID, c.chainConf)
-		if err != nil {
-			return err
-		}
-
 		c.merger.block = block
 		c.merger.txBatchIDList = c.txBatchIDList
 		// get the new RWSetMap after conflict detection
@@ -104,17 +101,12 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 			return err
 		}
 
-		// get the base txBatch info
-		baseTxBatchInfo := c.merger.txBatchInfo[c.merger.baseTxBatchID].txBatch
-		block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
-
 		rwSetMap = c.merger.rwSetMap
-	} else {
-		// empty block use the baseTxBatch's block
-		block = c.merger.txBatchInfo[c.txBatchIDList[0]].txBatch
-
-		rwSetMap = c.merger.txBatchInfo[c.txBatchIDList[0]].rwSetMap
 	}
+
+	// rewrite blockTimestamp
+	baseTxBatchInfo := c.merger.txBatchInfo[c.merger.baseTxBatchID].txBatch
+	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
 
 	var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
 	err = common.FinalizeBlock(block, rwSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)

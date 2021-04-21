@@ -76,6 +76,14 @@ func TestCommitter_Commit_getRetryListAfterABA(t *testing.T) {
 		txBatchIDList: make([]string, 0),
 	}
 
+	// ABA 通过的batch
+	txBatchHash := [][]byte{branchID3, branchID2, branchID5, branchID4}
+	c.setTxBatchIDList(txBatchHash)
+	fmt.Println("sort before", c.txBatchIDList)
+
+	c.sortTxBatchID()
+	fmt.Println("sort after:", c.txBatchIDList)
+
 	txList := getTxs()
 	// ABA通过后所有批次的交易集
 	allTrans := make(map[string]*commonpb.Transaction)
@@ -89,14 +97,6 @@ func TestCommitter_Commit_getRetryListAfterABA(t *testing.T) {
 	allTrans[txList[7].Header.TxId] = txList[7]
 
 	c.merger.allTxsMap = allTrans
-
-	// ABA 通过的batch
-	txBatchHash := [][]byte{branchID3, branchID2, branchID5, branchID4}
-	c.setTxBatchIDList(txBatchHash)
-	fmt.Println("sort before", c.txBatchIDList)
-
-	c.sortTxBatchID()
-	fmt.Println("sort after:", c.txBatchIDList)
 
 	c.handleABAFailTxs()
 
@@ -136,7 +136,11 @@ func newTx(txId string, contractId *commonpb.ContractId, parameterMap map[string
 		},
 		RequestPayload:   payloadBytes,
 		RequestSignature: nil,
-		Result:           nil,
+		Result:           &commonpb.Result{
+			Code:           commonpb.TxStatusCode_SUCCESS,
+			ContractResult: nil,
+			RwSetHash:      nil,
+		},
 	}
 }
 
@@ -185,7 +189,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 		TxReads:  nil,
 		TxWrites: nil,
 	}
-	hash0 := []byte("a")
+	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{txList[2], txList[3]})
 	hc.AddAbftTxBatch(b0, true, rwSetMap0)
 
@@ -200,7 +204,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 		TxReads:  nil,
 		TxWrites: nil,
 	}
-	hash1 := []byte("b")
+	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{txList[3], txList[4]})
 	hc.AddAbftTxBatch(b1, true, rwSetMap1)
 
@@ -216,7 +220,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 		TxWrites: nil,
 	}
 
-	hash2 := []byte("c")
+	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{txList[4], txList[6]})
 	hc.AddAbftTxBatch(b2, true, rwSetMap2)
 
@@ -226,7 +230,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 		TxReads:  nil,
 		TxWrites: nil,
 	}
-	hash3 := []byte("d")
+	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{txList[4]})
 	hc.AddAbftTxBatch(b3, true, rwSetMap3)
 
@@ -236,7 +240,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 		TxReads:  nil,
 		TxWrites: nil,
 	}
-	hash4 := []byte("e")
+	hash4 := branchID5
 	b4 := createBatch(hash4, 3, []*commonpb.Transaction{txList[0]})
 	hc.AddAbftTxBatch(b4, true, rwSetMap4)
 
@@ -256,7 +260,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 		TxReads:  nil,
 		TxWrites: nil,
 	}
-	hash5 := []byte("f")
+	hash5 := branchID6
 	b5 := createBatch(hash5, 3, []*commonpb.Transaction{txList[0], txList[5], txList[6]})
 	hc.AddAbftTxBatch(b5, true, rwSetMap5)
 

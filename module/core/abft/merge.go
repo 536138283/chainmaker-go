@@ -17,7 +17,7 @@ type Merger struct {
 	block         *commonpb.Block // the commited block
 	rwSetMap      map[string]*commonpb.TxRWSet
 	lock          sync.Mutex
-	txBatchInfo   map[string]*TxBatchInfo // key -> BrtchId
+	txBatchInfo   map[string]*TxBatchInfo // key -> BatchId
 	txBatchIDList []string
 	baseTxBatchID string
 	allTxsMap     map[string]*commonpb.Transaction // record all transaction(txId->Transaction)
@@ -37,68 +37,52 @@ func NewMerger() *Merger {
 }
 
 func (m *Merger) Merge() error {
-	// set base TxBrtch Id
+	// set base TxBatch Id
 	m.baseTxBatchID = m.txBatchIDList[0]
-	baseTxBrtch := m.txBatchInfo[m.baseTxBatchID].txBatch
+	baseTxBatch := m.txBatchInfo[m.baseTxBatchID].txBatch
 	baseRWSetMap := m.txBatchInfo[m.baseTxBatchID].rwSetMap
-	//baseWriteTable := getWriteTable(baseRWSetMap)
 
 	if len(m.txBatchIDList) == 1 {
-		m.block.Txs = baseTxBrtch.Txs
-		m.block.Dag = baseTxBrtch.Dag
-
-		for _, tx := range baseTxBrtch.Txs {
+		m.block.Txs = baseTxBatch.Txs
+		m.block.Dag = baseTxBatch.Dag
+		for _, tx := range baseTxBatch.Txs {
 			m.allTxsMap[tx.Header.TxId] = tx
 		}
-
 		m.rwSetMap = baseRWSetMap
-
 		return nil
 	}
 
-	repeatTxMap, baseTxTable := m.prepare()
-	for i := 0; i < len(m.txBatchIDList); i++ {
-		txBrtchID := m.txBatchIDList[i]
-		txBrtch := m.txBatchInfo[txBrtchID].txBatch
-		repeatedTxIndexs := repeatTxMap[txBrtchID]
-		rwSetMap := m.txBatchInfo[txBrtchID].rwSetMap
+	repeatTxMap, _ := m.prepare()
+	baseWriteTable := getBaseWriteTable(baseRWSetMap)
+	for i := 1; i < len(m.txBatchIDList); i++ {
+		txBatchID := m.txBatchIDList[i]
+		txBatch := m.txBatchInfo[txBatchID].txBatch
+		repeatedTxIndexs := repeatTxMap[txBatchID]
+		rwSetMap := m.txBatchInfo[txBatchID].rwSetMap
 
 		// 将依赖该重复交易集中的交易的执行结果置为失败
-		conflictRepeatedTxMap := make(map[int][]int)
 		// get the releated tx for repeated tx
-		findReleatedTxForRepeatedTx(
+		conflictRepeatedTxMap := findReleatedTxForRepeatedTx(
 			repeatedTxIndexs,
-			txBrtch.Txs,
+			txBatch.Txs,
 			rwSetMap)
 
-		// reWrite releated Tx 's result
-		m.modifyRleatedTxResult(
-			conflictRepeatedTxMap,
-			txBrtch,
-			baseTxBrtch,
-			baseTxTable,
-			txBrtchID,
+		// merge txBatch(Txs and RWSetMap)
+		m.doMerge(
+			baseTxBatch,
+			txBatch,
 			baseRWSetMap,
-			rwSetMap)
-
-		// delete repeated Txs
-		deleteRepeatedTx(
-			repeatedTxIndexs,
 			rwSetMap,
-			txBrtch)
-
-		// merge txBrtch(Txs and RWSetMap)
-		mergeTxsAndRWSetMap(
-			baseTxBrtch,
-			txBrtch,
-			baseRWSetMap,
-			rwSetMap)
+			baseWriteTable,
+			repeatedTxIndexs,
+			conflictRepeatedTxMap)
 	}
 
-	dag := m.buildDAG(baseTxBrtch, baseRWSetMap)
+	// rebuild dag for new RWSetMap
+	dag := m.buildDAG(baseTxBatch, baseRWSetMap)
 
 	// edit block
-	m.block.Txs = baseTxBrtch.Txs
+	m.block.Txs = baseTxBatch.Txs
 	m.block.Dag = dag
 
 	// set rwSetMap
@@ -107,38 +91,24 @@ func (m *Merger) Merge() error {
 	return nil
 }
 
-func mergeTxsAndRWSetMap(baseTxBrtch, txBrtch *commonpb.Block, baseRWSetMap, rwSetMap map[string]*commonpb.TxRWSet) {
-	// merge Txs
-	baseTxBrtch.Txs = append(baseTxBrtch.Txs, txBrtch.Txs...)
-
-	// merge RWSetMap
-	for txId, rwSet := range rwSetMap {
-		baseRWSetMap[txId] = rwSet
-	}
-}
-
-func constructKey(contractName string, key []byte) string {
-	return contractName + string(key)
-}
-
-// 拿到重复交易(key=>BrtchID, value=>重复交易的下标)以及第一个批次的交易(key=>txId, value=>交易的下标)的数据集
+// 拿到重复交易(key=>BatchID, value=>重复交易的下标)以及第一个批次的交易(key=>txId, value=>交易的下标)的数据集
 func (m *Merger) prepare() (map[string][]int, map[string]int) {
 
-	// record the deleted & repeated transaction(BrtchID->deleted transaction 's position)
+	// record the deleted & repeated transaction(BatchID->deleted transaction 's position)
 	repeatTrans := make(map[string][]int)
 	baseTxIndexTable := make(map[string]int)
-	for _, txBrtchID := range m.txBatchIDList {
-		if info, ok := m.txBatchInfo[txBrtchID]; ok {
+	for _, txBatchID := range m.txBatchIDList {
+		if info, ok := m.txBatchInfo[txBatchID]; ok {
 			txs := info.txBatch.Txs
 			for i, _ := range txs {
 				txID := txs[i].Header.TxId
-				if txBrtchID == m.baseTxBatchID {
+				if txBatchID == m.baseTxBatchID {
 					baseTxIndexTable[txID] = i
 				}
 				if _, ok := m.allTxsMap[txID]; !ok {
 					m.allTxsMap[txID] = txs[i]
 				} else {
-					repeatTrans[txBrtchID] = append(repeatTrans[txBrtchID], i)
+					repeatTrans[txBatchID] = append(repeatTrans[txBatchID], i)
 				}
 			}
 		}
@@ -146,163 +116,15 @@ func (m *Merger) prepare() (map[string][]int, map[string]int) {
 	return repeatTrans, baseTxIndexTable
 }
 
-func getWriteTable(rwSet *commonpb.TxRWSet) map[string]struct{} {
-	writeTable := make(map[string]struct{})
-	for _, txWrite := range rwSet.TxWrites {
-		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
-		writeTable[finalKey] = struct{}{}
-	}
-	return writeTable
-}
-
-func deleteRepeatedTx(repeatedTxIndexs []int, rwSetMap map[string]*commonpb.TxRWSet, txBrtch *commonpb.Block) {
-	for _, repeatedTxIndex := range repeatedTxIndexs {
-		// delete repeated tx from rwSetMap
-		delete(rwSetMap, txBrtch.Txs[repeatedTxIndex].Header.TxId)
-
-		// delete repeated tx from Txs
-		deleteRepeatedTxFromTxs(repeatedTxIndex, txBrtch)
-	}
-}
-
-func deleteRepeatedTxFromTxs(repeatedTxIndex int, txBrtch *commonpb.Block) {
-	switch repeatedTxIndex {
-	case 0:
-		txBrtch.Txs = txBrtch.Txs[repeatedTxIndex+1:]
-	case len(txBrtch.Txs):
-		txBrtch.Txs = txBrtch.Txs[:repeatedTxIndex]
-	default:
-		txBrtch.Txs = append(txBrtch.Txs[:repeatedTxIndex], txBrtch.Txs[repeatedTxIndex+1:]...)
-	}
-}
-
-func (m *Merger) modifyRleatedTxResult(
-	conflictRepeatedTxMap map[int][]int,
-	txBrtch, baseTxBrtch *commonpb.Block,
-	baseTxTable map[string]int, BrtchID string,
-	baseRWSetMap, rwSetMap map[string]*commonpb.TxRWSet) {
-
-	for repeatedTxIndex, releatedTxIndexs := range conflictRepeatedTxMap {
-		txId := txBrtch.Txs[repeatedTxIndex].Header.TxId
-		if ok := ifNeedModify(
-			txBrtch,
-			baseTxBrtch,
-			repeatedTxIndex,
-			baseTxTable[txId],
-			baseRWSetMap,
-			rwSetMap); ok {
-
-			for _, releatedTxIndex := range releatedTxIndexs {
-				releatedTx := txBrtch.Txs[releatedTxIndex]
-				releatedTxId := releatedTx.Header.TxId
-				modifyTxResult(releatedTx)
-				modifyTxRWSet(m.txBatchInfo[BrtchID].rwSetMap, releatedTxId)
-			}
-		}
-	}
-}
-
-func findReleatedTxForRepeatedTx(repeatedTxIndexs []int, txs []*commonpb.Transaction, rwSetMap map[string]*commonpb.TxRWSet) map[int][]int {
-	releatedTxMap := make(map[int][]int)
-	for _, repeatedTxIndex := range repeatedTxIndexs {
-		repeatedTx := txs[repeatedTxIndex]
-		repeatedTxRWSet := rwSetMap[repeatedTx.Header.TxId]
-
-		// get repeated tx 's write table
-		repeatedTxWriteTable := getWriteTable(repeatedTxRWSet)
-
-		getReleatedTxMap(txs, rwSetMap, repeatedTxWriteTable, releatedTxMap, repeatedTxIndex)
-	}
-
-	return releatedTxMap
-}
-
-func getReleatedTxMap(
-	txs []*commonpb.Transaction,
-	rwSetMap map[string]*commonpb.TxRWSet,
-	repeatedTxWriteTable map[string]struct{},
-	releatedTxMap map[int][]int, index int) {
-
-	for j := index + 1; j <= len(txs)-1; j++ {
-		tx := txs[j]
-		txId := tx.Header.TxId
-		rwSet := rwSetMap[txId]
-		for _, txRead := range rwSet.TxReads {
-			finalKey := constructKey(txRead.ContractName, txRead.Key)
-			// check if RWSet conflict
-			if _, ok := repeatedTxWriteTable[finalKey]; ok {
-				releatedTxMap[index] = append(releatedTxMap[index], j)
-			}
-		}
-	}
-}
-
-func ifNeedModify(
-	txBrtch, baseTxBrtch *commonpb.Block,
-	repeatedTxIndex, baseTxIndex int,
-	baseRWSetMap, rwSetMap map[string]*commonpb.TxRWSet) bool {
-
-	writeTable := make(map[string]struct{})
-
-	// get the write table from repeated tx 's neighbors(from ownTxBrtch)
-	for _, neighbor := range txBrtch.Dag.Vertexes[repeatedTxIndex].Neighbors {
-		tx := txBrtch.Txs[int(neighbor)]
-		writeTable = getWriteTable(rwSetMap[tx.Header.TxId])
-	}
-
-	// get the write table from repeated tx 's neighbors(from baseTxBrtch)
-	for _, neighbor := range baseTxBrtch.Dag.Vertexes[baseTxIndex].Neighbors {
-		tx := baseTxBrtch.Txs[int(neighbor)]
-		writeTable = getWriteTable(baseRWSetMap[tx.Header.TxId])
-	}
-
-	tx := txBrtch.Txs[repeatedTxIndex]
-	txId := tx.Header.TxId
-	rwSet := rwSetMap[txId]
-	for _, txRead := range rwSet.TxReads {
-		finalKey := constructKey(txRead.ContractName, txRead.Key)
-		// check if RWSet conflict
-		if _, ok := writeTable[finalKey]; ok {
-			return true
-		}
-	}
-
-	return false
-}
-
-func getWriteTableFor() {
-
-}
-
-func modifyTxResult(tx *commonpb.Transaction) {
-	tx.Result = &commonpb.Result{
-		Code: commonpb.TxStatusCode_CONTRACT_FAIL,
-		ContractResult: &commonpb.ContractResult{
-			Code:    commonpb.ContractResultCode_FAIL,
-			Result:  nil,
-			Message: "Transaction conflic",
-		},
-		RwSetHash: nil,
-	}
-}
-
-func modifyTxRWSet(rwSetMap map[string]*commonpb.TxRWSet, txId string) {
-	rwSetMap[txId] = &commonpb.TxRWSet{
-		TxId:     txId,
-		TxReads:  nil,
-		TxWrites: nil,
-	}
-}
-
-func (m *Merger) buildDAG(txBrtch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) *commonpb.DAG {
+func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) *commonpb.DAG {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	txCount := len(txBrtch.Txs)
+	txCount := len(txBatch.Txs)
 	log.Debugf("start building DAG for block %d with %d txs", m.block.Header.BlockHeight, txCount)
 
 	txRWSetTable := make([]*commonpb.TxRWSet, txCount)
-	for i, tx := range txBrtch.Txs {
+	for i, tx := range txBatch.Txs {
 		txRWSetTable[i] = rwSetMap[tx.Header.TxId]
 	}
 
@@ -353,6 +175,181 @@ func (m *Merger) buildDAG(txBrtch *commonpb.Block, rwSetMap map[string]*commonpb
 	log.Debugf("build DAG for block %d finished", m.block.Header.BlockHeight)
 	return dag
 
+}
+
+func (m *Merger) doMerge(
+	baseTxBatch,
+	txBatch *commonpb.Block,
+	baseRWSetMap,
+	rwSetMap map[string]*commonpb.TxRWSet,
+	baseWriteTable map[string]struct{},
+	repeatedTxIndexs []int,
+	conflictRepeatedTxMap map[int][]int) {
+
+	repeatedTxIndexMap := getRepeatedTxIndexMap(repeatedTxIndexs)
+	releatedTxIndexMap := getReleatedTxIndexMap(conflictRepeatedTxMap)
+	failTxWriteTable := make(map[string]struct{})
+	newWriteTable := make(map[string]struct{})
+	for index, tx := range txBatch.Txs {
+		// merge
+		if _, ok := repeatedTxIndexMap[index]; !ok {
+			txId := tx.Header.TxId
+			rwSet := rwSetMap[txId]
+			for _, txRead := range rwSet.TxReads {
+				finalKey := constructKey(txRead.ContractName, txRead.Key)
+				// check if RWSet conflict
+				if ifNeedModify(
+					finalKey,
+					index,
+					baseWriteTable,
+					failTxWriteTable,
+					releatedTxIndexMap) {
+
+					// modify conflict tx
+					modifyTxResult(tx)
+
+					updateWriteTable(failTxWriteTable, rwSet)
+					rwSet = getEmptyRWSet(txId)
+				} else {
+					updateWriteTable(newWriteTable, rwSet)
+				}
+			}
+			// merge RWSetMap
+			baseRWSetMap[txId] = rwSet
+
+			// merge Tx
+			baseTxBatch.Txs = append(baseTxBatch.Txs, tx)
+		}
+	}
+}
+func ifNeedModify(
+	finalKey string,
+	index int,
+	baseWriteTable,
+	failTxWriteTable map[string]struct{},
+	releatedTxIndexMap map[int]struct{}) bool {
+
+	_, ok1 := baseWriteTable[finalKey]
+	_, ok2 := failTxWriteTable[finalKey]
+	_, ok3 := releatedTxIndexMap[index]
+
+	if ok1 || ok2 || ok3 {
+		return true
+	}
+	return false
+}
+
+func getReleatedTxIndexMap(conflictRepeatedTxMap map[int][]int) map[int]struct{} {
+	releatedTxIndexMap := make(map[int]struct{})
+	for _, releatedTxIndexs := range conflictRepeatedTxMap {
+		for _, releatedTxIndex := range releatedTxIndexs {
+			releatedTxIndexMap[releatedTxIndex] = struct{}{}
+		}
+	}
+	return releatedTxIndexMap
+}
+
+func getRepeatedTxIndexMap(repeatedTxIndexs []int) map[int]struct{} {
+	repeatedTxIndexMap := make(map[int]struct{})
+	for _, index := range repeatedTxIndexs {
+		repeatedTxIndexMap[index] = struct{}{}
+	}
+	return repeatedTxIndexMap
+}
+
+func constructKey(contractName string, key []byte) string {
+	return contractName + string(key)
+}
+
+func getBaseWriteTable(rwSetMap map[string]*commonpb.TxRWSet) map[string]struct{} {
+	writeTable := make(map[string]struct{})
+	for _, rwSet := range rwSetMap {
+		for _, txWrite := range rwSet.TxWrites {
+			finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+			writeTable[finalKey] = struct{}{}
+		}
+	}
+
+	return writeTable
+}
+
+func updateWriteTable(writeTable map[string]struct{}, rwSet *commonpb.TxRWSet) {
+	for _, txWrite := range rwSet.TxWrites {
+		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+		writeTable[finalKey] = struct{}{}
+	}
+}
+
+func getWriteTable(rwSet *commonpb.TxRWSet) map[string]struct{} {
+	writeTable := make(map[string]struct{})
+	for _, txWrite := range rwSet.TxWrites {
+		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+		writeTable[finalKey] = struct{}{}
+	}
+	return writeTable
+}
+
+func findReleatedTxForRepeatedTx(repeatedTxIndexs []int, txs []*commonpb.Transaction, rwSetMap map[string]*commonpb.TxRWSet) map[int][]int {
+	releatedTxMap := make(map[int][]int)
+	for _, repeatedTxIndex := range repeatedTxIndexs {
+		repeatedTx := txs[repeatedTxIndex]
+		repeatedTxRWSet := rwSetMap[repeatedTx.Header.TxId]
+
+		// get repeated tx 's write table
+		repeatedTxWriteTable := getWriteTable(repeatedTxRWSet)
+
+		getReleatedTxMap(txs, rwSetMap, repeatedTxWriteTable, releatedTxMap, repeatedTxIndex)
+	}
+
+	return releatedTxMap
+}
+
+func getReleatedTxMap(
+	txs []*commonpb.Transaction,
+	rwSetMap map[string]*commonpb.TxRWSet,
+	repeatedTxWriteTable map[string]struct{},
+	releatedTxMap map[int][]int, index int) {
+
+	for j := index + 1; j <= len(txs)-1; j++ {
+		tx := txs[j]
+		txId := tx.Header.TxId
+		rwSet := rwSetMap[txId]
+		for _, txRead := range rwSet.TxReads {
+			finalKey := constructKey(txRead.ContractName, txRead.Key)
+			// check if RWSet conflict
+			if _, ok := repeatedTxWriteTable[finalKey]; ok {
+				releatedTxMap[index] = append(releatedTxMap[index], j)
+			}
+		}
+	}
+}
+
+func modifyTxResult(tx *commonpb.Transaction) {
+	tx.Result = &commonpb.Result{
+		Code: commonpb.TxStatusCode_CONTRACT_FAIL,
+		ContractResult: &commonpb.ContractResult{
+			Code:    commonpb.ContractResultCode_FAIL,
+			Result:  nil,
+			Message: "Transaction conflic",
+		},
+		RwSetHash: nil,
+	}
+}
+
+func modifyTxRWSet(rwSetMap map[string]*commonpb.TxRWSet, txId string) {
+	rwSetMap[txId] = &commonpb.TxRWSet{
+		TxId:     txId,
+		TxReads:  nil,
+		TxWrites: nil,
+	}
+}
+
+func getEmptyRWSet(txId string) *commonpb.TxRWSet {
+	return &commonpb.TxRWSet{
+		TxId:     txId,
+		TxReads:  nil,
+		TxWrites: nil,
+	}
 }
 
 func buildRWBitmaps(txCount int, txRWSetTable []*commonpb.TxRWSet) ([]*bitmap.Bitmap, []*bitmap.Bitmap) {
