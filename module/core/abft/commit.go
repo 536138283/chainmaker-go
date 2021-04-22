@@ -33,11 +33,10 @@ type Committer struct {
 	chainConf     protocol.ChainConf
 	retryList     []*commonpb.Transaction
 	commonCommit  *common.CommitBlock
-	proposer      *Proposer
 	lock          sync.Mutex
 }
 
-func NewCommitter(coreExecute *CoreExecute, proposer *Proposer) *Committer {
+func NewCommitter(coreExecute *CoreExecute) *Committer {
 	committer := &Committer{
 		chainID:       coreExecute.chainId,
 		blockHeight:   0,
@@ -48,7 +47,6 @@ func NewCommitter(coreExecute *CoreExecute, proposer *Proposer) *Committer {
 		txPool:        coreExecute.txPool,
 		identity:      coreExecute.identity,
 		chainConf:     coreExecute.chainConf,
-		proposer:      proposer,
 		lock:          sync.Mutex{},
 	}
 	cbConf := &common.CommitBlockConf{

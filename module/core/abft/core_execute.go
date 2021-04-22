@@ -69,7 +69,7 @@ func NewCoreExecute(ceConfig *CoreExecuteConfig) (*CoreExecute, error) {
 	if err != nil {
 		return nil, err
 	}
-	ce.Committer = NewCommitter(ce, ce.Proposer)
+	ce.Committer = NewCommitter(ce)
 	return ce, nil
 }
 
