@@ -7,6 +7,10 @@ import (
 	"testing"
 )
 
+var (
+	contractName = "testContract"
+)
+
 func TestMerger_Merge(t *testing.T) {
 
 	branchID1 := []byte("a")

@@ -23,7 +23,6 @@ type CommitBlock struct {
 	store                 protocol.BlockchainStore
 	log                   *logger.CMLogger
 	snapshotManager       protocol.SnapshotManager
-	txPool                protocol.TxPool
 	ledgerCache           protocol.LedgerCache
 	chainConf             protocol.ChainConf
 	msgBus                msgbus.MessageBus
@@ -48,7 +47,6 @@ func NewCommitBlock(cbConf *CommitBlockConf) *CommitBlock {
 		store:           cbConf.Store,
 		log:             cbConf.Log,
 		snapshotManager: cbConf.SnapshotManager,
-		txPool:          cbConf.TxPool,
 		ledgerCache:     cbConf.LedgerCache,
 		chainConf:       cbConf.ChainConf,
 		msgBus:          cbConf.MsgBus,
@@ -85,7 +83,7 @@ func (cb *CommitBlock) CommitBlock(block *commonpb.Block, rwSetMap map[string]*c
 
 	// clear snapshot
 	startSnapshotTick := utils.CurrentTimeMillisSeconds()
-	if err := cb.snapshotManager.NotifyBlockCommitted(block); cb != nil {
+	if err := cb.snapshotManager.NotifyBlockCommitted(block); err != nil {
 		err = fmt.Errorf("notify snapshot error [%d](hash:%x)",
 			block.Header.BlockHeight, block.Header.BlockHash)
 		cb.log.Error(err)
