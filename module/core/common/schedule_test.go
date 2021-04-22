@@ -225,9 +225,9 @@ func TestSimulateWithDag(t *testing.T) {
 		},
 	}
 
-	txSimCache0 := newTxSimContext(vmMgr, snapshot, tx0)
-	txSimCache1 := newTxSimContext(vmMgr, snapshot, tx1)
-	txSimCache2 := newTxSimContext(vmMgr, snapshot, tx2)
+	txSimCache0 := NewTxSimContext(vmMgr, snapshot, tx0)
+	txSimCache1 := NewTxSimContext(vmMgr, snapshot, tx1)
+	txSimCache2 := NewTxSimContext(vmMgr, snapshot, tx2)
 
 	result := &commonpb.Result{
 		Code: commonpb.TxStatusCode_SUCCESS,

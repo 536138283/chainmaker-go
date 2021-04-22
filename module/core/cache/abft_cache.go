@@ -27,7 +27,7 @@ type TxBatchCache struct { //单个批次的缓存结构
 
 type AbftCache struct {
 	txBatchCache        *TxBatchCache //节点打包的单个批次缓存
-	abftTxBatchCacheMap sync.Map      //节点校验后的批次集合
+	abftTxBatchCacheMap sync.Map      //节点校验后的批次集合 //todo english & name
 }
 
 func NewAbftCache() *AbftCache {

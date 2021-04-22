@@ -82,11 +82,11 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 	// sort BatchID
 	c.sortTxBatchID()
 
-	var block *commonpb.Block
+	//var block *commonpb.Block
 	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
 	// new block
 	lastBlock := c.ledgerCache.GetLastCommittedBlock()
-	block, err = common.InitNewBlock(lastBlock, c.identity, c.chainID, c.chainConf)
+	block, err := common.InitNewBlock(lastBlock, c.identity, c.chainID, c.chainConf)
 	if err != nil {
 		return err
 	}
@@ -163,20 +163,20 @@ func (c *Committer) sortTxBatchID() {
 	}
 }
 
-func (c *Committer) setTxBatchInfo(txBatchID []byte) error {
-	txBatch, err := c.abftCache.GetVerifiedTxBatchByHash(txBatchID)
+func (c *Committer) setTxBatchInfo(txBatchHash []byte) error {
+	txBatch, err := c.abftCache.GetVerifiedTxBatchByHash(txBatchHash)
 	if err != nil {
 		return err
 	}
 
-	if !txBatch.GetVerifyResult() {
+	if !txBatch.GetVerifyResult() { //todo change name
 		return nil
 	}
 
 	txBatchInfo := new(TxBatchInfo)
 	txBatchInfo.txBatch = txBatch.GetTxBatch()
 	txBatchInfo.rwSetMap = txBatch.GetTxBatchRwSet()
-	c.merger.txBatchInfo[hex.EncodeToString(txBatchID)] = txBatchInfo
+	c.merger.txBatchInfo[hex.EncodeToString(txBatchHash)] = txBatchInfo
 	return nil
 }
 

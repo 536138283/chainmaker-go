@@ -42,6 +42,7 @@ func (m *Merger) Merge() error {
 	baseTxBatch := m.txBatchInfo[m.baseTxBatchID].txBatch
 	baseRWSetMap := m.txBatchInfo[m.baseTxBatchID].rwSetMap
 
+	// rongyu todo
 	if len(m.txBatchIDList) == 1 {
 		m.block.Txs = baseTxBatch.Txs
 		m.block.Dag = baseTxBatch.Dag
@@ -90,7 +91,7 @@ func (m *Merger) Merge() error {
 	return nil
 }
 
-// 拿到重复交易(key=>BatchID, value=>重复交易的下标)
+// 拿到重复交易(key=>BatchID, value=>重复交易的下标) //todo
 func (m *Merger) prepare() map[string][]int {
 
 	// record the deleted & repeated transaction(BatchID->deleted transaction 's position)
@@ -100,6 +101,8 @@ func (m *Merger) prepare() map[string][]int {
 			txs := info.txBatch.Txs
 			for i, _ := range txs {
 				txID := txs[i].Header.TxId
+
+				// set all Transaction to a Map(txId=>tx)
 				if _, ok := m.allTxsMap[txID]; !ok {
 					m.allTxsMap[txID] = txs[i]
 				} else {

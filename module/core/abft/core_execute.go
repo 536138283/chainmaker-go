@@ -13,6 +13,7 @@ import (
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/protocol"
+	"github.com/Workiva/go-datastructures/threadsafe/err"
 )
 
 type CoreExecute struct {
@@ -83,9 +84,12 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 
 	switch message.Topic {
 	case msgbus.PackageSignal:
-		if proposedSignal, ok := message.Payload.(abft.PackagedSignal); ok {
-			c.Proposer.proposedSignal = &proposedSignal
+		if proposedSignal, ok := message.Payload.(abft.PackagedSignal); !ok {
+			c.log.Warnf("propose failed, error %s", //todo
+				err.Error())
+			return
 		}
+		c.Proposer.proposedSignal = &proposedSignal //todo
 		if err := c.Proposer.Propose(); err != nil {
 			c.log.Warnf("propose failed, error %s",
 				err.Error())

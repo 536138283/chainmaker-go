@@ -78,7 +78,7 @@ func NewVerifier(ce *CoreExecute) (*Verifier, error) {
 	return verifier, nil
 }
 
-func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) {
+func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) { //todo
 	currentHeight, err := v.ledgerCache.CurrentHeight()
 	if err != nil {
 		return false, err
@@ -110,14 +110,15 @@ func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxR
 	if txBatchCache != nil {
 		if bytes.Equal(txBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
 			txRwSetMap = txBatchCache.GetRwSetMap()
-		}
-	} else {
-		txRwSetMap, timeLasts, err = v.verifyBlock.ValidateBlock(block)
-		if err != nil {
 			return false, nil, err
 		}
 	}
+	txRwSetMap, timeLasts, err = v.verifyBlock.ValidateBlock(block)
+	if err != nil {
+		return false, nil, err
+	}
 	// mark transactions in block as pending status in txpool
+	//todo selt not
 	v.txPool.AddTxsToPendingCache(block.Txs, block.Header.BlockHeight)
 
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick

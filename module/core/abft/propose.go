@@ -61,7 +61,7 @@ func NewProposer(ce *CoreExecute) *Proposer {
 	}
 }
 
-func (p *Proposer) verifyHeight() (bool, error) {
+func (p *Proposer) verifyHeight() (bool, error) { //todo bool do not need
 	currentHeight, err := p.ledgerCache.CurrentHeight()
 	if err != nil {
 		return false, err
@@ -72,8 +72,8 @@ func (p *Proposer) verifyHeight() (bool, error) {
 	return true, nil
 }
 
-func (p *Proposer) proposeStatus() (*commonpb.Block, bool) {
-	txBatch := p.abftCache.GetTxBatchCache()
+func (p *Proposer) proposeStatus() (*commonpb.Block, bool) { //todo bool no need
+	txBatch := p.abftCache.GetTxBatchCache() // todo getXXBatch
 	if txBatch == nil {
 		return nil, true
 	}
@@ -111,7 +111,7 @@ func (p *Proposer) Propose() error {
 	select {
 	case <-ticker.C:
 		cancel()
-		p.log.Infof("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", txBatch.Header.BlockHeight)
+		p.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", txBatch.Header.BlockHeight)
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		return nil
 	case <-p.getTxBatchC:
@@ -131,11 +131,14 @@ func (p *Proposer) Propose() error {
 		if err != nil {
 			p.log.Errorf("schedule txBatch(%d,%x) error %s",
 				txBatch.Header.BlockHeight, txBatch.Header.BlockHash, err)
+			//todo empty block and save
+			return err
 		}
 
 		var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
 		err = common.FinalizeBlock(txBatch, txRWSetMap, aclFailTxs, p.chainConf.ChainConfig().Crypto.Hash)
 		if err != nil {
+			//todo empty block
 			p.log.Errorf("finalizeBlock txBatch(%d,%s) error %s",
 				txBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), err)
 		}
