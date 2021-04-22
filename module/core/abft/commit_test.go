@@ -78,7 +78,7 @@ func TestCommitter_Commit_getRetryListAfterABA(t *testing.T) {
 
 	// ABA 通过的batch
 	txBatchHash := [][]byte{branchID3, branchID2, branchID5, branchID4}
-	c.setTxBatchIDList(txBatchHash)
+	c.prepare(txBatchHash)
 	fmt.Println("sort before", c.txBatchIDList)
 
 	c.sortTxBatchID()

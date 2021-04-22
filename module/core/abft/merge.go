@@ -52,7 +52,7 @@ func (m *Merger) Merge() error {
 		return nil
 	}
 
-	repeatTxMap, _ := m.prepare()
+	repeatTxMap := m.prepare()
 	baseWriteTable := getBaseWriteTable(baseRWSetMap)
 	for i := 1; i < len(m.txBatchIDList); i++ {
 		txBatchID := m.txBatchIDList[i]
@@ -60,9 +60,8 @@ func (m *Merger) Merge() error {
 		repeatedTxIndexs := repeatTxMap[txBatchID]
 		rwSetMap := m.txBatchInfo[txBatchID].rwSetMap
 
-		// 将依赖该重复交易集中的交易的执行结果置为失败
 		// get the releated tx for repeated tx
-		conflictRepeatedTxMap := findReleatedTxForRepeatedTx(
+		conflictRepeatedTxMap := findReliantTxForRepeatedTx(
 			repeatedTxIndexs,
 			txBatch.Txs,
 			rwSetMap)
@@ -91,20 +90,16 @@ func (m *Merger) Merge() error {
 	return nil
 }
 
-// 拿到重复交易(key=>BatchID, value=>重复交易的下标)以及第一个批次的交易(key=>txId, value=>交易的下标)的数据集
-func (m *Merger) prepare() (map[string][]int, map[string]int) {
+// 拿到重复交易(key=>BatchID, value=>重复交易的下标)
+func (m *Merger) prepare() map[string][]int {
 
 	// record the deleted & repeated transaction(BatchID->deleted transaction 's position)
 	repeatTrans := make(map[string][]int)
-	baseTxIndexTable := make(map[string]int)
 	for _, txBatchID := range m.txBatchIDList {
 		if info, ok := m.txBatchInfo[txBatchID]; ok {
 			txs := info.txBatch.Txs
 			for i, _ := range txs {
 				txID := txs[i].Header.TxId
-				if txBatchID == m.baseTxBatchID {
-					baseTxIndexTable[txID] = i
-				}
 				if _, ok := m.allTxsMap[txID]; !ok {
 					m.allTxsMap[txID] = txs[i]
 				} else {
@@ -113,7 +108,7 @@ func (m *Merger) prepare() (map[string][]int, map[string]int) {
 			}
 		}
 	}
-	return repeatTrans, baseTxIndexTable
+	return repeatTrans
 }
 
 func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) *commonpb.DAG {
@@ -187,7 +182,7 @@ func (m *Merger) doMerge(
 	conflictRepeatedTxMap map[int][]int) {
 
 	repeatedTxIndexMap := getRepeatedTxIndexMap(repeatedTxIndexs)
-	releatedTxIndexMap := getReleatedTxIndexMap(conflictRepeatedTxMap)
+	reliantTxIndexMap := getReliantTxIndexMap(conflictRepeatedTxMap)
 	failTxWriteTable := make(map[string]struct{})
 	newWriteTable := make(map[string]struct{})
 	for index, tx := range txBatch.Txs {
@@ -203,7 +198,7 @@ func (m *Merger) doMerge(
 					index,
 					baseWriteTable,
 					failTxWriteTable,
-					releatedTxIndexMap) {
+					reliantTxIndexMap) {
 
 					// modify conflict tx
 					modifyTxResult(tx)
@@ -227,11 +222,11 @@ func ifNeedModify(
 	index int,
 	baseWriteTable,
 	failTxWriteTable map[string]struct{},
-	releatedTxIndexMap map[int]struct{}) bool {
+	reliantTxIndexMap map[int]struct{}) bool {
 
 	_, ok1 := baseWriteTable[finalKey]
 	_, ok2 := failTxWriteTable[finalKey]
-	_, ok3 := releatedTxIndexMap[index]
+	_, ok3 := reliantTxIndexMap[index]
 
 	if ok1 || ok2 || ok3 {
 		return true
@@ -239,14 +234,14 @@ func ifNeedModify(
 	return false
 }
 
-func getReleatedTxIndexMap(conflictRepeatedTxMap map[int][]int) map[int]struct{} {
-	releatedTxIndexMap := make(map[int]struct{})
-	for _, releatedTxIndexs := range conflictRepeatedTxMap {
-		for _, releatedTxIndex := range releatedTxIndexs {
-			releatedTxIndexMap[releatedTxIndex] = struct{}{}
+func getReliantTxIndexMap(conflictRepeatedTxMap map[int][]int) map[int]struct{} {
+	reliantTxIndexMap := make(map[int]struct{})
+	for _, reliantTxIndexs := range conflictRepeatedTxMap {
+		for _, reliantTxIndex := range reliantTxIndexs {
+			reliantTxIndexMap[reliantTxIndex] = struct{}{}
 		}
 	}
-	return releatedTxIndexMap
+	return reliantTxIndexMap
 }
 
 func getRepeatedTxIndexMap(repeatedTxIndexs []int) map[int]struct{} {
@@ -289,8 +284,8 @@ func getWriteTable(rwSet *commonpb.TxRWSet) map[string]struct{} {
 	return writeTable
 }
 
-func findReleatedTxForRepeatedTx(repeatedTxIndexs []int, txs []*commonpb.Transaction, rwSetMap map[string]*commonpb.TxRWSet) map[int][]int {
-	releatedTxMap := make(map[int][]int)
+func findReliantTxForRepeatedTx(repeatedTxIndexs []int, txs []*commonpb.Transaction, rwSetMap map[string]*commonpb.TxRWSet) map[int][]int {
+	reliantTxMap := make(map[int][]int)
 	for _, repeatedTxIndex := range repeatedTxIndexs {
 		repeatedTx := txs[repeatedTxIndex]
 		repeatedTxRWSet := rwSetMap[repeatedTx.Header.TxId]
@@ -298,17 +293,17 @@ func findReleatedTxForRepeatedTx(repeatedTxIndexs []int, txs []*commonpb.Transac
 		// get repeated tx 's write table
 		repeatedTxWriteTable := getWriteTable(repeatedTxRWSet)
 
-		getReleatedTxMap(txs, rwSetMap, repeatedTxWriteTable, releatedTxMap, repeatedTxIndex)
+		getReliantTxMap(txs, rwSetMap, repeatedTxWriteTable, reliantTxMap, repeatedTxIndex)
 	}
 
-	return releatedTxMap
+	return reliantTxMap
 }
 
-func getReleatedTxMap(
+func getReliantTxMap(
 	txs []*commonpb.Transaction,
 	rwSetMap map[string]*commonpb.TxRWSet,
 	repeatedTxWriteTable map[string]struct{},
-	releatedTxMap map[int][]int, index int) {
+	reliantTxMap map[int][]int, index int) {
 
 	for j := index + 1; j <= len(txs)-1; j++ {
 		tx := txs[j]
@@ -318,7 +313,7 @@ func getReleatedTxMap(
 			finalKey := constructKey(txRead.ContractName, txRead.Key)
 			// check if RWSet conflict
 			if _, ok := repeatedTxWriteTable[finalKey]; ok {
-				releatedTxMap[index] = append(releatedTxMap[index], j)
+				reliantTxMap[index] = append(reliantTxMap[index], j)
 			}
 		}
 	}

@@ -70,14 +70,13 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 	defer c.lock.Unlock()
 
 	// check block height
-	ok, err := c.verifyHeight(blockHeight)
-	if !ok {
-		c.log.Errorf("after ABA the tx batch height is wrong: %s, height: (%d)", err.Error(), blockHeight)
+	if ok, err := c.verifyHeight(blockHeight); !ok {
+		c.log.Errorf("height verify fail,err: %s, height: (%d)", err.Error(), blockHeight)
 		return err
 	}
 
-	// set txBatchID list
-	err = c.setTxBatchIDList(txBatchHash)
+	// set txBatchID list & txBatchInfo
+	err := c.prepare(txBatchHash)
 	if err != nil {
 		return err
 	}
@@ -93,6 +92,7 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 	if err != nil {
 		return err
 	}
+
 	if !c.isEmptyBlock() {
 		c.merger.block = block
 		c.merger.txBatchIDList = c.txBatchIDList
@@ -104,7 +104,7 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 		rwSetMap = c.merger.rwSetMap
 	}
 
-	// rewrite blockTimestamp
+	// rewrite block's Timestamp
 	baseTxBatchInfo := c.merger.txBatchInfo[c.merger.baseTxBatchID].txBatch
 	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
 
@@ -165,7 +165,7 @@ func (c *Committer) sortTxBatchID() {
 	}
 }
 
-func (c *Committer) getConfirmedTxBatchInfo(txBatchID []byte) error {
+func (c *Committer) setTxBatchInfo(txBatchID []byte) error {
 	txBatch, err := c.abftCache.GetVerifiedTxBatchByHash(txBatchID)
 	if err != nil {
 		return err
@@ -205,14 +205,14 @@ func (c *Committer) verifyHeight(height int64) (bool, error) {
 	return true, nil
 }
 
-func (c *Committer) setTxBatchIDList(txBatchHash [][]byte) error {
+func (c *Committer) prepare(txBatchHash [][]byte) error {
 	for i, _ := range txBatchHash {
-		// BatchInfo After ABA
-		if err := c.getConfirmedTxBatchInfo(txBatchHash[i]); err != nil {
+		// set txBatchInfo
+		if err := c.setTxBatchInfo(txBatchHash[i]); err != nil {
 			return err
 		}
 
-		// BatchIDList After ABA
+		// set txBatchIDList
 		c.txBatchIDList = append(c.txBatchIDList, hex.EncodeToString(txBatchHash[i]))
 	}
 	return nil

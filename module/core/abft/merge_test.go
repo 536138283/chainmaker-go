@@ -36,7 +36,7 @@ func TestMerger_Merge(t *testing.T) {
 
 	// ABA 通过的batch
 	txBatchHash := [][]byte{branchID3, branchID2, branchID4, branchID1}
-	c.setTxBatchIDList(txBatchHash)
+	c.prepare(txBatchHash)
 	c.sortTxBatchID()
 
 	block := cache.CreateNewTestBlock(3)
