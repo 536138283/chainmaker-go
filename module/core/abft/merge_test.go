@@ -1,13 +1,16 @@
 package abft
 
 import (
-	"chainmaker.org/chainmaker-go/core/cache"
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"fmt"
 	"testing"
+
+	"chainmaker.org/chainmaker-go/core/cache"
+	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 )
 
-var contractName = "contractName"
+var (
+	contractName = "testContract"
+)
 
 func TestMerger_Merge(t *testing.T) {
 
