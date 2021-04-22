@@ -1,45 +1,64 @@
-package common
+package abft
 
 import (
 	"chainmaker.org/chainmaker-go/core/cache"
+	"chainmaker.org/chainmaker-go/core/common"
+	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/mock"
+	"chainmaker.org/chainmaker-go/monitor"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
+	"chainmaker.org/chainmaker-go/protocol"
 	"encoding/hex"
 	"fmt"
 	"github.com/golang/mock/gomock"
+	"github.com/panjf2000/ants/v2"
+	"sync"
 	"testing"
 )
 
-func TestFinalizeBlock(t *testing.T) {
-	ctl := gomock.NewController(t)
-	identity := mock.NewMockSigningMember(ctl)
-	chainConf := mock.NewMockChainConf(ctl)
-	identity.EXPECT().Serialize(true).AnyTimes().Return([]byte("DEFAULTPROPOSER"), nil)
-	chainConf.EXPECT().ChainConfig().AnyTimes().Return(nil)
-
-	block := cache.CreateNewTestBlock(0)
-	chainId := "123"
-	nblock, er := InitNewBlock(block, identity, chainId, chainConf)
-	fmt.Println(er)
-
-	txRWSetMap := make(map[string]*commonpb.TxRWSet)
-	aclFailTxs := make([]*commonpb.Transaction, 0, 0)
-	hashtype := "456"
-	er = FinalizeBlock(nblock, txRWSetMap, aclFailTxs, hashtype)
-	fmt.Println(er)
-}
-
-func verifyBlockPrepare(t *testing.T) (*VerifyBlock, *commonpb.Block) {
+func verifyPrepare(t *testing.T) (*Verifier, *commonpb.Block, error) {
 	ctl := gomock.NewController(t)
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, "chain1")
-	chainConf := mock.NewMockChainConf(ctl)
+	abftCache := cache.NewAbftCache()
 	ledgerCache := mock.NewMockLedgerCache(ctl)
+	msgBus := mock.NewMockMessageBus(ctl)
+	txPool := mock.NewMockTxPool(ctl)
+
+	//msgBus mock
+	msgBus.EXPECT().Publish(gomock.Any(), gomock.Any()).AnyTimes().Return()
+
+	verifier := &Verifier{
+		wg:            sync.WaitGroup{},
+		log:           log,
+		abftCache:     abftCache,
+		ledgerCache:   ledgerCache,
+		msgBus:        msgBus,
+		verifyTimeout: DEFAULT_VERIFY_TIMEOUT,
+		txPool:        txPool,
+		chainId:       "chain1",
+	}
+	var block *commonpb.Block
+	verifier.verifyBlock, block = verifyBlockPrepare(ctl, log, ledgerCache, txPool)
+	var err error
+	verifier.goRoutinePool, err = ants.NewPool(10, ants.WithPreAlloc(true))
+	if err != nil {
+		return nil, nil, fmt.Errorf("new verifier failed: %s", err.Error())
+	}
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		verifier.metricBlockVerifyTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_VERIFIER, "metric_block_verify_time",
+			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
+	}
+	return verifier, block, nil
+
+}
+
+func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCache *mock.MockLedgerCache, txPool *mock.MockTxPool) (*common.VerifyBlock, *commonpb.Block) {
+	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	snapshotManager := mock.NewMockSnapshotManager(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
-	txPool := mock.NewMockTxPool(ctl)
 	store := mock.NewMockBlockchainStore(ctl)
 
 	//chainConf mock
@@ -51,7 +70,7 @@ func verifyBlockPrepare(t *testing.T) (*VerifyBlock, *commonpb.Block) {
 		Block: &config.BlockConfig{
 			BlockTxCapacity: 1000,
 			BlockSize:       1,
-			BlockInterval:   DEFAULTDURATION,
+			BlockInterval:   1000,
 		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
@@ -131,7 +150,7 @@ func verifyBlockPrepare(t *testing.T) (*VerifyBlock, *commonpb.Block) {
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(2)
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
-	txSimCache0 := NewTxSimContext(vmMgr, snapshot, tx0)
+	txSimCache0 := common.NewTxSimContext(vmMgr, snapshot, tx0)
 	txSimCache0.SetTxResult(result)
 	snapshot.EXPECT().ApplyTxSimContext(txSimCache0, true).Return(true, 1)
 	dag := &commonpb.DAG{
@@ -144,11 +163,12 @@ func verifyBlockPrepare(t *testing.T) (*VerifyBlock, *commonpb.Block) {
 	txsMap := make(map[string]*commonpb.Transaction)
 	txsMap[tx0.Header.TxId] = tx0
 	txPool.EXPECT().GetTxsByTxIds([]string{tx0.Header.TxId}).Return(txsMap, nil)
+	txPool.EXPECT().AddTxsToPendingCache(gomock.Any(), gomock.Any()).AnyTimes().Return()
 
 	//store mock
 	store.EXPECT().TxExists(tx0).AnyTimes().Return(false, nil)
 
-	conf := &ValidateBlockConf{
+	conf := &common.ValidateBlockConf{
 		ChainConf:       chainConf,
 		Log:             log,
 		LedgerCache:     ledgerCache,
@@ -158,11 +178,16 @@ func verifyBlockPrepare(t *testing.T) (*VerifyBlock, *commonpb.Block) {
 		TxPool:          txPool,
 		BlockchainStore: store,
 	}
-	return NewVerifyBlock(conf), block
+	return common.NewVerifyBlock(conf), block
 }
 
-func TestBlockVerify(t *testing.T) {
-	verifyBlock, block := verifyBlockPrepare(t)
-	RWSetMap, _, _ := verifyBlock.ValidateBlock(block)
-	fmt.Printf("rwset : %v\n", RWSetMap)
+func TestVerify(t *testing.T) {
+	verify, block, err := verifyPrepare(t)
+	if err != nil {
+		fmt.Println("verify prepare failed: " + err.Error())
+	}
+	err = verify.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
+	if err != nil {
+		fmt.Println("verify block failed: " + err.Error())
+	}
 }

@@ -57,6 +57,7 @@ func NewProposer(ce *CoreExecute) *Proposer {
 		snapshotManager: ce.snapshotManager,
 		msgBus:          ce.msgBus,
 		abftCache:       ce.abftCache,
+		getTxBatchC:     make(chan struct{}),
 	}
 }
 
@@ -73,7 +74,7 @@ func (p *Proposer) verifyHeight() (bool, error) {
 
 func (p *Proposer) proposeStatus() (*commonpb.Block, bool) {
 	txBatch := p.abftCache.GetTxBatchCache()
-	if txBatch.GetTxBatch() == nil {
+	if txBatch == nil {
 		return nil, true
 	}
 	return txBatch.GetTxBatch(), false

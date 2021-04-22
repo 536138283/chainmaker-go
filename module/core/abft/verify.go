@@ -107,7 +107,7 @@ func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxR
 	)
 	//nodes that pack the txBatch do not need to verify
 	txBatchCache := v.abftCache.GetTxBatchCache()
-	if txBatchCache.GetTxBatch() != nil {
+	if txBatchCache != nil {
 		if bytes.Equal(txBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
 			txRwSetMap = txBatchCache.GetRwSetMap()
 		}

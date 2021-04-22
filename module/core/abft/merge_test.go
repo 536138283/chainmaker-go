@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+var contractName = "contractName"
+
 func TestMerger_Merge(t *testing.T) {
 
 	branchID1 := []byte("a")
@@ -91,7 +93,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 	m := NewMerger()
 	rwSetMap0 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap0[tx0.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx0.Header.TxId,
+		TxId: tx0.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K1"),
@@ -104,7 +106,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 		}},
 	}
 	rwSetMap0[tx1.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx1.Header.TxId,
+		TxId: tx1.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K3"),
@@ -124,7 +126,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx2.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx2.Header.TxId,
+		TxId: tx2.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K5"),
@@ -137,7 +139,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 		}},
 	}
 	rwSetMap1[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -156,7 +158,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx4.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx4.Header.TxId,
+		TxId: tx4.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K9"),
@@ -169,7 +171,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 		}},
 	}
 	rwSetMap2[tx5.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx5.Header.TxId,
+		TxId: tx5.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K11"),
@@ -189,7 +191,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx6.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx6.Header.TxId,
+		TxId: tx6.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K13"),
@@ -202,7 +204,7 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 		}},
 	}
 	rwSetMap3[tx7.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx7.Header.TxId,
+		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K13"),
@@ -241,7 +243,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 	m := NewMerger()
 	rwSetMap0 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap0[tx0.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx0.Header.TxId,
+		TxId: tx0.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K1"),
@@ -254,7 +256,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap0[tx1.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx1.Header.TxId,
+		TxId: tx1.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K2"),
@@ -267,7 +269,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap0[tx8.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx8.Header.TxId,
+		TxId: tx8.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K3"),
@@ -287,7 +289,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx2.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx2.Header.TxId,
+		TxId: tx2.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K2"),
@@ -300,7 +302,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap1[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K4"),
@@ -313,7 +315,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap1[tx9.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx9.Header.TxId,
+		TxId: tx9.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K6"),
@@ -332,7 +334,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx4.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx4.Header.TxId,
+		TxId: tx4.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -345,7 +347,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap2[tx5.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx5.Header.TxId,
+		TxId: tx5.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K6"),
@@ -358,7 +360,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap2[tx10.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx10.Header.TxId,
+		TxId: tx10.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K9"),
@@ -378,7 +380,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx6.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx6.Header.TxId,
+		TxId: tx6.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K11"),
@@ -391,7 +393,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap3[tx7.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx7.Header.TxId,
+		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K12"),
@@ -404,7 +406,7 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap3[tx11.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx11.Header.TxId,
+		TxId: tx11.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K4"),
@@ -439,7 +441,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 	m := NewMerger()
 	rwSetMap0 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap0[tx0.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx0.Header.TxId,
+		TxId: tx0.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K1"),
@@ -452,7 +454,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap0[tx1.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx1.Header.TxId,
+		TxId: tx1.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K3"),
@@ -472,7 +474,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx1.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx1.Header.TxId,
+		TxId: tx1.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K3"),
@@ -485,7 +487,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap1[tx2.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx2.Header.TxId,
+		TxId: tx2.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K5"),
@@ -498,7 +500,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap1[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -518,7 +520,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx4.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx4.Header.TxId,
+		TxId: tx4.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K9"),
@@ -531,7 +533,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap2[tx5.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx5.Header.TxId,
+		TxId: tx5.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K11"),
@@ -544,7 +546,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap2[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -565,7 +567,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx6.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx6.Header.TxId,
+		TxId: tx6.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K13"),
@@ -578,7 +580,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap3[tx7.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx7.Header.TxId,
+		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K15"),
@@ -591,7 +593,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap3[tx5.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx5.Header.TxId,
+		TxId: tx5.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K11"),
@@ -604,7 +606,7 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 		}},
 	}
 	rwSetMap3[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -644,7 +646,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	m := NewMerger()
 	rwSetMap0 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap0[tx0.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx0.Header.TxId,
+		TxId: tx0.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K1"),
@@ -657,7 +659,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap0[tx1.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx1.Header.TxId,
+		TxId: tx1.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K3"),
@@ -670,7 +672,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap0[tx2.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx2.Header.TxId,
+		TxId: tx2.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K5"),
@@ -683,7 +685,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap0[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -704,7 +706,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -717,7 +719,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap1[tx4.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx4.Header.TxId,
+		TxId: tx4.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K8"),
@@ -730,7 +732,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap1[tx5.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx5.Header.TxId,
+		TxId: tx5.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K9"),
@@ -743,7 +745,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap1[tx6.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx6.Header.TxId,
+		TxId: tx6.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K11"),
@@ -764,7 +766,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx7.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx7.Header.TxId,
+		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K13"),
@@ -777,7 +779,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap2[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -790,7 +792,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap2[tx8.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx8.Header.TxId,
+		TxId: tx8.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K8"),
@@ -803,7 +805,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap2[tx9.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx9.Header.TxId,
+		TxId: tx9.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K16"),
@@ -825,7 +827,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx7.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx7.Header.TxId,
+		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K13"),
@@ -838,7 +840,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap3[tx10.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx10.Header.TxId,
+		TxId: tx10.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K14"),
@@ -851,7 +853,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap3[tx6.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx6.Header.TxId,
+		TxId: tx6.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K11"),
@@ -864,7 +866,7 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 		}},
 	}
 	rwSetMap3[tx11.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx11.Header.TxId,
+		TxId: tx11.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K12"),
@@ -906,7 +908,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	m := NewMerger()
 	rwSetMap0 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap0[tx0.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx0.Header.TxId,
+		TxId: tx0.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K1"),
@@ -919,7 +921,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap0[tx1.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx1.Header.TxId,
+		TxId: tx1.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K3"),
@@ -932,7 +934,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap0[tx2.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx2.Header.TxId,
+		TxId: tx2.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K4"),
@@ -945,7 +947,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap0[tx3.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx3.Header.TxId,
+		TxId: tx3.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K7"),
@@ -966,7 +968,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx2.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx2.Header.TxId,
+		TxId: tx2.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K4"),
@@ -979,7 +981,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap1[tx4.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx4.Header.TxId,
+		TxId: tx4.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K5"),
@@ -992,7 +994,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap1[tx5.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx5.Header.TxId,
+		TxId: tx5.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K8"),
@@ -1005,7 +1007,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap1[tx6.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx6.Header.TxId,
+		TxId: tx6.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K11"),
@@ -1026,7 +1028,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx7.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx7.Header.TxId,
+		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K13"),
@@ -1039,7 +1041,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap2[tx4.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx4.Header.TxId,
+		TxId: tx4.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K5"),
@@ -1052,7 +1054,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap2[tx8.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx8.Header.TxId,
+		TxId: tx8.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K8"),
@@ -1065,7 +1067,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap2[tx9.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx9.Header.TxId,
+		TxId: tx9.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K16"),
@@ -1087,7 +1089,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx7.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx7.Header.TxId,
+		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K13"),
@@ -1100,7 +1102,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap3[tx10.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx10.Header.TxId,
+		TxId: tx10.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K14"),
@@ -1113,7 +1115,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap3[tx11.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx11.Header.TxId,
+		TxId: tx11.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K4"),
@@ -1126,7 +1128,7 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 		}},
 	}
 	rwSetMap3[tx12.Header.TxId] = &commonpb.TxRWSet{
-		TxId:     tx12.Header.TxId,
+		TxId: tx12.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
 			Key:          []byte("K19"),

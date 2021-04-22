@@ -1,18 +1,18 @@
 package abft
 
 import (
-	"chainmaker.org/chainmaker-go/core/common"
+	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/mock"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker-go/pb/protogo/config"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"encoding/hex"
+	"fmt"
 	"github.com/golang/mock/gomock"
 	"testing"
 )
 
-func TestVerifyHeight(t *testing.T) {
-
-}
 func newBlock() *commonpb.Block {
 	return &commonpb.Block{
 		Header: &commonpb.BlockHeader{
@@ -59,7 +59,7 @@ func proposePrepare(t *testing.T) *Proposer {
 		RuntimeType:     commonpb.RuntimeType_WASMER,
 	}
 
-	parameters := make(map[string]string, 8)
+	parameters := make(map[string]string, 1)
 	tx0 := newTx("a0000000000000000000000000000000", contractId, parameters)
 	txBatch := make([]*commonpb.Transaction, 0)
 	txBatch = append(txBatch, tx0)
@@ -70,17 +70,34 @@ func proposePrepare(t *testing.T) *Proposer {
 	blockHash, _ := hex.DecodeString("f4b43ff2d2fbdd2563b406f833ecfd03c5b5d67726326d65c60cdf1f270f10fd")
 	lastBlock.Header.BlockHash = blockHash
 	ledgerCache.EXPECT().GetLastCommittedBlock().AnyTimes().Return(lastBlock)
-	ledgerCache.EXPECT().CurrentHeight().AnyTimes().Return(0, nil)
+	ledgerCache.EXPECT().CurrentHeight().AnyTimes().Return(int64(0), nil)
 
 	//identity mock
 	identity.EXPECT().Serialize(gomock.Any()).AnyTimes().Return([]byte("testNode1"), nil)
 
+	//chainConf mock
+	config := &config.ChainConfig{
+		Version: "1.0",
+		ChainId: "chain1",
+		Crypto: &config.CryptoConfig{
+			Hash: "SHA256",
+		},
+		Block: &config.BlockConfig{
+			BlockTxCapacity: 1000,
+			BlockSize:       1,
+			BlockInterval:   1000,
+		},
+	}
+	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
+
 	//snapshotManager mock
 	snapshot := mock.NewMockSnapshot(ctl)
 	snapshotManager.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
-	var txTable = make([]*commonpb.Transaction, 8)
-	var txRWSetTable = make([]*commonpb.TxRWSet, 8)
+
+	var txTable = make([]*commonpb.Transaction, 1)
 	txTable[0] = tx0
+
+	var txRWSetTable = make([]*commonpb.TxRWSet, 1)
 	txRWSetTable[0] = &commonpb.TxRWSet{
 		TxId: tx0.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
@@ -109,20 +126,31 @@ func proposePrepare(t *testing.T) *Proposer {
 	txResultMap[tx0.Header.TxId] = result
 	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
-	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(2)
+	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(1)
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().AnyTimes().Return()
 
-	txSimCache0 := common.NewTxSimContext(vmMgr, snapshot, tx0)
-
-	txSimCache0.SetTxResult(result)
-	snapshot.EXPECT().ApplyTxSimContext(txSimCache0, true).Return(true, 1)
+	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), true).Return(true, 1)
 	dag := &commonpb.DAG{
 		Vertexes: []*commonpb.DAG_Neighbor{{}},
 	}
 	snapshot.EXPECT().BuildDAG().Return(dag)
 	snapshot.EXPECT().GetTxResultMap().Return(txResultMap)
 
+	//msgBus mock
+	msgBus.EXPECT().Publish(gomock.Any(), gomock.Any()).AnyTimes().Return()
+
+	//vm mock
+	contractResult := &commonpb.ContractResult{
+		Code:    0,
+		Result:  nil,
+		Message: "",
+		GasUsed: 0,
+	}
+	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, commonpb.TxStatusCode_SUCCESS)
+
+	//abftcache mock
+	abftCache := cache.NewAbftCache()
 	ce := &CoreExecute{
 		chainId:         "chain1",
 		ledgerCache:     ledgerCache,
@@ -135,6 +163,18 @@ func proposePrepare(t *testing.T) *Proposer {
 		chainConf:       chainConf,
 		log:             log,
 		vmMgr:           vmMgr,
+		abftCache:       abftCache,
 	}
 	return NewProposer(ce)
+}
+
+func TestPropose(t *testing.T) {
+	proposer := proposePrepare(t)
+	proposer.proposedSignal = &abft.PackagedSignal{
+		BlockHeight: 1,
+	}
+	err := proposer.Propose()
+	if err != nil {
+		fmt.Println("error: " + err.Error())
+	}
 }
