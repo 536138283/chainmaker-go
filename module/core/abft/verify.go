@@ -78,15 +78,15 @@ func NewVerifier(ce *CoreExecute) (*Verifier, error) {
 	return verifier, nil
 }
 
-func (v *Verifier) checkHeight(block *commonPb.Block) (bool, error) { //todo
+func (v *Verifier) verifyHeight(block *commonPb.Block) error {
 	currentHeight, err := v.ledgerCache.CurrentHeight()
 	if err != nil {
-		return false, err
+		return err
 	}
 	if currentHeight+1 != block.Header.BlockHeight {
-		return false, errors.New("the packaging signal height is inconsistent with the cache")
+		return errors.New("the packaging signal height is inconsistent with the cache")
 	}
-	return true, nil
+	return nil
 }
 
 func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
@@ -94,36 +94,29 @@ func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxR
 	if err := utils.IsEmptyBlock(block); err != nil {
 		return false, nil, err
 	}
-	ok, err := v.checkHeight(block)
-	if !ok {
+	err := v.verifyHeight(block)
+	if err != nil {
 		return false, nil, err
 	}
 	v.log.Debugf("verify receive [%d](%x,%d,%d)",
 		block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount, len(block.Txs))
 
-	var (
-		txRwSetMap map[string]*commonPb.TxRWSet
-		timeLasts  []int64
-	)
 	//nodes that pack the txBatch do not need to verify
-	txBatchCache := v.abftCache.GetTxBatchCache()
-	if txBatchCache != nil {
-		if bytes.Equal(txBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
-			txRwSetMap = txBatchCache.GetRwSetMap()
-			return false, nil, err
+	proposedTxBatchCache := v.abftCache.GetProposedTxBatchCache()
+	if proposedTxBatchCache != nil {
+		if bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
+			return false, proposedTxBatchCache.GetRwSetMap(), nil
 		}
 	}
-	txRwSetMap, timeLasts, err = v.verifyBlock.ValidateBlock(block)
+	txRwSetMap, timeLasts, err := v.verifyBlock.ValidateBlock(block)
 	if err != nil {
 		return false, nil, err
 	}
 	// mark transactions in block as pending status in txpool
-	//todo selt not
 	v.txPool.AddTxsToPendingCache(block.Txs, block.Header.BlockHeight)
 
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	v.log.Infof("verify success [%d,%x](%v,%d)", block.Header.BlockHeight, block.Header.BlockHash,
-		timeLasts, elapsed)
+	v.log.Infof("verify success [%d,%x](%v,%d)", block.Header.BlockHeight, block.Header.BlockHash, timeLasts, elapsed)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
@@ -146,17 +139,25 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 }
 
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
-	var err error
 	verifyResult, rwSetMap, err := v.verify(block)
+	if err != nil {
+		v.log.Errorf("verify block failed: %s, blockHeignt: (%d)", err.Error(), block.Header.BlockHeight)
+	}
 	if mode == protocol.CONSENSUS_VERIFY {
 		err = v.verifyResult(block, rwSetMap, verifyResult)
-	} else {
-		//after verifing block,sync nodes cache the block
-		err = v.abftCache.AddAbftTxBatch(block, verifyResult, rwSetMap)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	//after verifing block,sync nodes cache the block
+	err = v.abftCache.AddVerifiedTxBatch(block, verifyResult, rwSetMap)
+	if err != nil {
 		err = fmt.Errorf("sync cache the verified block faield: %s, blockHeight(%d), blockHash(%s)", err.Error(),
 			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
+		return err
 	}
-	return err
+	return nil
 }
 
 func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) func() {
@@ -170,7 +171,7 @@ func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) f
 }
 
 func (v *Verifier) verifyResult(block *commonPb.Block, rwSet map[string]*commonPb.TxRWSet, verifyResult bool) error {
-	err := v.abftCache.AddAbftTxBatch(block, verifyResult, rwSet)
+	err := v.abftCache.AddVerifiedTxBatch(block, verifyResult, rwSet)
 	if err != nil {
 		return fmt.Errorf("abft add tx batch faield: %s, blockHeight(%d), txBatchHash(%s)", err.Error(),
 			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))

@@ -12,31 +12,31 @@ func TestAbft(t *testing.T) {
 	rwSetMap := make(map[string]*commonpb.TxRWSet)
 	b0 := CreateNewTestBlock(0)
 	hash0 := b0.Header.BlockHash
-	ok := hc.AddAbftTxBatch(b0, false, rwSetMap)
+	ok := hc.AddVerifiedTxBatch(b0, false, rwSetMap)
 	fmt.Println(ok)
 	b1 := CreateNewTestBlock(1)
 	hash1 := []byte{'1', '2', '3', '4', '5', '6', '7', '8', '9', '0'}
 	b1.Header.BlockHash = hash1
-	ok = hc.AddAbftTxBatch(b1, true, rwSetMap)
+	ok = hc.AddVerifiedTxBatch(b1, true, rwSetMap)
 	fmt.Println(ok)
 	b2 := CreateNewTestBlock(2)
 	hash2 := []byte{'2', '3', '4', '5', '6', '7', '8', '9', '0', '1'}
 	b2.Header.BlockHash = hash2
-	ok = hc.AddAbftTxBatch(b2, true, rwSetMap)
+	ok = hc.AddVerifiedTxBatch(b2, true, rwSetMap)
 	fmt.Println(ok)
 	b3 := CreateNewTestBlock(3)
 	hash3 := []byte{'3', '4', '5', '6', '7', '8', '9', '0', '1', '2'}
 	b3.Header.BlockHash = hash3
-	ok = hc.AddAbftTxBatch(b3, false, rwSetMap)
+	ok = hc.AddVerifiedTxBatch(b3, false, rwSetMap)
 	fmt.Println(ok)
 
 	fmt.Println("Get TxBatch by FAIL code")
-	tb0 := hc.GetVerifiedAbftTxBatchsByResult(false)
+	tb0 := hc.GetVerifiedTxBatchsByResult(false)
 	for i := 0; i < len(tb0); i++ {
 		fmt.Println(tb0[i].txBatch.Header.BlockHash)
 	}
 	fmt.Println("Get TxBatch by SUCCESS code")
-	tb1 := hc.GetVerifiedAbftTxBatchsByResult(false)
+	tb1 := hc.GetVerifiedTxBatchsByResult(false)
 	for i := 0; i < len(tb1); i++ {
 		fmt.Println(tb1[i].txBatch.Header.BlockHash)
 	}
@@ -66,10 +66,10 @@ func TestAbft(t *testing.T) {
 	fmt.Println(hc.HasVerifiedTxBatch(hash2))
 	fmt.Println(hc.IsVerifiedTxBatchSuccess(hash3))
 
-	hc.SetTxBatchCache(CreateNewTestBlock(4), nil)
-	tbc := hc.GetTxBatchCache()
+	hc.SetProposedTxBatchCache(CreateNewTestBlock(4), nil)
+	tbc := hc.GetProposedTxBatchCache()
 	fmt.Println(tbc.txBatch.Header.BlockHash)
-	hcMap := hc.GetAbftTxBatchCacheMap()
+	hcMap := hc.GetVerifiedTxBatchCacheCacheMap()
 	b, ok0 := hcMap.Load(string(hash2))
 	if ok0 {
 		fmt.Println(b.(commonpb.Block).Header.BlockHeight)

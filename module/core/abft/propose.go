@@ -28,20 +28,21 @@ import (
 const DEFAULT_WAIT_TXS_TIMEOUT = time.Second * 2
 
 type Proposer struct {
-	lock            sync.Mutex
-	chainId         string
-	proposedSignal  *abft.PackagedSignal
-	txPool          protocol.TxPool
-	ledgerCache     protocol.LedgerCache
-	log             *logger.CMLogger
-	identity        protocol.SigningMember
-	snapshotManager protocol.SnapshotManager
-	chainConf       protocol.ChainConf
-	vmMgr           protocol.VmManager
-	abftCache       *cache.AbftCache
-	msgBus          msgbus.MessageBus
-	txBatch         []*commonpb.Transaction
-	getTxBatchC     chan struct{}
+	lock                sync.Mutex
+	chainId             string
+	proposedSignal      *abft.PackagedSignal
+	txPool              protocol.TxPool
+	ledgerCache         protocol.LedgerCache
+	log                 *logger.CMLogger
+	identity            protocol.SigningMember
+	snapshotManager     protocol.SnapshotManager
+	chainConf           protocol.ChainConf
+	vmMgr               protocol.VmManager
+	abftCache           *cache.AbftCache
+	msgBus              msgbus.MessageBus
+	txBatch             []*commonpb.Transaction
+	getTxBatchC         chan struct{}
+	proposeEmptyTxBatch commonpb.Block
 }
 
 func NewProposer(ce *CoreExecute) *Proposer {
@@ -61,23 +62,23 @@ func NewProposer(ce *CoreExecute) *Proposer {
 	}
 }
 
-func (p *Proposer) verifyHeight() (bool, error) { //todo bool do not need
+func (p *Proposer) verifyHeight() error {
 	currentHeight, err := p.ledgerCache.CurrentHeight()
 	if err != nil {
-		return false, err
+		return err
 	}
 	if currentHeight+1 != p.proposedSignal.BlockHeight {
-		return false, errors.New("the propose signal height is inconsistent with the cache")
+		return errors.New("the propose signal height is inconsistent with the cache")
 	}
-	return true, nil
+	return nil
 }
 
-func (p *Proposer) proposeStatus() (*commonpb.Block, bool) { //todo bool no need
-	txBatch := p.abftCache.GetTxBatchCache() // todo getXXBatch
+func (p *Proposer) proposeStatus() *commonpb.Block {
+	txBatch := p.abftCache.GetProposedTxBatchCache()
 	if txBatch == nil {
-		return nil, true
+		return nil
 	}
-	return txBatch.GetTxBatch(), false
+	return txBatch.GetTxBatch()
 }
 
 func (p *Proposer) Propose() error {
@@ -85,13 +86,11 @@ func (p *Proposer) Propose() error {
 	defer p.lock.Unlock()
 
 	//check height
-	ok, err := p.verifyHeight()
-	if !ok {
-		return err
-	}
+	err := p.verifyHeight()
+
 	//check propose status
-	txBatch, ok := p.proposeStatus()
-	if !ok {
+	txBatch := p.proposeStatus()
+	if txBatch != nil {
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("The proposal has been completed, height: (%d)", txBatch.Header.BlockHeight)
 		return nil
@@ -103,7 +102,7 @@ func (p *Proposer) Propose() error {
 	if err != nil {
 		return err
 	}
-
+	p.proposeEmptyTxBatch = *txBatch
 	//get a random number of transactions
 	ticker := time.NewTicker(DEFAULT_WAIT_TXS_TIMEOUT)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -112,7 +111,8 @@ func (p *Proposer) Propose() error {
 	case <-ticker.C:
 		cancel()
 		p.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", txBatch.Header.BlockHeight)
-		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
+		p.msgBus.Publish(msgbus.ProposedBlock, &p.proposeEmptyTxBatch)
+		p.abftCache.SetProposedTxBatchCache(txBatch, nil)
 		return nil
 	case <-p.getTxBatchC:
 		timeLasts := make([]int64, 0)
@@ -131,17 +131,21 @@ func (p *Proposer) Propose() error {
 		if err != nil {
 			p.log.Errorf("schedule txBatch(%d,%x) error %s",
 				txBatch.Header.BlockHeight, txBatch.Header.BlockHash, err)
-			//todo empty block and save
+			p.msgBus.Publish(msgbus.ProposedBlock, &p.proposeEmptyTxBatch)
+			p.abftCache.SetProposedTxBatchCache(&p.proposeEmptyTxBatch, nil)
 			return err
 		}
 
 		var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
 		err = common.FinalizeBlock(txBatch, txRWSetMap, aclFailTxs, p.chainConf.ChainConfig().Crypto.Hash)
 		if err != nil {
-			//todo empty block
 			p.log.Errorf("finalizeBlock txBatch(%d,%s) error %s",
 				txBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), err)
+			p.msgBus.Publish(msgbus.ProposedBlock, &p.proposeEmptyTxBatch)
+			p.abftCache.SetProposedTxBatchCache(&p.proposeEmptyTxBatch, nil)
+			return err
 		}
+
 		var txsTimeout = make([]*commonpb.Transaction, 0)
 		if len(txRWSetMap) < len(p.txBatch) {
 			for _, tx := range p.txBatch {
@@ -151,7 +155,7 @@ func (p *Proposer) Propose() error {
 			}
 			p.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
-		p.abftCache.SetTxBatchCache(txBatch, txRWSetMap)
+		p.abftCache.SetProposedTxBatchCache(txBatch, txRWSetMap)
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("proposer success [%d](txs:%d)", txBatch.Header.BlockHeight, txBatch.Header.TxCount)
 	}

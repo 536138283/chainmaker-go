@@ -68,7 +68,7 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 	defer c.lock.Unlock()
 
 	// check block height
-	if ok, err := c.verifyHeight(blockHeight); !ok {
+	if err := c.verifyHeight(blockHeight); err != nil {
 		c.log.Errorf("height verify fail,err: %s, height: (%d)", err.Error(), blockHeight)
 		return err
 	}
@@ -139,7 +139,7 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 func (c *Committer) handleABAFailTxs() {
 
 	// get the verified txBatch from cache
-	txBatchCacheList := c.abftCache.GetVerifiedAbftTxBatchsByResult(true)
+	txBatchCacheList := c.abftCache.GetVerifiedTxBatchsByResult(true)
 
 	// get the txBatchID list before ABA
 	txBatchIDListBeforeABA := make([]string, 0)
@@ -192,15 +192,15 @@ func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA
 	}
 }
 
-func (c *Committer) verifyHeight(height int64) (bool, error) {
+func (c *Committer) verifyHeight(height int64) error {
 	currentHeight, err := c.ledgerCache.CurrentHeight()
 	if err != nil {
-		return false, err
+		return err
 	}
 	if height != currentHeight+1 {
-		return false, errors.New("the ABA signal height is inconsistent with the cache")
+		return errors.New("the ABA signal height is inconsistent with the cache")
 	}
-	return true, nil
+	return nil
 }
 
 func (c *Committer) prepare(txBatchHash [][]byte) error {
@@ -240,8 +240,8 @@ func (c *Committer) AddBlock(block *commonpb.Block) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	//verify height
-	ok, err := c.verifyHeight(block.Header.BlockHeight)
-	if !ok {
+	err := c.verifyHeight(block.Header.BlockHeight)
+	if err != nil {
 		return err
 	}
 	abftBlock, err := c.abftCache.GetVerifiedTxBatchByHash(block.Header.BlockHash)
