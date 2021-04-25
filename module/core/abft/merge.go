@@ -58,12 +58,17 @@ func (m *Merger) Merge() error {
 		repeatedTxIndexs := repeatTxsMap[txBatchID]
 		rwSetMap := m.txBatchInfo[txBatchID].rwSetMap
 
+		// get the repeat tx 's subscript in the baseTxBatch(txid => tx subscript)
 		repeatTxIndexFromBaseBatch := getRepeatTxIndexFromBaseBatch(baseTxBatch, repeatTxIDMap)
 
+		// get the conflict tx (caused by repeat tx) which need to modify result(repeatTx 's subscript => conflict tx 's subscript list)
 		conflictRepeatedTxMap := findReliantTxForRepeatedTx(
 			repeatedTxIndexs,
-			txBatch.Txs,
-			rwSetMap, baseRWSetMap, repeatTxIndexFromBaseBatch, txBatch, baseTxBatch)
+			baseTxBatch,
+			txBatch,
+			baseRWSetMap,
+			rwSetMap,
+			repeatTxIndexFromBaseBatch)
 
 		// merge txBatch(Txs and RWSetMap)
 		m.doMerge(
@@ -314,15 +319,16 @@ func getWriteTable(rwSet *commonpb.TxRWSet) map[string]struct{} {
 	}
 	return writeTable
 }
+
 func findReliantTxForRepeatedTx(
 	repeatedTxIndexs []int,
-	txs []*commonpb.Transaction,
-	rwSetMap, baseRWSetMap map[string]*commonpb.TxRWSet,
-	repeatedTxIndexsInBaseBatch map[string]int, txBatch, baseTxBatch *commonpb.Block) map[int][]int {
+	baseTxBatch, txBatch *commonpb.Block,
+	baseRWSetMap, rwSetMap map[string]*commonpb.TxRWSet,
+	repeatedTxIndexsInBaseBatch map[string]int) map[int][]int {
 
 	reliantTxMap := make(map[int][]int)
 	for _, repeatedTxIndex := range repeatedTxIndexs {
-		repeatedTx := txs[repeatedTxIndex]
+		repeatedTx := txBatch.Txs[repeatedTxIndex]
 		repeatedTxRWSet := rwSetMap[repeatedTx.Header.TxId]
 
 		// get repeated tx 's write table
@@ -331,8 +337,9 @@ func findReliantTxForRepeatedTx(
 		getReliantTxMap(
 			repeatedTxIndex,
 			repeatedTx.Header.TxId,
-			txs, rwSetMap, baseRWSetMap,
-			repeatedTxWriteTable, reliantTxMap,
+			reliantTxMap,
+			repeatedTxWriteTable,
+			rwSetMap, baseRWSetMap,
 			repeatedTxIndexsInBaseBatch, txBatch, baseTxBatch)
 	}
 
@@ -341,10 +348,9 @@ func findReliantTxForRepeatedTx(
 
 func getReliantTxMap(
 	index int, repeatedTxId string,
-	txs []*commonpb.Transaction, rwSetMap,
-	baseRWSetMap map[string]*commonpb.TxRWSet,
-	repeatedTxWriteTable map[string]struct{},
 	reliantTxMap map[int][]int,
+	repeatedTxWriteTable map[string]struct{},
+	rwSetMap, baseRWSetMap map[string]*commonpb.TxRWSet,
 	repeatedTxIndexsInBaseBatch map[string]int, txBatch, baseTxBatch *commonpb.Block) {
 
 	if isSpecialRepeatTx(
@@ -354,8 +360,8 @@ func getReliantTxMap(
 		return
 	}
 
-	for j := index + 1; j <= len(txs)-1; j++ {
-		tx := txs[j]
+	for j := index + 1; j <= len(txBatch.Txs)-1; j++ {
+		tx := txBatch.Txs[j]
 		txId := tx.Header.TxId
 		rwSet := rwSetMap[txId]
 		if isRWConflict(rwSet, repeatedTxWriteTable) {
