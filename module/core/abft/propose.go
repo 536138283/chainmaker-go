@@ -68,7 +68,7 @@ func (p *Proposer) verifyHeight() error {
 		return err
 	}
 	if currentHeight+1 != p.proposedSignal.BlockHeight {
-		return errors.New("the propose signal height is inconsistent with the cache")
+		return errors.New("the propose signal of height is wrong")
 	}
 	return nil
 }
@@ -87,6 +87,9 @@ func (p *Proposer) Propose() error {
 
 	//check height
 	err := p.verifyHeight()
+	if err != nil {
+		return err
+	}
 
 	//check propose status
 	txBatch := p.proposeStatus()

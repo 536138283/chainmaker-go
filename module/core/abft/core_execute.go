@@ -13,7 +13,6 @@ import (
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/protocol"
-	"github.com/Workiva/go-datastructures/threadsafe/err"
 )
 
 type CoreExecute struct {
@@ -84,28 +83,30 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 
 	switch message.Topic {
 	case msgbus.PackageSignal:
-		if proposedSignal, ok := message.Payload.(abft.PackagedSignal); !ok {
-			c.log.Warnf("propose failed, error %s", //todo
-				err.Error())
+		proposedSignal, ok := message.Payload.(abft.PackagedSignal)
+		if !ok {
+			c.log.Warnf("propose failed, Invalid Signal Type")
 			return
 		}
-		c.Proposer.proposedSignal = &proposedSignal //todo
+		c.Proposer.proposedSignal = &proposedSignal
 		if err := c.Proposer.Propose(); err != nil {
-			c.log.Warnf("propose failed, error %s",
-				err.Error())
+			c.log.Warnf("propose failed, error %s", err.Error())
 		}
 	case msgbus.VerifyBlock:
-		if block, ok := message.Payload.(commonPb.Block); ok {
-			c.Verifier.goRoutinePool.Submit(c.Verifier.verifyTask(&block, protocol.CONSENSUS_VERIFY))
+		block, ok := message.Payload.(commonPb.Block)
+		if !ok {
+			c.log.Warnf("verify block failed, Invalid Signal Type")
+			return
 		}
+		c.Verifier.goRoutinePool.Submit(c.Verifier.verifyTask(&block, protocol.CONSENSUS_VERIFY))
 	case msgbus.CommitedTxBatchs:
-		if txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA); ok {
-			if err := c.Committer.Commit(
-				txBatchAfterABA.BlockHeight,
-				txBatchAfterABA.TxBatchHash); err != nil {
-				c.log.Warnf("commit fail, error %s",
-					err.Error())
-			}
+		txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA)
+		if !ok {
+			c.log.Warnf("commited txBatch failed, Invalid Signal Type")
+		}
+		if err := c.Committer.Commit(
+			txBatchAfterABA.BlockHeight, txBatchAfterABA.TxBatchHash); err != nil {
+			c.log.Warnf("commit fail, error %s", err.Error())
 		}
 	}
 }

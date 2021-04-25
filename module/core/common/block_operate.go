@@ -322,8 +322,7 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 	}
 	// verify if txs are duplicate in this block
 	if IsTxDuplicate(block.Txs) {
-		err := fmt.Errorf("tx duplicate")
-		return nil, timeLasts, err
+		return nil, timeLasts, fmt.Errorf("tx duplicate")
 	}
 
 	// simulate with DAG, and verify read write set
@@ -336,8 +335,8 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 		return nil, timeLasts, fmt.Errorf("simulate %s", err)
 	}
 	if block.Header.TxCount != int64(len(txRWSetMap)) {
-		err = fmt.Errorf("simulate txcount expect %d, got %d", block.Header.TxCount, len(txRWSetMap))
-		return nil, timeLasts, err
+		return nil, timeLasts, fmt.Errorf("simulate txcount expect %d, got %d",
+			block.Header.TxCount, len(txRWSetMap))
 	}
 
 	// 2.transaction verify

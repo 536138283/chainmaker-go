@@ -89,6 +89,7 @@ func (v *Verifier) verifyHeight(block *commonPb.Block) error {
 	return nil
 }
 
+// todo add repeat verify!
 func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err := utils.IsEmptyBlock(block); err != nil {
@@ -105,7 +106,7 @@ func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxR
 	proposedTxBatchCache := v.abftCache.GetProposedTxBatchCache()
 	if proposedTxBatchCache != nil {
 		if bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
-			return false, proposedTxBatchCache.GetRwSetMap(), nil
+			return true, proposedTxBatchCache.GetRwSetMap(), nil
 		}
 	}
 	txRwSetMap, timeLasts, err := v.verifyBlock.ValidateBlock(block)

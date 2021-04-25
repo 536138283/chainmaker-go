@@ -23,8 +23,8 @@ func TestMerger_Merge(t *testing.T) {
 	//cach := addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
 	//cach := addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
 	//cach := addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
-	//cach := addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
-	cach := addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4)
+	cach := addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
+	//cach := addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4)
 
 	m := NewMerger()
 	c := &Committer{
