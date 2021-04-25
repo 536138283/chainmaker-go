@@ -89,7 +89,6 @@ func (v *Verifier) verifyHeight(block *commonPb.Block) error {
 	return nil
 }
 
-// todo add repeat verify!
 func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err := utils.IsEmptyBlock(block); err != nil {
@@ -163,6 +162,11 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 
 func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) func() {
 	return func() {
+		// repeat verify
+		if v.abftCache.HasVerifiedTxBatch(block.Header.BlockHash) {
+			return
+		}
+
 		err := v.VerifyBlock(block, mode)
 		if err != nil {
 			v.log.Errorf("verify txBatch failed: %s, height: %d, txBatchHash: %s", err, block.Header.BlockHeight,

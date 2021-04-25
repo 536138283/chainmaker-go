@@ -48,14 +48,17 @@ func (m *Merger) Merge() error {
 		m.allTxsMap[tx.Header.TxId] = tx
 	}
 
+	// merge Tx start with the second txBatch
 	for i := 1; i < len(m.txBatchIDList); i++ {
 		txBatchID := m.txBatchIDList[i]
 		txBatch := m.txBatchInfo[txBatchID].txBatch
-		repeatTxIndexMap, repeatTxMap := m.prepare(txBatchID)
-		repeatedTxIndexs := repeatTxIndexMap[txBatchID]
+
+		// get repeat Tx compare to the baseTxBatch
+		repeatTxsMap, repeatTxIDMap := m.getRepeatTx(txBatchID)
+		repeatedTxIndexs := repeatTxsMap[txBatchID]
 		rwSetMap := m.txBatchInfo[txBatchID].rwSetMap
 
-		repeatTxIndexFromBaseBatch := getRepeatTxIndexFromBaseBatch(baseTxBatch, repeatTxMap)
+		repeatTxIndexFromBaseBatch := getRepeatTxIndexFromBaseBatch(baseTxBatch, repeatTxIDMap)
 
 		conflictRepeatedTxMap := findReliantTxForRepeatedTx(
 			repeatedTxIndexs,
@@ -97,11 +100,11 @@ func getRepeatTxIndexFromBaseBatch(baseTxBatch *commonpb.Block, repeatTxMap map[
 	return repeatTxIndexInBaseBatch
 }
 
-func (m *Merger) prepare(txBatchID string) (map[string][]int, map[string]struct{}) {
+func (m *Merger) getRepeatTx(txBatchID string) (map[string][]int, map[string]struct{}) {
 
 	// record the deleted & repeated transaction(BatchID->deleted transaction 's position)
 	repeatTxs := make(map[string][]int)
-	repeatTxMap := make(map[string]struct{})
+	repeatTxIDMap := make(map[string]struct{})
 
 	if info, ok := m.txBatchInfo[txBatchID]; ok {
 		txs := info.txBatch.Txs
@@ -113,12 +116,12 @@ func (m *Merger) prepare(txBatchID string) (map[string][]int, map[string]struct{
 				m.allTxsMap[txID] = txs[i]
 			} else {
 				repeatTxs[txBatchID] = append(repeatTxs[txBatchID], i)
-				repeatTxMap[txID] = struct{}{}
+				repeatTxIDMap[txID] = struct{}{}
 			}
 		}
 	}
 
-	return repeatTxs, repeatTxMap
+	return repeatTxs, repeatTxIDMap
 }
 
 func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) *commonpb.DAG {
