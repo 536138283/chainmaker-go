@@ -101,7 +101,7 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 	select {
 	case <-ticker.C:
 		cancel()
-		p.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", txBatch.Header.BlockHeight)
+		p.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", emptyBlockBatch.Header.BlockHeight)
 		p.msgBus.Publish(msgbus.ProposedBlock, &emptyBlockBatch)
 		p.abftCache.SetProposedTxBatch(blockBatch, nil)
 		return nil
