@@ -14,7 +14,6 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"sort"
 	"sync"
@@ -36,45 +35,45 @@ type Committer struct {
 	lock          sync.Mutex
 }
 
-func NewCommitter(coreExecute *CoreExecute) *Committer {
+func NewCommitter(ceConfig *CoreExecuteConfig) *Committer {
 	committer := &Committer{
-		chainID:       coreExecute.chainId,
+		chainID:       ceConfig.ChainId,
 		blockHeight:   0,
 		txBatchIDList: make([]string, 0),
-		ledgerCache:   coreExecute.ledgerCache,
-		abftCache:     *coreExecute.abftCache,
-		log:           coreExecute.log,
-		txPool:        coreExecute.txPool,
-		identity:      coreExecute.identity,
-		chainConf:     coreExecute.chainConf,
+		ledgerCache:   ceConfig.LedgerCache,
+		abftCache:     *ceConfig.ABFTCache,
+		log:           ceConfig.Log,
+		txPool:        ceConfig.TxPool,
+		identity:      ceConfig.Identity,
+		chainConf:     ceConfig.ChainConf,
 		lock:          sync.Mutex{},
 	}
 	cbConf := &common.CommitBlockConf{
-		Store:           coreExecute.blockchainStore,
-		Log:             coreExecute.log,
-		SnapshotManager: coreExecute.snapshotManager,
-		TxPool:          coreExecute.txPool,
-		LedgerCache:     coreExecute.ledgerCache,
-		ChainConf:       coreExecute.chainConf,
-		MsgBus:          coreExecute.msgBus,
+		Store:           ceConfig.BlockchainStore,
+		Log:             ceConfig.Log,
+		SnapshotManager: ceConfig.SnapshotManager,
+		TxPool:          ceConfig.TxPool,
+		LedgerCache:     ceConfig.LedgerCache,
+		ChainConf:       ceConfig.ChainConf,
+		MsgBus:          ceConfig.MsgBus,
 	}
 	committer.commonCommit = common.NewCommitBlock(cbConf)
 	committer.merger = NewMerger()
 	return committer
 }
 
-func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
+func (c *Committer) Commit(blockHeight int64, txBatchHashs [][]byte) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
 	// check block height
-	if err := c.verifyHeight(blockHeight); err != nil {
+	if err := common.VerifyHeight(blockHeight, c.ledgerCache); err != nil {
 		c.log.Errorf("height verify fail,err: %s, height: (%d)", err.Error(), blockHeight)
 		return err
 	}
 
 	// set txBatchID list & txBatchInfo
-	err := c.prepare(txBatchHash)
+	err := c.prepare(txBatchHashs)
 	if err != nil {
 		return err
 	}
@@ -92,10 +91,8 @@ func (c *Committer) Commit(blockHeight int64, txBatchHash [][]byte) error {
 	}
 
 	if !c.isEmptyBlock() {
-		c.merger.block = block
-		c.merger.txBatchIDList = c.txBatchIDList
 		// get the new RWSetMap after conflict detection
-		if err = c.merger.Merge(); err != nil {
+		if err = c.merger.Merge(block, c.txBatchIDList); err != nil {
 			return err
 		}
 
@@ -169,14 +166,14 @@ func (c *Committer) setTxBatchInfo(txBatchHash []byte) error {
 		return err
 	}
 
-	if !txBatch.GetVerifyResult() { //todo change name
+	if !txBatch.GetVerifyResult() {
 		return nil
 	}
 
-	txBatchInfo := new(TxBatchInfo)
-	txBatchInfo.txBatch = txBatch.GetTxBatch()
-	txBatchInfo.rwSetMap = txBatch.GetTxBatchRwSet()
-	c.merger.txBatchInfo[hex.EncodeToString(txBatchHash)] = txBatchInfo
+	c.merger.txBatchInfo[hex.EncodeToString(txBatchHash)] = &TxBatchInfo{
+		txBatch:  txBatch.GetTxBatch(),
+		rwSetMap: txBatch.GetTxBatchRwSet(),
+	}
 	return nil
 }
 
@@ -192,26 +189,15 @@ func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA
 	}
 }
 
-func (c *Committer) verifyHeight(height int64) error {
-	currentHeight, err := c.ledgerCache.CurrentHeight()
-	if err != nil {
-		return err
-	}
-	if height != currentHeight+1 {
-		return errors.New("the ABA signal height is inconsistent with the cache")
-	}
-	return nil
-}
-
-func (c *Committer) prepare(txBatchHash [][]byte) error {
-	for i, _ := range txBatchHash {
+func (c *Committer) prepare(txBatchHashs [][]byte) error {
+	for _, hash := range txBatchHashs {
 		// set txBatchInfo
-		if err := c.setTxBatchInfo(txBatchHash[i]); err != nil {
+		if err := c.setTxBatchInfo(hash); err != nil {
 			return err
 		}
 
 		// set txBatchIDList
-		c.txBatchIDList = append(c.txBatchIDList, hex.EncodeToString(txBatchHash[i]))
+		c.txBatchIDList = append(c.txBatchIDList, hex.EncodeToString(hash))
 	}
 	return nil
 }
@@ -240,7 +226,7 @@ func (c *Committer) AddBlock(block *commonpb.Block) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	//verify height
-	err := c.verifyHeight(block.Header.BlockHeight)
+	err := common.VerifyHeight(block.Header.BlockHeight, c.ledgerCache)
 	if err != nil {
 		return err
 	}

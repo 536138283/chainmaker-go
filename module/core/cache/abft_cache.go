@@ -121,13 +121,13 @@ func (ptbc *ProposedTxBatchCache) GetTxBatch() *commonpb.Block {
 func (ptbc *ProposedTxBatchCache) GetRwSetMap() map[string]*commonpb.TxRWSet {
 	return ptbc.rwSetMap
 }
-func (hc *AbftCache) GetProposedTxBatchCache() *ProposedTxBatchCache {
+func (hc *AbftCache) GetProposedTxBatch() *ProposedTxBatchCache {
 	return hc.proposedTxBatchCache
 }
-func (hc *AbftCache) GetVerifiedTxBatchCacheCacheMap() sync.Map {
+func (hc *AbftCache) GetVerifiedTxBatchMap() sync.Map {
 	return hc.verifiedTxBatchCacheMap
 }
-func (hc *AbftCache) SetProposedTxBatchCache(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
+func (hc *AbftCache) SetProposedTxBatch(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
 	hc.proposedTxBatchCache = &ProposedTxBatchCache{
 		txBatch:  txBatch,
 		rwSetMap: rwSetMap,

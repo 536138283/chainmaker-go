@@ -13,14 +13,14 @@ import (
 
 func TestValidateTx(t *testing.T) {
 	verifyTx := txPrepare(t)
-	hashes, _, _ := verifyTx.VerifyTxs()
+	hashes, _, _ := verifyTx.VerifierTxs()
 
 	for _, hash := range hashes {
 		fmt.Println("test hash: ", hex.EncodeToString(hash))
 	}
 }
 
-func txPrepare(t *testing.T) *VerifyTx {
+func txPrepare(t *testing.T) *VerifierTx {
 	block := newBlock()
 	contractId := &commonpb.ContractId{
 		ContractName:    "ContractName",
@@ -91,7 +91,7 @@ func txPrepare(t *testing.T) *VerifyTx {
 	ac.EXPECT().LookUpResourceNameByTxType(tx0.Header.TxType).AnyTimes().Return("123", nil)
 	ac.EXPECT().CreatePrincipal("123", nil, nil).AnyTimes().Return(principal, nil)
 	ac.EXPECT().VerifyPrincipal(principal).AnyTimes().Return(true, nil)
-	verifyTxConf := &VerifyTxConfig{
+	verifyTxConf := &VerifierTxConfig{
 		Block:       block,
 		TxRWSetMap:  txRWSetMap,
 		TxResultMap: txResultMap,
@@ -101,5 +101,5 @@ func txPrepare(t *testing.T) *VerifyTx {
 		ChainConf:   chainConf,
 		Log:         log,
 	}
-	return NewVerifyTx(verifyTxConf)
+	return NewVerifierTx(verifyTxConf)
 }

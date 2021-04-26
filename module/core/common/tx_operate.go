@@ -31,7 +31,7 @@ type verifyStat struct {
 	sigCount    int
 }
 
-type VerifyTx struct {
+type VerifierTx struct {
 	block       *commonpb.Block
 	txRWSetMap  map[string]*commonpb.TxRWSet
 	txResultMap map[string]*commonpb.Result
@@ -42,7 +42,7 @@ type VerifyTx struct {
 	hashType    string
 	chainId     string
 }
-type VerifyTxConfig struct {
+type VerifierTxConfig struct {
 	Block       *commonpb.Block
 	TxRWSetMap  map[string]*commonpb.TxRWSet
 	TxResultMap map[string]*commonpb.Result
@@ -53,8 +53,8 @@ type VerifyTxConfig struct {
 	ChainConf   protocol.ChainConf
 }
 
-func NewVerifyTx(conf *VerifyTxConfig) *VerifyTx {
-	return &VerifyTx{
+func NewVerifierTx(conf *VerifierTxConfig) *VerifierTx {
+	return &VerifierTx{
 		block:       conf.Block,
 		txRWSetMap:  conf.TxRWSetMap,
 		txResultMap: conf.TxResultMap,
@@ -69,7 +69,7 @@ func NewVerifyTx(conf *VerifyTxConfig) *VerifyTx {
 
 // VerifyTxs verify transactions in block
 // include if transaction is double spent, transaction signature
-func (vt *VerifyTx) VerifyTxs() (txHashes [][]byte, txNewAdd []*commonpb.Transaction, err error) {
+func (vt *VerifierTx) VerifierTxs() (txHashes [][]byte, txNewAdd []*commonpb.Transaction, err error) {
 
 	verifyBatchs := utils.DispatchTxVerifyTask(vt.block.Txs)
 	resultTasks := make(map[int]verifyBlockBatch)
@@ -121,7 +121,7 @@ func (vt *VerifyTx) VerifyTxs() (txHashes [][]byte, txNewAdd []*commonpb.Transac
 	return txHashes, txNewAdd, nil
 }
 
-func (vt *VerifyTx) verifyTx(txs []*commonpb.Transaction, stat *verifyStat,
+func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, stat *verifyStat,
 	txsRet map[string]*commonpb.Transaction) ([][]byte, []*commonpb.Transaction, error) {
 	txHashes := make([][]byte, 0)
 	newAddTxs := make([]*commonpb.Transaction, 0) // tx that verified and not in txpool, need to be added to txpool
@@ -155,7 +155,7 @@ func (vt *VerifyTx) verifyTx(txs []*commonpb.Transaction, stat *verifyStat,
 	return txHashes, newAddTxs, nil
 }
 
-func (vt *VerifyTx) validateTx(tx *commonpb.Transaction, stat *verifyStat,
+func (vt *VerifierTx) validateTx(tx *commonpb.Transaction, stat *verifyStat,
 	txsRet map[string]*commonpb.Transaction, newAddTxs []*commonpb.Transaction) error {
 	txInPool, existTx := txsRet[tx.Header.TxId]
 	if existTx {

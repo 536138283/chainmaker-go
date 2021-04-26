@@ -66,10 +66,10 @@ func TestAbft(t *testing.T) {
 	fmt.Println(hc.HasVerifiedTxBatch(hash2))
 	fmt.Println(hc.IsVerifiedTxBatchSuccess(hash3))
 
-	hc.SetProposedTxBatchCache(CreateNewTestBlock(4), nil)
-	tbc := hc.GetProposedTxBatchCache()
+	hc.SetProposedTxBatch(CreateNewTestBlock(4), nil)
+	tbc := hc.GetProposedTxBatch()
 	fmt.Println(tbc.txBatch.Header.BlockHash)
-	hcMap := hc.GetVerifiedTxBatchCacheCacheMap()
+	hcMap := hc.GetVerifiedTxBatchMap()
 	b, ok0 := hcMap.Load(string(hash2))
 	if ok0 {
 		fmt.Println(b.(commonpb.Block).Header.BlockHeight)

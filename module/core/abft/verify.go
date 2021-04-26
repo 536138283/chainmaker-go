@@ -9,7 +9,6 @@ package abft
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -35,7 +34,7 @@ type Verifier struct {
 	wg                    sync.WaitGroup
 	log                   *logger.CMLogger
 	abftCache             *cache.AbftCache
-	verifyBlock           *common.VerifyBlock
+	verifierBlock         *common.VerifierBlock
 	ledgerCache           protocol.LedgerCache
 	msgBus                msgbus.MessageBus
 	verifyTimeout         time.Duration
@@ -44,30 +43,30 @@ type Verifier struct {
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
 }
 
-func NewVerifier(ce *CoreExecute) (*Verifier, error) {
+func NewVerifier(ceConfig *CoreExecuteConfig) (*Verifier, error) {
 	verifier := &Verifier{
+		chainId:       ceConfig.ChainId,
 		wg:            sync.WaitGroup{},
-		log:           ce.log,
-		abftCache:     ce.abftCache,
-		ledgerCache:   ce.ledgerCache,
-		msgBus:        ce.msgBus,
+		log:           ceConfig.Log,
+		abftCache:     ceConfig.ABFTCache,
+		ledgerCache:   ceConfig.LedgerCache,
+		msgBus:        ceConfig.MsgBus,
 		verifyTimeout: DEFAULT_VERIFY_TIMEOUT,
-		txPool:        ce.txPool,
-		chainId:       ce.chainId,
+		txPool:        ceConfig.TxPool,
 	}
 	conf := &common.ValidateBlockConf{
-		ChainConf:       ce.chainConf,
-		Log:             ce.log,
-		LedgerCache:     ce.ledgerCache,
-		Ac:              ce.ac,
-		SnapshotManager: ce.snapshotManager,
-		VmMgr:           ce.vmMgr,
-		TxPool:          ce.txPool,
-		BlockchainStore: ce.blockchainStore,
+		ChainConf:       ceConfig.ChainConf,
+		Log:             ceConfig.Log,
+		LedgerCache:     ceConfig.LedgerCache,
+		Ac:              ceConfig.AC,
+		SnapshotManager: ceConfig.SnapshotManager,
+		VmMgr:           ceConfig.VmMgr,
+		TxPool:          ceConfig.TxPool,
+		BlockchainStore: ceConfig.BlockchainStore,
 	}
-	verifier.verifyBlock = common.NewVerifyBlock(conf)
+	verifier.verifierBlock = common.NewVerifierBlock(conf)
 	var err error
-	verifier.goRoutinePool, err = ants.NewPool(len(ce.chainConf.ChainConfig().Consensus.Nodes), ants.WithPreAlloc(true))
+	verifier.goRoutinePool, err = ants.NewPool(len(ceConfig.ChainConf.ChainConfig().Consensus.Nodes), ants.WithPreAlloc(true))
 	if err != nil {
 		return nil, fmt.Errorf("new verifier failed: %s", err.Error())
 	}
@@ -78,37 +77,19 @@ func NewVerifier(ce *CoreExecute) (*Verifier, error) {
 	return verifier, nil
 }
 
-func (v *Verifier) verifyHeight(block *commonPb.Block) error {
-	currentHeight, err := v.ledgerCache.CurrentHeight()
-	if err != nil {
-		return err
-	}
-	if currentHeight+1 != block.Header.BlockHeight {
-		return errors.New("the packaging signal height is inconsistent with the cache")
-	}
-	return nil
-}
-
-func (v *Verifier) verify(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
+func (v *Verifier) verifyBlock(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err := utils.IsEmptyBlock(block); err != nil {
 		return false, nil, err
 	}
-	err := v.verifyHeight(block)
+	err := common.VerifyHeight(block.Header.BlockHeight, v.ledgerCache)
 	if err != nil {
 		return false, nil, err
 	}
 	v.log.Debugf("verify receive [%d](%x,%d,%d)",
 		block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount, len(block.Txs))
 
-	//nodes that pack the txBatch do not need to verify
-	proposedTxBatchCache := v.abftCache.GetProposedTxBatchCache()
-	if proposedTxBatchCache != nil {
-		if bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
-			return true, proposedTxBatchCache.GetRwSetMap(), nil
-		}
-	}
-	txRwSetMap, timeLasts, err := v.verifyBlock.ValidateBlock(block)
+	txRwSetMap, timeLasts, err := v.verifierBlock.ValidateBlock(block)
 	if err != nil {
 		return false, nil, err
 	}
@@ -138,10 +119,10 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 	return verifyResult
 }
 
-func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
-	verifyResult, rwSetMap, err := v.verify(block)
+func (v *Verifier) doVerify(block *commonPb.Block, mode protocol.VerifyMode) error {
+	verifyResult, rwSetMap, err := v.verifyBlock(block)
 	if err != nil {
-		v.log.Errorf("verify block failed: %s, blockHeignt: (%d)", err.Error(), block.Header.BlockHeight)
+		v.log.Errorf("verify failed [%d] (%s)", block.Header.BlockHeight, block.Header.BlockHash)
 	}
 	if mode == protocol.CONSENSUS_VERIFY {
 		err = v.verifyResult(block, rwSetMap, verifyResult)
@@ -160,6 +141,10 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 	return nil
 }
 
+func (v *Verifier) verify(block *commonPb.Block) error {
+	return v.goRoutinePool.Submit(v.verifyTask(block, protocol.CONSENSUS_VERIFY))
+}
+
 func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) func() {
 	return func() {
 		// repeat verify
@@ -167,7 +152,14 @@ func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) f
 			return
 		}
 
-		err := v.VerifyBlock(block, mode)
+		//nodes that pack the txBatch do not need to verify
+		proposedTxBatchCache := v.abftCache.GetProposedTxBatch()
+		if proposedTxBatchCache != nil &&
+			bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
+			return
+		}
+
+		err := v.doVerify(block, mode)
 		if err != nil {
 			v.log.Errorf("verify txBatch failed: %s, height: %d, txBatchHash: %s", err, block.Header.BlockHeight,
 				hex.EncodeToString(block.Header.BlockHash))
