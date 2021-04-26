@@ -44,11 +44,9 @@ func proposePrepare(t *testing.T) *Proposer {
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, "chain1")
 	chainConf := mock.NewMockChainConf(ctl)
 	ledgerCache := mock.NewMockLedgerCache(ctl)
-	ac := mock.NewMockAccessControlProvider(ctl)
 	snapshotManager := mock.NewMockSnapshotManager(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	txPool := mock.NewMockTxPool(ctl)
-	store := mock.NewMockBlockchainStore(ctl)
 	identity := mock.NewMockSigningMember(ctl)
 	msgBus := mock.NewMockMessageBus(ctl)
 
@@ -151,29 +149,28 @@ func proposePrepare(t *testing.T) *Proposer {
 
 	//abftcache mock
 	abftCache := cache.NewAbftCache()
-	ce := &CoreExecute{
-		chainId:         "chain1",
-		ledgerCache:     ledgerCache,
-		txPool:          txPool,
-		snapshotManager: snapshotManager,
-		identity:        identity,
-		msgBus:          msgBus,
-		ac:              ac,
-		blockchainStore: store,
-		chainConf:       chainConf,
-		log:             log,
-		vmMgr:           vmMgr,
-		abftCache:       abftCache,
+
+	ceConf := &CoreExecuteConfig{
+		ChainId:         "chain1",
+		TxPool:          txPool,
+		LedgerCache:     ledgerCache,
+		Log:             log,
+		Identity:        identity,
+		ChainConf:       chainConf,
+		VmMgr:           vmMgr,
+		SnapshotManager: snapshotManager,
+		MsgBus:          msgBus,
+		ABFTCache:       abftCache,
 	}
-	return NewProposer(ce)
+
+	return NewProposer(ceConf)
 }
 
 func TestPropose(t *testing.T) {
 	proposer := proposePrepare(t)
-	proposer.proposedSignal = &abft.PackagedSignal{
+	err := proposer.Propose(&abft.PackagedSignal{
 		BlockHeight: 1,
-	}
-	err := proposer.Propose()
+	})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}

@@ -40,7 +40,7 @@ func verifyPrepare(t *testing.T) (*Verifier, *commonpb.Block, error) {
 		chainId:       "chain1",
 	}
 	var block *commonpb.Block
-	verifier.verifyBlock, block = verifyBlockPrepare(ctl, log, ledgerCache, txPool)
+	verifier.verifierBlock, block = verifyBlockPrepare(ctl, log, ledgerCache, txPool)
 	var err error
 	verifier.goRoutinePool, err = ants.NewPool(10, ants.WithPreAlloc(true))
 	if err != nil {
@@ -54,7 +54,7 @@ func verifyPrepare(t *testing.T) (*Verifier, *commonpb.Block, error) {
 
 }
 
-func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCache *mock.MockLedgerCache, txPool *mock.MockTxPool) (*common.VerifyBlock, *commonpb.Block) {
+func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCache *mock.MockLedgerCache, txPool *mock.MockTxPool) (*common.VerifierBlock, *commonpb.Block) {
 	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	snapshotManager := mock.NewMockSnapshotManager(ctl)
@@ -178,7 +178,7 @@ func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCach
 		TxPool:          txPool,
 		BlockchainStore: store,
 	}
-	return common.NewVerifyBlock(conf), block
+	return common.NewVerifierBlock(conf), block
 }
 
 func TestVerify(t *testing.T) {
@@ -186,7 +186,7 @@ func TestVerify(t *testing.T) {
 	if err != nil {
 		fmt.Println("verify prepare failed: " + err.Error())
 	}
-	err = verify.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
+	err = verify.doVerify(block, protocol.CONSENSUS_VERIFY)
 	if err != nil {
 		fmt.Println("verify block failed: " + err.Error())
 	}

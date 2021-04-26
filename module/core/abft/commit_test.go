@@ -65,7 +65,6 @@ func TestCommitter_Commit_getRetryListAfterABA(t *testing.T) {
 	branchID5 := []byte("e")
 	branchID6 := []byte("f")
 
-	// 往cache中写入数据（所有verify通过的batch）
 	cach := addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6)
 
 	m := NewMerger()
@@ -76,7 +75,6 @@ func TestCommitter_Commit_getRetryListAfterABA(t *testing.T) {
 		txBatchIDList: make([]string, 0),
 	}
 
-	// ABA 通过的batch
 	txBatchHash := [][]byte{branchID3, branchID2, branchID5, branchID4}
 	c.prepare(txBatchHash)
 	fmt.Println("sort before", c.txBatchIDList)
@@ -85,7 +83,6 @@ func TestCommitter_Commit_getRetryListAfterABA(t *testing.T) {
 	fmt.Println("sort after:", c.txBatchIDList)
 
 	txList := getTxs()
-	// ABA通过后所有批次的交易集
 	allTrans := make(map[string]*commonpb.Transaction)
 	allTrans[txList[0].Header.TxId] = txList[0]
 	allTrans[txList[1].Header.TxId] = txList[1]
@@ -191,7 +188,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 	}
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{txList[2], txList[3]})
-	hc.AddAbftTxBatch(b0, true, rwSetMap0)
+	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[txList[3].Header.TxId] = &commonpb.TxRWSet{
@@ -206,7 +203,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 	}
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{txList[3], txList[4]})
-	hc.AddAbftTxBatch(b1, true, rwSetMap1)
+	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[txList[4].Header.TxId] = &commonpb.TxRWSet{
@@ -222,7 +219,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{txList[4], txList[6]})
-	hc.AddAbftTxBatch(b2, true, rwSetMap2)
+	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[txList[4].Header.TxId] = &commonpb.TxRWSet{
@@ -232,7 +229,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 	}
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{txList[4]})
-	hc.AddAbftTxBatch(b3, true, rwSetMap3)
+	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
 
 	rwSetMap4 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap4[txList[0].Header.TxId] = &commonpb.TxRWSet{
@@ -242,7 +239,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 	}
 	hash4 := branchID5
 	b4 := createBatch(hash4, 3, []*commonpb.Transaction{txList[0]})
-	hc.AddAbftTxBatch(b4, true, rwSetMap4)
+	hc.AddVerifiedTxBatch(b4, true, rwSetMap4)
 
 	rwSetMap5 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap5[txList[0].Header.TxId] = &commonpb.TxRWSet{
@@ -262,7 +259,7 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 	}
 	hash5 := branchID6
 	b5 := createBatch(hash5, 3, []*commonpb.Transaction{txList[0], txList[5], txList[6]})
-	hc.AddAbftTxBatch(b5, true, rwSetMap5)
+	hc.AddVerifiedTxBatch(b5, true, rwSetMap5)
 
 	/**
 	b0		t2,t3
