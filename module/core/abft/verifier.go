@@ -122,8 +122,8 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
 	// repeat verify
 	if v.abftCache.HasVerifiedTxBatch(block.Header.BlockHash) {
-		verifyResult, _ := v.abftCache.IsVerifiedTxBatchSuccess(block.Header.BlockHash)
 		if mode == protocol.CONSENSUS_VERIFY {
+			verifyResult, _ := v.abftCache.IsVerifiedTxBatchSuccess(block.Header.BlockHash)
 			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
 		}
 		return nil
