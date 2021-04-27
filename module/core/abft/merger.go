@@ -85,13 +85,14 @@ func (m *Merger) doMerge(
 	failTxWriteTable := make(map[string]struct{})
 	for _, tx := range txBatch.Txs {
 		txId := tx.Header.TxId
+		rwSet := rwSetMap[txId]
 
 		// discard repeat tx
 		if _, ok := m.allTxsMap[txId]; ok {
+			updateWriteTable(failTxWriteTable, rwSet)
 			continue
 		}
 
-		rwSet := rwSetMap[txId]
 		if ifConflict(rwSet, baseWriteTable, failTxWriteTable) {
 			// modify conflict tx
 			modifyTxResult(tx)
