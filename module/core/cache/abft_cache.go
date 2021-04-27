@@ -91,7 +91,7 @@ func (hc *AbftCache) HasVerifiedTxBatch(hash []byte) bool {
 func (hc *AbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
 	VerifiedTxBatch, ok := hc.verifiedTxBatchCacheMap.Load(hex.EncodeToString(hash))
 	if !ok {
-		return false, errors.New("TxBatch not exist")
+		return false, errors.New("tx batch not exist")
 	}
 	return VerifiedTxBatch.(*VerifiedTxBatchCache).verifyResult, nil
 }

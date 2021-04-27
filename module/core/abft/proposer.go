@@ -24,9 +24,8 @@ import (
 const DEFAULT_WAIT_TXS_TIMEOUT = time.Second * 2
 
 type Proposer struct {
-	lock    sync.Mutex
-	chainId string
-	//proposedSignal      *abft.PackagedSignal
+	lock            sync.Mutex
+	chainId         string
 	txPool          protocol.TxPool
 	ledgerCache     protocol.LedgerCache
 	log             *logger.CMLogger
@@ -57,7 +56,7 @@ func NewProposer(ceConfig *CoreExecuteConfig) *Proposer {
 		abftCache:       ceConfig.ABFTCache,
 		getTxBatchC:     make(chan struct{}),
 		retryInterval:   100,
-		txScheduler:	 common.NewTxScheduler(ceConfig.VmMgr, ceConfig.ChainId),
+		txScheduler:     common.NewTxScheduler(ceConfig.VmMgr, ceConfig.ChainId),
 	}
 }
 

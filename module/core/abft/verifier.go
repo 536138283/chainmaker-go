@@ -149,6 +149,8 @@ func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) f
 	return func() {
 		// repeat verify
 		if v.abftCache.HasVerifiedTxBatch(block.Header.BlockHash) {
+			verifyResult, _ := v.abftCache.IsVerifiedTxBatchSuccess(block.Header.BlockHash)
+			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
 			return
 		}
 
@@ -156,6 +158,8 @@ func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) f
 		proposedTxBatchCache := v.abftCache.GetProposedTxBatch()
 		if proposedTxBatchCache != nil &&
 			bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
+			verifyResult := true
+			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
 			return
 		}
 
