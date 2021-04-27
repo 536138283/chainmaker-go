@@ -119,10 +119,28 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 	return verifyResult
 }
 
-func (v *Verifier) doVerify(block *commonPb.Block, mode protocol.VerifyMode) error {
+func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
+	// repeat verify
+	if v.abftCache.HasVerifiedTxBatch(block.Header.BlockHash) {
+		verifyResult, _ := v.abftCache.IsVerifiedTxBatchSuccess(block.Header.BlockHash)
+		if mode == protocol.CONSENSUS_VERIFY {
+			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
+		}
+		return nil
+	}
+
+	//nodes that pack the txBatch do not need to verify
+	proposedTxBatchCache := v.abftCache.GetProposedTxBatch()
+	if proposedTxBatchCache != nil &&
+		bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
+		verifyResult := true
+		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
+		return nil
+	}
+
 	verifyResult, rwSetMap, err := v.verifyBlock(block)
 	if err != nil {
-		v.log.Errorf("verify failed [%d] (%s)", block.Header.BlockHeight, block.Header.BlockHash)
+		v.log.Errorf("verify failed:%s,[%d],(%s)", err.Error(), block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 	}
 	if mode == protocol.CONSENSUS_VERIFY {
 		err = v.verifyResult(block, rwSetMap, verifyResult)
@@ -131,6 +149,7 @@ func (v *Verifier) doVerify(block *commonPb.Block, mode protocol.VerifyMode) err
 		}
 		return nil
 	}
+
 	//after verifing block,sync nodes cache the block
 	err = v.abftCache.AddVerifiedTxBatch(block, verifyResult, rwSetMap)
 	if err != nil {
@@ -147,23 +166,7 @@ func (v *Verifier) verify(block *commonPb.Block) error {
 
 func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) func() {
 	return func() {
-		// repeat verify
-		if v.abftCache.HasVerifiedTxBatch(block.Header.BlockHash) {
-			verifyResult, _ := v.abftCache.IsVerifiedTxBatchSuccess(block.Header.BlockHash)
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
-			return
-		}
-
-		//nodes that pack the txBatch do not need to verify
-		proposedTxBatchCache := v.abftCache.GetProposedTxBatch()
-		if proposedTxBatchCache != nil &&
-			bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
-			verifyResult := true
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
-			return
-		}
-
-		err := v.doVerify(block, mode)
+		err := v.VerifyBlock(block, mode)
 		if err != nil {
 			v.log.Errorf("verify txBatch failed: %s, height: %d, txBatchHash: %s", err, block.Header.BlockHeight,
 				hex.EncodeToString(block.Header.BlockHash))

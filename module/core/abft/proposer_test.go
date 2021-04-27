@@ -39,6 +39,32 @@ func newBlock() *commonpb.Block {
 		},
 	}
 }
+func newVerifyBlock() *commonpb.Block {
+	return &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			ChainId:        "chain1",
+			BlockHeight:    0,
+			PreBlockHash:   nil,
+			BlockHash:      nil,
+			BlockVersion:   nil,
+			DagHash:        nil,
+			RwSetRoot:      nil,
+			TxRoot:         nil,
+			BlockTimestamp: 0,
+			Proposer:       nil,
+			ConsensusArgs:  nil,
+			TxCount:        0,
+			Signature:      []byte("12341234"),
+		},
+		Dag: &commonpb.DAG{
+			Vertexes: nil,
+		},
+		Txs: nil,
+		AdditionalData: &commonpb.AdditionalData{
+			ExtraData: nil,
+		},
+	}
+}
 func proposePrepare(t *testing.T) *Proposer {
 	ctl := gomock.NewController(t)
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, "chain1")

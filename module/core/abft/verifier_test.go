@@ -77,12 +77,13 @@ func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCach
 
 	//ledgerCache mock
 	lastBlock := newBlock()
-	block := newBlock()
+	block := newVerifyBlock()
 	lastBlock.Header.BlockHash = []byte("111222333444555")
 	block.Header.PreBlockHash = lastBlock.Header.BlockHash
-	blockHash, _ := hex.DecodeString("f4b43ff2d2fbdd2563b406f833ecfd03c5b5d67726326d65c60cdf1f270f10fd")
+	blockHash, _ := hex.DecodeString("f96db8e4f48dbce4f44af1e794b3d1f347ce24167ce71535fbec8fdb7e8f83bc")
 	block.Header.BlockHash = blockHash
 	ledgerCache.EXPECT().GetLastCommittedBlock().AnyTimes().Return(lastBlock)
+	ledgerCache.EXPECT().CurrentHeight().AnyTimes().Return(int64(0), nil)
 
 	//ac mock
 	principal := mock.NewMockPrincipal(ctl)
@@ -186,7 +187,8 @@ func TestVerify(t *testing.T) {
 	if err != nil {
 		fmt.Println("verify prepare failed: " + err.Error())
 	}
-	err = verify.doVerify(block, protocol.CONSENSUS_VERIFY)
+	fmt.Printf("block strcture: %v\n", block)
+	err = verify.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
 	if err != nil {
 		fmt.Println("verify block failed: " + err.Error())
 	}
