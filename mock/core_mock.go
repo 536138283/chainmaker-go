@@ -125,16 +125,16 @@ func (mr *MockBlockProposerMockRecorder) OnReceiveProposeStatusChange(proposeSta
 }
 
 // OnReceiveChainedBFTProposal mocks base method
-func (m *MockBlockProposer) OnReceiveChainedBFTProposal(proposal *interface{}) {
-	m.ctrl.T.Helper()
-	m.ctrl.Call(m, "OnReceiveChainedBFTProposal", proposal)
-}
+//func (m *MockBlockProposer) OnReceiveChainedBFTProposal(proposal *chainedbft.BuildProposal) {
+//	m.ctrl.T.Helper()
+//	m.ctrl.Call(m, "OnReceiveChainedBFTProposal", proposal)
+//}
 
 // OnReceiveChainedBFTProposal indicates an expected call of OnReceiveChainedBFTProposal
-func (mr *MockBlockProposerMockRecorder) OnReceiveChainedBFTProposal(proposal interface{}) *gomock.Call {
-	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnReceiveChainedBFTProposal", reflect.TypeOf((*MockBlockProposer)(nil).OnReceiveChainedBFTProposal), proposal)
-}
+//func (mr *MockBlockProposerMockRecorder) OnReceiveChainedBFTProposal(proposal interface{}) *gomock.Call {
+//	mr.mock.ctrl.T.Helper()
+//	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "OnReceiveChainedBFTProposal", reflect.TypeOf((*MockBlockProposer)(nil).OnReceiveChainedBFTProposal), proposal)
+//}
 
 // MockBlockVerifier is a mock of BlockVerifier interface
 type MockBlockVerifier struct {

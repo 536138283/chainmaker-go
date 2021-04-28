@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package protocol
 
 import (
+	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/txpool"
 )
@@ -44,3 +45,9 @@ const (
 	CONSENSUS_VERIFY VerifyMode = iota
 	SYNC_VERIFY
 )
+
+type CoreExecutor interface {
+	Start()
+	Stop()
+	msgbus.Subscriber
+}

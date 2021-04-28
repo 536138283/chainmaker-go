@@ -9,12 +9,15 @@ package core
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/core/abft"
 	"chainmaker.org/chainmaker-go/core/committer"
+
 	"chainmaker.org/chainmaker-go/core/proposer"
 	"chainmaker.org/chainmaker-go/core/scheduler"
 	"chainmaker.org/chainmaker-go/core/verifier"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	txpoolpb "chainmaker.org/chainmaker-go/pb/protogo/txpool"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/subscriber"
@@ -32,6 +35,8 @@ type CoreEngine struct {
 	BlockCommitter protocol.BlockCommitter // block committer, to commit block to store after consensus
 	txScheduler    protocol.TxScheduler    // transaction scheduler, schedule transactions run in vm
 
+	coreExecutor protocol.CoreExecutor //execution module of assembleable core engine
+
 	msgBus msgbus.MessageBus // message bus, transfer messages with other modules
 
 	txPool          protocol.TxPool          // transaction pool, cache transactions to be pack in block
@@ -48,6 +53,7 @@ type CoreEngine struct {
 // NewCoreEngine new a core engine.
 func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 	core := &CoreEngine{
+		chainConf:       cf.chainConf,
 		msgBus:          cf.msgBus,
 		txPool:          cf.txPool,
 		vmMgr:           cf.vmMgr,
@@ -115,7 +121,25 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	if core.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_ABFT {
+		ceConf := &abft.CoreExecuteConfig{
+			ChainId:         core.chainId,
+			TxPool:          core.txPool,
+			SnapshotManager: core.snapshotManager,
+			MsgBus:          core.msgBus,
+			Identity:        cf.identity,
+			LedgerCache:     cf.ledgerCache,
+			ChainConf:       core.chainConf,
+			AC:              cf.ac,
+			BlockchainStore: core.blockchainStore,
+			Log:             core.log,
+			VmMgr:           core.vmMgr,
+		}
+		core.coreExecutor, err = abft.NewCoreExecute(ceConf)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return core, nil
 }
 
@@ -161,12 +185,16 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 
 // Start, initialize core engine
 func (c *CoreEngine) Start() {
-	c.msgBus.Register(msgbus.ProposeState, c)
-	c.msgBus.Register(msgbus.VerifyBlock, c)
-	c.msgBus.Register(msgbus.CommitBlock, c)
-	c.msgBus.Register(msgbus.TxPoolSignal, c)
-	c.msgBus.Register(msgbus.BuildProposal, c)
-	c.blockProposer.Start()
+	if c.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
+		c.msgBus.Register(msgbus.ProposeState, c)
+		c.msgBus.Register(msgbus.VerifyBlock, c)
+		c.msgBus.Register(msgbus.CommitBlock, c)
+		c.msgBus.Register(msgbus.TxPoolSignal, c)
+		c.msgBus.Register(msgbus.BuildProposal, c)
+		c.blockProposer.Start()
+	} else {
+		c.coreExecutor.Start()
+	}
 }
 
 // Stop, stop core engine
