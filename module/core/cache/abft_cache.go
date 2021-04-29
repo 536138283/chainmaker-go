@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package cache
 
 import (
+	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
 	"errors"
 	"sync"
@@ -23,8 +24,9 @@ type VerifiedTxBatchCache struct {
 
 //After propose txbatch cache
 type ProposedTxBatchCache struct {
-	txBatch  *commonpb.Block
-	rwSetMap map[string]*commonpb.TxRWSet
+	fingerPrint utils.BlockFingerPrint
+	txBatch     *commonpb.Block
+	rwSetMap    map[string]*commonpb.TxRWSet
 }
 
 //abft complete structure
@@ -75,7 +77,7 @@ func (hc *AbftCache) GetVerifiedTxBatchByHash(hash []byte) (*VerifiedTxBatchCach
 	}
 	VerifiedTxBatch, ok := hc.verifiedTxBatchCacheMap.Load(hex.EncodeToString(hash))
 	if !ok {
-		return nil, nil
+		return nil, errors.New("get verified tx batch failed, tx batch is not exits")
 	}
 	return VerifiedTxBatch.(*VerifiedTxBatchCache), nil
 
@@ -118,6 +120,9 @@ func (vtbc *VerifiedTxBatchCache) SetTxBatchRwSet(rwSet map[string]*commonpb.TxR
 func (ptbc *ProposedTxBatchCache) GetTxBatch() *commonpb.Block {
 	return ptbc.txBatch
 }
+func (ptbc *ProposedTxBatchCache) GetFingerPrint() utils.BlockFingerPrint {
+	return ptbc.fingerPrint
+}
 func (ptbc *ProposedTxBatchCache) GetRwSetMap() map[string]*commonpb.TxRWSet {
 	return ptbc.rwSetMap
 }
@@ -129,6 +134,7 @@ func (hc *AbftCache) GetVerifiedTxBatchMap() sync.Map {
 }
 func (hc *AbftCache) SetProposedTxBatch(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
 	hc.proposedTxBatchCache = &ProposedTxBatchCache{
+		fingerPrint: utils.CalcBlockFingerPrint(txBatch),
 		txBatch:  txBatch,
 		rwSetMap: rwSetMap,
 	}
