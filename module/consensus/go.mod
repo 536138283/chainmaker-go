@@ -11,10 +11,14 @@ require (
 	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
 	chainmaker.org/chainmaker-go/protocol v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
+	github.com/NebulousLabs/errors v0.0.0-20181203160057-9f787ce8f69e // indirect
+	github.com/NebulousLabs/fastrand v0.0.0-20181203155948-6fb6489aac4e // indirect
+	github.com/NebulousLabs/merkletree v0.0.0-20181203152040-08d5d54b07f5
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/mock v1.4.4
+	github.com/klauspost/reedsolomon v1.9.12
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/prometheus/client_golang v1.9.0 // indirect

@@ -13,6 +13,7 @@ import (
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 
 	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/consensus/abft"
 	"chainmaker.org/chainmaker-go/consensus/raft"
 	"chainmaker.org/chainmaker-go/consensus/solo"
 	"chainmaker.org/chainmaker-go/consensus/tbft"
@@ -69,6 +70,15 @@ func (f Factory) NewConsensusEngine(
 			MsgBus:         msgBus,
 		}
 		return raft.New(config)
+	case consensuspb.ConsensusType_ABFT:
+		config := &abft.ConsensusABFTImplConfig{
+			ChainID:   chainID,
+			Id:        id,
+			MsgBus:    msgBus,
+			ChainConf: chainConf,
+			Singer:    signer,
+		}
+		return abft.New(config)
 	default:
 	}
 	return nil, (fmt.Errorf("error consensusType: %s", consensusType))
