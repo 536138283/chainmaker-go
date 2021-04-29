@@ -84,30 +84,29 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 
 	switch message.Topic {
 	case msgbus.PackageSignal:
-		proposedSignal, ok := message.Payload.(abft.PackagedSignal)
+		proposedSignal, ok := message.Payload.(*abft.PackagedSignal)
 		if !ok {
 			c.log.Warnf("propose failed, Invalid Signal Type")
 			return
 		}
-		if err := c.Proposer.Propose(&proposedSignal); err != nil {
+		if err := c.Proposer.Propose(proposedSignal); err != nil {
 			c.log.Warnf("propose failed, error %s", err.Error())
 		}
 	case msgbus.VerifyBlock:
-		block, ok := message.Payload.(commonPb.Block)
+		block, ok := message.Payload.(*commonPb.Block)
 		if !ok {
 			c.log.Warnf("verify block failed, Invalid Signal Type")
 			return
 		}
-		if err := c.Verifier.verify(&block); err != nil {
+		if err := c.Verifier.verify(block); err != nil {
 			c.log.Warnf("verify failed, error %s", err.Error())
 		}
 	case msgbus.CommitedTxBatchs:
-		txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA)
+		txBatchAfterABA, ok := message.Payload.(*abft.TxBatchAfterABA)
 		if !ok {
 			c.log.Warnf("commited txBatch failed, Invalid Signal Type")
 		}
-		if err := c.Committer.Commit(
-			txBatchAfterABA.BlockHeight, txBatchAfterABA.TxBatchHash); err != nil {
+		if err := c.Committer.Commit(txBatchAfterABA); err != nil {
 			c.log.Warnf("commit fail, error %s", err.Error())
 		}
 	}

@@ -11,6 +11,7 @@ import (
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
@@ -62,9 +63,12 @@ func NewCommitter(ceConfig *CoreExecuteConfig) *Committer {
 	return committer
 }
 
-func (c *Committer) Commit(blockHeight int64, txBatchHashs [][]byte) error {
+func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
+
+	blockHeight := txBatchAfterABA.BlockHeight
+	txBatchHashs := txBatchAfterABA.TxBatchHash
 
 	// check block height
 	if err := common.VerifyHeight(blockHeight, c.ledgerCache); err != nil {
