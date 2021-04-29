@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
-	"bytes"
 	"encoding/hex"
 	"fmt"
 	"sync"
@@ -131,9 +130,17 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 
 	//nodes that pack the txBatch do not need to verify
 	proposedTxBatchCache := v.abftCache.GetProposedTxBatch()
+	fingerPrint := utils.CalcBlockFingerPrint(block)
 	if proposedTxBatchCache != nil &&
-		bytes.Equal(proposedTxBatchCache.GetTxBatch().Header.BlockHash, block.Header.BlockHash) {
+		string(proposedTxBatchCache.GetFingerPrint()) == string(fingerPrint) {
 		verifyResult := true
+		err := v.abftCache.AddVerifiedTxBatch(block, verifyResult, proposedTxBatchCache.GetRwSetMap())
+		if err != nil {
+			err = fmt.Errorf("sync cache the verified block faield: %s, blockHeight(%d), blockHash(%s)", err.Error(),
+				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
+			return err
+		}
+
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
 		return nil
 	}

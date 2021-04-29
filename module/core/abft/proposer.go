@@ -152,6 +152,7 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 		}
 		p.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 	}
+
 	p.abftCache.SetProposedTxBatch(blockBatch, txRWSetMap)
 	p.msgBus.Publish(msgbus.ProposedBlock, blockBatch)
 	p.log.Infof("proposer success [%d](txs:%d)", blockBatch.Header.BlockHeight, blockBatch.Header.TxCount)
