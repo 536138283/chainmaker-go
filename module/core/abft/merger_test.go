@@ -19,12 +19,11 @@ func TestMerger_Merge(t *testing.T) {
 	branchID3 := []byte("c")
 	branchID4 := []byte("d")
 
-	// 往cache中写入数据（所有verify通过的batch）
 	//cach := addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
 	//cach := addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
 	//cach := addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
-	cach := addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
-	//cach := addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4)
+	//cach := addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
+	cach := addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4)
 
 	m := NewMerger()
 	c := &Committer{
@@ -34,24 +33,21 @@ func TestMerger_Merge(t *testing.T) {
 		txBatchIDList: make([]string, 0),
 	}
 
-	// ABA 通过的batch
 	txBatchHash := [][]byte{branchID3, branchID2, branchID4, branchID1}
 	c.prepare(txBatchHash)
 	c.sortTxBatchID()
+	fmt.Println(c.txBatchIDList)
 
 	block := cache.CreateNewTestBlock(3)
-	c.merger.block = block
-	c.merger.txBatchIDList = c.txBatchIDList
-	fmt.Println(c.merger.txBatchIDList)
 
-	if err := c.merger.Merge(); err != nil {
+	if err := c.merger.Merge(block, c.txBatchIDList); err != nil {
 		panic(err)
 	}
 
 	fmt.Println("rwSetMap:", c.merger.rwSetMap)
-	fmt.Println("block.dag:", c.merger.block.Dag)
-	fmt.Println("Txs num:", len(c.merger.block.Txs))
-	fmt.Println("Txs:", c.merger.block.Txs)
+	fmt.Println("block.dag:", block.Dag)
+	fmt.Println("Txs num:", len(block.Txs))
+	fmt.Println("Txs:", block.Txs)
 
 }
 
@@ -123,9 +119,9 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 	}
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{tx0, tx1})
-	m.block = b0
 	b0.Dag = m.buildDAG(b0, rwSetMap0)
-	hc.AddAbftTxBatch(b0, true, rwSetMap0)
+	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
+	//hc.SetProposedTxBatch(b0, rwSetMap0)
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx2.Header.TxId] = &commonpb.TxRWSet{
@@ -157,7 +153,8 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{tx2, tx3})
 	b1.Dag = m.buildDAG(b1, rwSetMap1)
-	hc.AddAbftTxBatch(b1, true, rwSetMap1)
+	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
+	//hc.SetProposedTxBatch(b1, rwSetMap1)
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx4.Header.TxId] = &commonpb.TxRWSet{
@@ -190,7 +187,8 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{tx4, tx5})
 	b2.Dag = m.buildDAG(b2, rwSetMap2)
-	hc.AddAbftTxBatch(b2, true, rwSetMap2)
+	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
+	//hc.SetProposedTxBatch(b2, rwSetMap2)
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx6.Header.TxId] = &commonpb.TxRWSet{
@@ -222,7 +220,8 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{tx6, tx7})
 	b3.Dag = m.buildDAG(b3, rwSetMap3)
-	hc.AddAbftTxBatch(b3, true, rwSetMap3)
+	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
+	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
 	return hc
 }
@@ -286,9 +285,9 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 	}
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{tx0, tx1, tx8})
-	m.block = b0
 	b0.Dag = m.buildDAG(b0, rwSetMap0)
-	hc.AddAbftTxBatch(b0, true, rwSetMap0)
+	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
+	//hc.SetProposedTxBatch(b0, rwSetMap0)
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx2.Header.TxId] = &commonpb.TxRWSet{
@@ -333,7 +332,8 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{tx2, tx3, tx9})
 	b1.Dag = m.buildDAG(b1, rwSetMap1)
-	hc.AddAbftTxBatch(b1, true, rwSetMap1)
+	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
+	//hc.SetProposedTxBatch(b1, rwSetMap1)
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx4.Header.TxId] = &commonpb.TxRWSet{
@@ -379,7 +379,8 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{tx4, tx5, tx10})
 	b2.Dag = m.buildDAG(b2, rwSetMap2)
-	hc.AddAbftTxBatch(b2, true, rwSetMap2)
+	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
+	//hc.SetProposedTxBatch(b2, rwSetMap2)
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx6.Header.TxId] = &commonpb.TxRWSet{
@@ -424,7 +425,8 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{tx6, tx7, tx11})
 	b3.Dag = m.buildDAG(b3, rwSetMap3)
-	hc.AddAbftTxBatch(b3, true, rwSetMap3)
+	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
+	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
 	return hc
 }
@@ -471,9 +473,9 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 	}
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{tx0, tx1})
-	m.block = b0
 	b0.Dag = m.buildDAG(b0, rwSetMap0)
-	hc.AddAbftTxBatch(b0, true, rwSetMap0)
+	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
+	//hc.SetProposedTxBatch(b0, rwSetMap0)
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx1.Header.TxId] = &commonpb.TxRWSet{
@@ -517,9 +519,9 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 	}
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{tx1, tx2, tx3})
-	m.block = b1
 	b1.Dag = m.buildDAG(b1, rwSetMap1)
-	hc.AddAbftTxBatch(b1, true, rwSetMap1)
+	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
+	//hc.SetProposedTxBatch(b1, rwSetMap1)
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx4.Header.TxId] = &commonpb.TxRWSet{
@@ -564,9 +566,9 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{tx4, tx3, tx5})
-	m.block = b2
 	b2.Dag = m.buildDAG(b2, rwSetMap2)
-	hc.AddAbftTxBatch(b2, true, rwSetMap2)
+	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
+	//hc.SetProposedTxBatch(b2, rwSetMap2)
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx6.Header.TxId] = &commonpb.TxRWSet{
@@ -623,9 +625,9 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 	}
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{tx6, tx7, tx5, tx3})
-	m.block = b3
 	b3.Dag = m.buildDAG(b3, rwSetMap3)
-	hc.AddAbftTxBatch(b3, true, rwSetMap3)
+	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
+	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
 	return hc
 }
@@ -702,10 +704,10 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	}
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{tx0, tx1, tx2, tx3})
-	m.block = b0
 	b0.Dag = m.buildDAG(b0, rwSetMap0)
 	fmt.Println(b0.Dag)
-	hc.AddAbftTxBatch(b0, true, rwSetMap0)
+	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
+	//hc.SetProposedTxBatch(b0, rwSetMap0)
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx3.Header.TxId] = &commonpb.TxRWSet{
@@ -762,10 +764,10 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	}
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{tx3, tx4, tx5, tx6})
-	m.block = b1
 	b1.Dag = m.buildDAG(b1, rwSetMap1)
 	fmt.Println(b1.Dag)
-	hc.AddAbftTxBatch(b1, true, rwSetMap1)
+	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
+	//hc.SetProposedTxBatch(b1, rwSetMap1)
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx7.Header.TxId] = &commonpb.TxRWSet{
@@ -823,10 +825,10 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{tx7, tx3, tx8, tx9})
-	m.block = b2
 	b2.Dag = m.buildDAG(b2, rwSetMap2)
 	fmt.Println(b2.Dag)
-	hc.AddAbftTxBatch(b2, true, rwSetMap2)
+	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
+	//hc.SetProposedTxBatch(b2, rwSetMap2)
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx7.Header.TxId] = &commonpb.TxRWSet{
@@ -883,10 +885,10 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	}
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{tx7, tx10, tx6, tx11})
-	m.block = b3
 	b3.Dag = m.buildDAG(b3, rwSetMap3)
 	fmt.Println(b3.Dag)
-	hc.AddAbftTxBatch(b3, true, rwSetMap3)
+	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
+	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
 	return hc
 }
@@ -964,10 +966,10 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	}
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{tx0, tx1, tx2, tx3})
-	m.block = b0
 	b0.Dag = m.buildDAG(b0, rwSetMap0)
 	fmt.Println(b0.Dag)
-	hc.AddAbftTxBatch(b0, true, rwSetMap0)
+	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
+	//hc.SetProposedTxBatch(b0, rwSetMap0)
 
 	rwSetMap1 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap1[tx2.Header.TxId] = &commonpb.TxRWSet{
@@ -1024,10 +1026,10 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	}
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{tx2, tx4, tx5, tx6})
-	m.block = b1
 	b1.Dag = m.buildDAG(b1, rwSetMap1)
 	fmt.Println(b1.Dag)
-	hc.AddAbftTxBatch(b1, true, rwSetMap1)
+	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
+	//hc.SetProposedTxBatch(b1, rwSetMap1)
 
 	rwSetMap2 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap2[tx7.Header.TxId] = &commonpb.TxRWSet{
@@ -1085,10 +1087,10 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{tx7, tx4, tx8, tx9})
-	m.block = b2
 	b2.Dag = m.buildDAG(b2, rwSetMap2)
 	fmt.Println(b2.Dag)
-	hc.AddAbftTxBatch(b2, true, rwSetMap2)
+	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
+	//hc.SetProposedTxBatch(b2, rwSetMap2)
 
 	rwSetMap3 := make(map[string]*commonpb.TxRWSet)
 	rwSetMap3[tx7.Header.TxId] = &commonpb.TxRWSet{
@@ -1145,10 +1147,10 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	}
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{tx7, tx10, tx11, tx12})
-	m.block = b3
 	b3.Dag = m.buildDAG(b3, rwSetMap3)
 	fmt.Println(b3.Dag)
-	hc.AddAbftTxBatch(b3, true, rwSetMap3)
+	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
+	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
 	return hc
 }

@@ -91,7 +91,7 @@ func (hc *AbftCache) HasVerifiedTxBatch(hash []byte) bool {
 func (hc *AbftCache) IsVerifiedTxBatchSuccess(hash []byte) (bool, error) {
 	VerifiedTxBatch, ok := hc.verifiedTxBatchCacheMap.Load(hex.EncodeToString(hash))
 	if !ok {
-		return false, errors.New("TxBatch not exist")
+		return false, errors.New("tx batch not exist")
 	}
 	return VerifiedTxBatch.(*VerifiedTxBatchCache).verifyResult, nil
 }
@@ -121,13 +121,13 @@ func (ptbc *ProposedTxBatchCache) GetTxBatch() *commonpb.Block {
 func (ptbc *ProposedTxBatchCache) GetRwSetMap() map[string]*commonpb.TxRWSet {
 	return ptbc.rwSetMap
 }
-func (hc *AbftCache) GetProposedTxBatchCache() *ProposedTxBatchCache {
+func (hc *AbftCache) GetProposedTxBatch() *ProposedTxBatchCache {
 	return hc.proposedTxBatchCache
 }
-func (hc *AbftCache) GetVerifiedTxBatchCacheCacheMap() sync.Map {
+func (hc *AbftCache) GetVerifiedTxBatchMap() sync.Map {
 	return hc.verifiedTxBatchCacheMap
 }
-func (hc *AbftCache) SetProposedTxBatchCache(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
+func (hc *AbftCache) SetProposedTxBatch(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) {
 	hc.proposedTxBatchCache = &ProposedTxBatchCache{
 		txBatch:  txBatch,
 		rwSetMap: rwSetMap,

@@ -40,7 +40,7 @@ func verifyPrepare(t *testing.T) (*Verifier, *commonpb.Block, error) {
 		chainId:       "chain1",
 	}
 	var block *commonpb.Block
-	verifier.verifyBlock, block = verifyBlockPrepare(ctl, log, ledgerCache, txPool)
+	verifier.verifierBlock, block = verifyBlockPrepare(ctl, log, ledgerCache, txPool)
 	var err error
 	verifier.goRoutinePool, err = ants.NewPool(10, ants.WithPreAlloc(true))
 	if err != nil {
@@ -54,7 +54,7 @@ func verifyPrepare(t *testing.T) (*Verifier, *commonpb.Block, error) {
 
 }
 
-func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCache *mock.MockLedgerCache, txPool *mock.MockTxPool) (*common.VerifyBlock, *commonpb.Block) {
+func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCache *mock.MockLedgerCache, txPool *mock.MockTxPool) (*common.VerifierBlock, *commonpb.Block) {
 	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	snapshotManager := mock.NewMockSnapshotManager(ctl)
@@ -77,12 +77,13 @@ func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCach
 
 	//ledgerCache mock
 	lastBlock := newBlock()
-	block := newBlock()
+	block := newVerifyBlock()
 	lastBlock.Header.BlockHash = []byte("111222333444555")
 	block.Header.PreBlockHash = lastBlock.Header.BlockHash
-	blockHash, _ := hex.DecodeString("f4b43ff2d2fbdd2563b406f833ecfd03c5b5d67726326d65c60cdf1f270f10fd")
+	blockHash, _ := hex.DecodeString("f96db8e4f48dbce4f44af1e794b3d1f347ce24167ce71535fbec8fdb7e8f83bc")
 	block.Header.BlockHash = blockHash
 	ledgerCache.EXPECT().GetLastCommittedBlock().AnyTimes().Return(lastBlock)
+	ledgerCache.EXPECT().CurrentHeight().AnyTimes().Return(int64(0), nil)
 
 	//ac mock
 	principal := mock.NewMockPrincipal(ctl)
@@ -178,7 +179,7 @@ func verifyBlockPrepare(ctl *gomock.Controller, log *logger.CMLogger, ledgerCach
 		TxPool:          txPool,
 		BlockchainStore: store,
 	}
-	return common.NewVerifyBlock(conf), block
+	return common.NewVerifierBlock(conf), block
 }
 
 func TestVerify(t *testing.T) {
@@ -186,6 +187,7 @@ func TestVerify(t *testing.T) {
 	if err != nil {
 		fmt.Println("verify prepare failed: " + err.Error())
 	}
+	fmt.Printf("block strcture: %v\n", block)
 	err = verify.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
 	if err != nil {
 		fmt.Println("verify block failed: " + err.Error())

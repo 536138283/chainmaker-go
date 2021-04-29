@@ -13,7 +13,6 @@ import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
-	"encoding/hex"
 	"fmt"
 )
 
@@ -151,7 +150,6 @@ func IsPreHashValid(block *commonpb.Block, preHash []byte) error {
 // IsBlockHashValid, to check if block hash equals with result calculated from block
 func IsBlockHashValid(block *commonpb.Block, hashType string) error {
 	hash, err := utils.CalcBlockHash(hashType, block)
-	fmt.Println("hash: " + hex.EncodeToString(hash))
 	if err != nil {
 		return fmt.Errorf("calc block hash error")
 	}
@@ -250,7 +248,7 @@ type ValidateBlockConf struct {
 	BlockchainStore protocol.BlockchainStore
 }
 
-type VerifyBlock struct {
+type VerifierBlock struct {
 	chainConf       protocol.ChainConf
 	log             *logger.CMLogger
 	ledgerCache     protocol.LedgerCache
@@ -262,8 +260,8 @@ type VerifyBlock struct {
 	blockchainStore protocol.BlockchainStore
 }
 
-func NewVerifyBlock(conf *ValidateBlockConf) *VerifyBlock {
-	verifyBlock := &VerifyBlock{
+func NewVerifierBlock(conf *ValidateBlockConf) *VerifierBlock {
+	verifyBlock := &VerifierBlock{
 		chainConf:       conf.ChainConf,
 		log:             conf.Log,
 		ledgerCache:     conf.LedgerCache,
@@ -278,7 +276,7 @@ func NewVerifyBlock(conf *ValidateBlockConf) *VerifyBlock {
 }
 
 // validateBlock, validate block and transactions
-func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonpb.TxRWSet, []int64, error) {
+func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonpb.TxRWSet, []int64, error) {
 	hashType := vb.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make([]int64, 0)
 	var err error
@@ -341,7 +339,7 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
-	verifyTxConf := &VerifyTxConfig{
+	verifierTxConf := &VerifierTxConfig{
 		Block:       block,
 		TxResultMap: txResultMap,
 		TxRWSetMap:  txRWSetMap,
@@ -351,8 +349,8 @@ func (vb *VerifyBlock) ValidateBlock(block *commonpb.Block) (map[string]*commonp
 		TxPool:      vb.txPool,
 		Store:       vb.blockchainStore,
 	}
-	verifytx := NewVerifyTx(verifyTxConf)
-	txHashes, _, err := verifytx.VerifyTxs()
+	verifiertx := NewVerifierTx(verifierTxConf)
+	txHashes, _, err := verifiertx.VerifierTxs()
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts = append(timeLasts, txLasts)
 
@@ -381,6 +379,17 @@ func checkBlockDigests(block *commonpb.Block, txHashes [][]byte, hashType string
 	if err := IsRWSetHashValid(block, hashType); err != nil {
 		log.Error(err)
 		return err
+	}
+	return nil
+}
+
+func VerifyHeight(height int64, ledgerCache protocol.LedgerCache) error {
+	currentHeight, err := ledgerCache.CurrentHeight()
+	if err != nil {
+		return err
+	}
+	if currentHeight+1 != height {
+		return fmt.Errorf("verify height fail,expected [%d]", currentHeight+1)
 	}
 	return nil
 }

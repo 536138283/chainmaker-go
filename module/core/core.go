@@ -10,6 +10,7 @@ package core
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/abft"
+	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/committer"
 
 	"chainmaker.org/chainmaker-go/core/proposer"
@@ -129,6 +130,7 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 			MsgBus:          core.msgBus,
 			Identity:        cf.identity,
 			LedgerCache:     cf.ledgerCache,
+			ABFTCache:       cache.NewAbftCache(),
 			ChainConf:       core.chainConf,
 			AC:              cf.ac,
 			BlockchainStore: core.blockchainStore,

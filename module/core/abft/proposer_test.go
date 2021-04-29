@@ -39,16 +39,40 @@ func newBlock() *commonpb.Block {
 		},
 	}
 }
+func newVerifyBlock() *commonpb.Block {
+	return &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			ChainId:        "chain1",
+			BlockHeight:    0,
+			PreBlockHash:   nil,
+			BlockHash:      nil,
+			BlockVersion:   nil,
+			DagHash:        nil,
+			RwSetRoot:      nil,
+			TxRoot:         nil,
+			BlockTimestamp: 0,
+			Proposer:       nil,
+			ConsensusArgs:  nil,
+			TxCount:        0,
+			Signature:      []byte("12341234"),
+		},
+		Dag: &commonpb.DAG{
+			Vertexes: nil,
+		},
+		Txs: nil,
+		AdditionalData: &commonpb.AdditionalData{
+			ExtraData: nil,
+		},
+	}
+}
 func proposePrepare(t *testing.T) *Proposer {
 	ctl := gomock.NewController(t)
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, "chain1")
 	chainConf := mock.NewMockChainConf(ctl)
 	ledgerCache := mock.NewMockLedgerCache(ctl)
-	ac := mock.NewMockAccessControlProvider(ctl)
 	snapshotManager := mock.NewMockSnapshotManager(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	txPool := mock.NewMockTxPool(ctl)
-	store := mock.NewMockBlockchainStore(ctl)
 	identity := mock.NewMockSigningMember(ctl)
 	msgBus := mock.NewMockMessageBus(ctl)
 
@@ -151,29 +175,28 @@ func proposePrepare(t *testing.T) *Proposer {
 
 	//abftcache mock
 	abftCache := cache.NewAbftCache()
-	ce := &CoreExecute{
-		chainId:         "chain1",
-		ledgerCache:     ledgerCache,
-		txPool:          txPool,
-		snapshotManager: snapshotManager,
-		identity:        identity,
-		msgBus:          msgBus,
-		ac:              ac,
-		blockchainStore: store,
-		chainConf:       chainConf,
-		log:             log,
-		vmMgr:           vmMgr,
-		abftCache:       abftCache,
+
+	ceConf := &CoreExecuteConfig{
+		ChainId:         "chain1",
+		TxPool:          txPool,
+		LedgerCache:     ledgerCache,
+		Log:             log,
+		Identity:        identity,
+		ChainConf:       chainConf,
+		VmMgr:           vmMgr,
+		SnapshotManager: snapshotManager,
+		MsgBus:          msgBus,
+		ABFTCache:       abftCache,
 	}
-	return NewProposer(ce)
+
+	return NewProposer(ceConf)
 }
 
 func TestPropose(t *testing.T) {
 	proposer := proposePrepare(t)
-	proposer.proposedSignal = &abft.PackagedSignal{
+	err := proposer.Propose(&abft.PackagedSignal{
 		BlockHeight: 1,
-	}
-	err := proposer.Propose()
+	})
 	if err != nil {
 		fmt.Println("error: " + err.Error())
 	}

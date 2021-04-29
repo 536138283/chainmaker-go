@@ -41,6 +41,7 @@ type CoreExecuteConfig struct {
 	MsgBus          msgbus.MessageBus
 	Identity        protocol.SigningMember
 	LedgerCache     protocol.LedgerCache
+	ABFTCache       *cache.AbftCache
 	ChainConf       protocol.ChainConf
 	AC              protocol.AccessControlProvider
 	BlockchainStore protocol.BlockchainStore
@@ -52,6 +53,7 @@ func NewCoreExecute(ceConfig *CoreExecuteConfig) (*CoreExecute, error) {
 	ce := &CoreExecute{
 		chainId:         ceConfig.ChainId,
 		ledgerCache:     ceConfig.LedgerCache,
+		abftCache:       ceConfig.ABFTCache,
 		txPool:          ceConfig.TxPool,
 		snapshotManager: ceConfig.SnapshotManager,
 		identity:        ceConfig.Identity,
@@ -63,13 +65,12 @@ func NewCoreExecute(ceConfig *CoreExecuteConfig) (*CoreExecute, error) {
 		vmMgr:           ceConfig.VmMgr,
 	}
 	var err error
-	ce.abftCache = cache.NewAbftCache()
-	ce.Proposer = NewProposer(ce)
-	ce.Verifier, err = NewVerifier(ce)
+	ce.Proposer = NewProposer(ceConfig)
+	ce.Verifier, err = NewVerifier(ceConfig)
 	if err != nil {
 		return nil, err
 	}
-	ce.Committer = NewCommitter(ce)
+	ce.Committer = NewCommitter(ceConfig)
 	return ce, nil
 }
 
@@ -88,8 +89,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 			c.log.Warnf("propose failed, Invalid Signal Type")
 			return
 		}
-		c.Proposer.proposedSignal = &proposedSignal
-		if err := c.Proposer.Propose(); err != nil {
+		if err := c.Proposer.Propose(&proposedSignal); err != nil {
 			c.log.Warnf("propose failed, error %s", err.Error())
 		}
 	case msgbus.VerifyBlock:
@@ -98,7 +98,9 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 			c.log.Warnf("verify block failed, Invalid Signal Type")
 			return
 		}
-		c.Verifier.goRoutinePool.Submit(c.Verifier.verifyTask(&block, protocol.CONSENSUS_VERIFY))
+		if err := c.Verifier.verify(&block); err != nil {
+			c.log.Warnf("verify failed, error %s", err.Error())
+		}
 	case msgbus.CommitedTxBatchs:
 		txBatchAfterABA, ok := message.Payload.(abft.TxBatchAfterABA)
 		if !ok {
