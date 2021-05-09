@@ -25,7 +25,7 @@ type Committer struct {
 	blockHeight   int64
 	txBatchIDList []string // BatchID After ABA
 	ledgerCache   protocol.LedgerCache
-	abftCache     cache.AbftCache
+	abftCache     *cache.AbftCache
 	merger        *Merger
 	log           *logger.CMLogger // logger
 	txPool        protocol.TxPool
@@ -42,7 +42,7 @@ func NewCommitter(ceConfig *CoreExecuteConfig) *Committer {
 		blockHeight:   0,
 		txBatchIDList: make([]string, 0),
 		ledgerCache:   ceConfig.LedgerCache,
-		abftCache:     *ceConfig.ABFTCache,
+		abftCache:     ceConfig.ABFTCache,
 		log:           ceConfig.Log,
 		txPool:        ceConfig.TxPool,
 		identity:      ceConfig.Identity,
@@ -94,6 +94,13 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 		return err
 	}
 
+	// set base TxBatch Id
+	c.merger.baseTxBatchID = c.txBatchIDList[0]
+
+	// rewrite block's Timestamp
+	baseTxBatchInfo := c.merger.txBatchInfo[c.merger.baseTxBatchID].txBatch
+	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
+
 	if !c.isEmptyBlock() {
 		// get the new RWSetMap after conflict detection
 		if err = c.merger.Merge(block, c.txBatchIDList); err != nil {
@@ -101,16 +108,11 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 		}
 
 		rwSetMap = c.merger.rwSetMap
-	}
-
-	// rewrite block's Timestamp
-	baseTxBatchInfo := c.merger.txBatchInfo[c.merger.baseTxBatchID].txBatch
-	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
-
-	var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
-	err = common.FinalizeBlock(block, rwSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)
-	if err != nil {
-		return err
+		var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
+		err = common.FinalizeBlock(block, rwSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)
+		if err != nil {
+			return err
+		}
 	}
 
 	hash, sig, err := utils.SignBlock(c.chainConf.ChainConfig().Crypto.Hash, c.identity, block)
