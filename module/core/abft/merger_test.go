@@ -213,7 +213,7 @@ func TestMerger_Merge(t *testing.T) {
 		c := &Committer{
 			merger:        m,
 			retryList:     nil,
-			abftCache:     *v.cach,
+			abftCache:     v.cach,
 			txBatchIDList: make([]string, 0),
 		}
 
@@ -223,6 +223,7 @@ func TestMerger_Merge(t *testing.T) {
 
 		block := cache.CreateNewTestBlock(3)
 
+		c.merger.baseTxBatchID = c.txBatchIDList[0]
 		if err := c.merger.Merge(block, c.txBatchIDList); err != nil {
 			panic(err)
 		}
