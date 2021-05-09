@@ -236,9 +236,7 @@ func TestMerger_Merge(t *testing.T) {
 		}
 
 		fmt.Println("rwSetMap:", c.merger.rwSetMap)
-		//fmt.Println("block.dag:", block.Dag)
-		//fmt.Println("Txs num:", len(block.Txs))
-		//fmt.Println("Txs:", block.Txs)
+
 	}
 
 }
