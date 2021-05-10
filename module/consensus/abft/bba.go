@@ -74,10 +74,11 @@ func (bba *BBA) appendBValRequests(val bool) {
 
 	for _, n := range bba.nodes {
 		abftMessage := &abftpb.ABFTMessage{
-			From: bba.nodeID,
-			To:   n,
-			Id:   bba.id,
-			Acs:  acsMessage,
+			Height: bba.height,
+			From:   bba.nodeID,
+			To:     n,
+			Id:     bba.id,
+			Acs:    acsMessage,
 		}
 		bba.messages = append(bba.messages, abftMessage)
 	}
@@ -101,10 +102,11 @@ func (bba *BBA) appendAuxRequests(val bool) {
 
 	for _, n := range bba.nodes {
 		abftMessage := &abftpb.ABFTMessage{
-			From: bba.nodeID,
-			To:   n,
-			Id:   bba.id,
-			Acs:  acsMessage,
+			Height: bba.height,
+			From:   bba.nodeID,
+			To:     n,
+			Id:     bba.id,
+			Acs:    acsMessage,
 		}
 		bba.messages = append(bba.messages, abftMessage)
 	}

@@ -33,6 +33,7 @@ type ACS struct {
 }
 
 func NewACS(cfg Config) *ACS {
+	cfg.logger.Infof("NewACS config: %s", &cfg)
 	acs := &ACS{
 		Config:         cfg,
 		rbcInstances:   make(map[string]*RBC),
@@ -54,6 +55,7 @@ func NewACS(cfg Config) *ACS {
 }
 
 func (acs *ACS) InputRBC(val []byte) error {
+	acs.logger.Debugf("[%s](%d-%s) ACS input RBC len: %v", acs.nodeID, acs.height, acs.id, len(val))
 	rbc, ok := acs.rbcInstances[acs.nodeID]
 	if !ok {
 		return fmt.Errorf("[%s](%d) cannot find rbc instance: %s", acs.nodeID, acs.height, acs.nodeID)
