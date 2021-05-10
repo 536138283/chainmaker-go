@@ -78,19 +78,20 @@ func NewVerifier(ceConfig *CoreExecuteConfig) (*Verifier, error) {
 
 func (v *Verifier) verifyBlock(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
+	emptyTxRwSetMap := make(map[string]*commonPb.TxRWSet)
 	if err := utils.IsEmptyBlock(block); err != nil {
 		return false, nil, err
 	}
 	err := common.VerifyHeight(block.Header.BlockHeight, v.ledgerCache)
 	if err != nil {
-		return false, nil, err
+		return false, emptyTxRwSetMap, err
 	}
 	v.log.Debugf("verify receive [%d](%x,%d,%d)",
 		block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount, len(block.Txs))
 
 	txRwSetMap, timeLasts, err := v.verifierBlock.ValidateBlock(block)
 	if err != nil {
-		return false, nil, err
+		return false, emptyTxRwSetMap, err
 	}
 	// mark transactions in block as pending status in txpool
 	v.txPool.AddTxsToPendingCache(block.Txs, block.Header.BlockHeight)
