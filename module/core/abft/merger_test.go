@@ -29,7 +29,7 @@ func TestMerger_Merge(t *testing.T) {
 	c := &Committer{
 		merger:        m,
 		retryList:     nil,
-		abftCache:     *cach,
+		abftCache:     cach,
 		txBatchIDList: make([]string, 0),
 	}
 

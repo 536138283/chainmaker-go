@@ -140,6 +140,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, stat *verifyStat,
 		if err := IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
 			return nil, nil, err
 		}
+		result.RwSetHash = rwsetHash
 		// verify if rwset hash is equal
 		if err := VerifyTxResult(tx, result, vt.hashType); err != nil {
 			return nil, nil, err
