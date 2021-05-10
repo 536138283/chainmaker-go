@@ -127,29 +127,28 @@ func TestMerger_Merge(t *testing.T) {
 	}
 	successTxMap1 := make(map[string]struct{})
 	successTxMap1 = map[string]struct{}{
-		txList1[0].Header.TxId: {},txList1[1].Header.TxId: {},
-		txList1[2].Header.TxId: {},txList1[3].Header.TxId: {},
-		txList1[4].Header.TxId: {},txList1[5].Header.TxId: {},
-		txList1[6].Header.TxId: {},txList1[7].Header.TxId: {},
+		txList1[0].Header.TxId: {}, txList1[1].Header.TxId: {},
+		txList1[2].Header.TxId: {}, txList1[3].Header.TxId: {},
+		txList1[4].Header.TxId: {}, txList1[5].Header.TxId: {},
+		txList1[6].Header.TxId: {}, txList1[7].Header.TxId: {},
 	}
 	//
 	cach2, txList2 := addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
 	neighborMap2 := make(map[int][]int32)
 	neighborMap2 = map[int][]int32{
-		0:  []int32{}, 1:  []int32{0}, 2:  []int32{1}, 3:  []int32{},
-		4:  []int32{}, 5:  []int32{}, 6:  []int32{}, 7:  []int32{5},
-		8:  []int32{7}, 9:  []int32{}, 10: []int32{9}, 11: []int32{},
+		0: []int32{}, 1: []int32{0}, 2: []int32{1}, 3: []int32{},
+		4: []int32{}, 5: []int32{}, 6: []int32{}, 7: []int32{5},
+		8: []int32{7}, 9: []int32{}, 10: []int32{9}, 11: []int32{},
 	}
 	successTxMap2 := make(map[string]struct{})
 	successTxMap2 = map[string]struct{}{
-		txList2[0].Header.TxId: {},txList2[1].Header.TxId: {},
-		txList2[2].Header.TxId: {},txList2[3].Header.TxId: {},
-		txList2[4].Header.TxId: {},txList2[5].Header.TxId: {},
-		txList2[6].Header.TxId: {},txList2[7].Header.TxId: {},
-		txList2[8].Header.TxId: {},txList2[9].Header.TxId: {},
-		txList2[10].Header.TxId: {},txList2[11].Header.TxId: {},
+		txList2[0].Header.TxId: {}, txList2[1].Header.TxId: {},
+		txList2[2].Header.TxId: {}, txList2[3].Header.TxId: {},
+		txList2[4].Header.TxId: {}, txList2[5].Header.TxId: {},
+		txList2[6].Header.TxId: {}, txList2[7].Header.TxId: {},
+		txList2[8].Header.TxId: {}, txList2[9].Header.TxId: {},
+		txList2[10].Header.TxId: {}, txList2[11].Header.TxId: {},
 	}
-
 
 	cach3, txList3 := addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
 	neighborMap3 := make(map[int][]int32)
@@ -159,39 +158,38 @@ func TestMerger_Merge(t *testing.T) {
 	}
 	successTxMap3 := make(map[string]struct{})
 	successTxMap3 = map[string]struct{}{
-		txList3[0].Header.TxId: {},txList3[1].Header.TxId: {},
-		txList3[2].Header.TxId: {},txList3[3].Header.TxId: {},
-		txList3[4].Header.TxId: {},txList3[5].Header.TxId: {},
-		txList3[6].Header.TxId: {},txList3[7].Header.TxId: {},
+		txList3[0].Header.TxId: {}, txList3[1].Header.TxId: {},
+		txList3[2].Header.TxId: {}, txList3[3].Header.TxId: {},
+		txList3[4].Header.TxId: {}, txList3[5].Header.TxId: {},
+		txList3[6].Header.TxId: {}, txList3[7].Header.TxId: {},
 	}
-
 
 	cach4, txList4 := addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
 	neighborMap4 := make(map[int][]int32)
 	neighborMap4 = map[int][]int32{
-		0:  []int32{}, 1:  []int32{}, 2:  []int32{}, 3:  []int32{},
-		4:  []int32{}, 5:  []int32{}, 6:  []int32{}, 7:  []int32{},
-		8:  []int32{}, 9:  []int32{}, 10: []int32{}, 11: []int32{},
+		0: []int32{}, 1: []int32{}, 2: []int32{}, 3: []int32{},
+		4: []int32{}, 5: []int32{}, 6: []int32{}, 7: []int32{},
+		8: []int32{}, 9: []int32{}, 10: []int32{}, 11: []int32{},
 	}
 	successTxMap4 := make(map[string]struct{})
 	successTxMap4 = map[string]struct{}{
-		txList4[0].Header.TxId: {},txList4[1].Header.TxId: {},
-		txList4[2].Header.TxId: {},txList4[3].Header.TxId: {},
-		txList4[6].Header.TxId: {},txList4[7].Header.TxId: {},
-		txList4[9].Header.TxId: {},txList4[10].Header.TxId: {},
+		txList4[0].Header.TxId: {}, txList4[1].Header.TxId: {},
+		txList4[2].Header.TxId: {}, txList4[3].Header.TxId: {},
+		txList4[6].Header.TxId: {}, txList4[7].Header.TxId: {},
+		txList4[9].Header.TxId: {}, txList4[10].Header.TxId: {},
 	}
 
 	cach5, txList5 := addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4)
 	neighborMap5 := make(map[int][]int32)
-	neighborMap5 = map[int][]int32{0:  []int32{}, 1:  []int32{}, 2:  []int32{1}, 3:  []int32{}, 4:  []int32{},
-		5:  []int32{}, 6:  []int32{}, 7:  []int32{}, 8:  []int32{}, 9:  []int32{}, 10: []int32{}, 11: []int32{},
+	neighborMap5 = map[int][]int32{0: []int32{}, 1: []int32{}, 2: []int32{1}, 3: []int32{}, 4: []int32{},
+		5: []int32{}, 6: []int32{}, 7: []int32{}, 8: []int32{}, 9: []int32{}, 10: []int32{}, 11: []int32{},
 	}
 	successTxMap5 := make(map[string]struct{})
 	successTxMap5 = map[string]struct{}{
-		txList5[0].Header.TxId: {},txList5[1].Header.TxId: {},
-		txList5[2].Header.TxId: {},txList5[3].Header.TxId: {},
-		txList5[6].Header.TxId: {},txList5[7].Header.TxId: {},
-		txList5[9].Header.TxId: {},txList5[10].Header.TxId: {},
+		txList5[0].Header.TxId: {}, txList5[1].Header.TxId: {},
+		txList5[2].Header.TxId: {}, txList5[3].Header.TxId: {},
+		txList5[6].Header.TxId: {}, txList5[7].Header.TxId: {},
+		txList5[9].Header.TxId: {}, txList5[10].Header.TxId: {},
 	}
 
 	tests := []struct {
