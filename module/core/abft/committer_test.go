@@ -71,7 +71,7 @@ func TestCommitter_Commit_getRetryListAfterABA(t *testing.T) {
 	c := &Committer{
 		merger:        m,
 		retryList:     nil,
-		abftCache:     *cach,
+		abftCache:     cach,
 		txBatchIDList: make([]string, 0),
 	}
 

@@ -10,7 +10,107 @@ import (
 
 var (
 	contractName = "testContract"
+	mode1        = "NoRepeatTx_NoConflic"
+	mode2        = "NoRepeatTx_HasConflic"
+	mode3        = "HasRepeatTx_NoConflic"
+	mode4        = "HasRepeatTx_HasConflic"
 )
+
+type testHelper struct {
+	testType string
+	block    *commonpb.Block
+	rwSetMap map[string]*commonpb.TxRWSet
+}
+
+func newVerifyHelper(block *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet, testType string) *testHelper {
+	return &testHelper{
+		testType: testType,
+		block:    block,
+		rwSetMap: rwSetMap,
+	}
+}
+
+func (vh *testHelper) checkMergeResults(neighborMap map[int][]int32, txNum int, successTxs map[string]struct{}) error {
+	block := vh.block
+	rwSetMap := vh.rwSetMap
+
+	if len(block.Txs) != txNum {
+		return fmt.Errorf("merge tx fail; wanted :%v, got :%v", txNum, len(block.Txs))
+	}
+
+	vertexesNum := 0
+	for i, v := range block.Dag.Vertexes {
+		if neighbor, ok := neighborMap[i]; ok {
+			if len(neighbor) != len(v.Neighbors) {
+				return fmt.Errorf("merger dag fail, wanted neighbor: %v, got: %v", neighbor, v.Neighbors)
+			}
+			vertexesNum++
+		}
+	}
+
+	if vertexesNum != len(neighborMap) {
+		return fmt.Errorf("merger dag fail, wanted dag: %v, got: %v", neighborMap, block.Dag)
+	}
+
+	txMap := make(map[string]struct{})
+	for _, v := range block.Txs {
+		if _, ok := txMap[v.Header.TxId]; !ok {
+			txMap[v.Header.TxId] = struct{}{}
+		} else {
+			return fmt.Errorf("merge tx fail, final Txs has the repeated tx.")
+		}
+	}
+
+	if len(rwSetMap) != txNum {
+		return fmt.Errorf("merge rwSetMap fail; wanted :%v, got :%v", txNum, len(rwSetMap))
+	}
+	for _, rwSet := range rwSetMap {
+		if _, ok := successTxs[rwSet.TxId]; ok {
+			err := vh.ifRWSetEmpty(rwSet)
+			if err != nil {
+				return err
+			}
+		} else {
+			if rwSet.TxId == "" {
+				return fmt.Errorf("merge rwSet fail, txId is empty")
+			}
+
+			if len(rwSet.TxReads) != 0 {
+				return fmt.Errorf("merge rwSet fail, TxReads should be empty")
+			}
+
+			if len(rwSet.TxWrites) != 0 {
+				return fmt.Errorf("merge rwSet fail, TxWrites should be empty")
+			}
+		}
+
+	}
+	return nil
+}
+
+func (vh *testHelper) ifRWSetEmpty(rwSet *commonpb.TxRWSet) error {
+	if rwSet.TxId == "" {
+		return fmt.Errorf("merge rwSet fail, txId is empty")
+	}
+
+	for _, writes := range rwSet.TxWrites {
+		if writes.ContractName == "" ||
+			len(writes.Key) == 0 ||
+			len(writes.Value) == 0 {
+			return fmt.Errorf("merge rwSet fail, TxWrites is empty")
+		}
+	}
+
+	for _, reads := range rwSet.TxReads {
+		if reads.ContractName == "" ||
+			len(reads.Key) == 0 ||
+			len(reads.Value) == 0 {
+			return fmt.Errorf("merge rwSet fail, TxReads is empty")
+		}
+	}
+
+	return nil
+}
 
 func TestMerger_Merge(t *testing.T) {
 
@@ -19,35 +119,125 @@ func TestMerger_Merge(t *testing.T) {
 	branchID3 := []byte("c")
 	branchID4 := []byte("d")
 
-	//cach := addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
-	//cach := addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
-	//cach := addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
-	//cach := addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
-	cach := addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4)
-
-	m := NewMerger()
-	c := &Committer{
-		merger:        m,
-		retryList:     nil,
-		abftCache:     *cach,
-		txBatchIDList: make([]string, 0),
+	cach1, txList1 := addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
+	neighborMap1 := make(map[int][]int32)
+	neighborMap1 = map[int][]int32{
+		0: []int32{}, 1: []int32{}, 2: []int32{}, 3: []int32{},
+		4: []int32{}, 5: []int32{}, 6: []int32{}, 7: []int32{},
+	}
+	successTxMap1 := make(map[string]struct{})
+	successTxMap1 = map[string]struct{}{
+		txList1[0].Header.TxId: {},txList1[1].Header.TxId: {},
+		txList1[2].Header.TxId: {},txList1[3].Header.TxId: {},
+		txList1[4].Header.TxId: {},txList1[5].Header.TxId: {},
+		txList1[6].Header.TxId: {},txList1[7].Header.TxId: {},
+	}
+	//
+	cach2, txList2 := addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
+	neighborMap2 := make(map[int][]int32)
+	neighborMap2 = map[int][]int32{
+		0:  []int32{}, 1:  []int32{0}, 2:  []int32{1}, 3:  []int32{},
+		4:  []int32{}, 5:  []int32{}, 6:  []int32{}, 7:  []int32{5},
+		8:  []int32{7}, 9:  []int32{}, 10: []int32{9}, 11: []int32{},
+	}
+	successTxMap2 := make(map[string]struct{})
+	successTxMap2 = map[string]struct{}{
+		txList2[0].Header.TxId: {},txList2[1].Header.TxId: {},
+		txList2[2].Header.TxId: {},txList2[3].Header.TxId: {},
+		txList2[4].Header.TxId: {},txList2[5].Header.TxId: {},
+		txList2[6].Header.TxId: {},txList2[7].Header.TxId: {},
+		txList2[8].Header.TxId: {},txList2[9].Header.TxId: {},
+		txList2[10].Header.TxId: {},txList2[11].Header.TxId: {},
 	}
 
-	txBatchHash := [][]byte{branchID3, branchID2, branchID4, branchID1}
-	c.prepare(txBatchHash)
-	c.sortTxBatchID()
-	fmt.Println(c.txBatchIDList)
 
-	block := cache.CreateNewTestBlock(3)
-
-	if err := c.merger.Merge(block, c.txBatchIDList); err != nil {
-		panic(err)
+	cach3, txList3 := addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4)
+	neighborMap3 := make(map[int][]int32)
+	neighborMap3 = map[int][]int32{
+		0: []int32{}, 1: []int32{}, 2: []int32{}, 3: []int32{},
+		4: []int32{}, 5: []int32{}, 6: []int32{}, 7: []int32{},
+	}
+	successTxMap3 := make(map[string]struct{})
+	successTxMap3 = map[string]struct{}{
+		txList3[0].Header.TxId: {},txList3[1].Header.TxId: {},
+		txList3[2].Header.TxId: {},txList3[3].Header.TxId: {},
+		txList3[4].Header.TxId: {},txList3[5].Header.TxId: {},
+		txList3[6].Header.TxId: {},txList3[7].Header.TxId: {},
 	}
 
-	fmt.Println("rwSetMap:", c.merger.rwSetMap)
-	fmt.Println("block.dag:", block.Dag)
-	fmt.Println("Txs num:", len(block.Txs))
-	fmt.Println("Txs:", block.Txs)
+
+	cach4, txList4 := addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4)
+	neighborMap4 := make(map[int][]int32)
+	neighborMap4 = map[int][]int32{
+		0:  []int32{}, 1:  []int32{}, 2:  []int32{}, 3:  []int32{},
+		4:  []int32{}, 5:  []int32{}, 6:  []int32{}, 7:  []int32{},
+		8:  []int32{}, 9:  []int32{}, 10: []int32{}, 11: []int32{},
+	}
+	successTxMap4 := make(map[string]struct{})
+	successTxMap4 = map[string]struct{}{
+		txList4[0].Header.TxId: {},txList4[1].Header.TxId: {},
+		txList4[2].Header.TxId: {},txList4[3].Header.TxId: {},
+		txList4[6].Header.TxId: {},txList4[7].Header.TxId: {},
+		txList4[9].Header.TxId: {},txList4[10].Header.TxId: {},
+	}
+
+	cach5, txList5 := addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4)
+	neighborMap5 := make(map[int][]int32)
+	neighborMap5 = map[int][]int32{0:  []int32{}, 1:  []int32{}, 2:  []int32{1}, 3:  []int32{}, 4:  []int32{},
+		5:  []int32{}, 6:  []int32{}, 7:  []int32{}, 8:  []int32{}, 9:  []int32{}, 10: []int32{}, 11: []int32{},
+	}
+	successTxMap5 := make(map[string]struct{})
+	successTxMap5 = map[string]struct{}{
+		txList5[0].Header.TxId: {},txList5[1].Header.TxId: {},
+		txList5[2].Header.TxId: {},txList5[3].Header.TxId: {},
+		txList5[6].Header.TxId: {},txList5[7].Header.TxId: {},
+		txList5[9].Header.TxId: {},txList5[10].Header.TxId: {},
+	}
+
+	tests := []struct {
+		cach        *cache.AbftCache
+		testType    string
+		neighborMap map[int][]int32
+		txNum       int
+		successTxs  map[string]struct{}
+	}{
+		{cach1, mode1, neighborMap1, 8, successTxMap1},
+		{cach2, mode2, neighborMap2, 12, successTxMap2},
+		{cach3, mode3, neighborMap3, 8, successTxMap3},
+		{cach4, mode4, neighborMap4, 12, successTxMap4},
+		{cach5, mode4, neighborMap5, 13, successTxMap5},
+	}
+
+	for _, v := range tests {
+		m := NewMerger()
+		c := &Committer{
+			merger:        m,
+			retryList:     nil,
+			abftCache:     v.cach,
+			txBatchIDList: make([]string, 0),
+		}
+
+		txBatchHash := [][]byte{branchID3, branchID2, branchID4, branchID1}
+		c.prepare(txBatchHash)
+		c.sortTxBatchID()
+
+		block := cache.CreateNewTestBlock(3)
+
+		c.merger.baseTxBatchID = c.txBatchIDList[0]
+		if err := c.merger.Merge(block, c.txBatchIDList); err != nil {
+			panic(err)
+		}
+
+		vh := newVerifyHelper(block, c.merger.rwSetMap, v.testType)
+		err := vh.checkMergeResults(v.neighborMap, v.txNum, v.successTxs)
+		fmt.Printf("test mode: %s, result: %v \n", v.testType, err == nil)
+		if err != nil {
+			fmt.Printf("fail reason: %s \n", err.Error())
+		}
+
+		fmt.Println("rwSetMap:", c.merger.rwSetMap)
+
+	}
 
 }
 
@@ -77,7 +267,13 @@ func getTxsForMerge() []*commonpb.Transaction {
 	return txList
 }
 
-func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 []byte) *cache.AbftCache {
+/**
+branch0:[tx0:{read: key1,  write: key2},  tx1:{read: key3,  wirte key4}]
+branch1:[tx2:{read: key5,  write: key6},  tx3:{read: key7,  wirte key8}]
+branch2:[tx4:{read: key9,  write: key10}, tx5:{read: key11, wirte key12}]
+branch3:[tx6:{read: key13, write: key14}, tx7:{read: key15, wirte key16}]
+*/
+func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 []byte) (*cache.AbftCache, []*commonpb.Transaction) {
 	txList := getTxs()
 	tx0 := txList[0]
 	tx1 := txList[1]
@@ -208,12 +404,12 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 		TxId: tx7.Header.TxId,
 		TxReads: []*commonpb.TxRead{{
 			ContractName: contractName,
-			Key:          []byte("K13"),
+			Key:          []byte("K15"),
 			Value:        []byte("V"),
 		}},
 		TxWrites: []*commonpb.TxWrite{{
 			ContractName: contractName,
-			Key:          []byte("K14"),
+			Key:          []byte("K16"),
 			Value:        []byte("V"),
 		}},
 	}
@@ -223,10 +419,16 @@ func addTxBatch_NoRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 
 	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
 	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
-	return hc
+	return hc, txList
 }
 
-func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4 []byte) *cache.AbftCache {
+/**
+branch0:[tx0:{read: key1,  write: key2},  tx1:{read: key2,  wirte key3},  tx8:{read: key3,   wirte key4}]
+branch1:[tx2:{read: key2,  write: key3},  tx3:{read: key4,  wirte key5},  tx9:{read: key6,   wirte key6}]
+branch2:[tx4:{read: key7,  write: key8},  tx5:{read: key6,  wirte key9},  tx10:{read: key9,  wirte key10}]
+branch3:[tx6:{read: key11, write: key12}, tx7:{read: key12, wirte key13}, tx11:{read: key4,  wirte key14}]
+*/
+func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4 []byte) (*cache.AbftCache, []*commonpb.Transaction) {
 	txList := getTxsForMerge()
 	tx0 := txList[0]
 	tx1 := txList[1]
@@ -428,10 +630,16 @@ func addTxBatch_NoRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4
 	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
 	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
-	return hc
+	return hc, txList
 }
 
-func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 []byte) *cache.AbftCache {
+/**
+branch0:[tx0:{read: key1,  write: key2},  tx1:{read: key3,  wirte key4}]
+branch1:[tx1:{read: key3,  write: key4},  tx2:{read: key5,  wirte key6},  tx3:{read: key7,  wirte key8}]
+branch2:[tx4:{read: key9,  write: key10}, tx5:{read: key11, wirte key12}, tx3:{read: key7,  wirte key8}]
+branch3:[tx6:{read: key13, write: key14}, tx7:{read: key15, wirte key16}, tx5:{read: key11, wirte key12}, tx3:{read: key7,  wirte key8}]
+*/
+func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4 []byte) (*cache.AbftCache, []*commonpb.Transaction) {
 	txList := getTxs()
 	tx0 := txList[0]
 	tx1 := txList[1]
@@ -629,10 +837,16 @@ func addTxBatch_HasRepeatTx_NoConflic(branchID1, branchID2, branchID3, branchID4
 	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
 	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
-	return hc
+	return hc, txList
 }
 
-func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4 []byte) *cache.AbftCache {
+/**
+branch0:[tx0:{read: key1,  write: key2},  tx1:{read: key2,  wirte key3},  tx2:{read: key5,   wirte key6},  tx3:{read: key7,  wirte key8}]
+branch1:[tx3:{read: key7,  wirte key8},  tx4:{read: key8,  wirte key9},  tx5:{read: key9,   wirte key10},  tx6:{read: key11, write: key12}]
+branch2:[tx7:{read: key13,  write: key14},  tx3:{read: key7,  wirte key8},  tx8:{read: key8,  wirte key15}, tx9:{read: key16, write: key17}]
+branch3:[tx7:{read: key13, write: key14}, tx10:{read: key14, wirte key18}, tx6:{read: key11,  wirte key12}, tx11:{read: key12, write: key19}]
+*/
+func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID4 []byte) (*cache.AbftCache, []*commonpb.Transaction) {
 	txList := getTxsForMerge()
 	tx0 := txList[0]
 	tx1 := txList[1]
@@ -705,7 +919,6 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{tx0, tx1, tx2, tx3})
 	b0.Dag = m.buildDAG(b0, rwSetMap0)
-	fmt.Println(b0.Dag)
 	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
 	//hc.SetProposedTxBatch(b0, rwSetMap0)
 
@@ -765,7 +978,6 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{tx3, tx4, tx5, tx6})
 	b1.Dag = m.buildDAG(b1, rwSetMap1)
-	fmt.Println(b1.Dag)
 	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
 	//hc.SetProposedTxBatch(b1, rwSetMap1)
 
@@ -826,7 +1038,6 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{tx7, tx3, tx8, tx9})
 	b2.Dag = m.buildDAG(b2, rwSetMap2)
-	fmt.Println(b2.Dag)
 	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
 	//hc.SetProposedTxBatch(b2, rwSetMap2)
 
@@ -886,14 +1097,13 @@ func addTxBatch_HasRepeatTx_HasConflic(branchID1, branchID2, branchID3, branchID
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{tx7, tx10, tx6, tx11})
 	b3.Dag = m.buildDAG(b3, rwSetMap3)
-	fmt.Println(b3.Dag)
 	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
 	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
-	return hc
+	return hc, txList
 }
 
-func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4 []byte) *cache.AbftCache {
+func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branchID4 []byte) (*cache.AbftCache, []*commonpb.Transaction) {
 	txList := getTxsForMerge()
 	tx0 := txList[0]
 	tx1 := txList[1]
@@ -967,7 +1177,6 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	hash0 := branchID1
 	b0 := createBatch(hash0, 3, []*commonpb.Transaction{tx0, tx1, tx2, tx3})
 	b0.Dag = m.buildDAG(b0, rwSetMap0)
-	fmt.Println(b0.Dag)
 	hc.AddVerifiedTxBatch(b0, true, rwSetMap0)
 	//hc.SetProposedTxBatch(b0, rwSetMap0)
 
@@ -1027,7 +1236,6 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	hash1 := branchID2
 	b1 := createBatch(hash1, 3, []*commonpb.Transaction{tx2, tx4, tx5, tx6})
 	b1.Dag = m.buildDAG(b1, rwSetMap1)
-	fmt.Println(b1.Dag)
 	hc.AddVerifiedTxBatch(b1, true, rwSetMap1)
 	//hc.SetProposedTxBatch(b1, rwSetMap1)
 
@@ -1088,7 +1296,6 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	hash2 := branchID3
 	b2 := createBatch(hash2, 3, []*commonpb.Transaction{tx7, tx4, tx8, tx9})
 	b2.Dag = m.buildDAG(b2, rwSetMap2)
-	fmt.Println(b2.Dag)
 	hc.AddVerifiedTxBatch(b2, true, rwSetMap2)
 	//hc.SetProposedTxBatch(b2, rwSetMap2)
 
@@ -1148,9 +1355,8 @@ func addTxBatch_HasRepeatTx_HasConflic_2(branchID1, branchID2, branchID3, branch
 	hash3 := branchID4
 	b3 := createBatch(hash3, 3, []*commonpb.Transaction{tx7, tx10, tx11, tx12})
 	b3.Dag = m.buildDAG(b3, rwSetMap3)
-	fmt.Println(b3.Dag)
 	hc.AddVerifiedTxBatch(b3, true, rwSetMap3)
 	//hc.SetProposedTxBatch(b3, rwSetMap3)
 
-	return hc
+	return hc, txList
 }

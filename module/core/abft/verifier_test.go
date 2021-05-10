@@ -11,12 +11,15 @@ import (
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
 	"chainmaker.org/chainmaker-go/protocol"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/panjf2000/ants/v2"
 	"sync"
 	"testing"
 )
+
+var success = "success"
 
 func verifyPrepare(t *testing.T) (*Verifier, *commonpb.Block, error) {
 	ctl := gomock.NewController(t)
@@ -187,9 +190,84 @@ func TestVerify(t *testing.T) {
 	if err != nil {
 		fmt.Println("verify prepare failed: " + err.Error())
 	}
-	fmt.Printf("block strcture: %v\n", block)
-	err = verify.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
-	if err != nil {
-		fmt.Println("verify block failed: " + err.Error())
+
+	blockByte, err := json.Marshal(block)
+
+	// empty block
+	block1 := new(commonpb.Block)
+	block1.GetDag()
+
+	// txCount error
+	block2 := new(commonpb.Block)
+	err = json.Unmarshal(blockByte, block2)
+	block2.Header.TxCount = 0
+
+	// txCount > txCap
+	block3 := new(commonpb.Block)
+	err = json.Unmarshal(blockByte, block3)
+	block3.Header.TxCount = 10
+
+	// sign is empty
+	block4 := new(commonpb.Block)
+	err = json.Unmarshal(blockByte, block4)
+	block.Header.Signature = []byte{}
+
+	//DagHash is empty
+	block5 := new(commonpb.Block)
+	err = json.Unmarshal(blockByte, block5)
+	block5.Header.DagHash = []byte{}
+
+	//PreBlockHash is empty
+	block6 := new(commonpb.Block)
+	err = json.Unmarshal(blockByte, block6)
+	block6.Header.PreBlockHash = []byte{}
+
+	//BlockHash is empty
+	block7 := new(commonpb.Block)
+	err = json.Unmarshal(blockByte, block7)
+	block7.Header.BlockHash = []byte{}
+
+	tests := []struct {
+		verifyCore   *Verifier
+		block        *commonpb.Block
+		expectResult string
+	}{
+		{verify, block, success}, // normal block
+		{verify, block, success}, // normal block (repeat block.)
+		{verify,block1, "invalid block, yield verify"}, // empty block
+		{verify,block2, ""}, // txcount error(no error,but record in cach)
+		{verify,block3, ""}, // txcount error(no error,but record in cach)
+		{verify,block4, ""}, // sign error(no error,but record in cach)
 	}
+
+	for _,v := range tests{
+		err = v.verifyCore.VerifyBlock(v.block, protocol.CONSENSUS_VERIFY)
+		fmt.Printf("block strcture: %v\n", v.block)
+		if v.expectResult != "" && v.expectResult != success {
+			checkResult(err, v.expectResult)
+		} else {
+			checkCache(v.verifyCore, v.block)
+		}
+	}
+
+	fmt.Println("verify finish.")
+}
+
+func checkResult(err error, expectResult string) {
+	if err.Error() != expectResult {
+		fmt.Printf("verify block failed; expected: %v, got: %v \n", expectResult, err)
+	}
+}
+
+func checkCache(verifyCore *Verifier, block *commonpb.Block) {
+	ifSuccess, err := verifyCore.abftCache.IsVerifiedTxBatchSuccess(block.Header.BlockHash)
+	if err != nil {
+		fmt.Printf("check cache fail, err : %v \n", err)
+	}
+
+	if ifSuccess {
+		fmt.Printf("check cache fail, this block should be fail.")
+	}
+
+	fmt.Printf("if success?, got : %v \n", ifSuccess)
 }

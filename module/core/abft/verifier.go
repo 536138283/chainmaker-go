@@ -78,9 +78,7 @@ func NewVerifier(ceConfig *CoreExecuteConfig) (*Verifier, error) {
 
 func (v *Verifier) verifyBlock(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
-	if err := utils.IsEmptyBlock(block); err != nil {
-		return false, nil, err
-	}
+
 	err := common.VerifyHeight(block.Header.BlockHeight, v.ledgerCache)
 	if err != nil {
 		return false, nil, err
@@ -119,6 +117,10 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 }
 
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
+	if err := utils.IsEmptyBlock(block); err != nil {
+		return err
+	}
+
 	// repeat verify
 	if v.abftCache.HasVerifiedTxBatch(block.Header.BlockHash) {
 		if mode == protocol.CONSENSUS_VERIFY {
