@@ -72,11 +72,12 @@ func (f Factory) NewConsensusEngine(
 		return raft.New(config)
 	case consensuspb.ConsensusType_ABFT:
 		config := &abft.ConsensusABFTImplConfig{
-			ChainID:   chainID,
-			Id:        id,
-			MsgBus:    msgBus,
-			ChainConf: chainConf,
-			Singer:    signer,
+			ChainID:     chainID,
+			Id:          id,
+			MsgBus:      msgBus,
+			ChainConf:   chainConf,
+			Singer:      signer,
+			LedgerCache: ledgerCache,
 		}
 		return abft.New(config)
 	default:

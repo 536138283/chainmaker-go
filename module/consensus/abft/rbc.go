@@ -51,6 +51,7 @@ func NewRBC(cfg Config) *RBC {
 
 // Input inputs data to the rbc instance.
 func (rbc *RBC) Input(data []byte) error {
+	rbc.logger.Debugf("[%s](%d-%s) RBC input data: %x", rbc.nodeID, rbc.height, rbc.id, data)
 	shards, err := rbc.makeShards(data)
 	if err != nil {
 		return err
@@ -232,7 +233,8 @@ func (rbc *RBC) tryDecodeValue(hash []byte) error {
 	for _, data := range shards[:rbc.faultsNum+1] {
 		rbc.output = append(rbc.output, data...)
 	}
-	rbc.logger.Debugf("[%s](%d-%s) RBC output data.len: %v", rbc.nodeID, rbc.height, rbc.id, len(rbc.output))
+	rbc.output = rbc.output[:prfs[0].Length]
+	rbc.logger.Debugf("[%s](%d-%s) RBC output data.len: %v, %x", rbc.nodeID, rbc.height, rbc.id, len(rbc.output), rbc.output)
 
 	return nil
 }
@@ -250,12 +252,15 @@ func (rbc *RBC) appendProofRequests(to string, proof *abftpb.ProofRequest) {
 	}
 
 	abftMessage := &abftpb.ABFTMessage{
-		From: rbc.nodeID,
-		To:   to,
-		Id:   rbc.id,
-		Acs:  acsMessage,
+		Height: rbc.height,
+		From:   rbc.nodeID,
+		To:     to,
+		Id:     rbc.id,
+		Acs:    acsMessage,
 	}
 	rbc.messages = append(rbc.messages, abftMessage)
+	rbc.logger.Debugf("[%s](%d-%s) RBC append proof(%x-%v-%v)",
+		rbc.nodeID, rbc.height, rbc.id, proof.RootHash, proof.Index, proof.Leaves)
 }
 
 func (rbc *RBC) appendEchoRequests(echo *abftpb.EchoRequest) {
@@ -272,10 +277,11 @@ func (rbc *RBC) appendEchoRequests(echo *abftpb.EchoRequest) {
 
 	for _, n := range rbc.nodes {
 		abftMessage := &abftpb.ABFTMessage{
-			From: rbc.nodeID,
-			To:   n,
-			Id:   rbc.id,
-			Acs:  acsMessage,
+			Height: rbc.height,
+			From:   rbc.nodeID,
+			To:     n,
+			Id:     rbc.id,
+			Acs:    acsMessage,
 		}
 		rbc.messages = append(rbc.messages, abftMessage)
 	}
@@ -295,10 +301,11 @@ func (rbc *RBC) appendReadyRequests(ready *abftpb.ReadyRequest) {
 
 	for _, n := range rbc.nodes {
 		abftMessage := &abftpb.ABFTMessage{
-			From: rbc.nodeID,
-			To:   n,
-			Id:   rbc.id,
-			Acs:  acsMessage,
+			Height: rbc.height,
+			From:   rbc.nodeID,
+			To:     n,
+			Id:     rbc.id,
+			Acs:    acsMessage,
 		}
 		rbc.messages = append(rbc.messages, abftMessage)
 	}

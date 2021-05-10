@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"fmt"
 	"sync"
-	"time"
 
 	"chainmaker.org/chainmaker-go/utils"
 	"go.uber.org/zap"
@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
+	netpb "chainmaker.org/chainmaker-go/pb/protogo/net"
 	"chainmaker.org/chainmaker-go/protocol"
 
 	"chainmaker.org/chainmaker-go/logger"
@@ -54,17 +55,21 @@ type ConsensusABFTImpl struct {
 	msgbus    msgbus.MessageBus
 	chainConf protocol.ChainConf
 	singer    protocol.SigningMember
-	acs       *ACS
-	closeC    chan struct{}
+	height    int64
+	// acsInstances map[int64]*ACS
+	acs    *ACS
+	runC   chan struct{}
+	closeC chan struct{}
 }
 
 // ConsensusABFTImplConfig contains initialization config for ConsensusABFTImpl
 type ConsensusABFTImplConfig struct {
-	ChainID   string
-	Id        string
-	MsgBus    msgbus.MessageBus
-	ChainConf protocol.ChainConf
-	Singer    protocol.SigningMember
+	ChainID     string
+	Id          string
+	MsgBus      msgbus.MessageBus
+	ChainConf   protocol.ChainConf
+	Singer      protocol.SigningMember
+	LedgerCache protocol.LedgerCache
 }
 
 // New creates a abft consensus instance
@@ -79,18 +84,11 @@ func New(config *ConsensusABFTImplConfig) (*ConsensusABFTImpl, error) {
 	consensus.chainConf = config.ChainConf
 	consensus.singer = config.Singer
 
-	nodeList, err := GetNodeListFromConfig(consensus.chainConf.ChainConfig())
+	height, err := config.LedgerCache.CurrentHeight()
 	if err != nil {
 		return nil, err
 	}
-	cfg := &Config{
-		logger: logger,
-		height: 0,
-		nodeID: consensus.Id,
-		nodes:  nodeList,
-	}
-	cfg.fillWithDefault()
-	consensus.acs = NewACS(*cfg)
+	consensus.height = height + 1
 
 	return consensus, nil
 }
@@ -101,13 +99,24 @@ func (consensus *ConsensusABFTImpl) Start() error {
 	consensus.logger.Infof("[%s] started", consensus.Id)
 	consensus.msgbus.Register(msgbus.ProposedBlock, consensus)
 	consensus.msgbus.Register(msgbus.VerifyResult, consensus)
+	consensus.msgbus.Register(msgbus.BlockInfo, consensus)
+	consensus.msgbus.Register(msgbus.RecvConsensusMsg, consensus)
 
-	go func() {
-		time.Sleep(3 * time.Second)
-		consensus.sendPackageSingal(1)
-	}()
+	// consensus.acsInstances = make(map[int64]*ACS)
+	nodeList, _ := GetNodeListFromConfig(consensus.chainConf.ChainConfig())
+	cfg := &Config{
+		logger: consensus.logger,
+		height: consensus.height,
+		id:     consensus.Id,
+		nodeID: consensus.Id,
+		nodes:  nodeList,
+	}
+	cfg.fillWithDefaults()
+	consensus.acs = NewACS(*cfg)
+	consensus.runC = make(chan struct{})
 
-	go consensus.run()
+	go consensus.run(consensus.runC)
+	consensus.sendPackageSingal(consensus.height)
 
 	return nil
 }
@@ -130,6 +139,10 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 	switch message.Topic {
 	case msgbus.ProposedBlock:
 		if block, ok := message.Payload.(*common.Block); ok {
+			if block.Header.BlockHeight != consensus.height {
+				consensus.logger.Warnf("[%s](%v) receive wrong proposed block height: %v", consensus.Id, consensus.height, block.Header.BlockHeight)
+				return
+			}
 
 			// Add hash and signature to block
 			hash, sig, err := utils.SignBlock(consensus.chainConf.ChainConfig().Crypto.Hash, consensus.singer, block)
@@ -140,13 +153,53 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 			block.Header.Signature = sig
 
 			data := mustMarshal(block)
-			consensus.acs.InputRBC(data)
+			// acs := consensus.getACS(block.Header.BlockHeight)
+			if err = consensus.acs.InputRBC(data); err != nil {
+				consensus.logger.Errorf("[%s] input RBC error: %v", consensus.Id, err)
+			}
 		}
 	case msgbus.VerifyResult:
 		if verifyResult, ok := message.Payload.(*consensuspb.VerifyResult); ok {
+			if verifyResult.VerifiedBlock.Header.BlockHeight != consensus.height {
+				consensus.logger.Warnf("[%s](%v) receive wrong verifyResult height: %v", consensus.Id, consensus.height, verifyResult.VerifiedBlock.Header.BlockHeight)
+				return
+			}
+
 			consensus.logger.Debugf("[%s] verify result: %s", consensus.Id, verifyResult.Code)
 			data := mustMarshal(verifyResult.VerifiedBlock)
+			// acs := consensus.getACS(verifyResult.VerifiedBlock.Header.BlockHeight)
 			consensus.acs.InputBBA(data)
+		}
+	case msgbus.BlockInfo:
+		if blockInfo, ok := message.Payload.(*common.BlockInfo); ok {
+			if blockInfo == nil || blockInfo.Block == nil {
+				consensus.logger.Errorf("receive message failed, error message BlockInfo = nil")
+				return
+			}
+			close(consensus.runC)
+			consensus.height = blockInfo.Block.Header.BlockHeight + 1
+			nodeList, _ := GetNodeListFromConfig(consensus.chainConf.ChainConfig())
+			cfg := &Config{
+				logger: consensus.logger,
+				height: consensus.height,
+				id:     consensus.Id,
+				nodeID: consensus.Id,
+				nodes:  nodeList,
+			}
+			cfg.fillWithDefaults()
+			consensus.acs = NewACS(*cfg)
+			consensus.runC = make(chan struct{})
+
+			go consensus.run(consensus.runC)
+			consensus.sendPackageSingal(consensus.height)
+		}
+	case msgbus.RecvConsensusMsg:
+		if msg, ok := message.Payload.(*netpb.NetMsg); ok {
+			abftMsg := new(abftpb.ABFTMessage)
+			mustUnmarshal(msg.Payload, abftMsg)
+			consensus.handleMessage(abftMsg)
+		} else {
+			panic(fmt.Errorf("receive message failed, error message type"))
 		}
 	}
 }
@@ -162,23 +215,31 @@ func (consensus *ConsensusABFTImpl) sendPackageSingal(height int64) {
 	consensus.msgbus.PublishSafe(msgbus.PackageSignal, signal)
 }
 
-func GetNodeListFromConfig(chainConfig *config.ChainConfig) (validators []string, err error) {
-	nodes := chainConfig.Consensus.Nodes
-	for _, node := range nodes {
-		for _, addr := range node.Address {
-			uid, err := helper.GetNodeUidFromAddr(addr)
-			if err != nil {
-				return nil, err
-			}
-			validators = append(validators, uid)
-		}
-	}
-	return validators, nil
-}
+// func (consensus *ConsensusABFTImpl) getACS(height int64) *ACS {
+//   if acs, ok := consensus.acsInstances[height]; ok {
+//     return acs
+//   }
 
-func (consensus *ConsensusABFTImpl) run() {
+//   nodeList, _ := GetNodeListFromConfig(consensus.chainConf.ChainConfig())
+//   cfg := &Config{
+//     logger: consensus.logger,
+//     height: height,
+//     id:     consensus.Id,
+//     nodeID: consensus.Id,
+//     nodes:  nodeList,
+//   }
+//   cfg.fillWithDefaults()
+//   acs := NewACS(*cfg)
+//   consensus.acsInstances[height] = acs
+//   return acs
+// }
+
+func (consensus *ConsensusABFTImpl) run(closeC chan struct{}) {
 	for {
+		// acs := consensus.getACS(consensus.height)
 		select {
+		case <-closeC:
+			return
 		case msg := <-consensus.acs.MessageCh():
 			consensus.handleMessage(msg)
 		case msg := <-consensus.acs.RbcOutputCh():
@@ -191,7 +252,19 @@ func (consensus *ConsensusABFTImpl) run() {
 }
 
 func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessage) {
-	if msg.To == consensus.Id {
+	consensus.logger.Debugf("[%s] handleMessage from: %v, to: %v, Id: %v", consensus.Id, msg.From, msg.To, msg.Id)
+	if msg.To != consensus.Id {
+		consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
+		netMsg := &netpb.NetMsg{
+			Payload: mustMarshal(msg),
+			Type:    netpb.NetMsg_CONSENSUS_MSG,
+			To:      msg.To,
+		}
+		consensus.publishToMsgbus(netMsg)
+		return
+
+	} else {
+		// acs := consensus.getACS(consensus.height)
 		consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
 	}
 
@@ -205,9 +278,28 @@ func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessage) {
 		mustUnmarshal(data, block)
 		consensus.logger.Debugf("[%s] commit block: %v", consensus.Id, block)
 		consensus.msgbus.PublishSafe(msgbus.CommitedTxBatchs, &abftpb.TxBatchAfterABA{
-			BlockHeight: 1,
+			BlockHeight: consensus.height,
 			TxBatchHash: [][]byte{block.Header.BlockHash},
 		})
 		break
 	}
+}
+
+func (consensus *ConsensusABFTImpl) publishToMsgbus(msg *netpb.NetMsg) {
+	consensus.logger.Debugf("[%s] publishToMsgbus size: %d", consensus.Id, proto.Size(msg))
+	consensus.msgbus.Publish(msgbus.SendConsensusMsg, msg)
+}
+
+func GetNodeListFromConfig(chainConfig *config.ChainConfig) (validators []string, err error) {
+	nodes := chainConfig.Consensus.Nodes
+	for _, node := range nodes {
+		for _, addr := range node.Address {
+			uid, err := helper.GetNodeUidFromAddr(addr)
+			if err != nil {
+				return nil, err
+			}
+			validators = append(validators, uid)
+		}
+	}
+	return validators, nil
 }
