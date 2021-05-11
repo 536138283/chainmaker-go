@@ -124,7 +124,7 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 	}
 	if core.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_ABFT {
 		ceConf := &abft.CoreExecuteConfig{
-			ChainId:         core.chainId,
+			ChainId:         cf.chainId,
 			TxPool:          core.txPool,
 			SnapshotManager: core.snapshotManager,
 			MsgBus:          core.msgBus,
