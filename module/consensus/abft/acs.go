@@ -47,9 +47,13 @@ func NewACS(cfg *Config) *ACS {
 	}
 
 	for _, id := range cfg.nodes {
-		cfg.id = id
-		acs.rbcInstances[id] = NewRBC(cfg.clone())
-		acs.bbaInstances[id] = NewBBA(cfg.clone())
+		rbcCfg := cfg.clone()
+		rbcCfg.id = id
+		acs.rbcInstances[id] = NewRBC(rbcCfg)
+
+		bbaCfg := cfg.clone()
+		bbaCfg.id = id
+		acs.bbaInstances[id] = NewBBA(bbaCfg)
 	}
 	return acs
 }

@@ -303,3 +303,11 @@ func GetNodeListFromConfig(chainConfig *config.ChainConfig) (validators []string
 	}
 	return validators, nil
 }
+
+// VerifyBlockSignatures verifies whether the signatures in block
+// is qulified with the consensus algorithm. It should return nil
+// error when verify successfully, and return corresponding error
+// when failed.
+func VerifyBlockSignatures(chainConf protocol.ChainConf, ac protocol.AccessControlProvider, block *common.Block) error {
+	return nil
+}

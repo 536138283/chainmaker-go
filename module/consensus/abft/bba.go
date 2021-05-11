@@ -62,6 +62,8 @@ func (bba *BBA) appendBValRequests(val bool) {
 		Epoch: bba.epoch,
 		Value: val,
 	}
+	bba.logger.Debugf("[%s](%d-%s) BBA appendBValRequests: {epoch: %v, value: %v}",
+		bba.nodeID, bba.height, bba.id, bvalRequest.Epoch, bvalRequest.Value)
 	bbaRequest := &abftpb.BBARequest{
 		Message: &abftpb.BBARequest_Bval{
 			Bval: bvalRequest,
@@ -74,14 +76,16 @@ func (bba *BBA) appendBValRequests(val bool) {
 	}
 
 	for _, n := range bba.nodes {
-		abftMessage := &abftpb.ABFTMessage{
-			Height: bba.height,
-			From:   bba.nodeID,
-			To:     n,
-			Id:     bba.id,
-			Acs:    acsMessage,
+		if n != bba.nodeID {
+			abftMessage := &abftpb.ABFTMessage{
+				Height: bba.height,
+				From:   bba.nodeID,
+				To:     n,
+				Id:     bba.id,
+				Acs:    acsMessage,
+			}
+			bba.messages = append(bba.messages, abftMessage)
 		}
-		bba.messages = append(bba.messages, abftMessage)
 	}
 }
 
@@ -114,6 +118,7 @@ func (bba *BBA) appendAuxRequests(val bool) {
 }
 
 func (bba *BBA) HandleMessage(sender string, msg *abftpb.BBARequest) error {
+	bba.logger.Debugf("[%s](%d-%s) BBA HandleMessage from: %v", bba.nodeID, bba.height, bba.id, sender)
 	if bba.done {
 		return nil
 	}
@@ -146,16 +151,19 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 		return nil
 	}
 
-	bba.logger.Debugf("[%s](%d-%s) BBA receive Bval: %v from: %v", bba.nodeID, bba.height, bba.id, bval, sender)
 	val := bval.Value
 	bba.receivedBvals[sender] = val
 	bvalCount := bba.countBvals(val)
 
+	bba.logger.Debugf("[%s](%d-%s) BBA receive Bval: %s, from: %v, bvalCount: %v",
+		bba.nodeID, bba.height, bba.id, bval, sender, bvalCount)
 	if bvalCount == 2*bba.faultsNum+1 {
 		bba.binValues = append(bba.binValues, val)
 		if len(bba.binValues) == 1 {
 			bba.appendAuxRequests(val)
 		}
+		bba.logger.Debugf("[%s](%d-%s) BBA handleBvalRequest binValues: %v",
+			bba.nodeID, bba.height, bba.id, bba.binValues)
 		return nil
 	}
 
@@ -245,6 +253,8 @@ func (bba *BBA) countOutputs() (int, []bool) {
 		}
 	}
 
+	bba.logger.Debugf("[%s](%d-%s) BBA countOutputs receivedAux: %v, binValues: %v",
+		bba.nodeID, bba.height, bba.id, bba.receivedAux, bba.binValues)
 	return len(bba.receivedAux), vals
 }
 

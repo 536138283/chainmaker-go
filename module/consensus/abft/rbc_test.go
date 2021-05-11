@@ -8,7 +8,9 @@ package abft
 
 import (
 	"bytes"
+	"reflect"
 	"sort"
+	"sync"
 	"testing"
 
 	"chainmaker.org/chainmaker-go/logger"
@@ -112,7 +114,6 @@ func TestRBC_Input(t *testing.T) {
 	}
 }
 
-/*
 func TestRBC_Output(t *testing.T) {
 	tests := []struct {
 		name   string
@@ -153,4 +154,3 @@ func TestRBC_Output(t *testing.T) {
 		})
 	}
 }
-*/
