@@ -14,12 +14,17 @@ import (
 
 type Config struct {
 	logger    *logger.CMLogger
-	height    int64
-	id        string
-	nodeID    string
-	nodes     []string
+	height    int64    // height
+	id        string   // id of the RBC or BBA instance
+	nodeID    string   // nodeID of current node
+	nodes     []string // the list of nodes
 	nodesNum  int
 	faultsNum int
+}
+
+func (c *Config) clone() *Config {
+	cfg := *c
+	return &cfg
 }
 
 func (c *Config) fillWithDefaults() {

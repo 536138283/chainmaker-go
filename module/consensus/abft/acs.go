@@ -20,7 +20,7 @@ type rbcOutput struct {
 }
 
 type ACS struct {
-	Config
+	*Config
 	rbcInstances   map[string]*RBC
 	bbaInstances   map[string]*BBA
 	rbcResults     map[string][]byte
@@ -32,8 +32,8 @@ type ACS struct {
 	decided        bool
 }
 
-func NewACS(cfg Config) *ACS {
-	cfg.logger.Infof("NewACS config: %s", &cfg)
+func NewACS(cfg *Config) *ACS {
+	cfg.logger.Infof("NewACS config: %s", cfg)
 	acs := &ACS{
 		Config:         cfg,
 		rbcInstances:   make(map[string]*RBC),
@@ -48,8 +48,8 @@ func NewACS(cfg Config) *ACS {
 
 	for _, id := range cfg.nodes {
 		cfg.id = id
-		acs.rbcInstances[id] = NewRBC(cfg)
-		acs.bbaInstances[id] = NewBBA(cfg)
+		acs.rbcInstances[id] = NewRBC(cfg.clone())
+		acs.bbaInstances[id] = NewBBA(cfg.clone())
 	}
 	return acs
 }

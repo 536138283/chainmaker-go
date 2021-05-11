@@ -20,7 +20,7 @@ import (
 
 // RBC represents an instance of "Reliable Broadcast".
 type RBC struct {
-	Config
+	*Config
 	enc            reedsolomon.Encoder
 	receivedEchos  map[string]*abft.EchoRequest
 	receivedReadys map[string][]byte
@@ -32,7 +32,8 @@ type RBC struct {
 }
 
 // NewRBC returns an instance of RBC for reliable broadcast.
-func NewRBC(cfg Config) *RBC {
+func NewRBC(cfg *Config) *RBC {
+	cfg.logger.Infof("NewRBC config: %s", cfg)
 	enc, err := reedsolomon.New(cfg.faultsNum+1, cfg.nodesNum-cfg.faultsNum-1)
 	if err != nil {
 		cfg.logger.DPanicf("[%s] new reedsolomon error: %v", cfg.nodeID, err)
@@ -70,6 +71,7 @@ func (rbc *RBC) Input(data []byte) error {
 			Proof:    proof,
 			Index:    proofIndex,
 			Leaves:   leaves,
+			Length:   int32(len(data)),
 		}
 		rbc.appendProofRequests(rbc.nodes[i], proofRequest)
 	}

@@ -11,7 +11,7 @@ import (
 )
 
 type BBA struct {
-	Config
+	*Config
 	epoch                       uint32
 	binValues                   []bool
 	sentBvals                   []bool
@@ -22,7 +22,8 @@ type BBA struct {
 	messages                    []*abftpb.ABFTMessage
 }
 
-func NewBBA(cfg Config) *BBA {
+func NewBBA(cfg *Config) *BBA {
+	cfg.logger.Infof("NewBBA config: %s", cfg)
 	bba := &BBA{
 		Config:        cfg,
 		epoch:         0,
@@ -194,6 +195,8 @@ func (bba *BBA) tryOutputAgreement() {
 		return
 	}
 
+	bba.logger.Debugf("[%s](%d-%s) BBA len(values): %v, coin: %v, values: %v",
+		bba.nodeID, bba.height, bba.id, len(values), coin, values)
 	bba.increaseEpoch()
 	if len(values) != 1 {
 		bba.estimated = coin

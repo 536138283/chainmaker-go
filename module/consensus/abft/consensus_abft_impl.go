@@ -112,7 +112,7 @@ func (consensus *ConsensusABFTImpl) Start() error {
 		nodes:  nodeList,
 	}
 	cfg.fillWithDefaults()
-	consensus.acs = NewACS(*cfg)
+	consensus.acs = NewACS(cfg)
 	consensus.runC = make(chan struct{})
 
 	go consensus.run(consensus.runC)
@@ -165,7 +165,7 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 				return
 			}
 
-			consensus.logger.Debugf("[%s] verify result: %s", consensus.Id, verifyResult.Code)
+			consensus.logger.Debugf("[%s] verify result code: %s, msg: %s", consensus.Id, verifyResult.Code, verifyResult.Msg)
 			data := mustMarshal(verifyResult.VerifiedBlock)
 			// acs := consensus.getACS(verifyResult.VerifiedBlock.Header.BlockHeight)
 			consensus.acs.InputBBA(data)
@@ -187,7 +187,7 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 				nodes:  nodeList,
 			}
 			cfg.fillWithDefaults()
-			consensus.acs = NewACS(*cfg)
+			consensus.acs = NewACS(cfg)
 			consensus.runC = make(chan struct{})
 
 			go consensus.run(consensus.runC)
@@ -243,10 +243,10 @@ func (consensus *ConsensusABFTImpl) run(closeC chan struct{}) {
 		case msg := <-consensus.acs.MessageCh():
 			consensus.handleMessage(msg)
 		case msg := <-consensus.acs.RbcOutputCh():
-			consensus.logger.Debugf("[%s] verify", consensus.Id)
 			block := &common.Block{}
 			mustUnmarshal(msg, block)
 			consensus.msgbus.PublishSafe(msgbus.VerifyBlock, block)
+			consensus.logger.Debugf("[%s] verify msg.len: %v, block: %v", consensus.Id, len(msg), block)
 		}
 	}
 }
