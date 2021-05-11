@@ -82,7 +82,6 @@ func (v *Verifier) verifyBlock(block *commonPb.Block) (bool, map[string]*commonP
 	if err := utils.IsEmptyBlock(block); err != nil {
 		return false, emptyTxRwSetMap, err
 	}
-
 	err := common.VerifyHeight(block.Header.BlockHeight, v.ledgerCache)
 	if err != nil {
 		return false, emptyTxRwSetMap, err
@@ -121,6 +120,10 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 }
 
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
+	// verify nil block
+	if block == nil {
+		return fmt.Errorf("verify failed, block is nil")
+	}
 
 	// repeat verify
 	if v.abftCache.HasVerifiedTxBatch(block.Header.BlockHash) {
