@@ -101,6 +101,8 @@ func VerifyBlockSignatures(
 		return tbft.VerifyBlockSignatures(chainConf, ac, block)
 	case consensuspb.ConsensusType_RAFT:
 		return raft.VerifyBlockSignatures(block)
+	case consensuspb.ConsensusType_ABFT:
+		return abft.VerifyBlockSignatures(chainConf, ac, block)
 	case consensuspb.ConsensusType_SOLO:
 		fallthrough
 	default:
