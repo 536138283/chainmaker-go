@@ -57,9 +57,10 @@ type ConsensusABFTImpl struct {
 	singer    protocol.SigningMember
 	height    int64
 	// acsInstances map[int64]*ACS
-	acs    *ACS
-	runC   chan struct{}
-	closeC chan struct{}
+	acs       *ACS
+	msgBuffer []*abftpb.ABFTMessage
+	runC      chan struct{}
+	closeC    chan struct{}
 }
 
 // ConsensusABFTImplConfig contains initialization config for ConsensusABFTImpl
@@ -83,6 +84,7 @@ func New(config *ConsensusABFTImplConfig) (*ConsensusABFTImpl, error) {
 	consensus.msgbus = config.MsgBus
 	consensus.chainConf = config.ChainConf
 	consensus.singer = config.Singer
+	consensus.msgBuffer = make([]*abftpb.ABFTMessage, 0)
 
 	height, err := config.LedgerCache.CurrentHeight()
 	if err != nil {
@@ -144,6 +146,8 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 				return
 			}
 
+			consensus.logger.Debugf("[%s](%v) receive proposed block: (%v-%x-%x)",
+				consensus.Id, consensus.height, block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash)
 			// Add hash and signature to block
 			hash, sig, err := utils.SignBlock(consensus.chainConf.ChainConfig().Crypto.Hash, consensus.singer, block)
 			if err != nil {
@@ -195,6 +199,15 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 
 			go consensus.run(consensus.runC)
 			consensus.sendPackageSingal(consensus.height)
+			buffer := make([]*abftpb.ABFTMessage, 0)
+			for _, msg := range consensus.msgBuffer {
+				if msg.Height == consensus.height {
+					consensus.handleMessage(msg)
+				} else if msg.Height > consensus.height {
+					buffer = append(buffer, msg)
+				}
+			}
+			consensus.msgBuffer = buffer
 		}
 	case msgbus.RecvConsensusMsg:
 		if msg, ok := message.Payload.(*netpb.NetMsg); ok {
@@ -255,7 +268,14 @@ func (consensus *ConsensusABFTImpl) run(closeC chan struct{}) {
 }
 
 func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessage) {
-	consensus.logger.Debugf("[%s] handleMessage from: %v, to: %v, Id: %v", consensus.Id, msg.From, msg.To, msg.Id)
+	consensus.logger.Debugf("[%s](%d) handleMessage height: %v, from: %v, to: %v, Id: %v",
+		consensus.Id, consensus.height, msg.Height, msg.From, msg.To, msg.Id)
+	if msg.Height < consensus.height {
+		return
+	} else if msg.Height > consensus.height {
+		consensus.msgBuffer = append(consensus.msgBuffer, msg)
+		return
+	}
 	if msg.To != consensus.Id {
 		// consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
 		netMsg := &netpb.NetMsg{

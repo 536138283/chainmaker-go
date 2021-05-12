@@ -142,7 +142,8 @@ func (rbc *RBC) verifyProofRequest(proof *abftpb.ProofRequest) bool {
 
 func (rbc *RBC) handleProofRequest(sender string, msg *abftpb.ProofRequest) error {
 	if sender != rbc.id {
-		return fmt.Errorf("[%s] receive proof request from %s which should be: %s", rbc.nodeID, sender, rbc.id)
+		return fmt.Errorf("[%s](%d-%s) RBC receive proof request from error node: %s",
+			rbc.nodeID, rbc.height, rbc.id, sender)
 	}
 
 	if rbc.echoSent {
@@ -151,7 +152,8 @@ func (rbc *RBC) handleProofRequest(sender string, msg *abftpb.ProofRequest) erro
 	}
 
 	if !rbc.verifyProofRequest(msg) {
-		return fmt.Errorf("[%s] receive invalid proof request from %s", rbc.nodeID, sender)
+		return fmt.Errorf("[%s](%d-%s) RBC receive invalid proof request from %s",
+			rbc.nodeID, rbc.height, rbc.id, sender)
 	}
 
 	rbc.logger.Debugf("[%s](%d-%s) RBC receive proof: %x from: %v", rbc.nodeID, rbc.height, rbc.id, msg.RootHash, sender)
@@ -273,8 +275,8 @@ func (rbc *RBC) appendProofRequests(to string, proof *abftpb.ProofRequest) {
 		Acs:    acsMessage,
 	}
 	rbc.messages = append(rbc.messages, abftMessage)
-	rbc.logger.Debugf("[%s](%d-%s) RBC append proof(%x-%v-%v)",
-		rbc.nodeID, rbc.height, rbc.id, proof.RootHash, proof.Index, proof.Leaves)
+	rbc.logger.Debugf("[%s](%d-%s) RBC append proof(%x-%v-%v) to: %v",
+		rbc.nodeID, rbc.height, rbc.id, proof.RootHash, proof.Index, proof.Leaves, to)
 }
 
 func (rbc *RBC) appendEchoRequests(echo *abftpb.EchoRequest) {
