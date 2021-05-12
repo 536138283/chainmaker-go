@@ -168,7 +168,10 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 			consensus.logger.Debugf("[%s] verify result code: %s, msg: %s", consensus.Id, verifyResult.Code, verifyResult.Msg)
 			data := mustMarshal(verifyResult.VerifiedBlock)
 			// acs := consensus.getACS(verifyResult.VerifiedBlock.Header.BlockHeight)
-			consensus.acs.InputBBA(data)
+			err := consensus.acs.InputBBA(data)
+			if err != nil {
+				consensus.logger.Errorf("acs input error: %v", err)
+			}
 		}
 	case msgbus.BlockInfo:
 		if blockInfo, ok := message.Payload.(*common.BlockInfo); ok {
@@ -254,7 +257,7 @@ func (consensus *ConsensusABFTImpl) run(closeC chan struct{}) {
 func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessage) {
 	consensus.logger.Debugf("[%s] handleMessage from: %v, to: %v, Id: %v", consensus.Id, msg.From, msg.To, msg.Id)
 	if msg.To != consensus.Id {
-		consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
+		// consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
 		netMsg := &netpb.NetMsg{
 			Payload: mustMarshal(msg),
 			Type:    netpb.NetMsg_CONSENSUS_MSG,
@@ -265,7 +268,10 @@ func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessage) {
 
 	} else {
 		// acs := consensus.getACS(consensus.height)
-		consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
+		err := consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
+		if err != nil {
+			consensus.logger.Errorf("[%s] handleMessage to: %s, error: %v", consensus.Id, msg.To, err)
+		}
 	}
 
 	output := consensus.acs.Output()

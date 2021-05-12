@@ -213,7 +213,6 @@ func (bba *BBA) tryOutputAgreement() {
 		if bba.decision == nil && values[0] == coin {
 			bba.output = values[0]
 			bba.decision = values[0]
-			bba.logger.Debugf("[%s](%d-%s) BBA output: %v", bba.nodeID, bba.height, bba.id, bba.output)
 		}
 	}
 

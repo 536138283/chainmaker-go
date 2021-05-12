@@ -43,7 +43,6 @@ func NewACS(cfg *Config) *ACS {
 		rbcOutputCache: make(map[string]*rbcOutput),
 		rbcOutputCh:    make(chan []byte, 1000),
 		messageCh:      make(chan *abftpb.ABFTMessage, 1000),
-		output:         make(map[string][]byte),
 	}
 
 	for _, id := range cfg.nodes {
@@ -94,6 +93,7 @@ func (acs *ACS) InputBBA(output []byte) error {
 			acs.nodeID, acs.height, acs.nodeID, hashStr)
 	}
 
+	acs.logger.Debugf("[%s](%d) ACS InputBBA id: %v", acs.nodeID, acs.height, rbcOutput.id)
 	acs.rbcResults[rbcOutput.id] = rbcOutput.output
 	return acs.processBBA(rbcOutput.id, func(bba *BBA) error {
 		if bba.AcceptInput() {
@@ -163,6 +163,7 @@ func (acs *ACS) processRBC(id string, f func(rbc *RBC) error) error {
 		return err
 	}
 
+	acs.logger.Debugf("[%s](%d) ACS processRBC id: %v", acs.nodeID, acs.height, id)
 	acs.appendMessages(rbc.Messages()...)
 
 	if output := rbc.Output(); output != nil {
@@ -197,6 +198,7 @@ func (acs *ACS) processBBA(id string, f func(bba *BBA) error) error {
 		return err
 	}
 
+	acs.logger.Debugf("[%s](%d) ACS processBBA id: %v", acs.nodeID, acs.height, id)
 	acs.appendMessages(bba.Messages()...)
 
 	if output := bba.Output(); output != nil {
@@ -237,6 +239,8 @@ func (acs *ACS) countFinishedBBA() int {
 }
 
 func (acs *ACS) tryComplete() {
+	acs.logger.Debugf("[%s](%d) ACS tryComplete decided: %v, finishedBBACount: %v, bbaResults.len: %v",
+		acs.nodeID, acs.height, acs.decided, acs.countFinishedBBA(), len(acs.bbaResults))
 	if acs.decided ||
 		acs.countFinishedBBA() < acs.nodesNum-acs.faultsNum ||
 		len(acs.bbaResults) < acs.nodesNum {

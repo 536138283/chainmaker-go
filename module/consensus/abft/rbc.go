@@ -21,11 +21,12 @@ import (
 // RBC represents an instance of "Reliable Broadcast".
 type RBC struct {
 	*Config
-	enc            reedsolomon.Encoder
-	receivedEchos  map[string]*abft.EchoRequest
-	receivedReadys map[string][]byte
-	messages       []*abftpb.ABFTMessage
-	output         []byte
+	enc                                reedsolomon.Encoder
+	receivedEchos                      map[string]*abft.EchoRequest
+	receivedReadys                     map[string][]byte
+	messages                           []*abftpb.ABFTMessage
+	echoSent, readySent, outputDecoded bool
+	output                             []byte
 
 	// channels for state transfer
 	closeCh chan struct{}
@@ -52,7 +53,7 @@ func NewRBC(cfg *Config) *RBC {
 
 // Input inputs data to the rbc instance.
 func (rbc *RBC) Input(data []byte) error {
-	rbc.logger.Debugf("[%s](%d-%s) RBC input data: %x", rbc.nodeID, rbc.height, rbc.id, data)
+	rbc.logger.Debugf("[%s](%d-%s) RBC input data.len: %v", rbc.nodeID, rbc.height, rbc.id, len(data))
 	shards, err := rbc.makeShards(data)
 	if err != nil {
 		return err
@@ -144,11 +145,17 @@ func (rbc *RBC) handleProofRequest(sender string, msg *abftpb.ProofRequest) erro
 		return fmt.Errorf("[%s] receive proof request from %s which should be: %s", rbc.nodeID, sender, rbc.id)
 	}
 
+	if rbc.echoSent {
+		return fmt.Errorf("[%s](%d-%s) RBC receive proof: %x from: %v multiple times",
+			rbc.nodeID, rbc.height, rbc.id, msg.RootHash, sender)
+	}
+
 	if !rbc.verifyProofRequest(msg) {
 		return fmt.Errorf("[%s] receive invalid proof request from %s", rbc.nodeID, sender)
 	}
 
 	rbc.logger.Debugf("[%s](%d-%s) RBC receive proof: %x from: %v", rbc.nodeID, rbc.height, rbc.id, msg.RootHash, sender)
+	rbc.echoSent = true
 	echo := &abftpb.EchoRequest{ProofRequest: msg}
 	rbc.appendEchoRequests(echo)
 
@@ -163,13 +170,14 @@ func (rbc *RBC) handleEchoRequest(sender string, msg *abftpb.EchoRequest) error 
 	if !rbc.verifyProofRequest(msg.ProofRequest) {
 		return fmt.Errorf("[%s] receive invalid proof request from %s", rbc.nodeID, sender)
 	}
-	rbc.logger.Debugf("[%s](%d-%s) RBC receive echo: %x from: %v", rbc.nodeID, rbc.height, rbc.id, msg.ProofRequest.RootHash, sender)
 
 	rbc.receivedEchos[sender] = msg
-	if rbc.countEchos(msg.ProofRequest.RootHash) < 2*rbc.faultsNum+1 {
+	rbc.logger.Debugf("[%s](%d-%s) RBC receive echo: %x from: %v", rbc.nodeID, rbc.height, rbc.id, msg.ProofRequest.RootHash, sender)
+	if rbc.readySent || rbc.countEchos(msg.ProofRequest.RootHash) < rbc.nodesNum-rbc.faultsNum {
 		return rbc.tryDecodeValue(msg.ProofRequest.RootHash)
 	}
 
+	rbc.readySent = true
 	ready := &abftpb.ReadyRequest{RootHash: msg.ProofRequest.RootHash}
 	rbc.appendReadyRequests(ready)
 	return nil
@@ -182,7 +190,8 @@ func (rbc *RBC) handleReadyRequest(sender string, msg *abftpb.ReadyRequest) erro
 	rbc.logger.Debugf("[%s](%d-%s) RBC receive ready: %x from: %v", rbc.nodeID, rbc.height, rbc.id, msg.RootHash, sender)
 
 	rbc.receivedReadys[sender] = msg.RootHash
-	if rbc.countReady(msg.RootHash) == rbc.faultsNum+1 {
+	if rbc.countReady(msg.RootHash) == rbc.faultsNum+1 && !rbc.readySent {
+		rbc.readySent = true
 		ready := &abftpb.ReadyRequest{RootHash: msg.RootHash}
 		rbc.appendReadyRequests(ready)
 	}
@@ -212,12 +221,15 @@ func (rbc *RBC) countReady(hash []byte) int {
 }
 
 func (rbc *RBC) tryDecodeValue(hash []byte) error {
-	if rbc.output != nil ||
+	rbc.logger.Debugf("[%s](%d-%s) RBC tryDecodeValue outputDecoded: %v, countEchos: %v, countReady: %v",
+		rbc.nodeID, rbc.height, rbc.id, rbc.outputDecoded, rbc.countEchos(hash), rbc.countReady(hash))
+	if rbc.outputDecoded ||
 		rbc.countEchos(hash) < rbc.faultsNum ||
 		rbc.countReady(hash) <= 2*rbc.faultsNum {
 		return nil
 	}
 
+	rbc.outputDecoded = true
 	var prfs proofs
 	for _, echo := range rbc.receivedEchos {
 		prfs = append(prfs, echo.ProofRequest)
@@ -236,7 +248,7 @@ func (rbc *RBC) tryDecodeValue(hash []byte) error {
 		rbc.output = append(rbc.output, data...)
 	}
 	rbc.output = rbc.output[:prfs[0].Length]
-	rbc.logger.Debugf("[%s](%d-%s) RBC output data.len: %v, %x", rbc.nodeID, rbc.height, rbc.id, len(rbc.output), rbc.output)
+	rbc.logger.Debugf("[%s](%d-%s) RBC output data.len: %v", rbc.nodeID, rbc.height, rbc.id, len(rbc.output))
 
 	return nil
 }
@@ -286,6 +298,8 @@ func (rbc *RBC) appendEchoRequests(echo *abftpb.EchoRequest) {
 			Acs:    acsMessage,
 		}
 		rbc.messages = append(rbc.messages, abftMessage)
+		rbc.logger.Debugf("[%s](%d-%s) RBC append echo id: %v, to: %v",
+			rbc.nodeID, rbc.height, rbc.id, rbc.id, n)
 	}
 }
 
@@ -310,6 +324,8 @@ func (rbc *RBC) appendReadyRequests(ready *abftpb.ReadyRequest) {
 			Acs:    acsMessage,
 		}
 		rbc.messages = append(rbc.messages, abftMessage)
+		rbc.logger.Debugf("[%s](%d-%s) RBC append ready id: %v, to: %v",
+			rbc.nodeID, rbc.height, rbc.id, rbc.id, n)
 	}
 }
 
