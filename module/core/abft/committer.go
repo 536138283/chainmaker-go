@@ -84,6 +84,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	// sort BatchID
 	c.sortTxBatchID()
+	c.log.Debugf("sort branchID index: %s", c.txBatchIDList)
 
 	//var block *commonpb.Block
 	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
@@ -175,21 +176,21 @@ func (c *Committer) sortTxBatchID() {
 	}
 }
 
-func (c *Committer) setTxBatchInfo(txBatchHash []byte) error {
+func (c *Committer) setTxBatchInfo(txBatchHash []byte) (error, bool) {
 	txBatch, err := c.abftCache.GetVerifiedTxBatchByHash(txBatchHash)
 	if err != nil {
-		return err
+		return err, false
 	}
 
 	if !txBatch.GetVerifyResult() {
-		return nil
+		return nil, false
 	}
 
 	c.merger.txBatchInfo[hex.EncodeToString(txBatchHash)] = &TxBatchInfo{
 		txBatch:  txBatch.GetTxBatch(),
 		rwSetMap: txBatch.GetTxBatchRwSet(),
 	}
-	return nil
+	return nil, true
 }
 
 func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA map[string]*commonpb.Block) {
@@ -207,12 +208,15 @@ func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA
 func (c *Committer) prepare(txBatchHashs [][]byte) error {
 	for _, hash := range txBatchHashs {
 		// set txBatchInfo
-		if err := c.setTxBatchInfo(hash); err != nil {
+		err, ok := c.setTxBatchInfo(hash)
+		if err != nil {
 			return err
 		}
 
 		// set txBatchIDList
-		c.txBatchIDList = append(c.txBatchIDList, hex.EncodeToString(hash))
+		if ok {
+			c.txBatchIDList = append(c.txBatchIDList, hex.EncodeToString(hash))
+		}
 	}
 	return nil
 }
