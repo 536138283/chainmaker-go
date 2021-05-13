@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"encoding/hex"
 	"fmt"
 	"sync"
-	"time"
 
 	"chainmaker.org/chainmaker-go/utils"
 	"go.uber.org/zap"
@@ -26,6 +26,7 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 
 	"chainmaker.org/chainmaker-go/logger"
+	"github.com/thoas/go-funk"
 )
 
 var clog *zap.SugaredLogger = zap.S()
@@ -147,8 +148,6 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 				return
 			}
 
-			consensus.logger.Debugf("[%s](%v) receive proposed block: (%v-%x-%x)",
-				consensus.Id, consensus.height, block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash)
 			// Add hash and signature to block
 			hash, sig, err := utils.SignBlock(consensus.chainConf.ChainConfig().Crypto.Hash, consensus.singer, block)
 			if err != nil {
@@ -156,6 +155,9 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 			}
 			block.Header.BlockHash = hash[:]
 			block.Header.Signature = sig
+
+			consensus.logger.Debugf("[%s](%v) receive proposed block: (%v-%x-%x)",
+				consensus.Id, consensus.height, block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash)
 
 			data := mustMarshal(block)
 			// acs := consensus.getACS(block.Header.BlockHeight)
@@ -183,7 +185,6 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 		}
 	case msgbus.BlockInfo:
 		if blockInfo, ok := message.Payload.(*common.BlockInfo); ok {
-			time.Sleep(time.Second * 2)
 			if blockInfo == nil || blockInfo.Block == nil {
 				consensus.logger.Errorf("receive message failed, error message BlockInfo = nil")
 				return
@@ -267,7 +268,8 @@ func (consensus *ConsensusABFTImpl) run(closeC chan struct{}) {
 			block := &common.Block{}
 			mustUnmarshal(msg, block)
 			consensus.msgbus.PublishSafe(msgbus.VerifyBlock, block)
-			consensus.logger.Debugf("[%s](%v) verify msg.len: %v, block: %v", consensus.Id, consensus.height, len(msg), block)
+			consensus.logger.Debugf("[%s](%v) verify block: (%v-%x-%x)",
+				consensus.Id, consensus.height, block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash)
 		}
 	}
 }
@@ -304,16 +306,20 @@ func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessage) {
 		return
 	}
 
+	var txBatchHash [][]byte
 	for _, data := range output {
 		block := &common.Block{}
 		mustUnmarshal(data, block)
-		consensus.logger.Debugf("[%s](%v) commit block: %x", consensus.Id, consensus.height, block.Header.BlockHash)
-		consensus.msgbus.PublishSafe(msgbus.CommitedTxBatchs, &abftpb.TxBatchAfterABA{
-			BlockHeight: consensus.height,
-			TxBatchHash: [][]byte{block.Header.BlockHash},
-		})
-		break
+		txBatchHash = append(txBatchHash, block.Header.BlockHash)
 	}
+
+	consensus.logger.Debugf("[%s](%v) commit batchs: %v",
+		consensus.Id, consensus.height,
+		funk.Map(txBatchHash, func(data []byte) string { return hex.EncodeToString(data) }))
+	consensus.msgbus.PublishSafe(msgbus.CommitedTxBatchs, &abftpb.TxBatchAfterABA{
+		BlockHeight: consensus.height,
+		TxBatchHash: txBatchHash,
+	})
 }
 
 func (consensus *ConsensusABFTImpl) publishToMsgbus(msg *netpb.NetMsg) {

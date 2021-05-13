@@ -65,7 +65,7 @@ func (bba *BBA) Input(val bool) error {
 
 	bba.Lock()
 	defer bba.Unlock()
-	bba.logger.Debugf("[%s](%d-%s) BBA input val: %v", bba.nodeID, bba.height, bba.id, val)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA input val: %v", bba.nodeID, bba.height, bba.id, bba.epoch, val)
 	// bba.inputted = true
 	bba.estimated = val
 	bba.sentBvals = append(bba.sentBvals, val)
@@ -78,8 +78,8 @@ func (bba *BBA) appendBValRequests(val bool) {
 		Epoch: bba.epoch,
 		Value: val,
 	}
-	bba.logger.Debugf("[%s](%d-%s) BBA appendBValRequests: {epoch: %v, value: %v}",
-		bba.nodeID, bba.height, bba.id, bvalRequest.Epoch, bvalRequest.Value)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA appendBValRequests: {epoch: %v, value: %v}",
+		bba.nodeID, bba.height, bba.id, bba.epoch, bvalRequest.Epoch, bvalRequest.Value)
 	bbaRequest := &abftpb.BBARequest{
 		Message: &abftpb.BBARequest_Bval{
 			Bval: bvalRequest,
@@ -137,7 +137,7 @@ func (bba *BBA) HandleMessage(sender string, msg *abftpb.BBARequest) error {
 	bba.Lock()
 	defer bba.Unlock()
 
-	bba.logger.Debugf("[%s](%d-%s) BBA HandleMessage from: %v", bba.nodeID, bba.height, bba.id, sender)
+	bba.logger.Debugf("[%s](%d-%s-%v) BBA HandleMessage from: %v", bba.nodeID, bba.height, bba.id, bba.epoch, sender)
 	if bba.done {
 		return nil
 	}
@@ -147,7 +147,8 @@ func (bba *BBA) HandleMessage(sender string, msg *abftpb.BBARequest) error {
 	case *abftpb.BBARequest_Aux:
 		return bba.handleAuxRequest(sender, m.Aux)
 	default:
-		bba.logger.Errorf("[%s](%d) BBA receive invalid message: %+v, this should not happen", bba.nodeID, bba.height, msg)
+		bba.logger.Errorf("[%s](%d-%s-%v) BBA receive invalid message: %+v, this should not happen",
+			bba.nodeID, bba.height, bba.id, bba.epoch, msg)
 	}
 
 	return nil
@@ -160,7 +161,7 @@ func (bba *BBA) Output() interface{} {
 	if bba.output != nil {
 		output := bba.output
 		bba.output = nil
-		bba.logger.Debugf("[%s](%d-%s) BBA output: %v", bba.nodeID, bba.height, bba.id, output)
+		bba.logger.Debugf("[%s](%d-%s-%d) BBA output: %v", bba.nodeID, bba.height, bba.id, bba.epoch, output)
 		return output
 	}
 
@@ -169,7 +170,8 @@ func (bba *BBA) Output() interface{} {
 
 func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error {
 	if bval.Epoch < bba.epoch {
-		bba.logger.Debugf("[%s](%d) BBA receive outdated Bval from: %v", bba.nodeID, bba.height, sender)
+		bba.logger.Debugf("[%s](%d-%s-%d) BBA receive outdated Bval from: %v",
+			bba.nodeID, bba.height, bba.id, bba.epoch, sender)
 		return nil
 	}
 
@@ -177,15 +179,15 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 	bba.receivedBvals[sender] = val
 	bvalCount := bba.countBvals(val)
 
-	bba.logger.Debugf("[%s](%d-%s) BBA receive Bval: {epoch: %v, value: %v}, from: %v, bvalCount: %v",
-		bba.nodeID, bba.height, bba.id, bval.Epoch, bval.Value, sender, bvalCount)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Bval: {epoch: %v, value: %v}, from: %v, bvalCount: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, bval.Epoch, bval.Value, sender, bvalCount)
 	if bvalCount == 2*bba.faultsNum+1 {
 		bba.binValues = append(bba.binValues, val)
 		if len(bba.binValues) == 1 {
 			bba.appendAuxRequests(val)
 		}
-		bba.logger.Debugf("[%s](%d-%s) BBA handleBvalRequest binValues: %v",
-			bba.nodeID, bba.height, bba.id, bba.binValues)
+		bba.logger.Debugf("[%s](%d-%s-%d) BBA handleBvalRequest binValues: %v",
+			bba.nodeID, bba.height, bba.id, bba.epoch, bba.binValues)
 		return nil
 	}
 
@@ -198,12 +200,13 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 
 func (bba *BBA) handleAuxRequest(sender string, aux *abftpb.AuxRequest) error {
 	if aux.Epoch < bba.epoch {
-		bba.logger.Debugf("[%s](%d) BBA receive outdated aux from: %v", bba.nodeID, bba.height, sender)
+		bba.logger.Debugf("[%s](%d-%s-%d) BBA receive outdated aux from: %v",
+			bba.nodeID, bba.height, bba.id, bba.epoch, sender)
 		return nil
 	}
 
-	bba.logger.Debugf("[%s](%d-%s) BBA receive Aux: {epoch: %v, value: %v} from: %v",
-		bba.nodeID, bba.height, bba.id, aux.Epoch, aux.Value, sender)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Aux: {epoch: %v, value: %v} from: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, aux.Epoch, aux.Value, sender)
 	val := aux.Value
 	bba.receivedAux[sender] = val
 	bba.tryOutputAgreement()
@@ -227,8 +230,8 @@ func (bba *BBA) tryOutputAgreement() {
 		return
 	}
 
-	bba.logger.Debugf("[%s](%d-%s) BBA len(values): %v, coin: %v, values: %v",
-		bba.nodeID, bba.height, bba.id, len(values), coin, values)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA tryOutputAgreement values: %v, coin: %v, values: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, values, coin, values)
 	bba.increaseEpoch()
 	if len(values) == 1 {
 		// bba.estimated = values[0]
@@ -256,6 +259,7 @@ func (bba *BBA) tryOutputAgreement() {
 }
 
 func (bba *BBA) increaseEpoch() {
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA increaseEpoch", bba.nodeID, bba.height, bba.id, bba.epoch)
 	bba.binValues = []bool{}
 	bba.sentBvals = []bool{}
 	bba.receivedBvals = make(map[string]bool)
@@ -286,8 +290,8 @@ func (bba *BBA) countOutputs() (int, []bool) {
 		}
 	}
 
-	bba.logger.Debugf("[%s](%d-%s) BBA countOutputs receivedAux: %v, binValues: %v",
-		bba.nodeID, bba.height, bba.id, bba.receivedAux, bba.binValues)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA countOutputs receivedAux: %v, binValues: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, bba.receivedAux, bba.binValues)
 	return len(bba.receivedAux), vals
 }
 
