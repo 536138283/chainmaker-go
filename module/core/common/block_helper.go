@@ -9,10 +9,12 @@ package common
 import (
 	"bytes"
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
+	"chainmaker.org/chainmaker-go/consensus/abft"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"encoding/hex"
 	"fmt"
 )
 
@@ -142,7 +144,7 @@ func IsHeightValid(block *commonpb.Block, currentHeight int64) error {
 // IsPreHashValid, to check if block.preHash equals with last block hash
 func IsPreHashValid(block *commonpb.Block, preHash []byte) error {
 	if !bytes.Equal(preHash, block.Header.PreBlockHash) {
-		return fmt.Errorf("prehash expect %x, got %x", preHash, block.Header.BlockHash)
+		return fmt.Errorf("prehash expect %x, got %x", preHash, block.Header.PreBlockHash)
 	}
 	return nil
 }
@@ -291,6 +293,10 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	}
 
 	lastBlock = vb.ledgerCache.GetLastCommittedBlock()
+	vb.log.Debugf("common block:::", block.Header)
+	vb.log.Debugf("common lastBlock:::", lastBlock.Header)
+	vb.log.Debugf("block 's pre blockHash:::%s", hex.EncodeToString(block.Header.PreBlockHash))
+	vb.log.Debugf("lastBlock 's blockHash:::%s", hex.EncodeToString(lastBlock.Header.BlockHash))
 
 	err = checkPreBlock(block, lastBlock)
 	if err != nil {
@@ -304,10 +310,15 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	// verify block sig and also verify identity and auth of block proposer
 	startSigTick := utils.CurrentTimeMillisSeconds()
 	vb.log.Debugf("verify block \n %s", utils.FormatBlock(block))
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+	//todo VerifyBlockSig
+	if  err = abft.VerifyBlockSignatures(vb.chainConf, vb.ac, block); err != nil {
 		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
+	//if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+	//	return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+	//		block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+	//}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts = append(timeLasts, sigLasts)
 

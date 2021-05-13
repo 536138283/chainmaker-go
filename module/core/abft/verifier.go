@@ -79,9 +79,10 @@ func NewVerifier(ceConfig *CoreExecuteConfig) (*Verifier, error) {
 func (v *Verifier) verifyBlock(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	emptyTxRwSetMap := make(map[string]*commonPb.TxRWSet)
-	if err := utils.IsEmptyBlock(block); err != nil {
-		return false, emptyTxRwSetMap, err
-	}
+	// todo signature is empty now
+	//if err := utils.IsEmptyBlock(block); err != nil {
+	//	return false, emptyTxRwSetMap, err
+	//}
 	err := common.VerifyHeight(block.Header.BlockHeight, v.ledgerCache)
 	if err != nil {
 		return false, emptyTxRwSetMap, err
@@ -120,6 +121,9 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 }
 
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
+	v.log.Debug("Verifier start.")
+	v.log.Debug("Block::: %s", block.Header)
+	v.log.Debug("Block::: preHash %s", hex.EncodeToString(block.Header.PreBlockHash))
 	// verify nil block
 	if block == nil {
 		return fmt.Errorf("verify failed, block is nil")
@@ -170,6 +174,7 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 		return err
 	}
+	v.log.Debug("Verifier finish.")
 	return nil
 }
 
