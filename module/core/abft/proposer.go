@@ -97,8 +97,6 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 		return err
 	}
 	emptyBlockBatch := *blockBatch
-	// todo set nil
-	emptyBlockBatch.Header.Proposer = []byte{}
 	//get a random number of transactions
 	ticker := time.NewTicker(DEFAULT_WAIT_TXS_TIMEOUT)
 	ctx, cancel := context.WithCancel(context.Background())
