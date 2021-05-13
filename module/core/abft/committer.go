@@ -96,8 +96,6 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	// set base TxBatch Id
 	c.merger.baseTxBatchID = c.txBatchIDList[0]
-
-	c.log.Debugf("txBatch:::", c.merger.txBatchInfo)
 	// rewrite block's Timestamp
 	baseTxBatchInfo := c.merger.txBatchInfo[c.merger.baseTxBatchID].txBatch
 	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
@@ -118,6 +116,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	// set proposer nil
 	block.Header.Proposer = []byte{}
+	c.log.Debugf("block before sig:::", c.merger.txBatchInfo)
 	hash, sig, err := utils.SignBlock(c.chainConf.ChainConfig().Crypto.Hash, c.identity, block)
 	if err != nil {
 		c.log.Errorf("[%s]sign block failed, %s", c.identity.GetMemberId(), err)
@@ -133,7 +132,6 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 		c.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
 	}
 
-	c.log.Debug("handleABAFailTxs")
 	// deal with tx(ABA fail)
 	c.handleABAFailTxs()
 
@@ -145,7 +143,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	//clear abft catche
 	c.abftCache.ClearAbftCache()
 
-	c.log.Debug("commit finish")
+	c.log.Debugf("commit finish, block: %s", block.Header)
 
 	return nil
 }
@@ -269,6 +267,15 @@ func (c *Committer) AddBlock(block *commonpb.Block) error {
 	if err != nil {
 		return err
 	}
+
+	c.log.Debug("remove txs")
+	//sync txpool(put retryList back txpool & delete blocked tx)
+	c.txPool.RetryAndRemoveTxs(nil, block.Txs)
+
+	c.log.Debug("clear abft cache")
+	//clear abft catche
+	c.abftCache.ClearAbftCache()
+
 	c.log.Debugf("AddBlock::: finish!")
 	return nil
 }

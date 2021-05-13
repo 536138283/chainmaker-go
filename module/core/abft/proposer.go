@@ -62,8 +62,6 @@ func NewProposer(ceConfig *CoreExecuteConfig) *Proposer {
 
 func (p *Proposer) getProposeStatus() *commonpb.Block {
 	txBatch := p.abftCache.GetProposedTxBatch()
-	p.log.Debugf(":::txBatch:::", txBatch)
-	p.log.Debugf(":::txBatch:::", txBatch == nil)
 	if txBatch == nil {
 		return nil
 	}
@@ -94,8 +92,7 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 	//start propose
 	lastBlock := p.ledgerCache.GetLastCommittedBlock()
 	blockBatch, err := common.InitNewBlock(lastBlock, p.identity, p.chainId, p.chainConf)
-	p.log.Debugf("blockBatch 's header:::%s", blockBatch.Header)
-	p.log.Debugf("blockBatch 's pre blockHash:::%s", hex.EncodeToString(blockBatch.Header.PreBlockHash))
+	p.log.Debugf("propose blockBatch 's header:::%s", blockBatch.Header)
 	if err != nil {
 		return err
 	}
@@ -110,8 +107,7 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 	case <-ticker.C:
 		cancel()
 		p.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", emptyBlockBatch.Header.BlockHeight)
-		p.log.Debugf("blockBatch 's header2:::%s", emptyBlockBatch.Header)
-		p.log.Debugf("blockBatch 's pre blockHash2:::%s", hex.EncodeToString(emptyBlockBatch.Header.PreBlockHash))
+		p.log.Debugf("proppose blockBatch 's header2:::%s", emptyBlockBatch.Header)
 		p.msgBus.Publish(msgbus.ProposedBlock, &emptyBlockBatch)
 		p.abftCache.SetProposedTxBatch(&emptyBlockBatch, nil)
 		return nil
@@ -134,7 +130,6 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 	vmStartTick := utils.CurrentTimeMillisSeconds()
 	ssLasts := vmStartTick - ssStartTick
 
-	p.log.Debugf("ProposedBlock2:::%s", blockBatch.Header)
 	txRWSetMap, err := p.txScheduler.Schedule(blockBatch, p.txBatch, snapshot)
 
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
@@ -147,7 +142,6 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 		return err
 	}
 
-	p.log.Debugf("ProposedBlock3:::%s", blockBatch.Header)
 	var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
 	err = common.FinalizeBlock(blockBatch, txRWSetMap, aclFailTxs, p.chainConf.ChainConfig().Crypto.Hash)
 	if err != nil {
@@ -167,12 +161,10 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 		}
 		p.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 	}
-	p.log.Debugf("ProposedBlock4:::%s", blockBatch.Header)
 	// todo set nil
 	blockBatch.Header.Proposer = []byte{}
 	p.abftCache.SetProposedTxBatch(blockBatch, txRWSetMap)
 	p.msgBus.Publish(msgbus.ProposedBlock, blockBatch)
-	p.log.Debugf("ProposedBlock5:::%s", blockBatch.Header)
 	p.log.Infof("proposer success [%d](txs:%d)", blockBatch.Header.BlockHeight, blockBatch.Header.TxCount)
 
 	return nil

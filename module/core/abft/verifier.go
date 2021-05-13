@@ -123,7 +123,6 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
 	v.log.Debug("Verifier start.")
 	v.log.Debug("Block::: %s", block.Header)
-	v.log.Debug("Block::: preHash %s", hex.EncodeToString(block.Header.PreBlockHash))
 	// verify nil block
 	if block == nil {
 		return fmt.Errorf("verify failed, block is nil")
@@ -174,7 +173,7 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 		return err
 	}
-	v.log.Debug("Verifier finish.")
+	v.log.Debugf("Verifier finish:::, block %s", block.Header)
 	return nil
 }
 
