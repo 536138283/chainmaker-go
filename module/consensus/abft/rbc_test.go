@@ -8,53 +8,76 @@ package abft
 
 import (
 	"bytes"
-	"reflect"
 	"sort"
 	"sync"
 	"testing"
+	"time"
 
 	"chainmaker.org/chainmaker-go/logger"
 	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
+	"github.com/stretchr/testify/assert"
 )
 
-var utLogger *logger.CMLogger
+var unittestLogger *logger.CMLogger
 
 var (
-	one_node_cfg  Config
-	four_node_cfg Config
+	one_node_cfg   *Config
+	three_node_cfg *Config
+	four_node_cfg  *Config
+	seven_node_cfg *Config
 )
 
 func init() {
-	utLogger = logger.GetLogger("ut")
-	one_node_cfg = Config{
-		logger: utLogger,
+	unittestLogger = logger.GetLogger("unittest")
+	one_node_cfg = &Config{
+		logger: unittestLogger,
 		height: 10,
 		id:     "id",
 		nodeID: "id",
 		nodes:  []string{"id"},
 	}
+	one_node_cfg.fillWithDefaults()
 
-	four_node_cfg = Config{
-		logger: utLogger,
+	three_node_cfg = &Config{
+		logger: unittestLogger,
+		height: 10,
+		id:     "id1",
+		nodeID: "id1",
+		nodes:  []string{"id1", "id2", "id3"},
+	}
+	three_node_cfg.fillWithDefaults()
+
+	four_node_cfg = &Config{
+		logger: unittestLogger,
 		height: 10,
 		id:     "id1",
 		nodeID: "id1",
 		nodes:  []string{"id1", "id2", "id3", "id4"},
 	}
-	one_node_cfg.fillWithDefaults()
 	four_node_cfg.fillWithDefaults()
+
+	seven_node_cfg = &Config{
+		logger: unittestLogger,
+		height: 10,
+		id:     "id1",
+		nodeID: "id1",
+		nodes:  []string{"id1", "id2", "id3", "id4", "id5", "id6", "id7"},
+	}
+	seven_node_cfg.fillWithDefaults()
 }
 
 func TestNewRBC(t *testing.T) {
 	type args struct {
-		cfg Config
+		cfg *Config
 	}
 	tests := []struct {
 		name string
 		args args
 	}{
-		{"1 node", args{cfg: one_node_cfg}},
-		{"4 node", args{cfg: four_node_cfg}},
+		{"1 node", args{cfg: one_node_cfg.clone()}},
+		{"3 node", args{cfg: three_node_cfg.clone()}},
+		{"4 node", args{cfg: four_node_cfg.clone()}},
+		{"7 node", args{cfg: seven_node_cfg.clone()}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -71,12 +94,14 @@ func TestRBC_Input(t *testing.T) {
 	}
 	tests := []struct {
 		name    string
-		config  Config
+		config  *Config
 		args    args
 		wantErr bool
 	}{
-		{"1 node", one_node_cfg, args{[]byte("test data")}, false},
-		{"4 node", four_node_cfg, args{[]byte("test data")}, false},
+		{"1 node", one_node_cfg.clone(), args{[]byte("test data")}, false},
+		{"3 node", three_node_cfg.clone(), args{[]byte("test data")}, false},
+		{"4 node", four_node_cfg.clone(), args{[]byte("test data")}, false},
+		{"7 node", seven_node_cfg.clone(), args{[]byte("test data")}, false},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -117,39 +142,57 @@ func TestRBC_Input(t *testing.T) {
 func TestRBC_Output(t *testing.T) {
 	tests := []struct {
 		name   string
-		config Config
+		config *Config
 		data   []byte
 	}{
-		{"1 node", one_node_cfg, []byte("test data")},
-		{"4 node", four_node_cfg, []byte("test data")},
+		{"1 node", one_node_cfg.clone(), []byte("test data")},
+		{"3 node", three_node_cfg.clone(), []byte("test data")},
+		{"4 node", four_node_cfg.clone(), []byte("test data")},
+		{"7 node", seven_node_cfg.clone(), []byte("test data")},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			var rbcs []*RBC
+			rbcs := make(map[string]*RBC)
 			config := tt.config
 			for i := range tt.config.nodes {
-				config.nodeID = config.nodes[i]
-				rbc := NewRBC(config)
-				rbcs = append(rbcs, rbc)
-			}
-			rbcs[0].Input(tt.data)
-			msgs := rbcs[0].Messages()
-
-			for _, msg := range msgs {
-				for _, rbc := range rbcs {
-					if msg.To == rbc.nodeID {
-						rbc.HandleMessage(msg.From, msg.Acs.Message.(*abftpb.ACSMessage_Rbc).Rbc)
-					}
-				}
+				cfg := config.clone()
+				cfg.nodeID = cfg.nodes[i]
+				rbc := NewRBC(cfg)
+				rbcs[cfg.nodeID] = rbc
 			}
 
 			var wg sync.WaitGroup
 			wg.Add(len(config.nodes))
 
-			for _, rbc := range rbcs {
-				if got := rbc.Output(); !reflect.DeepEqual(got, tt.data) {
-					t.Errorf("RBC.Output() = %v, data %v", got, tt.data)
-				}
+			finishC := make(chan struct{})
+			go func() {
+				wg.Wait()
+				close(finishC)
+			}()
+
+			for id, rbc := range rbcs {
+				go func(id string, rbc *RBC) {
+					defer wg.Done()
+					for {
+						msgs := rbc.Messages()
+						for _, msg := range msgs {
+							rbcs[msg.To].HandleMessage(msg.From, msg.Acs.Message.(*abftpb.ACSMessage_Rbc).Rbc)
+						}
+
+						if output := rbc.Output(); output != nil {
+							assert.Equal(t, tt.data, output)
+							return
+						}
+					}
+				}(id, rbc)
+			}
+
+			rbcs[config.nodes[0]].Input(tt.data)
+
+			select {
+			case <-time.After(time.Second):
+				assert.Fail(t, "timeout: RBC not finished")
+			case <-finishC:
 			}
 		})
 	}

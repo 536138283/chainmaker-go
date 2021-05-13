@@ -71,14 +71,15 @@ func (acs *ACS) InputRBC(val []byte) error {
 	acs.appendMessages(rbc.Messages()...)
 
 	if output := rbc.Output(); output != nil {
-		acs.rbcResults[acs.nodeID] = output
-		acs.processBBA(acs.nodeID, func(bba *BBA) error {
-			if bba.AcceptInput() {
-				return bba.Input(true)
-			}
+		acs.handleRBCOutput(acs.nodeID, output)
+		// acs.rbcResults[acs.nodeID] = output
+		// acs.processBBA(acs.nodeID, func(bba *BBA) error {
+		//   if bba.AcceptInput() {
+		//     return bba.Input(true)
+		//   }
 
-			return nil
-		})
+		//   return nil
+		// })
 	}
 
 	return nil

@@ -9,6 +9,7 @@ package abft
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"chainmaker.org/chainmaker-go/utils"
 	"go.uber.org/zap"
@@ -136,7 +137,7 @@ func (consensus *ConsensusABFTImpl) Stop() error {
 
 // OnMessage implements the OnMessage interface of msgbus.Subscriber
 func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
-	consensus.logger.Debugf("[%s] OnMessage receive topic: %s", consensus.Id, message.Topic)
+	consensus.logger.Debugf("[%s](%v) OnMessage receive topic: %s", consensus.Id, consensus.height, message.Topic)
 
 	switch message.Topic {
 	case msgbus.ProposedBlock:
@@ -169,7 +170,10 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 				return
 			}
 
-			consensus.logger.Debugf("[%s] verify result code: %s, msg: %s", consensus.Id, verifyResult.Code, verifyResult.Msg)
+			consensus.logger.Debugf("[%s](%v) verify result code: %s, msg: %s", consensus.Id, consensus.height, verifyResult.Code, verifyResult.Msg)
+			if verifyResult.Code != consensuspb.VerifyResult_SUCCESS {
+				return
+			}
 			data := mustMarshal(verifyResult.VerifiedBlock)
 			// acs := consensus.getACS(verifyResult.VerifiedBlock.Header.BlockHeight)
 			err := consensus.acs.InputBBA(data)
@@ -179,6 +183,7 @@ func (consensus *ConsensusABFTImpl) OnMessage(message *msgbus.Message) {
 		}
 	case msgbus.BlockInfo:
 		if blockInfo, ok := message.Payload.(*common.BlockInfo); ok {
+			time.Sleep(time.Second * 2)
 			if blockInfo == nil || blockInfo.Block == nil {
 				consensus.logger.Errorf("receive message failed, error message BlockInfo = nil")
 				return
@@ -262,7 +267,7 @@ func (consensus *ConsensusABFTImpl) run(closeC chan struct{}) {
 			block := &common.Block{}
 			mustUnmarshal(msg, block)
 			consensus.msgbus.PublishSafe(msgbus.VerifyBlock, block)
-			consensus.logger.Debugf("[%s] verify msg.len: %v, block: %v", consensus.Id, len(msg), block)
+			consensus.logger.Debugf("[%s](%v) verify msg.len: %v, block: %v", consensus.Id, consensus.height, len(msg), block)
 		}
 	}
 }
@@ -302,7 +307,7 @@ func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessage) {
 	for _, data := range output {
 		block := &common.Block{}
 		mustUnmarshal(data, block)
-		consensus.logger.Debugf("[%s] commit block: %v", consensus.Id, block)
+		consensus.logger.Debugf("[%s](%v) commit block: %x", consensus.Id, consensus.height, block.Header.BlockHash)
 		consensus.msgbus.PublishSafe(msgbus.CommitedTxBatchs, &abftpb.TxBatchAfterABA{
 			BlockHeight: consensus.height,
 			TxBatchHash: [][]byte{block.Header.BlockHash},

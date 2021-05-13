@@ -8,12 +8,14 @@ package abft
 
 import (
 	"fmt"
+	"sync"
 
 	"chainmaker.org/chainmaker-go/logger"
 )
 
 type Config struct {
-	logger    *logger.CMLogger
+	logger *logger.CMLogger
+	sync.Mutex
 	height    int64    // height
 	id        string   // id of the RBC or BBA instance
 	nodeID    string   // nodeID of current node
@@ -23,11 +25,23 @@ type Config struct {
 }
 
 func (c *Config) clone() *Config {
-	cfg := *c
-	return &cfg
+	c.Lock()
+	defer c.Unlock()
+	cfg := &Config{
+		logger:    c.logger,
+		height:    c.height,
+		id:        c.id,
+		nodeID:    c.nodeID,
+		nodes:     append([]string(nil), c.nodes...),
+		nodesNum:  c.nodesNum,
+		faultsNum: c.faultsNum,
+	}
+	return cfg
 }
 
 func (c *Config) fillWithDefaults() {
+	c.Lock()
+	defer c.Unlock()
 	if c.nodesNum == 0 {
 		c.nodesNum = len(c.nodes)
 	}
@@ -37,5 +51,7 @@ func (c *Config) fillWithDefaults() {
 }
 
 func (c *Config) String() string {
+	c.Lock()
+	defer c.Unlock()
 	return fmt.Sprintf("Config height: %v, id: %v, nodeID: %v, nodes: %v", c.height, c.id, c.nodeID, c.nodes)
 }

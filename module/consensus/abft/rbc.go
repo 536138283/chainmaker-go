@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"sort"
+	"sync"
 
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
@@ -21,6 +22,7 @@ import (
 // RBC represents an instance of "Reliable Broadcast".
 type RBC struct {
 	*Config
+	sync.Mutex
 	enc                                reedsolomon.Encoder
 	receivedEchos                      map[string]*abft.EchoRequest
 	receivedReadys                     map[string][]byte
@@ -54,6 +56,8 @@ func NewRBC(cfg *Config) *RBC {
 // Input inputs data to the rbc instance.
 func (rbc *RBC) Input(data []byte) error {
 	rbc.logger.Debugf("[%s](%d-%s) RBC input data.len: %v", rbc.nodeID, rbc.height, rbc.id, len(data))
+	rbc.Lock()
+	defer rbc.Unlock()
 	shards, err := rbc.makeShards(data)
 	if err != nil {
 		return err
@@ -81,6 +85,9 @@ func (rbc *RBC) Input(data []byte) error {
 }
 
 func (rbc *RBC) HandleMessage(sender string, msg *abftpb.RBCRequest) error {
+	rbc.Lock()
+	defer rbc.Unlock()
+
 	switch m := msg.Message.(type) {
 	case *abft.RBCRequest_ProofRequest:
 		return rbc.handleProofRequest(sender, m.ProofRequest)
@@ -95,12 +102,18 @@ func (rbc *RBC) HandleMessage(sender string, msg *abftpb.RBCRequest) error {
 }
 
 func (rbc *RBC) Messages() []*abftpb.ABFTMessage {
+	rbc.Lock()
+	defer rbc.Unlock()
+
 	msgs := rbc.messages
 	rbc.messages = []*abftpb.ABFTMessage{}
 	return msgs
 }
 
 func (rbc *RBC) Output() []byte {
+	rbc.Lock()
+	defer rbc.Unlock()
+
 	if rbc.output != nil {
 		output := rbc.output
 		rbc.output = nil
