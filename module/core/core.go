@@ -137,10 +137,15 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 			Log:             core.log,
 			VmMgr:           core.vmMgr,
 		}
-		core.coreExecutor, err = abft.NewCoreExecute(ceConf)
+		coreExecutor, err := abft.NewCoreExecute(ceConf)
 		if err != nil {
 			return nil, err
 		}
+
+		core.coreExecutor = coreExecutor
+		core.BlockVerifier = coreExecutor.Verifier
+		core.BlockCommitter = coreExecutor.Committer
+
 	}
 	return core, nil
 }
