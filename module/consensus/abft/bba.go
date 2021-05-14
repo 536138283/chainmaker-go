@@ -12,6 +12,16 @@ import (
 	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 )
 
+type bvalDelayedMsg struct {
+	sender string
+	bval   *abftpb.BValRequest
+}
+
+type auxDelayedMsg struct {
+	sender string
+	aux    *abftpb.AuxRequest
+}
+
 type BBA struct {
 	*Config
 	sync.Mutex
@@ -24,6 +34,8 @@ type BBA struct {
 	// inputted, ouputted          bool
 	// estimated, output           bool
 	output, estimated, decision interface{}
+	bvalBuffer                  []bvalDelayedMsg
+	auxBuffer                   []auxDelayedMsg
 	messages                    []*abftpb.ABFTMessage
 }
 
@@ -78,8 +90,6 @@ func (bba *BBA) appendBValRequests(val bool) {
 		Epoch: bba.epoch,
 		Value: val,
 	}
-	bba.logger.Debugf("[%s](%d-%s-%d) BBA appendBValRequests: {epoch: %v, value: %v}",
-		bba.nodeID, bba.height, bba.id, bba.epoch, bvalRequest.Epoch, bvalRequest.Value)
 	bbaRequest := &abftpb.BBARequest{
 		Message: &abftpb.BBARequest_Bval{
 			Bval: bvalRequest,
@@ -101,6 +111,9 @@ func (bba *BBA) appendBValRequests(val bool) {
 				Acs:    acsMessage,
 			}
 			bba.messages = append(bba.messages, abftMessage)
+
+			bba.logger.Debugf("[%s](%d-%s-%d) BBA appendBValRequests value: %v to: %v",
+				bba.nodeID, bba.height, bba.id, bba.epoch, val, n)
 		}
 	}
 }
@@ -130,6 +143,8 @@ func (bba *BBA) appendAuxRequests(val bool) {
 			Acs:    acsMessage,
 		}
 		bba.messages = append(bba.messages, abftMessage)
+		bba.logger.Debugf("[%s](%d-%s-%d) BBA appendAuxRequests value: %v to: %v",
+			bba.nodeID, bba.height, bba.id, bba.epoch, val, n)
 	}
 }
 
@@ -175,6 +190,11 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 		return nil
 	}
 
+	if bval.Epoch > bba.epoch {
+		bba.bvalBuffer = append(bba.bvalBuffer, bvalDelayedMsg{sender: sender, bval: bval})
+		return nil
+	}
+
 	val := bval.Value
 	bba.receivedBvals[sender] = val
 	bvalCount := bba.countBvals(val)
@@ -202,6 +222,11 @@ func (bba *BBA) handleAuxRequest(sender string, aux *abftpb.AuxRequest) error {
 	if aux.Epoch < bba.epoch {
 		bba.logger.Debugf("[%s](%d-%s-%d) BBA receive outdated aux from: %v",
 			bba.nodeID, bba.height, bba.id, bba.epoch, sender)
+		return nil
+	}
+
+	if aux.Epoch > bba.epoch {
+		bba.auxBuffer = append(bba.auxBuffer, auxDelayedMsg{sender: sender, aux: aux})
 		return nil
 	}
 
@@ -256,6 +281,26 @@ func (bba *BBA) tryOutputAgreement() {
 	estimated := bba.estimated.(bool)
 	bba.sentBvals = append(bba.sentBvals, estimated)
 	bba.appendBValRequests(estimated)
+
+	bvalBuffer := bba.bvalBuffer
+	bba.bvalBuffer = nil
+	for _, msg := range bvalBuffer {
+		err := bba.handleBvalRequest(msg.sender, msg.bval)
+		if err != nil {
+			bba.logger.Errorf("[%s](%d-%s-%v) BBA handleBvalRequest error: %v",
+				bba.nodeID, bba.height, bba.id, bba.epoch, err)
+		}
+	}
+
+	auxBuffer := bba.auxBuffer
+	bba.auxBuffer = nil
+	for _, msg := range auxBuffer {
+		err := bba.handleAuxRequest(msg.sender, msg.aux)
+		if err != nil {
+			bba.logger.Errorf("[%s](%d-%s-%v) BBA handleAuxRequest error: %v",
+				bba.nodeID, bba.height, bba.id, bba.epoch, err)
+		}
+	}
 }
 
 func (bba *BBA) increaseEpoch() {

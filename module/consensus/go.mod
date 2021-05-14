@@ -23,6 +23,7 @@ require (
 	github.com/mattn/go-colorable v0.1.1 // indirect
 	github.com/prometheus/client_golang v1.9.0 // indirect
 	github.com/stretchr/testify v1.6.1
+	github.com/thoas/go-funk v0.8.0
 	go.etcd.io/etcd v0.0.0-20191023171146-3cf2f69b5738
 	go.uber.org/multierr v1.6.0 // indirect
 	go.uber.org/zap v1.16.0
