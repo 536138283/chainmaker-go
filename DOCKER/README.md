@@ -4,7 +4,7 @@
 
 ```bash
 $ cd chainmaker-go
-# 生成镜像名称为：chainmaker:v1.0.0_r，如需要修改版本，请修改Makefile文件
+# 生成镜像名称为：chainmaker:v1.1.0，如需要修改版本，请修改Makefile文件
 $ make docker-build
 ```
 
