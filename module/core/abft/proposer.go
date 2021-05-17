@@ -83,7 +83,7 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 
 	//check propose status
 	txBatch := p.getProposeStatus()
-	if txBatch != nil {
+	if txBatch != nil && txBatch.Header.BlockHeight == proposedSignal.BlockHeight {
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
 		p.log.Infof("The proposal has been completed, height: (%d)", txBatch.Header.BlockHeight)
 		return nil
