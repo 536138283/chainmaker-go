@@ -10,6 +10,7 @@ import (
 	"crypto/md5"
 	"encoding/base64"
 	"fmt"
+	"sync"
 
 	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
 )
@@ -21,6 +22,7 @@ type rbcOutput struct {
 
 type ACS struct {
 	*Config
+	sync.Mutex
 	rbcInstances   map[string]*RBC
 	bbaInstances   map[string]*BBA
 	rbcResults     map[string][]byte
@@ -58,6 +60,8 @@ func NewACS(cfg *Config) *ACS {
 }
 
 func (acs *ACS) InputRBC(val []byte) error {
+	acs.Lock()
+	defer acs.Unlock()
 	acs.logger.Debugf("[%s](%d-%s) ACS input RBC len: %v", acs.nodeID, acs.height, acs.id, len(val))
 	rbc, ok := acs.rbcInstances[acs.nodeID]
 	if !ok {
@@ -86,6 +90,9 @@ func (acs *ACS) InputRBC(val []byte) error {
 }
 
 func (acs *ACS) InputBBA(output []byte) error {
+	acs.Lock()
+	defer acs.Unlock()
+
 	hash := md5.Sum(output)
 	hashStr := base64.StdEncoding.EncodeToString(hash[:])
 	rbcOutput, ok := acs.rbcOutputCache[hashStr]
@@ -106,6 +113,9 @@ func (acs *ACS) InputBBA(output []byte) error {
 }
 
 func (acs *ACS) HandleMessage(sender string, id string, acsMessage *abftpb.ACSMessage) error {
+	acs.Lock()
+	defer acs.Unlock()
+
 	switch m := acsMessage.Message.(type) {
 	case *abftpb.ACSMessage_Rbc:
 		return acs.handleRBC(sender, id, m.Rbc)
@@ -118,14 +128,22 @@ func (acs *ACS) HandleMessage(sender string, id string, acsMessage *abftpb.ACSMe
 }
 
 func (acs *ACS) RbcOutputCh() chan []byte {
+	acs.Lock()
+	defer acs.Unlock()
 	return acs.rbcOutputCh
 }
 
 func (acs *ACS) MessageCh() chan *abftpb.ABFTMessage {
+	acs.Lock()
+	defer acs.Unlock()
+
 	return acs.messageCh
 }
 
 func (acs *ACS) Output() map[string][]byte {
+	acs.Lock()
+	defer acs.Unlock()
+
 	if acs.output != nil {
 		output := acs.output
 		acs.output = nil
@@ -202,14 +220,13 @@ func (acs *ACS) processBBA(id string, f func(bba *BBA) error) error {
 	acs.logger.Debugf("[%s](%d) ACS processBBA id: %v", acs.nodeID, acs.height, id)
 	acs.appendMessages(bba.Messages()...)
 
-	if output := bba.Output(); output != nil {
+	if outputted, output := bba.Output(); outputted {
 		if _, ok := acs.bbaResults[id]; ok {
 			return fmt.Errorf("[%s](%d-%s) BBA outputs multiple result: %v", acs.nodeID, acs.height, id, acs.bbaResults[id])
 		}
 
-		result := output.(bool)
-		acs.bbaResults[id] = result
-		if result && acs.countFinishedBBA() == acs.nodesNum-acs.faultsNum {
+		acs.bbaResults[id] = output
+		if output && acs.countFinishedBBA() == acs.nodesNum-acs.faultsNum {
 			for id, bba := range acs.bbaInstances {
 				if bba.AcceptInput() {
 					if err := bba.Input(false); err != nil {
@@ -217,8 +234,8 @@ func (acs *ACS) processBBA(id string, f func(bba *BBA) error) error {
 					}
 
 					acs.appendMessages(bba.Messages()...)
-					if output := bba.Output(); output != nil {
-						acs.bbaResults[id] = output.(bool)
+					if outputted, output := bba.Output(); outputted {
+						acs.bbaResults[id] = output
 					}
 				}
 			}

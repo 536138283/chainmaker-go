@@ -25,18 +25,17 @@ type auxDelayedMsg struct {
 type BBA struct {
 	*Config
 	sync.Mutex
-	epoch         uint32
-	binValues     []bool
-	sentBvals     []bool
-	receivedBvals map[string]bool
-	receivedAux   map[string]bool
-	done          bool
-	// inputted, ouputted          bool
-	// estimated, output           bool
-	output, estimated, decision interface{}
-	bvalBuffer                  []bvalDelayedMsg
-	auxBuffer                   []auxDelayedMsg
-	messages                    []*abftpb.ABFTMessage
+	epoch                         uint32
+	binValues                     []bool
+	sentBvals                     []bool
+	receivedBvals                 map[string]bool
+	receivedAux                   map[string]bool
+	done                          bool
+	estimated, outputted, decided bool
+	estimation, output, decision  bool
+	bvalBuffer                    []bvalDelayedMsg
+	auxBuffer                     []auxDelayedMsg
+	messages                      []*abftpb.ABFTMessage
 }
 
 func NewBBA(cfg *Config) *BBA {
@@ -66,8 +65,7 @@ func (bba *BBA) AcceptInput() bool {
 	bba.Lock()
 	defer bba.Unlock()
 
-	return bba.epoch == 0 && bba.estimated == nil
-	// return bba.epoch == 0 && !bba.inputted
+	return bba.epoch == 0 && !bba.estimated
 }
 
 func (bba *BBA) Input(val bool) error {
@@ -78,74 +76,12 @@ func (bba *BBA) Input(val bool) error {
 	bba.Lock()
 	defer bba.Unlock()
 	bba.logger.Debugf("[%s](%d-%s-%d) BBA input val: %v", bba.nodeID, bba.height, bba.id, bba.epoch, val)
-	// bba.inputted = true
-	bba.estimated = val
+
+	bba.estimated = true
+	bba.estimation = val
 	bba.sentBvals = append(bba.sentBvals, val)
 	bba.appendBValRequests(val)
 	return nil
-}
-
-func (bba *BBA) appendBValRequests(val bool) {
-	bvalRequest := &abftpb.BValRequest{
-		Epoch: bba.epoch,
-		Value: val,
-	}
-	bbaRequest := &abftpb.BBARequest{
-		Message: &abftpb.BBARequest_Bval{
-			Bval: bvalRequest,
-		},
-	}
-	acsMessage := &abftpb.ACSMessage{
-		Message: &abftpb.ACSMessage_Bba{
-			Bba: bbaRequest,
-		},
-	}
-
-	for _, n := range bba.nodes {
-		if n != bba.nodeID {
-			abftMessage := &abftpb.ABFTMessage{
-				Height: bba.height,
-				From:   bba.nodeID,
-				To:     n,
-				Id:     bba.id,
-				Acs:    acsMessage,
-			}
-			bba.messages = append(bba.messages, abftMessage)
-
-			bba.logger.Debugf("[%s](%d-%s-%d) BBA appendBValRequests value: %v to: %v",
-				bba.nodeID, bba.height, bba.id, bba.epoch, val, n)
-		}
-	}
-}
-
-func (bba *BBA) appendAuxRequests(val bool) {
-	auxRequest := &abftpb.AuxRequest{
-		Epoch: bba.epoch,
-		Value: val,
-	}
-	bbaRequest := &abftpb.BBARequest{
-		Message: &abftpb.BBARequest_Aux{
-			Aux: auxRequest,
-		},
-	}
-	acsMessage := &abftpb.ACSMessage{
-		Message: &abftpb.ACSMessage_Bba{
-			Bba: bbaRequest,
-		},
-	}
-
-	for _, n := range bba.nodes {
-		abftMessage := &abftpb.ABFTMessage{
-			Height: bba.height,
-			From:   bba.nodeID,
-			To:     n,
-			Id:     bba.id,
-			Acs:    acsMessage,
-		}
-		bba.messages = append(bba.messages, abftMessage)
-		bba.logger.Debugf("[%s](%d-%s-%d) BBA appendAuxRequests value: %v to: %v",
-			bba.nodeID, bba.height, bba.id, bba.epoch, val, n)
-	}
 }
 
 func (bba *BBA) HandleMessage(sender string, msg *abftpb.BBARequest) error {
@@ -169,18 +105,19 @@ func (bba *BBA) HandleMessage(sender string, msg *abftpb.BBARequest) error {
 	return nil
 }
 
-func (bba *BBA) Output() interface{} {
+func (bba *BBA) Output() (outputted bool, output bool) {
 	bba.Lock()
 	defer bba.Unlock()
 
-	if bba.output != nil {
-		output := bba.output
-		bba.output = nil
-		bba.logger.Debugf("[%s](%d-%s-%d) BBA output: %v", bba.nodeID, bba.height, bba.id, bba.epoch, output)
-		return output
-	}
+	outputted = bba.outputted
+	output = bba.output
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA outputted: %v, output: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, outputted, output)
 
-	return nil
+	bba.outputted = false
+	bba.output = false
+
+	return outputted, output
 }
 
 func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error {
@@ -199,8 +136,14 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 	bba.receivedBvals[sender] = val
 	bvalCount := bba.countBvals(val)
 
-	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Bval: {epoch: %v, value: %v}, from: %v, bvalCount: %v",
-		bba.nodeID, bba.height, bba.id, bba.epoch, bval.Epoch, bval.Value, sender, bvalCount)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Bval value: %v, from: %v, bvalCount: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, bval.Value, sender, bvalCount)
+
+	if bvalCount == bba.faultsNum+1 && !bba.hasSentBval(val) {
+		bba.sentBvals = append(bba.sentBvals, val)
+		bba.appendBValRequests(val)
+	}
+
 	if bvalCount == 2*bba.faultsNum+1 {
 		bba.binValues = append(bba.binValues, val)
 		if len(bba.binValues) == 1 {
@@ -211,10 +154,6 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 		return nil
 	}
 
-	if bvalCount == bba.faultsNum+1 && !bba.hasSentBval(val) {
-		bba.sentBvals = append(bba.sentBvals, val)
-		bba.appendBValRequests(val)
-	}
 	return nil
 }
 
@@ -230,8 +169,8 @@ func (bba *BBA) handleAuxRequest(sender string, aux *abftpb.AuxRequest) error {
 		return nil
 	}
 
-	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Aux: {epoch: %v, value: %v} from: %v",
-		bba.nodeID, bba.height, bba.id, bba.epoch, aux.Epoch, aux.Value, sender)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Aux value: %v from: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, aux.Value, sender)
 	val := aux.Value
 	bba.receivedAux[sender] = val
 	bba.tryOutputAgreement()
@@ -243,44 +182,34 @@ func (bba *BBA) tryOutputAgreement() {
 		return
 	}
 
-	lenOutputs, values := bba.countOutputs()
+	lenOutputs, vals := bba.countOutputs()
 	if lenOutputs < bba.nodesNum-bba.faultsNum {
 		return
 	}
 
 	coin := bba.epoch%2 == 0
-	if bba.done || (bba.decision != nil && bba.decision.(bool) == coin) {
-		// if bba.done || (!bba.decided && bba.decision == coin) {
+	if bba.done || (bba.decided && bba.decision == coin) {
 		bba.done = true
 		return
 	}
 
-	bba.logger.Debugf("[%s](%d-%s-%d) BBA tryOutputAgreement values: %v, coin: %v, values: %v",
-		bba.nodeID, bba.height, bba.id, bba.epoch, values, coin, values)
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA tryOutputAgreement vals: %v, coin: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, vals, coin)
 	bba.increaseEpoch()
-	if len(values) == 1 {
-		// bba.estimated = values[0]
-		// if !bba.decision && values[0] == coin {
-		//   bba.output = values[0]
-		//   bba.decision = values[0]
-		// }
-
-		bba.estimated = values[0]
-		if bba.decision == nil && values[0] == coin {
-			// if !bba.decision && values[0] == coin {
-			bba.output = values[0]
-			bba.decision = values[0]
+	if len(vals) == 1 {
+		bba.estimation = vals[0]
+		if !bba.decided && vals[0] == coin {
+			bba.decided = true
+			bba.decision = vals[0]
+			bba.outputted = true
+			bba.output = vals[0]
 		}
 	} else {
-		bba.estimated = coin
+		bba.estimation = coin
 	}
 
-	// bba.sentBvals = append(bba.sentBvals, bba.estimated)
-	// bba.appendBValRequests(bba.estimated)
-
-	estimated := bba.estimated.(bool)
-	bba.sentBvals = append(bba.sentBvals, estimated)
-	bba.appendBValRequests(estimated)
+	bba.sentBvals = append(bba.sentBvals, bba.estimation)
+	bba.appendBValRequests(bba.estimation)
 
 	bvalBuffer := bba.bvalBuffer
 	bba.bvalBuffer = nil
@@ -347,4 +276,65 @@ func (bba *BBA) hasSentBval(val bool) bool {
 		}
 	}
 	return false
+}
+
+func (bba *BBA) appendBValRequests(val bool) {
+	bvalRequest := &abftpb.BValRequest{
+		Epoch: bba.epoch,
+		Value: val,
+	}
+	bbaRequest := &abftpb.BBARequest{
+		Message: &abftpb.BBARequest_Bval{
+			Bval: bvalRequest,
+		},
+	}
+	acsMessage := &abftpb.ACSMessage{
+		Message: &abftpb.ACSMessage_Bba{
+			Bba: bbaRequest,
+		},
+	}
+
+	for _, n := range bba.nodes {
+		abftMessage := &abftpb.ABFTMessage{
+			Height: bba.height,
+			From:   bba.nodeID,
+			To:     n,
+			Id:     bba.id,
+			Acs:    acsMessage,
+		}
+		bba.messages = append(bba.messages, abftMessage)
+
+		bba.logger.Debugf("[%s](%d-%s-%d) BBA appendBValRequests value: %v to: %v",
+			bba.nodeID, bba.height, bba.id, bba.epoch, val, n)
+	}
+}
+
+func (bba *BBA) appendAuxRequests(val bool) {
+	auxRequest := &abftpb.AuxRequest{
+		Epoch: bba.epoch,
+		Value: val,
+	}
+	bbaRequest := &abftpb.BBARequest{
+		Message: &abftpb.BBARequest_Aux{
+			Aux: auxRequest,
+		},
+	}
+	acsMessage := &abftpb.ACSMessage{
+		Message: &abftpb.ACSMessage_Bba{
+			Bba: bbaRequest,
+		},
+	}
+
+	for _, n := range bba.nodes {
+		abftMessage := &abftpb.ABFTMessage{
+			Height: bba.height,
+			From:   bba.nodeID,
+			To:     n,
+			Id:     bba.id,
+			Acs:    acsMessage,
+		}
+		bba.messages = append(bba.messages, abftMessage)
+		bba.logger.Debugf("[%s](%d-%s-%d) BBA appendAuxRequests value: %v to: %v",
+			bba.nodeID, bba.height, bba.id, bba.epoch, val, n)
+	}
 }
