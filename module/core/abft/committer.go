@@ -102,6 +102,8 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
 
 	if !c.isEmptyBlock() {
+		c.log.Debugf("baseRWSetMap::: %s", c.merger.txBatchInfo[c.merger.baseTxBatchID])
+
 		// get the new RWSetMap after conflict detection
 		if err = c.merger.Merge(block, c.txBatchIDList); err != nil {
 			return err
@@ -148,6 +150,13 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	return nil
 }
+//
+//func (c *Committer) clearMegerCache() {
+//	c.merger.txBatchInfo = make(map[string]*TxBatchInfo)
+//	c.merger.baseTxBatchID = ""
+//	c.merger.rwSetMap = make(map[string]*commonpb.TxRWSet)
+//	c.merger.allTxsMap = make(map[string]*commonpb.Transaction)
+//}
 
 func (c *Committer) handleABAFailTxs() {
 
@@ -206,6 +215,8 @@ func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA
 }
 
 func (c *Committer) prepare(txBatchHashs [][]byte) error {
+
+	c.initCommiter()
 	for _, hash := range txBatchHashs {
 		// set txBatchInfo
 		err, ok := c.setTxBatchInfo(hash)
@@ -219,6 +230,17 @@ func (c *Committer) prepare(txBatchHashs [][]byte) error {
 		}
 	}
 	return nil
+}
+
+func (c *Committer) initCommiter() {
+	c.txBatchIDList = make([]string, 0)
+	c.retryList = make([]*commonpb.Transaction, 0)
+
+	// init merger
+	c.merger.txBatchInfo = make(map[string]*TxBatchInfo)
+	c.merger.baseTxBatchID = ""
+	c.merger.rwSetMap = make(map[string]*commonpb.TxRWSet)
+	c.merger.allTxsMap = make(map[string]*commonpb.Transaction)
 }
 
 func (c *Committer) isEmptyBlock() bool {

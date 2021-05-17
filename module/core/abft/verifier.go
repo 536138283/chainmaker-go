@@ -168,6 +168,7 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 
 	//after verifing block,sync nodes cache the block
 	err = v.abftCache.AddVerifiedTxBatch(block, verifyResult, rwSetMap)
+	v.log.Debugf("AddVerifiedTxBatch:::, height: %s, rwSetMap: %s, rwSetMap :%s", block.Header.BlockHeight, rwSetMap, &rwSetMap)
 	if err != nil {
 		err = fmt.Errorf("sync cache the verified block faield: %s, blockHeight(%d), blockHash(%s)", err.Error(),
 			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
