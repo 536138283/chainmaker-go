@@ -200,7 +200,9 @@ func (consensus *ConsensusABFTImpl) onVerifyResult(message *msgbus.Message) {
 		return
 	}
 
-	consensus.logger.Debugf("[%s](%v) verify result code: %s, msg: %s", consensus.Id, consensus.height, verifyResult.Code, verifyResult.Msg)
+	consensus.logger.Debugf("[%s](%v) verify result code: %s, msg: %s, block: (%v-%x-%x)",
+		consensus.Id, consensus.height, verifyResult.Code, verifyResult.Msg,
+		verifyResult.VerifiedBlock.Header.BlockHeight, verifyResult.VerifiedBlock.Header.BlockHash, verifyResult.VerifiedBlock.Header.PreBlockHash)
 	if verifyResult.Code != consensuspb.VerifyResult_SUCCESS {
 		return
 	}

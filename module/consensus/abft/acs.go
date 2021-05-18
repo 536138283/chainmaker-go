@@ -108,6 +108,9 @@ func (acs *ACS) InputBBA(output []byte) error {
 
 	acs.logger.Debugf("[%s](%d) ACS InputBBA id: %v", acs.nodeID, acs.height, rbcOutput.id)
 	acs.rbcResults[rbcOutput.id] = rbcOutput.output
+	if acs.tryComplete() {
+		return nil
+	}
 	return acs.processBBA(rbcOutput.id, func(bba *BBA) error {
 		if bba.AcceptInput() {
 			return bba.Input(true)
@@ -252,13 +255,13 @@ func (acs *ACS) countFinishedBBA() int {
 	return n
 }
 
-func (acs *ACS) tryComplete() {
+func (acs *ACS) tryComplete() bool {
 	acs.logger.Debugf("[%s](%d) ACS tryComplete decided: %v, finishedBBACount: %v, bbaResults.len: %v",
 		acs.nodeID, acs.height, acs.decided, acs.countFinishedBBA(), len(acs.bbaResults))
 	if acs.decided ||
 		acs.countFinishedBBA() < acs.nodesNum-acs.faultsNum ||
 		len(acs.bbaResults) < acs.nodesNum {
-		return
+		return false
 	}
 
 	bbaTrueDecision := []string{}
@@ -273,9 +276,9 @@ func (acs *ACS) tryComplete() {
 		val, ok := acs.rbcResults[id]
 		if !ok {
 			// Wait for RBC to complete
-			acs.logger.Errorf("[%s](%d) ACS tryComplete wait for rbcResults id: %v, rbcResults: %v",
+			acs.logger.Infof("[%s](%d) ACS tryComplete wait for rbcResults id: %v, rbcResults: %v",
 				acs.nodeID, acs.height, id, funk.Keys(acs.rbcResults))
-			return
+			return false
 		}
 		outputs = append(outputs, val)
 	}
@@ -283,4 +286,5 @@ func (acs *ACS) tryComplete() {
 	acs.outputs = outputs
 	acs.decided = true
 	acs.logger.Debugf("[%s](%d) ACS complete output.len: %v", acs.nodeID, acs.height, len(acs.outputs))
+	return true
 }
