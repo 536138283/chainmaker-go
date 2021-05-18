@@ -8,6 +8,7 @@ package abft
 
 import (
 	"chainmaker.org/chainmaker-go/common/bitmap"
+	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"github.com/prometheus/common/log"
 	"sync"
@@ -19,6 +20,7 @@ type Merger struct {
 	txBatchInfo   map[string]*TxBatchInfo // key -> BatchId
 	baseTxBatchID string
 	allTxsMap     map[string]*commonpb.Transaction // record all transaction(txId->Transaction)
+	log           *logger.CMLogger                 // logger
 }
 
 type TxBatchInfo struct {
@@ -84,20 +86,28 @@ func (m *Merger) doMerge(
 	for _, tx := range txBatch.Txs {
 		txId := tx.Header.TxId
 		rwSet := rwSetMap[txId]
-
+		// rwset != nil
+		if rwSet == nil {
+			continue
+		}
 		// discard repeat tx
 		if _, ok := m.allTxsMap[txId]; ok {
-			updateWriteTable(failTxWriteTable, rwSet)
+			if tx.Result.Code == commonpb.TxStatusCode_SUCCESS {
+				updateWriteTable(failTxWriteTable, rwSet)
+			}
 			continue
 		}
 
-		if ifConflict(rwSet, baseWriteTable, failTxWriteTable) {
-			// modify conflict tx
-			modifyTxResult(tx)
+		if tx.Result.Code == commonpb.TxStatusCode_SUCCESS {
+			if ifConflict(rwSet, baseWriteTable, failTxWriteTable) {
+				// modify conflict tx
+				modifyTxResult(tx)
 
-			updateWriteTable(failTxWriteTable, rwSet)
-			rwSet = modifyTxRWSet(txId)
+				updateWriteTable(failTxWriteTable, rwSet)
+				rwSet = modifyTxRWSet(txId)
+			}
 		}
+
 		// merge RWSetMap
 		baseRWSetMap[txId] = rwSet
 
@@ -140,10 +150,9 @@ func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb
 
 	txCount := len(txBatch.Txs)
 	log.Debugf("start building DAG for block %d with %d txs", txBatch.Header.BlockHeight, txCount)
-
-	txRWSetTable := make([]*commonpb.TxRWSet, txCount)
-	for i, tx := range txBatch.Txs {
-		txRWSetTable[i] = rwSetMap[tx.Header.TxId]
+	txRWSetTable := make([]*commonpb.TxRWSet, 0)
+	for _, tx := range txBatch.Txs {
+		txRWSetTable = append(txRWSetTable, rwSetMap[tx.Header.TxId])
 	}
 
 	// build read-write bitmap for all transactions
@@ -278,8 +287,8 @@ func modifyTxResult(tx *commonpb.Transaction) {
 func modifyTxRWSet(txId string) *commonpb.TxRWSet {
 	return &commonpb.TxRWSet{
 		TxId:     txId,
-		TxReads:  nil,
-		TxWrites: nil,
+		TxReads:  make([]*commonpb.TxRead, 0),
+		TxWrites: make([]*commonpb.TxWrite, 0),
 	}
 }
 

@@ -60,6 +60,7 @@ func NewCommitter(ceConfig *CoreExecuteConfig) *Committer {
 	}
 	committer.commonCommit = common.NewCommitBlock(cbConf)
 	committer.merger = NewMerger()
+	committer.merger.log = ceConfig.Log
 	return committer
 }
 
@@ -150,13 +151,6 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	return nil
 }
-//
-//func (c *Committer) clearMegerCache() {
-//	c.merger.txBatchInfo = make(map[string]*TxBatchInfo)
-//	c.merger.baseTxBatchID = ""
-//	c.merger.rwSetMap = make(map[string]*commonpb.TxRWSet)
-//	c.merger.allTxsMap = make(map[string]*commonpb.Transaction)
-//}
 
 func (c *Committer) handleABAFailTxs() {
 
