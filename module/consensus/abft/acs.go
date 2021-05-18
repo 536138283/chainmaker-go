@@ -13,7 +13,14 @@ import (
 	"sync"
 
 	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
+	"github.com/thoas/go-funk"
 )
+
+type Event struct {
+	rbcOutputs [][]byte
+	messages   []*abftpb.ABFTMessage
+	outputs    [][]byte
+}
 
 type rbcOutput struct {
 	id     string
@@ -28,9 +35,9 @@ type ACS struct {
 	rbcResults     map[string][]byte
 	bbaResults     map[string]bool
 	rbcOutputCache map[string]*rbcOutput
-	rbcOutputCh    chan []byte
-	messageCh      chan *abftpb.ABFTMessage
-	output         map[string][]byte
+	rbcOutputs     [][]byte
+	outputs        [][]byte
+	messages       []*abftpb.ABFTMessage
 	decided        bool
 }
 
@@ -43,8 +50,6 @@ func NewACS(cfg *Config) *ACS {
 		rbcResults:     make(map[string][]byte),
 		bbaResults:     make(map[string]bool),
 		rbcOutputCache: make(map[string]*rbcOutput),
-		rbcOutputCh:    make(chan []byte, 1000),
-		messageCh:      make(chan *abftpb.ABFTMessage, 1000),
 	}
 
 	for _, id := range cfg.nodes {
@@ -72,7 +77,7 @@ func (acs *ACS) InputRBC(val []byte) error {
 		return err
 	}
 
-	acs.appendMessages(rbc.Messages()...)
+	acs.appendMessages(rbc.Messages())
 
 	if output := rbc.Output(); output != nil {
 		acs.handleRBCOutput(acs.nodeID, output)
@@ -127,31 +132,24 @@ func (acs *ACS) HandleMessage(sender string, id string, acsMessage *abftpb.ACSMe
 	return nil
 }
 
-func (acs *ACS) RbcOutputCh() chan []byte {
-	acs.Lock()
-	defer acs.Unlock()
-	return acs.rbcOutputCh
-}
-
-func (acs *ACS) MessageCh() chan *abftpb.ABFTMessage {
+func (acs *ACS) Event() *Event {
 	acs.Lock()
 	defer acs.Unlock()
 
-	return acs.messageCh
-}
-
-func (acs *ACS) Output() map[string][]byte {
-	acs.Lock()
-	defer acs.Unlock()
-
-	if acs.output != nil {
-		output := acs.output
-		acs.output = nil
-		acs.logger.Debugf("[%s](%d-%s) ACS output.len: %v", acs.nodeID, acs.height, acs.id, len(output))
-		return output
+	event := &Event{}
+	if len(acs.rbcOutputs) != 0 {
+		event.rbcOutputs = acs.rbcOutputs
+		acs.rbcOutputs = nil
 	}
-
-	return nil
+	if len(acs.messages) != 0 {
+		event.messages = acs.messages
+		acs.messages = nil
+	}
+	if len(acs.outputs) != 0 {
+		event.outputs = acs.outputs
+		acs.outputs = nil
+	}
+	return event
 }
 
 func (acs *ACS) handleRBC(sender string, id string, rbcMessage *abftpb.RBCRequest) error {
@@ -166,10 +164,8 @@ func (acs *ACS) handleBBA(sender string, id string, bbaMessage *abftpb.BBAReques
 	})
 }
 
-func (acs *ACS) appendMessages(msgs ...*abftpb.ABFTMessage) {
-	for _, msg := range msgs {
-		acs.messageCh <- msg
-	}
+func (acs *ACS) appendMessages(msgs []*abftpb.ABFTMessage) {
+	acs.messages = append(acs.messages, msgs...)
 }
 
 func (acs *ACS) processRBC(id string, f func(rbc *RBC) error) error {
@@ -183,7 +179,7 @@ func (acs *ACS) processRBC(id string, f func(rbc *RBC) error) error {
 	}
 
 	acs.logger.Debugf("[%s](%d) ACS processRBC id: %v", acs.nodeID, acs.height, id)
-	acs.appendMessages(rbc.Messages()...)
+	acs.appendMessages(rbc.Messages())
 
 	if output := rbc.Output(); output != nil {
 		acs.handleRBCOutput(id, output)
@@ -200,7 +196,7 @@ func (acs *ACS) handleRBCOutput(id string, output []byte) {
 	hash := md5.Sum(output)
 	hashStr := base64.StdEncoding.EncodeToString(hash[:])
 	acs.rbcOutputCache[hashStr] = data
-	acs.rbcOutputCh <- output
+	acs.rbcOutputs = append(acs.rbcOutputs, output)
 }
 
 func (acs *ACS) processBBA(id string, f func(bba *BBA) error) error {
@@ -218,7 +214,7 @@ func (acs *ACS) processBBA(id string, f func(bba *BBA) error) error {
 	}
 
 	acs.logger.Debugf("[%s](%d) ACS processBBA id: %v", acs.nodeID, acs.height, id)
-	acs.appendMessages(bba.Messages()...)
+	acs.appendMessages(bba.Messages())
 
 	if outputted, output := bba.Output(); outputted {
 		if _, ok := acs.bbaResults[id]; ok {
@@ -233,7 +229,7 @@ func (acs *ACS) processBBA(id string, f func(bba *BBA) error) error {
 						return err
 					}
 
-					acs.appendMessages(bba.Messages()...)
+					acs.appendMessages(bba.Messages())
 					if outputted, output := bba.Output(); outputted {
 						acs.bbaResults[id] = output
 					}
@@ -272,17 +268,19 @@ func (acs *ACS) tryComplete() {
 		}
 	}
 
-	output := make(map[string][]byte)
+	outputs := make([][]byte, 0)
 	for _, id := range bbaTrueDecision {
 		val, ok := acs.rbcResults[id]
 		if !ok {
 			// Wait for RBC to complete
+			acs.logger.Errorf("[%s](%d) ACS tryComplete wait for rbcResults id: %v, rbcResults: %v",
+				acs.nodeID, acs.height, id, funk.Keys(acs.rbcResults))
 			return
 		}
-		output[id] = val
+		outputs = append(outputs, val)
 	}
 
-	acs.output = output
+	acs.outputs = outputs
 	acs.decided = true
-	acs.logger.Debugf("[%s](%d) ACS complete output.len: %v", acs.nodeID, acs.height, len(acs.output))
+	acs.logger.Debugf("[%s](%d) ACS complete output.len: %v", acs.nodeID, acs.height, len(acs.outputs))
 }
