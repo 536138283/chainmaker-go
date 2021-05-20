@@ -8,16 +8,16 @@ SPDX-License-Identifier: Apache-2.0
 package blockchain
 
 import (
-	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
+	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
+
 	"chainmaker.org/chainmaker-go/accesscontrol"
 	"chainmaker.org/chainmaker-go/chainconf"
-	"chainmaker.org/chainmaker-go/common/helper"
 	"chainmaker.org/chainmaker-go/consensus"
 	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
@@ -36,20 +36,6 @@ import (
 
 // Init all the modules.
 func (bc *Blockchain) Init() (err error) {
-	var (
-		moduleNameSubscriber    = "Subscriber"
-		moduleNameStore         = "Store"
-		moduleNameLedger        = "Ledger"
-		moduleNameChainConf     = "ChainConf"
-		moduleNameAccessControl = "AccessControl"
-		moduleNameNetService    = "NetService"
-		moduleNameVM            = "VM"
-		moduleNameTxPool        = "TxPool"
-		moduleNameCore          = "Core"
-		moduleNameConsensus     = "Consensus"
-		moduleNameSync          = "Sync"
-	)
-
 	baseModules := []map[string]func() error{
 		// init Subscriber
 		{moduleNameSubscriber: bc.initSubscriber},
@@ -141,15 +127,26 @@ func (bc *Blockchain) initExtModules(extModules []map[string]func() error) (err 
 }
 
 func (bc *Blockchain) initNetService() (err error) {
+	_, ok := bc.initModules[moduleNameNetService]
+	if ok {
+		bc.log.Infof("net service module existed, ignore.")
+		return
+	}
 	var netServiceFactory net.NetServiceFactory
 	if bc.netService, err = netServiceFactory.NewNetService(bc.net, bc.chainId, bc.ac, bc.chainConf, net.WithMsgBus(bc.msgBus)); err != nil {
 		bc.log.Errorf("new net service failed, %s", err)
 		return
 	}
+	bc.initModules[moduleNameNetService] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initStore() (err error) {
+	_, ok := bc.initModules[moduleNameStore]
+	if ok {
+		bc.log.Infof("store module existed, ignore.")
+		return
+	}
 	var storeFactory store.Factory
 	var storeType types.EngineType
 	switch strings.ToLower(localconf.ChainMakerConfig.StorageConfig.Provider) {
@@ -166,10 +163,16 @@ func (bc *Blockchain) initStore() (err error) {
 		bc.log.Errorf("new store failed, %s", err.Error())
 		return err
 	}
+	bc.initModules[moduleNameStore] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initChainConf() (err error) {
+	_, ok := bc.initModules[moduleNameChainConf]
+	if ok {
+		bc.log.Infof("chain config module existed, ignore.")
+		return
+	}
 	bc.chainConf, err = chainconf.NewChainConf(
 		chainconf.WithChainId(bc.chainId),
 		chainconf.WithMsgBus(bc.msgBus),
@@ -189,10 +192,19 @@ func (bc *Blockchain) initChainConf() (err error) {
 		bc.log.Errorf("load node list of chain config failed, %s", err)
 		return err
 	}
+	bc.initModules[moduleNameChainConf] = struct{}{}
+
+	// register myself as config watcher
+	bc.chainConf.AddWatch(bc)
 	return
 }
 
 func (bc *Blockchain) initCache() (err error) {
+	_, ok := bc.initModules[moduleNameLedger]
+	if ok {
+		bc.log.Infof("ledger module existed, ignore.")
+		return
+	}
 	// create genesis block
 	// 1) if not exist on chain, create it
 	// 2) if exist on chain, load the config in genesis, it will be changed to load the config in config transactions in the future
@@ -214,7 +226,7 @@ func (bc *Blockchain) initCache() (err error) {
 		if err != nil {
 			return fmt.Errorf("create chain [%s] genesis failed, %s", bc.chainId, err.Error())
 		}
-		if err = bc.store.PutBlock(genesisBlock, rwSetList); err != nil {
+		if err = bc.store.PutBlock(genesisBlock, rwSetList, nil); err != nil {
 			return fmt.Errorf("put chain[%s] genesis block failed, %s", bc.chainId, err.Error())
 		}
 
@@ -231,10 +243,16 @@ func (bc *Blockchain) initCache() (err error) {
 	bc.ledgerCache.SetLastCommittedBlock(bc.lastBlock)
 	bc.proposalCache = cache.NewProposalCache(bc.chainConf, bc.ledgerCache)
 	bc.log.Debugf("go last block: %+v", bc.lastBlock)
+	bc.initModules[moduleNameLedger] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initAC() (err error) {
+	_, ok := bc.initModules[moduleNameAccessControl]
+	if ok {
+		bc.log.Infof("access control module existed, ignore.")
+		return
+	}
 	// initialize access control: policy list and resource-policy mapping
 	nodeConfig := localconf.ChainMakerConfig.NodeConfig
 	skFile := nodeConfig.PrivKeyFile
@@ -259,16 +277,22 @@ func (bc *Blockchain) initAC() (err error) {
 	}
 
 	bc.identity = bc.ac.GetLocalSigningMember()
+	bc.initModules[moduleNameAccessControl] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initTxPool() (err error) {
+	_, ok := bc.initModules[moduleNameTxPool]
+	if ok {
+		bc.log.Infof("tx pool module existed, ignore.")
+		return
+	}
 	// init transaction pool
 	var (
 		txPoolFactory txpool.TxPoolFactory
 		txType        = txpool.SINGLE
 	)
-	if localconf.ChainMakerConfig.DebugConfig.UseBatchTxPool {
+	if strings.ToUpper(localconf.ChainMakerConfig.TxPoolConfig.PoolType) == string(txpool.BATCH) {
 		txType = txpool.BATCH
 	}
 	bc.txPool, err = txPoolFactory.NewTxPool(
@@ -286,10 +310,16 @@ func (bc *Blockchain) initTxPool() (err error) {
 		bc.log.Errorf("new tx pool failed, %s", err)
 		return err
 	}
+	bc.initModules[moduleNameTxPool] = struct{}{}
 	return nil
 }
 
 func (bc *Blockchain) initVM() (err error) {
+	_, ok := bc.initModules[moduleNameVM]
+	if ok {
+		bc.log.Infof("vm module existed, ignore.")
+		return
+	}
 	// init VM
 	var snapshotFactory snapshot.Factory
 	var vmFactory vm.Factory
@@ -299,10 +329,16 @@ func (bc *Blockchain) initVM() (err error) {
 	} else {
 		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.snapshotManager, bc.chainId, bc.ac, bc.netService.GetChainNodesInfoProvider())
 	}
+	bc.initModules[moduleNameVM] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initCore() (err error) {
+	_, ok := bc.initModules[moduleNameCore]
+	if ok {
+		bc.log.Infof("core engine module existed, ignore.")
+		return
+	}
 	// init core engine
 	var coreFactory core.CoreFactory
 	bc.coreEngine, err = coreFactory.NewCoreWithOptions(
@@ -323,6 +359,7 @@ func (bc *Blockchain) initCore() (err error) {
 		bc.log.Errorf("new core engine failed, %s", err.Error())
 		return err
 	}
+	bc.initModules[moduleNameCore] = struct{}{}
 	return
 }
 
@@ -332,14 +369,24 @@ func (bc *Blockchain) initConsensus() (err error) {
 	id := localconf.ChainMakerConfig.NodeConfig.NodeId
 	nodes := bc.chainConf.ChainConfig().Consensus.Nodes
 	nodeIds := make([]string, len(nodes))
+	isConsensusNode := false
 	for i, node := range nodes {
-		for _, addr := range node.Address {
-			uid, err := helper.GetNodeUidFromAddr(addr)
-			if err != nil {
-				return err
+		for _, nid := range node.NodeId {
+			nodeIds[i] = nid
+			if nid == id {
+				isConsensusNode = true
 			}
-			nodeIds[i] = uid
 		}
+	}
+	if !isConsensusNode {
+		// this node is not a consensus node
+		delete(bc.initModules, moduleNameConsensus)
+		return nil
+	}
+	_, ok := bc.initModules[moduleNameConsensus]
+	if ok {
+		bc.log.Infof("consensus module existed, ignore.")
+		return
 	}
 	dbHandle := bc.store.GetDBHandle(protocol.ConsensusDBName)
 	bc.consensus, err = consensusFactory.NewConsensusEngine(
@@ -357,15 +404,22 @@ func (bc *Blockchain) initConsensus() (err error) {
 		bc.netService,
 		bc.msgBus,
 		bc.chainConf,
-		bc.store)
+		bc.store,
+		bc.coreEngine.HotStuffHelper)
 	if err != nil {
 		bc.log.Errorf("new consensus engine failed, %s", err)
 		return err
 	}
+	bc.initModules[moduleNameConsensus] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initSync() (err error) {
+	_, ok := bc.initModules[moduleNameSync]
+	if ok {
+		bc.log.Infof("sync module existed, ignore.")
+		return
+	}
 	// init sync service module
 	bc.syncServer = blockSync.NewBlockChainSyncServer(
 		bc.chainId,
@@ -376,11 +430,22 @@ func (bc *Blockchain) initSync() (err error) {
 		bc.coreEngine.BlockVerifier,
 		bc.coreEngine.BlockCommitter,
 	)
-
+	bc.initModules[moduleNameSync] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initSubscriber() error {
+	_, ok := bc.initModules[moduleNameSubscriber]
+	if ok {
+		bc.log.Infof("subscriber module existed, ignore.")
+		return nil
+	}
 	bc.eventSubscriber = subscriber.NewSubscriber(bc.msgBus)
+	bc.initModules[moduleNameSubscriber] = struct{}{}
 	return nil
+}
+
+func (bc *Blockchain) isModuleInit(moduleName string) bool {
+	_, ok := bc.initModules[moduleName]
+	return ok
 }

@@ -96,7 +96,7 @@ mockgen-dep:
 
 docker-build:
 	docker build -t chainmaker -f ./DOCKER/Dockerfile .
-	docker tag chainmaker chainmaker:v1.0.0_r
+	docker tag chainmaker chainmaker:v1.1.0
 
 docker-build-dev:
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
