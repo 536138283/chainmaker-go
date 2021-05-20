@@ -31,7 +31,7 @@ func TestFinalizeBlock(t *testing.T) {
 	fmt.Println(er)
 }
 
-func verifyBlockPrepare(t *testing.T) (*VerifyBlock, *commonpb.Block) {
+func verifyBlockPrepare(t *testing.T) (*VerifierBlock, *commonpb.Block) {
 	ctl := gomock.NewController(t)
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, "chain1")
 	chainConf := mock.NewMockChainConf(ctl)
@@ -158,7 +158,7 @@ func verifyBlockPrepare(t *testing.T) (*VerifyBlock, *commonpb.Block) {
 		TxPool:          txPool,
 		BlockchainStore: store,
 	}
-	return NewVerifyBlock(conf), block
+	return NewVerifierBlock(conf), block
 }
 
 func TestBlockVerify(t *testing.T) {

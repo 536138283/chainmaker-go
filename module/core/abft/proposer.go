@@ -128,7 +128,7 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 	vmStartTick := utils.CurrentTimeMillisSeconds()
 	ssLasts := vmStartTick - ssStartTick
 
-	txRWSetMap, err := p.txScheduler.Schedule(blockBatch, p.txBatch, snapshot)
+	txRWSetMap, _, err := p.txScheduler.Schedule(blockBatch, p.txBatch, snapshot)
 
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
 	timeLasts = append(timeLasts, ssLasts, vmLasts)

@@ -55,7 +55,6 @@ type CoreEngine struct {
 // NewCoreEngine new a core engine.
 func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 	core := &CoreEngine{
-		chainConf:       cf.chainConf,
 		msgBus:          cf.msgBus,
 		txPool:          cf.txPool,
 		vmMgr:           cf.vmMgr,
@@ -127,7 +126,7 @@ func NewCoreEngine(cf *CoreFactory) (*CoreEngine, error) {
 	if err != nil {
 		return nil, err
 	}
-	if core.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_ABFT {
+	if core.chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_ABFT {
 		ceConf := &abft.CoreExecuteConfig{
 			ChainId:         cf.chainId,
 			TxPool:          core.txPool,
@@ -199,7 +198,7 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 
 // Start, initialize core engine
 func (c *CoreEngine) Start() {
-	if c.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
+	if c.chainConf.ChainConfig().Consensus.Type != consensuspb.ConsensusType_ABFT {
 		c.msgBus.Register(msgbus.ProposeState, c)
 		c.msgBus.Register(msgbus.VerifyBlock, c)
 		c.msgBus.Register(msgbus.CommitBlock, c)

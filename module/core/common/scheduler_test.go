@@ -191,7 +191,7 @@ func TestSchedule(t *testing.T) {
 
 	snapshot.EXPECT().BuildDAG().Return(dag)
 
-	txRWSetMap, err := scheduler.Schedule(block, txBatch, snapshot)
+	txRWSetMap, _, err := scheduler.Schedule(block, txBatch, snapshot)
 
 	if err != nil {
 		fmt.Printf("error : %s", err.Error())

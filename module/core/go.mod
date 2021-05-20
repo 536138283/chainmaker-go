@@ -24,7 +24,7 @@ require (
 )
 
 replace (
-	//chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
+	chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
 	chainmaker.org/chainmaker-go/chainconf => ./../conf/chainconf
 	chainmaker.org/chainmaker-go/common => ../../common
 	chainmaker.org/chainmaker-go/consensus => ../consensus
