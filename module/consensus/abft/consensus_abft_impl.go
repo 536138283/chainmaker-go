@@ -16,7 +16,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/thoas/go-funk"
 
-	"chainmaker.org/chainmaker-go/common/helper"
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
@@ -342,12 +341,8 @@ func (consensus *ConsensusABFTImpl) publishToMsgbus(msg *netpb.NetMsg) {
 func GetNodeListFromConfig(chainConfig *config.ChainConfig) (validators []string, err error) {
 	nodes := chainConfig.Consensus.Nodes
 	for _, node := range nodes {
-		for _, addr := range node.Address {
-			uid, err := helper.GetNodeUidFromAddr(addr)
-			if err != nil {
-				return nil, err
-			}
-			validators = append(validators, uid)
+		for _, nid := range node.NodeId {
+			validators = append(validators, nid)
 		}
 	}
 	return validators, nil

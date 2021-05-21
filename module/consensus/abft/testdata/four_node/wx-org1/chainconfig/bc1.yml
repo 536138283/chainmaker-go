@@ -26,11 +26,11 @@ consensus:
   # 共识节点列表，组织必须出现在trust_roots的org_id中，每个组织可配置多个共识节点，节点地址采用libp2p格式
   nodes:
     - org_id: "wx-org1.chainmaker.org"
-      address:
-        - "/ip4/192.168.2.2/tcp/6666/p2p/QmcQHCuAXaFkbcsPUj7e37hXXfZ9DdN7bozseo5oX4qiC4"
+      node_id:
+        - "QmcQHCuAXaFkbcsPUj7e37hXXfZ9DdN7bozseo5oX4qiC4"
     - org_id: "wx-org2.chainmaker.org"
-      address:
-        - "/ip4/192.168.2.3/tcp/6666/p2p/QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
+      node_id:
+        - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
     # - org_id: "wx-org3.chainmaker.org"
     #   address:
     #     - "/ip4/192.168.2.4/tcp/6666/p2p/QmXf6mnQDBR9aHauRmViKzSuZgpumkn7x6rNxw1oqqRr45"
@@ -53,27 +53,27 @@ trust_roots:
     root: "../config/wx-org4/certs/ca/wx-org4.chainmaker.org/ca.crt"
 
 # 权限配置（只能整体添加、修改、删除）
-permissions:
-  - resource_name: NODE_ADDR_UPDATE
-    principle:
+resource_policies:
+  - resource_name: NODE_ID_UPDATE
+    policy:
       rule: SELF # 规则（ANY，MAJORITY...，全部大写，自动转大写）
       org_list: # 组织名称（组织名称，区分大小写）
       role_list: # 角色名称（role，全部小写，自动转小写）
         - admin
   - resource_name: TRUST_ROOT_UPDATE
-    principle:
+    policy:
       rule: SELF # 规则（ANY，MAJORITY...，全部大写）
       org_list: # 组织名称（组织名称）
       role_list: # 角色名称（role，全部小写）
         - admin
   - resource_name: CONSENSUS_EXT_DELETE
-    principle:
+    policy:
       rule: MAJORITY
       org_list:
       role_list:
         - admin
   - resource_name: BLOCK_UPDATE
-    principle:
+    policy:
       rule: ANY
       org_list:
       role_list:
