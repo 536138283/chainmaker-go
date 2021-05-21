@@ -102,7 +102,7 @@ func (mr *MockSnapshotMockRecorder) ApplyTxSimContext(arg0, arg1 interface{}) *g
 }
 
 // BuildDAG mocks base method.
-func (m *MockSnapshot) BuildDAG() *common.DAG {
+func (m *MockSnapshot) BuildDAG(isSql bool) *common.DAG {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "BuildDAG")
 	ret0, _ := ret[0].(*common.DAG)
@@ -127,6 +127,20 @@ func (m *MockSnapshot) GetBlockHeight() int64 {
 func (mr *MockSnapshotMockRecorder) GetBlockHeight() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHeight", reflect.TypeOf((*MockSnapshot)(nil).GetBlockHeight))
+}
+
+// GetBlockProposer mocks base method.
+func (m *MockSnapshot) GetBlockProposer() []byte {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetBlockProposer")
+	ret0, _ := ret[0].([]byte)
+	return ret0
+}
+
+// GetBlockProposer indicates an expected call of GetBlockProposer.
+func (mr *MockSnapshotMockRecorder) GetBlockProposer() *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockProposer", reflect.TypeOf((*MockSnapshot)(nil).GetBlockProposer))
 }
 
 // GetBlockchainStore mocks base method.
