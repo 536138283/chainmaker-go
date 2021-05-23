@@ -121,9 +121,6 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 }
 
 func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
-	v.log.Debug("Verifier start.")
-	v.log.Debug("Block::: %s", block.Header)
-	// verify nil block
 	if block == nil {
 		return fmt.Errorf("verify failed, block is nil")
 	}
@@ -141,7 +138,8 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 	proposedTxBatchCache := v.abftCache.GetProposedTxBatch()
 	fingerPrint := utils.CalcBlockFingerPrint(block)
 	if proposedTxBatchCache != nil &&
-		string(proposedTxBatchCache.GetFingerPrint()) == string(fingerPrint) {
+		string(proposedTxBatchCache.GetFingerPrint()) == string(fingerPrint) &&
+		hex.EncodeToString(block.Header.BlockHash) == hex.EncodeToString(proposedTxBatchCache.GetTxBatch().Header.BlockHash) {
 		verifyResult := true
 		err := v.abftCache.AddVerifiedTxBatch(block, verifyResult, proposedTxBatchCache.GetRwSetMap())
 		if err != nil {

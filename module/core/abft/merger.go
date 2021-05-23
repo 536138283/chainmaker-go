@@ -10,7 +10,6 @@ import (
 	"chainmaker.org/chainmaker-go/common/bitmap"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"github.com/prometheus/common/log"
 	"sync"
 )
 
@@ -86,10 +85,6 @@ func (m *Merger) doMerge(
 	for _, tx := range txBatch.Txs {
 		txId := tx.Header.TxId
 		rwSet := rwSetMap[txId]
-		// rwset != nil
-		if rwSet == nil {
-			continue
-		}
 		// discard repeat tx
 		if _, ok := m.allTxsMap[txId]; ok {
 			if tx.Result.Code == commonpb.TxStatusCode_SUCCESS {
@@ -149,11 +144,12 @@ func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb
 	defer m.lock.Unlock()
 
 	txCount := len(txBatch.Txs)
-	log.Debugf("start building DAG for block %d with %d txs", txBatch.Header.BlockHeight, txCount)
+	m.log.Debugf("start building DAG for block %d with %d txs", txBatch.Header.BlockHeight, txCount)
 	txRWSetTable := make([]*commonpb.TxRWSet, 0)
 	for _, tx := range txBatch.Txs {
 		txRWSetTable = append(txRWSetTable, rwSetMap[tx.Header.TxId])
 	}
+	m.log.Debugf("txRWSetTable:::%s, len:::%d, cap ::: %d", txRWSetTable, len(txRWSetTable), cap(txRWSetTable))
 
 	// build read-write bitmap for all transactions
 	readBitmaps, writeBitmaps := buildRWBitmaps(txCount, txRWSetTable)
@@ -199,7 +195,7 @@ func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb
 			dag.Vertexes[i].Neighbors = append(dag.Vertexes[i].Neighbors, int32(j))
 		}
 	}
-	log.Debugf("build DAG for block %d finished", txBatch.Header.BlockHeight)
+	m.log.Debugf("build DAG for block %d finished", txBatch.Header.BlockHeight)
 	return dag
 
 }
