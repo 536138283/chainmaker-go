@@ -14,7 +14,6 @@ import (
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
-	"encoding/hex"
 	"fmt"
 )
 
@@ -179,7 +178,11 @@ func IsTxDuplicate(txs []*commonpb.Transaction) bool {
 func IsMerkleRootValid(block *commonpb.Block, txHashes [][]byte, hashType string) error {
 	txRoot, err := hash.GetMerkleRoot(hashType, txHashes)
 	if err != nil || !bytes.Equal(txRoot, block.Header.TxRoot) {
-		return fmt.Errorf("txroot expect %x, got %x", block.Header.TxRoot, txRoot)
+		return fmt.Errorf(
+			"txroot expect %x, got %x; " +
+			"hashType expect %x,got %x; " +
+			"txHashes got %x; " +
+			"height: %d; error: %x", block.Header.TxRoot, txRoot, hashType, hashType, txHashes, block.Header.BlockHeight, err)
 	}
 	return nil
 }
@@ -293,10 +296,6 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	}
 
 	lastBlock = vb.ledgerCache.GetLastCommittedBlock()
-	vb.log.Debugf("common block:::", block.Header)
-	vb.log.Debugf("common lastBlock:::", lastBlock.Header)
-	vb.log.Debugf("block 's pre blockHash:::%s", hex.EncodeToString(block.Header.PreBlockHash))
-	vb.log.Debugf("lastBlock 's blockHash:::%s", hex.EncodeToString(lastBlock.Header.BlockHash))
 
 	err = checkPreBlock(block, lastBlock)
 	if err != nil {
@@ -362,6 +361,9 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, err := verifiertx.VerifierTxs()
+	if err != nil {
+		return txRWSetMap, timeLasts, err
+	}
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts = append(timeLasts, txLasts)
 
@@ -400,7 +402,7 @@ func VerifyHeight(height int64, ledgerCache protocol.LedgerCache) error {
 		return err
 	}
 	if currentHeight+1 != height {
-		return fmt.Errorf("verify height fail,expected [%d]", currentHeight+1)
+		return fmt.Errorf("verify height fail,expected [%d], got [%d]", currentHeight+1, height)
 	}
 	return nil
 }

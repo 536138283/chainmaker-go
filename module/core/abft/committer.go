@@ -80,6 +80,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	// set txBatchID list & txBatchInfo
 	err := c.prepare(txBatchHashs)
 	if err != nil {
+		c.log.Error("prepare commit fail,err: %s, height: (%d)", err.Error(), blockHeight)
 		return err
 	}
 
@@ -93,6 +94,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	lastBlock := c.ledgerCache.GetLastCommittedBlock()
 	block, err := common.InitNewBlock(lastBlock, c.identity, c.chainID, c.chainConf)
 	if err != nil {
+		c.log.Error("init new block fail,err: %s,height: (%d)", err.Error(), blockHeight)
 		return err
 	}
 
@@ -103,10 +105,9 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
 
 	if !c.isEmptyBlock() {
-		c.log.Debugf("baseRWSetMap::: %s", c.merger.txBatchInfo[c.merger.baseTxBatchID])
-
 		// get the new RWSetMap after conflict detection
 		if err = c.merger.Merge(block, c.txBatchIDList); err != nil {
+			c.log.Error("merge txBatch fail,err: %s, height: (%d)", err.Error(), blockHeight)
 			return err
 		}
 
@@ -114,13 +115,13 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 		var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
 		err = common.FinalizeBlock(block, rwSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash)
 		if err != nil {
+			c.log.Error("finalize block fail,err: %s, height: (%d)", err.Error(), blockHeight)
 			return err
 		}
 	}
 
 	// set proposer nil
 	block.Header.Proposer = []byte{}
-	c.log.Debugf("block before sig:::", c.merger.txBatchInfo)
 	hash, sig, err := utils.SignBlock(c.chainConf.ChainConfig().Crypto.Hash, c.identity, block)
 	if err != nil {
 		c.log.Errorf("[%s]sign block failed, %s", c.identity.GetMemberId(), err)
@@ -128,7 +129,6 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	block.Header.BlockHash = hash[:]
 	block.Header.Signature = sig
-	//todo set sig empty
 	block.Header.Signature = []byte{}
 	c.log.Debugf("commit block: %s", block)
 	err = c.commonCommit.CommitBlock(block, rwSetMap)
@@ -179,21 +179,21 @@ func (c *Committer) sortTxBatchID() {
 	}
 }
 
-func (c *Committer) setTxBatchInfo(txBatchHash []byte) (error, bool) {
+func (c *Committer) setTxBatchInfo(txBatchHash []byte) bool{
 	txBatch, err := c.abftCache.GetVerifiedTxBatchByHash(txBatchHash)
 	if err != nil {
-		return err, false
+		return false
 	}
 
 	if !txBatch.GetVerifyResult() {
-		return nil, false
+		return false
 	}
 
 	c.merger.txBatchInfo[hex.EncodeToString(txBatchHash)] = &TxBatchInfo{
 		txBatch:  txBatch.GetTxBatch(),
 		rwSetMap: txBatch.GetTxBatchRwSet(),
 	}
-	return nil, true
+	return true
 }
 
 func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA map[string]*commonpb.Block) {
@@ -209,24 +209,18 @@ func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA
 }
 
 func (c *Committer) prepare(txBatchHashs [][]byte) error {
-
-	c.initCommiter()
+	c.clearCommiter()
 	for _, hash := range txBatchHashs {
 		// set txBatchInfo
-		err, ok := c.setTxBatchInfo(hash)
-		if err != nil {
-			return err
-		}
-
-		// set txBatchIDList
-		if ok {
+		if ok := c.setTxBatchInfo(hash); ok {
+			// set txBatchIDList
 			c.txBatchIDList = append(c.txBatchIDList, hex.EncodeToString(hash))
 		}
 	}
 	return nil
 }
 
-func (c *Committer) initCommiter() {
+func (c *Committer) clearCommiter() {
 	c.txBatchIDList = make([]string, 0)
 	c.retryList = make([]*commonpb.Transaction, 0)
 
@@ -239,7 +233,6 @@ func (c *Committer) initCommiter() {
 
 func (c *Committer) isEmptyBlock() bool {
 	for _, txBatchID := range c.txBatchIDList {
-		c.log.Debugf("txBatchInfo::: %s", c.merger.txBatchInfo)
 		if len(c.merger.txBatchInfo[txBatchID].txBatch.Txs) != 0 {
 			return false
 		}
@@ -262,14 +255,12 @@ func (c *Committer) AddBlock(block *commonpb.Block) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.log.Debugf("AddBlock::: start")
-
 	//verify height
 	err := common.VerifyHeight(block.Header.BlockHeight, c.ledgerCache)
 	if err != nil {
 		return err
 	}
-	c.log.Debugf("VerifyHeight::: finish!")
+
 	abftBlock, err := c.abftCache.GetVerifiedTxBatchByHash(block.Header.BlockHash)
 	if err != nil {
 		return err
@@ -278,24 +269,18 @@ func (c *Committer) AddBlock(block *commonpb.Block) error {
 		return fmt.Errorf("[AddBlock] the block is not in the cache, blockHeight(%d), blockHash(%s)", block.Header.BlockHeight,
 			hex.EncodeToString(block.Header.BlockHash))
 	}
-	c.log.Debugf("CommitBlock::: start!")
+
 	err = c.commonCommit.CommitBlock(abftBlock.GetTxBatch(), abftBlock.GetTxBatchRwSet())
 	if err != nil {
 		c.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
 		return err
 	}
-	if err != nil {
-		return err
-	}
 
-	c.log.Debug("remove txs")
 	//sync txpool(put retryList back txpool & delete blocked tx)
 	c.txPool.RetryAndRemoveTxs(nil, block.Txs)
 
-	c.log.Debug("clear abft cache")
 	//clear abft catche
 	c.abftCache.ClearAbftCache()
 
-	c.log.Debugf("AddBlock::: finish!")
 	return nil
 }

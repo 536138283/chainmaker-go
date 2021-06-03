@@ -79,7 +79,6 @@ func NewVerifier(ceConfig *CoreExecuteConfig) (*Verifier, error) {
 func (v *Verifier) verifyBlock(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	emptyTxRwSetMap := make(map[string]*commonPb.TxRWSet)
-	// todo signature is empty now
 	//if err := utils.IsEmptyBlock(block); err != nil {
 	//	return false, emptyTxRwSetMap, err
 	//}
@@ -156,21 +155,18 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 	if err != nil {
 		v.log.Errorf("verify failed:%s,[%d],(%s)", err.Error(), block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 	}
-	if mode == protocol.CONSENSUS_VERIFY {
-		err = v.verifyResult(block, rwSetMap, verifyResult)
-		if err != nil {
-			return err
-		}
-		return nil
-	}
 
-	//after verifing block,sync nodes cache the block
 	err = v.abftCache.AddVerifiedTxBatch(block, verifyResult, rwSetMap)
 	if err != nil {
 		err = fmt.Errorf("sync cache the verified block faield: %s, blockHeight(%d), blockHash(%s)", err.Error(),
 			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 		return err
 	}
+
+	if mode == protocol.CONSENSUS_VERIFY {
+		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
+	}
+
 	return nil
 }
 
@@ -186,15 +182,4 @@ func (v *Verifier) verifyTask(block *commonPb.Block, mode protocol.VerifyMode) f
 				hex.EncodeToString(block.Header.BlockHash))
 		}
 	}
-}
-
-func (v *Verifier) verifyResult(block *commonPb.Block, rwSet map[string]*commonPb.TxRWSet, verifyResult bool) error {
-	err := v.abftCache.AddVerifiedTxBatch(block, verifyResult, rwSet)
-	v.log.Debugf("AddVerifiedTxBatch:::, height: %s, rwSet: %s" , block.Header.BlockHeight, rwSet)
-	if err != nil {
-		return fmt.Errorf("abft add tx batch faield: %s, blockHeight(%d), txBatchHash(%s)", err.Error(),
-			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
-	}
-	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
-	return nil
 }

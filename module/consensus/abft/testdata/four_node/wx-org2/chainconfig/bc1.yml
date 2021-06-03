@@ -31,12 +31,12 @@ consensus:
     - org_id: "wx-org2.chainmaker.org"
       node_id:
         - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
-    # - org_id: "wx-org3.chainmaker.org"
-    #   address:
-    #     - "/ip4/192.168.2.4/tcp/6666/p2p/QmXf6mnQDBR9aHauRmViKzSuZgpumkn7x6rNxw1oqqRr45"
-    # - org_id: "wx-org4.chainmaker.org"
-    #   address:
-    #     - "/ip4/192.168.2.5/tcp/6666/p2p/QmRRWXJpAVdhFsFtd9ah5F4LDQWFFBDVKpECAF8hssqj6H"
+     - org_id: "wx-org3.chainmaker.org"
+       address:
+         - "/ip4/192.168.2.4/tcp/6666/p2p/QmXf6mnQDBR9aHauRmViKzSuZgpumkn7x6rNxw1oqqRr45"
+     - org_id: "wx-org4.chainmaker.org"
+       address:
+         - "/ip4/192.168.2.5/tcp/6666/p2p/QmRRWXJpAVdhFsFtd9ah5F4LDQWFFBDVKpECAF8hssqj6H"
   ext_config: # 扩展字段，记录难度、奖励等其他类共识算法配置
     - key: TBFT_propose_timeout
       value: "30s" 

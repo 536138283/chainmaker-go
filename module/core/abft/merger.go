@@ -149,7 +149,6 @@ func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb
 	for _, tx := range txBatch.Txs {
 		txRWSetTable = append(txRWSetTable, rwSetMap[tx.Header.TxId])
 	}
-	m.log.Debugf("txRWSetTable:::%s, len:::%d, cap ::: %d", txRWSetTable, len(txRWSetTable), cap(txRWSetTable))
 
 	// build read-write bitmap for all transactions
 	readBitmaps, writeBitmaps := buildRWBitmaps(txCount, txRWSetTable)
