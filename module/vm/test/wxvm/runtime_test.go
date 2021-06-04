@@ -22,6 +22,7 @@ import (
 )
 
 func Test_invoke_cpp(t *testing.T) {
+	test.WasmFile = "../../../../test/wasm/cpp-func-verify-1.0.0.wasm"
 	runtimeInstance := &wxvm.RuntimeInstance{
 		ChainId:     "chain01",
 		CtxService:  xvm.NewContextService(""),
@@ -30,7 +31,7 @@ func Test_invoke_cpp(t *testing.T) {
 
 	logger := logger.GetLoggerByChain(logger.MODULE_VM, "chain01")
 
-	method := "call_contract"
+	method := "functional_verify"
 	count := 1
 	start := time.Now()
 	var wg sync.WaitGroup
@@ -66,5 +67,5 @@ func Test_invoke_cpp(t *testing.T) {
 		}()
 	}
 	wg.Wait()
-	fmt.Printf("method [%+v], tx count %+v, time cost %+v\n", method, count, time.Since(start))
+	fmt.Printf("method [%+v], tx count %+v, time used %+v\n", method, count, time.Since(start))
 }

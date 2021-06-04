@@ -117,6 +117,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Hash:    codeHash,
 	}
 	r.Address = address
+	r.ContractId = contractId
 	// new evm instance
 	lastBlock, _ := txSimContext.GetBlockchainStore().GetLastBlock()
 	externalStore := &storage.ContractStorage{Ctx: txSimContext}
@@ -171,11 +172,12 @@ func (r *RuntimeInstance) callback(result evm_go.ExecuteResult, err error) {
 	for n, v := range result.StorageCache.CachedData {
 		for k, val := range v {
 			r.TxSimContext.Put(n, []byte(k), val.Bytes())
+			//fmt.Println("n k val", n, k, val, val.String())
 		}
 	}
 	if len(result.StorageCache.Destructs) > 0 {
-		revokeKey := []byte(protocol.ContractRevoke)
-		if err := r.TxSimContext.Put(r.ContractId.ContractName, revokeKey, []byte(r.ContractId.ContractName)); err != nil {
+		revokeKey := []byte(protocol.ContractRevoke + r.ContractId.ContractName)
+		if err := r.TxSimContext.Put(commonPb.ContractName_SYSTEM_CONTRACT_STATE.String(), revokeKey, []byte(r.ContractId.ContractName)); err != nil {
 			panic(err)
 		}
 		r.Log.Infof("destruction encountered in contract [%s] execution, tx: [%s]",
@@ -187,15 +189,18 @@ func (r *RuntimeInstance) callback(result evm_go.ExecuteResult, err error) {
 			r.Log.Errorf("failed to save contractName %s", err.Error())
 			panic(err)
 		}
-		if err := r.TxSimContext.Put(r.Address.String(), []byte(protocol.ContractVersion), []byte(r.ContractId.ContractVersion)); err != nil {
+		versionKey := []byte(protocol.ContractVersion + r.Address.String())
+		//if err := r.TxSimContext.Put(r.Address.String(), []byte(protocol.ContractVersion), []byte(r.ContractId.ContractVersion)); err != nil {
+		if err := r.TxSimContext.Put(commonPb.ContractName_SYSTEM_CONTRACT_STATE.String(), versionKey, []byte(r.ContractId.ContractVersion)); err != nil {
 			r.Log.Errorf("failed to save ContractVersion %s", err.Error())
 			panic(err)
 		}
 		// if is create/upgrade contract then override solidity byteCode
 		if len(result.ByteCodeBody) > 0 && len(result.ByteCodeHead) > 0 {
 			// save byteCodeBody
-			versionedByteCodeKey := append([]byte(protocol.ContractByteCode), []byte(r.ContractId.ContractVersion)...)
-			if err := r.TxSimContext.Put(r.ContractId.ContractName, versionedByteCodeKey, result.ByteCodeBody); err != nil {
+			versionedByteCodeKey := append([]byte(protocol.ContractByteCode+r.ContractId.ContractName), []byte(r.ContractId.ContractVersion)...)
+			//if err := r.TxSimContext.Put(r.ContractId.ContractName, versionedByteCodeKey, result.ByteCodeBody); err != nil {
+			if err := r.TxSimContext.Put(commonPb.ContractName_SYSTEM_CONTRACT_STATE.String(), versionedByteCodeKey, result.ByteCodeBody); err != nil {
 				r.Log.Errorf("failed to save byte code body %s", err.Error())
 				panic(err)
 			}

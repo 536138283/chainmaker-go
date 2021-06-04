@@ -38,6 +38,7 @@ type TxSchedulerImpl struct {
 	VmManager       protocol.VmManager
 	scheduleFinishC chan bool
 	log             *logger.CMLogger
+	chainConf       protocol.ChainConf // chain config
 
 	metricVMRunTime *prometheus.HistogramVec
 }
@@ -46,12 +47,13 @@ type TxSchedulerImpl struct {
 type dagNeighbors map[int]bool
 
 // NewTxScheduler building a transaction scheduler
-func NewTxScheduler(vmMgr protocol.VmManager, chainId string) *TxSchedulerImpl {
+func NewTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf) *TxSchedulerImpl {
 	txSchedulerImpl := &TxSchedulerImpl{
 		lock:            sync.Mutex{},
 		VmManager:       vmMgr,
 		scheduleFinishC: make(chan bool),
-		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
+		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainConf.ChainConfig().ChainId),
+		chainConf:       chainConf,
 	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		txSchedulerImpl.metricVMRunTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER, "metric_vm_run_time",
@@ -66,6 +68,8 @@ func newTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, t
 		tx:            tx,
 		txReadKeyMap:  make(map[string]*commonpb.TxRead, 8),
 		txWriteKeyMap: make(map[string]*commonpb.TxWrite, 8),
+		sqlRowCache:   make(map[int32]protocol.SqlRows, 0),
+		txWriteKeySql: make([]*commonpb.TxWrite, 0),
 		snapshot:      snapshot,
 		vmManager:     vmManager,
 		gasUsed:       0,
@@ -87,7 +91,11 @@ func (ts *TxSchedulerImpl) Schedule(block *commonpb.Block, txBatch []*commonpb.T
 	ts.log.Infof("schedule tx batch start, size %d", txBatchSize)
 	var goRoutinePool *ants.Pool
 	var err error
-	if goRoutinePool, err = ants.NewPool(runtime.NumCPU()*4, ants.WithPreAlloc(true)); err != nil {
+	poolCapacity := runtime.NumCPU() * 4
+	if ts.chainConf.ChainConfig().Contract.EnableSqlSupport {
+		poolCapacity = 1
+	}
+	if goRoutinePool, err = ants.NewPool(poolCapacity, ants.WithPreAlloc(true)); err != nil {
 		return nil, nil, err
 	}
 	defer goRoutinePool.Release()
@@ -164,10 +172,10 @@ func (ts *TxSchedulerImpl) Schedule(block *commonpb.Block, txBatch []*commonpb.T
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)
-	block.Dag = snapshot.BuildDAG()
+	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport)
 	block.Txs = snapshot.GetTxTable()
 	timeCostB := time.Since(startTime)
-	ts.log.Infof("schedule tx batch end, success %d, time cost %v, time cost(dag include) %v ",
+	ts.log.Infof("schedule tx batch end, success %d, time used %v, time used (dag include) %v ",
 		len(block.Dag.Vertexes), timeCostA, timeCostB)
 	txRWSetTable := snapshot.GetTxRWSetTable()
 	for _, txRWSet := range txRWSetTable {
@@ -223,7 +231,11 @@ func (ts *TxSchedulerImpl) SimulateWithDag(block *commonpb.Block, snapshot proto
 
 	var goRoutinePool *ants.Pool
 	var err error
-	if goRoutinePool, err = ants.NewPool(runtime.NumCPU()*4, ants.WithPreAlloc(true)); err != nil {
+	poolCapacity := runtime.NumCPU() * 4
+	if ts.chainConf.ChainConfig().Contract.EnableSqlSupport {
+		poolCapacity = 1
+	}
+	if goRoutinePool, err = ants.NewPool(poolCapacity, ants.WithPreAlloc(true)); err != nil {
 		return nil, nil, err
 	}
 	defer goRoutinePool.Release()
@@ -236,7 +248,6 @@ func (ts *TxSchedulerImpl) SimulateWithDag(block *commonpb.Block, snapshot proto
 				err := goRoutinePool.Submit(func() {
 					ts.log.Debugf("run vm with dag for tx id %s", tx.Header.GetTxId())
 					txSimContext := newTxSimContext(ts.VmManager, snapshot, tx)
-
 					runVmSuccess := true
 					var txResult *commonpb.Result
 					var err error
@@ -297,7 +308,7 @@ func (ts *TxSchedulerImpl) SimulateWithDag(block *commonpb.Block, snapshot proto
 	<-ts.scheduleFinishC
 	snapshot.Seal()
 
-	ts.log.Infof("simulate with dag end, size %d, time cost %+v", len(block.Txs), time.Since(startTime))
+	ts.log.Infof("simulate with dag end, size %d, time used %+v", len(block.Txs), time.Since(startTime))
 
 	// Return the read and write set after the scheduled execution
 
@@ -456,7 +467,7 @@ func (ts *TxSchedulerImpl) runVM(tx *commonpb.Transaction, txSimContext protocol
 		}
 		match, err := regexp.MatchString(protocol.DefaultStateRegex, key)
 		if err != nil || !match {
-			return errResult(result, fmt.Errorf("expect key no special characters, but get %s. letter, number, dot and underline are allowed, tx id:%s", key, tx.Header.TxId))
+			return errResult(result, fmt.Errorf("expect key no special characters, but get key:[%s]. letter, number, dot and underline are allowed, tx id:[%s]", key, tx.Header.TxId))
 		}
 		if len(val) > protocol.ParametersValueMaxLength {
 			return errResult(result, fmt.Errorf("expect value length less than %d, but get %d, tx id:%s", protocol.ParametersValueMaxLength, len(val), tx.Header.TxId))
