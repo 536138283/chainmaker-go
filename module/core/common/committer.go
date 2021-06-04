@@ -82,7 +82,7 @@ func (cb *CommitBlock) CommitBlock(block *commonpb.Block, rwSetMap map[string]*c
 	events := cb.rearrangeContractEvent(block, contractEventMap)
 
 	startDBTick := utils.CurrentTimeMillisSeconds()
-	if err := cb.store.PutBlock(block, rwSet, events); err != nil {
+	if err := cb.store.PutBlock(block, rwSet); err != nil {
 		// if put db error, then panic
 		cb.log.Error(err)
 		panic(err)
@@ -106,6 +106,28 @@ func (cb *CommitBlock) CommitBlock(block *commonpb.Block, rwSetMap map[string]*c
 	}
 	confLasts := utils.CurrentTimeMillisSeconds() - startConfTick
 
+	// publish contract event
+	var startPublishContractEventTick int64
+	var pubEvent int64
+	if len(events) > 0 {
+		startPublishContractEventTick = utils.CurrentTimeMillisSeconds()
+		cb.log.Infof("start publish contractEventsInfo: block[%d] ,time[%d]", block.Header.BlockHeight, startPublishContractEventTick)
+		var eventsInfo []*commonpb.ContractEventInfo
+		for _, t := range events {
+			eventInfo := &commonpb.ContractEventInfo{
+				BlockHeight:     block.Header.BlockHeight,
+				ChainId:         block.Header.GetChainId(),
+				Topic:           t.Topic,
+				TxId:            t.TxId,
+				ContractName:    t.ContractName,
+				ContractVersion: t.ContractVersion,
+				EventData:       t.EventData,
+			}
+			eventsInfo = append(eventsInfo, eventInfo)
+		}
+		cb.msgBus.Publish(msgbus.ContractEventInfo, eventsInfo)
+		pubEvent = utils.CurrentTimeMillisSeconds() - startPublishContractEventTick
+	}
 	startOtherTick := utils.CurrentTimeMillisSeconds()
 	cb.ledgerCache.SetLastCommittedBlock(block)
 	bi := &commonpb.BlockInfo{
@@ -119,8 +141,8 @@ func (cb *CommitBlock) CommitBlock(block *commonpb.Block, rwSetMap map[string]*c
 	}
 	otherLasts := utils.CurrentTimeMillisSeconds() - startOtherTick
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	cb.log.Infof("commit block [%d](count:%d,hash:%x), time used(db:%d,ss:%d,conf:%d,other:%d,total:%d)",
-		block.Header.BlockHeight, block.Header.TxCount, block.Header.BlockHash, dbLasts, snapshotLasts, confLasts, otherLasts, elapsed)
+	cb.log.Infof("commit block [%d](count:%d,hash:%x), time used(db:%d,ss:%d,conf:%d,pubConEvent:%d,other:%d,total:%d)",
+		block.Header.BlockHeight, block.Header.TxCount, block.Header.BlockHash, dbLasts, snapshotLasts, confLasts, pubEvent, otherLasts, elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		cb.metricBlockCommitTime.WithLabelValues(cb.chainConf.ChainConfig().ChainId).Observe(float64(elapsed) / 1000)
 	}

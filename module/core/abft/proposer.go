@@ -56,7 +56,7 @@ func NewProposer(ceConfig *CoreExecuteConfig) *Proposer {
 		abftCache:       ceConfig.ABFTCache,
 		getTxBatchC:     make(chan struct{}),
 		retryInterval:   100,
-		txScheduler:     common.NewTxScheduler(ceConfig.VmMgr, ceConfig.ChainId),
+		txScheduler:     common.NewTxScheduler(ceConfig.VmMgr, ceConfig.ChainConf),
 	}
 }
 

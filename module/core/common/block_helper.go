@@ -276,7 +276,7 @@ func NewVerifierBlock(conf *ValidateBlockConf) *VerifierBlock {
 		txPool:          conf.TxPool,
 		blockchainStore: conf.BlockchainStore,
 	}
-	verifyBlock.txScheduler = NewTxScheduler(verifyBlock.vmMgr, verifyBlock.chainConf.ChainConfig().ChainId)
+	verifyBlock.txScheduler = NewTxScheduler(verifyBlock.vmMgr, verifyBlock.chainConf)
 	return verifyBlock
 }
 
@@ -325,6 +325,7 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	if err != nil {
 		return nil, timeLasts, err
 	}
+	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
 		return nil, timeLasts, nil
 	}
@@ -335,7 +336,6 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 
 	// simulate with DAG, and verify read write set
 	startVMTick := utils.CurrentTimeMillisSeconds()
-	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(block, snapshot)
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts = append(timeLasts, vmLasts)

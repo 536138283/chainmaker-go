@@ -38,6 +38,7 @@ type TxScheduler struct {
 	VmManager       protocol.VmManager
 	scheduleFinishC chan bool
 	log             *logger.CMLogger
+	chainConf       protocol.ChainConf // chain config
 
 	metricVMRunTime *prometheus.HistogramVec
 }
@@ -46,12 +47,13 @@ type TxScheduler struct {
 type dagNeighbors map[int]bool
 
 // NewTxScheduler building a transaction scheduler
-func NewTxScheduler(vmMgr protocol.VmManager, chainId string) *TxScheduler {
+func NewTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf) *TxScheduler {
 	txScheduler := &TxScheduler{
 		lock:            sync.Mutex{},
 		VmManager:       vmMgr,
 		scheduleFinishC: make(chan bool),
-		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
+		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainConf.ChainConfig().ChainId),
+		chainConf:       chainConf,
 	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		txScheduler.metricVMRunTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER, "metric_vm_run_time",
@@ -66,10 +68,11 @@ func NewTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, t
 		tx:            tx,
 		txReadKeyMap:  make(map[string]*commonpb.TxRead, 8),
 		txWriteKeyMap: make(map[string]*commonpb.TxWrite, 8),
+		sqlRowCache:   make(map[int32]protocol.SqlRows, 0),
 		snapshot:      snapshot,
 		vmManager:     vmManager,
 		gasUsed:       0,
-		currentDepth:   0,
+		currentDepth:  0,
 		hisResult:     make([]*callContractResult, 0),
 	}
 }
@@ -162,7 +165,7 @@ func (ts *TxScheduler) Schedule(block *commonpb.Block, txBatch []*commonpb.Trans
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)
-	block.Dag = snapshot.BuildDAG()
+	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport)
 	block.Txs = snapshot.GetTxTable()
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch end, success %d, time cost %v, time cost(dag include) %v ",
