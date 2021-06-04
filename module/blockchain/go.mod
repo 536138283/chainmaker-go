@@ -28,6 +28,7 @@ replace (
 	chainmaker.org/chainmaker-go/common => ../../common
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
+	chainmaker.org/chainmaker-go/evm => ../vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../conf/localconf
 	chainmaker.org/chainmaker-go/logger => ../logger
@@ -44,8 +45,7 @@ replace (
 	chainmaker.org/chainmaker-go/txpool/batchtxpool => ./../txpool/batch
 	chainmaker.org/chainmaker-go/utils => ../utils
 	chainmaker.org/chainmaker-go/vm => ../vm
+	chainmaker.org/chainmaker-go/wasi => ../vm/wasi
 	chainmaker.org/chainmaker-go/wasmer => ../vm/wasmer
 	chainmaker.org/chainmaker-go/wxvm => ../vm/wxvm
-	chainmaker.org/chainmaker-go/wasi => ../vm/wasi
-	chainmaker.org/chainmaker-go/evm => ../vm/evm
 )
