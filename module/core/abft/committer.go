@@ -147,7 +147,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	//clear abft catche
 	c.abftCache.ClearAbftCache()
 
-	c.log.Debugf("commit finish, block: %s", block.Header)
+	c.log.Debugf("commit finish, block: [%d]", block.Header.BlockHeight)
 
 	return nil
 }
@@ -281,6 +281,8 @@ func (c *Committer) AddBlock(block *commonpb.Block) error {
 
 	//clear abft catche
 	c.abftCache.ClearAbftCache()
+
+	c.log.Debugf("Add Block [%d] finish", block.Header.BlockHeight)
 
 	return nil
 }

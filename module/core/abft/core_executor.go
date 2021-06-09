@@ -89,6 +89,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 			c.log.Warnf("propose failed, Invalid Signal Type")
 			return
 		}
+		c.log.Debugf("handle package signal, block height [%d]", proposedSignal.BlockHeight)
 		if err := c.Proposer.Propose(proposedSignal); err != nil {
 			c.log.Warnf("propose failed, error %s", err.Error())
 		}
@@ -98,6 +99,7 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 			c.log.Warnf("verify block failed, Invalid Signal Type")
 			return
 		}
+		c.log.Debugf("handle verify block signal, block height [%d]", block.Header.BlockHeight)
 		if err := c.Verifier.verify(block); err != nil {
 			c.log.Warnf("verify failed, error %s", err.Error())
 		}
@@ -105,7 +107,9 @@ func (c *CoreExecute) OnMessage(message *msgbus.Message) {
 		txBatchAfterABA, ok := message.Payload.(*abft.TxBatchAfterABA)
 		if !ok {
 			c.log.Warnf("commited txBatch failed, Invalid Signal Type")
+			return
 		}
+		c.log.Debugf("handle commit tx batch signal, block height [%d]", txBatchAfterABA.BlockHeight)
 		if err := c.Committer.Commit(txBatchAfterABA); err != nil {
 			c.log.Warnf("commit fail, error %s", err.Error())
 		}
