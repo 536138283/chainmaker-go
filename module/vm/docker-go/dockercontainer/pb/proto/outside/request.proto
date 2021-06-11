@@ -1,0 +1,26 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+option go_package = "chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside";
+
+package outside;
+
+import "outside/contract.proto";
+
+message TxRequest {
+    ContractId contractId = 1;
+
+    string method = 2;
+
+    bytes byteCode = 3;
+
+    map<string, string> parameters = 4;
+
+    //SimContext simContext = 5;
+}
+

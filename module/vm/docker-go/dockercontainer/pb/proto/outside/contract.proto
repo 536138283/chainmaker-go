@@ -1,0 +1,51 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+syntax = "proto3";
+
+option go_package = "chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside";
+
+package outside;
+
+
+
+// the unique identifier of a smart contract
+message ContractId {
+    // smart contract name, set by contract creator, can have multiple versions
+    string contract_name = 1;
+
+    // smart contract version, set by contract creator, name + version should be unique
+    string contract_version = 2;
+
+    // smart contract runtime type, set by contract creator
+    RuntimeType runtime_type = 3;
+}
+
+// smart contract runtime, contains vm type and language type
+enum RuntimeType {
+    INVALID = 0;
+
+    // native implement in chainmaker-go
+    NATIVE = 1;
+
+    // vm-wasmer, language-c++
+    WASMER = 2;
+
+    // vm-wxvm, language-cpp
+    WXVM = 3;
+
+    // wasm interpreter in go
+    GASM = 4;
+
+    // vm-evm
+    EVM = 5;
+
+    // vm-docker, language-golang
+    DOCKER_GO = 6;
+
+    // vm-docker, language-java
+    DOCKER_JAVA = 7;
+}
