@@ -38,6 +38,10 @@ func NewMerger() *Merger {
 func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
 	baseTxBatch := m.txBatchInfo[m.baseTxBatchID].txBatch
 	baseRWSetMap := m.txBatchInfo[m.baseTxBatchID].rwSetMap
+	// init baseRWSetMap if empty
+	if baseRWSetMap == nil {
+		baseRWSetMap = make(map[string]*commonpb.TxRWSet)
+	}
 	baseWriteTable := getBaseWriteTable(baseRWSetMap)
 
 	// record baseTxBatch 's tx

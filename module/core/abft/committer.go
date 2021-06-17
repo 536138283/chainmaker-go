@@ -86,8 +86,6 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	// sort BatchID
 	c.sortTxBatchID()
-	c.log.Debugf("sort branchID index: %s", c.txBatchIDList)
-
 	//var block *commonpb.Block
 	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
 	// new block
@@ -139,15 +137,11 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	// deal with tx(ABA fail)
 	c.handleABAFailTxs()
 
-	c.log.Debug("remove txs")
 	//sync txpool(put retryList back txpool & delete blocked tx)
 	c.txPool.RetryAndRemoveTxs(c.retryList, block.Txs)
 
-	c.log.Debug("clear abft cache")
 	//clear abft catche
 	c.abftCache.ClearAbftCache()
-
-	c.log.Debugf("commit finish, block: [%d]", block.Header.BlockHeight)
 
 	return nil
 }

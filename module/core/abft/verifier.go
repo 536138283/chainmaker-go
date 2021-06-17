@@ -146,11 +146,9 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 			return err
 		}
-
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
 		return nil
 	}
-
 	verifyResult, rwSetMap, err := v.verifyBlock(block)
 	if err != nil {
 		v.log.Errorf("verify failed:%s,[%d],(%s)", err.Error(), block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))

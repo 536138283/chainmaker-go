@@ -73,9 +73,7 @@ func TestCommitBlock_CommitBlock(t *testing.T) {
 		contractEventMap[tx.Header.TxId] = event
 	}
 	// record contract event
-	events := rearrangeContractEvent(block, contractEventMap)
-
-	store.EXPECT().PutBlock(block, txRWSets, events).Return(nil)
+	store.EXPECT().PutBlock(block, txRWSets).Return(nil)
 
 	cbConf := &CommitBlockConf{
 		Store:           store,

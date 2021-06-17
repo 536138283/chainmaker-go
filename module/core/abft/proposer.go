@@ -72,7 +72,6 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	p.log.Debugf("Propose height: %s", proposedSignal.BlockHeight)
 	//check height
 	err := common.VerifyHeight(proposedSignal.BlockHeight, p.ledgerCache)
 	if err != nil {
@@ -83,7 +82,7 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 	txBatch := p.getTxBatchFromABFTCache()
 	if txBatch != nil && txBatch.Header.BlockHeight == proposedSignal.BlockHeight {
 		p.msgBus.Publish(msgbus.ProposedBlock, txBatch)
-		p.log.Infof("The proposal has been completed, height: (%d)", txBatch.Header.BlockHeight)
+		p.log.Debugf("The proposal has been completed, height: (%d)", txBatch.Header.BlockHeight)
 		return nil
 	}
 
@@ -107,14 +106,15 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 		p.abftCache.SetProposedTxBatch(&emptyBlockBatch, rwSetMap)
 		return nil
 	case <-p.getTxBatchC:
-		if err := p.doPropose(lastBlock, blockBatch, &emptyBlockBatch); err != nil {
+		if err := p.doPropose(lastBlock, blockBatch); err != nil {
 			return err
 		}
 	}
 	return nil
 }
 
-func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Block) error {
+func (p *Proposer) doPropose(lastBlock, blockBatch *commonpb.Block) error {
+	emptyBlockBatch := *blockBatch
 	snapshot := p.snapshotManager.NewSnapshot(lastBlock, blockBatch)
 	vmStartTick := utils.CurrentTimeMillisSeconds()
 	txRWSetMap, _, err := p.txScheduler.Schedule(blockBatch, p.txBatch, snapshot)
@@ -124,7 +124,7 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 		p.log.Errorf("schedule txBatch(%d,%x) error %s",
 			blockBatch.Header.BlockHeight, blockBatch.Header.BlockHash, err)
 		p.msgBus.Publish(msgbus.ProposedBlock, emptyBlockBatch)
-		p.abftCache.SetProposedTxBatch(emptyBlockBatch, rwSetMap)
+		p.abftCache.SetProposedTxBatch(&emptyBlockBatch, rwSetMap)
 		return err
 	}
 
@@ -136,7 +136,7 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 		p.log.Errorf("finalizeBlock txBatch(%d,%s) error %s",
 			blockBatch.Header.BlockHeight, hex.EncodeToString(blockBatch.Header.BlockHash), err)
 		p.msgBus.Publish(msgbus.ProposedBlock, emptyBlockBatch)
-		p.abftCache.SetProposedTxBatch(emptyBlockBatch, rwSetMap)
+		p.abftCache.SetProposedTxBatch(&emptyBlockBatch, rwSetMap)
 		return err
 	}
 
@@ -150,7 +150,7 @@ func (p *Proposer) doPropose(lastBlock, blockBatch, emptyBlockBatch *commonpb.Bl
 		p.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 	}
 
-	p.log.Infof("schedule success [%d](txs:%d), time used(vm:%d,finalizeBlock:%d)",
+	p.log.Debugf("schedule success [%d](txs:%d), time used(vm:%d,finalizeBlock:%d)",
 		blockBatch.Header.BlockHeight, blockBatch.Header.TxCount,
 		vmLasts, finalizeLasts)
 

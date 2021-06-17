@@ -219,7 +219,7 @@ func TestMerger_Merge(t *testing.T) {
 		c.prepare(txBatchHash)
 		c.sortTxBatchID()
 
-		block := cache.CreateNewTestBlock(3)
+		block := CreateNewTestBlock(3)
 
 		c.merger.baseTxBatchID = c.txBatchIDList[0]
 		if err := c.merger.Merge(block, c.txBatchIDList); err != nil {

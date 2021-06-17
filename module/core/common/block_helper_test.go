@@ -1,7 +1,6 @@
 package common
 
 import (
-	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/mock"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
@@ -19,7 +18,7 @@ func TestFinalizeBlock(t *testing.T) {
 	identity.EXPECT().Serialize(true).AnyTimes().Return([]byte("DEFAULTPROPOSER"), nil)
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(nil)
 
-	block := cache.CreateNewTestBlock(0)
+	block := CreateNewTestBlock(0)
 	chainId := "123"
 	nblock, er := InitNewBlock(block, identity, chainId, chainConf)
 	fmt.Println(er)
@@ -165,4 +164,57 @@ func TestBlockVerify(t *testing.T) {
 	verifyBlock, block := verifyBlockPrepare(t)
 	RWSetMap, _, _ := verifyBlock.ValidateBlock(block)
 	fmt.Printf("rwset : %v\n", RWSetMap)
+}
+
+func CreateNewTestBlock(height int64) *commonpb.Block {
+	var hash = []byte("0123456789")
+	var version = []byte("0")
+	var block = &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			ChainId:        "Chain1",
+			BlockHeight:    height,
+			PreBlockHash:   hash,
+			BlockHash:      hash,
+			PreConfHeight:  0,
+			BlockVersion:   version,
+			DagHash:        hash,
+			RwSetRoot:      hash,
+			TxRoot:         hash,
+			BlockTimestamp: 0,
+			Proposer:       hash,
+			ConsensusArgs:  nil,
+			TxCount:        1,
+			Signature:      []byte(""),
+		},
+		Dag: &commonpb.DAG{
+			Vertexes: nil,
+		},
+		Txs: nil,
+	}
+	tx := CreateNewTestTx()
+	txs := make([]*commonpb.Transaction, 1)
+	txs[0] = tx
+	block.Txs = txs
+	return block
+}
+
+func CreateNewTestTx() *commonpb.Transaction {
+	var hash = []byte("0123456789")
+	return &commonpb.Transaction{
+		Header: &commonpb.TxHeader{
+			ChainId:        "",
+			Sender:         nil,
+			TxType:         0,
+			TxId:           "",
+			Timestamp:      0,
+			ExpirationTime: 0,
+		},
+		RequestPayload:   hash,
+		RequestSignature: hash,
+		Result: &commonpb.Result{
+			Code:           commonpb.TxStatusCode_SUCCESS,
+			ContractResult: nil,
+			RwSetHash:      nil,
+		},
+	}
 }
