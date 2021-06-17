@@ -14,7 +14,7 @@ chainmaker:
 	@cd main && go build -mod=mod -o ../bin/chainmaker
 
 package:
-	@cd main && GOPATH=${GOPATH} go build -o ../bin/chainmaker
+	@cd main && GOPATH=${GOPATH} go build -mod=mod -o ../bin/chainmaker
 	@mkdir -p ./release
 	@rm -rf ./tmp/chainmaker/
 	@mkdir -p ./tmp/chainmaker/
