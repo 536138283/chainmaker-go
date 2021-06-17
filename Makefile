@@ -8,10 +8,10 @@ else
   endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=V1.0.0
+VERSION=V1.1.1
 
 chainmaker:
-	@cd main && go build -o ../bin/chainmaker
+	@cd main && go build -mod=mod -o ../bin/chainmaker
 
 package:
 	@cd main && GOPATH=${GOPATH} go build -o ../bin/chainmaker
@@ -27,13 +27,13 @@ package:
 	@rm -rf ./tmp/
 
 compile:
-	@cd main && go build -o ../bin/chainmaker
+	@cd main && go build -mod=mod -o ../bin/chainmaker
 
 cmc:
-	@cd tools/cmc && GOPATH=${GOPATH} go build -o ../../bin/cmc 
+	@cd tools/cmc && GOPATH=${GOPATH} go build -mod=mod -o ../../bin/cmc
 
 scanner:
-	@cd tools/scanner && GOPATH=${GOPATH} go build -o ../../bin/scanner 
+	@cd tools/scanner && GOPATH=${GOPATH} go build -mod=mod -o ../../bin/scanner
 
 dep: pb-dep mockgen-dep 
 	@go get golang.org/x/tools/cmd/stringer
