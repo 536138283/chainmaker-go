@@ -79,9 +79,9 @@ func NewVerifier(ceConfig *CoreExecuteConfig) (*Verifier, error) {
 func (v *Verifier) verifyBlock(block *commonPb.Block) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	emptyTxRwSetMap := make(map[string]*commonPb.TxRWSet)
-	//if err := utils.IsEmptyBlock(block); err != nil {
-	//	return false, emptyTxRwSetMap, err
-	//}
+	if err := utils.IsEmptyBlock(block); err != nil {
+		return false, emptyTxRwSetMap, err
+	}
 	err := common.VerifyHeight(block.Header.BlockHeight, v.ledgerCache)
 	if err != nil {
 		return false, emptyTxRwSetMap, err

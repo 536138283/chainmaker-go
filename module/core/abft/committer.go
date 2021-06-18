@@ -127,8 +127,6 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	block.Header.BlockHash = hash[:]
 	block.Header.Signature = sig
-	block.Header.Signature = []byte{}
-	c.log.Debugf("commit block: %s", block)
 	err = c.commonCommit.CommitBlock(block, rwSetMap)
 	if err != nil {
 		c.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
@@ -142,6 +140,8 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	//clear abft catche
 	c.abftCache.ClearAbftCache()
+
+	c.log.Debugf("commited block [%d]", block.Header.BlockHeight)
 
 	return nil
 }

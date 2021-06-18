@@ -153,8 +153,6 @@ func (p *Proposer) doPropose(lastBlock, blockBatch *commonpb.Block) error {
 	p.log.Debugf("schedule success [%d](txs:%d), time used(vm:%d,finalizeBlock:%d)",
 		blockBatch.Header.BlockHeight, blockBatch.Header.TxCount,
 		vmLasts, finalizeLasts)
-
-	blockBatch.Header.Proposer = []byte{}
 	p.abftCache.SetProposedTxBatch(blockBatch, txRWSetMap)
 	p.msgBus.Publish(msgbus.ProposedBlock, blockBatch)
 	p.log.Infof("proposer success [%d](txs:%d)", blockBatch.Header.BlockHeight, blockBatch.Header.TxCount)
