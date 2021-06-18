@@ -3,8 +3,8 @@ package module
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpcserver"
+	security2 "chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
 	"log"
@@ -19,41 +19,45 @@ type ExitStatus struct {
 	Signal os.Signal
 	Code   int
 	PID    int
+	TxId   string
 }
 
-type Manager struct {
+type ManagerImpl struct {
 	dockerRpcServer *rpcserver.DockerRpcServer
-	existCh         chan ExitStatus
+	workerStatusCh  chan ExitStatus
+	//workerFinishCh  chan bool
 	// uid manager
 	// child process manage
 
 }
 
-func NewManager() *Manager {
+func NewManager() *ManagerImpl {
 
 	// new docker rpc server
-	server, err := rpcserver.NewDockerRpcServer("12355")
+	server, err := rpcserver.NewDockerRpcServer(config.Port)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	exitCh := make(chan ExitStatus)
+	//finishCh := make(chan bool)
 
-	manager := &Manager{
+	manager := &ManagerImpl{
 		dockerRpcServer: server,
-		existCh:         exitCh,
+		workerStatusCh:  exitCh,
+		//workerFinishCh:  finishCh,
 	}
 
 	return manager
 }
 
-func (m *Manager) InitContainer() error {
+func (m *ManagerImpl) InitContainer() error {
 
 	// start server
 	go m.dockerRpcServer.StartServer()
 
 	// init sandBox
-	go security.InitSandboxEnv()
+	go security2.InitSandboxEnv()
 
 	// init monitor
 	go m.MonitorWorkers()
@@ -64,7 +68,37 @@ func (m *Manager) InitContainer() error {
 	return nil
 }
 
-func (m *Manager) StartWorker(command string, uid uint32) {
+func (m *ManagerImpl) listenIncoming() {
+	fmt.Println("Manager -- Begin listen incoming")
+	for {
+		select {
+		case tx := <-m.dockerRpcServer.TxCh:
+			go m.HandleTx(tx)
+		}
+	}
+	fmt.Println("Manager -- Stop listen incoming")
+}
+
+func (m *ManagerImpl) HandleTx(tx *outside.TxRequest) *outside.ContractResult {
+
+	fmt.Println("Manager -- Begin handle tx")
+
+	// set available uid
+
+	// set file path for uid
+
+	// store info for
+	newFilePath := "/home/user10000/hello"
+	err := utils.ConvertBytesToRunnableFile(tx.ByteCode, newFilePath, 10000)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
+	return m.StartWorker(newFilePath, uint32(10000), tx.TxId)
+
+}
+
+func (m *ManagerImpl) StartWorker(command string, uid uint32, txId string) *outside.ContractResult {
 	cmd := exec.Cmd{
 		Path: command,
 	}
@@ -72,14 +106,14 @@ func (m *Manager) StartWorker(command string, uid uint32) {
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	//cmd.SysProcAttr = &syscall.SysProcAttr{
-	//	Credential: &syscall.Credential{
-	//		Uid: uid,
-	//	},
-	//	Cloneflags: syscall.CLONE_NEWIPC |
-	//		syscall.CLONE_NEWPID |
-	//		syscall.CLONE_NEWNET,
-	//}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uid,
+		},
+		Cloneflags: syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNET,
+	}
 
 	// start app
 	if err := cmd.Start(); err != nil {
@@ -97,68 +131,59 @@ func (m *Manager) StartWorker(command string, uid uint32) {
 
 	fmt.Println("Add Pid ", cmd.Process.Pid, " to file ", config.ProcsFile)
 
-	if err := cmd.Wait(); err != nil {
-		fmt.Println("cmd return with error: ", err)
+	cmd.Wait()
+
+	// capture result of current process
+	contractResult := &outside.ContractResult{
+		Code:    outside.ContractResultCode_OK,
+		Result:  nil,
+		Message: "testing",
 	}
 
+	// timeout, stop the process
 	timer.Stop()
 
+	// capture current process exit status
+	// code : 0 : process run successfully
+	// code : -1 : process run fail, maybe timeout, maybe memory out
 	status := cmd.ProcessState.Sys().(syscall.WaitStatus)
 
-	options := ExitStatus{
+	exitStatus := ExitStatus{
 		Code: status.ExitStatus(),
 		PID:  cmd.Process.Pid,
+		TxId: txId,
 	}
 
 	if status.Signaled() {
-		options.Signal = status.Signal()
+		exitStatus.Signal = status.Signal()
 	}
 
-	cmd.Process.Kill()
+	m.workerStatusCh <- exitStatus
 
-	m.existCh <- options
+	return contractResult
 }
 
-func (m *Manager) MonitorWorkers() {
+func (m *ManagerImpl) MonitorWorkers() {
 	for {
-		status := <-m.existCh
+		status := <-m.workerStatusCh
 
 		switch status.Signal {
 		case os.Kill:
-			fmt.Printf("process %d is killed by system\n", status.PID)
+			// means process run fail, todo
+			fmt.Printf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
 		default:
-			fmt.Printf("process %d exit with code: \n", status.Code)
+			// means process run successful, return the value back
+			fmt.Printf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
+
+			contractResult := &outside.ContractResult{
+				Code:    outside.ContractResultCode_OK,
+				Result:  nil,
+				Message: "testing",
+			}
+
+			m.dockerRpcServer.TxResultCh <- contractResult
+			//m.workerFinishCh <- true
 		}
 
 	}
-}
-
-func (m *Manager) handleTx(tx *outside.TxRequest) {
-
-	fmt.Println("begin handle tx")
-
-	newFilePath := "/home/user10000/hello"
-	err := utils.ConvertBytesToFile(tx.ByteCode, newFilePath)
-	if err != nil {
-		log.Fatalln("err in convert to file ", err)
-	}
-
-	err = utils.SetFileRunnable(newFilePath, 10000)
-	if err != nil {
-		log.Fatalln("err in set file runnable ", err)
-	}
-
-	m.StartWorker(newFilePath, uint32(10000))
-
-}
-
-func (m *Manager) listenIncoming() {
-	fmt.Println("begin listen incoming")
-	for i := 0; i < 1; i++ {
-		select {
-		case tx := <-m.dockerRpcServer.TxCh:
-			go m.handleTx(tx)
-		}
-	}
-	fmt.Println("begin listen incoming  -- finished")
 }

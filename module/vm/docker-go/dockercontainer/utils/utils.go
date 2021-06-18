@@ -35,7 +35,7 @@ func RunCmd(command string) error {
 }
 
 // ConvertFileToBytes convert file to byte array
-func ConvertFileToBytes(filePath string) ([]byte, error) {
+func convertFileToBytes(filePath string) ([]byte, error) {
 	bytes, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -44,26 +44,35 @@ func ConvertFileToBytes(filePath string) ([]byte, error) {
 	return bytes, nil
 }
 
+func ConvertBytesToRunnableFile(bytes []byte, newFilePath string, userId int) error {
+	if err := convertBytesToFile(bytes, newFilePath); err != nil {
+		return err
+	}
+
+	if err := setFileRunnable(newFilePath, userId); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ConvertBytesToFile convert byte array to file
-func ConvertBytesToFile(bytes []byte, newFilePath string) error {
+func convertBytesToFile(bytes []byte, newFilePath string) error {
 	f, err := os.Create(newFilePath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
 
-	n, err := f.Write(bytes)
+	_, err = f.Write(bytes)
 	if err != nil {
 		return err
 	}
-
-	fmt.Println("-------------")
-	fmt.Println(n)
 	return nil
 }
 
 // SetFileRunnable make file runnable, file permission is 700
-func SetFileRunnable(filePath string, userId int) error {
+func setFileRunnable(filePath string, userId int) error {
 
 	err := os.Chmod(filePath, 0700)
 	if err != nil {

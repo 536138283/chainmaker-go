@@ -3,11 +3,10 @@ package rpcserver
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/api"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
+	"context"
 	"errors"
-	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-	"io"
 	"log"
 	"net"
 	"time"
@@ -23,38 +22,21 @@ type DockerRpcServer struct {
 	Server     *grpc.Server
 	isShutdown bool
 	TxCh       chan *outside.TxRequest
+	TxResultCh chan *outside.ContractResult
 }
 
-func (s *DockerRpcServer) RunContracts(stream api.DockerRpc_RunContractsServer) error {
+func (s *DockerRpcServer) RunContracts(ctx context.Context, txRequest *outside.TxRequest) (*outside.ContractResult, error) {
+
+	s.TxCh <- txRequest
 
 	for {
-		tx, err := stream.Recv()
-		if err == io.EOF {
 
-			txResult := &outside.TxResult{
-				Code: 0,
-				ContractResult: &outside.ContractResult{
-					Code:    0,
-					Result:  nil,
-					Message: "testing",
-				},
-				RwSetHash: nil,
-			}
-			fmt.Println("server receive all")
-			return stream.SendAndClose(txResult)
-		}
+		contractResult := <-s.TxResultCh
 
-		if err != nil {
-			return err
-		}
-		// handle each incoming tx
-		fmt.Println("Server receive tx")
-		fmt.Println("bytes length: ", len(tx.ByteCode))
-		//
-		s.TxCh <- tx
+		return contractResult, nil
+
 	}
 
-	return nil
 }
 
 // NewDockerRpcServer build new rpc server
@@ -96,11 +78,14 @@ func NewDockerRpcServer(port string) (*DockerRpcServer, error) {
 	log.Println("Server created successfully")
 
 	txCh := make(chan *outside.TxRequest)
+	txResCh := make(chan *outside.ContractResult)
+
 	return &DockerRpcServer{
 		Listener:   listener,
 		Server:     server,
 		isShutdown: true,
 		TxCh:       txCh,
+		TxResultCh: txResCh,
 	}, nil
 }
 
@@ -124,8 +109,10 @@ func (s *DockerRpcServer) StartServer() error {
 }
 
 // Stop the server
+// Stop the server
 func (s *DockerRpcServer) Stop() {
 	if s.Server != nil {
+		s.isShutdown = false
 		s.Server.Stop()
 	}
 }

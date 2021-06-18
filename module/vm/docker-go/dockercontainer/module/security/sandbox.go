@@ -24,6 +24,6 @@ func InitSandboxEnv() error {
 		return err
 	}
 	fmt.Println("Successfully create new users")
-	fmt.Println("Init Completed")
+	fmt.Println("Init Sandbox Completed")
 	return nil
 }

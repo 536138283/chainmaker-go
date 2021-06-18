@@ -36,26 +36,26 @@ var file_api_docker_rpc_proto_rawDesc = []byte{
 	0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x12, 0x03, 0x61, 0x70, 0x69, 0x1a, 0x15, 0x6f, 0x75, 0x74,
 	0x73, 0x69, 0x64, 0x65, 0x2f, 0x72, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x2e, 0x70, 0x72, 0x6f,
 	0x74, 0x6f, 0x1a, 0x14, 0x6f, 0x75, 0x74, 0x73, 0x69, 0x64, 0x65, 0x2f, 0x72, 0x65, 0x73, 0x75,
-	0x6c, 0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x32, 0x46, 0x0a, 0x09, 0x44, 0x6f, 0x63, 0x6b,
-	0x65, 0x72, 0x52, 0x70, 0x63, 0x12, 0x39, 0x0a, 0x0c, 0x52, 0x75, 0x6e, 0x43, 0x6f, 0x6e, 0x74,
+	0x6c, 0x74, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x32, 0x4a, 0x0a, 0x09, 0x44, 0x6f, 0x63, 0x6b,
+	0x65, 0x72, 0x52, 0x70, 0x63, 0x12, 0x3d, 0x0a, 0x0c, 0x52, 0x75, 0x6e, 0x43, 0x6f, 0x6e, 0x74,
 	0x72, 0x61, 0x63, 0x74, 0x73, 0x12, 0x12, 0x2e, 0x6f, 0x75, 0x74, 0x73, 0x69, 0x64, 0x65, 0x2e,
-	0x54, 0x78, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x11, 0x2e, 0x6f, 0x75, 0x74, 0x73,
-	0x69, 0x64, 0x65, 0x2e, 0x54, 0x78, 0x52, 0x65, 0x73, 0x75, 0x6c, 0x74, 0x22, 0x00, 0x28, 0x01,
-	0x42, 0x47, 0x5a, 0x45, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x6d, 0x61, 0x6b, 0x65, 0x72, 0x2e, 0x6f,
-	0x72, 0x67, 0x2f, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x6d, 0x61, 0x6b, 0x65, 0x72, 0x2d, 0x67, 0x6f,
-	0x2f, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x2d, 0x67, 0x6f, 0x2f, 0x64, 0x6f, 0x63, 0x6b, 0x65,
-	0x72, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x2f, 0x70, 0x62, 0x2f, 0x70, 0x72,
-	0x6f, 0x74, 0x6f, 0x67, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f,
-	0x33,
+	0x54, 0x78, 0x52, 0x65, 0x71, 0x75, 0x65, 0x73, 0x74, 0x1a, 0x17, 0x2e, 0x6f, 0x75, 0x74, 0x73,
+	0x69, 0x64, 0x65, 0x2e, 0x43, 0x6f, 0x6e, 0x74, 0x72, 0x61, 0x63, 0x74, 0x52, 0x65, 0x73, 0x75,
+	0x6c, 0x74, 0x22, 0x00, 0x42, 0x47, 0x5a, 0x45, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x6d, 0x61, 0x6b,
+	0x65, 0x72, 0x2e, 0x6f, 0x72, 0x67, 0x2f, 0x63, 0x68, 0x61, 0x69, 0x6e, 0x6d, 0x61, 0x6b, 0x65,
+	0x72, 0x2d, 0x67, 0x6f, 0x2f, 0x64, 0x6f, 0x63, 0x6b, 0x65, 0x72, 0x2d, 0x67, 0x6f, 0x2f, 0x64,
+	0x6f, 0x63, 0x6b, 0x65, 0x72, 0x63, 0x6f, 0x6e, 0x74, 0x61, 0x69, 0x6e, 0x65, 0x72, 0x2f, 0x70,
+	0x62, 0x2f, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x67, 0x6f, 0x2f, 0x61, 0x70, 0x69, 0x62, 0x06, 0x70,
+	0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var file_api_docker_rpc_proto_goTypes = []interface{}{
-	(*outside.TxRequest)(nil), // 0: outside.TxRequest
-	(*outside.TxResult)(nil),  // 1: outside.TxResult
+	(*outside.TxRequest)(nil),      // 0: outside.TxRequest
+	(*outside.ContractResult)(nil), // 1: outside.ContractResult
 }
 var file_api_docker_rpc_proto_depIdxs = []int32{
 	0, // 0: api.DockerRpc.RunContracts:input_type -> outside.TxRequest
-	1, // 1: api.DockerRpc.RunContracts:output_type -> outside.TxResult
+	1, // 1: api.DockerRpc.RunContracts:output_type -> outside.ContractResult
 	1, // [1:2] is the sub-list for method output_type
 	0, // [0:1] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
@@ -99,7 +99,7 @@ const _ = grpc.SupportPackageIsVersion6
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://godoc.org/google.golang.org/grpc#ClientConn.NewStream.
 type DockerRpcClient interface {
-	RunContracts(ctx context.Context, opts ...grpc.CallOption) (DockerRpc_RunContractsClient, error)
+	RunContracts(ctx context.Context, in *outside.TxRequest, opts ...grpc.CallOption) (*outside.ContractResult, error)
 }
 
 type dockerRpcClient struct {
@@ -110,93 +110,59 @@ func NewDockerRpcClient(cc grpc.ClientConnInterface) DockerRpcClient {
 	return &dockerRpcClient{cc}
 }
 
-func (c *dockerRpcClient) RunContracts(ctx context.Context, opts ...grpc.CallOption) (DockerRpc_RunContractsClient, error) {
-	stream, err := c.cc.NewStream(ctx, &_DockerRpc_serviceDesc.Streams[0], "/api.DockerRpc/RunContracts", opts...)
+func (c *dockerRpcClient) RunContracts(ctx context.Context, in *outside.TxRequest, opts ...grpc.CallOption) (*outside.ContractResult, error) {
+	out := new(outside.ContractResult)
+	err := c.cc.Invoke(ctx, "/api.DockerRpc/RunContracts", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &dockerRpcRunContractsClient{stream}
-	return x, nil
-}
-
-type DockerRpc_RunContractsClient interface {
-	Send(*outside.TxRequest) error
-	CloseAndRecv() (*outside.TxResult, error)
-	grpc.ClientStream
-}
-
-type dockerRpcRunContractsClient struct {
-	grpc.ClientStream
-}
-
-func (x *dockerRpcRunContractsClient) Send(m *outside.TxRequest) error {
-	return x.ClientStream.SendMsg(m)
-}
-
-func (x *dockerRpcRunContractsClient) CloseAndRecv() (*outside.TxResult, error) {
-	if err := x.ClientStream.CloseSend(); err != nil {
-		return nil, err
-	}
-	m := new(outside.TxResult)
-	if err := x.ClientStream.RecvMsg(m); err != nil {
-		return nil, err
-	}
-	return m, nil
+	return out, nil
 }
 
 // DockerRpcServer is the server API for DockerRpc service.
 type DockerRpcServer interface {
-	RunContracts(DockerRpc_RunContractsServer) error
+	RunContracts(context.Context, *outside.TxRequest) (*outside.ContractResult, error)
 }
 
 // UnimplementedDockerRpcServer can be embedded to have forward compatible implementations.
 type UnimplementedDockerRpcServer struct {
 }
 
-func (*UnimplementedDockerRpcServer) RunContracts(DockerRpc_RunContractsServer) error {
-	return status.Errorf(codes.Unimplemented, "method RunContracts not implemented")
+func (*UnimplementedDockerRpcServer) RunContracts(context.Context, *outside.TxRequest) (*outside.ContractResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RunContracts not implemented")
 }
 
 func RegisterDockerRpcServer(s *grpc.Server, srv DockerRpcServer) {
 	s.RegisterService(&_DockerRpc_serviceDesc, srv)
 }
 
-func _DockerRpc_RunContracts_Handler(srv interface{}, stream grpc.ServerStream) error {
-	return srv.(DockerRpcServer).RunContracts(&dockerRpcRunContractsServer{stream})
-}
-
-type DockerRpc_RunContractsServer interface {
-	SendAndClose(*outside.TxResult) error
-	Recv() (*outside.TxRequest, error)
-	grpc.ServerStream
-}
-
-type dockerRpcRunContractsServer struct {
-	grpc.ServerStream
-}
-
-func (x *dockerRpcRunContractsServer) SendAndClose(m *outside.TxResult) error {
-	return x.ServerStream.SendMsg(m)
-}
-
-func (x *dockerRpcRunContractsServer) Recv() (*outside.TxRequest, error) {
-	m := new(outside.TxRequest)
-	if err := x.ServerStream.RecvMsg(m); err != nil {
+func _DockerRpc_RunContracts_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(outside.TxRequest)
+	if err := dec(in); err != nil {
 		return nil, err
 	}
-	return m, nil
+	if interceptor == nil {
+		return srv.(DockerRpcServer).RunContracts(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/api.DockerRpc/RunContracts",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DockerRpcServer).RunContracts(ctx, req.(*outside.TxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 var _DockerRpc_serviceDesc = grpc.ServiceDesc{
 	ServiceName: "api.DockerRpc",
 	HandlerType: (*DockerRpcServer)(nil),
-	Methods:     []grpc.MethodDesc{},
-	Streams: []grpc.StreamDesc{
+	Methods: []grpc.MethodDesc{
 		{
-			StreamName:    "RunContracts",
-			Handler:       _DockerRpc_RunContracts_Handler,
-			ClientStreams: true,
+			MethodName: "RunContracts",
+			Handler:    _DockerRpc_RunContracts_Handler,
 		},
 	},
+	Streams:  []grpc.StreamDesc{},
 	Metadata: "api/docker_rpc.proto",
 }

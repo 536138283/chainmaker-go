@@ -10,17 +10,21 @@ option go_package = "chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/p
 
 package outside;
 
-import "outside/contract.proto";
-
 message TxRequest {
-    ContractId contractId = 1;
 
-    string method = 2;
+    string tx_id = 1;
 
-    bytes byteCode = 3;
+    string contract_name = 2;
 
-    map<string, string> parameters = 4;
+    string contract_version = 3;
 
-    //SimContext simContext = 5;
+    string method = 4;
+
+    bytes byteCode = 5;
+
+    map<string, string> parameters = 6;
+
+//    SimContext simContext = 5;
 }
+
 

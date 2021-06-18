@@ -10,13 +10,8 @@ option go_package = "chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/p
 
 package api;
 
-import "outside/request.proto";
-import "outside/result.proto";
+import "inside/message.proto";
 
-
-service DockerRpc {
-
-    rpc RunContracts(outside.TxRequest) returns (outside.ContractResult){};
-
-    // get, put key
+service IpcRpc {
+    rpc GetResult(inside.Message) returns (inside.Message){}
 }

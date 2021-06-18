@@ -10,7 +10,25 @@ option go_package = "chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/p
 
 package outside;
 
+enum ContractName {
+    // system chain configuration contract
+    // used to add, delete and change the chain configuration
+    SYSTEM_CONTRACT_CHAIN_CONFIG = 0;
 
+    // system chain query contract
+    // used to query the configuration on the chain
+    SYSTEM_CONTRACT_QUERY = 1;
+
+    // system certificate storage contract
+    // used to manage certificates
+    SYSTEM_CONTRACT_CERT_MANAGE = 2;
+
+    // governance contract
+    SYSTEM_CONTRACT_GOVERNANCE = 3;
+
+    // multi signature contract on chain
+    SYSTEM_CONTRACT_MULTI_SIGN = 4;
+}
 
 // the unique identifier of a smart contract
 message ContractId {
@@ -22,6 +40,53 @@ message ContractId {
 
     // smart contract runtime type, set by contract creator
     RuntimeType runtime_type = 3;
+}
+
+message ContractInfo {
+    repeated ContractTransaction contract_transaction = 1;
+}
+
+message ContractTransaction {
+    ContractId contract_id = 1;
+    string tx_id = 2;
+}
+
+enum QueryFunction {
+    // get block by transactionId
+    GET_BLOCK_BY_TX_ID = 0;
+
+    // get contract information
+    GET_CONTRACT_INFO = 1;
+
+    // get transaction by transactionId
+    GET_TX_BY_TX_ID = 2;
+
+    // get block by block height
+    GET_BLOCK_BY_HEIGHT = 3;
+
+    // get chain information
+    GET_CHAIN_INFO = 4;
+
+    // get the last configuration block
+    GET_LAST_CONFIG_BLOCK = 5;
+
+    // get block by block hash
+    GET_BLOCK_BY_HASH = 6;
+
+    // get the list of node
+    GET_NODE_CHAIN_LIST = 7;
+
+    // get governance information
+    GET_GOVERNANCE_CONTRACT = 8;
+
+    // get read/write set information by eight
+    GET_BLOCK_WITH_TXRWSETS_BY_HEIGHT = 9;
+
+    // get read/write set information by hash
+    GET_BLOCK_WITH_TXRWSETS_BY_HASH = 10;
+
+    // get the last block
+    GET_LAST_BLOCK = 11;
 }
 
 // smart contract runtime, contains vm type and language type
@@ -48,4 +113,122 @@ enum RuntimeType {
 
     // vm-docker, language-java
     DOCKER_JAVA = 7;
+}
+
+enum ConfigFunction {
+    // get chain configuration
+    GET_CHAIN_CONFIG = 0;
+
+    // get the latest configuration block
+    // the incoming blockheight must exist in the database
+    // 如果传入的blockHeight是配置块，直接返回当前的配置信息
+    GET_CHAIN_CONFIG_AT = 1;
+
+    // update core
+    CORE_UPDATE = 2;
+
+    // update block
+    BLOCK_UPDATE = 3;
+
+    // add trusted certficate (org_id and root)
+    TRUST_ROOT_ADD = 4;
+
+    // [self] modify an individual's own trusted root certificate [org_id must exist in the original trust_roots,
+    // and the new root certificate must be different from other certificates]
+    TRUST_ROOT_UPDATE = 5;
+
+    // delete trusted root certificate [org_ ID should be in trust_ The nodes in nodes need to be deleted]
+    TRUST_ROOT_DELETE = 6;
+
+    // organization add node address
+    // org_id must already exist in nodes，you can add addresses in batches
+    // the parameter is addresses. Single addresses are separated by ","
+    // ip+port and peerid cannot be repeated
+    NODE_ADDR_ADD = 7;
+
+    // [self]the organization updates an address
+    //[org_id and address must already exist in nodes, new_address is the new address. ip+port and peerId cannot be duplicated]
+    NODE_ADDR_UPDATE = 8;
+
+    // organization delete node address [org_id and address must already exist in nodes]
+    NODE_ADDR_DELETE = 9;
+
+    // organization add node address in batches [org_id在nodes不存在，批量添加地址，参数为addresses，单地址用逗号","隔开。ip+port和peerId不能重复]
+    NODE_ORG_ADD = 10;
+
+    // organization update
+    // org_id must already exist in nodes，the parameter is addresses，Single addresses are separated by ","
+    // ip+port and peerid cannot be repeated
+    NODE_ORG_UPDATE = 11;
+
+    // organization delete, org_id must already exist in nodes
+    NODE_ORG_DELETE = 12;
+
+    // add consensus parameters, key is not exit in ext_config
+    CONSENSUS_EXT_ADD = 13;
+
+    // update onsensus parameters, key exit in ext_config
+    CONSENSUS_EXT_UPDATE = 14;
+
+    // delete onsensus parameters, key exit in ext_config
+    CONSENSUS_EXT_DELETE = 15;
+
+    // add permission
+    PERMISSION_ADD = 16;
+
+    // update permission
+    PERMISSION_UPDATE = 17;
+
+    // delete permission
+    PERMISSION_DELETE = 18;
+}
+
+// Methods of certificate management
+enum CertManageFunction {
+
+    // add certficate
+    CERT_ADD = 0;
+
+    // delete certficate
+    CERTS_DELETE = 1;
+
+    // query certficate
+    CERTS_QUERY = 2;
+
+    // freeze certificate
+    CERTS_FREEZE = 3;
+
+    // unfreezing certificate
+    CERTS_UNFREEZE = 4;
+
+    // Revocation of certificate
+    CERTS_REVOKE = 5;
+}
+
+// methods of managing multi signature
+enum MultiSignFunction {
+    // multi signature request
+    REQ = 0;
+
+    // multi signature voting
+    VOTE = 1;
+
+    // multi signature query
+    QUERY = 2;
+}
+
+// methods of user management contract
+enum ManageUserContractFunction {
+    // init contract
+    INIT_CONTRACT = 0;
+    // upgrade contract
+    UPGRADE_CONTRACT = 1;
+    // freeze  contract
+    FREEZE_CONTRACT = 2;
+
+    // unfreezing contract
+    UNFREEZE_CONTRACT = 3;
+
+    // Revocation of contract
+    REVOKE_CONTRACT = 4;
 }
