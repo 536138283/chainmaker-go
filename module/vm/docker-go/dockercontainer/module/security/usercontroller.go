@@ -1,0 +1,109 @@
+package security
+
+import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+type UsersController struct {
+	Total   int
+	UserMap map[int]*User
+}
+
+type User struct {
+	Uid      int
+	Gid      int
+	UserName string
+	HomeDir  string
+	SockPath string
+	BinPath  string
+	Busy     bool
+}
+
+func NewUsersController() *UsersController {
+
+	userMap := make(map[int]*User)
+
+	users := &UsersController{
+		UserMap: userMap,
+		Total:   0,
+	}
+
+	return users
+}
+
+// CreateNewUsers create new users in docker from 10000 as uid,
+func (u *UsersController) CreateNewUsers(userNum int) error {
+	const AddUserFormat = "useradd -u %d -d /home/%s -m -s /bin/bash %s"
+	const BaseUid = 10000
+
+	for i := 0; i < userNum; i++ {
+		newUserId := BaseUid + i
+		newUser := u.createNewUser(newUserId)
+		addUserCommand := fmt.Sprintf(AddUserFormat, newUserId, newUser.UserName, newUser.UserName)
+
+		if err := utils.RunCmd(addUserCommand); err != nil {
+			return err
+		}
+
+		if err := u.setUserDirMod(*newUser); err != nil {
+			return nil
+		}
+
+		// update Users
+		u.UserMap[newUserId] = newUser
+		u.Total++
+
+	}
+
+	return nil
+}
+
+func (u *UsersController) createNewUser(userId int) *User {
+
+	const UserHomePath = "/home/u-%d"
+	userName := fmt.Sprintf("u-%d", userId)
+	sockFileName := fmt.Sprintf("u-%d.sock", userId)
+	binFileName := fmt.Sprintf("u-%d", userId)
+
+	homeDir := fmt.Sprintf(UserHomePath, userId)
+	sockPath := filepath.Join(homeDir, sockFileName)
+	binPath := filepath.Join(homeDir, binFileName)
+
+	return &User{
+		Uid:      userId,
+		Gid:      userId,
+		UserName: userName,
+		HomeDir:  homeDir,
+		SockPath: sockPath,
+		BinPath:  binPath,
+		Busy:     false,
+	}
+}
+
+// change userDir mod as 700
+func (u *UsersController) setUserDirMod(newUser User) error {
+	return os.Chmod(newUser.HomeDir, 0700)
+}
+
+func (u *UsersController) UpdateUserState(userId int, busy bool) {
+	u.UserMap[userId].Busy = busy
+	fmt.Println("UserController Update: ", u.UserMap[userId])
+}
+
+func (u *UsersController) GetAvailableUser() *User {
+	for _, user := range u.UserMap {
+		if !user.Busy {
+			return user
+		}
+	}
+
+	return nil
+}
+
+func (u *UsersController) ResetUserEnv(user *User) error {
+	rmCommand := fmt.Sprintf("rm -rf %s/*", user.HomeDir)
+	return utils.RunCmd(rmCommand)
+}

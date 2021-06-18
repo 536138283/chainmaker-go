@@ -1,8 +1,8 @@
 package security
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"fmt"
+	"os"
 )
 
 type SandBox struct {
@@ -20,10 +20,10 @@ func InitSandboxEnv() error {
 	}
 	fmt.Println("Successfully set cgroup")
 
-	if err := CreateNewUsers(config.UserNum); err != nil {
-		return err
-	}
-	fmt.Println("Successfully create new users")
 	fmt.Println("Init Sandbox Completed")
 	return nil
+}
+
+func SetTmpMod() error {
+	return os.Chmod("/tmp/", 0755)
 }

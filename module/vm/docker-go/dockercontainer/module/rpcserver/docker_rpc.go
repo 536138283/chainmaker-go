@@ -3,6 +3,7 @@ package rpcserver
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/api"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"context"
 	"errors"
 	"google.golang.org/grpc"
@@ -21,17 +22,18 @@ type DockerRpcServer struct {
 	Listener   net.Listener
 	Server     *grpc.Server
 	isShutdown bool
+	handler    protocol.Handler
 	TxCh       chan *outside.TxRequest
 	TxResultCh chan *outside.ContractResult
 }
 
 func (s *DockerRpcServer) RunContracts(ctx context.Context, txRequest *outside.TxRequest) (*outside.ContractResult, error) {
 
-	s.TxCh <- txRequest
+	s.handler.GetTxCh() <- txRequest
 
 	for {
 
-		contractResult := <-s.TxResultCh
+		contractResult := <-s.handler.GetTxResultCh()
 
 		return contractResult, nil
 
@@ -40,7 +42,7 @@ func (s *DockerRpcServer) RunContracts(ctx context.Context, txRequest *outside.T
 }
 
 // NewDockerRpcServer build new rpc server
-func NewDockerRpcServer(port string) (*DockerRpcServer, error) {
+func NewDockerRpcServer(port string, handler protocol.Handler) (*DockerRpcServer, error) {
 
 	if port == "" {
 		return nil, errors.New("server listen port not provided")
@@ -86,6 +88,7 @@ func NewDockerRpcServer(port string) (*DockerRpcServer, error) {
 		isShutdown: true,
 		TxCh:       txCh,
 		TxResultCh: txResCh,
+		handler:    handler,
 	}, nil
 }
 
