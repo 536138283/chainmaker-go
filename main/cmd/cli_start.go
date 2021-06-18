@@ -128,6 +128,8 @@ func printLogo() {
 
 func startPProf() {
 	go func() {
+		runtime.SetBlockProfileRate(1)
+		runtime.SetMutexProfileFraction(1)
 		addr := fmt.Sprintf(":%d", localconf.ChainMakerConfig.PProfConfig.Port)
 		log.Infof("pprof start at [%s]", addr)
 		err := http.ListenAndServe(addr, nil)

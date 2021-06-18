@@ -3,7 +3,7 @@ log:
     log_level_default: DEBUG
     log_levels:
       core: DEBUG
-      net: INFO
+      net: DEBUG
       Sync: INFO
     file_path: ../log/system.log
     max_age: 365                  # 日志最长保存时间，单位：天
