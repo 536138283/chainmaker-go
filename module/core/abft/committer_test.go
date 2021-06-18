@@ -163,7 +163,7 @@ func getTxs() []*commonpb.Transaction {
 }
 
 func createBatch(blockHash []byte, height int64, txList []*commonpb.Transaction) *commonpb.Block {
-	b0 := cache.CreateNewTestBlock(height)
+	b0 := CreateNewTestBlock(height)
 	hash0 := blockHash
 	b0.Header.BlockHash = hash0
 	b0.Txs = txList
@@ -272,4 +272,58 @@ func addTxBatch(branchID1, branchID2, branchID3, branchID4, branchID5, branchID6
 
 	//retry: t5,t6
 	return hc
+}
+
+
+func CreateNewTestBlock(height int64) *commonpb.Block {
+	var hash = []byte("0123456789")
+	var version = []byte("0")
+	var block = &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			ChainId:        "Chain1",
+			BlockHeight:    height,
+			PreBlockHash:   hash,
+			BlockHash:      hash,
+			PreConfHeight:  0,
+			BlockVersion:   version,
+			DagHash:        hash,
+			RwSetRoot:      hash,
+			TxRoot:         hash,
+			BlockTimestamp: 0,
+			Proposer:       hash,
+			ConsensusArgs:  nil,
+			TxCount:        1,
+			Signature:      []byte(""),
+		},
+		Dag: &commonpb.DAG{
+			Vertexes: nil,
+		},
+		Txs: nil,
+	}
+	tx := CreateNewTestTx()
+	txs := make([]*commonpb.Transaction, 1)
+	txs[0] = tx
+	block.Txs = txs
+	return block
+}
+
+func CreateNewTestTx() *commonpb.Transaction {
+	var hash = []byte("0123456789")
+	return &commonpb.Transaction{
+		Header: &commonpb.TxHeader{
+			ChainId:        "",
+			Sender:         nil,
+			TxType:         0,
+			TxId:           "",
+			Timestamp:      0,
+			ExpirationTime: 0,
+		},
+		RequestPayload:   hash,
+		RequestSignature: hash,
+		Result: &commonpb.Result{
+			Code:           commonpb.TxStatusCode_SUCCESS,
+			ContractResult: nil,
+			RwSetHash:      nil,
+		},
+	}
 }

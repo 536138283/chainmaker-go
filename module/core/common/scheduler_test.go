@@ -98,7 +98,8 @@ func prepare(t *testing.T) (*mock.MockVmManager, []*commonpb.TxRWSet, []*commonp
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
-	scheduler := NewTxScheduler(vmMgr, "Chain1")
+	chainConf := mock.NewMockChainConf(ctl)
+	scheduler := NewTxScheduler(vmMgr, chainConf)
 
 	contractId := &commonpb.ContractId{
 		ContractName:    "ContractName",

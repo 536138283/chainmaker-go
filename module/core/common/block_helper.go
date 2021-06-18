@@ -287,6 +287,7 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	var err error
 	var lastBlock *commonpb.Block
 	txCapacity := int64(vb.chainConf.ChainConfig().Block.BlockTxCapacity)
+	txRWSetMap := make(map[string]*commonpb.TxRWSet)
 	if block.Header.TxCount > txCapacity {
 		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
 	}
@@ -309,15 +310,14 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	// verify block sig and also verify identity and auth of block proposer
 	startSigTick := utils.CurrentTimeMillisSeconds()
 	vb.log.Debugf("verify block \n %s", utils.FormatBlock(block))
-	//todo VerifyBlockSig
 	if  err = abft.VerifyBlockSignatures(vb.chainConf, vb.ac, block); err != nil {
 		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
-	//if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-	//	return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-	//		block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
-	//}
+	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+	}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts = append(timeLasts, sigLasts)
 
@@ -327,7 +327,7 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	}
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
-		return nil, timeLasts, nil
+		return txRWSetMap, timeLasts, nil
 	}
 	// verify if txs are duplicate in this block
 	if IsTxDuplicate(block.Txs) {

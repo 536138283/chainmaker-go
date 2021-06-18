@@ -92,6 +92,7 @@ func (vt *VerifierTx) VerifierTxs() (txHashes [][]byte, txNewAdd []*commonpb.Tra
 			}
 			txHashes, newAddTxs, err := vt.verifyTx(txs, stat, txsRet)
 			if err != nil {
+				vt.log.Debugf("verify tx fail [%s], height[%d]", err.Error(), vt.block.Header.BlockHeight)
 				return
 			}
 			resultMu.Lock()
@@ -168,7 +169,10 @@ func (vt *VerifierTx) validateTx(tx *commonpb.Transaction, stat *verifyStat,
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	isExist, err := vt.store.TxExists(tx.Header.TxId)
 	stat.dbLasts += utils.CurrentTimeMillisSeconds() - startDBTicker
-	if err != nil || isExist {
+	if err != nil {
+		return err
+	}
+	if isExist {
 		err = fmt.Errorf("tx duplicate in DB (tx:%s)", tx.Header.TxId)
 		return err
 	}
