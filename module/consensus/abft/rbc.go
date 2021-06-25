@@ -26,7 +26,7 @@ type RBC struct {
 	enc                                reedsolomon.Encoder
 	receivedEchos                      map[string]*abft.EchoRequest
 	receivedReadys                     map[string][]byte
-	messages                           []*abftpb.ABFTMessage
+	messages                           []*abftpb.ABFTMessageReq
 	echoSent, readySent, outputDecoded bool
 	output                             []byte
 
@@ -48,7 +48,7 @@ func NewRBC(cfg *Config) *RBC {
 		receivedEchos:  make(map[string]*abft.EchoRequest),
 		receivedReadys: make(map[string][]byte),
 		closeCh:        make(chan struct{}),
-		messages:       []*abftpb.ABFTMessage{},
+		messages:       []*abftpb.ABFTMessageReq{},
 	}
 	return rbc
 }
@@ -101,12 +101,12 @@ func (rbc *RBC) HandleMessage(sender string, msg *abftpb.RBCRequest) error {
 	return nil
 }
 
-func (rbc *RBC) Messages() []*abftpb.ABFTMessage {
+func (rbc *RBC) Messages() []*abftpb.ABFTMessageReq {
 	rbc.Lock()
 	defer rbc.Unlock()
 
 	msgs := rbc.messages
-	rbc.messages = []*abftpb.ABFTMessage{}
+	rbc.messages = []*abftpb.ABFTMessageReq{}
 	return msgs
 }
 
@@ -280,7 +280,7 @@ func (rbc *RBC) appendProofRequests(to string, proof *abftpb.ProofRequest) {
 		},
 	}
 
-	abftMessage := &abftpb.ABFTMessage{
+	abftMessage := &abftpb.ABFTMessageReq{
 		Height: rbc.height,
 		From:   rbc.nodeID,
 		To:     to,
@@ -305,7 +305,7 @@ func (rbc *RBC) appendEchoRequests(echo *abftpb.EchoRequest) {
 	}
 
 	for _, n := range rbc.nodes {
-		abftMessage := &abftpb.ABFTMessage{
+		abftMessage := &abftpb.ABFTMessageReq{
 			Height: rbc.height,
 			From:   rbc.nodeID,
 			To:     n,
@@ -331,7 +331,7 @@ func (rbc *RBC) appendReadyRequests(ready *abftpb.ReadyRequest) {
 	}
 
 	for _, n := range rbc.nodes {
-		abftMessage := &abftpb.ABFTMessage{
+		abftMessage := &abftpb.ABFTMessageReq{
 			Height: rbc.height,
 			From:   rbc.nodeID,
 			To:     n,

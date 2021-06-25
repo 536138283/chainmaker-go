@@ -35,7 +35,7 @@ type BBA struct {
 	estimation, output, decision  bool
 	bvalBuffer                    []bvalDelayedMsg
 	auxBuffer                     []auxDelayedMsg
-	messages                      []*abftpb.ABFTMessage
+	messages                      []*abftpb.ABFTMessageReq
 }
 
 func NewBBA(cfg *Config) *BBA {
@@ -52,12 +52,12 @@ func NewBBA(cfg *Config) *BBA {
 	return bba
 }
 
-func (bba *BBA) Messages() []*abftpb.ABFTMessage {
+func (bba *BBA) Messages() []*abftpb.ABFTMessageReq {
 	bba.Lock()
 	defer bba.Unlock()
 
 	messages := bba.messages
-	bba.messages = []*abftpb.ABFTMessage{}
+	bba.messages = []*abftpb.ABFTMessageReq{}
 	return messages
 }
 
@@ -295,7 +295,7 @@ func (bba *BBA) appendBValRequests(val bool) {
 	}
 
 	for _, n := range bba.nodes {
-		abftMessage := &abftpb.ABFTMessage{
+		abftMessage := &abftpb.ABFTMessageReq{
 			Height: bba.height,
 			From:   bba.nodeID,
 			To:     n,
@@ -326,7 +326,7 @@ func (bba *BBA) appendAuxRequests(val bool) {
 	}
 
 	for _, n := range bba.nodes {
-		abftMessage := &abftpb.ABFTMessage{
+		abftMessage := &abftpb.ABFTMessageReq{
 			Height: bba.height,
 			From:   bba.nodeID,
 			To:     n,

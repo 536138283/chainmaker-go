@@ -59,7 +59,7 @@ func TestBBA_Input(t *testing.T) {
 			msgs := bba.Messages()
 			assert.Equal(t, len(tt.config.nodes), len(msgs))
 			index := 0
-			funk.ForEach(msgs, func(msg *abftpb.ABFTMessage) {
+			funk.ForEach(msgs, func(msg *abftpb.ABFTMessageReq) {
 				assert.Equal(t, tt.config.height, msg.Height)
 				assert.Equal(t, tt.config.nodeID, msg.From)
 				assert.Equal(t, tt.config.nodes[index], msg.To)

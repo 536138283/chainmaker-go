@@ -18,7 +18,7 @@ import (
 
 type Event struct {
 	rbcOutputs [][]byte
-	messages   []*abftpb.ABFTMessage
+	messages   []*abftpb.ABFTMessageReq
 	outputs    [][]byte
 }
 
@@ -37,7 +37,7 @@ type ACS struct {
 	rbcOutputCache map[string]*rbcOutput
 	rbcOutputs     [][]byte
 	outputs        [][]byte
-	messages       []*abftpb.ABFTMessage
+	messages       []*abftpb.ABFTMessageReq
 	decided        bool
 }
 
@@ -167,7 +167,7 @@ func (acs *ACS) handleBBA(sender string, id string, bbaMessage *abftpb.BBAReques
 	})
 }
 
-func (acs *ACS) appendMessages(msgs []*abftpb.ABFTMessage) {
+func (acs *ACS) appendMessages(msgs []*abftpb.ABFTMessageReq) {
 	acs.messages = append(acs.messages, msgs...)
 }
 

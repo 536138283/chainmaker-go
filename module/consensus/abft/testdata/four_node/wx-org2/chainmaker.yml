@@ -20,8 +20,8 @@ net:
   seeds:
     - "/ip4/192.168.2.2/tcp/6666/p2p/QmcQHCuAXaFkbcsPUj7e37hXXfZ9DdN7bozseo5oX4qiC4"
     - "/ip4/192.168.2.3/tcp/6666/p2p/QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
-    - "/ip4/192.168.2.4/tcp/6666/p2p/QmXf6mnQDBR9aHauRmViKzSuZgpumkn7x6rNxw1oqqRr45"
-    - "/ip4/192.168.2.5/tcp/6666/p2p/QmRRWXJpAVdhFsFtd9ah5F4LDQWFFBDVKpECAF8hssqj6H"
+    # - "/ip4/192.168.2.4/tcp/6666/p2p/QmXf6mnQDBR9aHauRmViKzSuZgpumkn7x6rNxw1oqqRr45"
+    # - "/ip4/192.168.2.5/tcp/6666/p2p/QmRRWXJpAVdhFsFtd9ah5F4LDQWFFBDVKpECAF8hssqj6H"
   tls:
     enabled: true
     priv_key_file: ../config/wx-org2/certs/node/consensus1/consensus1.tls.key
