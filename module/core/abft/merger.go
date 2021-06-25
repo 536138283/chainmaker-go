@@ -10,6 +10,7 @@ import (
 	"chainmaker.org/chainmaker-go/common/bitmap"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"encoding/hex"
 	"sync"
 )
 
@@ -86,11 +87,13 @@ func (m *Merger) doMerge(
 	baseWriteTable map[string]struct{}) {
 
 	failTxWriteTable := make(map[string]struct{})
+	repeatTx := 0
 	for _, tx := range txBatch.Txs {
 		txId := tx.Header.TxId
 		rwSet := rwSetMap[txId]
 		// discard repeat tx
 		if _, ok := m.allTxsMap[txId]; ok {
+			repeatTx++
 			if tx.Result.Code == commonpb.TxStatusCode_SUCCESS {
 				updateWriteTable(failTxWriteTable, rwSet)
 			}
@@ -115,8 +118,8 @@ func (m *Merger) doMerge(
 
 		// update allTxsMap
 		m.allTxsMap[txId] = tx
-
 	}
+	m.log.Debugf("branchId[%s], repeatTx[%d]", hex.EncodeToString(txBatch.Header.BlockHash), repeatTx)
 }
 
 func (m *Merger) getRepeatTx(txBatchID string) ([]int, map[string]struct{}) {
