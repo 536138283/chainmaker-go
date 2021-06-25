@@ -43,13 +43,7 @@ message Response {
     bytes payload = 3;
 }
 
-message KeyValuePair {
-    string key = 1;
-    string value = 2;
-}
-
 message Input {
-    repeated KeyValuePair parameters = 1;
+    map<string, string> args = 1;
 
-    bool isInit = 2;
 }
