@@ -165,8 +165,26 @@ func displayBuildProcess(rd io.Reader) error {
 
 	scanner := bufio.NewScanner(rd)
 	for scanner.Scan() {
+
 		lastLine = scanner.Text()
-		fmt.Println(scanner.Text())
+		lastLine = strings.TrimLeft(lastLine, "{\"stream\":\"")
+		lastLine = strings.TrimRight(lastLine, "\"}")
+		lastLine = strings.TrimRight(lastLine, "\\n")
+		if len(lastLine) == 0 {
+			continue
+		}
+		if strings.Contains(lastLine, "---\\u003e") {
+			continue
+		}
+
+		if strings.Contains(lastLine, "Removing intermediate") {
+			continue
+		}
+
+		if strings.Contains(lastLine, "ux\":{\"ID\":\"sha256") {
+			continue
+		}
+		fmt.Println(lastLine)
 	}
 
 	errLine := &ErrorLine{}

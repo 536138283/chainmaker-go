@@ -2,7 +2,7 @@ package protocol
 
 import "chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
 
-type Handler interface {
+type Scheduler interface {
 
 	// Start start tx and tx result channel
 	Start()
@@ -15,4 +15,7 @@ type Handler interface {
 
 	// GetTxResultCh get tx result channel
 	GetTxResultCh() chan *outside.ContractResult
+
+	// FreeHandler remove handler key in scheduler
+	FreeHandler(contractName string)
 }

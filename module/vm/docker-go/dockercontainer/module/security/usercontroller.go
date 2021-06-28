@@ -3,6 +3,7 @@ package security
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 )
@@ -10,6 +11,7 @@ import (
 type UsersController struct {
 	Total   int
 	UserMap map[int]*User
+	logger  *log.Logger
 }
 
 type User struct {
@@ -29,6 +31,7 @@ func NewUsersController() *UsersController {
 	users := &UsersController{
 		UserMap: userMap,
 		Total:   0,
+		logger:  utils.NewLogger("User Controller"),
 	}
 
 	return users
@@ -90,12 +93,13 @@ func (u *UsersController) setUserDirMod(newUser User) error {
 
 func (u *UsersController) UpdateUserState(userId int, busy bool) {
 	u.UserMap[userId].Busy = busy
-	fmt.Println("UserController Update: ", u.UserMap[userId])
+	u.logger.Println("update user: ", u.UserMap[userId])
 }
 
 func (u *UsersController) GetAvailableUser() *User {
 	for _, user := range u.UserMap {
 		if !user.Busy {
+			u.logger.Println("allocate user: ", user)
 			return user
 		}
 	}
@@ -105,5 +109,6 @@ func (u *UsersController) GetAvailableUser() *User {
 
 func (u *UsersController) ResetUserEnv(user *User) error {
 	rmCommand := fmt.Sprintf("rm -rf %s/*", user.HomeDir)
+	u.logger.Printf("reset user [%s] environment\n", user.UserName)
 	return utils.RunCmd(rmCommand)
 }

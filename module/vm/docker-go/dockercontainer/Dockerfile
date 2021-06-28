@@ -3,9 +3,9 @@ FROM golang:1.15-alpine AS build
 WORKDIR /container
 ENV CGO_ENABLED=0
 ENV GOPROXY=https://goproxy.cn,direct
-COPY go.* ./
-RUN go mod download
+#COPY go.* ./
 COPY . /container
+RUN go mod download
 
 RUN go build -o /bin/start
 

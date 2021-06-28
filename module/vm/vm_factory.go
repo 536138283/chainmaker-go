@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package vm
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontroller"
 	"encoding/hex"
 	"fmt"
 	"path/filepath"
@@ -44,6 +45,7 @@ func (f *Factory) NewVmManager(wxvmCodePathPrefix string, AccessControl protocol
 	wasmerVmPoolManager := wasmer.NewVmPoolManager(chainId)
 	wxvmCodeManager := xvm.NewCodeManager(chainId, wxvmCodeDir)
 	wxvmContextService := xvm.NewContextService(chainId)
+	dockerManager := dockercontroller.NewDockerManager(chainId)
 
 	return &ManagerImpl{
 		ChainId:                chainId,
@@ -54,6 +56,7 @@ func (f *Factory) NewVmManager(wxvmCodePathPrefix string, AccessControl protocol
 		ChainNodesInfoProvider: provider,
 		Log:                    log,
 		chainConf:              chainConf,
+		DockerManager:          dockerManager,
 	}
 }
 
@@ -74,6 +77,7 @@ type ManagerImpl struct {
 	ChainId                string
 	Log                    *logger.CMLogger
 	chainConf              protocol.ChainConf // chain config
+	DockerManager          *dockercontroller.DockerManager
 }
 
 func (m *ManagerImpl) GetAccessControl() protocol.AccessControlProvider {
@@ -494,6 +498,11 @@ func (m *ManagerImpl) invokeUserContractByRuntime(contractId *commonPb.ContractI
 			Method:       method,
 			ContractId:   contractId,
 		}
+	case commonPb.RuntimeType_DOCKER_GO:
+		// retrieve default container instance
+		const containerName = "container1"
+		runtimeInstance = m.DockerManager.Instances[containerName]
+
 	default:
 		contractResult.Message = fmt.Sprintf("no such vm runtime %q", runtimeType)
 		return contractResult, commonPb.TxStatusCode_INVALID_CONTRACT_PARAMETER_RUNTIME_TYPE
@@ -562,7 +571,9 @@ func (m *ManagerImpl) invokeUserContractByRuntime(contractId *commonPb.ContractI
 		//txContext.Put(contractId.ContractName, []byte("target"), []byte("mysql")) // for dag
 	}
 
+	// if docker manager, just run invoke, which send data to docker, doesn't return result immediately
 	runtimeContractResult := runtimeInstance.Invoke(contractId, method, byteCode, parameters, txContext, gasUsed)
+
 	if runtimeContractResult.Code == commonPb.ContractResultCode_OK {
 		return runtimeContractResult, commonPb.TxStatusCode_SUCCESS
 	} else {

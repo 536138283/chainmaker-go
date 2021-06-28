@@ -29,6 +29,8 @@ replace (
 	chainmaker.org/chainmaker-go/common => ../../common
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
+	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
+	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
 	chainmaker.org/chainmaker-go/evm => ../vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../conf/localconf
@@ -53,5 +55,6 @@ replace (
 	github.com/libp2p/go-libp2p => ../net/p2p/libp2p
 	github.com/libp2p/go-libp2p-core => ../net/p2p/libp2pcore
 	github.com/libp2p/go-libp2p-pubsub => ../net/p2p/libp2ppubsub
+	contract-sdk-test1/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 
 )

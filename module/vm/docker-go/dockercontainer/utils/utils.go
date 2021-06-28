@@ -3,6 +3,7 @@ package utils
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -84,4 +85,9 @@ func setFileRunnable(filePath string, userId int) error {
 		return err
 	}
 	return nil
+}
+
+func NewLogger(module string) *log.Logger {
+	currentModule := module + " "
+	return log.New(os.Stdout, currentModule, log.Lshortfile|log.Ldate|log.Ltime)
 }

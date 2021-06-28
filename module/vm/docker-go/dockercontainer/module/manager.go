@@ -2,9 +2,9 @@ package module
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/docker_scheduler"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpcserver"
 	security2 "chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/txhandler"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"log"
 	"os"
@@ -19,12 +19,8 @@ type ExitStatus struct {
 
 type ManagerImpl struct {
 	dockerRpcServer *rpcserver.DockerRpcServer
-	handler         protocol.Handler
+	scheduler       protocol.Scheduler
 	userController  protocol.UserController
-	//workerFinishCh  chan bool
-	// uid manager
-	// child process manage
-
 }
 
 func NewManager() *ManagerImpl {
@@ -33,24 +29,24 @@ func NewManager() *ManagerImpl {
 	userController := security2.NewUsersController()
 
 	// new handler
-	handler := txhandler.NewHandler(userController)
+	scheduler := docker_scheduler.NewDockerScheduler(userController)
 
 	// new docker rpc server
-	server, err := rpcserver.NewDockerRpcServer(config.Port, handler)
+	server, err := rpcserver.NewDockerRpcServer(config.Port, scheduler)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
 	manager := &ManagerImpl{
 		dockerRpcServer: server,
-		handler:         handler,
+		scheduler:       scheduler,
 		userController:  userController,
 	}
 
 	return manager
 }
 
-func (m *ManagerImpl) InitContainer() error {
+func (m *ManagerImpl) InitContainer() {
 
 	// start server
 	go m.dockerRpcServer.StartServer()
@@ -62,7 +58,6 @@ func (m *ManagerImpl) InitContainer() error {
 	go m.userController.CreateNewUsers(config.UserNum)
 
 	// start handler
-	go m.handler.Start()
+	go m.scheduler.Start()
 
-	return nil
 }

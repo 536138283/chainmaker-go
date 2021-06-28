@@ -17,8 +17,8 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4
 	github.com/prometheus/client_golang v1.9.0
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/time v0.0.0-20191024005414-555d28b269f0
-	google.golang.org/grpc v1.37.0
+	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
+	google.golang.org/grpc v1.38.0
 )
 
 replace (
@@ -28,6 +28,8 @@ replace (
 	chainmaker.org/chainmaker-go/common => ../../common
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
+	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
+	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
 	chainmaker.org/chainmaker-go/evm => ../vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../conf/localconf
@@ -37,6 +39,7 @@ replace (
 	chainmaker.org/chainmaker-go/net => ../net
 	chainmaker.org/chainmaker-go/pb/protogo => ../../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ../../protocol
+	chainmaker.org/chainmaker-go/provider => ./../provider
 	chainmaker.org/chainmaker-go/rpcserver => ../rpcserver
 	chainmaker.org/chainmaker-go/snapshot => ../snapshot
 	chainmaker.org/chainmaker-go/spv => ../spv
@@ -53,6 +56,6 @@ replace (
 	github.com/libp2p/go-libp2p => ../net/p2p/libp2p
 	github.com/libp2p/go-libp2p-core => ../net/p2p/libp2pcore
 	github.com/libp2p/go-libp2p-pubsub => ../net/p2p/libp2ppubsub
-	chainmaker.org/chainmaker-go/provider => ./../provider
+	contract-sdk-test1/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 
 )

@@ -6,6 +6,7 @@ require (
 	chainmaker.org/chainmaker-go/accesscontrol v0.0.0
 	chainmaker.org/chainmaker-go/chainconf v0.0.0
 	chainmaker.org/chainmaker-go/common v0.0.0
+	chainmaker.org/chainmaker-go/docker-go v0.0.0
 	chainmaker.org/chainmaker-go/evm v0.0.0
 	chainmaker.org/chainmaker-go/gasm v0.0.0
 	chainmaker.org/chainmaker-go/localconf v0.0.0
@@ -16,13 +17,16 @@ require (
 	chainmaker.org/chainmaker-go/wasmer v0.0.0
 	chainmaker.org/chainmaker-go/wxvm v0.0.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/stretchr/testify v1.7.0
+	github.com/spf13/cobra v1.1.1
+	github.com/spf13/pflag v1.0.5
 )
 
 replace (
 	chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
 	chainmaker.org/chainmaker-go/chainconf => ../conf/chainconf
 	chainmaker.org/chainmaker-go/common => ../../common
+	chainmaker.org/chainmaker-go/docker-go => ./docker-go
+	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ./docker-go/dockercontainer
 	chainmaker.org/chainmaker-go/evm => ./evm
 	chainmaker.org/chainmaker-go/gasm => ./gasm
 	chainmaker.org/chainmaker-go/localconf => ../conf/localconf
@@ -34,4 +38,5 @@ replace (
 	chainmaker.org/chainmaker-go/wasi => ./wasi
 	chainmaker.org/chainmaker-go/wasmer => ./wasmer
 	chainmaker.org/chainmaker-go/wxvm => ./wxvm
+	contract-sdk-test1/pb_sdk => ./docker-go/dockercontainer/pb_sdk
 )

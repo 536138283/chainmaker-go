@@ -481,6 +481,7 @@ func (ts *TxScheduler) runVM(tx *commonpb.Transaction, txSimContext protocol.TxS
 	}
 	contractResultPayload, txStatusCode := ts.VmManager.RunContract(contractId, method, byteCode, parameters, txSimContext, 0, tx.Header.TxType)
 
+	// split here  -- not using vm manager, but using docker manager
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 

@@ -6,9 +6,10 @@ import (
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"context"
-	"fmt"
 	"google.golang.org/grpc"
 	"log"
+	"strings"
+	"time"
 )
 
 // RuntimeInstance evm runtime
@@ -17,45 +18,70 @@ type RuntimeInstance struct {
 	ChainId       string // chain id
 }
 
+const (
+	dialTimeout        = 10 * time.Second
+	maxRecvMessageSize = 100 * 1024 * 1024 // 100 MiB
+	maxSendMessageSize = 100 * 1024 * 1024 // 100 MiB
+)
+
 // Invoke contract by call vm, send tx to docker and get result after all txs finished
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
-	//txId := txSimContext.GetTx().GetHeader().TxId
+	txId := txSimContext.GetTx().GetHeader().TxId
 
-	//startTime := utils.CurrentTimeMillisSeconds()
-	// return whole snapshot
+	log.Println("--------------------------------------")
+	log.Println("Start to run contract in docker")
 
-	// split the whole snapshot to contractResult
+	// contract response
+	contractResult = &commonPb.ContractResult{
+		Code:    commonPb.ContractResultCode_FAIL,
+		Result:  nil,
+		Message: "",
+	}
 
-	// only return the runtimeContractResult
+	// split args from parameters
+	argsMap := make(map[string]string)
+
+	for key, value := range parameters {
+		if strings.Contains(key, "arg") {
+			argsMap[key] = value
+		}
+	}
 
 	// construct tx request and send to docker rpc
 	txRequest := &outside.TxRequest{
-		ContractId: nil,
-		Method:     method,
-		ByteCode:   byteCode,
-		Parameters: parameters,
+		TxId:            txId,
+		ContractName:    contractId.ContractName,
+		ContractVersion: contractId.ContractVersion,
+		Method:          method,
+		ByteCode:        byteCode,
+		Parameters:      argsMap,
 	}
 
-	result := r.startRpcClient(txRequest)
+	result, err := r.startRpcClient(txRequest)
 
-	contractResult = &commonPb.ContractResult{
-		Code:          0,
-		Result:        result.ContractResult.Result,
-		Message:       result.ContractResult.Message,
-		GasUsed:       0,
-		ContractEvent: nil,
+	contractResult.Message = result.Message
+	contractResult.Result = result.Result
+
+	if err != nil {
+		return contractResult
 	}
 
-	fmt.Println("-----------------------------------------------")
-	fmt.Println(result)
+	contractResult.Code = commonPb.ContractResultCode_OK
+
+	log.Println("-----------------------------------------------")
+	log.Println("End to run contract in docker")
+	log.Println(result)
 
 	return contractResult
 }
 
-func (r *RuntimeInstance) startRpcClient(request *outside.TxRequest) *outside.TxResult {
+func (r *RuntimeInstance) startRpcClient(request *outside.TxRequest) (*outside.ContractResult, error) {
 	Port := "12355"
-	conn, err := grpc.Dial(":"+Port, grpc.WithInsecure())
+	conn, err := grpc.Dial(":"+Port, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
+		grpc.MaxCallRecvMsgSize(maxRecvMessageSize),
+		grpc.MaxCallSendMsgSize(maxSendMessageSize),
+	))
 	if err != nil {
 		log.Fatalf("err when dial the server %v", err)
 	}
@@ -63,14 +89,12 @@ func (r *RuntimeInstance) startRpcClient(request *outside.TxRequest) *outside.Tx
 
 	client := api.NewDockerRpcClient(conn)
 
-	stream, err := client.RunContracts(context.Background())
-	stream.Send(request)
+	result, err := client.RunContracts(context.Background(), request)
 
-	result, err := stream.CloseAndRecv()
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
-	return result
+	return result, nil
 
 }

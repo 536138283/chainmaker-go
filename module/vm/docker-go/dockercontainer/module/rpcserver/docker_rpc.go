@@ -4,6 +4,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/api"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"context"
 	"errors"
 	"google.golang.org/grpc"
@@ -18,31 +19,42 @@ const (
 	connectionTimeout = 5 * time.Second
 )
 
+const (
+	dialTimeout        = 10 * time.Second
+	maxRecvMessageSize = 100 * 1024 * 1024 // 100 MiB
+	maxSendMessageSize = 100 * 1024 * 1024 // 100 MiB
+)
+
 type DockerRpcServer struct {
 	Listener   net.Listener
 	Server     *grpc.Server
 	isShutdown bool
-	handler    protocol.Handler
+	scheduler  protocol.Scheduler
 	TxCh       chan *outside.TxRequest
 	TxResultCh chan *outside.ContractResult
+	logger     *log.Logger
 }
 
 func (s *DockerRpcServer) RunContracts(ctx context.Context, txRequest *outside.TxRequest) (*outside.ContractResult, error) {
 
-	s.handler.GetTxCh() <- txRequest
+	s.scheduler.GetTxCh() <- txRequest
 
 	for {
 
-		contractResult := <-s.handler.GetTxResultCh()
+		// todo check if result is for current request
+		contractResult := <-s.scheduler.GetTxResultCh()
+		s.logger.Println(contractResult)
+		if contractResult.Result != nil {
+			return contractResult, nil
 
-		return contractResult, nil
+		}
 
 	}
 
 }
 
 // NewDockerRpcServer build new rpc server
-func NewDockerRpcServer(port string, handler protocol.Handler) (*DockerRpcServer, error) {
+func NewDockerRpcServer(port string, scheduler protocol.Scheduler) (*DockerRpcServer, error) {
 
 	if port == "" {
 		return nil, errors.New("server listen port not provided")
@@ -74,10 +86,10 @@ func NewDockerRpcServer(port string, handler protocol.Handler) (*DockerRpcServer
 
 	//set default connection timeout
 	serverOpts = append(serverOpts, grpc.ConnectionTimeout(connectionTimeout))
+	serverOpts = append(serverOpts, grpc.MaxSendMsgSize(maxSendMessageSize))
+	serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(maxRecvMessageSize))
 
 	server := grpc.NewServer(serverOpts...)
-
-	log.Println("Server created successfully")
 
 	txCh := make(chan *outside.TxRequest)
 	txResCh := make(chan *outside.ContractResult)
@@ -88,7 +100,8 @@ func NewDockerRpcServer(port string, handler protocol.Handler) (*DockerRpcServer
 		isShutdown: true,
 		TxCh:       txCh,
 		TxResultCh: txResCh,
-		handler:    handler,
+		scheduler:  scheduler,
+		logger:     utils.NewLogger("Docker RPC Server"),
 	}, nil
 }
 
@@ -105,7 +118,7 @@ func (s *DockerRpcServer) StartServer() error {
 
 	api.RegisterDockerRpcServer(s.Server, s)
 
-	log.Println("Start server ..... ")
+	s.logger.Println("Start server ..... ")
 	s.isShutdown = true
 	s.Server.Serve(s.Listener)
 	return nil

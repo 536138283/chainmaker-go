@@ -1,7 +1,8 @@
-package txhandler
+package docker_scheduler
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/docker_handler"
 	security2 "chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
@@ -11,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -19,117 +21,152 @@ type ExitStatus struct {
 	Signal os.Signal
 	Code   int
 	PID    int
-	TxId   string
 	User   *security2.User
+	Tx     *outside.TxRequest
 }
 
-type Handler struct {
+type DockerScheduler struct {
 	txCh           chan *outside.TxRequest
 	txResultCh     chan *outside.ContractResult
 	exitCh         chan ExitStatus
 	userController protocol.UserController
+	handlers       map[string]*docker_handler.DockerHandler
+	logger         *log.Logger
 }
 
-func NewHandler(userController protocol.UserController) *Handler {
+func NewDockerScheduler(userController protocol.UserController) *DockerScheduler {
 	txCh := make(chan *outside.TxRequest)
-	txResultCh := make(chan *outside.ContractResult)
-	exitCh := make(chan ExitStatus)
+	txResultCh := make(chan *outside.ContractResult, 1)
+	exitCh := make(chan ExitStatus, 1)
 
-	handler := &Handler{
+	scheduler := &DockerScheduler{
 		txCh:           txCh,
 		txResultCh:     txResultCh,
 		exitCh:         exitCh,
 		userController: userController,
+		logger:         utils.NewLogger("Docker Scheduler"),
+		handlers:       make(map[string]*docker_handler.DockerHandler),
 	}
 
-	return handler
+	return scheduler
 }
 
-func (h *Handler) Start() {
+func (s *DockerScheduler) Start() {
 
-	go h.listenIncoming()
+	s.logger.Println("start docker scheduler")
 
-	go h.monitorSandBox()
+	go s.listenIncoming()
+
+	go s.monitorSandBox()
 
 }
 
-func (h *Handler) Stop() {
+func (s *DockerScheduler) Stop() {
 	// close all channels:
+	//close(s.txCh)
+	//close(s.txResultCh)
+	//close(s.exitCh)
+
+	// stop listen
+
+	// stop monitor
 }
 
-func (h *Handler) GetTxCh() chan *outside.TxRequest {
-	return h.txCh
+func (s *DockerScheduler) GetTxCh() chan *outside.TxRequest {
+	return s.txCh
 }
 
-func (h *Handler) GetTxResultCh() chan *outside.ContractResult {
-	return h.txResultCh
+func (s *DockerScheduler) GetTxResultCh() chan *outside.ContractResult {
+	return s.txResultCh
 }
 
-func (h *Handler) listenIncoming() {
-	fmt.Println("Handler -- Begin listen incoming")
+func (s *DockerScheduler) listenIncoming() {
+	s.logger.Println("Begin listen incoming")
 	for {
 		select {
-		case tx := <-h.txCh:
-			go h.handleTx(tx)
+		case tx := <-s.txCh:
+			go s.handleTx(tx)
 		}
 	}
-	fmt.Println("Handler -- Stop listen incoming")
+	s.logger.Println("Stop listen incoming")
 }
 
-func (h *Handler) monitorSandBox() {
+func (s *DockerScheduler) monitorSandBox() {
 	for {
-		status := <-h.exitCh
+		status := <-s.exitCh
 
 		switch status.Signal {
 		case os.Kill:
 			// means process run fail, todo
-			fmt.Printf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
+			s.logger.Printf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
 		default:
 			// means process run successful, return the value back
-			fmt.Printf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
+			s.logger.Printf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
 			//m.workerFinishCh <- true
 		}
 
 		// free current user
-		h.userController.UpdateUserState(status.User.Uid, false)
-		h.userController.ResetUserEnv(status.User)
+		s.userController.UpdateUserState(status.User.Uid, false)
+		s.userController.ResetUserEnv(status.User)
 	}
 }
 
-func (h *Handler) handleTx(tx *outside.TxRequest) *outside.ContractResult {
+func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
 
-	fmt.Println("Handler -- Begin handle tx")
+	s.logger.Println("Scheduler -- Begin handle tx")
 
-	// set available uid
-	user := h.userController.GetAvailableUser()
-	h.userController.UpdateUserState(user.Uid, true)
+	// set available user
+	user := s.userController.GetAvailableUser()
+	s.userController.UpdateUserState(user.Uid, true)
 
 	// save bytes to executable file and set proper permission
 	err := utils.ConvertBytesToRunnableFile(tx.ByteCode, user.BinPath, user.Uid)
 	if err != nil {
+		fmt.Println(1)
 		log.Fatalln(err)
 	}
 
-	return h.startSandBox(user, tx.TxId)
+	// register the new handler
+	handler, err := docker_handler.NewDockerHandler(user, tx, s)
+	if err != nil {
+		fmt.Println(2)
+		log.Fatalln(err)
+	}
+	s.handlers[tx.ContractName] = handler
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	// begin handle sandbox
+	go handler.UdsServer.StartServer(tx, &wg)
+
+	err = s.startSandBox(user, tx, &wg)
+	if err != nil {
+		return err
+	}
+
+	s.FreeHandler(tx.ContractName)
+
+	return nil
 }
 
-func (h *Handler) startSandBox(user *security2.User, txId string) *outside.ContractResult {
+func (s *DockerScheduler) startSandBox(user *security2.User, tx *outside.TxRequest, wg *sync.WaitGroup) error {
 
 	cmd := exec.Cmd{
 		Path: user.BinPath,
+		Args: []string{user.SockPath},
 	}
 
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	//cmd.SysProcAttr = &syscall.SysProcAttr{
-	//	Credential: &syscall.Credential{
-	//		Uid: uint32(user.Uid),
-	//	},
-	//	Cloneflags: syscall.CLONE_NEWIPC |
-	//		syscall.CLONE_NEWPID |
-	//		syscall.CLONE_NEWNET,
-	//}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(user.Uid),
+		},
+		Cloneflags: syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNET,
+	}
 
 	// start app
 	if err := cmd.Start(); err != nil {
@@ -145,18 +182,9 @@ func (h *Handler) startSandBox(user *security2.User, txId string) *outside.Contr
 	memoryPath := filepath.Join(config.CGroupRoot, config.ProcsFile)
 	utils.WriteToFile(memoryPath, cmd.Process.Pid)
 
-	fmt.Println("Add Pid ", cmd.Process.Pid, " to file ", config.ProcsFile)
+	s.logger.Println("Add Pid ", cmd.Process.Pid, " to file ", config.ProcsFile)
 
 	cmd.Wait()
-
-	// capture result of current process
-	// todo: unix domain socket receive the result
-	contractResult := &outside.ContractResult{
-		Code:    outside.ContractResultCode_OK,
-		Result:  nil,
-		Message: "testing",
-	}
-	h.txResultCh <- contractResult
 
 	// timeout, stop the process
 	timer.Stop()
@@ -169,15 +197,26 @@ func (h *Handler) startSandBox(user *security2.User, txId string) *outside.Contr
 	exitStatus := ExitStatus{
 		Code: status.ExitStatus(),
 		PID:  cmd.Process.Pid,
-		TxId: txId,
 		User: user,
+		Tx:   tx,
 	}
 
 	if status.Signaled() {
 		exitStatus.Signal = status.Signal()
 	}
 
-	h.exitCh <- exitStatus
+	s.logger.Println("--------- after wait")
 
-	return contractResult
+	// need to wait uds server finish the job
+	wg.Wait()
+
+	s.exitCh <- exitStatus
+
+	return nil
+}
+
+func (s *DockerScheduler) FreeHandler(contractName string) {
+	// free handler map
+	delete(s.handlers, contractName)
+	s.logger.Printf("free [%s] handler", contractName)
 }

@@ -32,4 +32,5 @@ replace (
 	chainmaker.org/chainmaker-go/pb/protogo => ../../../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ../../../protocol
 	chainmaker.org/chainmaker-go/utils => ../../utils
+	contract-sdk-test1/pb_sdk => ./dockercontainer/pb_sdk
 )
