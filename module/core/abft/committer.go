@@ -86,6 +86,8 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	// sort BatchID
 	c.sortTxBatchID()
+	c.log.Debugf("receive tx batch id [%s]", c.txBatchIDList)
+
 	//var block *commonpb.Block
 	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
 	// new block

@@ -119,7 +119,7 @@ func (m *Merger) doMerge(
 		// update allTxsMap
 		m.allTxsMap[txId] = tx
 	}
-	m.log.Debugf("height[%d], branchId[%s], repeatTx[%d]", baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx)
+	m.log.Debugf("height[%d], branchId[%s], repeatTx[%d], processer[%s]", baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx, string(txBatch.Header.Proposer))
 }
 
 func (m *Merger) getRepeatTx(txBatchID string) ([]int, map[string]struct{}) {
