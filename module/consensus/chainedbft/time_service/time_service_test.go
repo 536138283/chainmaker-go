@@ -9,13 +9,16 @@ import (
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker-go/logger"
+
 	"github.com/stretchr/testify/require"
 
 	chainedbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/chainedbft"
 )
 
 func TestTimerService_AddEvent(t *testing.T) {
-	timerService := NewTimerService()
+	log := logger.GetLogger("test")
+	timerService := NewTimerService(log)
 	go timerService.Start()
 	firedCh := timerService.GetFiredCh()
 
@@ -28,7 +31,8 @@ func TestTimerService_AddEvent(t *testing.T) {
 	checkNoTimeOutEvent(t, firedCh)
 
 	// 2. sleep to fired timeout
-	time.Sleep(paceEvent.Duration * 2)
+	time.Sleep(paceEvent.Duration * 6)
+
 	checkTimeOutEvent(t, firedCh)
 
 	// 3. re-add paceEvent event
@@ -42,31 +46,6 @@ func TestTimerService_AddEvent(t *testing.T) {
 
 }
 
-func TestTimerService_AddEvent2(t *testing.T) {
-	timerService := NewTimerService()
-	go timerService.Start()
-	firedCh := timerService.GetFiredCh()
-
-	// 4. add other event and no timeOut
-	event := TimerEvent{
-		Duration: time.Millisecond * 1,
-		State:    chainedbftpb.ConsStateType_NewLevel,
-		Height:   10,
-	}
-
-	timerService.AddEvent(&event)
-	checkNoTimeOutEvent(t, firedCh)
-
-	// 5. sleep to wait timeOut
-	time.Sleep(event.Duration * 2)
-	checkTimeOutEvent(t, firedCh)
-
-	// 6. add event failed, so no timeOut
-	timerService.AddEvent(&event)
-	time.Sleep(event.Duration * 2)
-	checkNoTimeOutEvent(t, firedCh)
-}
-
 func checkNoTimeOutEvent(t *testing.T, ch <-chan *TimerEvent) {
 	select {
 	case event := <-ch:
@@ -75,9 +54,9 @@ func checkNoTimeOutEvent(t *testing.T, ch <-chan *TimerEvent) {
 	}
 }
 
-func checkTimeOutEvent(t *testing.T, ch <-chan *TimerEvent) {
+func checkTimeOutEvent(t *testing.T, firedCh <-chan *TimerEvent) {
 	select {
-	case <-ch:
+	case <-firedCh:
 	default:
 		require.Fail(t, "should have timeOut event")
 	}

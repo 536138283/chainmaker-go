@@ -15,7 +15,7 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	logImpl "chainmaker.org/chainmaker-go/logger"
+	//logImpl "chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/protocol"
 	"github.com/pkg/errors"
 	"github.com/tecbot/gorocksdb"
@@ -47,26 +47,26 @@ type Provider struct {
 	dbHandles map[string]*RocksDBHandle
 	mutex     sync.Mutex
 
-	logger *logImpl.CMLogger
+	logger protocol.Logger
 }
 
-// NewBlockProvider construct a new Rocksdb Provider for block operation with given chainId
-func NewBlockProvider(chainId string) *Provider {
-	return NewProvider(chainId, StoreBlockDBDir)
-}
-
-// NewStateProvider construct a new Rocksdb Provider for state operation with given chainId
-func NewStateProvider(chainId string) *Provider {
-	return NewProvider(chainId, StoreStateDBDir)
-}
-
-// NewHistoryProvider construct a new Rocksdb Provider for history operation with given chainId
-func NewHistoryProvider(chainId string) *Provider {
-	return NewProvider(chainId, StoreHistoryDBDir)
-}
+//// NewBlockProvider construct a new Rocksdb Provider for block operation with given chainId
+//func NewBlockProvider(chainId string) *Provider {
+//	return NewProvider(chainId, StoreBlockDBDir)
+//}
+//
+//// NewStateProvider construct a new Rocksdb Provider for state operation with given chainId
+//func NewStateProvider(chainId string) *Provider {
+//	return NewProvider(chainId, StoreStateDBDir)
+//}
+//
+//// NewHistoryProvider construct a new Rocksdb Provider for history operation with given chainId
+//func NewHistoryProvider(chainId string) *Provider {
+//	return NewProvider(chainId, StoreHistoryDBDir)
+//}
 
 // NewProvider construct a new db Provider for given chainId and dir
-func NewProvider(chainId string, dbDir string) *Provider {
+func NewProvider(chainId string, dbDir string, logger protocol.Logger) *Provider {
 	dbOpts := NewRocksdbConfig()
 	writeBufferSize := localconf.ChainMakerConfig.StorageConfig.WriteBufferSize
 	if writeBufferSize > 0 {
@@ -93,7 +93,7 @@ func NewProvider(chainId string, dbDir string) *Provider {
 		dbHandles: make(map[string]*RocksDBHandle),
 		mutex:     sync.Mutex{},
 
-		logger: logImpl.GetLoggerByChain(logImpl.MODULE_STORAGE, chainId),
+		logger: logger,
 	}
 }
 
@@ -108,7 +108,7 @@ func (p *Provider) GetDBHandle(dbName string) protocol.DBHandle {
 			db:           p.db,
 			readOptions:  gorocksdb.NewDefaultReadOptions(),
 			writeOptions: gorocksdb.NewDefaultWriteOptions(),
-			logger:       logImpl.GetLogger(logImpl.MODULE_STORAGE),
+			logger:       p.logger,
 		}
 		p.dbHandles[dbName] = dbHandle
 	}
@@ -173,7 +173,7 @@ type RocksDBHandle struct {
 	writeOptions *gorocksdb.WriteOptions
 	db           *gorocksdb.DB
 
-	logger *logImpl.CMLogger
+	logger protocol.Logger
 }
 
 // Get get value from rocksdb
@@ -189,7 +189,7 @@ func (dbHandle *RocksDBHandle) Get(key []byte) ([]byte, error) {
 // Put put key,value to rocksdb
 func (dbHandle *RocksDBHandle) Put(key []byte, value []byte) error {
 	if value == nil {
-		dbHandle.logger.Warn("writting rocksdbprovider key [%#v] with nil value", key)
+		dbHandle.logger.Warn("writing rocksdbprovider key [%#v] with nil value", key)
 		return errors.New("error writing rocksdbprovider with nil value")
 	}
 	err := dbHandle.db.Put(dbHandle.writeOptions, makeKeyWithDbName(dbHandle.dbName, key), value)
@@ -243,6 +243,15 @@ func (dbHandle *RocksDBHandle) WriteBatch(batch protocol.StoreBatcher, sync bool
 		dbHandle.logger.Errorf("write batch to rocksdbprovider failed")
 		return errors.Wrap(err, "error writing batch to rocksdbprovider")
 	}
+	return nil
+}
+
+// CompactRange compacts the underlying DB for the given key range.
+func (dbHandle *RocksDBHandle) CompactRange(start, limit []byte) error {
+	dbHandle.db.CompactRange(gorocksdb.Range{
+		Start: start,
+		Limit: limit,
+	})
 	return nil
 }
 

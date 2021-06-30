@@ -16,42 +16,67 @@ import (
 	"chainmaker.org/chainmaker-go/chainconf"
 	commonErrors "chainmaker.org/chainmaker-go/common/errors"
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	configpb "chainmaker.org/chainmaker-go/pb/protogo/config"
 	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/protocol/test"
 	"chainmaker.org/chainmaker-go/utils"
+
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
+var log = &test.GoLogger{}
+
 func TestNewTxPoolImpl(t *testing.T) {
 	chainConf, _ := chainconf.NewChainConf(nil)
-	txPool, err := NewTxPoolImpl("", newMockBlockChainStore(), newMockMessageBus(), chainConf, newMockAccessControlProvider(), newMockNet())
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	txPool, err := NewTxPoolImpl("", newMockBlockChainStore(ctrl).store, newMockMessageBus(ctrl), chainConf, newMockAccessControlProvider(ctrl), newMockNet(ctrl), log)
 	require.Nil(t, txPool)
 	require.EqualError(t, fmt.Errorf("no chainId in create txpool"), err.Error())
 
-	txPool, err = NewTxPoolImpl("test_chain", newMockBlockChainStore(), newMockMessageBus(), chainConf, newMockAccessControlProvider(), newMockNet())
+	txPool, err = NewTxPoolImpl("test_chain", newMockBlockChainStore(ctrl).store, newMockMessageBus(ctrl), chainConf, newMockAccessControlProvider(ctrl), newMockNet(ctrl), log)
 	require.NotNil(t, txPool)
 	require.NoError(t, err)
 }
 
-func newTestPool(txCount uint32) protocol.TxPool {
+type testPool struct {
+	txPool protocol.TxPool
+	extTxs map[string]*commonPb.Transaction
+}
+
+func newTestPool(t *testing.T, txCount uint32) (*testPool, func()) {
 	chainConf, _ := chainconf.NewChainConf(nil)
+	chainConf.ChainConf = &configpb.ChainConfig{
+		Block:    &configpb.BlockConfig{},
+		Contract: &configpb.ContractConfig{},
+	}
 	localconf.ChainMakerConfig.TxPoolConfig.MaxTxPoolSize = txCount
-	localconf.ChainMakerConfig.TxPoolConfig.MaxConfigTxPoolSize = 10
+	localconf.ChainMakerConfig.TxPoolConfig.MaxConfigTxPoolSize = 1000
 	localconf.ChainMakerConfig.TxPoolConfig.CacheFlushTicker = 1
 	localconf.ChainMakerConfig.TxPoolConfig.CacheThresholdCount = 1
 	localconf.ChainMakerConfig.LogConfig.SystemLog.LogLevels = make(map[string]string)
 	localconf.ChainMakerConfig.LogConfig.SystemLog.LogLevels["txpool"] = "ERROR"
-
-	txPool, _ := NewTxPoolImpl("test_chain", newMockBlockChainStore(), newMockMessageBus(), chainConf, newMockAccessControlProvider(), newMockNet())
+	ctrl := gomock.NewController(t)
+	mockStore := newMockBlockChainStore(ctrl)
+	txPool, _ := NewTxPoolImpl("test_chain", mockStore.store, newMockMessageBus(ctrl), chainConf, newMockAccessControlProvider(ctrl), newMockNet(ctrl), log)
 	_ = txPool.Start()
-	return txPool
+	return &testPool{
+			txPool: txPool,
+			extTxs: mockStore.txs,
+		}, func() {
+			ctrl.Finish()
+			txPool.Stop()
+		}
 }
 
 func TestTxPoolImpl_AddTx(t *testing.T) {
 	commonTxs := generateTxs(30, false)
 	configTxs := generateTxs(30, true)
-	txPool := newTestPool(20)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 20)
+	txPool := testPool.txPool
+	defer fn()
 
 	// 2. add config txs
 	for _, tx := range configTxs[:10] {
@@ -81,7 +106,7 @@ func TestTxPoolImpl_AddTx(t *testing.T) {
 
 	// 6. add txs to blockchain
 	for _, tx := range commonTxs[20:25] {
-		imPool.blockchainStore.(*mockBlockChainStore).txs[tx.Header.TxId] = tx
+		testPool.extTxs[tx.Header.TxId] = tx
 	}
 
 	// 7. add txs[20:25] failed due to txs exist in blockchain
@@ -97,8 +122,9 @@ func TestTxPoolImpl_AddTx(t *testing.T) {
 }
 
 func TestFlushOrAddTxsToCache(t *testing.T) {
-	txPool := newTestPool(20)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 20)
+	txPool := testPool.txPool
+	defer fn()
 	rpcConfigTxs, _, _ := generateTxsBySource(10, true)
 	rpcCommonTxs, p2pCommonTxs, _ := generateTxsBySource(10, false)
 	imlPool := txPool.(*txPoolImpl)
@@ -113,16 +139,16 @@ func TestFlushOrAddTxsToCache(t *testing.T) {
 
 	// 3. add common txs
 	imlPool.flushOrAddTxsToCache(rpcCommonTxs)
-	require.EqualValues(t, 0, imlPool.queue.commonTxsCount())
-	require.EqualValues(t, len(rpcCommonTxs.txs), imlPool.cache.totalCount)
+	require.EqualValues(t, len(rpcCommonTxs.txs), imlPool.queue.commonTxsCount())
+	require.EqualValues(t, 0, imlPool.cache.totalCount)
 
 	// 4. repeat add common txs due to not flush, so size will be *2
 	imlPool.flushOrAddTxsToCache(rpcCommonTxs)
-	require.EqualValues(t, 0, imlPool.queue.commonTxsCount())
-	require.EqualValues(t, len(rpcCommonTxs.txs)*2, imlPool.cache.totalCount)
+	require.EqualValues(t, len(rpcCommonTxs.txs), imlPool.queue.commonTxsCount())
+	require.EqualValues(t, 0, imlPool.cache.totalCount)
 
 	// 5. modify flushThreshold in cache and add common txs to queue
-	imlPool.cache.flushThreshold = 20
+	imlPool.cache.flushThreshold = 0
 	p2pCommonTxs.source = protocol.RPC
 	imlPool.flushOrAddTxsToCache(p2pCommonTxs)
 	fmt.Println(imlPool.cache.isFlushByTxCount(p2pCommonTxs), imlPool.queue.configTxsCount(), imlPool.queue.commonTxsCount())
@@ -130,8 +156,9 @@ func TestFlushOrAddTxsToCache(t *testing.T) {
 }
 
 func TestTxPoolImpl_AddTxsToPendingCache(t *testing.T) {
-	txPool := newTestPool(20)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 200)
+	txPool := testPool.txPool
+	defer fn()
 	imlPool := txPool.(*txPoolImpl)
 	commonTxs := generateTxs(50, false)
 
@@ -151,7 +178,6 @@ func TestTxPoolImpl_AddTxsToPendingCache(t *testing.T) {
 	for _, tx := range commonTxs[20:45] {
 		require.NoError(t, txPool.AddTx(tx, protocol.RPC))
 	}
-	require.True(t, imlPool.queue.commonTxsCount() < 20)
 	// 2.1 add txs[20:40] to pending cache
 	txPool.AddTxsToPendingCache(commonTxs[20:40], 100)
 	// wait time to flush txs to queue with failed due to txs has exist in pending cache，parallel execution by adding txs to queue and adding txs to pending cache
@@ -166,8 +192,9 @@ func TestTxPoolImpl_AddTxsToPendingCache(t *testing.T) {
 }
 
 func TestTxPoolImpl_GetTxByTxId(t *testing.T) {
-	txPool := newTestPool(20)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 20)
+	txPool := testPool.txPool
+	defer fn()
 	imlPool := txPool.(*txPoolImpl)
 	commonTxs := generateTxs(50, false)
 
@@ -209,8 +236,9 @@ func TestTxPoolImpl_GetTxByTxId(t *testing.T) {
 }
 
 func TestTxPoolImpl_GetTxsByTxIds(t *testing.T) {
-	txPool := newTestPool(20)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 20)
+	txPool := testPool.txPool
+	defer fn()
 	imlPool := txPool.(*txPoolImpl)
 	commonTxs := generateTxs(50, false)
 
@@ -250,8 +278,9 @@ func TestTxPoolImpl_GetTxsByTxIds(t *testing.T) {
 }
 
 func TestTxPoolImpl_FetchTxBatch(t *testing.T) {
-	txPool := newTestPool(20)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 2000)
+	txPool := testPool.txPool
+	defer fn()
 	imlPool := txPool.(*txPoolImpl)
 	commonTxs := generateTxs(100, false)
 
@@ -259,21 +288,18 @@ func TestTxPoolImpl_FetchTxBatch(t *testing.T) {
 	for _, tx := range commonTxs[:50] {
 		require.NoError(t, txPool.AddTx(tx, protocol.RPC))
 	}
-	txsInPool := txPool.FetchTxBatch(99)
-	require.Nil(t, txsInPool)
 
 	// 2. sleep to wait txs flush
-	time.Sleep(time.Millisecond * 1500)
-	txsInPool = txPool.FetchTxBatch(99)
+	time.Sleep(time.Millisecond * 100)
+	txsInPool := txPool.FetchTxBatch(99)
 	require.EqualValues(t, commonTxs[:50], txsInPool)
-	//require.EqualValues(t, 50, imlPool.queue.commonTxQueue.pendingCache.Size())
 	require.EqualValues(t, 0, imlPool.queue.commonTxsCount())
-
 }
 
 func TestTxPoolImpl_RetryAndRemoveTxs(t *testing.T) {
-	txPool := newTestPool(20)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 2000)
+	txPool := testPool.txPool
+	defer fn()
 	imlPool := txPool.(*txPoolImpl)
 	commonTxs := generateTxs(100, false)
 
@@ -281,7 +307,7 @@ func TestTxPoolImpl_RetryAndRemoveTxs(t *testing.T) {
 	for _, tx := range commonTxs[:50] {
 		require.NoError(t, txPool.AddTx(tx, protocol.RPC))
 	}
-	time.Sleep(time.Millisecond * 1500)
+	time.Sleep(time.Millisecond * 100)
 	require.EqualValues(t, 50, imlPool.queue.commonTxsCount())
 
 	// 2. retry nil and remove txs[50:60]
@@ -313,8 +339,9 @@ func TestTxPoolImpl_RetryAndRemoveTxs(t *testing.T) {
 }
 
 func TestPoolImplConcurrencyInvoke(t *testing.T) {
-	txPool := newTestPool(2000000)
-	defer txPool.Stop()
+	testPool, fn := newTestPool(t, 2000000)
+	txPool := testPool.txPool
+	defer fn()
 	imlPool := txPool.(*txPoolImpl)
 	commonTxs := generateTxs(500000, false)
 	txIds := make([]string, 0, len(commonTxs))
@@ -329,7 +356,7 @@ func TestPoolImplConcurrencyInvoke(t *testing.T) {
 	wg := sync.WaitGroup{}
 	for i := 0; i < workerNum; i++ {
 		wg.Add(1)
-		go func(i int, txs []*common.Transaction) {
+		go func(i int, txs []*commonPb.Transaction) {
 			for _, tx := range txs {
 				txPool.AddTx(tx, protocol.RPC)
 			}

@@ -8,9 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"fmt"
 	"strings"
 	"sync"
+
+	"chainmaker.org/chainmaker-go/localconf"
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 
 	"chainmaker.org/chainmaker-go/common/bitmap"
 	"chainmaker.org/chainmaker-go/protocol"
@@ -72,6 +75,25 @@ func (s *SnapshotImpl) GetTxResultMap() map[string]*commonPb.Result {
 }
 
 func (s *SnapshotImpl) GetTxRWSetTable() []*commonPb.TxRWSet {
+	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
+		info := "rwset: "
+		for i, txRWSet := range s.txRWSetTable {
+			info += fmt.Sprintf("read set for tx id:[%s], count [%d]<", s.txTable[i].Header.TxId, len(txRWSet.TxReads))
+			for _, txRead := range txRWSet.TxReads {
+				if !strings.HasPrefix(string(txRead.Key), protocol.ContractByteCode) {
+					info += fmt.Sprintf("[%v] -> [%v], contract name [%v], version [%v],", txRead.Key, txRead.Value, txRead.ContractName, txRead.Version)
+				}
+			}
+			info += "> "
+			info += fmt.Sprintf("write set for tx id:[%s], count [%d]<", s.txTable[i].Header.TxId, len(txRWSet.TxWrites))
+			for _, txWrite := range txRWSet.TxWrites {
+				info += fmt.Sprintf("[%v] -> [%v], contract name [%v], ", txWrite.Key, txWrite.Value, txWrite.ContractName)
+			}
+			info += ">"
+		}
+		log.Debugf(info)
+	}
+
 	for _, txRWSet := range s.txRWSetTable {
 		for _, txRead := range txRWSet.TxReads {
 			if strings.HasPrefix(string(txRead.Key), protocol.ContractByteCode) ||
@@ -133,15 +155,7 @@ func (s *SnapshotImpl) ApplyTxSimContext(cache protocol.TxSimContext, runVmSucce
 	var txResult *commonPb.Result
 
 	// Only when the virtual machine is running normally can the read-write set be saved
-	if runVmSuccess {
-		txRWSet = cache.GetTxRWSet()
-	} else {
-		txRWSet = &commonPb.TxRWSet{
-			TxId:     tx.Header.TxId,
-			TxReads:  nil,
-			TxWrites: nil,
-		}
-	}
+	txRWSet = cache.GetTxRWSet(runVmSuccess)
 	txResult = cache.GetTxResult()
 
 	if txExecSeq >= len(s.txTable) {

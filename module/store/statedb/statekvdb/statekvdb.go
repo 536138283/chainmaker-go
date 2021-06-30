@@ -11,6 +11,12 @@ import (
 	"errors"
 	"fmt"
 
+	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
+
+	"chainmaker.org/chainmaker-go/utils"
+
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+
 	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/cache"
@@ -19,7 +25,6 @@ import (
 )
 
 const (
-	stateDBName            = ""
 	contractStoreSeparator = '#'
 	stateDBSavepointKey    = "stateDBSavePointKey"
 )
@@ -49,22 +54,39 @@ func (s *StateKvDB) CommitBlock(blockWithRWSet *serialization.BlockWithSerialize
 	txRWSets := blockWithRWSet.TxRWSets
 	for _, txRWSet := range txRWSets {
 		for _, txWrite := range txRWSet.TxWrites {
-			// 5. state: contractID + stateKey
-			txWriteKey := constructStateKey(txWrite.ContractName, txWrite.Key)
-			if txWrite.Value == nil {
-				batch.Delete(txWriteKey)
-			} else {
-				batch.Put(txWriteKey, txWrite.Value)
-			}
+
+			s.operateDbByWriteSet(batch, txWrite)
 		}
 	}
-
+	//process consensusArgs
+	if len(block.Header.ConsensusArgs) > 0 {
+		err := s.updateConsensusArgs(batch, block)
+		if err != nil {
+			return err
+		}
+	}
 	err := s.writeBatch(block.Header.BlockHeight, batch)
 	if err != nil {
 		return err
 	}
 	s.Logger.Debugf("chain[%s]: commit state block[%d]",
 		block.Header.ChainId, block.Header.BlockHeight)
+	return nil
+}
+
+func (s *StateKvDB) updateConsensusArgs(batch protocol.StoreBatcher, block *commonPb.Block) error {
+	//try to add consensusArgs
+	consensusArgs, err := utils.GetConsensusArgsFromBlock(block)
+	if err != nil {
+		s.Logger.Errorf("parse header.ConsensusArgs get an error:%s", err)
+		return err
+	}
+	if consensusArgs.ConsensusData != nil {
+		s.Logger.Debugf("add consensusArgs ConsensusData to statedb")
+		for _, write := range consensusArgs.ConsensusData.TxWrites {
+			s.operateDbByWriteSet(batch, write)
+		}
+	}
 	return nil
 }
 
@@ -105,10 +127,11 @@ func (i *kvi) Value() (*storePb.KV, error) {
 	}
 	return &storePb.KV{
 		ContractName: i.contractName,
-		Key:          i.iter.Key(),
+		Key:          parseStateKey(i.iter.Key(), i.contractName),
 		Value:        i.iter.Value(),
 	}, nil
 }
+
 func (i *kvi) Release() {
 	i.iter.Release()
 }
@@ -137,7 +160,7 @@ func (s *StateKvDB) writeBatch(blockHeight int64, batch protocol.StoreBatcher) e
 	go func() {
 		err := s.DbHandle.WriteBatch(batch, false)
 		if err != nil {
-			panic(fmt.Sprintf("Error writting leveldb: %s", err))
+			panic(fmt.Sprintf("Error writing leveldb: %s", err))
 		}
 		//db committed, clean cache
 		s.Cache.DelBlock(blockHeight)
@@ -155,45 +178,73 @@ func (s *StateKvDB) get(key []byte) ([]byte, error) {
 	return s.DbHandle.Get(key)
 }
 
-func (s *StateKvDB) has(key []byte) (bool, error) {
-	//check has from cache
-	isDelete, exist := s.Cache.Has(string(key))
-	if exist {
-		return !isDelete, nil
-	}
-	return s.DbHandle.Has(key)
-}
+//func (s *StateKvDB) has(key []byte) (bool, error) {
+//	//check has from cache
+//	isDelete, exist := s.Cache.Has(string(key))
+//	if exist {
+//		return !isDelete, nil
+//	}
+//	return s.DbHandle.Has(key)
+//}
 
 func constructStateKey(contractName string, key []byte) []byte {
 	return append(append([]byte(contractName), contractStoreSeparator), key...)
 }
 
-var ERROR_SQLDB_ONLY = errors.New("leveldb don't support this operation, please change to sql db")
+// parseStateKey corresponding to the constructStateKey(),  delete contract name from leveldb key
+func parseStateKey(key []byte, contractName string) []byte {
+	return key[len(contractName)+1:]
+}
+
+var errorSqldbOnly = errors.New("leveldb don't support this operation, please change to sql db")
 
 func (s *StateKvDB) QuerySingle(contractName, sql string, values ...interface{}) (protocol.SqlRow, error) {
-	return nil, ERROR_SQLDB_ONLY
+	return nil, errorSqldbOnly
 }
 func (s *StateKvDB) QueryMulti(contractName, sql string, values ...interface{}) (protocol.SqlRows, error) {
-	return nil, ERROR_SQLDB_ONLY
+	return nil, errorSqldbOnly
 
 }
 func (s *StateKvDB) BeginDbTransaction(txName string) (protocol.SqlDBTransaction, error) {
-	return nil, ERROR_SQLDB_ONLY
+	return nil, errorSqldbOnly
 
 }
 func (s *StateKvDB) GetDbTransaction(txName string) (protocol.SqlDBTransaction, error) {
-	return nil, ERROR_SQLDB_ONLY
+	return nil, errorSqldbOnly
 
 }
 func (s *StateKvDB) CommitDbTransaction(txName string) error {
-	return ERROR_SQLDB_ONLY
+	return errorSqldbOnly
 
 }
 func (s *StateKvDB) RollbackDbTransaction(txName string) error {
-	return ERROR_SQLDB_ONLY
+	return errorSqldbOnly
 
 }
 func (s *StateKvDB) ExecDdlSql(contractName, sql string) error {
-	return ERROR_SQLDB_ONLY
+	return errorSqldbOnly
 
+}
+
+func (s *StateKvDB) operateDbByWriteSet(batch protocol.StoreBatcher, txWrite *commonPb.TxWrite) {
+	// 5. state: contractID + stateKey
+	txWriteKey := constructStateKey(txWrite.ContractName, txWrite.Key)
+	if txWrite.Value == nil {
+		batch.Delete(txWriteKey)
+	} else {
+		batch.Put(txWriteKey, txWrite.Value)
+	}
+}
+func (s *StateKvDB) GetChainConfig() (*configPb.ChainConfig, error) {
+	val, err := s.ReadObject(commonPb.ContractName_SYSTEM_CONTRACT_CHAIN_CONFIG.String(),
+		[]byte(commonPb.ContractName_SYSTEM_CONTRACT_CHAIN_CONFIG.String()))
+	if err != nil {
+		return nil, err
+	}
+	conf := &configPb.ChainConfig{}
+	err = conf.Unmarshal(val)
+	if err != nil {
+		return nil, err
+	}
+	return conf, nil
 }

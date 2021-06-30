@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	logImpl "chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/binlog"
 	"chainmaker.org/chainmaker-go/store/blockdb"
@@ -40,16 +39,16 @@ import (
 type Factory struct {
 }
 
-var newRocksdbHandle func(chainId string, dbName string) protocol.DBHandle
+var newRocksdbHandle func(chainId string, dbName string, logger protocol.Logger) protocol.DBHandle
 
 // NewStore constructs new BlockStore
-func (m *Factory) NewStore(chainId string, storeConfig *localconf.StorageConfig) (protocol.BlockchainStore, error) {
-	//为存储模块初始化专用的StorageLogger
-	logger := logImpl.GetLoggerByChain(logImpl.MODULE_STORAGE, chainId)
+func (m *Factory) NewStore(chainId string, storeConfig *localconf.StorageConfig,
+	logger protocol.Logger) (protocol.BlockchainStore, error) {
 	return m.newStore(chainId, storeConfig, nil, logger)
 }
 
-func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig, binLog binlog.BinLoger, logger protocol.Logger) (protocol.BlockchainStore, error) {
+func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig, binLog binlog.BinLoger,
+	logger protocol.Logger) (protocol.BlockchainStore, error) {
 
 	var blockDB blockdb.BlockDB
 	var err error
@@ -152,11 +151,9 @@ func parseEngineType(dbType string) types.EngineType {
 }
 
 // NewBlockKvDB constructs new `BlockDB`
-func (m *Factory) NewBlockKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig, logger protocol.Logger) (blockdb.BlockDB, error) {
+func (m *Factory) NewBlockKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+	logger protocol.Logger) (blockdb.BlockDB, error) {
 	nWorkers := runtime.NumCPU()
-	if logger == nil {
-		logger = logImpl.GetLoggerByChain(logImpl.MODULE_STORAGE, chainId)
-	}
 	blockDB := &blockkvdb.BlockKvDB{
 		WorkersSemaphore: semaphore.NewWeighted(int64(nWorkers)),
 		Cache:            cache.NewStoreCacheMgr(chainId, logger),
@@ -166,18 +163,22 @@ func (m *Factory) NewBlockKvDB(chainId string, engineType types.EngineType, conf
 	case types.LevelDb:
 		blockDB.DbHandle = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreBlockDBDir, config, logger)
 	case types.RocksDb:
-		blockDB.DbHandle = newRocksdbHandle(chainId, "blockdb")
+		blockDB.DbHandle = newRocksdbHandle(chainId, "blockdb", logger)
 	default:
 		return nil, nil
 	}
+
+	//Get and update archive pivot
+	if _, err := blockDB.GetArchivedPivot(); err != nil {
+		return nil, err
+	}
+
 	return blockDB, nil
 }
 
 // NewStateKvDB constructs new `StabeKvDB`
-func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig, logger protocol.Logger) (statedb.StateDB, error) {
-	if logger == nil {
-		logger = logImpl.GetLoggerByChain(logImpl.MODULE_STORAGE, chainId)
-	}
+func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+	logger protocol.Logger) (statedb.StateDB, error) {
 	stateDB := &statekvdb.StateKvDB{
 		Logger: logger,
 		Cache:  cache.NewStoreCacheMgr(chainId, logger),
@@ -186,7 +187,7 @@ func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, conf
 	case types.LevelDb:
 		stateDB.DbHandle = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreStateDBDir, config, logger)
 	case types.RocksDb:
-		stateDB.DbHandle = newRocksdbHandle(chainId, "statedb")
+		stateDB.DbHandle = newRocksdbHandle(chainId, "statedb", logger)
 
 	default:
 		return nil, nil
@@ -195,32 +196,28 @@ func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, conf
 }
 
 // NewHistoryKvDB constructs new `HistoryKvDB`
-func (m *Factory) NewHistoryKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig, logger protocol.Logger) (*historykvdb.HistoryKvDB, error) {
-	if logger == nil {
-		logger = logImpl.GetLoggerByChain(logImpl.MODULE_STORAGE, chainId)
-	}
+func (m *Factory) NewHistoryKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+	logger protocol.Logger) (*historykvdb.HistoryKvDB, error) {
 	var db protocol.DBHandle
 	switch engineType {
 	case types.LevelDb:
 		db = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreHistoryDBDir, config, logger)
 	case types.RocksDb:
-		db = newRocksdbHandle(chainId, "historydb")
+		db = newRocksdbHandle(chainId, "historydb", logger)
 	default:
 		return nil, errors.New("invalid db type")
 	}
 	historyDB := historykvdb.NewHistoryKvDB(db, cache.NewStoreCacheMgr(chainId, logger), logger)
 	return historyDB, nil
 }
-func (m *Factory) NewResultKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig, logger protocol.Logger) (*resultkvdb.ResultKvDB, error) {
-	if logger == nil {
-		logger = logImpl.GetLoggerByChain(logImpl.MODULE_STORAGE, chainId)
-	}
+func (m *Factory) NewResultKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+	logger protocol.Logger) (*resultkvdb.ResultKvDB, error) {
 	var db protocol.DBHandle
 	switch engineType {
 	case types.LevelDb:
 		db = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreResultDBDir, config, logger)
 	case types.RocksDb:
-		db = newRocksdbHandle(chainId, "resultdb")
+		db = newRocksdbHandle(chainId, "resultdb", logger)
 	default:
 		return nil, errors.New("invalid db type")
 	}

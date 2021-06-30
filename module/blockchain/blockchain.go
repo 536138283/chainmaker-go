@@ -10,7 +10,6 @@ package blockchain
 
 import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
-	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/net"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
@@ -32,6 +31,7 @@ const (
 	moduleNameConsensus     = "Consensus"
 	moduleNameSync          = "Sync"
 	moduleNameSpv           = "Spv"
+	moduleNameDpos          = "DPoS"
 )
 
 // Blockchain is a block chain service. It manage all the modules of the chain.
@@ -61,7 +61,7 @@ type Blockchain struct {
 	txPool protocol.TxPool
 
 	// core engine
-	coreEngine *core.CoreEngine
+	coreEngine protocol.CoreEngine
 
 	// vm manager
 	vmMgr protocol.VmManager
@@ -80,6 +80,9 @@ type Blockchain struct {
 	proposalCache protocol.ProposalCache
 
 	snapshotManager protocol.SnapshotManager
+
+	// dpos feature
+	dpos protocol.DPoS
 
 	lastBlock *common.Block
 

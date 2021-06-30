@@ -15,11 +15,11 @@ import (
 	"chainmaker.org/chainmaker-go/store/cache"
 	"chainmaker.org/chainmaker-go/store/serialization"
 	"chainmaker.org/chainmaker-go/store/types"
+	"chainmaker.org/chainmaker-go/utils"
 	"github.com/gogo/protobuf/proto"
 )
 
 const (
-	historyDBName        = ""
 	txRWSetIdxKeyPrefix  = 'r'
 	resultDBSavepointKey = "resultSavepointKey"
 )
@@ -60,6 +60,61 @@ func (h *ResultKvDB) CommitBlock(blockInfo *serialization.BlockWithSerializedInf
 	}
 	h.Logger.Debugf("chain[%s]: commit history block[%d]",
 		block.Header.ChainId, block.Header.BlockHeight)
+	return nil
+}
+
+// ShrinkBlocks archive old blocks rwsets in an atomic operation
+func (h *ResultKvDB) ShrinkBlocks(txIdsMap map[uint64][]string) error {
+	var err error
+
+	for _, txIds := range txIdsMap {
+		batch := types.NewUpdateBatch()
+		for _, txId := range txIds {
+			txRWSetKey := constructTxRWSetIDKey(txId)
+			batch.Delete(txRWSetKey)
+		}
+		if err = h.DbHandle.WriteBatch(batch, false); err != nil {
+			return err
+		}
+	}
+
+	go h.compactRange()
+
+	return nil
+}
+
+func (h *ResultKvDB) RestoreBlocks(blockInfos []*serialization.BlockWithSerializedInfo) error {
+	startTime := utils.CurrentTimeMillisSeconds()
+	for i := len(blockInfos) - 1; i >= 0; i-- {
+		blockInfo := blockInfos[i]
+
+		//check whether block can be archived
+		if utils.IsConfBlock(blockInfo.Block) {
+			h.Logger.Infof("skip store conf block: [%d]", blockInfo.Block.Header.BlockHeight)
+			continue
+		}
+
+		txRWSets := blockInfo.TxRWSets
+		rwsetData := blockInfo.GetSerializedTxRWSets()
+		batch := types.NewUpdateBatch()
+		for index, txRWSet := range txRWSets {
+			// rwset: txID -> txRWSet
+			batch.Put(constructTxRWSetIDKey(txRWSet.TxId), rwsetData[index])
+		}
+		if err := h.DbHandle.WriteBatch(batch, false); err != nil {
+			return err
+		}
+	}
+
+	beforeWrite := utils.CurrentTimeMillisSeconds()
+
+	go h.compactRange()
+
+	writeTime := utils.CurrentTimeMillisSeconds() - beforeWrite
+	h.Logger.Infof("restore block RWSets from [%d] to [%d] time used (prepare_txs:%d write_batch:%d, total:%d)",
+		blockInfos[len(blockInfos)-1].Block.Header.BlockHeight, blockInfos[0].Block.Header.BlockHeight, beforeWrite-startTime, writeTime,
+		utils.CurrentTimeMillisSeconds()-startTime)
+
 	return nil
 }
 
@@ -105,7 +160,7 @@ func (h *ResultKvDB) writeBatch(blockHeight int64, batch protocol.StoreBatcher) 
 	go func() {
 		err := h.DbHandle.WriteBatch(batch, false)
 		if err != nil {
-			panic(fmt.Sprintf("Error writting db: %s", err))
+			panic(fmt.Sprintf("Error writing db: %s", err))
 		}
 		//db committed, clean cache
 		h.Cache.DelBlock(blockHeight)
@@ -123,15 +178,27 @@ func (h *ResultKvDB) get(key []byte) ([]byte, error) {
 	return h.DbHandle.Get(key)
 }
 
-func (h *ResultKvDB) has(key []byte) (bool, error) {
-	//check has from cache
-	isDelete, exist := h.Cache.Has(string(key))
-	if exist {
-		return !isDelete, nil
-	}
-	return h.DbHandle.Has(key)
-}
+//
+//func (h *ResultKvDB) has(key []byte) (bool, error) {
+//	//check has from cache
+//	isDelete, exist := h.Cache.Has(string(key))
+//	if exist {
+//		return !isDelete, nil
+//	}
+//	return h.DbHandle.Has(key)
+//}
 
 func constructTxRWSetIDKey(txId string) []byte {
 	return append([]byte{txRWSetIdxKeyPrefix}, txId...)
+}
+
+func (h *ResultKvDB) compactRange() {
+	//trigger level compact
+	for i := 1; i <= 1; i++ {
+		h.Logger.Infof("Do %dst time CompactRange", i)
+		if err := h.DbHandle.CompactRange(nil, nil); err != nil {
+			h.Logger.Warnf("resultdb level compact failed: %v", err)
+		}
+		//time.Sleep(2 * time.Second)
+	}
 }

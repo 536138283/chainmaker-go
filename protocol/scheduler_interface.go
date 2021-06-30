@@ -33,10 +33,10 @@ type TxSimContext interface {
 	// Put key into cache
 	Put(name string, key []byte, value []byte) error
 	// PutRecord put sql state into cache
-	PutRecord(contractName string, value []byte)
+	PutRecord(contractName string, value []byte, sqlType SqlType)
 	// Delete key from cache
 	Del(name string, key []byte) error
-	// TODO Query a series of keys from the database, not yet implemented [start, limit)
+	// Select range query for key [start, limit)
 	Select(name string, startKey []byte, limit []byte) (StateIterator, error)
 	// Cross contract call, return (contract result, gas used)
 	CallContract(contractId *common.ContractId, method string, byteCode []byte,
@@ -54,7 +54,7 @@ type TxSimContext interface {
 	// Set the tx result
 	SetTxResult(*common.Result)
 	// Get the read and write set completed by the current transaction
-	GetTxRWSet() *common.TxRWSet
+	GetTxRWSet(runVmSuccess bool) *common.TxRWSet
 	// Get the creator of the contract
 	GetCreator(namespace string) *pbac.SerializedMember
 	// Get the invoker of the transaction
@@ -73,4 +73,6 @@ type TxSimContext interface {
 	GetDepth() int
 	SetStateSqlHandle(int32, SqlRows)
 	GetStateSqlHandle(int32) (SqlRows, bool)
+	SetStateKvHandle(int32, StateIterator)
+	GetStateKvHandle(int32) (StateIterator, bool)
 }

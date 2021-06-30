@@ -7,17 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 package store
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
 	"sync"
 
-	"errors"
-
 	"chainmaker.org/chainmaker-go/localconf"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
 	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
 	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/store/archive"
 	"chainmaker.org/chainmaker-go/store/binlog"
 	"chainmaker.org/chainmaker-go/store/blockdb"
 	"chainmaker.org/chainmaker-go/store/contracteventdb"
@@ -27,17 +28,16 @@ import (
 	"chainmaker.org/chainmaker-go/store/statedb"
 	"chainmaker.org/chainmaker-go/store/types"
 	"chainmaker.org/chainmaker-go/utils"
-	"github.com/gogo/protobuf/proto"
 	"github.com/tidwall/wal"
 	"golang.org/x/sync/semaphore"
 )
 
 const (
-	logPath             = "wal"
-	logDBBlockKeyPrefix = 'n'
+	logPath = "wal"
+	//logDBBlockKeyPrefix = 'n'
 )
 
-// BlockStoreImpl provides an implementation of `protocal.BlockchainStore`.
+// BlockStoreImpl provides an implementation of `protocol.BlockchainStore`.
 type BlockStoreImpl struct {
 	blockDB         blockdb.BlockDB
 	stateDB         statedb.StateDB
@@ -47,6 +47,7 @@ type BlockStoreImpl struct {
 	wal             binlog.BinLoger
 	//一个本地数据库，用于对外提供一些本节点的数据存储服务
 	commonDB         protocol.DBHandle
+	ArchiveMgr       *archive.ArchiveMgr
 	workersSemaphore *semaphore.Weighted
 	logger           protocol.Logger
 	storeConfig      *localconf.StorageConfig
@@ -89,12 +90,17 @@ func NewBlockStoreImpl(chainId string,
 		logger:           logger,
 		storeConfig:      storeConfig,
 	}
+
+	if err :=  blockStore.InitArchiveMgr(chainId); err != nil {
+		return nil, err
+	}
+
 	//binlog 有SavePoint，不是空数据库，进行数据恢复
-	if i, err := blockStore.getLastSavepoint(); err == nil && i > 0 {
+	if i, errbs := blockStore.getLastSavepoint(); errbs == nil && i > 0 {
 		//check savepoint and recover
-		err = blockStore.recover()
-		if err != nil {
-			return nil, err
+		errbs = blockStore.recover()
+		if errbs != nil {
+			return nil, errbs
 		}
 	} else {
 		logger.Info("binlog is empty, don't need recover")
@@ -102,7 +108,7 @@ func NewBlockStoreImpl(chainId string,
 	return blockStore, nil
 }
 
-// 初始化创世区块到数据库，对应的数据库必须为空数据库，否则报错
+//InitGenesis 初始化创世区块到数据库，对应的数据库必须为空数据库，否则报错
 func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) error {
 	bs.logger.Debug("start initial genesis block to database...")
 	//1.检查创世区块是否有异常
@@ -111,45 +117,66 @@ func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) erro
 	}
 	//创世区块只执行一次，而且可能涉及到创建创建数据库，所以串行执行，而且无法启用事务
 	blockBytes, blockWithSerializedInfo, err := serialization.SerializeBlock(genesisBlock)
+	if err != nil {
+		return err
+	}
 	block := genesisBlock.Block
-	bs.writeLog(uint64(block.Header.BlockHeight), blockBytes)
+	err = bs.writeLog(uint64(block.Header.BlockHeight), blockBytes)
+	if err != nil {
+		return err
+	}
 	//2.初始化BlockDB
 	err = bs.blockDB.InitGenesis(blockWithSerializedInfo)
 	if err != nil {
 		bs.logger.Errorf("chain[%s] failed to write blockDB, block[%d]",
 			block.Header.ChainId, block.Header.BlockHeight)
-
+		return err
 	}
 	//3. 初始化StateDB
 	err = bs.stateDB.InitGenesis(blockWithSerializedInfo)
 	if err != nil {
 		bs.logger.Errorf("chain[%s] failed to write stateDB, block[%d]",
 			block.Header.ChainId, block.Header.BlockHeight)
+		return err
 	}
 	//4. 初始化历史数据库
 	err = bs.historyDB.InitGenesis(blockWithSerializedInfo)
 	if err != nil {
 		bs.logger.Errorf("chain[%s] failed to write historyDB, block[%d]",
 			block.Header.ChainId, block.Header.BlockHeight)
+		return err
 	}
 	//5. 初始化Result数据库
 	err = bs.resultDB.InitGenesis(blockWithSerializedInfo)
 	if err != nil {
 		bs.logger.Errorf("chain[%s] failed to write resultDB, block[%d]",
 			block.Header.ChainId, block.Header.BlockHeight)
+		return err
 	}
 	//6. init contract event db
 	if !bs.storeConfig.DisableContractEventDB {
 		if parseEngineType(bs.storeConfig.ContractEventDbConfig.SqlDbConfig.SqlDbType) == types.MySQL &&
-			bs.storeConfig.ContractEventDbConfig.Provider == "sql" {
-			bs.contractEventDB.InitGenesis(blockWithSerializedInfo)
+			bs.storeConfig.ContractEventDbConfig.Provider == localconf.DbConfig_Provider_Sql {
+			err = bs.contractEventDB.InitGenesis(blockWithSerializedInfo)
+			if err != nil {
+				bs.logger.Errorf("chain[%s] failed to write event db, block[%d]",
+					block.Header.ChainId, block.Header.BlockHeight)
+				return err
+			}
 		} else {
 			return errors.New("contract event db config err")
 		}
 	}
 	bs.logger.Infof("chain[%s]: put block[%d] (txs:%d bytes:%d), ",
 		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs), len(blockBytes))
-	return nil
+
+	//7. init archive manager
+	err = bs.InitArchiveMgr(block.Header.ChainId)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 func checkGenesis(genesisBlock *storePb.BlockWithRWSet) error {
 	if genesisBlock.Block.Header.BlockHeight != 0 {
@@ -160,20 +187,21 @@ func checkGenesis(genesisBlock *storePb.BlockWithRWSet) error {
 
 // PutBlock commits the block and the corresponding rwsets in an atomic operation
 func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.TxRWSet) error {
-	startPutBlock := utils.CurrentTimeMillisSeconds()
+	bs.logger.Infof("chain[%s]: start put block[%d]", block.Header.ChainId, block.Header.BlockHeight)
 
+	startPutBlock := utils.CurrentTimeMillisSeconds()
 	//1. commit log
 	blockWithRWSet := &storePb.BlockWithRWSet{
 		Block:    block,
 		TxRWSets: txRWSets,
 	}
-	//try to add consensusArgs
-	consensusArgs, err := utils.GetConsensusArgsFromBlock(block)
-	if err == nil && consensusArgs.ConsensusData != nil {
-		bs.logger.Debugf("add consensusArgs ConsensusData!")
-		blockWithRWSet.TxRWSets = append(blockWithRWSet.TxRWSets, consensusArgs.ConsensusData)
-	}
+
 	blockBytes, blockWithSerializedInfo, err := serialization.SerializeBlock(blockWithRWSet)
+	if err != nil {
+		bs.logger.Errorf("chain[%s] failed to write log, block[%d], err:%s",
+			block.Header.ChainId, block.Header.BlockHeight, err)
+		return err
+	}
 	elapsedMarshalBlockAndRWSet := utils.CurrentTimeMillisSeconds() - startPutBlock
 
 	startCommitLogDB := utils.CurrentTimeMillisSeconds()
@@ -195,35 +223,20 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 	// 2.commit blockDB
 	go func() {
 		defer batchWG.Done()
-		err := bs.blockDB.CommitBlock(blockWithSerializedInfo)
-		if err != nil {
-			bs.logger.Errorf("chain[%s] failed to write blockDB, block[%d]",
-				block.Header.ChainId, block.Header.BlockHeight)
-			errsChan <- err
-		}
+		bs.putBlock2DB(blockWithSerializedInfo, errsChan, bs.blockDB.CommitBlock)
 	}()
 
 	// 3.commit stateDB
 	go func() {
 		defer batchWG.Done()
-		err := bs.stateDB.CommitBlock(blockWithSerializedInfo)
-		if err != nil {
-			bs.logger.Errorf("chain[%s] failed to write stateDB, block[%d]",
-				block.Header.ChainId, block.Header.BlockHeight)
-			errsChan <- err
-		}
+		bs.putBlock2DB(blockWithSerializedInfo, errsChan, bs.stateDB.CommitBlock)
 	}()
 
 	// 4.commit historyDB
 	if !bs.storeConfig.DisableHistoryDB {
 		go func() {
 			defer batchWG.Done()
-			err := bs.historyDB.CommitBlock(blockWithSerializedInfo)
-			if err != nil {
-				bs.logger.Errorf("chain[%s] failed to write historyDB, block[%d]",
-					block.Header.ChainId, block.Header.BlockHeight)
-				errsChan <- err
-			}
+			bs.putBlock2DB(blockWithSerializedInfo, errsChan, bs.historyDB.CommitBlock)
 		}()
 	} else {
 		batchWG.Done()
@@ -232,27 +245,16 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 	if !bs.storeConfig.DisableResultDB {
 		go func() {
 			defer batchWG.Done()
-			err := bs.resultDB.CommitBlock(blockWithSerializedInfo)
-			if err != nil {
-				bs.logger.Errorf("chain[%s] failed to write resultdb, block[%d]",
-					block.Header.ChainId, block.Header.BlockHeight)
-				errsChan <- err
-			}
+			bs.putBlock2DB(blockWithSerializedInfo, errsChan, bs.resultDB.CommitBlock)
 		}()
 	} else {
 		batchWG.Done()
 	}
 	//6.commit contractEventDB
 	if !bs.storeConfig.DisableContractEventDB {
-
 		go func() {
 			defer batchWG.Done()
-			err := bs.contractEventDB.CommitBlock(blockWithSerializedInfo)
-			if err != nil {
-				bs.logger.Errorf("chain[%s] failed to write contractEventDB, block[%d]",
-					block.Header.ChainId, block.Header.BlockHeight)
-				errsChan <- err
-			}
+			bs.putBlock2DB(blockWithSerializedInfo, errsChan, bs.contractEventDB.CommitBlock)
 		}()
 	} else {
 		batchWG.Done()
@@ -280,6 +282,54 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 	return nil
 }
 
+// GetArchivedPivot return archived pivot
+func (bs *BlockStoreImpl) GetArchivedPivot() uint64 {
+	if !bs.isSupportArchive() {
+		return 0
+	}
+	height, _ := bs.ArchiveMgr.GetArchivedPivot()
+	return height
+}
+
+// ArchiveBlock the block after backup
+func (bs *BlockStoreImpl) ArchiveBlock(archiveHeight uint64) error {
+	if !bs.isSupportArchive() {
+		return nil
+	}
+	return bs.ArchiveMgr.ArchiveBlock(archiveHeight)
+}
+
+// RestoreBlocks restore blocks from outside serialized block data
+func (bs *BlockStoreImpl) RestoreBlocks(serializedBlocks [][]byte) error {
+	if !bs.isSupportArchive() {
+		return nil
+	}
+	blockInfos := make([]*serialization.BlockWithSerializedInfo, 0, len(serializedBlocks))
+	for _, blockInfo := range serializedBlocks {
+		bwsInfo, err := serialization.DeserializeBlock(blockInfo)
+		if err != nil {
+			return err
+		}
+
+		blockInfos = append(blockInfos, bwsInfo)
+	}
+
+	return bs.ArchiveMgr.RestoreBlock(blockInfos)
+}
+
+type commitBlock func(blockInfo *serialization.BlockWithSerializedInfo) error
+
+func (bs *BlockStoreImpl) putBlock2DB(blockWithSerializedInfo *serialization.BlockWithSerializedInfo,
+	errsChan chan error, commit commitBlock) {
+	err := commit(blockWithSerializedInfo)
+	block := blockWithSerializedInfo.Block
+	if err != nil {
+		bs.logger.Errorf("chain[%s] failed to write DB, block[%d]",
+			block.Header.ChainId, block.Header.BlockHeight)
+		errsChan <- err
+	}
+}
+
 // BlockExists returns true if the black hash exist, or returns false if none exists.
 func (bs *BlockStoreImpl) BlockExists(blockHash []byte) (bool, error) {
 	return bs.blockDB.BlockExists(blockHash)
@@ -288,6 +338,16 @@ func (bs *BlockStoreImpl) BlockExists(blockHash []byte) (bool, error) {
 // GetBlockByHash returns a block given it's hash, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetBlockByHash(blockHash []byte) (*commonPb.Block, error) {
 	return bs.blockDB.GetBlockByHash(blockHash)
+}
+
+// GetHeightByHash returns a block height given it's hash, or returns nil if none exists.
+func (bs *BlockStoreImpl) GetHeightByHash(blockHash []byte) (uint64, error) {
+	return bs.blockDB.GetHeightByHash(blockHash)
+}
+
+// GetBlockHeaderByHeight returns a block header by given it's height, or returns nil if none exists.
+func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader, error) {
+	return bs.blockDB.GetBlockHeaderByHeight(height)
 }
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
@@ -305,6 +365,11 @@ func (bs *BlockStoreImpl) GetLastConfigBlock() (*commonPb.Block, error) {
 	return bs.blockDB.GetLastConfigBlock()
 }
 
+//GetLastChainConfig returns the last chain config
+func (bs *BlockStoreImpl) GetLastChainConfig() (*configPb.ChainConfig, error) {
+	return bs.stateDB.GetChainConfig()
+}
+
 // GetBlockByTx returns a block which contains a tx.
 func (bs *BlockStoreImpl) GetBlockByTx(txId string) (*commonPb.Block, error) {
 	return bs.blockDB.GetBlockByTx(txId)
@@ -314,6 +379,12 @@ func (bs *BlockStoreImpl) GetBlockByTx(txId string) (*commonPb.Block, error) {
 func (bs *BlockStoreImpl) GetTx(txId string) (*commonPb.Transaction, error) {
 	return bs.blockDB.GetTx(txId)
 }
+
+// GetTxHeight retrieves a transaction height by txid, or returns nil if none exists.
+func (bs *BlockStoreImpl) GetTxHeight(txId string) (uint64, error) {
+	return bs.blockDB.GetTxHeight(txId)
+}
+
 func (bs *BlockStoreImpl) GetTxWithBlockInfo(txId string) (*commonPb.TransactionInfo, error) {
 	return bs.blockDB.GetTxWithBlockInfo(txId)
 }
@@ -335,7 +406,8 @@ func (bs *BlockStoreImpl) ReadObject(contractName string, key []byte) ([]byte, e
 
 // SelectObject returns an iterator that contains all the key-values between given key ranges.
 // startKey is included in the results and limit is excluded.
-func (bs *BlockStoreImpl) SelectObject(contractName string, startKey []byte, limit []byte) (protocol.StateIterator, error) {
+func (bs *BlockStoreImpl) SelectObject(contractName string, startKey []byte, limit []byte) (
+	protocol.StateIterator, error) {
 	return bs.stateDB.SelectObject(contractName, startKey, limit)
 }
 func (bs *BlockStoreImpl) GetHistoryForKey(contractName string, key []byte) (protocol.KeyHistoryIterator, error) {
@@ -362,26 +434,44 @@ func (bs *BlockStoreImpl) GetContractTxHistory(contractName string) (protocol.Tx
 
 // GetTxRWSet returns an txRWSet for given txId, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetTxRWSet(txId string) (*commonPb.TxRWSet, error) {
-	return bs.resultDB.GetTxRWSet(txId)
+	var (
+		rwSet      *commonPb.TxRWSet
+		err        error
+		isArchived bool
+	)
+
+	if rwSet, err = bs.resultDB.GetTxRWSet(txId); err != nil {
+		return nil, err
+	}
+
+	if rwSet == nil {
+		if isArchived, err = bs.blockDB.TxArchived(txId); err != nil {
+			return nil, err
+		} else if isArchived {
+			return nil, archive.ArchivedRWSetError
+		}
+	}
+
+	return rwSet, err
 }
 
 // GetTxRWSetsByHeight returns all the rwsets corresponding to the block,
 // or returns nil if zhe block does not exist
 func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet, error) {
 	blockStoreInfo, err := bs.blockDB.GetFilteredBlock(height)
-	if err != nil {
+	if err != nil || blockStoreInfo == nil {
 		return nil, err
 	}
-	var txRWSets []*commonPb.TxRWSet
-	//var batchWG sync.WaitGroup
-	//batchWG.Add(len(blockStoreInfo.TxIds))
-	//errsChan := make(chan error, len(blockStoreInfo.TxIds))
-	txRWSets = make([]*commonPb.TxRWSet, len(blockStoreInfo.TxIds))
+	var txRWSets = make([]*commonPb.TxRWSet, len(blockStoreInfo.TxIds))
 	for i, txId := range blockStoreInfo.TxIds {
 
 		txRWSet, err := bs.GetTxRWSet(txId)
 		if err != nil {
 			return nil, err
+		}
+		if txRWSet == nil { //数据库未找到记录，这不正常，记录日志，初始化空实例
+			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", txId)
+			txRWSet = &commonPb.TxRWSet{}
 		}
 		txRWSets[i] = txRWSet
 		bs.logger.Debugf("getTxRWSetsByHeight, txid:%s", txId)
@@ -417,6 +507,10 @@ func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRW
 		if err != nil {
 			return nil, err
 		}
+		if txRWSet == nil { //数据库未找到记录，这不正常，记录日志，初始化空实例
+			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", tx.Header.TxId)
+			txRWSet = &commonPb.TxRWSet{}
+		}
 		blockWithRWSets.TxRWSets[i] = txRWSet
 		//}
 	}
@@ -436,18 +530,18 @@ func (bs *BlockStoreImpl) GetDBHandle(dbName string) protocol.DBHandle {
 func (bs *BlockStoreImpl) Close() error {
 	bs.blockDB.Close()
 	bs.stateDB.Close()
-	if !bs.storeConfig.DisableHistoryDB {
+	if !bs.storeConfig.DisableHistoryDB && bs.historyDB != nil {
 		bs.historyDB.Close()
 	}
-	if !bs.storeConfig.DisableContractEventDB {
+	if !bs.storeConfig.DisableContractEventDB && bs.contractEventDB != nil {
 		if parseEngineType(bs.storeConfig.ContractEventDbConfig.SqlDbConfig.SqlDbType) == types.MySQL &&
-			bs.storeConfig.ContractEventDbConfig.Provider == "sql" {
+			bs.storeConfig.ContractEventDbConfig.Provider == localconf.DbConfig_Provider_Sql {
 			bs.contractEventDB.Close()
 		} else {
 			return errors.New("contract event db config err")
 		}
 	}
-	if !bs.storeConfig.DisableResultDB {
+	if !bs.storeConfig.DisableResultDB && bs.resultDB != nil {
 		bs.resultDB.Close()
 	}
 	bs.wal.Close()
@@ -481,7 +575,7 @@ func (bs *BlockStoreImpl) recover() error {
 	}
 	if !bs.storeConfig.DisableContractEventDB {
 		if parseEngineType(bs.storeConfig.ContractEventDbConfig.SqlDbConfig.SqlDbType) == types.MySQL &&
-			bs.storeConfig.ContractEventDbConfig.Provider == "sql" {
+			bs.storeConfig.ContractEventDbConfig.Provider == localconf.DbConfig_Provider_Sql {
 			if contractEventSavepoint, err = bs.contractEventDB.GetLastSavepoint(); err != nil {
 				return err
 			}
@@ -494,37 +588,38 @@ func (bs *BlockStoreImpl) recover() error {
 		logSavepoint, blockSavepoint, stateSavepoint, historySavepoint, contractEventSavepoint)
 	//recommit blockdb
 	if err := bs.recoverBlockDB(blockSavepoint, logSavepoint); err != nil {
-		return nil
+		return err
 	}
 
 	//recommit statedb
 	if err := bs.recoverStateDB(stateSavepoint, logSavepoint); err != nil {
-		return nil
+		return err
 	}
 
 	if !bs.storeConfig.DisableHistoryDB {
 		//recommit historydb
 		if err := bs.recoverHistoryDB(stateSavepoint, logSavepoint); err != nil {
-			return nil
+			return err
 		}
 	}
 	if !bs.storeConfig.DisableResultDB {
 		//recommit resultdb
 		if err := bs.recoverResultDB(resultSavepoint, logSavepoint); err != nil {
-			return nil
+			return err
 		}
 	}
 	//recommit contract event db
 	if !bs.storeConfig.DisableContractEventDB {
 		if err := bs.recoverContractEventDB(contractEventSavepoint, logSavepoint); err != nil {
-			return nil
+			return err
 		}
 	}
 	return nil
 }
 
 func (bs *BlockStoreImpl) recoverBlockDB(currentHeight uint64, savePoint uint64) error {
-	for height := currentHeight + 1; height <= savePoint; height++ {
+	height := bs.calculateRecoverHeight(currentHeight, savePoint)
+	for ; height <= savePoint; height++ {
 		bs.logger.Infof("[BlockDB] recommitting lost blocks, blockNum=%d, lastBlockNum=%d", height, savePoint)
 		blockWithSerializedInfo, err := bs.getBlockFromLog(height)
 		if err != nil {
@@ -539,7 +634,8 @@ func (bs *BlockStoreImpl) recoverBlockDB(currentHeight uint64, savePoint uint64)
 }
 
 func (bs *BlockStoreImpl) recoverStateDB(currentHeight uint64, savePoint uint64) error {
-	for height := currentHeight + 1; height <= savePoint; height++ {
+	height := bs.calculateRecoverHeight(currentHeight, savePoint)
+	for ; height <= savePoint; height++ {
 		bs.logger.Infof("[StateDB] recommitting lost blocks, blockNum=%d, lastBlockNum=%d", height, savePoint)
 		blockWithSerializedInfo, err := bs.getBlockFromLog(height)
 		if err != nil {
@@ -552,8 +648,10 @@ func (bs *BlockStoreImpl) recoverStateDB(currentHeight uint64, savePoint uint64)
 	}
 	return nil
 }
+
 func (bs *BlockStoreImpl) recoverContractEventDB(currentHeight uint64, savePoint uint64) error {
-	for height := currentHeight + 1; height <= savePoint; height++ {
+	height := bs.calculateRecoverHeight(currentHeight, savePoint)
+	for ; height <= savePoint; height++ {
 		bs.logger.Infof("[ContractEventDB] recommitting lost blocks, blockNum=%d, lastBlockNum=%d", height, savePoint)
 		blockWithSerializedInfo, err := bs.getBlockFromLog(height)
 		if err != nil {
@@ -567,8 +665,10 @@ func (bs *BlockStoreImpl) recoverContractEventDB(currentHeight uint64, savePoint
 	}
 	return nil
 }
+
 func (bs *BlockStoreImpl) recoverHistoryDB(currentHeight uint64, savePoint uint64) error {
-	for height := currentHeight + 1; height <= savePoint; height++ {
+	height := bs.calculateRecoverHeight(currentHeight, savePoint)
+	for ; height <= savePoint; height++ {
 		bs.logger.Infof("[HistoryDB] recommitting lost blocks, blockNum=%d, lastBlockNum=%d", height, savePoint)
 		blockWithSerializedInfo, err := bs.getBlockFromLog(height)
 		if err != nil {
@@ -589,7 +689,8 @@ func (bs *BlockStoreImpl) recoverHistoryDB(currentHeight uint64, savePoint uint6
 }
 
 func (bs *BlockStoreImpl) recoverResultDB(currentHeight uint64, savePoint uint64) error {
-	for height := currentHeight + 1; height <= savePoint; height++ {
+	height := bs.calculateRecoverHeight(currentHeight, savePoint)
+	for ; height <= savePoint; height++ {
 		bs.logger.Infof("[HistoryDB] recommitting lost blocks, blockNum=%d, lastBlockNum=%d", height, savePoint)
 		blockWithSerializedInfo, err := bs.getBlockFromLog(height)
 		if err != nil {
@@ -647,46 +748,48 @@ func (bs *BlockStoreImpl) deleteBlockFromLog(num uint64) error {
 	return bs.wal.TruncateFront(lastBlockNum)
 }
 
-func (bs *BlockStoreImpl) construcBlockNumKey(blockNum uint64) []byte {
-	blkNumBytes := bs.encodeBlockNum(blockNum)
-	return append([]byte{logDBBlockKeyPrefix}, blkNumBytes...)
-}
+//func (bs *BlockStoreImpl) construcBlockNumKey(blockNum uint64) []byte {
+//	blkNumBytes := bs.encodeBlockNum(blockNum)
+//	return append([]byte{logDBBlockKeyPrefix}, blkNumBytes...)
+//}
 
-func (bs *BlockStoreImpl) encodeBlockNum(blockNum uint64) []byte {
-	return proto.EncodeVarint(blockNum)
-}
+//func (bs *BlockStoreImpl) encodeBlockNum(blockNum uint64) []byte {
+//	return proto.EncodeVarint(blockNum)
+//}
 
-//不在事务中，直接查询状态数据库，返回一行结果
+//QuerySingle 不在事务中，直接查询状态数据库，返回一行结果
 func (bs *BlockStoreImpl) QuerySingle(contractName, sql string, values ...interface{}) (protocol.SqlRow, error) {
 	return bs.stateDB.QuerySingle(contractName, sql, values...)
 }
 
-//不在事务中，直接查询状态数据库，返回多行结果
+//QueryMulti 不在事务中，直接查询状态数据库，返回多行结果
 func (bs *BlockStoreImpl) QueryMulti(contractName, sql string, values ...interface{}) (protocol.SqlRows, error) {
 	return bs.stateDB.QueryMulti(contractName, sql, values...)
 }
+
+//ExecDdlSql execute DDL SQL in a contract
 func (bs *BlockStoreImpl) ExecDdlSql(contractName, sql string) error {
 	return bs.stateDB.ExecDdlSql(contractName, sql)
 }
 
-//启用一个事务
+//BeginDbTransaction 启用一个事务
 func (bs *BlockStoreImpl) BeginDbTransaction(txName string) (protocol.SqlDBTransaction, error) {
 	return bs.stateDB.BeginDbTransaction(txName)
 }
 
-//根据事务名，获得一个已经启用的事务
+//GetDbTransaction 根据事务名，获得一个已经启用的事务
 func (bs *BlockStoreImpl) GetDbTransaction(txName string) (protocol.SqlDBTransaction, error) {
 	return bs.stateDB.GetDbTransaction(txName)
 
 }
 
-//提交一个事务
+//CommitDbTransaction 提交一个事务
 func (bs *BlockStoreImpl) CommitDbTransaction(txName string) error {
 	return bs.stateDB.CommitDbTransaction(txName)
 
 }
 
-//回滚一个事务
+//RollbackDbTransaction 回滚一个事务
 func (bs *BlockStoreImpl) RollbackDbTransaction(txName string) error {
 	return bs.stateDB.RollbackDbTransaction(txName)
 }
@@ -695,10 +798,27 @@ func (bs *BlockStoreImpl) calculateRecoverHeight(currentHeight uint64, savePoint
 	height := currentHeight + 1
 	if savePoint == 0 && currentHeight == 0 {
 		//check whether has genesis block
-		if data, _ := bs.wal.Read(1); data != nil && len(data) > 0 {
+		if data, _ := bs.wal.Read(1); len(data) > 0 {
 			height = height - 1
 		}
 	}
 
 	return height
+}
+
+func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
+	if bs.isSupportArchive() {
+		archiveMgr, err := archive.NewArchiveMgr(chainId, bs.blockDB, bs.resultDB, bs.storeConfig, bs.logger)
+		if err != nil {
+			return err
+		}
+
+		bs.ArchiveMgr = archiveMgr
+	}
+
+	return nil
+}
+
+func (bs *BlockStoreImpl) isSupportArchive() bool {
+	return bs.storeConfig.BlockDbConfig.IsKVDB() && bs.storeConfig.ResultDbConfig.IsKVDB()
 }

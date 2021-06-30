@@ -10,12 +10,14 @@ import (
 	"reflect"
 	"testing"
 
+	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/mock"
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"github.com/golang/mock/gomock"
 
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/consensus/tbft"
+	"chainmaker.org/chainmaker-go/dpos"
 	configpb "chainmaker.org/chainmaker-go/pb/protogo/config"
 	"chainmaker.org/chainmaker-go/protocol"
 )
@@ -34,6 +36,13 @@ var (
 func TestNewConsensusEngine(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+
+	prePath := localconf.ChainMakerConfig.StorageConfig.StorePath
+	defer func() {
+		localconf.ChainMakerConfig.StorageConfig.StorePath = prePath
+	}()
+	//localconf.ChainMakerConfig.StorageConfig.StorePath = filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
+	localconf.ChainMakerConfig.StorageConfig.StorePath = t.TempDir()
 
 	signer := mock.NewMockSigningMember(ctrl)
 	ledgerCache := mock.NewMockLedgerCache(ctrl)
@@ -95,6 +104,7 @@ func TestNewConsensusEngine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var factory Factory
+			dposImpl := dpos.NewDPoSImpl(tt.args.chainConf, tt.args.store)
 			got, err := factory.NewConsensusEngine(
 				tt.args.consensusType,
 				tt.args.chainID,
@@ -111,6 +121,8 @@ func TestNewConsensusEngine(t *testing.T) {
 				tt.args.msgBus,
 				tt.args.chainConf,
 				tt.args.store,
+				nil,
+				dposImpl,
 			)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewConsensusEngine() error = %v, wantErr %v", err, tt.wantErr)

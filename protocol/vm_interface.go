@@ -39,6 +39,7 @@ const (
 	EventDataMaxCount = 16
 
 	ContractKey            = ":K:"
+	ContractByteHeader     = ":H:"
 	ContractByteCode       = ":B:"
 	ContractVersion        = ":V:"
 	ContractRuntimeType    = ":R:"
@@ -78,6 +79,13 @@ const (
 	ContractMethodGetState    = "GetState"
 	ContractMethodPutState    = "PutState"
 	ContractMethodDeleteState = "DeleteState"
+	// kv iterator author:whang1234
+	ContractMethodKvIterator        = "KvIterator"
+	ContractMethodKvPreIterator     = "KvPreIterator"
+	ContractMethodKvIteratorHasNext = "KvIteratorHasNext"
+	ContractMethodKvIteratorNextLen = "KvIteratorNextLen"
+	ContractMethodKvIteratorNext    = "KvIteratorNext"
+	ContractMethodKvIteratorClose   = "KvIteratorClose"
 	// sql
 	ContractMethodExecuteQuery       = "ExecuteQuery"
 	ContractMethodExecuteQueryOne    = "ExecuteQueryOne"
@@ -93,15 +101,27 @@ const (
 	ContractMethodGetPaillierOperationResult    = "GetPaillierOperationResult"
 	ContractMethodGetPaillierOperationResultLen = "GetPaillierOperationResultLen"
 	PaillierOpTypeAddCiphertext                 = "AddCiphertext"
-	PaillierOpTypeAddCiphertextStr              = "AddCiphertextStr"
 	PaillierOpTypeAddPlaintext                  = "AddPlaintext"
-	PaillierOpTypeAddPlaintextInt64             = "AddPlaintextInt64"
 	PaillierOpTypeSubCiphertext                 = "SubCiphertext"
-	PaillierOpTypeSubCiphertextStr              = "SubCiphertextStr"
 	PaillierOpTypeSubPlaintext                  = "SubPlaintext"
-	PaillierOpTypeSubPlaintextInt64             = "SubPlaintextInt64"
 	PaillierOpTypeNumMul                        = "NumMul"
-	PaillierOpTypeNumMulInt64                   = "NumMulInt64"
+	// bulletproofs
+	ContractMethodGetBulletproofsResult     = "GetBulletproofsResult"
+	ContractMethodGetBulletproofsResultLen  = "GetBulletproofsResultLen"
+	BulletProofsOpTypePedersenAddNum        = "PedersenAddNum"
+	BulletProofsOpTypePedersenAddCommitment = "PedersenAddCommitment"
+	BulletProofsOpTypePedersenSubNum        = "PedersenSubNum"
+	BulletProofsOpTypePedersenSubCommitment = "PedersenSubCommitment"
+	BulletProofsOpTypePedersenMulNum        = "PedersenMulNum"
+	BulletProofsVerify                      = "BulletproofsVerify"
+)
+
+type SqlType int8
+
+const (
+	SqlTypeDdl SqlType = iota
+	SqlTypeDml
+	SqlTypeDql
 )
 
 //VmManager manage vm runtime
@@ -120,8 +140,6 @@ type ContractWacsiCommon interface {
 	SuccessResult() int32
 	ErrorResult() int32
 	CallContract() int32
-	GetPaillierOpResultLen() int32
-	GetPaillierOpResult() int32
 }
 
 type ContractWacsiKV interface {
@@ -129,6 +147,11 @@ type ContractWacsiKV interface {
 	GetState() int32
 	PutState() int32
 	DeleteState() int32
+	KvIterator() int32
+	KvPreIterator() int32
+	KvIteratorClose() int32
+	KvIteratorNext() int32
+	KvIteratorHasNext() int32
 }
 
 type ContractWacsiSQL interface {

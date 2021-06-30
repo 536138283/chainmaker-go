@@ -8,19 +8,22 @@ SPDX-License-Identifier: Apache-2.0
 package sync
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	syncPb "chainmaker.org/chainmaker-go/pb/protogo/sync"
 	"testing"
 	"time"
 
 	"chainmaker.org/chainmaker-go/logger"
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	syncPb "chainmaker.org/chainmaker-go/pb/protogo/sync"
 
 	"github.com/gogo/protobuf/proto"
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNodeStatusMsg(t *testing.T) {
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	// 1. the peer status is old
@@ -41,7 +44,7 @@ func TestNodeStatusMsg(t *testing.T) {
 	// 4. receive the peer status is old, and update the pendingRecvHeight
 	_, _ = sch.handler(NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 151}})
 	require.EqualValues(t, 151, sch.peers["node1"])
-	require.EqualValues(t, 181, sch.pendingRecvHeight)
+	require.EqualValues(t, 101, sch.pendingRecvHeight)
 
 	// 5. malicious node to broadcast old status
 	_, _ = sch.handler(NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 90}})
@@ -54,10 +57,17 @@ func TestNodeStatusMsg(t *testing.T) {
 	// 7. repeat receive same peer status
 	_, _ = sch.handler(NodeStatusMsg{from: "node2", msg: syncPb.BlockHeightBCM{BlockHeight: 100}})
 	require.EqualValues(t, 100, sch.peers["node2"])
+
+	// 8. fired dataDetection task
+	_, _ = sch.handler(DataDetection{})
+	require.EqualValues(t, 181, sch.pendingRecvHeight)
+
 }
 
 func TestNextHeightToReq(t *testing.T) {
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	// 1. add block status
@@ -80,7 +90,9 @@ func TestNextHeightToReq(t *testing.T) {
 }
 
 func TestIsNeedSync(t *testing.T) {
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	// 1. add peer status
@@ -104,8 +116,10 @@ func TestIsNeedSync(t *testing.T) {
 }
 
 func TestSchedulerMsg(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	mockSender := NewMockSender()
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(mockSender, mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	// 1. add peer status
@@ -121,7 +135,9 @@ func TestSchedulerMsg(t *testing.T) {
 }
 
 func TestSyncedBlockMsg(t *testing.T) {
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	bz, _ := proto.Marshal(&syncPb.SyncBlockBatch{
@@ -143,7 +159,9 @@ func TestSyncedBlockMsg(t *testing.T) {
 }
 
 func TestProcessedBlockResp(t *testing.T) {
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	// 1. add ok process result and check result
@@ -166,7 +184,9 @@ func TestProcessedBlockResp(t *testing.T) {
 }
 
 func TestLivenessMsg(t *testing.T) {
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	// 1. no any status
@@ -188,8 +208,10 @@ func TestLivenessMsg(t *testing.T) {
 }
 
 func TestSchedulerFlow(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
 	mockSender := NewMockSender()
-	mockLedger := NewMockLedgerCache(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
 	sch := newScheduler(mockSender, mockLedger, 100, time.Second, time.Second*3, 2, logger.GetLogger(logger.MODULE_SYNC))
 
 	// 1. add peers status
