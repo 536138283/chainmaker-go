@@ -1,10 +1,12 @@
 package core
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
-	"log"
+	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 )
@@ -12,7 +14,7 @@ import (
 type UsersController struct {
 	Total   int
 	UserMap map[int]*helper.User
-	logger  *log.Logger
+	logger  *zap.SugaredLogger
 }
 
 func NewUsersController() *UsersController {
@@ -22,7 +24,7 @@ func NewUsersController() *UsersController {
 	users := &UsersController{
 		UserMap: userMap,
 		Total:   0,
-		logger:  utils.NewLogger("User Controller"),
+		logger:  logger.NewDockerLogger(logger.MODULE_USERCONTROLLER),
 	}
 
 	return users
@@ -52,6 +54,8 @@ func (u *UsersController) CreateNewUsers(userNum int) error {
 
 	}
 
+	u.logger.Infof("create [%d] users", userNum)
+
 	return nil
 }
 
@@ -59,12 +63,10 @@ func (u *UsersController) createNewUser(userId int) *helper.User {
 
 	const UserHomePath = "/home/u-%d"
 	userName := fmt.Sprintf("u-%d", userId)
-	//sockFileName := fmt.Sprintf("u-%d.sock", userId)
 	binFileName := fmt.Sprintf("u-%d", userId)
 
 	homeDir := fmt.Sprintf(UserHomePath, userId)
-	//sockPath := filepath.Join(homeDir, sockFileName)
-	sockPath := "/tmp/sock.sock"
+	sockPath := config.SockPath
 	binPath := filepath.Join(homeDir, binFileName)
 
 	return &helper.User{
@@ -85,13 +87,13 @@ func (u *UsersController) setUserDirMod(newUser helper.User) error {
 
 func (u *UsersController) UpdateUserState(userId int, busy bool) {
 	u.UserMap[userId].Busy = busy
-	u.logger.Println("update user: ", u.UserMap[userId])
+	u.logger.Debugf("update user: [%v]", u.UserMap[userId])
 }
 
 func (u *UsersController) GetAvailableUser() *helper.User {
 	for _, user := range u.UserMap {
 		if !user.Busy {
-			u.logger.Println("allocate user: ", user)
+			u.logger.Debugf("allocate user: [%v]", user)
 			return user
 		}
 	}
@@ -101,6 +103,6 @@ func (u *UsersController) GetAvailableUser() *helper.User {
 
 func (u *UsersController) ResetUserEnv(user *helper.User) error {
 	rmCommand := fmt.Sprintf("rm -rf %s/*", user.HomeDir)
-	u.logger.Printf("reset user [%s] environment\n", user.UserName)
+	u.logger.Debugf("reset user [%s] environment\n", user.UserName)
 	return utils.RunCmd(rmCommand)
 }

@@ -93,17 +93,20 @@ func main() {
 	// 1) 合约创建
 	if createContract {
 		testCreate(sk3, &client, CHAIN1)
-		time.Sleep(5 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 
 	// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
 
 	// 2) test invoke
-	go testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+
+	for i := 0; i < 1; i++ {
+		go testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+	}
 	//go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(30 * time.Second)
 
 	//time.Sleep(5 * time.Second)
 	//////

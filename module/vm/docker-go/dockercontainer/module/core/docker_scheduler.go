@@ -2,11 +2,13 @@ package core
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
+	"go.uber.org/zap"
 	"log"
 	"os"
 	"os/exec"
@@ -27,7 +29,7 @@ type DockerScheduler struct {
 	txCh       chan *outside.TxRequest
 	txResultCh chan *outside.ContractResult
 	exitCh     chan ExitStatus
-	logger     *log.Logger
+	logger     *zap.SugaredLogger
 
 	userController  protocol.UserController
 	handlerRegister *HandlerRegister
@@ -40,7 +42,7 @@ func NewDockerScheduler(userController protocol.UserController, handlerRegister 
 		txResultCh:      make(chan *outside.ContractResult, 2),
 		exitCh:          make(chan ExitStatus, 2),
 		userController:  userController,
-		logger:          utils.NewLogger("Docker Scheduler"),
+		logger:          logger.NewDockerLogger(logger.MODULE_SCHEDULER),
 		handlerRegister: handlerRegister,
 	}
 
@@ -49,7 +51,7 @@ func NewDockerScheduler(userController protocol.UserController, handlerRegister 
 
 func (s *DockerScheduler) StartScheduler() {
 
-	s.logger.Println("start docker scheduler")
+	s.logger.Infof("start docker scheduler")
 
 	go s.listenIncoming()
 
@@ -72,15 +74,14 @@ func (s *DockerScheduler) GetTxResultCh() chan *outside.ContractResult {
 }
 
 func (s *DockerScheduler) listenIncoming() {
-	s.logger.Println("Begin listen incoming")
+	s.logger.Infof("Begin listen incoming")
 	for {
 		select {
 		case tx := <-s.txCh:
-			s.logger.Println("receive tx, begin to handle")
 			go s.handleTx(tx)
 		}
 	}
-	s.logger.Println("Stop listen incoming")
+	s.logger.Infof("Stop listen incoming")
 }
 
 func (s *DockerScheduler) monitorSandBox() {
@@ -90,10 +91,10 @@ func (s *DockerScheduler) monitorSandBox() {
 		switch status.Signal {
 		case os.Kill:
 			// means process run fail, todo
-			s.logger.Printf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
+			s.logger.Debugf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
 		default:
 			// means process run successful, return the value back
-			s.logger.Printf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
+			s.logger.Debugf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
 		}
 
 	}
@@ -108,7 +109,7 @@ func (s *DockerScheduler) listenResult() {
 
 func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
 
-	s.logger.Println("Scheduler -- Begin handle tx")
+	s.logger.Debugf("begin handle tx")
 
 	startTime := time.Now()
 
@@ -147,7 +148,7 @@ func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
 	s.userController.UpdateUserState(user.Uid, false)
 	s.userController.ResetUserEnv(user)
 
-	s.logger.Println("running time is:", time.Since(startTime))
+	s.logger.Debugf("running time is: %s for tx [%s]", time.Since(startTime), tx.TxId[:10])
 
 	return nil
 }
@@ -185,7 +186,7 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 	memoryPath := filepath.Join(config.CGroupRoot, config.ProcsFile)
 	utils.WriteToFile(memoryPath, cmd.Process.Pid)
 
-	s.logger.Println("Add Pid ", cmd.Process.Pid, " to file ", config.ProcsFile)
+	s.logger.Debugf("Add Pid [%d] to file [%s]", cmd.Process.Pid, config.ProcsFile)
 
 	cmd.Wait()
 
@@ -208,15 +209,12 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 		exitStatus.Signal = status.Signal()
 	}
 
-	s.logger.Println("--------- after wait")
-
 	s.exitCh <- exitStatus
 
 	return nil
 }
 
 func (s *DockerScheduler) constructHandlerName(tx *outside.TxRequest) string {
-
 	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId[:5]
 	return handlerName
 }

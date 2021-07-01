@@ -1,11 +1,13 @@
 package rpcserver
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/core"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"contract-sdk-test1/pb_sdk/protogo"
 	"errors"
 	"fmt"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"io"
@@ -18,14 +20,14 @@ import (
 type UDSServer struct {
 	Listener net.Listener
 	Server   *grpc.Server
-	logger   *log.Logger
+	logger   *zap.SugaredLogger
 
 	handlerRegister *core.HandlerRegister
 }
 
 func (s *UDSServer) Contact(stream protogo.Contract_ContactServer) error {
 
-	s.logger.Println("begin to handle stream....")
+	s.logger.Debugf("begin to handle stream....")
 
 	// get handler from handler_register
 	registerMsg, err := stream.Recv()
@@ -34,7 +36,7 @@ func (s *UDSServer) Contact(stream protogo.Contract_ContactServer) error {
 	}
 
 	handlerName := registerMsg.HandlerName
-	fmt.Println(handlerName)
+	//fmt.Println(handlerName)
 	handler := s.handlerRegister.GetHandlerByName(handlerName)
 
 	if handler == nil {
@@ -43,7 +45,7 @@ func (s *UDSServer) Contact(stream protogo.Contract_ContactServer) error {
 	}
 
 	handler.SetStream(stream)
-	s.logger.Println("get handler: ", registerMsg.HandlerName)
+	s.logger.Debugf("get handler: %s", registerMsg.HandlerName)
 
 	err = handler.HandleMessage(registerMsg)
 	if err != nil {
@@ -71,10 +73,9 @@ func (s *UDSServer) Contact(stream protogo.Contract_ContactServer) error {
 		case rmsg := <-msgAvail:
 			switch {
 			case rmsg.err == io.EOF:
-				s.logger.Println("received EOF, ending contract stream")
+				s.logger.Debugf("received EOF, ending contract stream")
 				return nil
 			case rmsg.err != nil:
-				s.logger.Println(rmsg.err)
 				err := fmt.Errorf("receive failed: %s", rmsg.err)
 				return err
 			case rmsg.msg == nil:
@@ -98,18 +99,12 @@ func (s *UDSServer) Contact(stream protogo.Contract_ContactServer) error {
 // NewUDSRpcServer build new uds server, current: each server in charge of one sandbox
 func NewUDSRpcServer(handlerRegister *core.HandlerRegister) (*UDSServer, error) {
 
-	SockPath := "/tmp/sock.sock"
-
-	if SockPath == "" {
-		return nil, errors.New("server listen port not provided")
-	}
-
-	listenAddress, err := net.ResolveUnixAddr("unix", SockPath)
+	listenAddress, err := net.ResolveUnixAddr("unix", config.SockPath)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	listener, err := CreateUnixListener(listenAddress, SockPath)
+	listener, err := CreateUnixListener(listenAddress, config.SockPath)
 	if err != nil {
 		log.Fatalf("Failed to listen1: %v", err)
 	}
@@ -142,7 +137,7 @@ func NewUDSRpcServer(handlerRegister *core.HandlerRegister) (*UDSServer, error) 
 	return &UDSServer{
 		Listener: listener,
 		Server:   server,
-		logger:   utils.NewLogger("Docker UDS RPC Server"),
+		logger:   logger.NewDockerLogger(logger.MODULE_UDS_SERVER),
 
 		handlerRegister: handlerRegister,
 	}, nil
@@ -184,7 +179,7 @@ func (s *UDSServer) StartServer() error {
 
 	protogo.RegisterContractServer(s.Server, s)
 
-	s.logger.Printf("Start uds server for ")
+	s.logger.Infof("start uds server")
 
 	return s.Server.Serve(s.Listener)
 }
@@ -197,5 +192,5 @@ func (s *UDSServer) Stop() {
 		s.Server.Stop()
 	}
 
-	s.logger.Println("stop server for contract")
+	s.logger.Infof("stop uds server")
 }

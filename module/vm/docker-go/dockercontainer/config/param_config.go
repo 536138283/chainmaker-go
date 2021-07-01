@@ -7,8 +7,17 @@ const (
 	SwapLimitFile   = "memory.swappiness"
 
 	RssLimit = 500 // 10 MB
-	UserNum  = 5
+	UserNum  = 100
 
 	TimeLimit = 300 // process running time limit
 	Port      = "12355"
+
+	SockPath = "/uds.sock"
+
+	// LogFile log info
+	LogFile          = "/docker_manager.log"
+	DisplayInConsole = true
+	ShowLine         = false
+	LogLevel         = "DEBUG"
+	//LogLevel = "INFO" //
 )

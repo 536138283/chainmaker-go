@@ -1,14 +1,14 @@
 package core
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"contract-sdk-test1/pb_sdk/protogo"
 	"fmt"
 	"github.com/golang/protobuf/proto"
-	"log"
+	"go.uber.org/zap"
 )
 
 type state string
@@ -25,7 +25,7 @@ const (
 // to deal with each contract message
 type Handler struct {
 	user        *helper.User
-	logger      *log.Logger
+	logger      *zap.SugaredLogger
 	tx          *outside.TxRequest
 	state       state
 	handlerName string
@@ -36,8 +36,10 @@ type Handler struct {
 
 func NewHandler(user *helper.User, tx *outside.TxRequest, scheduler protocol.Scheduler, handlerName string) (*Handler, error) {
 
+	loggerName := "[Docker Handler " + handlerName + " ]"
+
 	handler := &Handler{
-		logger:      utils.NewLogger("Docker Handler - " + tx.TxId[:5]),
+		logger:      logger.NewDockerLogger(loggerName),
 		tx:          tx,
 		user:        user,
 		state:       created,
@@ -45,20 +47,20 @@ func NewHandler(user *helper.User, tx *outside.TxRequest, scheduler protocol.Sch
 		handlerName: handlerName,
 	}
 
-	fmt.Println("------------------")
-	fmt.Println("------------------")
-	fmt.Println(tx.TxId)
-	fmt.Println(tx.Method)
-	fmt.Println(len(tx.ByteCode))
-	fmt.Println(tx.ContractName)
-	fmt.Println(tx.Parameters)
+	//fmt.Println("------------------")
+	//fmt.Println("------------------")
+	//fmt.Println(tx.TxId)
+	//fmt.Println(tx.Method)
+	//fmt.Println(len(tx.ByteCode))
+	//fmt.Println(tx.ContractName)
+	//fmt.Println(tx.Parameters)
 	//udsServer, err := rpcserver.NewUDSRpcServer(user, handler)
 	//if err != nil {
 	//	return nil, err
 	//}
 
 	//handler.UdsServer = udsServer
-	handler.logger.Printf("Handler created for tx: [%s]\n", tx.TxId[:5])
+	handler.logger.Debugf("Handler created for tx: [%s]\n", tx.TxId[:5])
 	return handler, nil
 }
 
@@ -67,7 +69,7 @@ func (h *Handler) SetStream(stream protogo.Contract_ContactServer) {
 }
 
 func (h *Handler) sendMessage(msg *protogo.ContractMessage) error {
-	h.logger.Printf("send message [%s]", msg)
+	h.logger.Debugf("send message [%s]", msg)
 	return h.stream.Send(msg)
 }
 
@@ -79,7 +81,7 @@ func (h *Handler) sendMessage(msg *protogo.ContractMessage) error {
 // 4. client send get_state to server --> server send back get_state with payload
 // 5. client send result to server and close --> server receive result and give result to scheduler
 func (h *Handler) HandleMessage(msg *protogo.ContractMessage) error {
-	h.logger.Printf("handle msg [%s]\n", msg)
+	h.logger.Debugf("handle msg [%s]\n", msg)
 	//var err error
 	switch h.state {
 	case created:

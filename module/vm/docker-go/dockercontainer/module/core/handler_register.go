@@ -1,34 +1,34 @@
 package core
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
-	"log"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"go.uber.org/zap"
 )
 
 type HandlerRegister struct {
 	HandlersTable map[string]*Handler
-	logger        *log.Logger
+	logger        *zap.SugaredLogger
 }
 
 func NewHandlerRegister() *HandlerRegister {
 
 	return &HandlerRegister{
 		HandlersTable: make(map[string]*Handler),
-		logger:        utils.NewLogger("Handler Register"),
+		logger:        logger.NewDockerLogger(logger.MODULE_HANDLER_REGISTER),
 	}
 }
 
 func (hr *HandlerRegister) RegisterNewHandler(handlerName string, handler *Handler) {
 	hr.HandlersTable[handlerName] = handler
-	hr.logger.Println("register handler: ", handlerName)
+	hr.logger.Debugf("register handler: [%s]", handlerName)
 }
 
 func (hr *HandlerRegister) FreeHandler(handlerName string) {
 	delete(hr.HandlersTable, handlerName)
-	hr.logger.Printf("free [%s] handler", handlerName)
+	hr.logger.Debugf("free [%s] handler", handlerName)
 }
 
 func (hr *HandlerRegister) GetHandlerByName(handlerName string) *Handler {
-	hr.logger.Printf("get [%s] handler", handlerName)
+	hr.logger.Debugf("get [%s] handler", handlerName)
 	return hr.HandlersTable[handlerName]
 }

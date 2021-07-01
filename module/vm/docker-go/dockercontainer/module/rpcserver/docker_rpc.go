@@ -1,15 +1,15 @@
 package rpcserver
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/api"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"context"
 	"errors"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
-	"log"
 	"net"
 	"time"
 )
@@ -27,21 +27,23 @@ type DockerRpcServer struct {
 	Listener   net.Listener
 	Server     *grpc.Server
 	isShutdown bool
-	logger     *log.Logger
+	logger     *zap.SugaredLogger
 
 	scheduler protocol.Scheduler
 }
 
 func (s *DockerRpcServer) RunContracts(ctx context.Context, txRequest *outside.TxRequest) (*outside.ContractResult, error) {
 
-	s.logger.Println("run contract:")
+	requestName := txRequest.ContractName + " - " + txRequest.TxId[:10]
+
+	s.logger.Debugf("run contract: [%s]", requestName)
 	s.scheduler.GetTxCh() <- txRequest
 
 	for {
 
 		// todo check if result is for current request
 		contractResult := <-s.scheduler.GetTxResultCh()
-		s.logger.Println(contractResult)
+		s.logger.Debugf("contract result: %v", contractResult)
 		if contractResult.Result != nil {
 			return contractResult, nil
 
@@ -94,7 +96,7 @@ func NewDockerRpcServer(port string, scheduler protocol.Scheduler) (*DockerRpcSe
 		Server:     server,
 		isShutdown: false,
 		scheduler:  scheduler,
-		logger:     utils.NewLogger("Docker RPC Server"),
+		logger:     logger.NewDockerLogger(logger.MODULE_DOCKER_SERVER),
 	}, nil
 }
 
@@ -111,7 +113,7 @@ func (s *DockerRpcServer) StartServer() error {
 
 	api.RegisterDockerRpcServer(s.Server, s)
 
-	s.logger.Println("Start server ..... ")
+	s.logger.Infof("start docker server")
 	s.isShutdown = true
 	err := s.Server.Serve(s.Listener)
 	if err != nil {

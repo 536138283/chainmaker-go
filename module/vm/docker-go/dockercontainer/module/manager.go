@@ -12,6 +12,7 @@ type ManagerImpl struct {
 	udsRpcServer    *rpcserver.UDSServer
 	scheduler       *core.DockerScheduler
 	userController  *core.UsersController
+	securityEnv     *security2.SecurityEnv
 }
 
 func NewManager() (*ManagerImpl, error) {
@@ -42,6 +43,7 @@ func NewManager() (*ManagerImpl, error) {
 		udsRpcServer:    udsServer,
 		scheduler:       scheduler,
 		userController:  userController,
+		securityEnv:     security2.NewSecurityEnv(),
 	}
 
 	return manager, nil
@@ -56,7 +58,7 @@ func (m *ManagerImpl) InitContainer() {
 	go m.udsRpcServer.StartServer()
 
 	// init sandBox
-	go security2.InitSecurityEnv()
+	go m.securityEnv.InitSecurityEnv()
 
 	// create new users
 	go m.userController.CreateNewUsers(config.UserNum)

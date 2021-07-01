@@ -29,8 +29,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
-	log.Println("--------------------------------------")
-	log.Println("Start to run contract in docker")
+	//log.Println("--------------------------------------")
+	//log.Println("Start to run contract in docker")
 
 	// contract response
 	contractResult = &commonPb.ContractResult{
@@ -58,7 +58,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Parameters:      argsMap,
 	}
 
-	result, err := r.startRpcClient(txRequest)
+	result, err := r.RpcCall(txRequest)
 
 	contractResult.Message = result.Message
 	contractResult.Result = result.Result
@@ -69,22 +69,32 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 	contractResult.Code = commonPb.ContractResultCode_OK
 
-	log.Println("-----------------------------------------------")
-	log.Println("End to run contract in docker")
-	log.Println(result)
+	//log.Println("-----------------------------------------------")
+	//log.Println("End to run contract in docker")
+	//log.Println(result)
 
 	return contractResult
 }
 
-func (r *RuntimeInstance) startRpcClient(request *outside.TxRequest) (*outside.ContractResult, error) {
+func (r *RuntimeInstance) initRpcConnection() (*grpc.ClientConn, error) {
 	Port := "12355"
 	conn, err := grpc.Dial(":"+Port, grpc.WithInsecure(), grpc.WithDefaultCallOptions(
 		grpc.MaxCallRecvMsgSize(maxRecvMessageSize),
 		grpc.MaxCallSendMsgSize(maxSendMessageSize),
 	))
+
 	if err != nil {
 		log.Fatalf("err when dial the server %v", err)
 	}
+
+	return conn, nil
+}
+
+// RpcCall later change to stream send txs, and return whole result once
+func (r *RuntimeInstance) RpcCall(request *outside.TxRequest) (*outside.ContractResult, error) {
+
+	conn, err := r.initRpcConnection()
+
 	defer conn.Close()
 
 	client := api.NewDockerRpcClient(conn)

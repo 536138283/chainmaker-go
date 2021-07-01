@@ -1,29 +1,38 @@
 package security
 
 import (
-	"fmt"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"go.uber.org/zap"
 	"os"
 )
 
-type SandBox struct {
+type SecurityEnv struct {
+	logger *zap.SugaredLogger
 }
 
-func InitSecurityEnv() error {
-	if err := SetTmpMod(); err != nil {
+func NewSecurityEnv() *SecurityEnv {
+	return &SecurityEnv{
+		logger: logger.NewDockerLogger(logger.MODULE_SECURITY_ENV),
+	}
+}
+
+func (s *SecurityEnv) InitSecurityEnv() error {
+	if err := s.setTmpMod(); err != nil {
 		return err
 	}
 
-	fmt.Println("Successfully set tmp file mod")
+	s.logger.Infof("successfully set tmp file mod")
 
 	if err := SetCGroup(); err != nil {
 		return err
 	}
-	fmt.Println("Successfully set cgroup")
+	s.logger.Infof("successfully set cgroup")
 
-	fmt.Println("Init Sandbox Completed")
+	s.logger.Infof("init security env completed")
+
 	return nil
 }
 
-func SetTmpMod() error {
-	return os.Chmod("/tmp/", 0777)
+func (s *SecurityEnv) setTmpMod() error {
+	return os.Chmod("/tmp/", 0755)
 }
