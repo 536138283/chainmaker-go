@@ -100,7 +100,11 @@ func main() {
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
 
 	// 2) test invoke
-	testDockerInvoke(sk3, &client, CHAIN1)
+	go testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+	//go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
+
+	time.Sleep(10 * time.Second)
+
 	//time.Sleep(5 * time.Second)
 	//////
 	//testInvokeFactSave(sk3, &client, CHAIN1)
@@ -181,7 +185,7 @@ func initWxwmTest() {
 	runtimeType = commonPb.RuntimeType_WXVM
 }
 
-func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string) string {
+func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {
 	txId := utils.GetRandTxId()
 	fmt.Printf("\n============ invoke contract %s[sum][%s] ============\n", contractName, txId)
 
@@ -189,11 +193,11 @@ func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 	pairs := []*commonPb.KeyValuePair{
 		{
 			Key:   "arg1",
-			Value: "1",
+			Value: v1,
 		},
 		{
 			Key:   "arg2",
-			Value: "2",
+			Value: v2,
 		},
 	}
 	payload := &commonPb.TransactPayload{

@@ -1,13 +1,13 @@
 package protocol
 
-import security2 "chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
+import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
+)
 
 type UserController interface {
-	CreateNewUsers(userNum int) error
-
-	GetAvailableUser() *security2.User
+	GetAvailableUser() *helper.User
 
 	UpdateUserState(userId int, busy bool)
 
-	ResetUserEnv(user *security2.User) error
+	ResetUserEnv(user *helper.User) error
 }

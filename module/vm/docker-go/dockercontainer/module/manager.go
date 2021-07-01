@@ -2,48 +2,49 @@ package module
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/docker_scheduler"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/core"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpcserver"
 	security2 "chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
-	"log"
-	"os"
 )
-
-type ExitStatus struct {
-	Signal os.Signal
-	Code   int
-	PID    int
-	TxId   string
-}
 
 type ManagerImpl struct {
 	dockerRpcServer *rpcserver.DockerRpcServer
-	scheduler       protocol.Scheduler
-	userController  protocol.UserController
+	udsRpcServer    *rpcserver.UDSServer
+	scheduler       *core.DockerScheduler
+	userController  *core.UsersController
 }
 
-func NewManager() *ManagerImpl {
+func NewManager() (*ManagerImpl, error) {
 
 	// new users controller
-	userController := security2.NewUsersController()
+	userController := core.NewUsersController()
 
-	// new handler
-	scheduler := docker_scheduler.NewDockerScheduler(userController)
+	// new handler register
+	handlerRegister := core.NewHandlerRegister()
+
+	// new scheduler
+	scheduler := core.NewDockerScheduler(userController, handlerRegister)
+
+	// new uds rpc server
+	udsServer, err := rpcserver.NewUDSRpcServer(handlerRegister)
+	if err != nil {
+		return nil, err
+	}
 
 	// new docker rpc server
 	server, err := rpcserver.NewDockerRpcServer(config.Port, scheduler)
 	if err != nil {
-		log.Fatalln(err)
+		return nil, err
 	}
 
 	manager := &ManagerImpl{
 		dockerRpcServer: server,
+		udsRpcServer:    udsServer,
 		scheduler:       scheduler,
 		userController:  userController,
 	}
 
-	return manager
+	return manager, nil
 }
 
 func (m *ManagerImpl) InitContainer() {
@@ -51,13 +52,20 @@ func (m *ManagerImpl) InitContainer() {
 	// start server
 	go m.dockerRpcServer.StartServer()
 
+	// start uds server
+	go m.udsRpcServer.StartServer()
+
 	// init sandBox
-	go security2.InitSandboxEnv()
+	go security2.InitSecurityEnv()
 
 	// create new users
 	go m.userController.CreateNewUsers(config.UserNum)
 
-	// start handler
-	go m.scheduler.Start()
+	// start scheduler
+	go m.scheduler.StartScheduler()
+
+}
+
+func (m *ManagerImpl) StopManager() {
 
 }

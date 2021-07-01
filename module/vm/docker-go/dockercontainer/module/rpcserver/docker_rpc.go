@@ -17,9 +17,7 @@ import (
 const (
 	serverMinInterval = time.Duration(1) * time.Minute
 	connectionTimeout = 5 * time.Second
-)
 
-const (
 	dialTimeout        = 10 * time.Second
 	maxRecvMessageSize = 100 * 1024 * 1024 // 100 MiB
 	maxSendMessageSize = 100 * 1024 * 1024 // 100 MiB
@@ -29,14 +27,14 @@ type DockerRpcServer struct {
 	Listener   net.Listener
 	Server     *grpc.Server
 	isShutdown bool
-	scheduler  protocol.Scheduler
-	TxCh       chan *outside.TxRequest
-	TxResultCh chan *outside.ContractResult
 	logger     *log.Logger
+
+	scheduler protocol.Scheduler
 }
 
 func (s *DockerRpcServer) RunContracts(ctx context.Context, txRequest *outside.TxRequest) (*outside.ContractResult, error) {
 
+	s.logger.Println("run contract:")
 	s.scheduler.GetTxCh() <- txRequest
 
 	for {
@@ -91,15 +89,10 @@ func NewDockerRpcServer(port string, scheduler protocol.Scheduler) (*DockerRpcSe
 
 	server := grpc.NewServer(serverOpts...)
 
-	txCh := make(chan *outside.TxRequest)
-	txResCh := make(chan *outside.ContractResult)
-
 	return &DockerRpcServer{
 		Listener:   listener,
 		Server:     server,
-		isShutdown: true,
-		TxCh:       txCh,
-		TxResultCh: txResCh,
+		isShutdown: false,
 		scheduler:  scheduler,
 		logger:     utils.NewLogger("Docker RPC Server"),
 	}, nil
@@ -120,15 +113,17 @@ func (s *DockerRpcServer) StartServer() error {
 
 	s.logger.Println("Start server ..... ")
 	s.isShutdown = true
-	s.Server.Serve(s.Listener)
+	err := s.Server.Serve(s.Listener)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 // Stop the server
-// Stop the server
 func (s *DockerRpcServer) Stop() {
 	if s.Server != nil {
-		s.isShutdown = false
+		s.isShutdown = true
 		s.Server.Stop()
 	}
 }
