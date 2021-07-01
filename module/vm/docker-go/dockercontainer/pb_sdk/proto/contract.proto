@@ -4,16 +4,15 @@ package proto;
 
 option go_package = "contract-sdk-test1/pb/protogo";
 
-// Chaincode as a server - peer establishes a connection to the chaincode as a client
-// Currently only supports a stream connection.
+// manager as server - sandbox established a connection to the manager
 service Contract {
-    rpc Connect(stream ContractMessage) returns (stream ContractMessage);
+    rpc Contact(stream ContractMessage) returns (stream ContractMessage);
 }
 
 message ContractMessage {
     Type type = 1;
 
-    string contract_name = 2;
+    string handler_name = 2;
 
     bytes payload = 3;
 }
@@ -46,4 +45,5 @@ message Response {
 message Input {
     map<string, string> args = 1;
 
+    bool isInit = 2;
 }

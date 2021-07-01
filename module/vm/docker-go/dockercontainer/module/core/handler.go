@@ -24,23 +24,25 @@ const (
 // Handler used to handle each sandbox's message
 // to deal with each contract message
 type Handler struct {
-	user   *helper.User
-	logger *log.Logger
-	tx     *outside.TxRequest
-	state  state
+	user        *helper.User
+	logger      *log.Logger
+	tx          *outside.TxRequest
+	state       state
+	handlerName string
 
-	stream    protogo.Contract_ConnectServer
+	stream    protogo.Contract_ContactServer
 	scheduler protocol.Scheduler
 }
 
-func NewHandler(user *helper.User, tx *outside.TxRequest, scheduler protocol.Scheduler) (*Handler, error) {
+func NewHandler(user *helper.User, tx *outside.TxRequest, scheduler protocol.Scheduler, handlerName string) (*Handler, error) {
 
 	handler := &Handler{
-		logger:    utils.NewLogger("Docker Handler - " + tx.TxId[:5]),
-		tx:        tx,
-		user:      user,
-		state:     created,
-		scheduler: scheduler,
+		logger:      utils.NewLogger("Docker Handler - " + tx.TxId[:5]),
+		tx:          tx,
+		user:        user,
+		state:       created,
+		scheduler:   scheduler,
+		handlerName: handlerName,
 	}
 
 	fmt.Println("------------------")
@@ -60,7 +62,7 @@ func NewHandler(user *helper.User, tx *outside.TxRequest, scheduler protocol.Sch
 	return handler, nil
 }
 
-func (h *Handler) SetStream(stream protogo.Contract_ConnectServer) {
+func (h *Handler) SetStream(stream protogo.Contract_ContactServer) {
 	h.stream = stream
 }
 
@@ -92,13 +94,13 @@ func (h *Handler) HandleMessage(msg *protogo.ContractMessage) error {
 
 func (h *Handler) handleCreated(registerMsg *protogo.ContractMessage) error {
 	if registerMsg.Type != protogo.Type_REGISTER {
-		return fmt.Errorf("contract [%s] handler cannot handle message (%s) while in state: %s", registerMsg.ContractName, registerMsg.Type, h.state)
+		return fmt.Errorf("handler [%s] cannot handle message (%s) while in state: %s", registerMsg.HandlerName, registerMsg.Type, h.state)
 	}
 
 	registeredMsg := &protogo.ContractMessage{
-		Type:         protogo.Type_REGISTERED,
-		ContractName: registerMsg.ContractName,
-		Payload:      nil,
+		Type:        protogo.Type_REGISTERED,
+		HandlerName: registerMsg.HandlerName,
+		Payload:     nil,
 	}
 
 	h.sendMessage(registeredMsg)
@@ -113,9 +115,9 @@ func (h *Handler) afterRegistered() error {
 	}
 
 	prepareMsg := &protogo.ContractMessage{
-		Type:         protogo.Type_PREPARE,
-		ContractName: h.tx.ContractName,
-		Payload:      nil,
+		Type:        protogo.Type_PREPARE,
+		HandlerName: h.handlerName,
+		Payload:     nil,
 	}
 
 	return h.sendMessage(prepareMsg)
@@ -142,9 +144,9 @@ func (h *Handler) afterFirstReady() error {
 
 func (h *Handler) sendInit() error {
 	initMsg := &protogo.ContractMessage{
-		Type:         protogo.Type_INIT,
-		ContractName: h.tx.ContractName,
-		Payload:      nil, // put some parameters
+		Type:        protogo.Type_INIT,
+		HandlerName: h.handlerName,
+		Payload:     nil, // put some parameters
 	}
 
 	return h.sendMessage(initMsg)
@@ -164,9 +166,9 @@ func (h *Handler) sendInvoke() error {
 
 	inputPayload, _ := proto.Marshal(input)
 	invokeMsg := &protogo.ContractMessage{
-		Type:         protogo.Type_INVOKE,
-		ContractName: h.tx.ContractName,
-		Payload:      inputPayload, // put some parameters
+		Type:        protogo.Type_INVOKE,
+		HandlerName: h.handlerName,
+		Payload:     inputPayload, // put some parameters
 	}
 
 	return h.sendMessage(invokeMsg)
@@ -195,9 +197,9 @@ func (h *Handler) handleGetState(getStateMsg *protogo.ContractMessage) error {
 	// get data from node
 
 	responseMsg := &protogo.ContractMessage{
-		Type:         protogo.Type_RESPONSE,
-		ContractName: h.tx.ContractName,
-		Payload:      nil,
+		Type:        protogo.Type_RESPONSE,
+		HandlerName: h.handlerName,
+		Payload:     nil,
 	}
 
 	return h.sendMessage(responseMsg)
@@ -239,9 +241,9 @@ func (h *Handler) handleCompleted(completedMsg *protogo.ContractMessage) error {
 func (h *Handler) afterCompleted() error {
 
 	responseMsg := &protogo.ContractMessage{
-		Type:         protogo.Type_COMPLETED,
-		ContractName: h.tx.ContractName,
-		Payload:      nil,
+		Type:        protogo.Type_COMPLETED,
+		HandlerName: h.handlerName,
+		Payload:     nil,
 	}
 
 	return h.sendMessage(responseMsg)

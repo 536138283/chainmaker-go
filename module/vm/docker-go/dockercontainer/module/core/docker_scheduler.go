@@ -110,6 +110,8 @@ func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
 
 	s.logger.Println("Scheduler -- Begin handle tx")
 
+	startTime := time.Now()
+
 	// set available user
 	user := s.userController.GetAvailableUser()
 	s.userController.UpdateUserState(user.Uid, true)
@@ -121,36 +123,40 @@ func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
 		log.Fatalln(err)
 	}
 
+	// todo change contractName to other name
+	handlerName := s.constructHandlerName(tx)
+
 	// register the new handler
-	handler, err := NewHandler(user, tx, s)
+	handler, err := NewHandler(user, tx, s, handlerName)
 	if err != nil {
 		fmt.Println(2)
 		log.Fatalln(err)
 	}
 
-	// todo change contractName to other name
-	s.handlerRegister.RegisterNewHandler(tx.ContractName, handler)
+	s.handlerRegister.RegisterNewHandler(handlerName, handler)
 
-	err = s.startSandBox(user, tx)
+	err = s.startSandBox(user, tx, handlerName)
 	if err != nil {
 		return err
 	}
 
 	// free handler
-	s.handlerRegister.FreeHandler(tx.ContractName)
+	s.handlerRegister.FreeHandler(handlerName)
 
 	// free current user
 	s.userController.UpdateUserState(user.Uid, false)
 	s.userController.ResetUserEnv(user)
 
+	s.logger.Println("running time is:", time.Since(startTime))
+
 	return nil
 }
 
-func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest) error {
+func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest, handlerName string) error {
 
 	cmd := exec.Cmd{
 		Path: user.BinPath,
-		Args: []string{user.SockPath},
+		Args: []string{user.SockPath, handlerName},
 	}
 
 	cmd.Stdout = os.Stdout
@@ -207,4 +213,10 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest)
 	s.exitCh <- exitStatus
 
 	return nil
+}
+
+func (s *DockerScheduler) constructHandlerName(tx *outside.TxRequest) string {
+
+	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId[:5]
+	return handlerName
 }

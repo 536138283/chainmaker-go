@@ -23,7 +23,7 @@ type UDSServer struct {
 	handlerRegister *core.HandlerRegister
 }
 
-func (s *UDSServer) Connect(stream protogo.Contract_ConnectServer) error {
+func (s *UDSServer) Contact(stream protogo.Contract_ContactServer) error {
 
 	s.logger.Println("begin to handle stream....")
 
@@ -33,7 +33,7 @@ func (s *UDSServer) Connect(stream protogo.Contract_ConnectServer) error {
 		return err
 	}
 
-	handlerName := registerMsg.ContractName
+	handlerName := registerMsg.HandlerName
 	fmt.Println(handlerName)
 	handler := s.handlerRegister.GetHandlerByName(handlerName)
 
@@ -43,7 +43,7 @@ func (s *UDSServer) Connect(stream protogo.Contract_ConnectServer) error {
 	}
 
 	handler.SetStream(stream)
-	s.logger.Println("get handler: ", registerMsg.ContractName)
+	s.logger.Println("get handler: ", registerMsg.HandlerName)
 
 	err = handler.HandleMessage(registerMsg)
 	if err != nil {
