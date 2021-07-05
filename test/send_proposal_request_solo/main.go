@@ -106,9 +106,11 @@ func main() {
 	//}
 	//testDockerQuery(sk3, &client, CHAIN1, "5", "6")
 
-	for i := 0; i < 2; i++ {
-		go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
-	}
+	//for i := 0; i < 16; i++ {
+	//	go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
+	//}
+
+	testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
 
 	time.Sleep(10 * time.Second)
 
@@ -231,6 +233,29 @@ func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 	fmt.Printf(logTempSendTx, resp.Code, resp.Message, resp.ContractResult)
 	return txId
 
+}
+
+func testDockerPerformanceModeTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string) {
+	fmt.Println("==============================================")
+	fmt.Println("==============================================")
+	fmt.Println("==============start batch invoke==============")
+	fmt.Println("==============================================")
+	fmt.Println("==============================================")
+	start := utils.CurrentTimeMillisSeconds()
+	wg := sync.WaitGroup{}
+	for j := 0; j < 10; j++ {
+		wg.Add(1)
+		go func() {
+			for j := 0; j < 10; j++ {
+				testDockerInvoke(sk3, client, chainId, "5", "6")
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
+	end := utils.CurrentTimeMillisSeconds()
+	spend := end - start
+	fmt.Println("发送100个交易所花时间", spend, "ms")
 }
 
 func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {

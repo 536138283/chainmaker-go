@@ -57,6 +57,7 @@ func NewDockerManager(chainId string) *DockerManager {
 	defaultRuntimeInstance := &docker_go.RuntimeInstance{
 		ContainerName: containerName,
 		ChainId:       chainId,
+		Lru:           docker_go.New(5),
 	}
 
 	instances[containerName] = defaultRuntimeInstance

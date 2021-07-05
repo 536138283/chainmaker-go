@@ -16,6 +16,7 @@ import (
 type RuntimeInstance struct {
 	ContainerName string
 	ChainId       string // chain id
+	Lru           *Cache
 }
 
 const (
@@ -24,7 +25,8 @@ const (
 	maxSendMessageSize = 100 * 1024 * 1024 // 100 MiB
 )
 
-// Invoke contract by call vm, send tx to docker and get result after all txs finished
+// Invoke contract by call vm, send tx to docker and get result after all txs finished todo
+// For now, send tx to docker and get result immediately, merge result in scheduler as before
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
@@ -32,7 +34,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	//log.Println("--------------------------------------")
 	//log.Println("Start to run contract in docker")
 
-	// contract response
+	// construct response
 	contractResult = &commonPb.ContractResult{
 		Code:    commonPb.ContractResultCode_FAIL,
 		Result:  nil,
@@ -53,8 +55,20 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		ContractName:    contractId.ContractName,
 		ContractVersion: contractId.ContractVersion,
 		Method:          method,
-		ByteCode:        byteCode,
-		Parameters:      argsMap,
+		//ByteCode:        byteCode,
+		Parameters: argsMap,
+	}
+
+	// lru test
+	cacheKey := r.ConstructContractKey(contractId.ContractName, contractId.ContractVersion)
+	_, ok := r.Lru.Get(cacheKey)
+	if !ok {
+		//log.Printf("add [%s] to cache", cacheKey)
+		r.Lru.Add(cacheKey, true)
+		txRequest.ByteCode = byteCode
+	} else {
+		//log.Printf("[%s] exist", cacheKey)
+		txRequest.ByteCode = nil
 	}
 
 	result, err := r.RpcCall(txRequest)
@@ -114,4 +128,8 @@ func (r *RuntimeInstance) RpcCall(request *outside.TxRequest) (*outside.Contract
 
 	return result, nil
 
+}
+
+func (r *RuntimeInstance) ConstructContractKey(contractName, contractVersion string) string {
+	return contractName + ":" + contractVersion
 }

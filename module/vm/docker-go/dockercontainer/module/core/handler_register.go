@@ -15,6 +15,7 @@ type HandlerRegister struct {
 func NewHandlerRegister() *HandlerRegister {
 
 	return &HandlerRegister{
+		lock:          sync.Mutex{},
 		HandlersTable: make(map[string]*Handler),
 		logger:        logger.NewDockerLogger(logger.MODULE_HANDLER_REGISTER),
 	}
@@ -28,6 +29,8 @@ func (hr *HandlerRegister) RegisterNewHandler(handlerName string, handler *Handl
 }
 
 func (hr *HandlerRegister) FreeHandler(handlerName string) {
+	hr.lock.Lock()
+	defer hr.lock.Unlock()
 	delete(hr.HandlersTable, handlerName)
 	hr.logger.Debugf("free [%s] handler", handlerName)
 }

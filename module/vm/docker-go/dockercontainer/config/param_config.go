@@ -7,7 +7,7 @@ const (
 	SwapLimitFile   = "memory.swappiness"
 
 	RssLimit = 500 // 10 MB
-	UserNum  = 100
+	UserNum  = 200
 
 	TimeLimit = 300 // process running time limit
 	Port      = "12355"
@@ -18,6 +18,6 @@ const (
 	LogFile          = "/docker_manager.log"
 	DisplayInConsole = true
 	ShowLine         = false
-	LogLevel         = "DEBUG"
-	//LogLevel = "INFO" //
+	//LogLevel         = "DEBUG"
+	LogLevel = "INFO" //
 )

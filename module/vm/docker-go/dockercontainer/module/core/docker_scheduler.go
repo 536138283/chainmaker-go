@@ -33,6 +33,8 @@ type DockerScheduler struct {
 
 	userController  protocol.UserController
 	handlerRegister *HandlerRegister
+
+	lru *Cache
 }
 
 func NewDockerScheduler(userController protocol.UserController, handlerRegister *HandlerRegister) *DockerScheduler {
@@ -44,6 +46,7 @@ func NewDockerScheduler(userController protocol.UserController, handlerRegister 
 		userController:  userController,
 		logger:          logger.NewDockerLogger(logger.MODULE_SCHEDULER),
 		handlerRegister: handlerRegister,
+		lru:             New(5),
 	}
 
 	return scheduler
@@ -111,6 +114,18 @@ func (s *DockerScheduler) listenResult() {
 func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResult, error) {
 
 	s.logger.Debugf("begin handle tx")
+
+	// lru test
+	contractKey := s.ConstructContractKey(tx.ContractName, tx.ContractVersion)
+	v, ok := s.lru.Get(contractKey)
+
+	if ok {
+		s.logger.Debugf("get bytecode from cache [%s]", contractKey)
+		tx.ByteCode = v.([]byte)
+	} else {
+		s.logger.Debugf("add [%s] to cache", contractKey)
+		s.lru.Add(contractKey, tx.ByteCode)
+	}
 
 	// set available user
 	user := s.userController.GetAvailableUser()
@@ -220,4 +235,8 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 func (s *DockerScheduler) constructHandlerName(tx *outside.TxRequest) string {
 	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId[:10]
 	return handlerName
+}
+
+func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
+	return contractName + ":" + contractVersion
 }
