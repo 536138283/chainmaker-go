@@ -9,7 +9,6 @@ package common
 import (
 	"bytes"
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
-	"chainmaker.org/chainmaker-go/consensus/abft"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
@@ -310,10 +309,6 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	// verify block sig and also verify identity and auth of block proposer
 	startSigTick := utils.CurrentTimeMillisSeconds()
 	vb.log.Debugf("verify block \n %s", utils.FormatBlock(block))
-	if  err = abft.VerifyBlockSignatures(vb.chainConf, vb.ac, block); err != nil {
-		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
-	}
 
 	if block.Header.Proposer != nil {
 		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
