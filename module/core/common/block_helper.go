@@ -314,10 +314,16 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	if block.Header.Proposer != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil", vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts = append(timeLasts, sigLasts)
 

@@ -119,7 +119,7 @@ func (m *Merger) doMerge(
 		// update allTxsMap
 		m.allTxsMap[txId] = tx
 	}
-	m.log.Debugf("merge tx branch, height[%d], branchId[%s], repeatTx[%d], processer[%s]",
+	m.log.Debugf("merge tx branch, height[%d], branchId[%s], repeatTx[%d], proposer[%s]",
 		baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx, hex.EncodeToString(txBatch.Header.Proposer))
 }
 
