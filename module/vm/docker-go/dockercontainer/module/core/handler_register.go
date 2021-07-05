@@ -3,9 +3,11 @@ package core
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"go.uber.org/zap"
+	"sync"
 )
 
 type HandlerRegister struct {
+	lock          sync.Mutex
 	HandlersTable map[string]*Handler
 	logger        *zap.SugaredLogger
 }
@@ -19,6 +21,8 @@ func NewHandlerRegister() *HandlerRegister {
 }
 
 func (hr *HandlerRegister) RegisterNewHandler(handlerName string, handler *Handler) {
+	hr.lock.Lock()
+	defer hr.lock.Unlock()
 	hr.HandlersTable[handlerName] = handler
 	hr.logger.Debugf("register handler: [%s]", handlerName)
 }

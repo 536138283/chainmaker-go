@@ -41,7 +41,6 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 	// split args from parameters
 	argsMap := make(map[string]string)
-
 	for key, value := range parameters {
 		if strings.Contains(key, "arg") {
 			argsMap[key] = value
@@ -60,6 +59,10 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 	result, err := r.RpcCall(txRequest)
 
+	// doesn't transfer the simcontext
+	// new simple sim context in child process, then apply the simple sim context here
+
+	// fulfil the result
 	contractResult.Message = result.Message
 	contractResult.Result = result.Result
 
@@ -74,6 +77,10 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	//log.Println(result)
 
 	return contractResult
+}
+
+func (r *RuntimeInstance) applyCache(txSimContext protocol.TxSimContext, maps []byte) error {
+	return nil
 }
 
 func (r *RuntimeInstance) initRpcConnection() (*grpc.ClientConn, error) {

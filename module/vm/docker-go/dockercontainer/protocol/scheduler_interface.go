@@ -9,4 +9,7 @@ type Scheduler interface {
 
 	// GetTxResultCh get tx result channel
 	GetTxResultCh() chan *outside.ContractResult
+
+	// HandleTx handle one tx
+	HandleTx(tx *outside.TxRequest) (*outside.ContractResult, error)
 }

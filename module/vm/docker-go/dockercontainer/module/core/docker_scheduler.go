@@ -73,12 +73,13 @@ func (s *DockerScheduler) GetTxResultCh() chan *outside.ContractResult {
 	return s.txResultCh
 }
 
+// listenIncoming for now, doesn't use it, later change handle multiple txs, use this func
 func (s *DockerScheduler) listenIncoming() {
 	s.logger.Infof("Begin listen incoming")
 	for {
 		select {
 		case tx := <-s.txCh:
-			go s.handleTx(tx)
+			go s.HandleTx(tx)
 		}
 	}
 	s.logger.Infof("Stop listen incoming")
@@ -107,11 +108,9 @@ func (s *DockerScheduler) listenResult() {
 	//}
 }
 
-func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
+func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResult, error) {
 
 	s.logger.Debugf("begin handle tx")
-
-	startTime := time.Now()
 
 	// set available user
 	user := s.userController.GetAvailableUser()
@@ -138,8 +137,10 @@ func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
 
 	err = s.startSandBox(user, tx, handlerName)
 	if err != nil {
-		return err
+		return nil, err
 	}
+
+	// todo using txResultChan to handle multiple incoming txs
 
 	// free handler
 	s.handlerRegister.FreeHandler(handlerName)
@@ -148,9 +149,11 @@ func (s *DockerScheduler) handleTx(tx *outside.TxRequest) error {
 	s.userController.UpdateUserState(user.Uid, false)
 	s.userController.ResetUserEnv(user)
 
-	s.logger.Debugf("running time is: %s for tx [%s]", time.Since(startTime), tx.TxId[:10])
+	// return result -- for one tx incoming
+	result := handler.contractResult
+	s.logger.Debugf("result is: [%s]", result.Result)
 
-	return nil
+	return result, nil
 }
 
 func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest, handlerName string) error {
@@ -163,14 +166,14 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: uint32(user.Uid),
-		},
-		Cloneflags: syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWNET,
-	}
+	//cmd.SysProcAttr = &syscall.SysProcAttr{
+	//	Credential: &syscall.Credential{
+	//		Uid: uint32(user.Uid),
+	//	},
+	//	Cloneflags: syscall.CLONE_NEWIPC |
+	//		syscall.CLONE_NEWPID |
+	//		syscall.CLONE_NEWNET,
+	//}
 
 	// start app
 	if err := cmd.Start(); err != nil {
@@ -215,6 +218,6 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 }
 
 func (s *DockerScheduler) constructHandlerName(tx *outside.TxRequest) string {
-	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId[:5]
+	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId[:10]
 	return handlerName
 }

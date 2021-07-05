@@ -153,7 +153,7 @@ func (m *ManagerImpl) runUserContract(contractId *commonPb.ContractId, method st
 		contractName   = contractId.ContractName
 		runtimeType    = 0
 		version        = contractId.ContractVersion
-		versionKey     = []byte(protocol.ContractVersion + contractName)
+		versionKey     = []byte(protocol.ContractVersion + contractName) //:V:contract16
 		creatorKey     = []byte(protocol.ContractCreator + contractName)
 		freezeKey      = []byte(protocol.ContractFreeze + contractName)
 		revokeKey      = []byte(protocol.ContractRevoke + contractName)

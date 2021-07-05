@@ -101,12 +101,18 @@ func main() {
 
 	// 2) test invoke
 
-	for i := 0; i < 1; i++ {
-		go testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
-	}
-	//go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
+	//for i := 0; i < 2; i++ {
+	//	go testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+	//}
+	//testDockerQuery(sk3, &client, CHAIN1, "5", "6")
 
-	time.Sleep(30 * time.Second)
+	for i := 0; i < 2; i++ {
+		go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
+	}
+
+	time.Sleep(10 * time.Second)
+
+	//time.Sleep(30 * time.Second)
 
 	//time.Sleep(5 * time.Second)
 	//////
@@ -195,6 +201,10 @@ func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 	// 构造Payload
 	pairs := []*commonPb.KeyValuePair{
 		{
+			Key:   "arg0",
+			Value: "sum",
+		},
+		{
 			Key:   "arg1",
 			Value: v1,
 		},
@@ -203,9 +213,49 @@ func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 			Value: v2,
 		},
 	}
+
 	payload := &commonPb.TransactPayload{
 		ContractName: contractName,
-		Method:       "sum",
+		Method:       "invoke_contract",
+		Parameters:   pairs,
+	}
+
+	payloadBytes, err := proto.Marshal(payload)
+	if err != nil {
+		log.Fatalf(logTempMarshalPayLoadFailed, err.Error())
+	}
+
+	resp := proposalRequest(sk3, client, commonPb.TxType_INVOKE_USER_CONTRACT,
+		chainId, txId, payloadBytes)
+
+	fmt.Printf(logTempSendTx, resp.Code, resp.Message, resp.ContractResult)
+	return txId
+
+}
+
+func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {
+	txId := utils.GetRandTxId()
+	fmt.Printf("\n============ query contract %s[sum][%s] ============\n", contractName, txId)
+
+	// 构造Payload
+	pairs := []*commonPb.KeyValuePair{
+		{
+			Key:   "arg0",
+			Value: "sum",
+		},
+		{
+			Key:   "arg1",
+			Value: v1,
+		},
+		{
+			Key:   "arg2",
+			Value: v2,
+		},
+	}
+
+	payload := &commonPb.TransactPayload{
+		ContractName: contractName,
+		Method:       "invoke_contract",
 		Parameters:   pairs,
 	}
 

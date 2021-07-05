@@ -34,22 +34,34 @@ type DockerRpcServer struct {
 
 func (s *DockerRpcServer) RunContracts(ctx context.Context, txRequest *outside.TxRequest) (*outside.ContractResult, error) {
 
+	startTime := time.Now()
+
 	requestName := txRequest.ContractName + " - " + txRequest.TxId[:10]
 
 	s.logger.Debugf("run contract: [%s]", requestName)
-	s.scheduler.GetTxCh() <- txRequest
 
-	for {
+	result, err := s.scheduler.HandleTx(txRequest)
 
-		// todo check if result is for current request
-		contractResult := <-s.scheduler.GetTxResultCh()
-		s.logger.Debugf("contract result: %v", contractResult)
-		if contractResult.Result != nil {
-			return contractResult, nil
-
-		}
-
+	s.logger.Debugf("running time is: %s for tx [%s]", time.Since(startTime), txRequest.TxId[:10])
+	if err != nil {
+		return nil, err
 	}
+
+	return result, nil
+
+	//s.scheduler.GetTxCh() <- txRequest
+	//
+	//for {
+	//
+	//	// todo check if result is for current request
+	//	contractResult := <-s.scheduler.GetTxResultCh()
+	//	s.logger.Debugf("contract result: %v", contractResult)
+	//	if contractResult.Result != nil {
+	//		return contractResult, nil
+	//
+	//	}
+	//
+	//}
 
 }
 

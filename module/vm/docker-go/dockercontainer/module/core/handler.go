@@ -32,6 +32,8 @@ type Handler struct {
 
 	stream    protogo.Contract_ContactServer
 	scheduler protocol.Scheduler
+
+	contractResult *outside.ContractResult
 }
 
 func NewHandler(user *helper.User, tx *outside.TxRequest, scheduler protocol.Scheduler, handlerName string) (*Handler, error) {
@@ -39,12 +41,13 @@ func NewHandler(user *helper.User, tx *outside.TxRequest, scheduler protocol.Sch
 	loggerName := "[Docker Handler " + handlerName + " ]"
 
 	handler := &Handler{
-		logger:      logger.NewDockerLogger(loggerName),
-		tx:          tx,
-		user:        user,
-		state:       created,
-		scheduler:   scheduler,
-		handlerName: handlerName,
+		logger:         logger.NewDockerLogger(loggerName),
+		tx:             tx,
+		user:           user,
+		state:          created,
+		scheduler:      scheduler,
+		handlerName:    handlerName,
+		contractResult: nil,
 	}
 
 	//fmt.Println("------------------")
@@ -137,7 +140,7 @@ func (h *Handler) afterFirstReady() error {
 	switch h.tx.Method {
 	case "init_contract":
 		return h.sendInit()
-	case "sum":
+	case "invoke_contract":
 		return h.sendInvoke()
 	default:
 		return fmt.Errorf("contract [%s] handler cannot send such method: %s", h.tx.ContractName, h.tx.Method)
@@ -233,8 +236,12 @@ func (h *Handler) handleCompleted(completedMsg *protogo.ContractMessage) error {
 	}
 
 	//h.logger.Println("in complete: ", contractResult)
-	// give back result to scheduler
-	h.scheduler.GetTxResultCh() <- contractResult
+
+	// give back result to scheduler  -- for multiple tx incoming
+	//h.scheduler.GetTxResultCh() <- contractResult
+
+	// save contract result into handler
+	h.contractResult = contractResult
 
 	return h.afterCompleted()
 }
