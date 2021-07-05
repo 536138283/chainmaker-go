@@ -92,7 +92,7 @@ func (vt *VerifierTx) VerifierTxs() (txHashes [][]byte, txNewAdd []*commonpb.Tra
 			}
 			txHashes, newAddTxs, err := vt.verifyTx(txs, stat, txsRet)
 			if err != nil {
-				vt.log.Debugf("verify tx fail [%s], height[%d]", err.Error(), vt.block.Header.BlockHeight)
+				vt.log.Warnf("verify tx fail [%s], height[%d]", err.Error(), vt.block.Header.BlockHeight)
 				return
 			}
 			resultMu.Lock()
