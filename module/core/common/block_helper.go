@@ -11,6 +11,7 @@ import (
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
 	"chainmaker.org/chainmaker-go/logger"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"fmt"
@@ -287,8 +288,10 @@ func (vb *VerifierBlock) ValidateBlock(block *commonpb.Block) (map[string]*commo
 	var lastBlock *commonpb.Block
 	txCapacity := int64(vb.chainConf.ChainConfig().Block.BlockTxCapacity)
 	txRWSetMap := make(map[string]*commonpb.TxRWSet)
-	if block.Header.TxCount > txCapacity {
-		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+	if vb.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
+		if block.Header.TxCount > txCapacity {
+			return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+		}
 	}
 
 	if err = IsTxCountValid(block); err != nil {
