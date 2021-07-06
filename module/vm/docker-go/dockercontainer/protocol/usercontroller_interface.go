@@ -5,9 +5,9 @@ import (
 )
 
 type UserController interface {
-	GetAvailableUser() *helper.User
+	GetAvailableUser() (*helper.User, error)
 
-	UpdateUserState(userId int, busy bool)
+	FreeUser(user *helper.User) error
 
 	ResetUserEnv(user *helper.User) error
 }

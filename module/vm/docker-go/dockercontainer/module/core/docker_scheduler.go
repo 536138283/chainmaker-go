@@ -116,23 +116,25 @@ func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResu
 	s.logger.Debugf("begin handle tx")
 
 	// lru test
-	contractKey := s.ConstructContractKey(tx.ContractName, tx.ContractVersion)
-	v, ok := s.lru.Get(contractKey)
+	bytecodeKey := s.ConstructBytecodeKey(tx.ContractName, tx.ContractVersion)
+	v, ok := s.lru.Get(bytecodeKey)
 
 	if ok {
-		s.logger.Debugf("get bytecode from cache [%s]", contractKey)
+		s.logger.Debugf("get bytecode from cache [%s]", bytecodeKey)
 		tx.ByteCode = v.([]byte)
 	} else {
-		s.logger.Debugf("add [%s] to cache", contractKey)
-		s.lru.Add(contractKey, tx.ByteCode)
+		s.logger.Debugf("add [%s] to cache", bytecodeKey)
+		s.lru.Add(bytecodeKey, tx.ByteCode)
 	}
 
-	// set available user
-	user := s.userController.GetAvailableUser()
-	s.userController.UpdateUserState(user.Uid, true)
+	// set available user todo add waiting logic if there is no available user
+	user, err := s.userController.GetAvailableUser()
+	if err != nil {
+		return nil, err
+	}
 
 	// save bytes to executable file and set proper permission
-	err := utils.ConvertBytesToRunnableFile(tx.ByteCode, user.BinPath, user.Uid)
+	err = utils.ConvertBytesToRunnableFile(tx.ByteCode, user.BinPath, user.Uid)
 	if err != nil {
 		fmt.Println(1)
 		log.Fatalln(err)
@@ -161,8 +163,12 @@ func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResu
 	s.handlerRegister.FreeHandler(handlerName)
 
 	// free current user
-	s.userController.UpdateUserState(user.Uid, false)
-	s.userController.ResetUserEnv(user)
+	if err = s.userController.FreeUser(user); err != nil {
+		return nil, err
+	}
+	if err = s.userController.ResetUserEnv(user); err != nil {
+		return nil, err
+	}
 
 	// return result -- for one tx incoming
 	result := handler.contractResult
@@ -237,6 +243,6 @@ func (s *DockerScheduler) constructHandlerName(tx *outside.TxRequest) string {
 	return handlerName
 }
 
-func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
+func (s *DockerScheduler) ConstructBytecodeKey(contractName, contractVersion string) string {
 	return contractName + ":" + contractVersion
 }

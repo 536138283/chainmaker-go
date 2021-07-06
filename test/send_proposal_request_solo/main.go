@@ -69,7 +69,7 @@ func main() {
 	//initWxwmTest()
 	initDockerGoTest()
 
-	createContract := true
+	createContract := false
 
 	conn, err := initGRPCConnect(true)
 	if err != nil {
@@ -112,7 +112,7 @@ func main() {
 
 	testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
 
-	time.Sleep(10 * time.Second)
+	//time.Sleep(10 * time.Second)
 
 	//time.Sleep(30 * time.Second)
 
@@ -246,7 +246,7 @@ func testDockerPerformanceModeTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcN
 	for j := 0; j < 10; j++ {
 		wg.Add(1)
 		go func() {
-			for j := 0; j < 10; j++ {
+			for j := 0; j < 5; j++ {
 				testDockerInvoke(sk3, client, chainId, "5", "6")
 			}
 			wg.Done()
@@ -255,7 +255,7 @@ func testDockerPerformanceModeTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcN
 	wg.Wait()
 	end := utils.CurrentTimeMillisSeconds()
 	spend := end - start
-	fmt.Println("发送100个交易所花时间", spend, "ms")
+	fmt.Println("发送50个交易所花时间", spend, "ms")
 }
 
 func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {

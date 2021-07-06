@@ -7,5 +7,4 @@ type User struct {
 	HomeDir  string
 	SockPath string
 	BinPath  string
-	Busy     bool
 }
