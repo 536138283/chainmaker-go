@@ -47,10 +47,12 @@ func convertFileToBytes(filePath string) ([]byte, error) {
 
 func ConvertBytesToRunnableFile(bytes []byte, newFilePath string, userId int) error {
 	if err := convertBytesToFile(bytes, newFilePath); err != nil {
+		log.Fatalf("fail to convert bytes to file: [%s]", err)
 		return err
 	}
 
 	if err := setFileRunnable(newFilePath, userId); err != nil {
+		log.Fatalf("fail to set file mod: [%s]", err)
 		return err
 	}
 
@@ -59,6 +61,7 @@ func ConvertBytesToRunnableFile(bytes []byte, newFilePath string, userId int) er
 
 // ConvertBytesToFile convert byte array to file
 func convertBytesToFile(bytes []byte, newFilePath string) error {
+
 	f, err := os.Create(newFilePath)
 	if err != nil {
 		return err
@@ -69,7 +72,8 @@ func convertBytesToFile(bytes []byte, newFilePath string) error {
 	if err != nil {
 		return err
 	}
-	return nil
+
+	return f.Sync()
 }
 
 // SetFileRunnable make file runnable, file permission is 700
@@ -85,9 +89,4 @@ func setFileRunnable(filePath string, userId int) error {
 		return err
 	}
 	return nil
-}
-
-func NewLogger(module string) *log.Logger {
-	currentModule := module + " "
-	return log.New(os.Stdout, currentModule, log.Lshortfile|log.Ldate|log.Ltime)
 }

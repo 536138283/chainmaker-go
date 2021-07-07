@@ -7,7 +7,6 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
-	"fmt"
 	"go.uber.org/zap"
 	"log"
 	"os"
@@ -56,7 +55,7 @@ func (s *DockerScheduler) StartScheduler() {
 
 	s.logger.Infof("start docker scheduler")
 
-	go s.listenIncoming()
+	//go s.listenIncoming()
 
 	go s.monitorSandBox()
 
@@ -130,13 +129,14 @@ func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResu
 	// set available user todo add waiting logic if there is no available user
 	user, err := s.userController.GetAvailableUser()
 	if err != nil {
+		s.logger.Errorf("fail to get a user: [%s]", err)
 		return nil, err
 	}
 
 	// save bytes to executable file and set proper permission
 	err = utils.ConvertBytesToRunnableFile(tx.ByteCode, user.BinPath, user.Uid)
 	if err != nil {
-		fmt.Println(1)
+		s.logger.Errorf("fail to convert bytes: [%s]", err)
 		log.Fatalln(err)
 	}
 
@@ -146,8 +146,8 @@ func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResu
 	// register the new handler
 	handler, err := NewHandler(user, tx, s, handlerName)
 	if err != nil {
-		fmt.Println(2)
-		log.Fatalln(err)
+		s.logger.Errorf("fail to generate new handler: %s", err)
+		return nil, err
 	}
 
 	s.handlerRegister.RegisterNewHandler(handlerName, handler)
@@ -187,18 +187,19 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	//cmd.SysProcAttr = &syscall.SysProcAttr{
-	//	Credential: &syscall.Credential{
-	//		Uid: uint32(user.Uid),
-	//	},
-	//	Cloneflags: syscall.CLONE_NEWIPC |
-	//		syscall.CLONE_NEWPID |
-	//		syscall.CLONE_NEWNET,
-	//}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(user.Uid),
+		},
+		Cloneflags: syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNET,
+	}
 
 	// start app
 	if err := cmd.Start(); err != nil {
-		log.Panicln(err)
+		s.logger.Errorf("fail to run child process [%v]", err)
+		log.Fatalln(err)
 	}
 
 	// set timeout

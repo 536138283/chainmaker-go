@@ -7,7 +7,7 @@ import (
 )
 
 type HandlerRegister struct {
-	lock          sync.Mutex
+	lock          sync.RWMutex
 	HandlersTable map[string]*Handler
 	logger        *zap.SugaredLogger
 }
@@ -15,7 +15,7 @@ type HandlerRegister struct {
 func NewHandlerRegister() *HandlerRegister {
 
 	return &HandlerRegister{
-		lock:          sync.Mutex{},
+		lock:          sync.RWMutex{},
 		HandlersTable: make(map[string]*Handler),
 		logger:        logger.NewDockerLogger(logger.MODULE_HANDLER_REGISTER),
 	}
@@ -36,6 +36,8 @@ func (hr *HandlerRegister) FreeHandler(handlerName string) {
 }
 
 func (hr *HandlerRegister) GetHandlerByName(handlerName string) *Handler {
+	hr.lock.RLock()
+	defer hr.lock.RUnlock()
 	hr.logger.Debugf("get [%s] handler", handlerName)
 	return hr.HandlersTable[handlerName]
 }

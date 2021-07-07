@@ -65,11 +65,11 @@ var caPaths = []string{certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/c
 // vm wasmer 整体功能测试，合约创建、升级、执行、查询、冻结、解冻、吊销、交易区块的查询、链配置信息的查询
 func main() {
 	//initWasmerTest()
-	//initGasmTest()
+	initGasmTest()
 	//initWxwmTest()
-	initDockerGoTest()
+	//initDockerGoTest()
 
-	createContract := false
+	createContract := true
 
 	conn, err := initGRPCConnect(true)
 	if err != nil {
@@ -96,6 +96,9 @@ func main() {
 		time.Sleep(10 * time.Second)
 	}
 
+	// 2) 批量测试
+	//testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
+
 	// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
 
@@ -109,8 +112,6 @@ func main() {
 	//for i := 0; i < 16; i++ {
 	//	go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
 	//}
-
-	testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
 
 	//time.Sleep(10 * time.Second)
 
@@ -159,7 +160,7 @@ func main() {
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1)
 	////
 	//// 15) 批量执行
-	//testPerformanceModeTransfer(sk3, &client, CHAIN1)
+	testPerformanceModeTransfer(sk3, &client, CHAIN1)
 	//time.Sleep(10 * time.Second)
 	//
 	//// 16) 功能测试
@@ -246,7 +247,7 @@ func testDockerPerformanceModeTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcN
 	for j := 0; j < 10; j++ {
 		wg.Add(1)
 		go func() {
-			for j := 0; j < 5; j++ {
+			for j := 0; j < 100; j++ {
 				testDockerInvoke(sk3, client, chainId, "5", "6")
 			}
 			wg.Done()
@@ -255,7 +256,7 @@ func testDockerPerformanceModeTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcN
 	wg.Wait()
 	end := utils.CurrentTimeMillisSeconds()
 	spend := end - start
-	fmt.Println("发送50个交易所花时间", spend, "ms")
+	fmt.Println("发送100个交易所花时间", spend, "ms")
 }
 
 func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {
@@ -307,7 +308,7 @@ func testPerformanceModeTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcNodeCli
 	for j := 0; j < 10; j++ {
 		wg.Add(1)
 		go func() {
-			for j := 0; j < 10; j++ {
+			for j := 0; j < 100; j++ {
 				testInvokeFactSave(sk3, client, CHAIN1)
 			}
 			wg.Done()
