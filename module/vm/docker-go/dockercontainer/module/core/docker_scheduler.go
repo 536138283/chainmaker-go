@@ -33,7 +33,7 @@ type DockerScheduler struct {
 	userController  protocol.UserController
 	handlerRegister *HandlerRegister
 
-	lru *Cache
+	contractManager *ContractManager
 }
 
 func NewDockerScheduler(userController protocol.UserController, handlerRegister *HandlerRegister) *DockerScheduler {
@@ -45,7 +45,7 @@ func NewDockerScheduler(userController protocol.UserController, handlerRegister 
 		userController:  userController,
 		logger:          logger.NewDockerLogger(logger.MODULE_SCHEDULER),
 		handlerRegister: handlerRegister,
-		lru:             New(5),
+		contractManager: NewContractManager(),
 	}
 
 	return scheduler
@@ -112,38 +112,39 @@ func (s *DockerScheduler) listenResult() {
 
 func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResult, error) {
 
+	startTime := time.Now()
+
 	s.logger.Debugf("begin handle tx")
 
-	// lru test
-	bytecodeKey := s.ConstructBytecodeKey(tx.ContractName, tx.ContractVersion)
-	v, ok := s.lru.Get(bytecodeKey)
+	// get contract from contract manager
+	contractKey := s.ConstructContractKey(tx.ContractName, tx.ContractVersion)
+
+	var contractPath string
+
+	contractPath, ok := s.contractManager.GetContract(contractKey)
 
 	if ok {
-		s.logger.Debugf("get bytecode from cache [%s]", bytecodeKey)
-		tx.ByteCode = v.([]byte)
+		s.logger.Debugf("get contrac from memory [%s]", contractPath)
 	} else {
-		s.logger.Debugf("add [%s] to cache", bytecodeKey)
-		s.lru.Add(bytecodeKey, tx.ByteCode)
+		// todo change using single flight
+		newContractPath, err := s.contractManager.SaveContract(contractKey, tx.ByteCode)
+		if err != nil {
+			return nil, err
+		}
+		s.logger.Debugf("save [%s] to disk", newContractPath)
+		contractPath = newContractPath
 	}
 
-	// set available user todo add waiting logic if there is no available user
+	// set available user
 	user, err := s.userController.GetAvailableUser()
 	if err != nil {
 		s.logger.Errorf("fail to get a user: [%s]", err)
 		return nil, err
 	}
 
-	// save bytes to executable file and set proper permission
-	err = utils.ConvertBytesToRunnableFile(tx.ByteCode, user.BinPath, user.Uid)
-	if err != nil {
-		s.logger.Errorf("fail to convert bytes: [%s]", err)
-		log.Fatalln(err)
-	}
-
-	// todo change contractName to other name
+	// register new handler
 	handlerName := s.constructHandlerName(tx)
 
-	// register the new handler
 	handler, err := NewHandler(user, tx, s, handlerName)
 	if err != nil {
 		s.logger.Errorf("fail to generate new handler: %s", err)
@@ -152,7 +153,8 @@ func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResu
 
 	s.handlerRegister.RegisterNewHandler(handlerName, handler)
 
-	err = s.startSandBox(user, tx, handlerName)
+	// start sand box
+	err = s.startSandBox(user, tx, handlerName, contractPath)
 	if err != nil {
 		return nil, err
 	}
@@ -166,21 +168,21 @@ func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResu
 	if err = s.userController.FreeUser(user); err != nil {
 		return nil, err
 	}
-	if err = s.userController.ResetUserEnv(user); err != nil {
-		return nil, err
-	}
+	//if err = s.userController.ResetUserEnv(user); err != nil {
+	//	return nil, err
+	//}
 
 	// return result -- for one tx incoming
 	result := handler.contractResult
-	s.logger.Debugf("result is: [%s]", result.Result)
+	s.logger.Debugf("cost time for running sandbox is: %s", time.Since(startTime))
 
 	return result, nil
 }
 
-func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest, handlerName string) error {
+func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest, handlerName, contractPath string) error {
 
 	cmd := exec.Cmd{
-		Path: user.BinPath,
+		Path: contractPath,
 		Args: []string{user.SockPath, handlerName},
 	}
 
@@ -244,6 +246,6 @@ func (s *DockerScheduler) constructHandlerName(tx *outside.TxRequest) string {
 	return handlerName
 }
 
-func (s *DockerScheduler) ConstructBytecodeKey(contractName, contractVersion string) string {
+func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
 	return contractName + ":" + contractVersion
 }

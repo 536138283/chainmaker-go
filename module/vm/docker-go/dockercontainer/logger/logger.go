@@ -17,6 +17,7 @@ const (
 	MODULE_UDS_SERVER       = "[Docker UDS Server]"
 	MODULE_DOCKER_SERVER    = "[Docker Docker Server]"
 	MODULE_SECURITY_ENV     = "[Docker Security Env]"
+	MODULE_CONTRACT_MANAGER = "[Docker Contract Manager]"
 )
 
 func NewDockerLogger(name string) *zap.SugaredLogger {

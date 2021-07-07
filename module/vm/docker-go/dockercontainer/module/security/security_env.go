@@ -28,6 +28,11 @@ func (s *SecurityEnv) InitSecurityEnv() error {
 	}
 	s.logger.Infof("successfully set cgroup")
 
+	if err := s.createContractDir(); err != nil {
+		return err
+	}
+	s.logger.Infof("successfully create contract base dir")
+
 	s.logger.Infof("init security env completed")
 
 	return nil
@@ -35,4 +40,8 @@ func (s *SecurityEnv) InitSecurityEnv() error {
 
 func (s *SecurityEnv) setTmpMod() error {
 	return os.Chmod("/tmp/", 0755)
+}
+
+func (s *SecurityEnv) createContractDir() error {
+	return os.Mkdir("/contracts", 0755)
 }

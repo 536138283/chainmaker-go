@@ -65,9 +65,9 @@ var caPaths = []string{certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/c
 // vm wasmer 整体功能测试，合约创建、升级、执行、查询、冻结、解冻、吊销、交易区块的查询、链配置信息的查询
 func main() {
 	//initWasmerTest()
-	initGasmTest()
+	//initGasmTest()
 	//initWxwmTest()
-	//initDockerGoTest()
+	initDockerGoTest()
 
 	createContract := true
 
@@ -97,28 +97,17 @@ func main() {
 	}
 
 	// 2) 批量测试
-	//testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
+	testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
+
+	// 3) invoke 测试
+	// testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
+
+	// 4) query 测试
+	//testDockerQuery(sk3, &client, CHAIN1, "5", "6")
 
 	// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
 
-	// 2) test invoke
-
-	//for i := 0; i < 2; i++ {
-	//	go testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
-	//}
-	//testDockerQuery(sk3, &client, CHAIN1, "5", "6")
-
-	//for i := 0; i < 16; i++ {
-	//	go testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
-	//}
-
-	//time.Sleep(10 * time.Second)
-
-	//time.Sleep(30 * time.Second)
-
-	//time.Sleep(5 * time.Second)
-	//////
 	//testInvokeFactSave(sk3, &client, CHAIN1)
 	//time.Sleep(4 * time.Second)
 	//
@@ -160,7 +149,7 @@ func main() {
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1)
 	////
 	//// 15) 批量执行
-	testPerformanceModeTransfer(sk3, &client, CHAIN1)
+	//testPerformanceModeTransfer(sk3, &client, CHAIN1)
 	//time.Sleep(10 * time.Second)
 	//
 	//// 16) 功能测试
