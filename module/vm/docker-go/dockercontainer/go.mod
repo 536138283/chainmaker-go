@@ -4,8 +4,7 @@ go 1.15
 
 require (
 	contract-sdk-test1/pb_sdk v0.0.0-00010101000000-000000000000
-	github.com/enriquebris/goconcurrentqueue v0.6.0 // indirect
-	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da
+	github.com/enriquebris/goconcurrentqueue v0.6.0
 	github.com/golang/protobuf v1.5.0
 	go.uber.org/zap v1.18.1
 	google.golang.org/grpc v1.38.0
