@@ -86,8 +86,9 @@ func (m *Merger) doMerge(
 	rwSetMap map[string]*commonpb.TxRWSet,
 	baseWriteTable map[string]struct{}) {
 
+	m.log.Debugf("merge branch, branchID[%s], height[%d]", hex.EncodeToString(txBatch.Header.BlockHash), txBatch.Header.BlockHeight)
 	failTxWriteTable := make(map[string]struct{})
-	repeatTx := 0
+	repeatTx := int64(0)
 	for _, tx := range txBatch.Txs {
 		txId := tx.Header.TxId
 		rwSet := rwSetMap[txId]
@@ -119,8 +120,8 @@ func (m *Merger) doMerge(
 		// update allTxsMap
 		m.allTxsMap[txId] = tx
 	}
-	m.log.Debugf("merge tx branch, height[%d], branchId[%s], repeatTx[%d], proposer[%s]",
-		baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx, hex.EncodeToString(txBatch.Header.Proposer))
+	m.log.Debugf("merge tx branch, height[%d], branchId[%s], repeatTx[%d], totalTx[%d], proposer[%s], ",
+		baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx, txBatch.Header.TxCount, hex.EncodeToString(txBatch.Header.Proposer))
 }
 
 func (m *Merger) getRepeatTx(txBatchID string) ([]int, map[string]struct{}) {
