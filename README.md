@@ -5,8 +5,8 @@ ChainMaker aims to use standardized and modularized components to build a blockc
 
 # Quick Start
 Please visit the following links to get started with ChainMaker.
-- [User Manul](https://git.chainmaker.org.cn/chainmaker/chainmaker-docs/-/blob/master/ChainMaker_User_Manual.md)
-- [Deploy Maunl](https://git.chainmaker.org.cn/chainmaker/chainmaker-docs/-/blob/master/ChainMaker_Deploy_Manual.md)
+- [长安链 · ChainMaker Docs](https://docs.chainmaker.org.cn/ "长安链 · ChainMaker Docs")
+- [长安链 · ChainMaker Community](https://www.chainmaker.org.cn/ "长安链 · ChainMaker Community")
 
 # License
 
