@@ -51,7 +51,7 @@ type callContractResult struct {
 func (s *txSimContextImpl) Get(contractName string, key []byte) ([]byte, error) {
 	// Get from write set
 	if value, done := s.getFromWriteSet(contractName, key); done {
-		s.putIntoReadSet(contractName, key, value)
+		s.PutIntoReadSet(contractName, key, value)
 		return value, nil
 	}
 
@@ -65,7 +65,7 @@ func (s *txSimContextImpl) Get(contractName string, key []byte) ([]byte, error) 
 		return nil, err
 	} else {
 		// if get from db success, put into read set
-		s.putIntoReadSet(contractName, key, value)
+		s.PutIntoReadSet(contractName, key, value)
 		return value, nil
 	}
 }
@@ -98,9 +98,9 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
 	// 4. construct an iterator which includes rwset iterator, store's iterator and cache for the two iterators
 	wsetsMap := make(map[string]interface{})
 	txRWSets := s.snapshot.GetTxRWSetTable()
-	if len(txRWSets) == 0 {
-		return s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
-	}
+	//if len(txRWSets) == 0 {
+	//	return s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
+	//}
 	for _, txRWSet := range txRWSets {
 		for _, wset := range txRWSet.TxWrites {
 			if string(wset.Key) >= string(startKey) && string(wset.Key) < string(limit) {
@@ -112,15 +112,15 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
 			}
 		}
 	}
-	if len(wsetsMap) == 0 {
-		return s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
-	}
+	//if len(wsetsMap) == 0 {
+	//	return s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
+	//}
 	wsetIterator := NewWsetIterator(wsetsMap)
 	dbIterator, err := s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
 	if err != nil {
 		return nil, err
 	}
-	return NewSimContextIterator(wsetIterator, dbIterator), nil
+	return NewSimContextIterator(s, wsetIterator, dbIterator), nil
 
 }
 
@@ -143,7 +143,7 @@ func (s *txSimContextImpl) GetSender() *acpb.SerializedMember {
 	return s.tx.Header.Sender
 }
 
-func (s *txSimContextImpl) putIntoReadSet(contractName string, key []byte, value []byte) {
+func (s *txSimContextImpl) PutIntoReadSet(contractName string, key []byte, value []byte) {
 	s.txReadKeyMap[constructKey(contractName, key)] = &commonpb.TxRead{
 		Key:          key,
 		Value:        value,

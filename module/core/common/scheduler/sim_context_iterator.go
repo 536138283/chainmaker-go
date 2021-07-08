@@ -15,19 +15,20 @@ type SimContextIterator struct {
     dbValueCache   *store.KV
     wsetIter       protocol.StateIterator
     dbIter         protocol.StateIterator
-    //log            protocol.Logger
+    simContext     protocol.TxSimContext
 }
 
-func NewSimContextIterator(wsetIter, dbIter protocol.StateIterator) *SimContextIterator {
+func NewSimContextIterator(simContext protocol.TxSimContext, wsetIter, dbIter protocol.StateIterator) *SimContextIterator {
     return &SimContextIterator{
         wsetValueCache: nil,
         dbValueCache:   nil,
         wsetIter:       wsetIter,
         dbIter:         dbIter,
-        //log:            logger.GetLoggerByChain(logger.MODULE_CORE, chainConf.ChainConfig().ChainId),
+        simContext:     simContext,
     }
 }
 
+// Next move the iter to next and return is there value in next iter
 func (sci *SimContextIterator) Next() bool {
     if sci.wsetValueCache != nil || sci.dbValueCache != nil {
         return true
@@ -54,7 +55,25 @@ func (sci *SimContextIterator) Next() bool {
     return false
 }
 
+// Value return the value of current iter
 func (sci *SimContextIterator) Value() (*store.KV, error) {
+    storeKv, err := sci.getValue()
+    if err != nil {
+        return nil, err
+    }
+    if storeKv == nil {
+        return nil, nil
+    }
+    contractName, err := sci.simContext.GetTx().GetContractName()
+    if err != nil {
+        return nil, err
+    }
+    sci.simContext.PutIntoReadSet(contractName, storeKv.Key, storeKv.Value)
+
+    return storeKv, nil
+}
+
+func (sci *SimContextIterator) getValue() (*store.KV, error) {
     var resultCache *store.KV
     if sci.wsetValueCache != nil && sci.dbValueCache != nil {
         if string(sci.wsetValueCache.Key) == string(sci.dbValueCache.Key) {
@@ -151,6 +170,7 @@ func (sci *SimContextIterator) Value() (*store.KV, error) {
     return dbValue, nil
 }
 
+// Release release the iterator
 func (sci *SimContextIterator) Release() {
     sci.wsetIter.Release()
     sci.dbIter.Release()
