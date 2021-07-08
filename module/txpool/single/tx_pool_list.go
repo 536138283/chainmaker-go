@@ -44,8 +44,10 @@ func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore pro
 
 	if localconf.ChainMakerConfig.TxPoolConfig.RandomTxList==true{
          list.queue= newListMap()
+         log.Infof("RandomTxList==true")
 	}else{
 		list.queue=linkedhashmap.NewLinkedHashMap()
+		log.Infof("RandomTxList==false")
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
@@ -146,8 +148,8 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 	cacheKVs = make([]*valInPendingCache, 0, count)
 
 	if localconf.ChainMakerConfig.TxPoolConfig.RandomTxList == true {
-
-		lm:=l.queue.(*listMap)
+		l.log.Infof("listMap")
+		lm := l.queue.(*listMap)
 
 		for txId, val := range lm.m {
 			if count > 0 {
@@ -165,14 +167,15 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 						l.log.Errorf("tx:%s duplicate to package block, txInPoolHeight: %d", txId, val.(*valInPendingCache).inBlockHeight)
 					}
 				}
-				count --
-			}else{
+				count--
+			} else {
 				return
 			}
 		}
 		return
 	} else {
-		lhm:=l.queue.(*linkedhashmap.LinkedHashMap)
+		l.log.Infof("LinkedHashMap---------")
+		lhm := l.queue.(*linkedhashmap.LinkedHashMap)
 
 		node := lhm.GetLinkList().Front()
 		for node != nil && count > 0 {
