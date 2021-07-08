@@ -94,7 +94,7 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
 	// 1. get block's wset and filter wsets with startKey, limit
 	// 2. construct an iterator for wset
 	// 3. get store's iterator
-	// 4. construct an iterator which includes rwset iterator, store's iterator and a cache for store's iterator
+	// 4. construct an iterator which includes rwset iterator, store's iterator and cache for the two iterators
 	wsetsMap := make(map[string]interface{})
 	txRWSets := s.snapshot.GetTxRWSetTable()
 	if len(txRWSets) == 0 {
