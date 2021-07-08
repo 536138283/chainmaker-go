@@ -35,6 +35,10 @@ type txQuerySimContextImpl struct {
 	blockVersion     string
 }
 
+func (s *txQuerySimContextImpl) PutIntoReadSet(contractName string, key []byte, value []byte) {
+	// do nothing
+}
+
 type callContractResult struct {
 	contractName string
 	method       string
