@@ -146,10 +146,14 @@ type TxContextMockTest struct {
 	db         *leveldb.DB
 	kvRowCache map[int32]protocol.StateIterator
 }
-func (s *TxContextMockTest) GetBlockVersion() string{
+
+func (s *TxContextMockTest) GetBlockVersion() string {
 	return protocol.DefaultBlockVersion
 }
 func (s *TxContextMockTest) PutRecord(contractName string, value []byte, sqlType protocol.SqlType) {
+	panic("implement me")
+}
+func (s *TxContextMockTest) PutIntoReadSet(contractName string, key []byte, value []byte) {
 	panic("implement me")
 }
 func (s *TxContextMockTest) SetStateKvHandle(index int32, rows protocol.StateIterator) {

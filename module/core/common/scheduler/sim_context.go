@@ -105,8 +105,8 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
 		for _, wset := range txRWSet.TxWrites {
 			if string(wset.Key) >= string(startKey) && string(wset.Key) < string(limit) {
 				wsetsMap[string(wset.Key)] = &store.KV{
-					Key: wset.Key,
-					Value: wset.Value,
+					Key:          wset.Key,
+					Value:        wset.Value,
 					ContractName: contractName,
 				}
 			}

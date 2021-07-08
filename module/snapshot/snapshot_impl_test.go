@@ -107,6 +107,10 @@ func (s *MockSimContextImpl) Put(contractName string, key []byte, value []byte) 
 func (s *MockSimContextImpl) PutRecord(contractName string, value []byte, sqlType protocol.SqlType) {
 }
 
+func (mock *MockSimContextImpl) PutIntoReadSet(contractName string, key []byte, value []byte) {
+	panic("implement me")
+}
+
 // 删除合约账户状态
 func (s *MockSimContextImpl) Del(contractName string, key []byte) error {
 	return nil
