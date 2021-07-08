@@ -29,18 +29,25 @@ type txList struct {
 	metricTxPoolSize *prometheus.GaugeVec
 
 	rwLock       sync.RWMutex
-	queue        *linkedhashmap.LinkedHashMap // Orderly store TXS: txs
-	pendingCache *sync.Map                    // A place where transactions are stored after Fetch
+	queue        queue              // Orderly or random store TXS: txs
+	pendingCache *sync.Map          // A place where transactions are stored after Fetch
 }
 
 func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore protocol.BlockchainStore) *txList {
+
 	list := &txList{
 		log:             log,
 		blockchainStore: blockchainStore,
 		rwLock:          sync.RWMutex{},
-		queue:           linkedhashmap.NewLinkedHashMap(),
 		pendingCache:    pendingCache,
 	}
+
+	if localconf.ChainMakerConfig.TxPoolConfig.RandomTxList==true{
+         list.queue= newListMap()
+	}else{
+		list.queue=linkedhashmap.NewLinkedHashMap()
+	}
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		list.metricTxPoolSize = monitor.NewGaugeVec(monitor.SUBSYSTEM_TXPOOL, "metric_tx_pool_size", "tx pool size", "chainId", "poolType")
 	}
@@ -90,7 +97,6 @@ func (l *txList) Delete(txIds []string) {
 		l.queue.Remove(txId)
 		l.pendingCache.Delete(txId)
 	}
-
 }
 
 // Fetch Gets a list of stored transactions
@@ -138,27 +144,58 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 	txIds = make([]string, 0, count)
 	errKeys = make([]string, 0, count)
 	cacheKVs = make([]*valInPendingCache, 0, count)
-	node := l.queue.GetLinkList().Front()
-	for node != nil && count > 0 {
-		txId := node.Value.(string)
-		tx := l.queue.Get(txId).(*commonPb.Transaction)
-		if validate != nil && validate(tx) != nil {
-			errKeys = append(errKeys, txId)
-		} else {
-			txs = append(txs, tx)
-			txIds = append(txIds, txId)
-			cacheKVs = append(cacheKVs, &valInPendingCache{
-				tx:            tx,
-				inBlockHeight: blockHeight,
-			})
-			if val, ok := l.pendingCache.Load(txId); ok {
-				l.log.Errorf("tx:%s duplicate to package block, txInPoolHeight: %d", txId, val.(*valInPendingCache).inBlockHeight)
+
+	if localconf.ChainMakerConfig.TxPoolConfig.RandomTxList == true {
+
+		lm:=l.queue.(*listMap)
+
+		for txId, val := range lm.m {
+			if count > 0 {
+				tx := val.(*commonPb.Transaction)
+				if validate != nil && validate(tx) != nil {
+					errKeys = append(errKeys, txId)
+				} else {
+					txs = append(txs, tx)
+					txIds = append(txIds, txId)
+					cacheKVs = append(cacheKVs, &valInPendingCache{
+						tx:            tx,
+						inBlockHeight: blockHeight,
+					})
+					if val, ok := l.pendingCache.Load(txId); ok {
+						l.log.Errorf("tx:%s duplicate to package block, txInPoolHeight: %d", txId, val.(*valInPendingCache).inBlockHeight)
+					}
+				}
+				count --
+			}else{
+				return
 			}
 		}
-		count--
-		node = node.Next()
+		return
+	} else {
+		lhm:=l.queue.(*linkedhashmap.LinkedHashMap)
+
+		node := lhm.GetLinkList().Front()
+		for node != nil && count > 0 {
+			txId := node.Value.(string)
+			tx := l.queue.Get(txId).(*commonPb.Transaction)
+			if validate != nil && validate(tx) != nil {
+				errKeys = append(errKeys, txId)
+			} else {
+				txs = append(txs, tx)
+				txIds = append(txIds, txId)
+				cacheKVs = append(cacheKVs, &valInPendingCache{
+					tx:            tx,
+					inBlockHeight: blockHeight,
+				})
+				if val, ok := l.pendingCache.Load(txId); ok {
+					l.log.Errorf("tx:%s duplicate to package block, txInPoolHeight: %d", txId, val.(*valInPendingCache).inBlockHeight)
+				}
+			}
+			count--
+			node = node.Next()
+		}
+		return
 	}
-	return
 }
 
 func (l *txList) monitor(tx *commonPb.Transaction, len int) {
