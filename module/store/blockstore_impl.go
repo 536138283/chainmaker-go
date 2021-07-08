@@ -91,7 +91,7 @@ func NewBlockStoreImpl(chainId string,
 		storeConfig:      storeConfig,
 	}
 
-	if err :=  blockStore.InitArchiveMgr(chainId); err != nil {
+	if err := blockStore.InitArchiveMgr(chainId); err != nil {
 		return nil, err
 	}
 
@@ -171,7 +171,7 @@ func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) erro
 		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs), len(blockBytes))
 
 	//7. init archive manager
-	err =  bs.InitArchiveMgr(block.Header.ChainId);
+	err = bs.InitArchiveMgr(block.Header.ChainId)
 	if err != nil {
 		return err
 	}
@@ -284,25 +284,37 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 
 // GetArchivedPivot return archived pivot
 func (bs *BlockStoreImpl) GetArchivedPivot() uint64 {
+	if !bs.isSupportArchive() {
+		return 0
+	}
 	height, _ := bs.ArchiveMgr.GetArchivedPivot()
 	return height
 }
 
 // ArchiveBlock the block after backup
 func (bs *BlockStoreImpl) ArchiveBlock(archiveHeight uint64) error {
+	if !bs.isSupportArchive() {
+		return nil
+	}
 	return bs.ArchiveMgr.ArchiveBlock(archiveHeight)
 }
 
 // RestoreBlocks restore blocks from outside serialized block data
 func (bs *BlockStoreImpl) RestoreBlocks(serializedBlocks [][]byte) error {
+	if !bs.isSupportArchive() {
+		return nil
+	}
 	blockInfos := make([]*serialization.BlockWithSerializedInfo, 0, len(serializedBlocks))
 	for _, blockInfo := range serializedBlocks {
 		bwsInfo, err := serialization.DeserializeBlock(blockInfo)
 		if err != nil {
 			return err
 		}
-
-		blockInfos = append(blockInfos, bwsInfo)
+		_, s, err := serialization.SerializeBlock(bwsInfo)
+		if err != nil {
+			return err
+		}
+		blockInfos = append(blockInfos, s)
 	}
 
 	return bs.ArchiveMgr.RestoreBlock(blockInfos)
@@ -460,6 +472,10 @@ func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet
 		if err != nil {
 			return nil, err
 		}
+		if txRWSet == nil { //数据库未找到记录，这不正常，记录日志，初始化空实例
+			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", txId)
+			txRWSet = &commonPb.TxRWSet{}
+		}
 		txRWSets[i] = txRWSet
 		bs.logger.Debugf("getTxRWSetsByHeight, txid:%s", txId)
 
@@ -493,6 +509,10 @@ func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRW
 		txRWSet, err := bs.GetTxRWSet(tx.Header.TxId)
 		if err != nil {
 			return nil, err
+		}
+		if txRWSet == nil { //数据库未找到记录，这不正常，记录日志，初始化空实例
+			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", tx.Header.TxId)
+			txRWSet = &commonPb.TxRWSet{}
 		}
 		blockWithRWSets.TxRWSets[i] = txRWSet
 		//}
@@ -715,7 +735,12 @@ func (bs *BlockStoreImpl) getBlockFromLog(num uint64) (*serialization.BlockWithS
 		bs.logger.Errorf("read log failed, err:%s", err)
 		return nil, err
 	}
-	return serialization.DeserializeBlock(bytes)
+	blockWithRWSet, err := serialization.DeserializeBlock(bytes)
+	if err != nil {
+		return nil, err
+	}
+	_, s, err := serialization.SerializeBlock(blockWithRWSet)
+	return s, err
 }
 
 func (bs *BlockStoreImpl) deleteBlockFromLog(num uint64) error {
@@ -790,8 +815,8 @@ func (bs *BlockStoreImpl) calculateRecoverHeight(currentHeight uint64, savePoint
 }
 
 func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
-	if bs.storeConfig.BlockDbConfig.IsKVDB() && bs.storeConfig.ResultDbConfig.IsKVDB() {
-		archiveMgr, err := archive.NewArchiveMgr(chainId, bs.blockDB, bs.resultDB, bs.storeConfig)
+	if bs.isSupportArchive() {
+		archiveMgr, err := archive.NewArchiveMgr(chainId, bs.blockDB, bs.resultDB, bs.storeConfig, bs.logger)
 		if err != nil {
 			return err
 		}
@@ -800,4 +825,8 @@ func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
 	}
 
 	return nil
+}
+
+func (bs *BlockStoreImpl) isSupportArchive() bool {
+	return bs.storeConfig.BlockDbConfig.IsKVDB() && bs.storeConfig.ResultDbConfig.IsKVDB()
 }
