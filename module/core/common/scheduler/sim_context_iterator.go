@@ -16,20 +16,22 @@ type SimContextIterator struct {
 	wsetIter       protocol.StateIterator
 	dbIter         protocol.StateIterator
 	finalValue     *store.KV
+	simContext     protocol.TxSimContext
 	//log            protocol.Logger
 }
 
-func NewSimContextIterator(wsetIter, dbIter protocol.StateIterator) *SimContextIterator {
+func NewSimContextIterator(simContext protocol.TxSimContext, wsetIter, dbIter protocol.StateIterator) *SimContextIterator {
 	return &SimContextIterator{
 		wsetValueCache: nil,
 		dbValueCache:   nil,
 		finalValue:     nil,
 		wsetIter:       wsetIter,
 		dbIter:         dbIter,
-		//log:            logger.GetLoggerByChain(logger.MODULE_CORE, chainConf.ChainConfig().ChainId),
+		simContext:     simContext,
 	}
 }
 
+// Next move the iter to next and return is there value in next iter
 func (sci *SimContextIterator) Next() bool {
 	if sci.wsetValueCache == nil {
 		if sci.wsetIter.Next() {
@@ -79,10 +81,21 @@ func (sci *SimContextIterator) Next() bool {
 	return true
 }
 
+// Value return the value of current iter
 func (sci *SimContextIterator) Value() (*store.KV, error) {
+	if sci.finalValue == nil {
+		return nil, nil
+	}
+	contractName, err := sci.simContext.GetTx().GetContractName()
+	if err != nil {
+		return nil, err
+	}
+	sci.simContext.PutIntoReadSet(contractName, sci.finalValue.Key, sci.finalValue.Value)
+
 	return sci.finalValue, nil
 }
 
+// Release release the iterator
 func (sci *SimContextIterator) Release() {
 	sci.wsetIter.Release()
 	sci.dbIter.Release()
