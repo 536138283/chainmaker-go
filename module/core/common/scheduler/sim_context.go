@@ -121,7 +121,6 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
         return nil, err
     }
     return NewSimContextIterator(s, wsetIterator, dbIterator), nil
-
 }
 
 func (s *txSimContextImpl) GetCreator(contractName string) *acpb.SerializedMember {

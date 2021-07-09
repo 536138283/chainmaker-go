@@ -51,18 +51,6 @@ func TestSimContextIteratorNextValue(t *testing.T) {
 
     i := 0
     _, vals := makeStringKeyMap()
-    simContextMockDbIterator := NewSimContextIterator(simContext, makeEmptyWSetIterator(), makeMockDbIterator())
-    for {
-        if !simContextMockDbIterator.Next() {
-            break
-        }
-        val, err := simContextMockDbIterator.Value()
-        require.Nil(t, err)
-        require.Equal(t, vals[i], val)
-        i++
-    }
-
-    i = 0
     simContextMockWSetIterator := NewSimContextIterator(simContext, makeMockWSetIterator(), makeEmptyWSetIterator())
     for {
         if !simContextMockWSetIterator.Next() {
