@@ -27,11 +27,11 @@ func TestSimContextIteratorNextValue(t *testing.T) {
         kvRowCache:       make(map[int32]protocol.StateIterator, 0),
         txWriteKeySql:    make([]*commonpb.TxWrite, 0),
         txWriteKeyDdlSql: make([]*commonpb.TxWrite, 0),
-        tx              : &commonpb.Transaction{
+        tx: &commonpb.Transaction{
             Header: &commonpb.TxHeader{
                 ChainId:        "chain1",
                 TxId:           "12345678",
-                TxType: commonpb.TxType_INVOKE_USER_CONTRACT,
+                TxType:         commonpb.TxType_INVOKE_USER_CONTRACT,
                 Timestamp:      0,
                 ExpirationTime: 0,
             },
@@ -39,10 +39,9 @@ func TestSimContextIteratorNextValue(t *testing.T) {
             RequestSignature: nil,
             Result:           nil,
         },
-        gasUsed:          0,
-        currentDepth:     0,
-        hisResult:        make([]*callContractResult, 0),
-
+        gasUsed:      0,
+        currentDepth: 0,
+        hisResult:    make([]*callContractResult, 0),
     }
     simContextEmptyIterator := NewSimContextIterator(simContext, makeEmptyWSetIterator(), makeEmptyWSetIterator())
     require.False(t, simContextEmptyIterator.Next())
@@ -89,7 +88,7 @@ func TestSimContextIteratorNextValue(t *testing.T) {
 }
 
 func makeEmptyWSetIterator() protocol.StateIterator {
-   return NewWsetIterator(make(map[string]interface{}))
+    return NewWsetIterator(make(map[string]interface{}))
 }
 
 func makeMockWSetIterator() protocol.StateIterator {

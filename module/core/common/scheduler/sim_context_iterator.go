@@ -1,6 +1,7 @@
 /*
- Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
-   SPDX-License-Identifier: Apache-2.0
+Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+SPDX-License-Identifier: Apache-2.0
 */
 
 package scheduler
@@ -13,6 +14,7 @@ import (
 type SimContextIterator struct {
     wsetValueCache *store.KV
     dbValueCache   *store.KV
+    finalValue     *store.KV
     wsetIter       protocol.StateIterator
     dbIter         protocol.StateIterator
     simContext     protocol.TxSimContext
@@ -22,6 +24,7 @@ func NewSimContextIterator(simContext protocol.TxSimContext, wsetIter, dbIter pr
     return &SimContextIterator{
         wsetValueCache: nil,
         dbValueCache:   nil,
+        finalValue:     nil,
         wsetIter:       wsetIter,
         dbIter:         dbIter,
         simContext:     simContext,
@@ -30,51 +33,31 @@ func NewSimContextIterator(simContext protocol.TxSimContext, wsetIter, dbIter pr
 
 // Next move the iter to next and return is there value in next iter
 func (sci *SimContextIterator) Next() bool {
-    if sci.wsetValueCache != nil || sci.dbValueCache != nil {
-        return true
-    }
-    if sci.wsetIter.Next() {
-        value, err := sci.wsetIter.Value()
-        if err != nil {
-            //sci.log.Error("get value from wsetIter failed, ", err)
-            return false
+    if sci.wsetValueCache == nil {
+        if sci.wsetIter.Next() {
+            value, err := sci.wsetIter.Value()
+            if err != nil {
+                //sci.log.Error("get value from wsetIter failed, ", err)
+                return false
+            }
+            sci.wsetValueCache = value
         }
-        sci.wsetValueCache = value
-        return true
     }
-    if sci.dbIter.Next() {
-        value, err := sci.dbIter.Value()
-        if err != nil {
-            //sci.log.Error("get value from dbIter failed, ", err)
-            return false
+    if sci.dbValueCache == nil {
+        if sci.dbIter.Next() {
+            value, err := sci.dbIter.Value()
+            if err != nil {
+                //sci.log.Error("get value from dbIter failed, ", err)
+                return false
+            }
+            sci.dbValueCache = value
         }
-        sci.dbValueCache = value
-        return true
+    }
+    if sci.wsetValueCache == nil && sci.dbValueCache == nil {
+        return false
     }
 
-    return false
-}
-
-// Value return the value of current iter
-func (sci *SimContextIterator) Value() (*store.KV, error) {
-    storeKv, err := sci.getValue()
-    if err != nil {
-        return nil, err
-    }
-    if storeKv == nil {
-        return nil, nil
-    }
-    contractName, err := sci.simContext.GetTx().GetContractName()
-    if err != nil {
-        return nil, err
-    }
-    sci.simContext.PutIntoReadSet(contractName, storeKv.Key, storeKv.Value)
-
-    return storeKv, nil
-}
-
-func (sci *SimContextIterator) getValue() (*store.KV, error) {
-    var resultCache *store.KV
+    var resultCache *store.KV = nil
     if sci.wsetValueCache != nil && sci.dbValueCache != nil {
         if string(sci.wsetValueCache.Key) == string(sci.dbValueCache.Key) {
             sci.dbValueCache = nil
@@ -87,87 +70,29 @@ func (sci *SimContextIterator) getValue() (*store.KV, error) {
             resultCache = sci.dbValueCache
             sci.dbValueCache = nil
         }
-        return resultCache, nil
+    } else if sci.wsetValueCache != nil {
+        resultCache = sci.wsetValueCache
+        sci.wsetValueCache = nil
+    } else if sci.dbValueCache != nil {
+        resultCache = sci.dbValueCache
+        sci.dbValueCache = nil
     }
-    if sci.wsetValueCache != nil {
-        if !sci.dbIter.Next() {
-            resultCache = sci.wsetValueCache
-            sci.wsetValueCache = nil
-            return resultCache, nil
-        }
-        dbValue, err := sci.dbIter.Value()
-        if err != nil {
-            //sci.log.Error("get value from dbIter failed, ", err)
-            return nil, err
-        }
-        if string(sci.wsetValueCache.Key) == string(dbValue.Key) {
-            resultCache = sci.wsetValueCache
-            sci.wsetValueCache = nil
-        } else if string(sci.wsetValueCache.Key) < string(dbValue.Key) {
-            sci.dbValueCache = dbValue
-            resultCache = sci.wsetValueCache
-            sci.wsetValueCache = nil
-        } else {
-            resultCache = dbValue
-        }
-        return resultCache, nil
-    }
-    if sci.dbValueCache != nil {
-        if !sci.wsetIter.Next() {
-            resultCache = sci.dbValueCache
-            sci.dbValueCache = nil
-            return resultCache, nil
-        }
-        wsetValue, err := sci.wsetIter.Value()
-        if err != nil {
-            //sci.log.Error("get value from wsetIter failed, ", err)
-            return nil, err
-        }
-        if string(sci.dbValueCache.Key) == string(wsetValue.Key) {
-            sci.dbValueCache = nil
-            resultCache = wsetValue
-        } else if string(sci.dbValueCache.Key) < string(wsetValue.Key) {
-            sci.wsetValueCache = wsetValue
-            resultCache = sci.dbValueCache
-            sci.dbValueCache = nil
-        } else {
-            resultCache = wsetValue
-        }
-        return resultCache, nil
-    }
+    sci.finalValue = resultCache
+    return true
+}
 
-    var err error
-    var wsetValue *store.KV = nil
-    var dbValue *store.KV = nil
-    if sci.wsetIter.Next() {
-        wsetValue, err = sci.wsetIter.Value()
-        if err != nil {
-            //sci.log.Error("get value from wsetIter failed, ", err)
-            return nil, err
-        }
+// Value return the value of current iter
+func (sci *SimContextIterator) Value() (*store.KV, error) {
+    if sci.finalValue == nil {
+        return nil, nil
     }
-    if sci.dbIter.Next() {
-        dbValue, err = sci.dbIter.Value()
-        if err != nil {
-            //sci.log.Error("get value from dbIter failed, ", err)
-            return nil, err
-        }
+    contractName, err := sci.simContext.GetTx().GetContractName()
+    if err != nil {
+        return nil, err
     }
-    if wsetValue != nil && dbValue != nil {
-        if string(wsetValue.Key) == string(dbValue.Key) {
-            return wsetValue, nil
-        }
-        if string(wsetValue.Key) < string(dbValue.Key) {
-            sci.dbValueCache = dbValue
-            return wsetValue, nil
-        }
-        sci.wsetValueCache = wsetValue
-        return dbValue, nil
-    }
-    if wsetValue != nil {
-        return wsetValue, nil
-    }
-    return dbValue, nil
+    sci.simContext.PutIntoReadSet(contractName, sci.finalValue.Key, sci.finalValue.Value)
+
+    return sci.finalValue, nil
 }
 
 // Release release the iterator

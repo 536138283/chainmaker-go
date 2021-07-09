@@ -31,6 +31,7 @@ func (wi *WsetIterator) Value() (*store.KV, error) {
     var kv *store.KV
     var keyStr string
     ok := true
+    // get the first row
     wi.stringKeySortedMap.Range(func(key string, val interface{}) (isContinue bool) {
         keyStr = key
         kv, ok = val.(*store.KV)

@@ -13,12 +13,12 @@ import (
 
 func TestWsetIteratorNextValue(t *testing.T) {
     type testData struct {
-        data map[string]interface{}
-        wantNext bool
+        data      map[string]interface{}
+        wantNext  bool
         wantValue *store.KV
     }
-    stringKeyMap,_ := makeStringKeyMap()
-    tests := []*testData {
+    stringKeyMap, _ := makeStringKeyMap()
+    tests := []*testData{
         {
             data:      make(map[string]interface{}),
             wantNext:  false,
@@ -27,10 +27,10 @@ func TestWsetIteratorNextValue(t *testing.T) {
         {
             data:     stringKeyMap,
             wantNext: true,
-            wantValue: &store.KV {
+            wantValue: &store.KV{
                 ContractName: "a",
                 Key:          []byte("a"),
-                Value: []byte("a"),
+                Value:        []byte("a"),
             },
         },
     }
@@ -43,33 +43,33 @@ func TestWsetIteratorNextValue(t *testing.T) {
     }
 }
 
-func makeStringKeyMap() (map[string]interface{}, []*store.KV){
+func makeStringKeyMap() (map[string]interface{}, []*store.KV) {
     stringKeyMap := make(map[string]interface{})
     kvs := make([]*store.KV, 0)
     kvA := &store.KV{
         ContractName: "a",
-        Key: []byte("a"),
-        Value: []byte("a"),
+        Key:          []byte("a"),
+        Value:        []byte("a"),
     }
     kvAb := &store.KV{
         ContractName: "ab",
-        Key: []byte("ab"),
-        Value: []byte("ab"),
+        Key:          []byte("ab"),
+        Value:        []byte("ab"),
     }
     kvB := &store.KV{
         ContractName: "b",
-        Key: []byte("b"),
-        Value: []byte("b"),
+        Key:          []byte("b"),
+        Value:        []byte("b"),
     }
     kvBa := &store.KV{
         ContractName: "ba",
-        Key: []byte("ba"),
-        Value: []byte("ba"),
+        Key:          []byte("ba"),
+        Value:        []byte("ba"),
     }
     kvBb := &store.KV{
         ContractName: "bb",
-        Key: []byte("bb"),
-        Value: []byte("bb"),
+        Key:          []byte("bb"),
+        Value:        []byte("bb"),
     }
     stringKeyMap["a"] = kvA
     stringKeyMap["ab"] = kvAb

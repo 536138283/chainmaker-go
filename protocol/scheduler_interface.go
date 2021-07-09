@@ -35,7 +35,7 @@ type TxSimContext interface {
 	// PutRecord put sql state into cache
 	PutRecord(contractName string, value []byte, sqlType SqlType)
 	// PutIntoReadSet put kv to readset
-    PutIntoReadSet(contractName string, key []byte, value []byte)
+	PutIntoReadSet(contractName string, key []byte, value []byte)
 	// Delete key from cache
 	Del(name string, key []byte) error
 	// Select range query for key [start, limit)
