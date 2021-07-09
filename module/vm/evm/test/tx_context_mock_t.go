@@ -94,6 +94,14 @@ type TxContextMockTest struct {
 	cacheMap map[string][]byte
 }
 
+func (s *TxContextMockTest) PutIntoReadSet(contractName string, key []byte, value []byte) {
+	panic("implement me")
+}
+
+func (s *TxContextMockTest) GetBlockVersion() string {
+	panic("implement me")
+}
+
 func (s *TxContextMockTest) SetStateKvHandle(i int32, iterator protocol.StateIterator) {
 	panic("implement me")
 }
