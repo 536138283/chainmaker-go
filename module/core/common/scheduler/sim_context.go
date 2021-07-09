@@ -98,9 +98,6 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
     // 4. construct an iterator which includes rwset iterator, store's iterator and cache for the two iterators
     wsetsMap := make(map[string]interface{})
     txRWSets := s.snapshot.GetTxRWSetTable()
-    //if len(txRWSets) == 0 {
-    //	return s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
-    //}
     for _, txRWSet := range txRWSets {
         for _, wset := range txRWSet.TxWrites {
             if string(wset.Key) >= string(startKey) && string(wset.Key) < string(limit) {
@@ -112,9 +109,15 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
             }
         }
     }
-    //if len(wsetsMap) == 0 {
-    //	return s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
-    //}
+    for _, txWrite := range s.txWriteKeyMap {
+        if string(txWrite.Key) >= string(startKey) && string(txWrite.Key) < string(limit) {
+            wsetsMap[string(txWrite.Key)] = &store.KV{
+                Key:          txWrite.Key,
+                Value:        txWrite.Value,
+                ContractName: contractName,
+            }
+        }
+    }
     wsetIterator := NewWsetIterator(wsetsMap)
     dbIterator, err := s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
     if err != nil {
