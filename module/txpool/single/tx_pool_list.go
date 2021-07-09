@@ -172,7 +172,6 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 				return
 			}
 		}
-		return
 	} else {
 		l.log.Infof("LinkedHashMap---------")
 		lhm := l.queue.(*linkedhashmap.LinkedHashMap)
@@ -197,8 +196,8 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 			count--
 			node = node.Next()
 		}
-		return
 	}
+	return
 }
 
 func (l *txList) monitor(tx *commonPb.Transaction, len int) {

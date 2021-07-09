@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
+	"chainmaker.org/chainmaker-go/chainconf"
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"errors"
 	"fmt"
 	"sync"
@@ -353,7 +355,35 @@ func (pool *txPoolImpl) removeTxs(txs []*commonPb.Transaction) {
 
 func (pool *txPoolImpl) FetchTxBatch(blockHeight int64) []*commonPb.Transaction {
 	start := utils.CurrentTimeMillisSeconds()
-	txs := pool.queue.fetch(poolconf.MaxTxCount(pool.chainConf), blockHeight, pool.validateTxTime)
+
+	var fetchNum int
+
+	if pool.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_ABFT {
+
+		lastBlock, err := pool.blockchainStore.GetLastBlock()
+		if err != nil {
+			pool.log.Errorf("txpool GetLastBlock ERROR", err)
+		}
+
+		config := pool.chainConf.(*chainconf.ChainConf)
+
+		if utils.IsValidConfigTx(lastBlock.Txs[0]) {
+			if err := config.CallbackChainConfigWatcher(); err != nil {
+				pool.log.Errorf("CallbackChainConfigWatcher failed, %s", err)
+			}
+		}
+
+		chainNodeList, err := config.GetConsensusNodeIdList()
+		if err != nil {
+			pool.log.Errorf("load node list of chain config failed, %s", err)
+		}
+
+		fetchNum = poolconf.MaxTxCount(pool.chainConf)/len(chainNodeList)
+	} else {
+		fetchNum = poolconf.MaxTxCount(pool.chainConf)
+	}
+
+	txs := pool.queue.fetch(fetchNum, blockHeight, pool.validateTxTime)
 	if len(txs) > 0 {
 		pool.log.Infof("fetch txs from txpool, txsNum:%d, blockHeight:%d, elapse time: %d", len(txs), blockHeight, utils.CurrentTimeMillisSeconds()-start)
 	}

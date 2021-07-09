@@ -321,7 +321,7 @@ func (c *ChainConf) CompleteBlock(block *common.Block) error {
 
 	if utils.IsValidConfigTx(tx) { // tx is chainConfig
 		// watch chainConfig
-		if err := c.callbackChainConfigWatcher(); err != nil {
+		if err := c.CallbackChainConfigWatcher(); err != nil {
 			return err
 		}
 	}
@@ -340,7 +340,7 @@ func (c *ChainConf) CompleteBlock(block *common.Block) error {
 	return nil
 }
 
-func (c *ChainConf) callbackChainConfigWatcher() error {
+func (c *ChainConf) CallbackChainConfigWatcher() error {
 	err := c.latestChainConfig()
 	if err != nil {
 		return err
