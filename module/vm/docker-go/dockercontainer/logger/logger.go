@@ -14,10 +14,12 @@ const (
 	MODULE_SCHEDULER        = "[Docker Scheduler]"
 	MODULE_USERCONTROLLER   = "[Docker User Controller]"
 	MODULE_HANDLER_REGISTER = "[Docker Handler Register]"
-	MODULE_UDS_SERVER       = "[Docker UDS Server]"
-	MODULE_DOCKER_SERVER    = "[Docker Docker Server]"
+	MODULE_DMS_SERVER       = "[Docker DMS Server]"
+	MODULE_CDM_SERVER       = "[Docker CDM Server]"
+	MODULE_CDM_API          = "[Docker CDM Api]"
 	MODULE_SECURITY_ENV     = "[Docker Security Env]"
 	MODULE_CONTRACT_MANAGER = "[Docker Contract Manager]"
+	MODULE_CDM_HANDLER      = "[Docker CDM Handler]"
 )
 
 func NewDockerLogger(name string) *zap.SugaredLogger {

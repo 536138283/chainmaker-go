@@ -2,7 +2,7 @@ package dockercontroller
 
 import (
 	"bufio"
-	docker_go "chainmaker.org/chainmaker-go/docker-go"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontroller/module"
 	"chainmaker.org/chainmaker-go/logger"
 	"context"
 	"encoding/binary"
@@ -38,8 +38,12 @@ type DockerManager struct {
 	ShowStderr   bool
 	ctx          context.Context
 	client       *client.Client
-	Log          *logger.CMLogger
-	Instances    map[string]*docker_go.RuntimeInstance
+
+	Log *logger.CMLogger
+
+	CDMClient *module.CDMClient
+	CDMState  bool
+	TmpCache  *module.Cache
 }
 
 // NewDockerManager return docker manager and running a default container
@@ -50,17 +54,9 @@ func NewDockerManager(chainId string) *DockerManager {
 		return nil
 	}
 
-	log := logger.GetLoggerByChain(logger.MODULE_VM, chainId)
-	instances := make(map[string]*docker_go.RuntimeInstance)
-
-	// build default docker go runtime instance
-	defaultRuntimeInstance := &docker_go.RuntimeInstance{
-		ContainerName: containerName,
-		ChainId:       chainId,
-		Lru:           docker_go.New(5),
-	}
-
-	instances[containerName] = defaultRuntimeInstance
+	log := logger.GetLoggerByChain("[Docker Manager]", chainId)
+	cdmClient := module.NewCDMClient(chainId)
+	tmpCache := module.NewCache(5)
 
 	newDockerManager := &DockerManager{
 		AttachStdOut: true,
@@ -70,16 +66,25 @@ func NewDockerManager(chainId string) *DockerManager {
 		ctx:          ctx,
 		client:       cli,
 		Log:          log,
-		Instances:    instances,
+		CDMClient:    cdmClient,
+		CDMState:     false,
+		TmpCache:     tmpCache,
 	}
 
 	err = newDockerManager.StartContainer()
 	if err != nil {
-		fmt.Println("---------------------------------------------------------")
-		fmt.Println("problem when start container ", err)
+		log.Errorf("problem when start container: %s ", err)
 	}
 
 	return newDockerManager
+}
+
+func (m *DockerManager) StartCDMClient() {
+	state := m.CDMClient.StartClient()
+
+	m.CDMState = state
+
+	m.Log.Infof("cdm client state is: %v", state)
 }
 
 // create container based on image

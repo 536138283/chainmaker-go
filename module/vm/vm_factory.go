@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package vm
 
 import (
+	docker_go "chainmaker.org/chainmaker-go/docker-go"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontroller"
 	"encoding/hex"
 	"fmt"
@@ -499,9 +500,18 @@ func (m *ManagerImpl) invokeUserContractByRuntime(contractId *commonPb.ContractI
 			ContractId:   contractId,
 		}
 	case commonPb.RuntimeType_DOCKER_GO:
-		// retrieve default container instance
+
+		if !m.DockerManager.CDMState {
+			m.DockerManager.StartCDMClient()
+		}
+
 		const containerName = "container1"
-		runtimeInstance = m.DockerManager.Instances[containerName]
+		runtimeInstance = &docker_go.RuntimeInstance{
+			ContainerName: containerName,
+			ChainId:       m.ChainId,
+			Client:        m.DockerManager.CDMClient,
+			TmpCache:      m.DockerManager.TmpCache,
+		}
 
 	default:
 		contractResult.Message = fmt.Sprintf("no such vm runtime %q", runtimeType)
@@ -571,7 +581,6 @@ func (m *ManagerImpl) invokeUserContractByRuntime(contractId *commonPb.ContractI
 		//txContext.Put(contractId.ContractName, []byte("target"), []byte("mysql")) // for dag
 	}
 
-	// if docker manager, just run invoke, which send data to docker, doesn't return result immediately
 	runtimeContractResult := runtimeInstance.Invoke(contractId, method, byteCode, parameters, txContext, gasUsed)
 
 	if runtimeContractResult.Code == commonPb.ContractResultCode_OK {

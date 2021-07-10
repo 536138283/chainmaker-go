@@ -97,10 +97,14 @@ func main() {
 	}
 
 	// 2) 批量测试
-	testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
+	for i := 0; i < 10; i++ {
+		testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
+
+		time.Sleep(10 * time.Second)
+	}
 
 	// 3) invoke 测试
-	// testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
+	//testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
 
 	// 4) query 测试
 	//testDockerQuery(sk3, &client, CHAIN1, "5", "6")

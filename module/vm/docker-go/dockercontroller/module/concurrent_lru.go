@@ -1,4 +1,4 @@
-package docker_go
+package module
 
 import (
 	"github.com/golang/groupcache/lru"
@@ -18,22 +18,22 @@ type Cache struct {
 	cache *lru.Cache
 }
 
-func New(maxEntries int) *Cache {
+func NewCache(maxEntries int) *Cache {
 	var cache Cache
 	cache.cache = lru.New(maxEntries)
 	return &cache
 }
 
-// Add adds a value to the cache.
-func (c *Cache) Add(key lru.Key, value interface{}) {
+// TmpAdd Add adds a value to the cache.
+func (c *Cache) TmpAdd(key lru.Key, value interface{}) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.cache.Add(key, value)
 }
 
-// Get looks up a key's value from the cache.
-func (c *Cache) Get(key lru.Key) (value interface{}, ok bool) {
+// TmpGet Get looks up a key's value from the cache.
+func (c *Cache) TmpGet(key lru.Key) (value interface{}, ok bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 

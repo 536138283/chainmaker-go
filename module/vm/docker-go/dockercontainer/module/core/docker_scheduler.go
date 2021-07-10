@@ -4,7 +4,8 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo/outside"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"go.uber.org/zap"
@@ -21,70 +22,79 @@ type ExitStatus struct {
 	Code   int
 	PID    int
 	User   *helper.User
-	Tx     *outside.TxRequest
+	TxId   string
 }
 
+const (
+	ReqChanSize      = 1000
+	ResponseChanSize = 1000
+)
+
 type DockerScheduler struct {
-	txCh       chan *outside.TxRequest
-	txResultCh chan *outside.ContractResult
-	exitCh     chan ExitStatus
-	logger     *zap.SugaredLogger
+	exitCh chan ExitStatus
+	logger *zap.SugaredLogger
 
 	userController  protocol.UserController
 	handlerRegister *HandlerRegister
 
 	contractManager *ContractManager
+
+	txReqCh      chan *protogo.TxRequest
+	txResponseCh chan *protogo.TxResponse
 }
 
 func NewDockerScheduler(userController protocol.UserController, handlerRegister *HandlerRegister) *DockerScheduler {
 
 	scheduler := &DockerScheduler{
-		txCh:            make(chan *outside.TxRequest, 2),
-		txResultCh:      make(chan *outside.ContractResult, 2),
 		exitCh:          make(chan ExitStatus, 2),
 		userController:  userController,
 		logger:          logger.NewDockerLogger(logger.MODULE_SCHEDULER),
 		handlerRegister: handlerRegister,
 		contractManager: NewContractManager(),
+
+		txReqCh:      make(chan *protogo.TxRequest, ReqChanSize),
+		txResponseCh: make(chan *protogo.TxResponse, ResponseChanSize),
 	}
 
 	return scheduler
+}
+
+func (s *DockerScheduler) GetTxReqCh() chan *protogo.TxRequest {
+	return s.txReqCh
+}
+
+func (s *DockerScheduler) GetTxResponseCh() chan *protogo.TxResponse {
+	return s.txResponseCh
 }
 
 func (s *DockerScheduler) StartScheduler() {
 
 	s.logger.Infof("start docker scheduler")
 
-	//go s.listenIncoming()
+	go s.listenIncomingTxRequest()
+
+	go s.listenIncomingTxResponse()
 
 	go s.monitorSandBox()
 
-	//go s.listenResult()
+}
 
+func (s *DockerScheduler) listenIncomingTxResponse() {
+
+	s.logger.Infof("start listen tx response")
+
+}
+
+func (s *DockerScheduler) listenIncomingTxRequest() {
+	s.logger.Infof("start listen incoming tx request")
+	for {
+		txRequest := <-s.txReqCh
+		go s.handleTx(txRequest)
+	}
 }
 
 func (s *DockerScheduler) StopScheduler() {
 
-}
-
-func (s *DockerScheduler) GetTxCh() chan *outside.TxRequest {
-	return s.txCh
-}
-
-func (s *DockerScheduler) GetTxResultCh() chan *outside.ContractResult {
-	return s.txResultCh
-}
-
-// listenIncoming for now, doesn't use it, later change handle multiple txs, use this func
-func (s *DockerScheduler) listenIncoming() {
-	s.logger.Infof("Begin listen incoming")
-	for {
-		select {
-		case tx := <-s.txCh:
-			go s.HandleTx(tx)
-		}
-	}
-	s.logger.Infof("Stop listen incoming")
 }
 
 func (s *DockerScheduler) monitorSandBox() {
@@ -94,44 +104,37 @@ func (s *DockerScheduler) monitorSandBox() {
 		switch status.Signal {
 		case os.Kill:
 			// means process run fail, todo
-			s.logger.Debugf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
+			s.logger.Debugf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
 		default:
 			// means process run successful, return the value back
-			s.logger.Debugf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.Tx.TxId)
+			s.logger.Debugf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
 		}
 
 	}
 }
 
-func (s *DockerScheduler) listenResult() {
-	//for result := range s.txResultCh {
-	//	//todo
-	//	// rwset conflict analysis
-	//}
-}
-
-func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResult, error) {
+func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) error {
 
 	startTime := time.Now()
 
-	s.logger.Debugf("begin handle tx")
+	s.logger.Debugf("begin handle tx request")
 
 	// get contract from contract manager
-	contractKey := s.ConstructContractKey(tx.ContractName, tx.ContractVersion)
+	contractKey := s.ConstructContractKey(txRequest.ContractName, txRequest.ContractVersion)
 
 	var contractPath string
 
 	contractPath, ok := s.contractManager.GetContract(contractKey)
 
 	if ok {
-		s.logger.Debugf("get contrac from memory [%s]", contractPath)
+		s.logger.Debugf("get contract path from disk [%s]", contractPath)
 	} else {
 		// todo change using single flight
-		newContractPath, err := s.contractManager.SaveContract(contractKey, tx.ByteCode)
+		newContractPath, err := s.contractManager.SaveContract(contractKey, txRequest.ByteCode)
 		if err != nil {
-			return nil, err
+			return err
 		}
-		s.logger.Debugf("save [%s] to disk", newContractPath)
+		s.logger.Debugf("save [%s] to disk and get new contract path", newContractPath)
 		contractPath = newContractPath
 	}
 
@@ -139,47 +142,44 @@ func (s *DockerScheduler) HandleTx(tx *outside.TxRequest) (*outside.ContractResu
 	user, err := s.userController.GetAvailableUser()
 	if err != nil {
 		s.logger.Errorf("fail to get a user: [%s]", err)
-		return nil, err
+		return err
 	}
 
 	// register new handler
-	handlerName := s.constructHandlerName(tx)
+	handlerName := s.constructHandlerName(txRequest)
 
-	handler, err := NewHandler(user, tx, s, handlerName)
+	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName)
 	if err != nil {
 		s.logger.Errorf("fail to generate new handler: %s", err)
-		return nil, err
+		return err
 	}
 
-	s.handlerRegister.RegisterNewHandler(handlerName, handler)
+	s.handlerRegister.RegisterNewHandler(handlerName, dmsHandler)
 
 	// start sand box
-	err = s.startSandBox(user, tx, handlerName, contractPath)
+	err = s.startSandBox(user, txRequest.TxId, handlerName, contractPath)
 	if err != nil {
-		return nil, err
+		return err
 	}
-
-	// todo using txResultChan to handle multiple incoming txs
 
 	// free handler
 	s.handlerRegister.FreeHandler(handlerName)
 
 	// free current user
 	if err = s.userController.FreeUser(user); err != nil {
-		return nil, err
+		return err
 	}
-	//if err = s.userController.ResetUserEnv(user); err != nil {
-	//	return nil, err
-	//}
 
 	// return result -- for one tx incoming
-	result := handler.contractResult
+	//result := handler.contractResult
+	//tx.ContractResult = result
+
 	s.logger.Debugf("cost time for running sandbox is: %s", time.Since(startTime))
 
-	return result, nil
+	return nil
 }
 
-func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest, handlerName, contractPath string) error {
+func (s *DockerScheduler) startSandBox(user *helper.User, txId, handlerName, contractPath string) error {
 
 	cmd := exec.Cmd{
 		Path: contractPath,
@@ -189,14 +189,14 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: uint32(user.Uid),
-		},
-		Cloneflags: syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWNET,
-	}
+	//cmd.SysProcAttr = &syscall.SysProcAttr{
+	//	Credential: &syscall.Credential{
+	//		Uid: uint32(user.Uid),
+	//	},
+	//	Cloneflags: syscall.CLONE_NEWIPC |
+	//		syscall.CLONE_NEWPID |
+	//		syscall.CLONE_NEWNET,
+	//}
 
 	// start app
 	if err := cmd.Start(); err != nil {
@@ -229,11 +229,13 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 		Code: status.ExitStatus(),
 		PID:  cmd.Process.Pid,
 		User: user,
-		Tx:   tx,
+		TxId: txId,
 	}
 
 	if status.Signaled() {
 		exitStatus.Signal = status.Signal()
+
+		// put result to resultCh
 	}
 
 	s.exitCh <- exitStatus
@@ -241,11 +243,13 @@ func (s *DockerScheduler) startSandBox(user *helper.User, tx *outside.TxRequest,
 	return nil
 }
 
-func (s *DockerScheduler) constructHandlerName(tx *outside.TxRequest) string {
+// handlerName: contractName:contractVersion:txId[:10]
+func (s *DockerScheduler) constructHandlerName(tx *protogo.TxRequest) string {
 	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId[:10]
 	return handlerName
 }
 
+// ConstructContractKey contractKey: contractName:contractVersion
 func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
 	return contractName + ":" + contractVersion
 }

@@ -8,6 +8,4 @@ type UserController interface {
 	GetAvailableUser() (*helper.User, error)
 
 	FreeUser(user *helper.User) error
-
-	ResetUserEnv(user *helper.User) error
 }

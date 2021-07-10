@@ -3,7 +3,6 @@ package utils
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -32,61 +31,5 @@ func RunCmd(command string) error {
 		return err
 	}
 
-	return nil
-}
-
-// ConvertFileToBytes convert file to byte array
-func convertFileToBytes(filePath string) ([]byte, error) {
-	bytes, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
-	}
-
-	return bytes, nil
-}
-
-func ConvertBytesToRunnableFile(bytes []byte, newFilePath string, userId int) error {
-	if err := convertBytesToFile(bytes, newFilePath); err != nil {
-		log.Fatalf("fail to convert bytes to file: [%s]", err)
-		return err
-	}
-
-	if err := setFileRunnable(newFilePath, userId); err != nil {
-		log.Fatalf("fail to set file mod: [%s]", err)
-		return err
-	}
-
-	return nil
-}
-
-// ConvertBytesToFile convert byte array to file
-func convertBytesToFile(bytes []byte, newFilePath string) error {
-
-	f, err := os.Create(newFilePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(bytes)
-	if err != nil {
-		return err
-	}
-
-	return f.Sync()
-}
-
-// SetFileRunnable make file runnable, file permission is 700
-func setFileRunnable(filePath string, userId int) error {
-
-	err := os.Chmod(filePath, 0700)
-	if err != nil {
-		return err
-	}
-
-	err = os.Chown(filePath, userId, userId)
-	if err != nil {
-		return err
-	}
 	return nil
 }

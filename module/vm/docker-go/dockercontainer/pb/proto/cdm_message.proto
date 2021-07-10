@@ -1,0 +1,70 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo";
+
+service CDMRpc {
+    rpc CDMCommunicate(stream CDMMessage) returns(stream CDMMessage) {};
+}
+
+//CMMessage means message between chainmaker and docker manager
+message CDMMessage {
+
+    string tx_id = 1;
+
+    CDMType type = 2;
+
+    bytes payload = 3;
+}
+
+enum CDMType {
+    CDM_TYPE_UNDEFINED = 0;
+    CDM_TYPE_TX_REQUEST = 1;
+    CDM_TYPE_TX_RESPONSE = 2;
+    CDM_TYPE_GET_STATE = 3;
+    CDM_TYPE_GET_STATE_RESPONSE = 4;
+    CDM_TYPE_GET_BYTECODE = 5;
+    CDM_TYPE_GET_BYTECODE_RESPONSE = 6;
+
+}
+
+// payload type
+
+// tx request - TX_REQUEST
+message TxRequest {
+
+    string tx_id = 1;
+
+    string contract_name = 2;
+
+    string contract_version = 3;
+
+    string method = 4;
+
+    bytes byteCode = 5;
+
+    map<string, string> parameters = 6;
+
+}
+
+// tx response - TX_RESPONSE
+message TxResponse {
+
+    string tx_id = 1;
+
+    ContractResultCode code = 2;
+
+    bytes result = 3;
+
+    string message = 4;
+
+}
+
+enum ContractResultCode {
+    OK = 0;
+    FAIL = 1;
+}
+
+// type2
+
