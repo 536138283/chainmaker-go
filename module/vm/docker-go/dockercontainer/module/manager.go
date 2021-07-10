@@ -5,6 +5,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/core"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
 	security2 "chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
+	"go.uber.org/zap"
 )
 
 type ManagerImpl struct {
@@ -14,9 +15,10 @@ type ManagerImpl struct {
 	userController  *core.UsersManager
 	securityEnv     *security2.SecurityEnv
 	handlerRegister *core.HandlerRegister
+	logger          *zap.SugaredLogger
 }
 
-func NewManager() (*ManagerImpl, error) {
+func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 
 	// new users controller
 	userController := core.NewUsersManager()
@@ -46,6 +48,7 @@ func NewManager() (*ManagerImpl, error) {
 		userController:  userController,
 		securityEnv:     security2.NewSecurityEnv(),
 		handlerRegister: handlerRegister,
+		logger:          managerLogger,
 	}
 
 	return manager, nil
@@ -53,25 +56,52 @@ func NewManager() (*ManagerImpl, error) {
 
 func (m *ManagerImpl) InitContainer() {
 
+	errorC := make(chan error, 1)
+
+	var err error
+
 	// start cdm server
 	cdmApiInstance := rpc.NewCDMApi(m.scheduler)
-	go m.cdmRpcServer.StartCDMServer(cdmApiInstance)
+	if err = m.cdmRpcServer.StartCDMServer(cdmApiInstance); err != nil {
+		errorC <- err
+	}
 
 	// start dms server
 	dmsApiInstance := rpc.NewDMSApi(m.handlerRegister)
-	go m.dmsRpcServer.StartDMSServer(dmsApiInstance)
+	if err = m.dmsRpcServer.StartDMSServer(dmsApiInstance); err != nil {
+		errorC <- err
+	}
 
 	// init sandBox
-	go m.securityEnv.InitSecurityEnv()
+	if err = m.securityEnv.InitSecurityEnv(); err != nil {
+		errorC <- err
+	}
 
 	// create new users
-	go m.userController.CreateNewUsers(config.UserNum)
+	if err = m.userController.CreateNewUsers(config.UserNum); err != nil {
+		errorC <- err
+	}
 
 	// start scheduler
-	go m.scheduler.StartScheduler()
+	m.scheduler.StartScheduler()
+
+	m.logger.Infof("docker vm start successfully")
+
+	// listen error signal
+	select {
+	case err := <-errorC:
+		if err != nil {
+			m.logger.Error("docker vm encounters error ", err)
+		}
+		m.StopManager()
+		close(errorC)
+	}
 
 }
 
 func (m *ManagerImpl) StopManager() {
-
+	m.cdmRpcServer.StopCDMServer()
+	m.dmsRpcServer.StopDMSServer()
+	m.scheduler.StopScheduler()
+	m.logger.Info("All is stopped!")
 }

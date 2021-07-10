@@ -7,12 +7,15 @@ import (
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
+	"sync"
 )
 
 type CDMApi struct {
 	logger    *zap.SugaredLogger
 	scheduler protocol.Scheduler
 	stream    protogo.CDMRpc_CDMCommunicateServer
+	stop      chan bool
+	wg        *sync.WaitGroup
 }
 
 func NewCDMApi(scheduler protocol.Scheduler) *CDMApi {
@@ -20,6 +23,8 @@ func NewCDMApi(scheduler protocol.Scheduler) *CDMApi {
 		scheduler: scheduler,
 		logger:    logger.NewDockerLogger(logger.MODULE_CDM_API),
 		stream:    nil,
+		stop:      make(chan bool),
+		wg:        new(sync.WaitGroup),
 	}
 }
 
@@ -28,15 +33,19 @@ func (cdm *CDMApi) CDMCommunicate(stream protogo.CDMRpc_CDMCommunicateServer) er
 
 	cdm.stream = stream
 
-	finishCh := make(chan bool)
+	cdm.wg.Add(2)
 
 	go cdm.recvMsgRoutine()
 
 	go cdm.sendMsgRoutine()
 
-	<-finishCh
+	cdm.wg.Wait()
 
 	return nil
+}
+
+func (cdm *CDMApi) closeConnection() {
+	close(cdm.stop)
 }
 
 // recv three types of msg
@@ -50,24 +59,38 @@ func (cdm *CDMApi) recvMsgRoutine() {
 	var err error
 
 	for {
-		recvMsg, _ := cdm.stream.Recv()
 
-		cdm.logger.Debugf("recv msg [%s]", recvMsg.TxId[:5])
-
-		switch recvMsg.Type {
-		case protogo.CDMType_CDM_TYPE_TX_REQUEST:
-			err = cdm.handleTxRequest(recvMsg)
-		case protogo.CDMType_CDM_TYPE_GET_STATE_RESPONSE:
-			err = cdm.handleGetStateResponse(recvMsg)
-		case protogo.CDMType_CDM_TYPE_GET_BYTECODE_RESPONSE:
-			err = cdm.handleGetByteCodeResponse(recvMsg)
+		select {
+		case <-cdm.stop:
+			cdm.wg.Done()
+			cdm.logger.Infof("stop receiving cdm message ")
+			return
 		default:
-			err = errors.New("unknown message type")
+			recvMsg, errRecv := cdm.stream.Recv()
+			cdm.logger.Debugf("receive msg: [%s]", recvMsg.Type)
+			if errRecv != nil {
+				err = errRecv
+			}
+
+			cdm.logger.Debugf("recv msg [%s]", recvMsg.TxId[:5])
+
+			switch recvMsg.Type {
+			case protogo.CDMType_CDM_TYPE_TX_REQUEST:
+				err = cdm.handleTxRequest(recvMsg)
+			case protogo.CDMType_CDM_TYPE_GET_STATE_RESPONSE:
+				err = cdm.handleGetStateResponse(recvMsg)
+			case protogo.CDMType_CDM_TYPE_GET_BYTECODE_RESPONSE:
+				err = cdm.handleGetByteCodeResponse(recvMsg)
+			default:
+				err = errors.New("unknown message type")
+			}
+
+			if err != nil {
+				cdm.logger.Errorf("fail to recv msg: [%s]", err)
+			}
+
 		}
 
-		if err != nil {
-			cdm.logger.Error(err)
-		}
 	}
 }
 
@@ -75,13 +98,22 @@ func (cdm *CDMApi) sendMsgRoutine() {
 
 	cdm.logger.Infof("start sending cdm message")
 
+	var err error
+
 	for {
 		select {
 		case txResponseMsg := <-cdm.scheduler.GetTxResponseCh():
-
 			cdmMsg := cdm.constructCDMMessage(txResponseMsg)
-			_ = cdm.sendMessage(cdmMsg)
+			err = cdm.sendMessage(cdmMsg)
+		case <-cdm.stop:
+			cdm.wg.Done()
+			return
 		}
+
+		if err != nil {
+			cdm.logger.Error(err)
+		}
+
 	}
 
 }
@@ -108,7 +140,6 @@ func (cdm *CDMApi) handleTxRequest(cdmMessage *protogo.CDMMessage) error {
 
 	var txRequest protogo.TxRequest
 	err := proto.Unmarshal(cdmMessage.Payload, &txRequest)
-
 	if err != nil {
 		return err
 	}

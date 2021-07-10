@@ -107,7 +107,7 @@ func main() {
 	//testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
 
 	// 4) query 测试
-	//testDockerQuery(sk3, &client, CHAIN1, "5", "6")
+	testDockerQuery(sk3, &client, CHAIN1, "5", "6")
 
 	// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有

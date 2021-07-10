@@ -26,6 +26,8 @@ type CDMClient struct {
 	stream protogo.CDMRpc_CDMCommunicateClient
 
 	logger *logger.CMLogger
+
+	stop chan bool
 }
 
 func NewCDMClient(chainId string) *CDMClient {
@@ -37,6 +39,7 @@ func NewCDMClient(chainId string) *CDMClient {
 		lock:        sync.Mutex{},
 		stream:      nil,
 		logger:      logger.GetLoggerByChain("[CDM Client]", chainId),
+		stop:        make(chan bool),
 	}
 }
 
@@ -62,7 +65,7 @@ func (c *CDMClient) deleteRecvChan(txId string) {
 
 func (c *CDMClient) StartClient() bool {
 
-	c.logger.Infof("start cdm client..")
+	c.logger.Debugf("start cdm client..")
 	conn, err := NewClientConn()
 	if err != nil {
 		c.logger.Errorf("fail to create connection: %s", err)
@@ -84,19 +87,38 @@ func (c *CDMClient) StartClient() bool {
 	return true
 }
 
+func (c *CDMClient) closeConnection() {
+	// close two goroutine
+	close(c.stop)
+	// close stream
+	err := c.stream.CloseSend()
+	if err != nil {
+		return
+	}
+}
+
 func (c *CDMClient) sendMsgRoutine() {
 
-	c.logger.Infof("start sending cdm message ")
+	c.logger.Debugf("start sending cdm message ")
 	// listen two chan:
 	// txCh: used to send tx to docker manager
 	// stateCh: used to send get state response or bytecode response to docker manager
 
+	var err error
+
 	for {
 		select {
 		case txMsg := <-c.txSendCh:
-			_ = c.sendCDMMsg(txMsg)
+			err = c.sendCDMMsg(txMsg)
 		case stateMsg := <-c.stateSendCh:
-			_ = c.sendCDMMsg(stateMsg)
+			err = c.sendCDMMsg(stateMsg)
+		case <-c.stop:
+			c.logger.Debugf("close send cdm msg")
+			return
+		}
+
+		if err != nil {
+			c.logger.Errorf("fail to send msg: %s", err)
 		}
 	}
 
@@ -104,28 +126,36 @@ func (c *CDMClient) sendMsgRoutine() {
 
 func (c *CDMClient) recvMsgRoutine() {
 
-	c.logger.Infof("start receiving cdm message ")
+	c.logger.Debugf("start receiving cdm message ")
 
 	var err error
 
 	for {
-		recvMsg, _ := c.stream.Recv()
 
-		switch recvMsg.Type {
-		case protogo.CDMType_CDM_TYPE_TX_RESPONSE:
-			waitCh := c.recvChMap[recvMsg.TxId]
-			waitCh <- recvMsg
-			c.deleteRecvChan(recvMsg.TxId)
-		case protogo.CDMType_CDM_TYPE_GET_STATE:
-			err = c.handleGetState(recvMsg)
-		case protogo.CDMType_CDM_TYPE_GET_BYTECODE:
-			err = c.handleGetByteCode(recvMsg)
+		select {
+		case <-c.stop:
+			c.logger.Infof("close recv cdm msg")
+			return
 		default:
-			c.logger.Errorf("unknown message type")
-		}
+			recvMsg, _ := c.stream.Recv()
 
-		if err != nil {
-			c.logger.Error(err)
+			switch recvMsg.Type {
+			case protogo.CDMType_CDM_TYPE_TX_RESPONSE:
+				waitCh := c.recvChMap[recvMsg.TxId]
+				waitCh <- recvMsg
+				c.deleteRecvChan(recvMsg.TxId)
+			case protogo.CDMType_CDM_TYPE_GET_STATE:
+				err = c.handleGetState(recvMsg)
+			case protogo.CDMType_CDM_TYPE_GET_BYTECODE:
+				err = c.handleGetByteCode(recvMsg)
+			default:
+				c.logger.Errorf("unknown message type")
+			}
+
+			if err != nil {
+				c.logger.Error(err)
+			}
+
 		}
 
 	}
@@ -133,6 +163,7 @@ func (c *CDMClient) recvMsgRoutine() {
 }
 
 func (c *CDMClient) sendCDMMsg(msg *protogo.CDMMessage) error {
+	c.logger.Debugf("send message: [%s]", msg.Type)
 	return c.stream.Send(msg)
 }
 

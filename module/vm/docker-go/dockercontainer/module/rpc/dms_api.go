@@ -48,6 +48,7 @@ func (s *DMSApi) Contact(stream protogo.Contract_ContactServer) error {
 
 	err = handler.HandleMessage(registerMsg)
 	if err != nil {
+		s.logger.Errorf("fail to handle register msg: [%s] -- msg: [%s]", err, registerMsg)
 		return err
 	}
 

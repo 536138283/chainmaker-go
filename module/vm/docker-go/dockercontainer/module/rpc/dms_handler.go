@@ -93,7 +93,9 @@ func (h *DMSHandler) handleCreated(registerMsg *SDKProtogo.ContractMessage) erro
 		Payload:     nil,
 	}
 
-	h.sendMessage(registeredMsg)
+	if err := h.sendMessage(registeredMsg); err != nil {
+		return err
+	}
 	h.state = prepare
 
 	return h.afterRegistered()

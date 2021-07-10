@@ -100,7 +100,14 @@ func (dms *DMSServer) StartDMSServer(dmsApi *DMSApi) error {
 
 	dms.logger.Infof("start dms server")
 
-	return dms.Server.Serve(dms.Listener)
+	go func() {
+		err := dms.Server.Serve(dms.Listener)
+		if err != nil {
+			dms.logger.Errorf("dms server fail to start: %s", err)
+		}
+	}()
+
+	return nil
 }
 
 // StopDMSServer Stop the server

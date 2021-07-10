@@ -5,26 +5,26 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module"
 	"fmt"
 	"go.uber.org/zap"
-	"log"
 	"time"
 )
 
-var ManagerLogger *zap.SugaredLogger
+var managerLogger *zap.SugaredLogger
 
 func main() {
 
-	ManagerLogger = logger.NewDockerLogger(logger.MODULE_MANAGER)
+	managerLogger = logger.NewDockerLogger(logger.MODULE_MANAGER)
 
-	manager, err := module.NewManager()
+	manager, err := module.NewManager(managerLogger)
 	if err != nil {
-		log.Fatalf("Err in creating manager: %s", err)
+		managerLogger.Errorf("Err in creating docker manager: %s", err)
+		return
 	}
 
-	ManagerLogger.Infof("docker manager created")
+	managerLogger.Infof("docker manager created")
 
 	manager.InitContainer()
 
-	ManagerLogger.Infof("docker manager init...")
+	managerLogger.Infof("docker manager init...")
 
 	// infinite loop
 	// todo wait node send stop

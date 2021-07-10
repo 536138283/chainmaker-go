@@ -65,6 +65,8 @@ func NewCDMServer(port string) (*CDMServer, error) {
 // 	Start the server
 func (cdm *CDMServer) StartCDMServer(apiInstance *CDMApi) error {
 
+	var err error
+
 	if cdm.Listener == nil {
 		return errors.New("nil listener")
 	}
@@ -77,10 +79,13 @@ func (cdm *CDMServer) StartCDMServer(apiInstance *CDMApi) error {
 
 	cdm.logger.Infof("start cdm server")
 
-	err := cdm.Server.Serve(cdm.Listener)
-	if err != nil {
-		return err
-	}
+	go func() {
+		err = cdm.Server.Serve(cdm.Listener)
+		if err != nil {
+			cdm.logger.Errorf("cdm server fail to start: %s", err)
+		}
+	}()
+
 	return nil
 }
 

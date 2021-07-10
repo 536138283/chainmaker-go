@@ -82,6 +82,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	r.Client.GetTxSendCh() <- cdmMessage
 
 	// wait this chan
+	//todo set timeout
 	recvMsg := <-responseCh
 
 	// construct response

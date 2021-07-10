@@ -30,6 +30,7 @@ func (cm *ContractManager) GetContract(contractName string) (string, bool) {
 
 	contractPath, ok := cm.contractsMap[contractName]
 	if ok {
+		cm.logger.Debugf("get contract for [%s], path is [%s]", contractName, contractPath)
 		return contractPath, true
 	}
 
@@ -59,6 +60,7 @@ func (cm *ContractManager) SaveContract(contractName string, byteCode []byte) (s
 
 	// save contract file path to map
 	cm.contractsMap[contractName] = contractFilePath
+	cm.logger.Debugf("save contract for [%s], path is [%s]", contractName, contractFilePath)
 
 	return contractFilePath, nil
 }

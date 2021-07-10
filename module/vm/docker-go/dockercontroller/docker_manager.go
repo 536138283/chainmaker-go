@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 )
 
 const (
@@ -43,6 +44,7 @@ type DockerManager struct {
 
 	CDMClient *module.CDMClient
 	CDMState  bool
+	lock      sync.Mutex
 	TmpCache  *module.Cache
 }
 
@@ -68,6 +70,7 @@ func NewDockerManager(chainId string) *DockerManager {
 		Log:          log,
 		CDMClient:    cdmClient,
 		CDMState:     false,
+		lock:         sync.Mutex{},
 		TmpCache:     tmpCache,
 	}
 
@@ -80,6 +83,8 @@ func NewDockerManager(chainId string) *DockerManager {
 }
 
 func (m *DockerManager) StartCDMClient() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 	state := m.CDMClient.StartClient()
 
 	m.CDMState = state

@@ -32,6 +32,8 @@ func NewUsersManager() *UsersManager {
 // CreateNewUsers create new users in docker from 10000 as uid
 func (u *UsersManager) CreateNewUsers(userNum int) error {
 
+	var err error
+
 	startTime := time.Now()
 	const BaseUid = 10000
 
@@ -41,7 +43,11 @@ func (u *UsersManager) CreateNewUsers(userNum int) error {
 		go func(i int) {
 			for j := 0; j < userNum/10; j++ {
 				newUserId := BaseUid + i*userNum/10 + j
-				u.generateNewUser(newUserId)
+				err = u.generateNewUser(newUserId)
+
+				if err != nil {
+					u.logger.Errorf("fail to create user [%d]", newUserId)
+				}
 			}
 			wg.Done()
 		}(i)

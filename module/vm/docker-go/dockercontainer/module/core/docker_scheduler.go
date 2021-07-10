@@ -9,7 +9,6 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"go.uber.org/zap"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -67,6 +66,7 @@ func (s *DockerScheduler) GetTxResponseCh() chan *protogo.TxResponse {
 	return s.txResponseCh
 }
 
+// StartScheduler three goroutines lifecycle is same as docker vm
 func (s *DockerScheduler) StartScheduler() {
 
 	s.logger.Infof("start docker scheduler")
@@ -79,6 +79,13 @@ func (s *DockerScheduler) StartScheduler() {
 
 }
 
+func (s *DockerScheduler) StopScheduler() {
+	s.logger.Infof("stop docker scheduler")
+	close(s.txResponseCh)
+	close(s.txReqCh)
+	close(s.exitCh)
+}
+
 func (s *DockerScheduler) listenIncomingTxResponse() {
 
 	s.logger.Infof("start listen tx response")
@@ -87,14 +94,11 @@ func (s *DockerScheduler) listenIncomingTxResponse() {
 
 func (s *DockerScheduler) listenIncomingTxRequest() {
 	s.logger.Infof("start listen incoming tx request")
+
 	for {
 		txRequest := <-s.txReqCh
 		go s.handleTx(txRequest)
 	}
-}
-
-func (s *DockerScheduler) StopScheduler() {
-
 }
 
 func (s *DockerScheduler) monitorSandBox() {
@@ -113,7 +117,7 @@ func (s *DockerScheduler) monitorSandBox() {
 	}
 }
 
-func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) error {
+func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 	startTime := time.Now()
 
@@ -125,24 +129,26 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) error {
 	var contractPath string
 
 	contractPath, ok := s.contractManager.GetContract(contractKey)
-
-	if ok {
-		s.logger.Debugf("get contract path from disk [%s]", contractPath)
-	} else {
+	if !ok {
 		// todo change using single flight
 		newContractPath, err := s.contractManager.SaveContract(contractKey, txRequest.ByteCode)
 		if err != nil {
-			return err
+			s.logger.Errorf("fail to save contract err: [%s] -- contract [%s], with txId [%s]", err, contractKey, txRequest.TxId)
+			s.returnErrorTxResponse(txRequest.TxId)
+			return
 		}
 		s.logger.Debugf("save [%s] to disk and get new contract path", newContractPath)
 		contractPath = newContractPath
 	}
 
+	s.logger.Debugf("get contract path from disk [%s]", contractPath)
+
 	// set available user
 	user, err := s.userController.GetAvailableUser()
 	if err != nil {
-		s.logger.Errorf("fail to get a user: [%s]", err)
-		return err
+		s.logger.Errorf("fail to get a user: [%s] -- txId [%s]", err, txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId)
+		return
 	}
 
 	// register new handler
@@ -150,8 +156,9 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) error {
 
 	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName)
 	if err != nil {
-		s.logger.Errorf("fail to generate new handler: %s", err)
-		return err
+		s.logger.Errorf("fail to generate new handler: %s -- txId [%s]", err, txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId)
+		return
 	}
 
 	s.handlerRegister.RegisterNewHandler(handlerName, dmsHandler)
@@ -159,7 +166,8 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) error {
 	// start sand box
 	err = s.startSandBox(user, txRequest.TxId, handlerName, contractPath)
 	if err != nil {
-		return err
+		s.returnErrorTxResponse(txRequest.TxId)
+		return
 	}
 
 	// free handler
@@ -167,7 +175,9 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) error {
 
 	// free current user
 	if err = s.userController.FreeUser(user); err != nil {
-		return err
+		s.logger.Errorf("fail to free user: err [%s] -- user[%v] -- txId [%s]", err, user, txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId)
+		return
 	}
 
 	// return result -- for one tx incoming
@@ -176,7 +186,6 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) error {
 
 	s.logger.Debugf("cost time for running sandbox is: %s", time.Since(startTime))
 
-	return nil
 }
 
 func (s *DockerScheduler) startSandBox(user *helper.User, txId, handlerName, contractPath string) error {
@@ -200,22 +209,34 @@ func (s *DockerScheduler) startSandBox(user *helper.User, txId, handlerName, con
 
 	// start app
 	if err := cmd.Start(); err != nil {
-		s.logger.Errorf("fail to run child process [%v]", err)
-		log.Fatalln(err)
+		s.logger.Errorf("fail to run child process [%s] -- txId [%s]", err, txId)
+		return err
 	}
 
 	// set timeout
 	timer := time.AfterFunc(config.TimeLimit*time.Second, func() {
-		cmd.Process.Kill()
+		err := cmd.Process.Kill()
+		if err != nil {
+			s.logger.Errorf("fail to kill process [%s] -- txId [%s]", err, txId)
+			return
+		}
 	})
 
 	// set cgroup procs id
 	memoryPath := filepath.Join(config.CGroupRoot, config.ProcsFile)
-	utils.WriteToFile(memoryPath, cmd.Process.Pid)
+	err := utils.WriteToFile(memoryPath, cmd.Process.Pid)
+	if err != nil {
+		s.logger.Errorf("fail to add cgroup [%s] -- txId [%s]", err, txId)
+		return err
+	}
 
 	s.logger.Debugf("Add Pid [%d] to file [%s]", cmd.Process.Pid, config.ProcsFile)
 
-	cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		s.logger.Errorf("fail to wait child process end [%s] -- txId [%s]", err, txId)
+		return err
+	}
 
 	// timeout, stop the process
 	timer.Stop()
@@ -234,13 +255,17 @@ func (s *DockerScheduler) startSandBox(user *helper.User, txId, handlerName, con
 
 	if status.Signaled() {
 		exitStatus.Signal = status.Signal()
-
-		// put result to resultCh
+		s.returnErrorTxResponse(txId)
 	}
 
 	s.exitCh <- exitStatus
 
 	return nil
+}
+
+func (s *DockerScheduler) returnErrorTxResponse(txId string) {
+	errTxResponse := s.constructErrorResponse(txId)
+	s.txResponseCh <- errTxResponse
 }
 
 // handlerName: contractName:contractVersion:txId[:10]
@@ -252,4 +277,13 @@ func (s *DockerScheduler) constructHandlerName(tx *protogo.TxRequest) string {
 // ConstructContractKey contractKey: contractName:contractVersion
 func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
 	return contractName + ":" + contractVersion
+}
+
+func (s *DockerScheduler) constructErrorResponse(txId string) *protogo.TxResponse {
+	return &protogo.TxResponse{
+		TxId:    txId,
+		Code:    protogo.ContractResultCode_FAIL,
+		Result:  nil,
+		Message: "fail",
+	}
 }
