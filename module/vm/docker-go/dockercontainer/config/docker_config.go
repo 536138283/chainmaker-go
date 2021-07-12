@@ -7,7 +7,7 @@ const (
 	SwapLimitFile   = "memory.swappiness"
 
 	RssLimit = 500 // 10 MB
-	UserNum  = 500
+	UserNum  = 600
 
 	TimeLimit = 300     // process running time limit
 	Port      = "12355" // Port for chainmaker and docker manager -- cdm_rpc

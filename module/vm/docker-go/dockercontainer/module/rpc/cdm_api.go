@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
+	"io"
 	"sync"
 )
 
@@ -14,7 +15,7 @@ type CDMApi struct {
 	logger    *zap.SugaredLogger
 	scheduler protocol.Scheduler
 	stream    protogo.CDMRpc_CDMCommunicateServer
-	stop      chan bool
+	stop      chan struct{}
 	wg        *sync.WaitGroup
 }
 
@@ -23,7 +24,7 @@ func NewCDMApi(scheduler protocol.Scheduler) *CDMApi {
 		scheduler: scheduler,
 		logger:    logger.NewDockerLogger(logger.MODULE_CDM_API),
 		stream:    nil,
-		stop:      make(chan bool),
+		stop:      nil,
 		wg:        new(sync.WaitGroup),
 	}
 }
@@ -31,6 +32,8 @@ func NewCDMApi(scheduler protocol.Scheduler) *CDMApi {
 // CDMCommunicate docker manager stream function
 func (cdm *CDMApi) CDMCommunicate(stream protogo.CDMRpc_CDMCommunicateServer) error {
 
+	// init cdm api stop chan and stream
+	cdm.stop = make(chan struct{})
 	cdm.stream = stream
 
 	cdm.wg.Add(2)
@@ -41,11 +44,13 @@ func (cdm *CDMApi) CDMCommunicate(stream protogo.CDMRpc_CDMCommunicateServer) er
 
 	cdm.wg.Wait()
 
+	cdm.logger.Infof("cdm connection end")
 	return nil
 }
 
 func (cdm *CDMApi) closeConnection() {
 	close(cdm.stop)
+	cdm.stream = nil
 }
 
 // recv three types of msg
@@ -67,9 +72,17 @@ func (cdm *CDMApi) recvMsgRoutine() {
 			return
 		default:
 			recvMsg, errRecv := cdm.stream.Recv()
-			cdm.logger.Debugf("receive msg: [%s]", recvMsg.Type)
+
+			if errRecv == io.EOF {
+				cdm.logger.Infof("receive eof")
+				cdm.closeConnection()
+				continue
+			}
+
 			if errRecv != nil {
-				err = errRecv
+				cdm.logger.Errorf("fail to recv msg: [%v]", err)
+				cdm.closeConnection()
+				continue
 			}
 
 			cdm.logger.Debugf("recv msg [%s]", recvMsg.TxId[:5])
@@ -86,7 +99,7 @@ func (cdm *CDMApi) recvMsgRoutine() {
 			}
 
 			if err != nil {
-				cdm.logger.Errorf("fail to recv msg: [%s]", err)
+				cdm.logger.Errorf("fail to recv msg in handler: [%s]", err)
 			}
 
 		}
@@ -107,7 +120,10 @@ func (cdm *CDMApi) sendMsgRoutine() {
 			err = cdm.sendMessage(cdmMsg)
 		case <-cdm.stop:
 			cdm.wg.Done()
+			cdm.logger.Infof("stop sending cdm message ")
 			return
+		default:
+			err = errors.New("unknown recv message type")
 		}
 
 		if err != nil {

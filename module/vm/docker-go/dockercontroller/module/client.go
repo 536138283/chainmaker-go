@@ -4,7 +4,9 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/logger"
 	"context"
+	"errors"
 	"google.golang.org/grpc"
+	"io"
 	"sync"
 )
 
@@ -27,7 +29,7 @@ type CDMClient struct {
 
 	logger *logger.CMLogger
 
-	stop chan bool
+	stop chan struct{}
 }
 
 func NewCDMClient(chainId string) *CDMClient {
@@ -39,7 +41,7 @@ func NewCDMClient(chainId string) *CDMClient {
 		lock:        sync.Mutex{},
 		stream:      nil,
 		logger:      logger.GetLoggerByChain("[CDM Client]", chainId),
-		stop:        make(chan bool),
+		stop:        nil,
 	}
 }
 
@@ -79,6 +81,7 @@ func (c *CDMClient) StartClient() bool {
 	}
 
 	c.stream = stream
+	c.stop = make(chan struct{})
 
 	go c.sendMsgRoutine()
 
@@ -115,6 +118,8 @@ func (c *CDMClient) sendMsgRoutine() {
 		case <-c.stop:
 			c.logger.Debugf("close send cdm msg")
 			return
+		default:
+			err = errors.New("unknown send message type")
 		}
 
 		if err != nil {
@@ -137,7 +142,18 @@ func (c *CDMClient) recvMsgRoutine() {
 			c.logger.Infof("close recv cdm msg")
 			return
 		default:
-			recvMsg, _ := c.stream.Recv()
+			recvMsg, recvErr := c.stream.Recv()
+
+			if recvErr == io.EOF {
+				c.closeConnection()
+				continue
+			}
+
+			if recvErr != nil {
+				c.logger.Errorf("fail to recv msg in client: %v", recvErr)
+				c.closeConnection()
+				continue
+			}
 
 			switch recvMsg.Type {
 			case protogo.CDMType_CDM_TYPE_TX_RESPONSE:

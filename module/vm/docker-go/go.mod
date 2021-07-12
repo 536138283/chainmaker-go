@@ -3,6 +3,7 @@ module chainmaker.org/chainmaker-go/docker-go
 go 1.15
 
 require (
+	chainmaker.org/chainmaker-go/common v0.0.0
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/logger v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
@@ -12,6 +13,8 @@ require (
 	github.com/containerd/containerd v1.5.2 // indirect
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/go-connections v0.4.0
+	github.com/gogo/protobuf v1.3.2
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/moby/sys/mount v0.2.0 // indirect

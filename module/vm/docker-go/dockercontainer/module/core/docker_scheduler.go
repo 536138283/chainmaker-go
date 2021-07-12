@@ -25,8 +25,8 @@ type ExitStatus struct {
 }
 
 const (
-	ReqChanSize      = 1000
-	ResponseChanSize = 1000
+	ReqChanSize      = 5000
+	ResponseChanSize = 5000
 )
 
 type DockerScheduler struct {
@@ -198,14 +198,14 @@ func (s *DockerScheduler) startSandBox(user *helper.User, txId, handlerName, con
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	//cmd.SysProcAttr = &syscall.SysProcAttr{
-	//	Credential: &syscall.Credential{
-	//		Uid: uint32(user.Uid),
-	//	},
-	//	Cloneflags: syscall.CLONE_NEWIPC |
-	//		syscall.CLONE_NEWPID |
-	//		syscall.CLONE_NEWNET,
-	//}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(user.Uid),
+		},
+		Cloneflags: syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNET,
+	}
 
 	// start app
 	if err := cmd.Start(); err != nil {

@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	dockerDir     string   = "../module/vm/docker-go/dockercontainer"
+	dockerDir string = "../module/vm/docker-go/dockercontainer"
+	//dockerDir     string   = "./dockercontainer"
 	imageName     string   = "image1"
 	containerName string   = "container1"
 	indexName     string   = "/" + containerName
