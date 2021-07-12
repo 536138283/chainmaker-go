@@ -367,9 +367,12 @@ func (pool *txPoolImpl) FetchTxBatch(blockHeight int64) []*commonPb.Transaction 
 
 		config := pool.chainConf.(*chainconf.ChainConf)
 
-		if utils.IsValidConfigTx(lastBlock.Txs[0]) {
-			if err := config.CallbackChainConfigWatcher(); err != nil {
-				pool.log.Errorf("CallbackChainConfigWatcher failed, %s", err)
+		if lastBlock.Txs != nil && len(lastBlock.Txs) != 0 {
+
+			if utils.IsValidConfigTx(lastBlock.Txs[0]) {
+				if err := config.CallbackChainConfigWatcher(); err != nil {
+					pool.log.Errorf("CallbackChainConfigWatcher failed, %s", err)
+				}
 			}
 		}
 
