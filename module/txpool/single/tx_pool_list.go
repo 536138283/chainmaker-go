@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
+	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"fmt"
 	"sync"
 
@@ -29,18 +30,27 @@ type txList struct {
 	metricTxPoolSize *prometheus.GaugeVec
 
 	rwLock       sync.RWMutex
-	queue        *linkedhashmap.LinkedHashMap // Orderly store TXS: txs
-	pendingCache *sync.Map                    // A place where transactions are stored after Fetch
+	queue        queue     // Orderly or random store TXS: txs
+	pendingCache *sync.Map // A place where transactions are stored after Fetch
 }
 
-func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore protocol.BlockchainStore) *txList {
+func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore protocol.BlockchainStore, consensusType consensuspb.ConsensusType) *txList {
+
 	list := &txList{
 		log:             log,
 		blockchainStore: blockchainStore,
 		rwLock:          sync.RWMutex{},
-		queue:           linkedhashmap.NewLinkedHashMap(),
 		pendingCache:    pendingCache,
 	}
+
+	if consensusType == consensuspb.ConsensusType_ABFT {
+		list.queue = newRandomMap()
+		log.Infof("abft consensus with map txpool")
+	} else {
+		list.queue = linkedhashmap.NewLinkedHashMap()
+		log.Infof("linkedHashMap txpool")
+	}
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		list.metricTxPoolSize = monitor.NewGaugeVec(monitor.SUBSYSTEM_TXPOOL, "metric_tx_pool_size", "tx pool size", "chainId", "poolType")
 	}
@@ -90,11 +100,10 @@ func (l *txList) Delete(txIds []string) {
 		l.queue.Remove(txId)
 		l.pendingCache.Delete(txId)
 	}
-
 }
 
 // Fetch Gets a list of stored transactions
-func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error, blockHeight int64) ([]*commonPb.Transaction, []string) {
+func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error, blockHeight int64, consensusType consensuspb.ConsensusType) ([]*commonPb.Transaction, []string) {
 	queueLen := l.queue.Size()
 	if queueLen < count {
 		count = queueLen
@@ -125,38 +134,69 @@ func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error,
 
 	l.log.Debugw("txList Fetch", "count", count, "queueLen", queueLen)
 	if queueLen > 0 {
-		cacheKVs, txs, txIds, errKeys = l.getTxsFromQueue(count, blockHeight, validate)
+		cacheKVs, txs, txIds, errKeys = l.getTxsFromQueue(count, blockHeight, validate, consensusType)
 		l.log.Debugw("txList Fetch txsNormal", "count", count, "queueLen", queueLen, "txsLen", len(txs), "errKeys", len(errKeys), "cacheKeys", len(cacheKVs))
 	}
 	return txs, txIds
 }
 
-func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx *commonPb.Transaction) error) (
+func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx *commonPb.Transaction) error, consensusType consensuspb.ConsensusType) (
 	cacheKVs []*valInPendingCache, txs []*commonPb.Transaction, txIds []string, errKeys []string) {
 
 	txs = make([]*commonPb.Transaction, 0, count)
 	txIds = make([]string, 0, count)
 	errKeys = make([]string, 0, count)
 	cacheKVs = make([]*valInPendingCache, 0, count)
-	node := l.queue.GetLinkList().Front()
-	for node != nil && count > 0 {
-		txId := node.Value.(string)
-		tx := l.queue.Get(txId).(*commonPb.Transaction)
-		if validate != nil && validate(tx) != nil {
-			errKeys = append(errKeys, txId)
-		} else {
-			txs = append(txs, tx)
-			txIds = append(txIds, txId)
-			cacheKVs = append(cacheKVs, &valInPendingCache{
-				tx:            tx,
-				inBlockHeight: blockHeight,
-			})
-			if val, ok := l.pendingCache.Load(txId); ok {
-				l.log.Errorf("tx:%s duplicate to package block, txInPoolHeight: %d", txId, val.(*valInPendingCache).inBlockHeight)
+
+	if consensusType == consensuspb.ConsensusType_ABFT {
+		l.log.Infof("getTxsFromQueue randomMap")
+		lm := l.queue.(*randomMap)
+
+		for txId, val := range lm.m {
+			if count > 0 {
+				tx := val.(*commonPb.Transaction)
+				if validate != nil && validate(tx) != nil {
+					errKeys = append(errKeys, txId)
+				} else {
+					txs = append(txs, tx)
+					txIds = append(txIds, txId)
+					cacheKVs = append(cacheKVs, &valInPendingCache{
+						tx:            tx,
+						inBlockHeight: blockHeight,
+					})
+					if val, ok := l.pendingCache.Load(txId); ok {
+						l.log.Errorf("tx:%s duplicate to package block, txInPoolHeight: %d", txId, val.(*valInPendingCache).inBlockHeight)
+					}
+				}
+				count--
+			} else {
+				return
 			}
 		}
-		count--
-		node = node.Next()
+	} else {
+		l.log.Infof("getTxsFromQueue LinkedHashMap")
+		lhm := l.queue.(*linkedhashmap.LinkedHashMap)
+
+		node := lhm.GetLinkList().Front()
+		for node != nil && count > 0 {
+			txId := node.Value.(string)
+			tx := l.queue.Get(txId).(*commonPb.Transaction)
+			if validate != nil && validate(tx) != nil {
+				errKeys = append(errKeys, txId)
+			} else {
+				txs = append(txs, tx)
+				txIds = append(txIds, txId)
+				cacheKVs = append(cacheKVs, &valInPendingCache{
+					tx:            tx,
+					inBlockHeight: blockHeight,
+				})
+				if val, ok := l.pendingCache.Load(txId); ok {
+					l.log.Errorf("tx:%s duplicate to package block, txInPoolHeight: %d", txId, val.(*valInPendingCache).inBlockHeight)
+				}
+			}
+			count--
+			node = node.Next()
+		}
 	}
 	return
 }

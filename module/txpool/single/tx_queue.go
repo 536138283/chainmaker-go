@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
+	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"fmt"
 	"sync"
 
@@ -27,14 +28,14 @@ type txQueue struct {
 	pendingCache  *sync.Map // Caches transactions that are already in the block to be deleted
 }
 
-func newQueue(blockStore protocol.BlockchainStore, log *logger.CMLogger, validate txValidateFunc) *txQueue {
+func newQueue(blockStore protocol.BlockchainStore, log *logger.CMLogger, validate txValidateFunc, consensusType consensuspb.ConsensusType) *txQueue {
 	pendingCache := sync.Map{}
 	queue := txQueue{
 		log:           log,
 		validate:      validate,
 		pendingCache:  &pendingCache,
-		commonTxQueue: newTxList(log, &pendingCache, blockStore),
-		configTxQueue: newTxList(log, &pendingCache, blockStore),
+		commonTxQueue: newTxList(log, &pendingCache, blockStore,consensusType),
+		configTxQueue: newTxList(log, &pendingCache, blockStore,consensusType),
 	}
 	return &queue
 }
@@ -79,10 +80,10 @@ func (queue *txQueue) deleteCommonTxs(txIds []string) {
 	queue.commonTxQueue.Delete(txIds)
 }
 
-func (queue *txQueue) fetch(expectedCount int, blockHeight int64, validateTxTime func(tx *commonPb.Transaction) error) []*commonPb.Transaction {
+func (queue *txQueue) fetch(expectedCount int, blockHeight int64, validateTxTime func(tx *commonPb.Transaction) error, consensusType consensuspb.ConsensusType) []*commonPb.Transaction {
 	// 1. fetch the config transaction
 	if configQueueLen := queue.configTxsCount(); configQueueLen > 0 {
-		if txs, txIds := queue.configTxQueue.Fetch(1, validateTxTime, blockHeight); len(txs) > 0 {
+		if txs, txIds := queue.configTxQueue.Fetch(1, validateTxTime, blockHeight, consensusType); len(txs) > 0 {
 			queue.log.Debugw("FetchTxBatch get config txs", "txCount", 1, "configQueueLen", configQueueLen, "txsLen", len(txs), "txIds", txIds)
 			return txs
 		}
@@ -90,7 +91,7 @@ func (queue *txQueue) fetch(expectedCount int, blockHeight int64, validateTxTime
 
 	// 2. fetch the common transaction
 	if txQueueLen := queue.commonTxsCount(); txQueueLen > 0 {
-		if txs, txIds := queue.commonTxQueue.Fetch(expectedCount, validateTxTime, blockHeight); len(txs) > 0 {
+		if txs, txIds := queue.commonTxQueue.Fetch(expectedCount, validateTxTime, blockHeight, consensusType); len(txs) > 0 {
 			queue.log.Debugw("FetchTxBatch get common txs", "txCount", expectedCount, "txQueueLen", txQueueLen, "txsLen", len(txs), "txIds", txIds)
 			return txs
 		}
