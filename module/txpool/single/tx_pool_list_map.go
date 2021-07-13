@@ -7,17 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 
 package single
 
-type listMap struct {
+type randomMap struct {
 	m map[string]interface{}
 }
 
-func newListMap() *listMap {
-	return &listMap{
+func newRandomMap() *randomMap {
+	return &randomMap{
 		m: make(map[string]interface{}),
 	}
 }
 
-func (listMap *listMap) Add(key string, val interface{}) bool {
+func (listMap *randomMap) Add(key string, val interface{}) bool {
 
 	if _, isExists := listMap.m[key]; isExists {
 		return false
@@ -27,7 +27,7 @@ func (listMap *listMap) Add(key string, val interface{}) bool {
 	return true
 }
 
-func (listMap *listMap) Get(key string) interface{} {
+func (listMap *randomMap) Get(key string) interface{} {
 	val, isExists := listMap.m[key]
 	if !isExists {
 		return nil
@@ -35,11 +35,11 @@ func (listMap *listMap) Get(key string) interface{} {
 	return val
 }
 
-func (listMap *listMap) Size() int {
+func (listMap *randomMap) Size() int {
 	return len(listMap.m)
 }
 
-func (listMap *listMap) Remove(key string) (bool, interface{}) {
+func (listMap *randomMap) Remove(key string) (bool, interface{}) {
 	val, isExists := listMap.m[key]
 	if !isExists {
 		return false, nil

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
+	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"fmt"
 	"sync"
 
@@ -29,11 +30,11 @@ type txList struct {
 	metricTxPoolSize *prometheus.GaugeVec
 
 	rwLock       sync.RWMutex
-	queue        queue              // Orderly or random store TXS: txs
-	pendingCache *sync.Map          // A place where transactions are stored after Fetch
+	queue        queue     // Orderly or random store TXS: txs
+	pendingCache *sync.Map // A place where transactions are stored after Fetch
 }
 
-func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore protocol.BlockchainStore) *txList {
+func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore protocol.BlockchainStore, consensusType consensuspb.ConsensusType) *txList {
 
 	list := &txList{
 		log:             log,
@@ -42,12 +43,12 @@ func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore pro
 		pendingCache:    pendingCache,
 	}
 
-	if localconf.ChainMakerConfig.TxPoolConfig.RandomTxList==true{
-         list.queue= newListMap()
-         log.Infof("RandomTxList==true")
-	}else{
-		list.queue=linkedhashmap.NewLinkedHashMap()
-		log.Infof("RandomTxList==false")
+	if consensusType == consensuspb.ConsensusType_ABFT {
+		list.queue = newRandomMap()
+		log.Infof("abft consensus with map txpool")
+	} else {
+		list.queue = linkedhashmap.NewLinkedHashMap()
+		log.Infof("linkedHashMap txpool")
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
@@ -102,7 +103,7 @@ func (l *txList) Delete(txIds []string) {
 }
 
 // Fetch Gets a list of stored transactions
-func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error, blockHeight int64) ([]*commonPb.Transaction, []string) {
+func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error, blockHeight int64, consensusType consensuspb.ConsensusType) ([]*commonPb.Transaction, []string) {
 	queueLen := l.queue.Size()
 	if queueLen < count {
 		count = queueLen
@@ -133,13 +134,13 @@ func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error,
 
 	l.log.Debugw("txList Fetch", "count", count, "queueLen", queueLen)
 	if queueLen > 0 {
-		cacheKVs, txs, txIds, errKeys = l.getTxsFromQueue(count, blockHeight, validate)
+		cacheKVs, txs, txIds, errKeys = l.getTxsFromQueue(count, blockHeight, validate, consensusType)
 		l.log.Debugw("txList Fetch txsNormal", "count", count, "queueLen", queueLen, "txsLen", len(txs), "errKeys", len(errKeys), "cacheKeys", len(cacheKVs))
 	}
 	return txs, txIds
 }
 
-func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx *commonPb.Transaction) error) (
+func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx *commonPb.Transaction) error, consensusType consensuspb.ConsensusType) (
 	cacheKVs []*valInPendingCache, txs []*commonPb.Transaction, txIds []string, errKeys []string) {
 
 	txs = make([]*commonPb.Transaction, 0, count)
@@ -147,9 +148,9 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 	errKeys = make([]string, 0, count)
 	cacheKVs = make([]*valInPendingCache, 0, count)
 
-	if localconf.ChainMakerConfig.TxPoolConfig.RandomTxList == true {
-		l.log.Infof("listMap")
-		lm := l.queue.(*listMap)
+	if consensusType == consensuspb.ConsensusType_ABFT {
+		l.log.Infof("getTxsFromQueue randomMap")
+		lm := l.queue.(*randomMap)
 
 		for txId, val := range lm.m {
 			if count > 0 {
@@ -173,7 +174,7 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 			}
 		}
 	} else {
-		l.log.Infof("LinkedHashMap---------")
+		l.log.Infof("getTxsFromQueue LinkedHashMap")
 		lhm := l.queue.(*linkedhashmap.LinkedHashMap)
 
 		node := lhm.GetLinkList().Front()

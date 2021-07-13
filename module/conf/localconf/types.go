@@ -269,7 +269,6 @@ type SqlDbConfig struct {
 }
 
 type txPoolConfig struct {
-	RandomTxList        bool   `mapstructure:"random_tx_list"`
 	PoolType            string `mapstructure:"pool_type"`
 	MaxTxPoolSize       uint32 `mapstructure:"max_txpool_size"`
 	MaxConfigTxPoolSize uint32 `mapstructure:"max_config_txpool_size"`
