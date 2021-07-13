@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -25,11 +26,12 @@ type ExitStatus struct {
 }
 
 const (
-	ReqChanSize      = 5000
-	ResponseChanSize = 5000
+	ReqChanSize      = 1000
+	ResponseChanSize = 1000
 )
 
 type DockerScheduler struct {
+	lock   sync.Mutex
 	exitCh chan ExitStatus
 	logger *zap.SugaredLogger
 
@@ -38,21 +40,26 @@ type DockerScheduler struct {
 
 	contractManager *ContractManager
 
-	txReqCh      chan *protogo.TxRequest
-	txResponseCh chan *protogo.TxResponse
+	txReqCh               chan *protogo.TxRequest
+	txResponseCh          chan *protogo.TxResponse
+	getStateReqCh         chan *protogo.CDMMessage
+	getStateResponseChMap map[string]chan *protogo.CDMMessage
 }
 
 func NewDockerScheduler(userController protocol.UserController, handlerRegister *HandlerRegister) *DockerScheduler {
 
 	scheduler := &DockerScheduler{
+		lock:            sync.Mutex{},
 		exitCh:          make(chan ExitStatus, 2),
 		userController:  userController,
 		logger:          logger.NewDockerLogger(logger.MODULE_SCHEDULER),
 		handlerRegister: handlerRegister,
 		contractManager: NewContractManager(),
 
-		txReqCh:      make(chan *protogo.TxRequest, ReqChanSize),
-		txResponseCh: make(chan *protogo.TxResponse, ResponseChanSize),
+		txReqCh:               make(chan *protogo.TxRequest, ReqChanSize),
+		txResponseCh:          make(chan *protogo.TxResponse, ResponseChanSize),
+		getStateReqCh:         make(chan *protogo.CDMMessage, ReqChanSize*8),
+		getStateResponseChMap: make(map[string]chan *protogo.CDMMessage),
 	}
 
 	return scheduler
@@ -64,6 +71,26 @@ func (s *DockerScheduler) GetTxReqCh() chan *protogo.TxRequest {
 
 func (s *DockerScheduler) GetTxResponseCh() chan *protogo.TxResponse {
 	return s.txResponseCh
+}
+
+func (s *DockerScheduler) GetGetStateReqCh() chan *protogo.CDMMessage {
+	return s.getStateReqCh
+}
+
+func (s *DockerScheduler) RegisterResponseCh(txId string, responseCh chan *protogo.CDMMessage) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.getStateResponseChMap[txId] = responseCh
+}
+
+func (s *DockerScheduler) GetResponseChByTxId(txId string) chan *protogo.CDMMessage {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	responseCh := s.getStateResponseChMap[txId]
+	delete(s.getStateResponseChMap, txId)
+	return responseCh
 }
 
 // StartScheduler three goroutines lifecycle is same as docker vm
@@ -154,7 +181,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	// register new handler
 	handlerName := s.constructHandlerName(txRequest)
 
-	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName)
+	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName, txRequest.ContractName)
 	if err != nil {
 		s.logger.Errorf("fail to generate new handler: %s -- txId [%s]", err, txRequest.TxId)
 		s.returnErrorTxResponse(txRequest.TxId)
@@ -164,7 +191,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	s.handlerRegister.RegisterNewHandler(handlerName, dmsHandler)
 
 	// start sand box
-	err = s.startSandBox(user, txRequest.TxId, handlerName, contractPath)
+	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
 	if err != nil {
 		s.returnErrorTxResponse(txRequest.TxId)
 		return
@@ -188,24 +215,24 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 }
 
-func (s *DockerScheduler) startSandBox(user *helper.User, txId, handlerName, contractPath string) error {
+func (s *DockerScheduler) startSandBox(user *helper.User, txId, contractName, handlerName, contractPath string) error {
 
 	cmd := exec.Cmd{
 		Path: contractPath,
-		Args: []string{user.SockPath, handlerName},
+		Args: []string{user.SockPath, handlerName, contractName},
 	}
 
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		Credential: &syscall.Credential{
-			Uid: uint32(user.Uid),
-		},
-		Cloneflags: syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWNET,
-	}
+	//cmd.SysProcAttr = &syscall.SysProcAttr{
+	//	Credential: &syscall.Credential{
+	//		Uid: uint32(user.Uid),
+	//	},
+	//	Cloneflags: syscall.CLONE_NEWIPC |
+	//		syscall.CLONE_NEWPID |
+	//		syscall.CLONE_NEWNET,
+	//}
 
 	// start app
 	if err := cmd.Start(); err != nil {

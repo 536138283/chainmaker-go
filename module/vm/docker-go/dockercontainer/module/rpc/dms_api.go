@@ -1,8 +1,8 @@
 package rpc
 
 import (
+	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"contract-sdk-test1/pb_sdk/protogo"
 	"errors"
 	"fmt"
 	"go.uber.org/zap"
@@ -25,7 +25,7 @@ func NewDMSApi(handlerRegister HandlerRegisterInterface) *DMSApi {
 	}
 }
 
-func (s *DMSApi) Contact(stream protogo.Contract_ContactServer) error {
+func (s *DMSApi) DMSCommunicate(stream protogo.DMSRpc_DMSCommunicateServer) error {
 
 	s.logger.Debugf("begin to handle stream....")
 
@@ -35,7 +35,7 @@ func (s *DMSApi) Contact(stream protogo.Contract_ContactServer) error {
 		return err
 	}
 
-	handlerName := registerMsg.HandlerName
+	handlerName := string(registerMsg.Payload)
 	handler := s.handlerRegister.GetHandlerByName(handlerName)
 
 	if handler == nil {
@@ -44,7 +44,7 @@ func (s *DMSApi) Contact(stream protogo.Contract_ContactServer) error {
 	}
 
 	handler.SetStream(stream)
-	s.logger.Debugf("get handler: %s", registerMsg.HandlerName)
+	s.logger.Debugf("get handler: %s", handlerName)
 
 	err = handler.HandleMessage(registerMsg)
 	if err != nil {
@@ -54,7 +54,7 @@ func (s *DMSApi) Contact(stream protogo.Contract_ContactServer) error {
 
 	// begin loop to receive msg
 	type recvMsg struct {
-		msg *protogo.ContractMessage
+		msg *protogo.DMSMessage
 		err error
 	}
 

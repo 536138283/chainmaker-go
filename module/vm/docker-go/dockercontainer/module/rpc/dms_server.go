@@ -1,8 +1,8 @@
 package rpc
 
 import (
+	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"contract-sdk-test1/pb_sdk/protogo"
 	"errors"
 	"fmt"
 	"go.uber.org/zap"
@@ -96,7 +96,7 @@ func (dms *DMSServer) StartDMSServer(dmsApi *DMSApi) error {
 		return errors.New("nil server")
 	}
 
-	protogo.RegisterContractServer(dms.Server, dmsApi)
+	protogo.RegisterDMSRpcServer(dms.Server, dmsApi)
 
 	dms.logger.Infof("start dms server")
 

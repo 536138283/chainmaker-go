@@ -7,7 +7,7 @@ const (
 	SwapLimitFile   = "memory.swappiness"
 
 	RssLimit = 500 // 10 MB
-	UserNum  = 600
+	UserNum  = 10
 
 	TimeLimit = 300     // process running time limit
 	Port      = "12355" // Port for chainmaker and docker manager -- cdm_rpc
@@ -20,6 +20,6 @@ const (
 	LogFile          = "/docker_manager.log"
 	DisplayInConsole = true
 	ShowLine         = false
-	//LogLevel         = "DEBUG"
-	LogLevel = "INFO" //
+	LogLevel         = "DEBUG"
+	//LogLevel = "INFO" //
 )

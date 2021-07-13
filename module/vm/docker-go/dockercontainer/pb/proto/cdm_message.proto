@@ -59,7 +59,10 @@ message TxResponse {
 
     string message = 4;
 
+    map<string, bytes> write_map = 5;
+
 }
+
 
 enum ContractResultCode {
     OK = 0;

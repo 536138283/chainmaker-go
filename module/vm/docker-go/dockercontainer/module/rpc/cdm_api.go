@@ -59,7 +59,7 @@ func (cdm *CDMApi) closeConnection() {
 // type3: get_bytecode response or path
 func (cdm *CDMApi) recvMsgRoutine() {
 
-	cdm.logger.Infof("start receiving cdm message ")
+	cdm.logger.Debugf("start receiving cdm message ")
 
 	var err error
 
@@ -68,13 +68,13 @@ func (cdm *CDMApi) recvMsgRoutine() {
 		select {
 		case <-cdm.stop:
 			cdm.wg.Done()
-			cdm.logger.Infof("stop receiving cdm message ")
+			cdm.logger.Debugf("stop receiving cdm message ")
 			return
 		default:
 			recvMsg, errRecv := cdm.stream.Recv()
 
 			if errRecv == io.EOF {
-				cdm.logger.Infof("receive eof")
+				cdm.logger.Debugf("receive eof")
 				cdm.closeConnection()
 				continue
 			}
@@ -85,7 +85,7 @@ func (cdm *CDMApi) recvMsgRoutine() {
 				continue
 			}
 
-			cdm.logger.Debugf("recv msg [%s]", recvMsg.TxId[:5])
+			cdm.logger.Debugf("recv msg [%s]", recvMsg.Type)
 
 			switch recvMsg.Type {
 			case protogo.CDMType_CDM_TYPE_TX_REQUEST:
@@ -109,7 +109,7 @@ func (cdm *CDMApi) recvMsgRoutine() {
 
 func (cdm *CDMApi) sendMsgRoutine() {
 
-	cdm.logger.Infof("start sending cdm message")
+	cdm.logger.Debugf("start sending cdm message")
 
 	var err error
 
@@ -118,16 +118,18 @@ func (cdm *CDMApi) sendMsgRoutine() {
 		case txResponseMsg := <-cdm.scheduler.GetTxResponseCh():
 			cdmMsg := cdm.constructCDMMessage(txResponseMsg)
 			err = cdm.sendMessage(cdmMsg)
+		case getStateReqMsg := <-cdm.scheduler.GetGetStateReqCh():
+			err = cdm.sendMessage(getStateReqMsg)
 		case <-cdm.stop:
 			cdm.wg.Done()
-			cdm.logger.Infof("stop sending cdm message ")
+			cdm.logger.Debugf("stop sending cdm message ")
 			return
-		default:
-			err = errors.New("unknown recv message type")
+			//default:
+			//	err = errors.New("unknown recv message type")
 		}
 
 		if err != nil {
-			cdm.logger.Error(err)
+			cdm.logger.Errorf("fail to send msg: [%s]", err)
 		}
 
 	}
@@ -152,6 +154,7 @@ func (cdm *CDMApi) sendMessage(msg *protogo.CDMMessage) error {
 	return cdm.stream.Send(msg)
 }
 
+// unmarshal cdm message to send txRequest to txReqCh
 func (cdm *CDMApi) handleTxRequest(cdmMessage *protogo.CDMMessage) error {
 
 	var txRequest protogo.TxRequest
@@ -166,6 +169,11 @@ func (cdm *CDMApi) handleTxRequest(cdmMessage *protogo.CDMMessage) error {
 }
 
 func (cdm *CDMApi) handleGetStateResponse(cdmMessage *protogo.CDMMessage) error {
+
+	responseCh := cdm.scheduler.GetResponseChByTxId(cdmMessage.TxId)
+
+	responseCh <- cdmMessage
+
 	return nil
 }
 

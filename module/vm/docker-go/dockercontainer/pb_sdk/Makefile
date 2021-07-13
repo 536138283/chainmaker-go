@@ -1,2 +1,2 @@
 gen:
-	cd proto && protoc -I=. --go_out=plugins=grpc:../protogo --go_opt=paths=source_relative contract.proto
+	cd proto && protoc -I=. --gogofaster_out=plugins=grpc:../protogo --gogofaster_opt=paths=source_relative dms_message.proto

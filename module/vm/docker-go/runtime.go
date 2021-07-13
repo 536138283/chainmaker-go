@@ -6,11 +6,14 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/groupcache/lru"
+	"log"
 	"strings"
 )
 
 type CDMClient interface {
 	GetTxSendCh() chan *protogo.CDMMessage
+
+	GetStateSendCh() chan *protogo.CDMMessage
 
 	RegisterRecvChan(txId string, recvCh chan *protogo.CDMMessage)
 }
@@ -35,8 +38,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
-	//log.Println("--------------------------------------")
-	//log.Println("Start to run contract in docker")
+	log.Println("--------------------------------------")
+	log.Println("Start to run contract in docker")
 
 	// split args from parameters
 	argsMap := make(map[string]string)
@@ -83,28 +86,62 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 	// wait this chan
 	//todo set timeout
-	recvMsg := <-responseCh
+	for {
+		recvMsg := <-responseCh
 
-	// construct response
-	var txResponse protogo.TxResponse
-	err := proto.UnmarshalMerge(recvMsg.Payload, &txResponse)
-	if err != nil {
-		return nil
+		switch recvMsg.Type {
+		case protogo.CDMType_CDM_TYPE_GET_STATE:
+			log.Println("------ get state here: ", recvMsg)
+			value, err := txSimContext.Get(contractId.ContractName, recvMsg.Payload)
+			if err != nil {
+				log.Println("fail to get state from sim context ", err)
+				return
+			}
+			log.Println("get value: ", string(value))
+			r.Client.RegisterRecvChan(txId, responseCh)
+
+			r.Client.GetStateSendCh() <- &protogo.CDMMessage{
+				TxId:    txId,
+				Type:    protogo.CDMType_CDM_TYPE_GET_STATE_RESPONSE,
+				Payload: value,
+			}
+
+		case protogo.CDMType_CDM_TYPE_TX_RESPONSE:
+
+			// construct response
+			var txResponse protogo.TxResponse
+			_ = proto.UnmarshalMerge(recvMsg.Payload, &txResponse)
+
+			contractResult = &commonPb.ContractResult{
+				Code:    commonPb.ContractResultCode(txResponse.Code),
+				Result:  txResponse.Result,
+				Message: txResponse.Message,
+			}
+
+			close(responseCh)
+
+			// merge the sim context write map
+			for key, value := range txResponse.WriteMap {
+				err := txSimContext.Put(contractId.ContractName, []byte(key), value)
+				if err != nil {
+					log.Println("fail to put in sim context: ", err)
+					return nil
+				}
+			}
+
+			log.Println("-----------------------------------------------")
+			log.Println("End to run contract in docker")
+			log.Println(contractResult)
+
+			return contractResult
+		default:
+			//todo error
+			log.Println("unknown type:", recvMsg.Type)
+
+		}
+
 	}
 
-	contractResult = &commonPb.ContractResult{
-		Code:    commonPb.ContractResultCode(txResponse.Code),
-		Result:  txResponse.Result,
-		Message: txResponse.Message,
-	}
-
-	//fmt.Println(contractResult)
-	// merge the sim context
-
-	//log.Println("-----------------------------------------------")
-	//log.Println("End to run contract in docker")
-
-	return contractResult
 }
 
 func (r *RuntimeInstance) ConstructContractKey(contractName, contractVersion string) string {

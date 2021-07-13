@@ -97,17 +97,17 @@ func main() {
 	}
 
 	// 2) 批量测试
-	for i := 0; i < 10; i++ {
-		testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
-
-		time.Sleep(10 * time.Second)
-	}
+	//for i := 0; i < 10; i++ {
+	//	testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
+	//
+	//	time.Sleep(10 * time.Second)
+	//}
 
 	// 3) invoke 测试
-	//testDockerInvoke(sk3, &client, CHAIN1, "5", "6")
+	//testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
 
 	// 4) query 测试
-	testDockerQuery(sk3, &client, CHAIN1, "5", "6")
+	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
 	// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有

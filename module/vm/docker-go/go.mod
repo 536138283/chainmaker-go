@@ -21,7 +21,6 @@ require (
 	github.com/moby/term v0.0.0-20201216013528-df9cb8a40635 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
-	github.com/stretchr/testify v1.7.0 // indirect
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/sys v0.0.0-20210608053332-aa57babbf139 // indirect
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4 // indirect
@@ -29,11 +28,11 @@ require (
 )
 
 replace (
+	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ./dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/common => ../../../common
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ./dockercontainer
 	chainmaker.org/chainmaker-go/logger => ../../logger
 	chainmaker.org/chainmaker-go/pb/protogo => ../../../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ../../../protocol
 	chainmaker.org/chainmaker-go/utils => ../../utils
-	contract-sdk-test1/pb_sdk => ./dockercontainer/pb_sdk
 )

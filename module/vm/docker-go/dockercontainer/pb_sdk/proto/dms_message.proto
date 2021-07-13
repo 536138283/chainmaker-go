@@ -1,0 +1,63 @@
+syntax = "proto3";
+
+package proto;
+
+option go_package = "chainmaker.org/chainmaker-contract-sdk-docker-go/pb/protogo";
+
+// manager as server - sandbox established a connection to the manager
+service DMSRpc {
+    rpc DMSCommunicate(stream DMSMessage) returns (stream DMSMessage);
+}
+
+message DMSMessage {
+    DMSMessageType type = 1;
+
+    string contract_name = 2;
+
+    bytes payload = 3;
+}
+
+enum DMSMessageType {
+    DMS_MESSAGE_TYPE_UNDEFINED = 0;
+    DMS_MESSAGE_TYPE_REGISTER = 1;
+    DMS_MESSAGE_TYPE_REGISTERED = 2;
+    DMS_MESSAGE_TYPE_PREPARE = 3;
+    DMS_MESSAGE_TYPE_READY = 4;
+    DMS_MESSAGE_TYPE_INIT = 5;
+    DMS_MESSAGE_TYPE_INVOKE = 6;
+    DMS_MESSAGE_TYPE_GET_STATE = 7;
+    DMS_MESSAGE_TYPE_RESPONSE = 8;
+    DMS_MESSAGE_TYPE_COMPLETED = 9;
+    DMS_MESSAGE_TYPE_ERROR = 10;
+}
+
+message Response {
+    // A status code that should follow the HTTP status codes.
+    int32 status = 1;
+
+    // A message associated with the response code.
+    string message = 2;
+
+    // A payload that can be used to include metadata with this response.
+    bytes payload = 3;
+}
+
+message Input {
+    map<string, string> args = 1;
+
+    bool is_init = 2;
+}
+
+
+// completed message
+message ResponseWithWriteMap {
+    Response response = 1;
+
+    map<string, bytes> write_map = 2;
+}
+
+
+
+
+
+
