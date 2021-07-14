@@ -1,17 +1,16 @@
 FROM golang:1.15-alpine AS build
 
-WORKDIR /container
+WORKDIR /dockervm
 ENV CGO_ENABLED=0
 ENV GOPROXY=https://goproxy.cn,direct
-#COPY go.* ./
-COPY . /container
+COPY . /dockervm
 RUN go mod download
 
-RUN go build -o /bin/start
+RUN go build -o /bin/startvm
 
 FROM ubuntu:20.04
 #RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 
-COPY --from=build /bin/start /bin/start
+COPY --from=build /bin/startvm /bin/startvm
 
-ENTRYPOINT ["/bin/start"]
+ENTRYPOINT ["/bin/startvm"]

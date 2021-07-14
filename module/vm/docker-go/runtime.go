@@ -7,6 +7,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/groupcache/lru"
 	"log"
+	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -30,9 +32,11 @@ type RuntimeInstance struct {
 	ChainId       string // chain id
 
 	Client CDMClient
-
-	TmpCache TmpCache
 }
+
+const (
+	ContractDir = "C:\\Users\\jiana\\Desktop\\mount\\"
+)
 
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
@@ -59,16 +63,6 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Parameters:      argsMap,
 	}
 
-	// lru test
-	cacheKey := r.ConstructContractKey(contractId.ContractName, contractId.ContractVersion)
-	_, ok := r.TmpCache.TmpGet(cacheKey)
-	if !ok {
-		r.TmpCache.TmpAdd(cacheKey, true)
-		txRequest.ByteCode = byteCode
-	} else {
-		txRequest.ByteCode = nil
-	}
-
 	txPayload, _ := proto.Marshal(txRequest)
 
 	cdmMessage := &protogo.CDMMessage{
@@ -91,19 +85,34 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 		switch recvMsg.Type {
 		case protogo.CDMType_CDM_TYPE_GET_STATE:
-			log.Println("------ get state here: ", recvMsg)
 			value, err := txSimContext.Get(contractId.ContractName, recvMsg.Payload)
 			if err != nil {
 				log.Println("fail to get state from sim context ", err)
 				return
 			}
 			log.Println("get value: ", string(value))
-			r.Client.RegisterRecvChan(txId, responseCh)
 
 			r.Client.GetStateSendCh() <- &protogo.CDMMessage{
 				TxId:    txId,
 				Type:    protogo.CDMType_CDM_TYPE_GET_STATE_RESPONSE,
 				Payload: value,
+			}
+
+		case protogo.CDMType_CDM_TYPE_GET_BYTECODE:
+			contractName := string(recvMsg.Payload)
+			contractPath := filepath.Join(ContractDir, contractName)
+
+			err := r.saveBytesToDisk(byteCode, contractPath)
+			if err != nil {
+				log.Println("fail to save bytecode to disk ", err)
+				return
+			}
+			log.Println("get contract path: ", contractPath)
+
+			r.Client.GetStateSendCh() <- &protogo.CDMMessage{
+				TxId:    txId,
+				Type:    protogo.CDMType_CDM_TYPE_GET_BYTECODE_RESPONSE,
+				Payload: nil,
 			}
 
 		case protogo.CDMType_CDM_TYPE_TX_RESPONSE:
@@ -118,8 +127,6 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 				Message: txResponse.Message,
 			}
 
-			close(responseCh)
-
 			// merge the sim context write map
 			for key, value := range txResponse.WriteMap {
 				err := txSimContext.Put(contractId.ContractName, []byte(key), value)
@@ -128,6 +135,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 					return nil
 				}
 			}
+
+			close(responseCh)
 
 			log.Println("-----------------------------------------------")
 			log.Println("End to run contract in docker")
@@ -146,4 +155,20 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 func (r *RuntimeInstance) ConstructContractKey(contractName, contractVersion string) string {
 	return contractName + ":" + contractVersion
+}
+
+func (r *RuntimeInstance) saveBytesToDisk(bytes []byte, newFilePath string) error {
+
+	f, err := os.Create(newFilePath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	_, err = f.Write(bytes)
+	if err != nil {
+		return err
+	}
+
+	return f.Sync()
 }

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
@@ -31,6 +32,8 @@ const (
 	openPort      nat.Port = "12355/tcp" // port for container
 	hostPort      string   = "12355"     // port for host: 		host port <-> container port
 	logTemplate   string   = "Docker Manager  -- %s"
+	sourceDir              = "C:\\Users\\jiana\\Desktop\\mount\\"
+	targetDir              = "/mount"
 )
 
 type DockerManager struct {
@@ -46,7 +49,6 @@ type DockerManager struct {
 	CDMClient *module.CDMClient
 	CDMState  bool
 	lock      sync.Mutex
-	TmpCache  *module.Cache
 }
 
 // NewDockerManager return docker manager and running a default container
@@ -59,7 +61,6 @@ func NewDockerManager(chainId string) *DockerManager {
 
 	log := logger.GetLoggerByChain("[Docker Manager]", chainId)
 	cdmClient := module.NewCDMClient(chainId)
-	tmpCache := module.NewCache(5)
 
 	newDockerManager := &DockerManager{
 		AttachStdOut: true,
@@ -72,7 +73,6 @@ func NewDockerManager(chainId string) *DockerManager {
 		CDMClient:    cdmClient,
 		CDMState:     false,
 		lock:         sync.Mutex{},
-		TmpCache:     tmpCache,
 	}
 
 	err = newDockerManager.StartContainer()
@@ -113,6 +113,21 @@ func (m *DockerManager) createContainer() error {
 			}},
 		},
 		Privileged: true,
+		Mounts: []mount.Mount{
+			{
+				Type:        mount.TypeBind,
+				Source:      sourceDir,
+				Target:      targetDir,
+				ReadOnly:    false,
+				Consistency: mount.ConsistencyFull,
+				BindOptions: &mount.BindOptions{
+					Propagation:  mount.PropagationRPrivate,
+					NonRecursive: false,
+				},
+				VolumeOptions: nil,
+				TmpfsOptions:  nil,
+			},
+		},
 	}, nil, nil, containerName)
 
 	if err != nil {

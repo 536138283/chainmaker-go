@@ -120,6 +120,8 @@ func (cdm *CDMApi) sendMsgRoutine() {
 			err = cdm.sendMessage(cdmMsg)
 		case getStateReqMsg := <-cdm.scheduler.GetGetStateReqCh():
 			err = cdm.sendMessage(getStateReqMsg)
+		case getByteCodeReqMsg := <-cdm.scheduler.GetGetByteCodeReqCh():
+			err = cdm.sendMessage(getByteCodeReqMsg)
 		case <-cdm.stop:
 			cdm.wg.Done()
 			cdm.logger.Debugf("stop sending cdm message ")
@@ -178,5 +180,9 @@ func (cdm *CDMApi) handleGetStateResponse(cdmMessage *protogo.CDMMessage) error 
 }
 
 func (cdm *CDMApi) handleGetByteCodeResponse(cdmMessage *protogo.CDMMessage) error {
+	responseCh := cdm.scheduler.GetResponseChByTxId(cdmMessage.TxId)
+
+	responseCh <- cdmMessage
+
 	return nil
 }

@@ -43,10 +43,13 @@ type DockerScheduler struct {
 	txReqCh               chan *protogo.TxRequest
 	txResponseCh          chan *protogo.TxResponse
 	getStateReqCh         chan *protogo.CDMMessage
+	getByteCodeReqCh      chan *protogo.CDMMessage
 	getStateResponseChMap map[string]chan *protogo.CDMMessage
 }
 
 func NewDockerScheduler(userController protocol.UserController, handlerRegister *HandlerRegister) *DockerScheduler {
+
+	contractManager := NewContractManager()
 
 	scheduler := &DockerScheduler{
 		lock:            sync.Mutex{},
@@ -54,13 +57,16 @@ func NewDockerScheduler(userController protocol.UserController, handlerRegister 
 		userController:  userController,
 		logger:          logger.NewDockerLogger(logger.MODULE_SCHEDULER),
 		handlerRegister: handlerRegister,
-		contractManager: NewContractManager(),
+		contractManager: contractManager,
 
 		txReqCh:               make(chan *protogo.TxRequest, ReqChanSize),
 		txResponseCh:          make(chan *protogo.TxResponse, ResponseChanSize),
 		getStateReqCh:         make(chan *protogo.CDMMessage, ReqChanSize*8),
+		getByteCodeReqCh:      make(chan *protogo.CDMMessage, ReqChanSize),
 		getStateResponseChMap: make(map[string]chan *protogo.CDMMessage),
 	}
+
+	contractManager.scheduler = scheduler
 
 	return scheduler
 }
@@ -75,6 +81,10 @@ func (s *DockerScheduler) GetTxResponseCh() chan *protogo.TxResponse {
 
 func (s *DockerScheduler) GetGetStateReqCh() chan *protogo.CDMMessage {
 	return s.getStateReqCh
+}
+
+func (s *DockerScheduler) GetGetByteCodeReqCh() chan *protogo.CDMMessage {
+	return s.getByteCodeReqCh
 }
 
 func (s *DockerScheduler) RegisterResponseCh(txId string, responseCh chan *protogo.CDMMessage) {
@@ -152,23 +162,12 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 	// get contract from contract manager
 	contractKey := s.ConstructContractKey(txRequest.ContractName, txRequest.ContractVersion)
-
-	var contractPath string
-
-	contractPath, ok := s.contractManager.GetContract(contractKey)
-	if !ok {
-		// todo change using single flight
-		newContractPath, err := s.contractManager.SaveContract(contractKey, txRequest.ByteCode)
-		if err != nil {
-			s.logger.Errorf("fail to save contract err: [%s] -- contract [%s], with txId [%s]", err, contractKey, txRequest.TxId)
-			s.returnErrorTxResponse(txRequest.TxId)
-			return
-		}
-		s.logger.Debugf("save [%s] to disk and get new contract path", newContractPath)
-		contractPath = newContractPath
+	contractPath, err := s.contractManager.GetContract(txRequest.TxId, contractKey)
+	if err != nil {
+		s.logger.Errorf("fail to get contract path -- contractName is [%s], err is [%s]", contractKey, err)
+		return
 	}
-
-	s.logger.Debugf("get contract path from disk [%s]", contractPath)
+	s.logger.Debugf("get contract path [%s]", contractPath)
 
 	// set available user
 	user, err := s.userController.GetAvailableUser()
@@ -180,7 +179,6 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 	// register new handler
 	handlerName := s.constructHandlerName(txRequest)
-
 	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName, txRequest.ContractName)
 	if err != nil {
 		s.logger.Errorf("fail to generate new handler: %s -- txId [%s]", err, txRequest.TxId)
@@ -206,10 +204,6 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 		s.returnErrorTxResponse(txRequest.TxId)
 		return
 	}
-
-	// return result -- for one tx incoming
-	//result := handler.contractResult
-	//tx.ContractResult = result
 
 	s.logger.Debugf("cost time for running sandbox is: %s", time.Since(startTime))
 
@@ -303,7 +297,7 @@ func (s *DockerScheduler) constructHandlerName(tx *protogo.TxRequest) string {
 
 // ConstructContractKey contractKey: contractName:contractVersion
 func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
-	return contractName + ":" + contractVersion
+	return contractName + "#" + contractVersion
 }
 
 func (s *DockerScheduler) constructErrorResponse(txId string) *protogo.TxResponse {

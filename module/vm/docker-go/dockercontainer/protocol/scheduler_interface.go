@@ -12,4 +12,6 @@ type Scheduler interface {
 	RegisterResponseCh(txId string, responseCh chan *protogo.CDMMessage)
 
 	GetResponseChByTxId(txId string) chan *protogo.CDMMessage
+
+	GetGetByteCodeReqCh() chan *protogo.CDMMessage
 }

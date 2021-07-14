@@ -166,9 +166,9 @@ func (c *CDMClient) recvMsgRoutine() {
 			case protogo.CDMType_CDM_TYPE_GET_STATE:
 				waitCh := c.recvChMap[recvMsg.TxId]
 				waitCh <- recvMsg
-				c.deleteRecvChan(recvMsg.TxId)
 			case protogo.CDMType_CDM_TYPE_GET_BYTECODE:
-				err = c.handleGetByteCode(recvMsg)
+				waitCh := c.recvChMap[recvMsg.TxId]
+				waitCh <- recvMsg
 			default:
 				c.logger.Errorf("unknown message type")
 			}
@@ -195,6 +195,13 @@ func (c *CDMClient) handleGetState(recvMsg *protogo.CDMMessage) error {
 
 func (c *CDMClient) handleGetByteCode(recvMsg *protogo.CDMMessage) error {
 
+	// get bytecode from state db
+
+	// convert bytes to file
+
+	// set file mode 755
+
+	// return path string
 	return nil
 }
 

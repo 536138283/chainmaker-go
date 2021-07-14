@@ -510,7 +510,6 @@ func (m *ManagerImpl) invokeUserContractByRuntime(contractId *commonPb.ContractI
 			ContainerName: containerName,
 			ChainId:       m.ChainId,
 			Client:        m.DockerManager.CDMClient,
-			TmpCache:      m.DockerManager.TmpCache,
 		}
 
 	default:

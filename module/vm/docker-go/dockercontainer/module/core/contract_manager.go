@@ -2,87 +2,91 @@ package core
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 	"os"
 	"path/filepath"
 	"sync"
 )
 
-const BaseDir = "/contracts"
+const BaseDir = "/mount"
 
 type ContractManager struct {
-	lock         sync.RWMutex
-	contractsMap map[string]string
-	logger       *zap.SugaredLogger
+	lock            sync.RWMutex
+	getContractLock singleflight.Group
+	contractsMap    map[string]string
+	logger          *zap.SugaredLogger
+	scheduler       protocol.Scheduler
 }
 
 func NewContractManager() *ContractManager {
 	return &ContractManager{
-		lock:         sync.RWMutex{},
-		contractsMap: make(map[string]string),
-		logger:       logger.NewDockerLogger(logger.MODULE_CONTRACT_MANAGER),
+		lock:            sync.RWMutex{},
+		getContractLock: singleflight.Group{},
+		contractsMap:    make(map[string]string),
+		logger:          logger.NewDockerLogger(logger.MODULE_CONTRACT_MANAGER),
 	}
 }
 
-func (cm *ContractManager) GetContract(contractName string) (string, bool) {
+// GetContract get contract path in volume,
+// if it exists in volume, return path
+// if not exist in volume, request from chain maker state library
+func (cm *ContractManager) GetContract(txId, contractName string) (string, error) {
 	cm.lock.RLock()
 	defer cm.lock.RUnlock()
 
+	// get contract path from map
 	contractPath, ok := cm.contractsMap[contractName]
 	if ok {
-		cm.logger.Debugf("get contract for [%s], path is [%s]", contractName, contractPath)
-		return contractPath, true
+		cm.logger.Debugf("get contract from memory [%s], path is [%s]", contractName, contractPath)
+		return contractPath, nil
 	}
 
-	return "", false
-}
+	// get contract path from chain maker
+	cPath, err, _ := cm.getContractLock.Do(contractName, func() (interface{}, error) {
+		defer cm.getContractLock.Forget(contractName)
 
-func (cm *ContractManager) SaveContract(contractName string, byteCode []byte) (string, error) {
-
-	cm.lock.Lock()
-	defer cm.lock.Unlock()
-
-	contractFilePath := filepath.Join(BaseDir, contractName)
-
-	// convert byte array to file
-	err := cm.convertBytesToFile(byteCode, contractFilePath)
+		return cm.lookupContractFromDB(txId, contractName)
+	})
 	if err != nil {
-		cm.logger.Errorf("fail to convert bytes to file: %s", err)
 		return "", err
 	}
 
-	// set file runnable with mod 755
-	err = cm.setFileMod(contractFilePath)
+	return cPath.(string), nil
+}
+
+func (cm *ContractManager) lookupContractFromDB(txId, contractName string) (string, error) {
+	getByteCodeMsg := &protogo.CDMMessage{
+		TxId:    txId,
+		Type:    protogo.CDMType_CDM_TYPE_GET_BYTECODE,
+		Payload: []byte(contractName),
+	}
+
+	// send request to chain maker
+	responseChan := make(chan *protogo.CDMMessage)
+	cm.scheduler.RegisterResponseCh(txId, responseChan)
+
+	cm.scheduler.GetGetByteCodeReqCh() <- getByteCodeMsg
+
+	<-responseChan
+
+	// set contract mod
+	contractPath := filepath.Join(BaseDir, contractName)
+	err := cm.setFileMod(contractPath)
 	if err != nil {
-		cm.logger.Errorf("fail to set file mod: %s", err)
 		return "", err
 	}
 
 	// save contract file path to map
-	cm.contractsMap[contractName] = contractFilePath
-	cm.logger.Debugf("save contract for [%s], path is [%s]", contractName, contractFilePath)
+	cm.contractsMap[contractName] = contractPath
+	cm.logger.Debugf("get contract disk [%s], path is [%s]", contractName, contractPath)
 
-	return contractFilePath, nil
+	return contractPath, nil
 }
 
-// ConvertBytesToFile convert byte array to file
-func (cm *ContractManager) convertBytesToFile(bytes []byte, newFilePath string) error {
-
-	f, err := os.Create(newFilePath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-
-	_, err = f.Write(bytes)
-	if err != nil {
-		return err
-	}
-
-	return f.Sync()
-}
-
-// SetFileRunnable make file runnable, file permission is 700
+// SetFileRunnable make file runnable, file permission is 755
 func (cm *ContractManager) setFileMod(filePath string) error {
 
 	err := os.Chmod(filePath, 0755)
@@ -90,5 +94,9 @@ func (cm *ContractManager) setFileMod(filePath string) error {
 		return err
 	}
 
+	return nil
+}
+
+func (cm *ContractManager) initialContractMap() error {
 	return nil
 }
