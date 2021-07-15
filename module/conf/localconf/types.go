@@ -347,6 +347,37 @@ type coreConfig struct {
 	Evidence bool `mapstructure:"evidence"`
 }
 
+type dockerConfig struct {
+	ImageName       string          `mapstructure:"image_name"`
+	ContainerName   string          `mapstructure:"container_name"`
+	DockerDir       string          `mapstructure:"docker_dir"`
+	MountDir        string          `mapstructure:"mount_dir"`
+	DockerMountDir  string          `mapstructure:"docker_mount_dir"`
+	DockerRpcConfig dockerRpcConfig `mapstructure:"rpc"`
+	DockerLogConfig dockerLogConfig `mapstructure:"log"`
+	DockerVmConfig  dockerVmConfig  `mapstructure:"vm"`
+}
+
+type dockerRpcConfig struct {
+	Port               uint32 `mapstructure:"port"`
+	MaxSendMessageSize uint32 `mapstructure:"max_send_message_size"`
+	MaxRecvMessageSize uint32 `mapstructure:"max_recv_message_size"`
+}
+
+type dockerLogConfig struct {
+	LogPath          string `mapstructure:"log_file"`
+	DisplayInConsole bool   `mapstructure:"display_in_console"`
+	ShowLine         bool   `mapstructure:"show_line"`
+	LogLevel         string `mapstructure:"log_level"`
+}
+
+type dockerVmConfig struct {
+	TxSize      uint32 `mapstructure:"tx_size"`
+	UserNum     uint32 `mapstructure:"user_num"`
+	TimeLimit   uint32 `mapstructure:"time_limit"`
+	UdsSockFile string `mapstructure:"uds_sock_file"`
+}
+
 // CMConfig - Local config struct
 type CMConfig struct {
 	LogConfig        logger.LogConfig   `mapstructure:"log"`
@@ -358,6 +389,7 @@ type CMConfig struct {
 	TxPoolConfig     txPoolConfig       `mapstructure:"txpool"`
 	SyncConfig       syncConfig         `mapstructure:"sync"`
 	SpvConfig        spvConfig          `mapstructure:"spv"`
+	DockerConfig     dockerConfig       `mapstructure:"docker"`
 
 	// 开发调试使用
 	DebugConfig     debugConfig     `mapstructure:"debug"`

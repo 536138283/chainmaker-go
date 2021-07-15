@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -229,7 +230,13 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 	}
 
 	// set timeout
-	timer := time.AfterFunc(config.TimeLimit*time.Second, func() {
+	timeLimitConfig := os.Getenv("TimeLimit")
+	timeLimit, err := strconv.Atoi(timeLimitConfig)
+	if err != nil {
+		timeLimit = 2
+	}
+	s.logger.Infof("time limit is %d second", timeLimit)
+	timer := time.AfterFunc(time.Duration(timeLimit)*time.Second, func() {
 		err := cmd.Process.Kill()
 		if err != nil {
 			s.logger.Errorf("fail to kill process [%s] -- txId [%s]", err, txId)
@@ -239,7 +246,7 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 
 	// set cgroup procs id
 	memoryPath := filepath.Join(config.CGroupRoot, config.ProcsFile)
-	err := utils.WriteToFile(memoryPath, cmd.Process.Pid)
+	err = utils.WriteToFile(memoryPath, cmd.Process.Pid)
 	if err != nil {
 		s.logger.Errorf("fail to add cgroup [%s] -- txId [%s]", err, txId)
 		return err

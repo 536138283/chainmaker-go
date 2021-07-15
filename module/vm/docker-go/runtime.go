@@ -2,6 +2,7 @@ package docker_go
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
@@ -27,10 +28,6 @@ type RuntimeInstance struct {
 	Client        CDMClient
 	Log           *logger.CMLogger
 }
-
-const (
-	ContractDir = "C:\\Users\\jiana\\Desktop\\mount\\"
-)
 
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
@@ -101,7 +98,10 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 		case protogo.CDMType_CDM_TYPE_GET_BYTECODE:
 			contractName := string(recvMsg.Payload)
-			contractPath := filepath.Join(ContractDir, contractName)
+
+			dockerConfig := localconf.ChainMakerConfig.DockerConfig
+			mountDir := dockerConfig.MountDir
+			contractPath := filepath.Join(mountDir, contractName)
 
 			err := r.saveBytesToDisk(byteCode, contractPath)
 			if err != nil {

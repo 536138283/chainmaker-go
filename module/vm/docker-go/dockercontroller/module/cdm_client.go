@@ -2,19 +2,13 @@ package module
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	"context"
 	"google.golang.org/grpc"
 	"io"
+	"strconv"
 	"sync"
-)
-
-const (
-	maxRecvMessageSize = 100 * 1024 * 1024 // 100 MiB
-	maxSendMessageSize = 100 * 1024 * 1024 // 100 MiB
-	Port               = ":12355"
-	ChanSize           = 1000
-	StateChanSize      = 1000
 )
 
 type CDMClient struct {
@@ -33,9 +27,11 @@ type CDMClient struct {
 
 func NewCDMClient(chainId string) *CDMClient {
 
+	dockerConfig := localconf.ChainMakerConfig.DockerConfig
+
 	return &CDMClient{
-		txSendCh:            make(chan *protogo.CDMMessage, ChanSize),      // tx request
-		stateResponseSendCh: make(chan *protogo.CDMMessage, StateChanSize), // get_state response and bytecode response
+		txSendCh:            make(chan *protogo.CDMMessage, dockerConfig.DockerVmConfig.TxSize),   // tx request
+		stateResponseSendCh: make(chan *protogo.CDMMessage, dockerConfig.DockerVmConfig.TxSize*8), // get_state response and bytecode response
 		recvChMap:           make(map[string]chan *protogo.CDMMessage),
 		lock:                sync.Mutex{},
 		stream:              nil,
@@ -182,7 +178,8 @@ func (c *CDMClient) recvMsgRoutine() {
 }
 
 func (c *CDMClient) sendCDMMsg(msg *protogo.CDMMessage) error {
-	// todo need lock? add
+	c.lock.Lock()
+	defer c.lock.Unlock()
 	c.logger.Debugf("send message: [%s]", msg.Type)
 	return c.stream.Send(msg)
 }
@@ -190,16 +187,20 @@ func (c *CDMClient) sendCDMMsg(msg *protogo.CDMMessage) error {
 // NewClientConn create client connection
 func NewClientConn() (*grpc.ClientConn, error) {
 
+	dockerConfig := localconf.ChainMakerConfig.DockerConfig
+
 	dialOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
 		grpc.FailOnNonTempDialError(true),
 		grpc.WithDefaultCallOptions(
-			grpc.MaxCallRecvMsgSize(maxRecvMessageSize),
-			grpc.MaxCallSendMsgSize(maxSendMessageSize),
+			grpc.MaxCallRecvMsgSize(int(dockerConfig.DockerRpcConfig.MaxRecvMessageSize*1024*1024)),
+			grpc.MaxCallSendMsgSize(int(dockerConfig.DockerRpcConfig.MaxSendMessageSize*1024*1024)),
 		),
 	}
 
-	return grpc.Dial(Port, dialOpts...)
+	port := ":" + strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
+
+	return grpc.Dial(port, dialOpts...)
 }
 
 // GetCDMClientStream get rpc stream

@@ -1,11 +1,11 @@
 package logger
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -19,16 +19,56 @@ const (
 	MODULE_CDM_API          = "[Docker CDM Api]"
 	MODULE_SECURITY_ENV     = "[Docker Security Env]"
 	MODULE_CONTRACT_MANAGER = "[Docker Contract Manager]"
-	MODULE_CDM_HANDLER      = "[Docker CDM Handler]"
 )
 
+var (
+	logLevelFromConfig         string
+	logPathFromConfig          string
+	displayInConsoleFromConfig bool
+	showLineFromConfig         bool
+)
+
+func InitialConfig() {
+
+	// init show line config
+	b1, err := strconv.ParseBool(os.Getenv("ShowLine"))
+	if err != nil {
+		showLineFromConfig = false
+	}
+	if b1 {
+		showLineFromConfig = true
+	} else {
+		showLineFromConfig = false
+	}
+
+	// init display in console config
+	b2, err := strconv.ParseBool(os.Getenv("DisplayInConsole"))
+	if err != nil {
+		displayInConsoleFromConfig = false
+	}
+	if b2 {
+		displayInConsoleFromConfig = true
+	} else {
+		displayInConsoleFromConfig = false
+	}
+
+	// todo error handle give default value
+	logPathFromConfig = os.Getenv("LogPath")
+	logLevelFromConfig = os.Getenv("LogLevel")
+
+}
+
 func NewDockerLogger(name string) *zap.SugaredLogger {
+
+	InitialConfig()
+
 	encoder := getEncoder()
 	writeSyncer := getLogWriter()
 
-	logLevel := zapcore.DebugLevel
-	if config.LogLevel == "INFO" {
-		logLevel = zapcore.InfoLevel
+	// default log level is info
+	logLevel := zapcore.InfoLevel
+	if logLevelFromConfig == "DEBUG" {
+		logLevel = zapcore.DebugLevel
 	}
 
 	core := zapcore.NewCore(
@@ -40,7 +80,7 @@ func NewDockerLogger(name string) *zap.SugaredLogger {
 	logger := zap.New(core).Named(name)
 	defer logger.Sync()
 
-	if config.ShowLine {
+	if showLineFromConfig {
 		logger = logger.WithOptions(zap.AddCaller())
 	}
 
@@ -72,15 +112,15 @@ func getEncoder() zapcore.Encoder {
 func getLogWriter() zapcore.WriteSyncer {
 
 	hook := &lumberjack.Logger{
-		Filename:   config.LogFile, //日志文件存放目录
-		MaxSize:    100,            //文件大小限制,单位MB
-		MaxBackups: 5,              //最大保留日志文件数量
-		MaxAge:     30,             //日志文件保留天数
-		Compress:   false,          //是否压缩处理
+		Filename:   logPathFromConfig, //日志文件存放目录
+		MaxSize:    100,               //文件大小限制,单位MB
+		MaxBackups: 5,                 //最大保留日志文件数量
+		MaxAge:     30,                //日志文件保留天数
+		Compress:   false,             //是否压缩处理
 	}
 
 	var syncer zapcore.WriteSyncer
-	if config.DisplayInConsole {
+	if displayInConsoleFromConfig {
 		syncer = zapcore.NewMultiWriteSyncer(zapcore.AddSync(os.Stdout), zapcore.AddSync(hook))
 	} else {
 		syncer = zapcore.AddSync(hook)

@@ -8,6 +8,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"net"
+	"os"
 	"time"
 )
 
@@ -18,7 +19,9 @@ type CDMServer struct {
 }
 
 // NewCDMServer build new chainmaker to docker manager rpc server
-func NewCDMServer(port string) (*CDMServer, error) {
+func NewCDMServer() (*CDMServer, error) {
+
+	port := os.Getenv("Port")
 
 	if port == "" {
 		return nil, errors.New("server listen port not provided")

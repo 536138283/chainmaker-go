@@ -1,7 +1,6 @@
 package module
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/core"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
 	security2 "chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
@@ -30,13 +29,13 @@ func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 	scheduler := core.NewDockerScheduler(userController, handlerRegister)
 
 	// new docker manager to sandbox server
-	dmsRpcServer, err := rpc.NewDMSServer(config.SockPath)
+	dmsRpcServer, err := rpc.NewDMSServer()
 	if err != nil {
 		return nil, err
 	}
 
 	// new chain maker to docker manager server
-	cdmRpcServer, err := rpc.NewCDMServer(config.Port)
+	cdmRpcServer, err := rpc.NewCDMServer()
 	if err != nil {
 		return nil, err
 	}
@@ -78,7 +77,7 @@ func (m *ManagerImpl) InitContainer() {
 	}
 
 	// create new users
-	if err = m.userController.CreateNewUsers(config.UserNum); err != nil {
+	if err = m.userController.CreateNewUsers(); err != nil {
 		errorC <- err
 	}
 

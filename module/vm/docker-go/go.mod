@@ -5,7 +5,8 @@ go 1.15
 require (
 	chainmaker.org/chainmaker-go/common v0.0.0
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer v0.0.0-00010101000000-000000000000
-	chainmaker.org/chainmaker-go/logger v0.0.0-00010101000000-000000000000
+	chainmaker.org/chainmaker-go/localconf v0.0.0-00010101000000-000000000000
+	chainmaker.org/chainmaker-go/logger v0.0.0
 	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
 	chainmaker.org/chainmaker-go/protocol v0.0.0
 	github.com/Microsoft/go-winio v0.5.0 // indirect
@@ -14,7 +15,6 @@ require (
 	github.com/docker/docker v20.10.7+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/moby/sys/mount v0.2.0 // indirect
@@ -24,15 +24,15 @@ require (
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5 // indirect
 	golang.org/x/sys v0.0.0-20210608053332-aa57babbf139 // indirect
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4 // indirect
-	google.golang.org/grpc v1.38.0
+	google.golang.org/grpc v1.39.0
 )
 
 replace (
 	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ./dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/common => ../../../common
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ./dockercontainer
+	chainmaker.org/chainmaker-go/localconf => ../../conf/localconf
 	chainmaker.org/chainmaker-go/logger => ../../logger
 	chainmaker.org/chainmaker-go/pb/protogo => ../../../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ../../../protocol
-	chainmaker.org/chainmaker-go/utils => ../../utils
 )

@@ -1,13 +1,14 @@
 package core
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
 	"github.com/enriquebris/goconcurrentqueue"
 	"go.uber.org/zap"
+	"os"
+	"strconv"
 	"sync"
 	"time"
 )
@@ -15,22 +16,30 @@ import (
 type UsersManager struct {
 	userQueue *goconcurrentqueue.FixedFIFO
 	logger    *zap.SugaredLogger
+	userNum   int
 }
 
 func NewUsersManager() *UsersManager {
 
-	userQueue := goconcurrentqueue.NewFixedFIFO(config.UserNum)
+	userNumConfig := os.Getenv("UserNum")
+	userNum, err := strconv.Atoi(userNumConfig)
+	if err != nil {
+		userNum = 50
+	}
+
+	userQueue := goconcurrentqueue.NewFixedFIFO(userNum)
 
 	usersManager := &UsersManager{
 		userQueue: userQueue,
 		logger:    logger.NewDockerLogger(logger.MODULE_USERCONTROLLER),
+		userNum:   userNum,
 	}
 
 	return usersManager
 }
 
 // CreateNewUsers create new users in docker from 10000 as uid
-func (u *UsersManager) CreateNewUsers(userNum int) error {
+func (u *UsersManager) CreateNewUsers() error {
 
 	var err error
 
@@ -41,8 +50,8 @@ func (u *UsersManager) CreateNewUsers(userNum int) error {
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(i int) {
-			for j := 0; j < userNum/10; j++ {
-				newUserId := BaseUid + i*userNum/10 + j
+			for j := 0; j < u.userNum/10; j++ {
+				newUserId := BaseUid + i*u.userNum/10 + j
 				err = u.generateNewUser(newUserId)
 
 				if err != nil {
@@ -54,7 +63,7 @@ func (u *UsersManager) CreateNewUsers(userNum int) error {
 	}
 
 	wg.Wait()
-	u.logger.Infof("create [%d] users", userNum)
+	u.logger.Infof("create [%d] users", u.userNum)
 	u.logger.Infof("created user time: [%s]", time.Since(startTime))
 
 	return nil
@@ -82,7 +91,7 @@ func (u *UsersManager) generateNewUser(newUserId int) error {
 func (u *UsersManager) constructNewUser(userId int) *security.User {
 
 	userName := fmt.Sprintf("u-%d", userId)
-	sockPath := config.SockPath
+	sockPath := os.Getenv("UdsSockFile")
 
 	return &security.User{
 		Uid:      userId,

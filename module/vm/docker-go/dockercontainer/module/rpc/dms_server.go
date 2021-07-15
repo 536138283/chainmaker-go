@@ -4,6 +4,7 @@ import (
 	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"errors"
+	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -20,7 +21,12 @@ type DMSServer struct {
 }
 
 // NewDMSServer build new docker manager to sandbox server, current: each server in charge of one sandbox
-func NewDMSServer(sockPath string) (*DMSServer, error) {
+func NewDMSServer() (*DMSServer, error) {
+
+	sockPath := os.Getenv("UdsSockFile")
+	if sockPath == "" {
+		return nil, fmt.Errorf("invalid sock path")
+	}
 
 	listenAddress, err := net.ResolveUnixAddr("unix", sockPath)
 	if err != nil {
