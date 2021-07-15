@@ -58,8 +58,6 @@ func NewDMSServer() (*DMSServer, error) {
 
 	//set default connection timeout
 	serverOpts = append(serverOpts, grpc.ConnectionTimeout(ConnectionTimeout))
-	serverOpts = append(serverOpts, grpc.MaxSendMsgSize(MaxSendMessageSize))
-	serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(MaxRecvMessageSize))
 
 	server := grpc.NewServer(serverOpts...)
 

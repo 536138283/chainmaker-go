@@ -12,7 +12,9 @@ import (
 	"sync"
 )
 
-const BaseDir = "/mount"
+var (
+	mountDir string
+)
 
 type ContractManager struct {
 	lock            sync.RWMutex
@@ -29,6 +31,8 @@ func NewContractManager() *ContractManager {
 		contractsMap:    make(map[string]string),
 		logger:          logger.NewDockerLogger(logger.MODULE_CONTRACT_MANAGER),
 	}
+
+	mountDir = os.Getenv("MountDir")
 
 	_ = contractManager.initialContractMap()
 	return contractManager
@@ -77,7 +81,7 @@ func (cm *ContractManager) lookupContractFromDB(txId, contractName string) (stri
 	<-responseChan
 
 	// set contract mod
-	contractPath := filepath.Join(BaseDir, contractName)
+	contractPath := filepath.Join(mountDir, contractName)
 	err := cm.setFileMod(contractPath)
 	if err != nil {
 		return "", err
@@ -103,14 +107,14 @@ func (cm *ContractManager) setFileMod(filePath string) error {
 
 func (cm *ContractManager) initialContractMap() error {
 
-	files, err := ioutil.ReadDir(BaseDir)
+	files, err := ioutil.ReadDir(mountDir)
 	if err != nil {
 		cm.logger.Errorf("fail to scan contract dir")
 		return err
 	}
 	for _, f := range files {
 		contractName := f.Name()
-		contractPath := filepath.Join(BaseDir, contractName)
+		contractPath := filepath.Join(mountDir, contractName)
 		cm.contractsMap[contractName] = contractPath
 	}
 

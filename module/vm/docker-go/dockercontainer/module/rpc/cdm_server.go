@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"net"
 	"os"
+	"strconv"
 	"time"
 )
 
@@ -52,9 +53,15 @@ func NewCDMServer() (*CDMServer, error) {
 	serverOpts = append(serverOpts, grpc.KeepaliveEnforcementPolicy(kep))
 
 	//set default connection timeout
+	maxSendSizeConfig := os.Getenv("MaxSendMessageSize")
+	maxRecvSizeConfig := os.Getenv("MaxRecvMessageSize")
+
+	maxSendSize, _ := strconv.Atoi(maxSendSizeConfig)
+	maxRecvSize, _ := strconv.Atoi(maxRecvSizeConfig)
+
 	serverOpts = append(serverOpts, grpc.ConnectionTimeout(ConnectionTimeout))
-	serverOpts = append(serverOpts, grpc.MaxSendMsgSize(MaxSendMessageSize))
-	serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(MaxRecvMessageSize))
+	serverOpts = append(serverOpts, grpc.MaxSendMsgSize(maxSendSize))
+	serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(maxRecvSize))
 
 	server := grpc.NewServer(serverOpts...)
 
