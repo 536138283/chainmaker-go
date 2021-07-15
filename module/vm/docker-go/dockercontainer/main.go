@@ -26,6 +26,8 @@ func main() {
 
 	managerLogger.Infof("docker manager init...")
 
+	fmt.Println("testing")
+
 	// infinite loop
 	// todo wait node send stop
 	for i := 0; ; i++ {
