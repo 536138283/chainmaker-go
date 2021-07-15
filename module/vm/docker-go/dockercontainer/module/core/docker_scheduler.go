@@ -3,11 +3,12 @@ package core
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
+	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"os/exec"
@@ -21,25 +22,24 @@ type ExitStatus struct {
 	Signal os.Signal
 	Code   int
 	PID    int
-	User   *helper.User
+	User   *security.User
 	TxId   string
 }
 
 const (
 	ReqChanSize      = 1000
-	ResponseChanSize = 1000
+	ResponseChanSize = 1000 //todo how to set number
 )
 
 type DockerScheduler struct {
-	lock   sync.Mutex
-	exitCh chan ExitStatus
-	logger *zap.SugaredLogger
+	lock           sync.Mutex
+	logger         *zap.SugaredLogger
+	userController protocol.UserController
 
-	userController  protocol.UserController
 	handlerRegister *HandlerRegister
-
 	contractManager *ContractManager
 
+	exitCh                chan ExitStatus
 	txReqCh               chan *protogo.TxRequest
 	txResponseCh          chan *protogo.TxResponse
 	getStateReqCh         chan *protogo.CDMMessage
@@ -53,12 +53,12 @@ func NewDockerScheduler(userController protocol.UserController, handlerRegister 
 
 	scheduler := &DockerScheduler{
 		lock:            sync.Mutex{},
-		exitCh:          make(chan ExitStatus, 2),
 		userController:  userController,
 		logger:          logger.NewDockerLogger(logger.MODULE_SCHEDULER),
 		handlerRegister: handlerRegister,
 		contractManager: contractManager,
 
+		exitCh:                make(chan ExitStatus, ReqChanSize),
 		txReqCh:               make(chan *protogo.TxRequest, ReqChanSize),
 		txResponseCh:          make(chan *protogo.TxResponse, ResponseChanSize),
 		getStateReqCh:         make(chan *protogo.CDMMessage, ReqChanSize*8),
@@ -110,8 +110,6 @@ func (s *DockerScheduler) StartScheduler() {
 
 	go s.listenIncomingTxRequest()
 
-	go s.listenIncomingTxResponse()
-
 	go s.monitorSandBox()
 
 }
@@ -121,12 +119,8 @@ func (s *DockerScheduler) StopScheduler() {
 	close(s.txResponseCh)
 	close(s.txReqCh)
 	close(s.exitCh)
-}
-
-func (s *DockerScheduler) listenIncomingTxResponse() {
-
-	s.logger.Infof("start listen tx response")
-
+	close(s.getStateReqCh)
+	close(s.getByteCodeReqCh)
 }
 
 func (s *DockerScheduler) listenIncomingTxRequest() {
@@ -173,7 +167,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	user, err := s.userController.GetAvailableUser()
 	if err != nil {
 		s.logger.Errorf("fail to get a user: [%s] -- txId [%s]", err, txRequest.TxId)
-		s.returnErrorTxResponse(txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
 
@@ -182,7 +176,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName, txRequest.ContractName)
 	if err != nil {
 		s.logger.Errorf("fail to generate new handler: %s -- txId [%s]", err, txRequest.TxId)
-		s.returnErrorTxResponse(txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
 
@@ -191,7 +185,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	// start sand box
 	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
 	if err != nil {
-		s.returnErrorTxResponse(txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
 
@@ -201,7 +195,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	// free current user
 	if err = s.userController.FreeUser(user); err != nil {
 		s.logger.Errorf("fail to free user: err [%s] -- user[%v] -- txId [%s]", err, user, txRequest.TxId)
-		s.returnErrorTxResponse(txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
 
@@ -209,7 +203,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 }
 
-func (s *DockerScheduler) startSandBox(user *helper.User, txId, contractName, handlerName, contractPath string) error {
+func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, handlerName, contractPath string) error {
 
 	cmd := exec.Cmd{
 		Path: contractPath,
@@ -274,19 +268,28 @@ func (s *DockerScheduler) startSandBox(user *helper.User, txId, contractName, ha
 		TxId: txId,
 	}
 
+	s.exitCh <- exitStatus
+
 	if status.Signaled() {
 		exitStatus.Signal = status.Signal()
-		s.returnErrorTxResponse(txId)
+		return fmt.Errorf("fail to run child process with kill signal")
 	}
-
-	s.exitCh <- exitStatus
 
 	return nil
 }
 
-func (s *DockerScheduler) returnErrorTxResponse(txId string) {
-	errTxResponse := s.constructErrorResponse(txId)
+func (s *DockerScheduler) returnErrorTxResponse(txId string, err error) {
+	errTxResponse := s.constructErrorResponse(txId, err)
 	s.txResponseCh <- errTxResponse
+}
+
+func (s *DockerScheduler) constructErrorResponse(txId string, err error) *protogo.TxResponse {
+	return &protogo.TxResponse{
+		TxId:    txId,
+		Code:    protogo.ContractResultCode_FAIL,
+		Result:  nil,
+		Message: err.Error(),
+	}
 }
 
 // handlerName: contractName:contractVersion:txId[:10]
@@ -298,13 +301,4 @@ func (s *DockerScheduler) constructHandlerName(tx *protogo.TxRequest) string {
 // ConstructContractKey contractKey: contractName:contractVersion
 func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
 	return contractName + "#" + contractVersion
-}
-
-func (s *DockerScheduler) constructErrorResponse(txId string) *protogo.TxResponse {
-	return &protogo.TxResponse{
-		TxId:    txId,
-		Code:    protogo.ContractResultCode_FAIL,
-		Result:  nil,
-		Message: "fail",
-	}
 }

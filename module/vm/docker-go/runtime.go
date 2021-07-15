@@ -2,11 +2,11 @@ package docker_go
 
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
+	"fmt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/golang/groupcache/lru"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,23 +15,17 @@ import (
 type CDMClient interface {
 	GetTxSendCh() chan *protogo.CDMMessage
 
-	GetStateSendCh() chan *protogo.CDMMessage
+	GetStateResponseSendCh() chan *protogo.CDMMessage
 
 	RegisterRecvChan(txId string, recvCh chan *protogo.CDMMessage)
-}
-
-type TmpCache interface {
-	TmpAdd(key lru.Key, value interface{})
-
-	TmpGet(key lru.Key) (value interface{}, ok bool)
 }
 
 // RuntimeInstance evm runtime
 type RuntimeInstance struct {
 	ContainerName string
 	ChainId       string // chain id
-
-	Client CDMClient
+	Client        CDMClient
+	Log           *logger.CMLogger
 }
 
 const (
@@ -42,10 +36,18 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
-	log.Println("--------------------------------------")
-	log.Println("Start to run contract in docker")
+	r.Log.Debugf("--------------------------------------")
+	r.Log.Debugf("Start to run contract in docker")
+
+	// contract response
+	contractResult = &commonPb.ContractResult{
+		Code:    commonPb.ContractResultCode_FAIL,
+		Result:  nil,
+		Message: "",
+	}
 
 	// split args from parameters
+	// todo is ok?
 	argsMap := make(map[string]string)
 	for key, value := range parameters {
 		if strings.Contains(key, "arg") {
@@ -87,12 +89,11 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		case protogo.CDMType_CDM_TYPE_GET_STATE:
 			value, err := txSimContext.Get(contractId.ContractName, recvMsg.Payload)
 			if err != nil {
-				log.Println("fail to get state from sim context ", err)
-				return
+				return r.errorResult(contractResult, err, "fail to get state from sim context")
 			}
-			log.Println("get value: ", string(value))
+			r.Log.Debug("get value: ", string(value))
 
-			r.Client.GetStateSendCh() <- &protogo.CDMMessage{
+			r.Client.GetStateResponseSendCh() <- &protogo.CDMMessage{
 				TxId:    txId,
 				Type:    protogo.CDMType_CDM_TYPE_GET_STATE_RESPONSE,
 				Payload: value,
@@ -104,12 +105,11 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 			err := r.saveBytesToDisk(byteCode, contractPath)
 			if err != nil {
-				log.Println("fail to save bytecode to disk ", err)
-				return
+				return r.errorResult(contractResult, err, "fail to save bytecode to disk")
 			}
-			log.Println("get contract path: ", contractPath)
+			r.Log.Debug("get contract path: ", contractPath)
 
-			r.Client.GetStateSendCh() <- &protogo.CDMMessage{
+			r.Client.GetStateResponseSendCh() <- &protogo.CDMMessage{
 				TxId:    txId,
 				Type:    protogo.CDMType_CDM_TYPE_GET_BYTECODE_RESPONSE,
 				Payload: nil,
@@ -121,36 +121,43 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			var txResponse protogo.TxResponse
 			_ = proto.UnmarshalMerge(recvMsg.Payload, &txResponse)
 
-			contractResult = &commonPb.ContractResult{
-				Code:    commonPb.ContractResultCode(txResponse.Code),
-				Result:  txResponse.Result,
-				Message: txResponse.Message,
-			}
+			contractResult.Code = commonPb.ContractResultCode(txResponse.Code)
+			contractResult.Result = txResponse.Result
+			contractResult.Message = txResponse.Message
 
 			// merge the sim context write map
 			for key, value := range txResponse.WriteMap {
 				err := txSimContext.Put(contractId.ContractName, []byte(key), value)
 				if err != nil {
-					log.Println("fail to put in sim context: ", err)
-					return nil
+					return r.errorResult(contractResult, err, "fail to put in sim context")
 				}
 			}
 
 			close(responseCh)
 
-			log.Println("-----------------------------------------------")
-			log.Println("End to run contract in docker")
-			log.Println(contractResult)
+			r.Log.Debug("-----------------------------------------------")
+			r.Log.Debug("End to run contract in docker")
+			r.Log.Debug(contractResult)
 
 			return contractResult
 		default:
-			//todo error
-			log.Println("unknown type:", recvMsg.Type)
+			err := fmt.Errorf("unknow type")
+			return r.errorResult(contractResult, err, "fail to receive request")
 
 		}
 
 	}
 
+}
+
+func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, err error, errMsg string) *commonPb.ContractResult {
+	contractResult.Code = commonPb.ContractResultCode_FAIL
+	if err != nil {
+		errMsg += ", " + err.Error()
+	}
+	contractResult.Message = errMsg
+	r.Log.Error(errMsg)
+	return contractResult
 }
 
 func (r *RuntimeInstance) ConstructContractKey(contractName, contractVersion string) string {
@@ -163,7 +170,12 @@ func (r *RuntimeInstance) saveBytesToDisk(bytes []byte, newFilePath string) erro
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func(f *os.File) {
+		err := f.Close()
+		if err != nil {
+			return
+		}
+	}(f)
 
 	_, err = f.Write(bytes)
 	if err != nil {

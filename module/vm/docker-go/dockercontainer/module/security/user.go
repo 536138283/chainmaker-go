@@ -1,4 +1,4 @@
-package helper
+package security
 
 type User struct {
 	Uid      int

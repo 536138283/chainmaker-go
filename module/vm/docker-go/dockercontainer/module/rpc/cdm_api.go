@@ -126,8 +126,6 @@ func (cdm *CDMApi) sendMsgRoutine() {
 			cdm.wg.Done()
 			cdm.logger.Debugf("stop sending cdm message ")
 			return
-			//default:
-			//	err = errors.New("unknown recv message type")
 		}
 
 		if err != nil {

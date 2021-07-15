@@ -45,7 +45,6 @@ message Response {
 message Input {
     map<string, string> args = 1;
 
-    bool is_init = 2;
 }
 
 

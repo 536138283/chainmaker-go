@@ -4,7 +4,6 @@ import (
 	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"errors"
-	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -69,15 +68,14 @@ func CreateUnixListener(listenAddress *net.UnixAddr, sockPath string) (*net.Unix
 start:
 	listener, err := net.ListenUnix("unix", listenAddress)
 	if err != nil {
-		fmt.Println("server -- unix domain socket create fail, try to re create")
 		err = os.Remove(sockPath)
 		if err != nil {
-			fmt.Println("server -- delete socket file fail: ", err)
 			return nil, err
 		}
 		goto start
 	} else {
 
+		// todo change 777: limit delete for user
 		if err := os.Chmod(sockPath, 0777); err != nil {
 			return nil, err
 		}

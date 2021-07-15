@@ -274,7 +274,7 @@ func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId
 
 	payload := &commonPb.TransactPayload{
 		ContractName: contractName,
-		Method:       "invoke_contract",
+		Method:       "invoke_contract", //todo add pb?
 		Parameters:   pairs,
 	}
 

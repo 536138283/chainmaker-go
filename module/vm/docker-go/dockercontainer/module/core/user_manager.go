@@ -3,7 +3,7 @@ package core
 import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
 	"github.com/enriquebris/goconcurrentqueue"
@@ -79,12 +79,12 @@ func (u *UsersManager) generateNewUser(newUserId int) error {
 	return nil
 }
 
-func (u *UsersManager) constructNewUser(userId int) *helper.User {
+func (u *UsersManager) constructNewUser(userId int) *security.User {
 
 	userName := fmt.Sprintf("u-%d", userId)
 	sockPath := config.SockPath
 
-	return &helper.User{
+	return &security.User{
 		Uid:      userId,
 		Gid:      userId,
 		UserName: userName,
@@ -93,7 +93,7 @@ func (u *UsersManager) constructNewUser(userId int) *helper.User {
 }
 
 // GetAvailableUser pop user from queue header
-func (u *UsersManager) GetAvailableUser() (*helper.User, error) {
+func (u *UsersManager) GetAvailableUser() (*security.User, error) {
 
 	user, err := u.userQueue.DequeueOrWaitForNextElement()
 	if err != nil {
@@ -101,11 +101,11 @@ func (u *UsersManager) GetAvailableUser() (*helper.User, error) {
 	}
 
 	u.logger.Debugf("get avaiable user: [%v]", user)
-	return user.(*helper.User), nil
+	return user.(*security.User), nil
 }
 
 // FreeUser add user to queue tail
-func (u *UsersManager) FreeUser(user *helper.User) error {
+func (u *UsersManager) FreeUser(user *security.User) error {
 	err := u.userQueue.Enqueue(user)
 	if err != nil {
 		return err

@@ -3,7 +3,7 @@ package rpc
 import (
 	SDKProtogo "chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/helper"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"fmt"
@@ -29,14 +29,14 @@ type DMSHandler struct {
 	state        state
 	logger       *zap.SugaredLogger
 
-	user      *helper.User
+	user      *security.User
 	txRequest *protogo.TxRequest
 
 	stream    SDKProtogo.DMSRpc_DMSCommunicateServer
 	scheduler protocol.Scheduler
 }
 
-func NewDMSHandler(user *helper.User, txRequest *protogo.TxRequest, scheduler protocol.Scheduler, handlerName, contractName string) (*DMSHandler, error) {
+func NewDMSHandler(user *security.User, txRequest *protogo.TxRequest, scheduler protocol.Scheduler, handlerName, contractName string) (*DMSHandler, error) {
 
 	loggerName := "[DMS Handler " + handlerName + " ]"
 
@@ -115,6 +115,7 @@ func (h *DMSHandler) handlePrepare(readyMsg *SDKProtogo.DMSMessage) error {
 
 func (h *DMSHandler) afterFirstReady() error {
 
+	//todo change with pb
 	switch h.txRequest.Method {
 	case "init_contract":
 		return h.sendInit()
@@ -138,7 +139,7 @@ func (h *DMSHandler) sendInit() error {
 	initMsg := &SDKProtogo.DMSMessage{
 		Type:         SDKProtogo.DMSMessageType_DMS_MESSAGE_TYPE_INIT,
 		ContractName: h.contractName,
-		Payload:      inputPayload, // put some parameters
+		Payload:      inputPayload,
 	}
 
 	return h.sendMessage(initMsg)

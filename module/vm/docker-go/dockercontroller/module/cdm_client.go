@@ -18,8 +18,8 @@ const (
 )
 
 type CDMClient struct {
-	txSendCh    chan *protogo.CDMMessage // channel receive tx from docker-go instance
-	stateSendCh chan *protogo.CDMMessage // channel receive state response
+	txSendCh            chan *protogo.CDMMessage // channel receive tx from docker-go instance
+	stateResponseSendCh chan *protogo.CDMMessage // channel receive state response
 
 	lock      sync.Mutex
 	recvChMap map[string]chan *protogo.CDMMessage // store tx_id to chan, retrieve chan to send tx response back to docker-go instance
@@ -34,13 +34,13 @@ type CDMClient struct {
 func NewCDMClient(chainId string) *CDMClient {
 
 	return &CDMClient{
-		txSendCh:    make(chan *protogo.CDMMessage, ChanSize),
-		stateSendCh: make(chan *protogo.CDMMessage, StateChanSize),
-		recvChMap:   make(map[string]chan *protogo.CDMMessage),
-		lock:        sync.Mutex{},
-		stream:      nil,
-		logger:      logger.GetLoggerByChain("[CDM Client]", chainId),
-		stop:        nil,
+		txSendCh:            make(chan *protogo.CDMMessage, ChanSize),      // tx request
+		stateResponseSendCh: make(chan *protogo.CDMMessage, StateChanSize), // get_state response and bytecode response
+		recvChMap:           make(map[string]chan *protogo.CDMMessage),
+		lock:                sync.Mutex{},
+		stream:              nil,
+		logger:              logger.GetLoggerByChain("[CDM Client]", chainId),
+		stop:                nil,
 	}
 }
 
@@ -48,15 +48,15 @@ func (c *CDMClient) GetTxSendCh() chan *protogo.CDMMessage {
 	return c.txSendCh
 }
 
-func (c *CDMClient) GetStateSendCh() chan *protogo.CDMMessage {
-	return c.stateSendCh
+func (c *CDMClient) GetStateResponseSendCh() chan *protogo.CDMMessage {
+	return c.stateResponseSendCh
 }
 
 func (c *CDMClient) RegisterRecvChan(txId string, recvCh chan *protogo.CDMMessage) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.logger.Infof("register recv chan [%s]", txId[:5])
+	c.logger.Debugf("register recv chan [%s]", txId[:5])
 	c.recvChMap[txId] = recvCh
 }
 
@@ -64,13 +64,13 @@ func (c *CDMClient) deleteRecvChan(txId string) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	c.logger.Infof("delete recv chan [%s]", txId[:5])
+	c.logger.Debugf("delete recv chan [%s]", txId[:5])
 	delete(c.recvChMap, txId)
 }
 
 func (c *CDMClient) StartClient() bool {
 
-	c.logger.Infof("start cdm client..")
+	c.logger.Debugf("start cdm client..")
 	conn, err := NewClientConn()
 	if err != nil {
 		c.logger.Errorf("fail to create connection: %s", err)
@@ -105,10 +105,11 @@ func (c *CDMClient) closeConnection() {
 
 func (c *CDMClient) sendMsgRoutine() {
 
-	c.logger.Infof("start sending cdm message ")
-	// listen two chan:
-	// txCh: used to send tx to docker manager
-	// stateCh: used to send get state response or bytecode response to docker manager
+	c.logger.Debugf("start sending cdm message ")
+	// listen three chan:
+	// txSendCh: used to send tx to docker manager
+	// stateResponseSendCh: used to send get state response or bytecode response to docker manager
+	// stopCh
 
 	var err error
 
@@ -116,13 +117,11 @@ func (c *CDMClient) sendMsgRoutine() {
 		select {
 		case txMsg := <-c.txSendCh:
 			err = c.sendCDMMsg(txMsg)
-		case stateMsg := <-c.stateSendCh:
+		case stateMsg := <-c.stateResponseSendCh:
 			err = c.sendCDMMsg(stateMsg)
 		case <-c.stop:
-			c.logger.Infof("close send cdm msg")
+			c.logger.Debugf("close send cdm msg")
 			return
-			//default:
-			//	err = errors.New("unknown send message type")
 		}
 
 		if err != nil {
@@ -134,7 +133,7 @@ func (c *CDMClient) sendMsgRoutine() {
 
 func (c *CDMClient) recvMsgRoutine() {
 
-	c.logger.Infof("start receiving cdm message ")
+	c.logger.Debugf("start receiving cdm message ")
 
 	var err error
 
@@ -142,7 +141,7 @@ func (c *CDMClient) recvMsgRoutine() {
 
 		select {
 		case <-c.stop:
-			c.logger.Infof("close recv cdm msg")
+			c.logger.Debugf("close recv cdm msg")
 			return
 		default:
 			recvMsg, recvErr := c.stream.Recv()
@@ -178,31 +177,14 @@ func (c *CDMClient) recvMsgRoutine() {
 			}
 
 		}
-
 	}
 
 }
 
 func (c *CDMClient) sendCDMMsg(msg *protogo.CDMMessage) error {
-	c.logger.Infof("send message: [%s]", msg.Type)
+	// todo need lock? add
+	c.logger.Debugf("send message: [%s]", msg.Type)
 	return c.stream.Send(msg)
-}
-
-func (c *CDMClient) handleGetState(recvMsg *protogo.CDMMessage) error {
-
-	return nil
-}
-
-func (c *CDMClient) handleGetByteCode(recvMsg *protogo.CDMMessage) error {
-
-	// get bytecode from state db
-
-	// convert bytes to file
-
-	// set file mode 755
-
-	// return path string
-	return nil
 }
 
 // NewClientConn create client connection

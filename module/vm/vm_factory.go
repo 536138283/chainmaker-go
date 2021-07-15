@@ -507,6 +507,7 @@ func (m *ManagerImpl) invokeUserContractByRuntime(contractId *commonPb.ContractI
 
 		const containerName = "container1"
 		runtimeInstance = &docker_go.RuntimeInstance{
+			Log:           m.Log,
 			ContainerName: containerName,
 			ChainId:       m.ChainId,
 			Client:        m.DockerManager.CDMClient,

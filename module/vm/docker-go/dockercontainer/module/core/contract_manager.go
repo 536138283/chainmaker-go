@@ -6,6 +6,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -22,12 +23,15 @@ type ContractManager struct {
 }
 
 func NewContractManager() *ContractManager {
-	return &ContractManager{
+	contractManager := &ContractManager{
 		lock:            sync.RWMutex{},
 		getContractLock: singleflight.Group{},
 		contractsMap:    make(map[string]string),
 		logger:          logger.NewDockerLogger(logger.MODULE_CONTRACT_MANAGER),
 	}
+
+	_ = contractManager.initialContractMap()
+	return contractManager
 }
 
 // GetContract get contract path in volume,
@@ -98,5 +102,19 @@ func (cm *ContractManager) setFileMod(filePath string) error {
 }
 
 func (cm *ContractManager) initialContractMap() error {
+
+	files, err := ioutil.ReadDir(BaseDir)
+	if err != nil {
+		cm.logger.Errorf("fail to scan contract dir")
+		return err
+	}
+	for _, f := range files {
+		contractName := f.Name()
+		contractPath := filepath.Join(BaseDir, contractName)
+		cm.contractsMap[contractName] = contractPath
+	}
+
+	cm.logger.Debugf("init contract map with size [%d]", len(cm.contractsMap))
+
 	return nil
 }

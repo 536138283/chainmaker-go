@@ -75,6 +75,7 @@ func NewDockerManager(chainId string) *DockerManager {
 		lock:         sync.Mutex{},
 	}
 
+	//todo add restart logic
 	err = newDockerManager.StartContainer()
 	if err != nil {
 		log.Errorf("problem when start container: %s ", err)
