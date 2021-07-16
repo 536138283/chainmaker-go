@@ -45,7 +45,8 @@ type TxScheduler struct {
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]bool
 
-func NewTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, tx *commonpb.Transaction) protocol.TxSimContext {
+func NewTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, tx *commonpb.Transaction,
+	blockVersion string) protocol.TxSimContext {
 	return &txSimContextImpl{
 		txExecSeq:        snapshot.GetSnapshotSize(),
 		tx:               tx,
@@ -60,6 +61,7 @@ func NewTxSimContext(vmManager protocol.VmManager, snapshot protocol.Snapshot, t
 		gasUsed:          0,
 		currentDepth:     0,
 		hisResult:        make([]*callContractResult, 0),
+		blockVersion:     blockVersion,
 	}
 }
 
@@ -92,7 +94,7 @@ func (ts *TxScheduler) Schedule(block *commonpb.Block, txBatch []*commonpb.Trans
 						return
 					}
 					ts.log.Debugf("run vm for tx id:%s", tx.Header.GetTxId())
-					txSimContext := NewTxSimContext(ts.VmManager, snapshot, tx)
+					txSimContext := NewTxSimContext(ts.VmManager, snapshot, tx, string(block.Header.BlockVersion))
 					runVmSuccess := true
 					var txResult *commonpb.Result
 					var err error
@@ -229,7 +231,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonpb.Block, snapshot protocol.
 				tx := txMapping[txIndex]
 				err := goRoutinePool.Submit(func() {
 					ts.log.Debugf("run vm with dag for tx id %s", tx.Header.GetTxId())
-					txSimContext := NewTxSimContext(ts.VmManager, snapshot, tx)
+					txSimContext := NewTxSimContext(ts.VmManager, snapshot, tx, string(block.Header.BlockVersion))
 					runVmSuccess := true
 					var txResult *commonpb.Result
 					var err error
@@ -371,11 +373,37 @@ func (ts *TxScheduler) runVM(tx *commonpb.Transaction, txSimContext protocol.TxS
 		}
 	case commonpb.TxType_INVOKE_SYSTEM_CONTRACT:
 		var payload commonpb.SystemContractPayload
+		var ac protocol.AccessControlProvider
 		if err := proto.Unmarshal(tx.RequestPayload, &payload); err == nil {
 			contractName = payload.ContractName
 			method = payload.Method
 			parameterPairs = payload.Parameters
 			parameters = ts.parseParameter(parameterPairs)
+
+			if ac, err = txSimContext.GetAccessControl(); err != nil {
+				ts.log.Errorf("failed to get access control from tx sim context for tx: %s, error: %s, contract[%s], method[%s]", tx.Header.TxId, err.Error(), contractName, method)
+				return errResult(result, fmt.Errorf("failed to get access control from tx sim context for tx: %s, error: %s", tx.Header.TxId, err.Error()))
+			}
+
+			if !ac.ResourcePolicyExists(method) {
+				ts.log.Infof("policy not found for invoke_system_contract, contract[%s], method[%s], skip acVerify here", contractName, method)
+			} else {
+				endorsements = payload.Endorsement
+				sequence = payload.Sequence
+
+				if endorsements == nil {
+					return errResult(result, fmt.Errorf("endorsements not found in invoke system contract payload, tx id:%s", tx.Header.TxId))
+				}
+				payload.Endorsement = nil
+				verifyPayloadBytes, err := proto.Marshal(&payload)
+
+				if err = ts.acVerify(txSimContext, method, endorsements, verifyPayloadBytes, parameters); err != nil {
+					ts.log.Infof("verify fail when invoke system contract[%s],method[%s]", contractName, method)
+					return errResult(result, err)
+				}
+
+				ts.log.Debugf("invoke system contract [%d] [%v]", sequence, endorsements)
+			}
 		} else {
 			return errResult(result, fmt.Errorf("failed to unmarshal invoke payload for tx %s, %s", tx.Header.TxId, err))
 		}

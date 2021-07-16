@@ -35,6 +35,7 @@ type txSimContextImpl struct {
 	hisResult        []*callContractResult
 	sqlRowCache      map[int32]protocol.SqlRows
 	kvRowCache       map[int32]protocol.StateIterator
+	blockVersion     string
 }
 
 type callContractResult struct {
@@ -95,15 +96,18 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
 }
 
 func (s *txSimContextImpl) GetCreator(contractName string) *acpb.SerializedMember {
-	if creatorByte, err := s.Get(commonpb.ContractName_SYSTEM_CONTRACT_STATE.String(), []byte(protocol.ContractCreator+contractName)); err != nil {
-		return nil
-	} else {
-		creator := &acpb.SerializedMember{}
-		if err = proto.Unmarshal(creatorByte, creator); err != nil {
-			return nil
-		}
-		return creator
+	creatorByte, err := s.Get(commonpb.ContractName_SYSTEM_CONTRACT_STATE.String(), []byte(protocol.ContractCreator+contractName))
+	if creatorByte == nil || err != nil {
+		creatorByte, err = s.Get(contractName, []byte(protocol.ContractCreator))
 	}
+	if err != nil {
+		return nil
+	}
+	creator := &acpb.SerializedMember{}
+	if err = proto.Unmarshal(creatorByte, creator); err != nil {
+		return nil
+	}
+	return creator
 }
 
 func (s *txSimContextImpl) GetSender() *acpb.SerializedMember {
@@ -177,12 +181,8 @@ func (s *txSimContextImpl) GetTxRWSet(runVmSuccess bool) *commonpb.TxRWSet {
 		TxReads:  nil,
 		TxWrites: nil,
 	}
-	if !runVmSuccess {
-		// ddl sql tx writes
-		s.txRWSet.TxWrites = append(s.txRWSet.TxWrites, s.txWriteKeyDdlSql...)
-		return s.txRWSet
-	}
 
+	// read set
 	{
 		txIds := make([]string, 0, len(s.txReadKeyMap))
 		for txId := range s.txReadKeyMap {
@@ -194,7 +194,8 @@ func (s *txSimContextImpl) GetTxRWSet(runVmSuccess bool) *commonpb.TxRWSet {
 		}
 	}
 
-	{
+	// write set
+	if runVmSuccess {
 		txIds := make([]string, 0, len(s.txWriteKeyMap))
 		for txId := range s.txWriteKeyMap {
 			txIds = append(txIds, txId)
@@ -205,6 +206,9 @@ func (s *txSimContextImpl) GetTxRWSet(runVmSuccess bool) *commonpb.TxRWSet {
 		}
 		// sql nil key tx writes
 		s.txRWSet.TxWrites = append(s.txRWSet.TxWrites, s.txWriteKeySql...)
+	} else {
+		// ddl sql tx writes
+		s.txRWSet.TxWrites = s.txWriteKeyDdlSql
 	}
 	return s.txRWSet
 }
@@ -306,4 +310,7 @@ func (s *txSimContextImpl) SetStateKvHandle(index int32, rows protocol.StateIter
 func (s *txSimContextImpl) GetStateKvHandle(index int32) (protocol.StateIterator, bool) {
 	data, ok := s.kvRowCache[index]
 	return data, ok
+}
+func (s *txSimContextImpl) GetBlockVersion() string {
+	return s.blockVersion
 }
