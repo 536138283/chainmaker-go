@@ -8,10 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package cache
 
 import (
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
 	"errors"
 	"sync"
+
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // LedgerCache is used for cache current block info
@@ -52,4 +53,3 @@ func (lc *LedgerCache) CurrentHeight() (int64, error) {
 	}
 	return lc.lastCommittedBlock.Header.BlockHeight, nil
 }
-

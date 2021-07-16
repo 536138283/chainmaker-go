@@ -3,8 +3,7 @@ package cache
 import (
 	"fmt"
 	"testing"
-
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
 )
 
 func TestAbft(t *testing.T) {

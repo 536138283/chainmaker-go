@@ -13,14 +13,13 @@ import (
 	"sync/atomic"
 	"time"
 
-	commonErrors "chainmaker.org/chainmaker-go/common/errors"
-	"chainmaker.org/chainmaker-go/common/msgbus"
-	"chainmaker.org/chainmaker-go/common/queue/lockfreequeue"
-	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	netPb "chainmaker.org/chainmaker-go/pb/protogo/net"
-	txpoolPb "chainmaker.org/chainmaker-go/pb/protogo/txpool"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonErrors "chainmaker.org/chainmaker/common/errors"
+	"chainmaker.org/chainmaker/common/msgbus"
+	"chainmaker.org/chainmaker/common/queue/lockfreequeue"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	netPb "chainmaker.org/chainmaker/pb-go/net"
+	txpoolPb "chainmaker.org/chainmaker/pb-go/txpool"
+	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/txpool/poolconf"
 	"chainmaker.org/chainmaker-go/utils"
 
@@ -53,7 +52,7 @@ type BatchTxPool struct {
 
 	mb         msgbus.MessageBus              // Receive messages from other modules
 	ac         protocol.AccessControlProvider // Verify transaction signature
-	log        *logger.CMLogger               //
+	log        protocol.Logger                //
 	chainConf  protocol.ChainConf             //
 	chainStore protocol.BlockchainStore       // Access information on the chain
 
@@ -62,7 +61,7 @@ type BatchTxPool struct {
 }
 
 func NewBatchTxPool(nodeId string, chainId string, chainConf protocol.ChainConf,
-	chainStore protocol.BlockchainStore, ac protocol.AccessControlProvider) *BatchTxPool {
+	chainStore protocol.BlockchainStore, ac protocol.AccessControlProvider, log protocol.Logger) *BatchTxPool {
 
 	return &BatchTxPool{
 		nodeId:  nodeId,
@@ -72,7 +71,7 @@ func NewBatchTxPool(nodeId string, chainId string, chainConf protocol.ChainConf,
 		chainConf:  chainConf,
 		chainStore: chainStore,
 		stopCh:     make(chan struct{}),
-		log:        logger.GetLoggerByChain(logger.MODULE_TXPOOL, chainId),
+		log:        log,
 
 		maxTxCount:         int32(poolconf.DefaultMaxTxPoolSize),
 		batchMaxSize:       int32(DefaultBatchMaxSize),
@@ -242,7 +241,8 @@ func (p *BatchTxPool) createCommonTxBatch() {
 		TxIdsMap: txIds,
 		Size_:    int32(len(txs)),
 	}
-	p.log.Infof("create txBatch size: %d, batchId: %d, txMapLen: %d, txsLen: %d", batch.Size(), batch.BatchId, len(batch.TxIdsMap), len(batch.Txs))
+	p.log.Infof("create txBatch size: %d, batchId: %d, txMapLen: %d, txsLen: %d, totalTxCount: %d",
+		batch.Size(), batch.BatchId, len(batch.TxIdsMap), len(batch.Txs), atomic.LoadInt32(&p.currentTxCount)+int32(batch.Size()))
 
 	var (
 		err      error

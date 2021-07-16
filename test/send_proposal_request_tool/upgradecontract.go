@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
 	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
 	"encoding/json"
@@ -60,8 +60,8 @@ func upgradeContract() error {
 	if err != nil {
 		return err
 	}
-
-	method, pairs, err = makePairs("", abiPath, pairs, commonPb.RuntimeType(runTime))
+	var abiData *[]byte
+	method, pairs, err = makePairs("", abiPath, pairs, commonPb.RuntimeType(runTime), abiData)
 	if err != nil {
 		return fmt.Errorf("make pairs filure!")
 	}

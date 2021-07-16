@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package waci
 
 import (
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // GetStateLen get state length from chain
@@ -44,6 +44,64 @@ func (s *WaciInstance) PutState() int32 {
 // DeleteState delete state from chain
 func (s *WaciInstance) DeleteState() int32 {
 	err := wacsi.DeleteState(s.RequestBody, s.ContractId.ContractName, s.TxSimContext)
+	if err != nil {
+		s.recordMsg(err.Error())
+		return protocol.ContractSdkSignalResultFail
+	}
+	return protocol.ContractSdkSignalResultSuccess
+}
+
+// KvIterator Select kv statement
+func (s *WaciInstance) KvIterator() int32 {
+	err := wacsi.KvIterator(s.RequestBody, s.ContractId.ContractName, s.TxSimContext, s.Vm.Memory)
+	if err != nil {
+		s.recordMsg(err.Error())
+		return protocol.ContractSdkSignalResultFail
+	}
+	return protocol.ContractSdkSignalResultSuccess
+}
+
+func (s *WaciInstance) KvPreIterator() int32 {
+	err := wacsi.KvPreIterator(s.RequestBody, s.ContractId.ContractName, s.TxSimContext, s.Vm.Memory)
+	if err != nil {
+		s.recordMsg(err.Error())
+		return protocol.ContractSdkSignalResultFail
+	}
+	return protocol.ContractSdkSignalResultSuccess
+}
+
+//KvIteratorHasNext to determine whether db has next statement
+func (s *WaciInstance) KvIteratorHasNext() int32 {
+	err := wacsi.KvIteratorHasNext(s.RequestBody, s.TxSimContext, s.Vm.Memory)
+	if err != nil {
+		s.recordMsg(err.Error())
+		return protocol.ContractSdkSignalResultFail
+	}
+	return protocol.ContractSdkSignalResultSuccess
+}
+
+func (s *WaciInstance) KvIteratorNextLen() int32 {
+	return s.kvIteratorNextCore(true)
+}
+
+//KvIteratorNext to get kv statement
+func (s *WaciInstance) KvIteratorNext() int32 {
+	return s.kvIteratorNextCore(false)
+}
+
+func (s *WaciInstance) kvIteratorNextCore(isLen bool) int32 {
+	data, err := wacsi.KvIteratorNext(s.RequestBody, s.TxSimContext, s.Vm.Memory, s.GetStateCache, s.ContractId.ContractName, isLen)
+	s.GetStateCache = data // reset data
+	if err != nil {
+		s.recordMsg(err.Error())
+		return protocol.ContractSdkSignalResultFail
+	}
+	return protocol.ContractSdkSignalResultSuccess
+}
+
+// KvIteratorClose Close kv statement
+func (s *WaciInstance) KvIteratorClose() int32 {
+	err := wacsi.KvIteratorClose(s.RequestBody, s.ContractId.ContractName, s.TxSimContext, s.Vm.Memory)
 	if err != nil {
 		s.recordMsg(err.Error())
 		return protocol.ContractSdkSignalResultFail

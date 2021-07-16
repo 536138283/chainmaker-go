@@ -10,9 +10,9 @@ package snapshot
 import (
 	"errors"
 
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
 
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type SnapshotEvidence struct {
@@ -95,15 +95,7 @@ func (s *SnapshotEvidence) ApplyTxSimContext(cache protocol.TxSimContext, runVmS
 	var txResult *commonPb.Result
 
 	// Only when the virtual machine is running normally can the read-write set be saved
-	if runVmSuccess {
-		txRWSet = cache.GetTxRWSet()
-	} else {
-		txRWSet = &commonPb.TxRWSet{
-			TxId:     tx.Header.TxId,
-			TxReads:  nil,
-			TxWrites: nil,
-		}
-	}
+	txRWSet = cache.GetTxRWSet(runVmSuccess)
 	txResult = cache.GetTxResult()
 
 	if txExecSeq >= len(s.delegate.txTable) {
@@ -189,7 +181,7 @@ func (s *SnapshotEvidence) BuildDAG(isSql bool) *commonPb.DAG {
 	defer s.delegate.lock.Unlock()
 
 	txCount := len(s.delegate.txTable)
-	log.Debugf("start building DAG for block %d with %d txs", s.delegate.blockHeight, txCount)
+	log.Debugf("start building DAG(all vertexes are nil) for block %d with %d txs", s.delegate.blockHeight, txCount)
 
 	dag := &commonPb.DAG{}
 	if txCount == 0 {

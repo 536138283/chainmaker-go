@@ -8,12 +8,12 @@ package native
 
 import (
 	"chainmaker.org/chainmaker-go/chainconf"
-	"chainmaker.org/chainmaker-go/common/sortedmap"
+	"chainmaker.org/chainmaker/common/sortedmap"
 	"chainmaker.org/chainmaker-go/logger"
-	acPb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
-	"chainmaker.org/chainmaker-go/protocol"
+	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	configPb "chainmaker.org/chainmaker/pb-go/config"
+	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"errors"
 	"fmt"
@@ -101,6 +101,11 @@ func registerChainConfigContractMethods(log *logger.CMLogger) map[string]Contrac
 	ChainConfigRuntime := &ChainConfigRuntime{log: log}
 	methodMap[commonPb.ConfigFunction_GET_CHAIN_CONFIG.String()] = ChainConfigRuntime.GetChainConfig
 	methodMap[commonPb.ConfigFunction_GET_CHAIN_CONFIG_AT.String()] = ChainConfigRuntime.GetChainConfigFromBlockHeight
+
+	//// [archive]
+	//archiveStoreRuntime := &ArchiveStoreRuntime{log: log}
+	//methodMap[commonPb.ArchiveStoreContractFunction_ARCHIVE_BLOCK.String()] = archiveStoreRuntime.ArchiveBlock
+	//methodMap[commonPb.ArchiveStoreContractFunction_RESTORE_BLOCKS.String()] = archiveStoreRuntime.RestoreBlock
 
 	return methodMap
 }

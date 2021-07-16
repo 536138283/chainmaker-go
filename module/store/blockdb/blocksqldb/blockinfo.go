@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package blocksqldb
 
 import (
-	"chainmaker.org/chainmaker-go/common/json"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
+	"chainmaker.org/chainmaker/common/json"
+	"chainmaker.org/chainmaker-go/localconf"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	storePb "chainmaker.org/chainmaker/pb-go/store"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -40,24 +41,49 @@ func (b *BlockInfo) ScanObject(scan func(dest ...interface{}) error) error {
 		&b.Signature, &b.Dag, &b.TxIds, &b.AdditionalData)
 }
 func (b *BlockInfo) GetCreateTableSql(dbType string) string {
-	if dbType == "mysql" {
-		return "CREATE TABLE `block_infos` (`chain_id` varchar(128),`block_height` bigint,`pre_block_hash` varbinary(128),`block_hash` varbinary(128),`pre_conf_height` bigint DEFAULT 0,`block_version` varbinary(128),`dag_hash` varbinary(128),`rw_set_root` varbinary(128),`tx_root` varbinary(128),`block_timestamp` bigint DEFAULT 0,`proposer` blob,`consensus_args` blob,`tx_count` bigint DEFAULT 0,`signature` blob,`dag` blob,`tx_ids` longtext,`additional_data` longblob,PRIMARY KEY (`block_height`),INDEX idx_hash (`block_hash`)) default character set utf8"
-	} else if dbType == "sqlite" {
-		return "CREATE TABLE `block_infos` (`chain_id` text,`block_height` integer,`pre_block_hash` blob,`block_hash` blob,`pre_conf_height` integer DEFAULT 0,`block_version` blob,`dag_hash` blob,`rw_set_root` blob,`tx_root` blob,`block_timestamp` integer DEFAULT 0,`proposer` blob,`consensus_args` blob,`tx_count` integer DEFAULT 0,`signature` blob,`dag` blob,`tx_ids` longtext,`additional_data` longblob,PRIMARY KEY (`block_height`))"
+	if dbType == localconf.SqlDbConfig_SqlDbType_MySQL {
+		return `CREATE TABLE block_infos (chain_id varchar(128),block_height bigint,pre_block_hash varbinary(128),
+block_hash varbinary(128),
+pre_conf_height bigint DEFAULT 0,
+block_version varbinary(128),
+dag_hash varbinary(128),
+rw_set_root varbinary(128),
+tx_root varbinary(128),
+block_timestamp bigint DEFAULT 0,
+proposer blob,
+consensus_args blob,
+tx_count bigint DEFAULT 0,
+signature blob,dag blob,tx_ids longtext,
+additional_data longblob,
+PRIMARY KEY (block_height),
+INDEX idx_hash (block_hash)) 
+default character set utf8`
+	} else if dbType == localconf.SqlDbConfig_SqlDbType_Sqlite {
+		return `CREATE TABLE block_infos (
+    chain_id text,block_height integer,pre_block_hash blob,block_hash blob,
+    pre_conf_height integer DEFAULT 0,block_version blob,dag_hash blob,
+    rw_set_root blob,tx_root blob,block_timestamp integer DEFAULT 0,proposer blob,
+    consensus_args blob,tx_count integer DEFAULT 0,signature blob,dag blob,
+    tx_ids longtext,additional_data longblob,PRIMARY KEY (block_height)
+)`
 	}
-	panic("Unsupported db type:" + string(dbType))
+	panic("Unsupported db type:" + dbType)
 }
 func (b *BlockInfo) GetTableName() string {
 	return "block_infos"
 }
 func (b *BlockInfo) GetInsertSql() (string, []interface{}) {
-	return "INSERT INTO block_infos values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", []interface{}{b.ChainId, b.BlockHeight, b.PreBlockHash, b.BlockHash, b.PreConfHeight, b.BlockVersion,
-		b.DagHash, b.RwSetRoot, b.TxRoot, b.BlockTimestamp, b.Proposer, b.ConsensusArgs, b.TxCount,
-		b.Signature, b.Dag, b.TxIds, b.AdditionalData}
+	return "INSERT INTO block_infos values(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+		[]interface{}{b.ChainId, b.BlockHeight, b.PreBlockHash, b.BlockHash, b.PreConfHeight, b.BlockVersion,
+			b.DagHash, b.RwSetRoot, b.TxRoot, b.BlockTimestamp, b.Proposer, b.ConsensusArgs, b.TxCount,
+			b.Signature, b.Dag, b.TxIds, b.AdditionalData}
 }
 func (b *BlockInfo) GetUpdateSql() (string, []interface{}) {
 	return "UPDATE block_infos set chain_id=?" +
 		" WHERE block_height=?", []interface{}{b.ChainId, b.BlockHeight}
+}
+func (b *BlockInfo) GetCountSql() (string, []interface{}) {
+	return "SELECT count(*) FROM block_infos WHERE block_height=?", []interface{}{b.BlockHeight}
 }
 func NewBlockInfo(block *commonPb.Block) (*BlockInfo, error) {
 	blockInfo := &BlockInfo{
@@ -134,26 +160,29 @@ func (b *BlockInfo) GetTxList() ([]string, error) {
 	}
 	return txList, nil
 }
+func (b *BlockInfo) GetBlockHeader() *commonPb.BlockHeader {
+	return &commonPb.BlockHeader{
+		ChainId:        b.ChainId,
+		BlockHeight:    b.BlockHeight,
+		PreBlockHash:   b.PreBlockHash,
+		BlockHash:      b.BlockHash,
+		PreConfHeight:  b.PreConfHeight,
+		BlockVersion:   b.BlockVersion,
+		DagHash:        b.DagHash,
+		RwSetRoot:      b.RwSetRoot,
+		TxRoot:         b.TxRoot,
+		BlockTimestamp: b.BlockTimestamp,
+		Proposer:       b.Proposer,
+		ConsensusArgs:  b.ConsensusArgs,
+		TxCount:        b.TxCount,
+		Signature:      b.Signature,
+	}
+}
 
 // GetBlock transfer the BlockInfo to commonPb.Block
 func (b *BlockInfo) GetBlock() (*commonPb.Block, error) {
 	block := &commonPb.Block{
-		Header: &commonPb.BlockHeader{
-			ChainId:        b.ChainId,
-			BlockHeight:    b.BlockHeight,
-			PreBlockHash:   b.PreBlockHash,
-			BlockHash:      b.BlockHash,
-			PreConfHeight:  b.PreConfHeight,
-			BlockVersion:   b.BlockVersion,
-			DagHash:        b.DagHash,
-			RwSetRoot:      b.RwSetRoot,
-			TxRoot:         b.TxRoot,
-			BlockTimestamp: b.BlockTimestamp,
-			Proposer:       b.Proposer,
-			ConsensusArgs:  b.ConsensusArgs,
-			TxCount:        b.TxCount,
-			Signature:      b.Signature,
-		},
+		Header: b.GetBlockHeader(),
 	}
 	if b.Dag != nil {
 		var dag commonPb.DAG
@@ -177,7 +206,7 @@ func (b *BlockInfo) GetBlock() (*commonPb.Block, error) {
 }
 
 // GetFilteredBlock returns a filtered block given it's block height, or return nil if none exists.
-func (b *BlockInfo) GetFilterdBlock() (*storePb.SerializedBlock, error) {
+func (b *BlockInfo) GetFilteredBlock() (*storePb.SerializedBlock, error) {
 	block, err := b.GetBlock()
 	if err != nil {
 		return nil, err

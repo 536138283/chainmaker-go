@@ -9,17 +9,18 @@ package tbft
 import (
 	"crypto/rand"
 	"crypto/sha1"
-	"github.com/golang/mock/gomock"
 	"reflect"
 	"testing"
 
+	"github.com/golang/mock/gomock"
+
 	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/mock"
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	configpb "chainmaker.org/chainmaker-go/pb/protogo/config"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	tbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/tbft"
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/protocol/mock"
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	configpb "chainmaker.org/chainmaker/pb-go/config"
+	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
+	tbftpb "chainmaker.org/chainmaker/pb-go/consensus/tbft"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/stretchr/testify/require"
 )
 
@@ -185,7 +186,7 @@ func TestVerifyBlockSignaturesOneNodeSuccess(t *testing.T) {
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).AnyTimes().Return(true, nil)
 
-	if err := VerifyBlockSignatures(chainConf, ac, block); err != nil {
+	if err := VerifyBlockSignatures(chainConf, ac, block, nil); err != nil {
 		t.Errorf("VerifyBlockSignatures() error = %v, wantErr %v", err, nil)
 	}
 }
@@ -234,7 +235,7 @@ func TestVerifyBlockSignaturesOneNodeFail(t *testing.T) {
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).AnyTimes().Return(true, nil)
 
-	if err := VerifyBlockSignatures(chainConf, ac, block); err == nil {
+	if err := VerifyBlockSignatures(chainConf, ac, block, nil); err == nil {
 		t.Errorf("VerifyBlockSignatures() error = %v, but expecte error", err)
 	}
 }
@@ -303,7 +304,7 @@ func TestVerifyBlockSignaturesFourNodeSuccess(t *testing.T) {
 	ac := mock.NewMockAccessControlProvider(ctrl)
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).AnyTimes().Return(true, nil)
-	if err := VerifyBlockSignatures(chainConf, ac, block); err != nil {
+	if err := VerifyBlockSignatures(chainConf, ac, block, nil); err != nil {
 		t.Errorf("VerifyBlockSignatures() error = %v, wantErr %v", err, nil)
 	}
 }
@@ -372,7 +373,7 @@ func TestVerifyBlockSignaturesFourNodeFail(t *testing.T) {
 	ac := mock.NewMockAccessControlProvider(ctrl)
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).AnyTimes().Return(true, nil)
-	if err := VerifyBlockSignatures(chainConf, ac, block); err == nil {
+	if err := VerifyBlockSignatures(chainConf, ac, block, nil); err == nil {
 		t.Errorf("VerifyBlockSignatures() error = %v, but expecte error", err)
 	}
 }

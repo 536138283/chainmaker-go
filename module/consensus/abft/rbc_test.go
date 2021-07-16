@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker-go/logger"
-	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
+	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
 	"github.com/stretchr/testify/assert"
 )
 

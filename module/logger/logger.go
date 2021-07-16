@@ -9,11 +9,12 @@ SPDX-License-Identifier: Apache-2.0
 package logger
 
 import (
-	"go.uber.org/zap/zapcore"
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker-go/common/log"
+	"go.uber.org/zap/zapcore"
+
+	"chainmaker.org/chainmaker/common/log"
 	"go.uber.org/zap"
 )
 
@@ -35,6 +36,7 @@ const (
 	MODULE_SPV        = "[Spv]"
 	MODULE_MONITOR    = "[Monitor]"
 	MODULE_SYNC       = "[Sync]"
+	MODULE_DPOS       = "[DPoS]"
 	// output brief.log
 	MODULE_BRIEF = "[Brief]"
 

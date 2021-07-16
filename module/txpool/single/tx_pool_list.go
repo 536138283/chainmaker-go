@@ -7,25 +7,24 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
+	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
 	"fmt"
 	"sync"
 
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
 
-	"chainmaker.org/chainmaker-go/common/linkedhashmap"
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/monitor"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker/common/linkedhashmap"
+	"chainmaker.org/chainmaker/protocol"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // txList Structure of store transactions in memory
 type txList struct {
-	log              *logger.CMLogger
+	log              protocol.Logger
 	blockchainStore  protocol.BlockchainStore
 	metricTxPoolSize *prometheus.GaugeVec
 
@@ -34,12 +33,12 @@ type txList struct {
 	pendingCache *sync.Map // A place where transactions are stored after Fetch
 }
 
-func newTxList(log *logger.CMLogger, pendingCache *sync.Map, blockchainStore protocol.BlockchainStore, consensusType consensuspb.ConsensusType) *txList {
-
+func newTxList(log protocol.Logger, pendingCache *sync.Map, blockchainStore protocol.BlockchainStore, consensusType consensuspb.ConsensusType) *txList {
 	list := &txList{
 		log:             log,
 		blockchainStore: blockchainStore,
 		rwLock:          sync.RWMutex{},
+		queue:           linkedhashmap.NewLinkedHashMap(),
 		pendingCache:    pendingCache,
 	}
 
@@ -95,11 +94,12 @@ func (l *txList) addTxs(tx *commonPb.Transaction, source protocol.TxSource, vali
 func (l *txList) Delete(txIds []string) {
 	l.rwLock.Lock()
 	defer l.rwLock.Unlock()
-	l.log.Debugf("remove txIds", "idsNum", len(txIds))
+	l.log.Debugf("remove txIds num: %d", len(txIds))
 	for _, txId := range txIds {
 		l.queue.Remove(txId)
 		l.pendingCache.Delete(txId)
 	}
+
 }
 
 // Fetch Gets a list of stored transactions

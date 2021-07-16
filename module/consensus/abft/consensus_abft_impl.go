@@ -19,13 +19,13 @@ import (
 	"github.com/thoas/go-funk"
 	"github.com/tidwall/wal"
 
-	"chainmaker.org/chainmaker-go/common/msgbus"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/config"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
-	netpb "chainmaker.org/chainmaker-go/pb/protogo/net"
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/common/msgbus"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/config"
+	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
+	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
+	netpb "chainmaker.org/chainmaker/pb-go/net"
+	"chainmaker.org/chainmaker/protocol"
 
 	"chainmaker.org/chainmaker-go/logger"
 )

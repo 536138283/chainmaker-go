@@ -14,7 +14,7 @@ import (
 	"strings"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/store/types"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm/logger"
@@ -26,10 +26,6 @@ import (
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
 )
-
-var defaultMaxIdleConns = 10
-var defaultMaxOpenConns = 10
-var defaultConnMaxLifeTime = 60
 
 //
 //type SqlDBProvider struct {
@@ -69,12 +65,12 @@ type SqlDBHandle struct {
 }
 
 // GetDBHandle returns a DBHandle for given dbname
-func (p *SqlDBHandle) GetDBHandle(dbName string) protocol.DBHandle {
-	p.Lock()
-	defer p.Unlock()
-
-	return p
-}
+//func (p *SqlDBHandle) GetDBHandle(dbName string) protocol.DBHandle {
+//	p.Lock()
+//	defer p.Unlock()
+//
+//	return p
+//}
 func ParseSqlDbType(str string) (types.EngineType, error) {
 	switch str {
 	case "mysql":
@@ -345,7 +341,7 @@ func (p *SqlDBHandle) Close() error {
 	defer p.Unlock()
 	if len(p.dbTxCache) > 0 {
 		txNames := ""
-		for name, _ := range p.dbTxCache {
+		for name := range p.dbTxCache {
 			txNames += name + ";"
 		}
 		p.log.Warnf("these db tx[%s] don't commit or rollback, close them.", txNames)

@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"math"
 
-	commonErrors "chainmaker.org/chainmaker-go/common/errors"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonErrors "chainmaker.org/chainmaker/common/errors"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/txpool/poolconf"
 	"chainmaker.org/chainmaker-go/utils"
 )
@@ -37,7 +37,7 @@ func (pool *txPoolImpl) validate(tx *commonPb.Transaction, source protocol.TxSou
 	}
 
 	if pool.isTxExistInDB(tx) {
-		pool.log.Warnf("transaction exists in DB", "txId", tx.Header.GetTxId())
+		pool.log.Warnf("transaction exists in DB, txId: %s", tx.Header.GetTxId())
 		return commonErrors.ErrTxIdExistDB
 	}
 	return nil

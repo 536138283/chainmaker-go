@@ -13,17 +13,16 @@ import (
 	"path/filepath"
 	"strings"
 
-	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-
 	"chainmaker.org/chainmaker-go/accesscontrol"
 	"chainmaker.org/chainmaker-go/chainconf"
 	"chainmaker.org/chainmaker-go/consensus"
 	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
+	providerConf "chainmaker.org/chainmaker-go/core/provider/conf"
+	"chainmaker.org/chainmaker-go/dpos"
 	"chainmaker.org/chainmaker-go/localconf"
+	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/net"
-	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/snapshot"
 	"chainmaker.org/chainmaker-go/store"
 	"chainmaker.org/chainmaker-go/subscriber"
@@ -31,6 +30,9 @@ import (
 	"chainmaker.org/chainmaker-go/txpool"
 	"chainmaker.org/chainmaker-go/utils"
 	"chainmaker.org/chainmaker-go/vm"
+	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
+	storePb "chainmaker.org/chainmaker/pb-go/store"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // Init all the modules.
@@ -76,6 +78,8 @@ func (bc *Blockchain) Init() (err error) {
 			{moduleNameNetService: bc.initNetService},
 			// init vm instances and module
 			{moduleNameVM: bc.initVM},
+			// init dpos service
+			{moduleNameDpos: bc.initDpos},
 
 			// init transaction pool
 			{moduleNameTxPool: bc.initTxPool},
@@ -125,6 +129,17 @@ func (bc *Blockchain) initExtModules(extModules []map[string]func() error) (err 
 	return
 }
 
+func (bc *Blockchain) initDpos() (err error) {
+	_, ok := bc.initModules[moduleNameDpos]
+	if ok {
+		bc.log.Infof("dpos service module existed, ignore.")
+		return
+	}
+	bc.dpos = dpos.NewDPoSImpl(bc.chainConf, bc.store)
+	bc.initModules[moduleNameNetService] = struct{}{}
+	return
+}
+
 func (bc *Blockchain) initNetService() (err error) {
 	_, ok := bc.initModules[moduleNameNetService]
 	if ok {
@@ -147,7 +162,8 @@ func (bc *Blockchain) initStore() (err error) {
 		return
 	}
 	var storeFactory store.Factory
-	if bc.store, err = storeFactory.NewStore(bc.chainId, &localconf.ChainMakerConfig.StorageConfig); err != nil {
+	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+	if bc.store, err = storeFactory.NewStore(bc.chainId, &localconf.ChainMakerConfig.StorageConfig, storeLogger); err != nil {
 		bc.log.Errorf("new store failed, %s", err.Error())
 		return err
 	}
@@ -201,7 +217,7 @@ func (bc *Blockchain) initCache() (err error) {
 	// 2) if exist on chain, load the config in genesis, it will be changed to load the config in config transactions in the future
 	bc.lastBlock, err = bc.store.GetLastBlock()
 	if err != nil { //可能是全新数据库没有任何数据，而且还没创世，所以可能报错，不返回错误，继续进行创世操作即可
-		bc.log.Infof("get last block failed, %s", err.Error())
+		bc.log.Infof("get last block failed, if it's a genesis block, ignore this error, %s", err.Error())
 	}
 
 	if bc.lastBlock != nil {
@@ -260,8 +276,8 @@ func (bc *Blockchain) initAC() (err error) {
 			return err
 		}
 	}
-
-	bc.ac, err = accesscontrol.NewAccessControlWithChainConfig(skFile, nodeConfig.PrivKeyPassword, certFile, bc.chainConf, nodeConfig.OrgId, bc.store)
+	acLog := logger.GetLoggerByChain(logger.MODULE_ACCESS, bc.chainId)
+	bc.ac, err = accesscontrol.NewAccessControlWithChainConfig(skFile, nodeConfig.PrivKeyPassword, certFile, bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
 	if err != nil {
 		bc.log.Errorf("get organization information failed, %s", err.Error())
 		return
@@ -286,7 +302,8 @@ func (bc *Blockchain) initTxPool() (err error) {
 	if strings.ToUpper(localconf.ChainMakerConfig.TxPoolConfig.PoolType) == string(txpool.BATCH) {
 		txType = txpool.BATCH
 	}
-	bc.txPool, err = txPoolFactory.NewTxPool(
+	txpoolLogger := logger.GetLoggerByChain(logger.MODULE_TXPOOL, bc.chainId)
+	bc.txPool, err = txPoolFactory.NewTxPool(txpoolLogger,
 		txType,
 		txpool.WithNodeId(localconf.ChainMakerConfig.NodeConfig.NodeId),
 		txpool.WithMsgBus(bc.msgBus),
@@ -312,13 +329,11 @@ func (bc *Blockchain) initVM() (err error) {
 		return
 	}
 	// init VM
-	var snapshotFactory snapshot.Factory
 	var vmFactory vm.Factory
-	bc.snapshotManager = snapshotFactory.NewSnapshotManager(bc.store)
 	if bc.netService == nil {
-		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.snapshotManager, bc.ac, nil, bc.chainConf)
+		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, nil, bc.chainConf)
 	} else {
-		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.snapshotManager, bc.ac, bc.netService.GetChainNodesInfoProvider(), bc.chainConf)
+		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, bc.netService.GetChainNodesInfoProvider(), bc.chainConf)
 	}
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
@@ -330,22 +345,33 @@ func (bc *Blockchain) initCore() (err error) {
 		bc.log.Infof("core engine module existed, ignore.")
 		return
 	}
-	// init core engine
-	var coreFactory core.CoreFactory
-	bc.coreEngine, err = coreFactory.NewCoreWithOptions(
-		core.WithMsgBus(bc.msgBus),
-		core.WithTxPool(bc.txPool),
-		core.WithSnapshotManager(bc.snapshotManager),
-		core.WithBlockchainStore(bc.store),
-		core.WithVmMgr(bc.vmMgr),
-		core.WithSigningMember(bc.identity),
-		core.WithLedgerCache(bc.ledgerCache),
-		core.WithChainId(bc.chainId),
-		core.WithChainConf(bc.chainConf),
-		core.WithAccessControl(bc.ac),
-		core.WithSubscriber(bc.eventSubscriber),
-		core.WithProposalCache(bc.proposalCache),
-	)
+	// create snapshot manager
+	var snapshotFactory snapshot.Factory
+	if bc.chainConf.ChainConfig().Snapshot != nil && bc.chainConf.ChainConfig().Snapshot.EnableEvidence {
+		bc.snapshotManager = snapshotFactory.NewSnapshotEvidenceMgr(bc.store)
+	} else {
+		bc.snapshotManager = snapshotFactory.NewSnapshotManager(bc.store)
+	}
+	// init coreEngine module
+	coreEngineConfig := &providerConf.CoreEngineConfig{
+		ChainId:         bc.chainId,
+		TxPool:          bc.txPool,
+		SnapshotManager: bc.snapshotManager,
+		MsgBus:          bc.msgBus,
+		Identity:        bc.identity,
+		LedgerCache:     bc.ledgerCache,
+		ChainConf:       bc.chainConf,
+		AC:              bc.ac,
+		BlockchainStore: bc.store,
+		Log:             logger.GetLoggerByChain(logger.MODULE_CORE, bc.chainId),
+		VmMgr:           bc.vmMgr,
+		ProposalCache:   bc.proposalCache,
+		Subscriber:      bc.eventSubscriber,
+		ABFTCache:       cache.NewAbftCache(),
+	}
+
+	coreEngineFactory := core.Factory()
+	bc.coreEngine, err = coreEngineFactory.NewConsensusEngine(bc.getConsensusType().String(), coreEngineConfig)
 	if err != nil {
 		bc.log.Errorf("new core engine failed, %s", err.Error())
 		return err
@@ -360,19 +386,10 @@ func (bc *Blockchain) initConsensus() (err error) {
 	id := localconf.ChainMakerConfig.NodeConfig.NodeId
 	nodes := bc.chainConf.ChainConfig().Consensus.Nodes
 	nodeIds := make([]string, len(nodes))
-	isConsensusNode := false
 	for i, node := range nodes {
 		for _, nid := range node.NodeId {
 			nodeIds[i] = nid
-			if nid == id {
-				isConsensusNode = true
-			}
 		}
-	}
-	if !isConsensusNode {
-		// this node is not a consensus node
-		delete(bc.initModules, moduleNameConsensus)
-		return nil
 	}
 	_, ok := bc.initModules[moduleNameConsensus]
 	if ok {
@@ -390,13 +407,14 @@ func (bc *Blockchain) initConsensus() (err error) {
 		dbHandle,
 		bc.ledgerCache,
 		bc.proposalCache,
-		bc.coreEngine.BlockVerifier,
-		bc.coreEngine.BlockCommitter,
+		bc.coreEngine.GetBlockVerifier(),
+		bc.coreEngine.GetBlockCommitter(),
 		bc.netService,
 		bc.msgBus,
 		bc.chainConf,
 		bc.store,
-		bc.coreEngine.HotStuffHelper)
+		bc.coreEngine.GetHotStuffHelper(),
+		bc.dpos)
 	if err != nil {
 		bc.log.Errorf("new consensus engine failed, %s", err)
 		return err
@@ -418,8 +436,8 @@ func (bc *Blockchain) initSync() (err error) {
 		bc.msgBus,
 		bc.store,
 		bc.ledgerCache,
-		bc.coreEngine.BlockVerifier,
-		bc.coreEngine.BlockCommitter,
+		bc.coreEngine.GetBlockVerifier(),
+		bc.coreEngine.GetBlockCommitter(),
 	)
 	bc.initModules[moduleNameSync] = struct{}{}
 	return

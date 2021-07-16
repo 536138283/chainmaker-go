@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package revoke
 
 import (
-	cmx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
-	"chainmaker.org/chainmaker-go/protocol"
+	cmx509 "chainmaker.org/chainmaker/common/crypto/x509"
+	"chainmaker.org/chainmaker/protocol"
 	"sync"
 )
 
@@ -49,6 +49,9 @@ func (rv *RevokedValidator) ValidateCertsIsRevoked(certs []*cmx509.Certificate) 
 	bl := false
 	rv.accessControls.Range(func(key, value interface{}) bool {
 		ac, _ := value.(protocol.AccessControlProvider)
+		if ac == nil {
+			return false
+		}
 		bl = ac.IsCertRevoked(certs)
 		if bl {
 			return false

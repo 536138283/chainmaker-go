@@ -8,8 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package subscriber
 
 import (
-	"chainmaker.org/chainmaker-go/common/msgbus"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker/common/msgbus"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
 	"chainmaker.org/chainmaker-go/subscriber/model"
 	feed "github.com/ethereum/go-ethereum/event"
 )
@@ -25,8 +25,8 @@ func (s *EventSubscriber) OnMessage(msg *msgbus.Message) {
 	if blockInfo, ok := msg.Payload.(*commonPb.BlockInfo); ok {
 		go s.blockFeed.Send(model.NewBlockEvent{BlockInfo: blockInfo})
 	}
-	if conEventsInfo, ok := msg.Payload.([]*commonPb.ContractEventInfo); ok {
-		go s.contractEventFeed.Send(model.NewContractEvent{ContractEvents: conEventsInfo})
+	if conEventInfoList, ok := msg.Payload.(*commonPb.ContractEventInfoList); ok {
+		go s.contractEventFeed.Send(model.NewContractEvent{ContractEventInfoList: conEventInfoList})
 	}
 }
 

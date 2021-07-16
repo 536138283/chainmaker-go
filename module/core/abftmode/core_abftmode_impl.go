@@ -1,0 +1,130 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
+package abftmode
+
+import (
+	"chainmaker.org/chainmaker-go/core/provider/conf"
+	"chainmaker.org/chainmaker/common/msgbus"
+	"chainmaker.org/chainmaker-go/core/cache"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/consensus/abft"
+	"chainmaker.org/chainmaker/protocol"
+)
+
+type CoreEngine struct {
+	chainId         string // chain id, to identity this chain
+	abftCache       *cache.AbftCache
+	ledgerCache     protocol.LedgerCache     // ledger cache
+	txPool          protocol.TxPool          // tx pool provides tx batch
+	snapshotManager protocol.SnapshotManager // snapshot manager
+	identity        protocol.SigningMember   // identity manager
+	msgBus          msgbus.MessageBus        // channel to give out proposed block
+	vmMgr           protocol.VmManager
+	ac              protocol.AccessControlProvider
+	blockchainStore protocol.BlockchainStore
+	chainConf       protocol.ChainConf // chain config
+	log             protocol.Logger   // logger
+
+	Committer *Committer
+	Proposer  *Proposer
+	Verifier  *Verifier
+}
+
+func NewCoreEngine(ceConfig *conf.CoreEngineConfig) (*CoreEngine, error) {
+	ce := &CoreEngine{
+		chainId:         ceConfig.ChainId,
+		ledgerCache:     ceConfig.LedgerCache,
+		abftCache:       ceConfig.ABFTCache,
+		txPool:          ceConfig.TxPool,
+		snapshotManager: ceConfig.SnapshotManager,
+		identity:        ceConfig.Identity,
+		msgBus:          ceConfig.MsgBus,
+		ac:              ceConfig.AC,
+		blockchainStore: ceConfig.BlockchainStore,
+		chainConf:       ceConfig.ChainConf,
+		log:             ceConfig.Log,
+		vmMgr:           ceConfig.VmMgr,
+	}
+	var err error
+	ce.Proposer = NewProposer(ceConfig)
+	ce.Verifier, err = NewVerifier(ceConfig)
+	if err != nil {
+		return nil, err
+	}
+	ce.Committer = NewCommitter(ceConfig)
+	return ce, nil
+}
+
+// OnQuit called when quit subsribe message from message bus
+func (c *CoreEngine) OnQuit() {
+	c.log.Info("on quit")
+}
+
+// OnMessage consume a message from message bus
+func (c *CoreEngine) OnMessage(message *msgbus.Message) {
+
+	switch message.Topic {
+	case msgbus.PackageSignal:
+		proposedSignal, ok := message.Payload.(*abft.PackagedSignal)
+		if !ok {
+			c.log.Warnf("propose failed, Invalid Signal Type")
+			return
+		}
+		c.log.Debugf("handle package signal, block height [%d]", proposedSignal.BlockHeight)
+		if err := c.Proposer.Propose(proposedSignal); err != nil {
+			c.log.Warnf("propose failed, error %s", err.Error())
+		}
+	case msgbus.VerifyBlock:
+		block, ok := message.Payload.(*commonPb.Block)
+		if !ok {
+			c.log.Warnf("verify block failed, Invalid Signal Type")
+			return
+		}
+		c.log.Debugf("handle verify block signal, block height [%d]", block.Header.BlockHeight)
+		if err := c.Verifier.verify(block); err != nil {
+			c.log.Warnf("verify failed, error %s", err.Error())
+		}
+	case msgbus.CommitedTxBatchs:
+		txBatchAfterABA, ok := message.Payload.(*abft.TxBatchAfterABA)
+		if !ok {
+			c.log.Warnf("commited txBatch failed, Invalid Signal Type")
+			return
+		}
+		c.log.Debugf("handle commit tx batch signal, block height [%d]", txBatchAfterABA.BlockHeight)
+		if err := c.Committer.Commit(txBatchAfterABA); err != nil {
+			c.log.Warnf("commit fail, error %s", err.Error())
+		}
+	}
+}
+
+func (c *CoreEngine) Stop() {
+	c.log.Info("on quit")
+}
+
+// OnMessage consume a message from message bus
+func (c *CoreEngine) Start() {
+	c.msgBus.Register(msgbus.ProposeState, c)
+	c.msgBus.Register(msgbus.VerifyBlock, c)
+	c.msgBus.Register(msgbus.CommitBlock, c)
+	c.msgBus.Register(msgbus.PackageSignal, c)
+	c.msgBus.Register(msgbus.CommitedTxBatchs, c)
+}
+
+func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
+	return nil
+}
+
+func (c *CoreEngine) GetBlockVerifier() protocol.BlockVerifier {
+	return nil
+}
+
+func (c *CoreEngine) DiscardAboveHeight(baseHeight int64) {
+}
+
+func (c *CoreEngine) GetHotStuffHelper() protocol.HotStuffHelper {
+	return nil
+}

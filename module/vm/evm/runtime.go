@@ -11,24 +11,25 @@ import (
 	"fmt"
 	"runtime/debug"
 
-	"chainmaker.org/chainmaker-go/common/evmutils"
+	"chainmaker.org/chainmaker/common/evmutils"
 	evm_go "chainmaker.org/chainmaker-go/evm/evm-go"
 	"chainmaker.org/chainmaker-go/evm/evm-go/environment"
 	"chainmaker.org/chainmaker-go/evm/evm-go/opcodes"
 	"chainmaker.org/chainmaker-go/evm/evm-go/storage"
 	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // RuntimeInstance evm runtime
 type RuntimeInstance struct {
-	Method       string               // invoke contract method
-	ChainId      string               // chain id
-	Address      *evmutils.Int        //address
-	ContractId   *commonPb.ContractId // contract info
-	Log          *logger.CMLogger
-	TxSimContext protocol.TxSimContext
+	Method        string               // invoke contract method
+	ChainId       string               // chain id
+	Address       *evmutils.Int        //address
+	ContractId    *commonPb.ContractId // contract info
+	Log           *logger.CMLogger
+	TxSimContext  protocol.TxSimContext
+	ContractEvent []*commonPb.ContractEvent
 }
 
 // Invoke contract by call vm, implement protocol.RuntimeInstance
@@ -154,6 +155,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	contractResult.Code = commonPb.ContractResultCode_OK
 	contractResult.GasUsed = int64(gasLeft - result.GasLeft)
 	contractResult.Result = result.ResultData
+	contractResult.ContractEvent = r.ContractEvent
 	return contractResult
 }
 
@@ -168,6 +170,13 @@ func (r *RuntimeInstance) callback(result evm_go.ExecuteResult, err error) {
 		r.Log.Errorf("error encountered in contract [%s] execution，tx: [%s], error: [%s]",
 			r.ContractId.ContractName, r.TxSimContext.GetTx().Header.TxId, err.Error())
 		panic(err)
+	}
+	//emit  contract event
+	err = r.emitContractEvent(result)
+	if err != nil {
+		r.Log.Debugf("emit contract event err:%s", err.Error())
+		panic(err)
+		return
 	}
 	for n, v := range result.StorageCache.CachedData {
 		for k, val := range v {
@@ -221,4 +230,49 @@ func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, e
 	contractResult.Message = errMsg
 	r.Log.Error(errMsg)
 	return contractResult
+}
+func (r *RuntimeInstance) emitContractEvent(result evm_go.ExecuteResult) error {
+	//parse log
+	var contractEvents []*commonPb.ContractEvent
+	logsMap := result.StorageCache.Logs
+	for _, logs := range logsMap {
+		for _, log := range logs {
+			if len(log.Topics) > protocol.EventDataMaxCount-1 {
+				return fmt.Errorf("too many event data")
+			}
+			contractEvent := &commonPb.ContractEvent{
+				TxId:            r.TxSimContext.GetTx().Header.TxId,
+				ContractName:    r.ContractId.ContractName,
+				ContractVersion: r.ContractId.ContractVersion,
+			}
+			topics := log.Topics
+			for index, topic := range topics {
+				//the first topic in log as contract event topic,others as event data.
+				//in ChainMaker contract event,only has one topic filed.
+				if index == 0 && topic != nil {
+					topicHexStr := hex.EncodeToString(topic)
+					if err := protocol.CheckTopicStr(topicHexStr); err != nil {
+						return fmt.Errorf(err.Error())
+					}
+					contractEvent.Topic = topicHexStr
+					r.Log.Debugf("topicHexString: %s", topicHexStr)
+					continue
+				}
+				//topic marked by 'index' in ethereum as contract event data
+				topicIndexHexStr := hex.EncodeToString(topic)
+				r.Log.Debugf("topicIndexString: %s", topicIndexHexStr)
+				contractEvent.EventData = append(contractEvent.EventData, topicIndexHexStr)
+			}
+			data := log.Data
+			dataHexStr := hex.EncodeToString(data)
+			if len(dataHexStr) > protocol.EventDataMaxLen {
+				return fmt.Errorf("event data too long,longer than %v", protocol.EventDataMaxLen)
+			}
+			contractEvent.EventData = append(contractEvent.EventData, dataHexStr)
+			contractEvents = append(contractEvents, contractEvent)
+			r.Log.Debugf("dataHexStr: %s", dataHexStr)
+		}
+	}
+	r.ContractEvent = contractEvents
+	return nil
 }

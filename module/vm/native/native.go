@@ -1,16 +1,16 @@
 /*
-Copyright (C) BABEC. All rights reserved.
-
-SPDX-License-Identifier: Apache-2.0
+ Copyright (C) BABEC. All rights reserved.
+ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+   SPDX-License-Identifier: Apache-2.0
 */
 
 package native
 
 import (
 	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	configPb "chainmaker.org/chainmaker/pb-go/config"
+	"chainmaker.org/chainmaker/protocol"
 	"errors"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
@@ -54,6 +54,9 @@ func initContract(log *logger.CMLogger) map[string]Contract {
 	contracts[commonPb.ContractName_SYSTEM_CONTRACT_CERT_MANAGE.String()] = newCertManageContract(log)
 	contracts[commonPb.ContractName_SYSTEM_CONTRACT_GOVERNANCE.String()] = newGovernmentContract(log)
 	contracts[commonPb.ContractName_SYSTEM_CONTRACT_MULTI_SIGN.String()] = newMultiSignContract(log)
+	contracts[commonPb.ContractName_SYSTEM_CONTRACT_PRIVATE_COMPUTE.String()] = newPrivateComputeContact(log)
+	contracts[commonPb.ContractName_SYSTEM_CONTRACT_DPOS_ERC20.String()] = newDPoSERC20Contract(log)
+	contracts[commonPb.ContractName_SYSTEM_CONTRACT_DPOS_STAKE.String()] = newDPoSStakeContract(log)
 	return contracts
 }
 
@@ -87,6 +90,11 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, methodName str
 	if err != nil {
 		r.log.Error(err)
 		result.Message = err.Error()
+		return result
+	}
+
+	if len(bytes) == 0 {
+		result.Message = "not found"
 		return result
 	}
 

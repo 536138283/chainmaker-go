@@ -9,14 +9,13 @@ package utils
 import (
 	"fmt"
 	"math"
-	"strconv"
 	"time"
 
-	pbac "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	chainedbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/chainedbft"
-	"chainmaker.org/chainmaker-go/protocol"
+	pbac "chainmaker.org/chainmaker/pb-go/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/consensus"
+	chainedbftpb "chainmaker.org/chainmaker/pb-go/consensus/chainedbft"
+	"chainmaker.org/chainmaker/protocol"
 	chainUtils "chainmaker.org/chainmaker-go/utils"
 	"github.com/gogo/protobuf/proto"
 )
@@ -61,8 +60,7 @@ func GetQCFromBlock(block *common.Block) []byte {
 //GetLevelFromQc get level from qc
 func GetLevelFromQc(block *common.Block) (uint64, error) {
 	qc := new(chainedbftpb.QuorumCert)
-	err := proto.Unmarshal(GetQCFromBlock(block), qc)
-	if err != nil || qc == nil {
+	if err := proto.Unmarshal(GetQCFromBlock(block), qc); err != nil {
 		return 0, err
 	}
 	return qc.Level, nil
@@ -94,7 +92,6 @@ func SignBlock(block *common.Block, hashType string, signer protocol.SigningMemb
 	}
 	block.Header.BlockHash = hash[:]
 	block.Header.Signature = sig
-
 	return nil
 }
 
@@ -198,16 +195,9 @@ func GetUidFromProtoSigner(signerpb *pbac.SerializedMember, netservice protocol.
 	return uid, nil
 }
 
-func ParseInt(key, val string) (int64, error) {
-	t, err := strconv.ParseInt(val, 10, 64)
-	if err != nil {
-		return 0, err
+func VerifyTimeConfig(detail string, t uint64) error {
+	if t > uint64(math.MaxInt64/time.Millisecond) {
+		return fmt.Errorf("invalid config[%s] value: %d > maxInt64/time.Millisecond ", detail, t)
 	}
-	if t <= 0 {
-		return 0, fmt.Errorf("invalid config[%s] value: %d <= 0", key, t)
-	}
-	if t > int64(math.MaxInt64)/int64(time.Millisecond) {
-		return 0, fmt.Errorf("invalid config[%s] value: %d > maxInt64/time.Millisecond ", key, t)
-	}
-	return t, nil
+	return nil
 }

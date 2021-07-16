@@ -17,11 +17,12 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/protocol"
-	"chainmaker.org/chainmaker-go/store/types"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/mattn/go-sqlite3"
+
+	"chainmaker.org/chainmaker-go/localconf"
+	"chainmaker.org/chainmaker/protocol"
+	"chainmaker.org/chainmaker-go/store/types"
 )
 
 var defaultMaxIdleConns = 10
@@ -37,6 +38,10 @@ type SqlDBHandle struct {
 	log           protocol.Logger
 }
 
+func (p *SqlDBHandle) CompactRange(start, limit []byte) error {
+	return errors.New("implement me")
+}
+
 func ParseSqlDbType(str string) (types.EngineType, error) {
 	switch str {
 	case "mysql":
@@ -49,6 +54,7 @@ func ParseSqlDbType(str string) (types.EngineType, error) {
 }
 
 const UTF8_CHAR = "charset=utf8mb4"
+const DSN_ParseTime = "parseTime=True"
 
 func replaceMySqlDsn(dsn string, dbName string) string {
 	dsnPattern := regexp.MustCompile(
@@ -63,16 +69,19 @@ func replaceMySqlDsn(dsn string, dbName string) string {
 	start, end := matches[10], matches[11]
 	newDsn := dsn[:start] + dbName + dsn[end:]
 	if matches[12] == -1 {
-		return newDsn + "?" + UTF8_CHAR
+		return newDsn + "?" + UTF8_CHAR + "&" + DSN_ParseTime
 	}
 	par := dsn[matches[12]:]
-	if strings.Contains(par, "charset=") {
-		return newDsn
+	if !strings.Contains(par, "charset=") {
+		newDsn = newDsn + "&" + UTF8_CHAR
 	}
-	return newDsn + "&" + UTF8_CHAR
+	if !strings.Contains(par, "parseTime=") {
+		newDsn = newDsn + "&" + DSN_ParseTime
+	}
+	return newDsn
 }
 
-// NewSqlDBProvider construct a new SqlDBHandle
+// NewSqlDBHandle construct a new SqlDBHandle
 func NewSqlDBHandle(dbName string, conf *localconf.SqlDbConfig, log protocol.Logger) *SqlDBHandle {
 	provider := &SqlDBHandle{dbTxCache: make(map[string]*SqlDBTx), log: log}
 	sqlType, err := ParseSqlDbType(conf.SqlDbType)
@@ -86,7 +95,8 @@ func NewSqlDBHandle(dbName string, conf *localconf.SqlDbConfig, log protocol.Log
 		if err != nil {
 			log.Panic("connect to mysql error:" + err.Error())
 		}
-		_, err = db.Query("SELECT DATABASE()")
+		err = db.Ping()
+		//_, err = db.Query("SELECT DATABASE()")
 		if err != nil {
 			if strings.Contains(err.Error(), "Unknown database") {
 				log.Infof("first time connect to a new database,create database %s", dbName)
@@ -103,18 +113,31 @@ func NewSqlDBHandle(dbName string, conf *localconf.SqlDbConfig, log protocol.Log
 			}
 		}
 		log.Debug("open new db connection for " + conf.SqlDbType + " dsn:" + dsn)
-		db.SetConnMaxLifetime(time.Second * time.Duration(conf.ConnMaxLifeTime))
-		db.SetMaxIdleConns(conf.MaxIdleConns)
-		db.SetMaxOpenConns(conf.MaxOpenConns)
+		if conf.ConnMaxLifeTime > 0 {
+			defaultConnMaxLifeTime = conf.ConnMaxLifeTime
+		}
+		if conf.MaxIdleConns > 0 {
+			defaultMaxIdleConns = conf.MaxIdleConns
+		}
+		if conf.MaxOpenConns > 0 {
+			defaultMaxOpenConns = conf.MaxOpenConns
+		}
+		db.SetConnMaxLifetime(time.Second * time.Duration(defaultConnMaxLifeTime))
+		db.SetMaxIdleConns(defaultMaxIdleConns)
+		db.SetMaxOpenConns(defaultMaxOpenConns)
 		provider.db = db
 		provider.contextDbName = dbName //默认连接mysql数据库
 	} else if sqlType == types.Sqlite {
 		dbPath := conf.Dsn
 		if !strings.Contains(dbPath, ":memory:") { //不是内存数据库模式，则需要在路径中包含chainId
 			dbPath = filepath.Join(dbPath, dbName)
-			provider.createDirIfNotExist(dbPath)
+			err := provider.createDirIfNotExist(dbPath)
+			if err != nil {
+				log.Panicf("failed to create folder for sqlite path:%s,get error:%s", dbPath, err)
+			}
 			dbPath = filepath.Join(dbPath, "sqlite.db")
 		}
+		log.Debug("open a sqlite connect for path:", dbPath)
 		db, err := sql.Open("sqlite3", dbPath)
 		if err != nil {
 			log.Panicf("failed to open sqlite path:%s,get error:%s", dbPath, err)
@@ -126,13 +149,14 @@ func NewSqlDBHandle(dbName string, conf *localconf.SqlDbConfig, log protocol.Log
 
 	log.Debug("inject ChainMaker logger into db logger.")
 	provider.log = log
+	provider.contextDbName = dbName
 	return provider
 }
 func (p *SqlDBHandle) createDatabase(dsn string, dbName string) error {
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		p.log.Error(err)
-		return CONNECTION_ERROR
+		return errConnection
 	}
 	defer db.Close()
 	sqlStr := "create database " + dbName
@@ -140,7 +164,7 @@ func (p *SqlDBHandle) createDatabase(dsn string, dbName string) error {
 	p.log.Debug("Exec sql:", sqlStr)
 	if err != nil {
 		p.log.Error(err)
-		return DATABASE_ERROR
+		return errDatabase
 	}
 	return nil
 }
@@ -155,7 +179,7 @@ func (p *SqlDBHandle) createDirIfNotExist(path string) error {
 		err := os.MkdirAll(path, os.ModePerm)
 		if err != nil {
 			p.log.Error(err)
-			return IO_ERROR
+			return errIO
 		}
 	}
 	return nil
@@ -177,14 +201,14 @@ func (p *SqlDBHandle) CreateDatabaseIfNotExist(dbName string) error {
 		_, err = p.db.Exec("create database " + dbName)
 		if err != nil {
 			p.log.Error(err)
-			return DATABASE_ERROR //创建失败
+			return errDatabase //创建失败
 		}
 		p.log.Debugf("create database %s", dbName)
 		//创建成功，再次切换数据库
 		_, err = p.db.Exec("use " + dbName)
 		if err != nil {
 			p.log.Error(err)
-			return DATABASE_ERROR //use失败
+			return errDatabase //use失败
 		}
 		return nil
 	}
@@ -196,7 +220,11 @@ func (p *SqlDBHandle) CreateDatabaseIfNotExist(dbName string) error {
 func (p *SqlDBHandle) CreateTableIfNotExist(objI interface{}) error {
 	p.Lock()
 	defer p.Unlock()
-	obj := objI.(TableDDLGenerator)
+	obj, ok := objI.(TableDDLGenerator)
+	if !ok {
+		p.log.Errorf("%v not a TableDDLGenerator", objI)
+		return errTypeConvert
+	}
 	if !p.HasTable(obj) {
 		return p.CreateTable(obj)
 	}
@@ -206,23 +234,34 @@ func (p *SqlDBHandle) HasTable(obj TableDDLGenerator) bool {
 	//obj:=objI.(TableDDLGenerator)
 	sql := ""
 	if p.dbType == types.MySQL {
-		sql = fmt.Sprintf("SELECT count(*) FROM information_schema.tables WHERE table_schema = '%s' AND table_name = '%s' AND table_type = 'BASE TABLE'", p.contextDbName, obj.GetTableName())
+		sql = fmt.Sprintf(
+			`SELECT count(*) 
+FROM information_schema.tables 
+WHERE table_schema = '%s' AND table_name = '%s' AND table_type = 'BASE TABLE'`,
+			p.contextDbName, obj.GetTableName())
 	}
 	if p.dbType == types.Sqlite {
-		sql = fmt.Sprintf("SELECT count(*) FROM sqlite_master WHERE type='table' AND name=\"%s\"", obj.GetTableName())
+		sql = fmt.Sprintf(`SELECT count(*) 
+FROM sqlite_master 
+WHERE type='table' AND name='%s'`, obj.GetTableName())
 	}
 	p.log.Debug("Query sql:", sql)
 	row := p.db.QueryRow(sql)
 	count := 0
-	row.Scan(&count)
+	err := row.Scan(&count)
+	if err != nil {
+		p.log.Error("scan count get error:%s", err)
+		return false
+	}
 	return count > 0
 }
 func (p *SqlDBHandle) CreateTable(obj TableDDLGenerator) error {
 	sql := obj.GetCreateTableSql(p.dbType.LowerString())
+	p.log.Debug("Exec ddl:", sql, "database:", p.contextDbName)
 	_, err := p.db.Exec(sql)
 	if err != nil {
 		p.log.Error(err)
-		return TABLE_ERROR //创建失败
+		return errTable //创建失败
 	}
 	return nil
 }
@@ -235,7 +274,7 @@ func (p *SqlDBHandle) ExecSql(sql string, values ...interface{}) (int64, error) 
 	tx, err := p.db.Exec(sql, values...)
 	if err != nil {
 		p.log.Error(err)
-		return 0, SQL_ERROR
+		return 0, errSql
 	}
 	return tx.RowsAffected()
 }
@@ -243,30 +282,46 @@ func (p *SqlDBHandle) ExecSql(sql string, values ...interface{}) (int64, error) 
 func (p *SqlDBHandle) Save(val interface{}) (int64, error) {
 	p.Lock()
 	defer p.Unlock()
-	value := val.(TableDMLGenerator)
-	update, args := value.GetUpdateSql()
-	p.log.Debug("Exec sql:", update, args)
-	effect, err := p.db.Exec(update, args...)
+	value, ok := val.(TableDMLGenerator)
+	if !ok {
+		p.log.Errorf("%v not a TableDMLGenerator", val)
+		return 0, errTypeConvert
+	}
+	countSql, args := value.GetCountSql()
+	p.log.Debug("Query sql:", countSql, args)
+	row := p.db.QueryRow(countSql, args...)
+	if row.Err() != nil {
+		return 0, row.Err()
+	}
+	rowCount := int64(0)
+	err := row.Scan(&rowCount)
 	if err != nil {
-		return 0, SQL_ERROR
+		return 0, errSql
 	}
-	rowCount, err := effect.RowsAffected()
-	if err != nil {
-		return 0, SQL_ERROR
+	if rowCount == 0 { //数据库不存在对应数据，执行Insert操作
+		insert, args := value.GetInsertSql()
+		p.log.Debug("Exec sql:", insert, args)
+		result, err := p.db.Exec(insert, args...)
+		if err != nil {
+			return 0, errSql
+		}
+		rowCount, err = result.RowsAffected()
+		if err != nil {
+			return 0, errSql
+		}
+	} else { //数据库存在，执行Update操作
+		update, args := value.GetUpdateSql()
+		p.log.Debug("Exec sql:", update, args)
+		effect, err := p.db.Exec(update, args...)
+		if err != nil {
+			return 0, errSql
+		}
+		rowCount, err = effect.RowsAffected()
+		if err != nil {
+			return 0, errSql
+		}
 	}
-	if rowCount != 0 {
-		return rowCount, nil
-	}
-	insert, args := value.GetInsertSql()
-	p.log.Debug("Exec sql:", insert, args)
-	result, err := p.db.Exec(insert, args...)
-	if err != nil {
-		return 0, SQL_ERROR
-	}
-	rowCount, err = result.RowsAffected()
-	if err != nil {
-		return 0, SQL_ERROR
-	}
+
 	return rowCount, nil
 }
 func (p *SqlDBHandle) QuerySingle(sql string, values ...interface{}) (protocol.SqlRow, error) {
@@ -277,13 +332,13 @@ func (p *SqlDBHandle) QuerySingle(sql string, values ...interface{}) (protocol.S
 	rows, err := db.Query(sql, values...)
 	if err != nil {
 		p.log.Error(err)
-		return nil, SQL_QUERY_ERROR
+		return nil, errSqlQuery
 	}
 
 	if !rows.Next() {
 		return &emptyRow{}, nil
 	}
-	return NewSqlDBRow(rows, nil), nil
+	return NewSqlDBRow(rows), nil
 }
 
 func (p *SqlDBHandle) QueryMulti(sql string, values ...interface{}) (protocol.SqlRows, error) {
@@ -293,7 +348,7 @@ func (p *SqlDBHandle) QueryMulti(sql string, values ...interface{}) (protocol.Sq
 	rows, err := p.db.Query(sql, values...)
 	if err != nil {
 		p.log.Error(err)
-		return nil, SQL_QUERY_ERROR
+		return nil, errSqlQuery
 	}
 	return NewSqlDBRows(rows, nil), nil
 }
@@ -311,7 +366,7 @@ func (p *SqlDBHandle) BeginDbTransaction(txName string) (protocol.SqlDBTransacti
 	tx, err := p.db.Begin()
 	if err != nil {
 		p.log.Error(err)
-		return nil, TRANSACTION_ERROR
+		return nil, errTransaction
 	}
 	sqltx := NewSqlDBTx(txName, p.dbType, tx, p.log)
 	p.dbTxCache[txName] = sqltx
@@ -338,7 +393,7 @@ func (p *SqlDBHandle) GetDbTransaction(txName string) (protocol.SqlDBTransaction
 func (p *SqlDBHandle) getDbTransaction(txName string) (*SqlDBTx, error) {
 	tx, has := p.dbTxCache[txName]
 	if !has {
-		return nil, TX_NOT_FOUND_ERROR
+		return nil, errTxNotFound
 	}
 	return tx, nil
 }
@@ -352,7 +407,7 @@ func (p *SqlDBHandle) CommitDbTransaction(txName string) error {
 	err = tx.Commit()
 	if err != nil {
 		p.log.Error(err)
-		return TRANSACTION_ERROR
+		return errTransaction
 	}
 	delete(p.dbTxCache, txName)
 	//p.log.Debugf("commit db transaction[%s]", txName) //devin: already log in tx.Commit()
@@ -368,7 +423,7 @@ func (p *SqlDBHandle) RollbackDbTransaction(txName string) error {
 	err = tx.Rollback()
 	if err != nil {
 		p.log.Error(err)
-		return TRANSACTION_ERROR
+		return errTransaction
 	}
 	delete(p.dbTxCache, txName)
 	//p.log.Debugf("rollback db transaction[%s]", txName) //devin: already log in tx.Rollback()
@@ -387,7 +442,7 @@ func (p *SqlDBHandle) Close() error {
 	err := p.db.Close()
 	if err != nil {
 		p.log.Error(err)
-		return CONNECTION_ERROR
+		return errConnection
 	}
 	return nil
 }

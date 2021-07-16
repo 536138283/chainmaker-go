@@ -18,8 +18,8 @@ import (
 
 	"chainmaker.org/chainmaker-go/gasm"
 	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/vm/test"
 	"chainmaker.org/chainmaker-go/wasmer"
 	"github.com/spf13/cobra"
@@ -65,7 +65,7 @@ func startPerf() {
 	test.WasmFile = wasmFilePath
 	test.CertFilePath = certFilePath
 	var contractId *commonPb.ContractId
-	var txContext *test.TxContextMockTest
+	var txContext protocol.TxSimContext
 	var byteCode []byte
 	var vmTypeInt int
 	if strings.ToLower(vmType) == "gasm" {
@@ -205,7 +205,7 @@ func invokeContractOfWasmer(method string, contractId *commonPb.ContractId, txCo
 	test.BaseParam(parameters)
 	//parameters["key"] = "key"
 
-	runtime, _ := pool.NewRuntimeInstance(contractId, txContext, byteCode)
+	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
 	return runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
 }
 

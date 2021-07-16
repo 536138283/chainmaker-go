@@ -7,14 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"chainmaker.org/chainmaker/protocol"
 	"fmt"
 	"sync"
-
-	"chainmaker.org/chainmaker-go/logger"
 )
 
 type Config struct {
-	logger *logger.CMLogger
+	logger protocol.Logger
 	sync.Mutex
 	height    int64    // height
 	id        string   // id of the RBC or BBA instance

@@ -11,14 +11,22 @@ import (
 	"testing"
 
 	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
+
+	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
 
 func mockValidateInQueue(queue *txQueue, blockChainStore protocol.BlockchainStore) txValidateFunc {
 	return func(tx *commonPb.Transaction, source protocol.TxSource) error {
-		if queue.has(tx, source != protocol.INTERNAL) {
+		if _, ok := queue.pendingCache.Load(tx.Header.TxId); ok {
+			return fmt.Errorf("tx exist in txpool")
+		}
+		if queue.commonTxQueue.queue.Get(tx.Header.TxId) != nil {
+			return fmt.Errorf("tx exist in txpool")
+		}
+		if queue.configTxQueue.queue.Get(tx.Header.TxId) != nil {
 			return fmt.Errorf("tx exist in txpool")
 		}
 		if blockChainStore != nil {
@@ -33,9 +41,11 @@ func mockValidateInQueue(queue *txQueue, blockChainStore protocol.BlockchainStor
 var testQueueLogName = "test_tx_queue"
 
 func TestAddTxsToConfigQueue(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, true)
 
 	// 1. put txs to config queue
@@ -62,9 +72,11 @@ func TestAddTxsToConfigQueue(t *testing.T) {
 }
 
 func TestAddTxsToCommonQueue(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, false)
 
 	// 1. put txs to queue
@@ -91,9 +103,11 @@ func TestAddTxsToCommonQueue(t *testing.T) {
 }
 
 func TestGetInQueue(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, false)
 
 	// 1. put txs to queue and check existence
@@ -131,9 +145,11 @@ func TestGetInQueue(t *testing.T) {
 }
 
 func TestHasInQueue(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, false)
 
 	// 1. put txs to queue and check existence
@@ -163,9 +179,11 @@ func TestHasInQueue(t *testing.T) {
 }
 
 func TestDeleteConfigTxs(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, true)
 
 	// 1. put txs to queue
@@ -191,9 +209,11 @@ func TestDeleteConfigTxs(t *testing.T) {
 }
 
 func TestDeleteCommonTxs(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, false)
 
 	// 1. put txs to queue and check existence
@@ -219,9 +239,11 @@ func TestDeleteCommonTxs(t *testing.T) {
 }
 
 func TestAppendTxsToPendingCache(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, false)
 
 	// 1. put txs to queue and check appendTxsToPendingCache
@@ -249,9 +271,11 @@ func TestAppendTxsToPendingCache(t *testing.T) {
 }
 
 func TestFetchInQueue(t *testing.T) {
-	blockChainStore := newMockBlockChainStore()
-	queue := newQueue(blockChainStore, logger.GetLogger(testQueueLogName), nil)
-	queue.validate = mockValidateInQueue(queue, blockChainStore)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	blockChainStore := newMockBlockChainStore(ctrl)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, false)
 
 	// 1. put txs to queue and check appendTxsToPendingCache

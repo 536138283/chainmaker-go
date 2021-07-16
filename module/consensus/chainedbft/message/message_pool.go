@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"sync"
 
-	chainedbft "chainmaker.org/chainmaker-go/pb/protogo/consensus/chainedbft"
+	chainedbft "chainmaker.org/chainmaker/pb-go/consensus/chainedbft"
 )
 
 //MsgPool manages all of consensus messages received for protocol
@@ -75,13 +75,13 @@ func (mp *MsgPool) GetProposal(height uint64, round uint64) *chainedbft.Consensu
 }
 
 //GetVotes is an external api to get votes at given height and round
-func (mp *MsgPool) GetVotes(height uint64, round uint64) []*chainedbft.VoteData {
+func (mp *MsgPool) GetQCVotes(height uint64, round uint64) []*chainedbft.VoteData {
 	mp.RLock()
 	defer mp.RUnlock()
 	if _, ok := mp.msgs[height]; !ok {
 		return nil
 	}
-	return mp.msgs[height].getVotes(round)
+	return mp.msgs[height].getQCVotes(round)
 }
 
 //CheckAnyVotes is an external api to check whether self have received minVotesForQc votes

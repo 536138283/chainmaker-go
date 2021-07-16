@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package chainedbft
 
 import (
+	"crypto/sha256"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/pb/protogo/net"
+	"chainmaker.org/chainmaker/pb-go/net"
 
-	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker/common/msgbus"
 	"chainmaker.org/chainmaker-go/consensus/chainedbft/utils"
-	chainedbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/chainedbft"
+	chainedbftpb "chainmaker.org/chainmaker/pb-go/consensus/chainedbft"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -26,6 +27,8 @@ func (cbi *ConsensusChainedBftImpl) signAndMarshal(payload *chainedbftpb.Consens
 	if err := utils.SignConsensusMsg(consensusMessage, cbi.chainConf.ChainConfig().Crypto.Hash, cbi.singer); err != nil {
 		return nil, fmt.Errorf("sign consensus message failed, err %v", err)
 	}
+	data, _ := proto.Marshal(payload)
+	cbi.logger.Debugf("The hash of the unsigned raw data when sign data：%x", sha256.Sum256(data))
 	cbi.logger.Debugf("signAndMarshal, consensus msg %v", payload.String())
 	if internal {
 		//send it to self, no need to marshal

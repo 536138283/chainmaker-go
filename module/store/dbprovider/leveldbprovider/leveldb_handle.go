@@ -13,8 +13,7 @@ import (
 	"path/filepath"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	logImpl "chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/pkg/errors"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/filter"
@@ -24,10 +23,14 @@ import (
 
 const defaultBloomFilterBits = 10
 const (
-	StoreBlockDBDir   = "store_block"
-	StoreStateDBDir   = "store_state"
+	//StoreBlockDBDir blockdb folder name
+	StoreBlockDBDir = "store_block"
+	//StoreStateDBDir statedb folder name
+	StoreStateDBDir = "store_state"
+	//StoreHistoryDBDir historydb folder name
 	StoreHistoryDBDir = "store_history"
-	StoreResultDBDir  = "store_result"
+	//StoreResultDBDir resultdb folder name
+	StoreResultDBDir = "store_result"
 )
 
 // LevelDBHandle encapsulated handle to leveldb
@@ -36,10 +39,8 @@ type LevelDBHandle struct {
 	logger protocol.Logger
 }
 
-func NewLevelDBHandle(chainId string, dbFolder string, dbconfig *localconf.LevelDbConfig, logger protocol.Logger) *LevelDBHandle {
-	if logger == nil {
-		logger = logImpl.GetLoggerByChain(logImpl.MODULE_STORAGE, chainId)
-	}
+func NewLevelDBHandle(chainId string, dbFolder string, dbconfig *localconf.LevelDbConfig,
+	logger protocol.Logger) *LevelDBHandle {
 	dbOpts := &opt.Options{}
 	writeBufferSize := dbconfig.BlockWriteBufferSize
 	if writeBufferSize <= 0 {
@@ -100,7 +101,7 @@ func (h *LevelDBHandle) Get(key []byte) ([]byte, error) {
 // Put saves the key-values
 func (h *LevelDBHandle) Put(key []byte, value []byte) error {
 	if value == nil {
-		h.logger.Warn("writting leveldbprovider key [%#v] with nil value", key)
+		h.logger.Warn("writing leveldbprovider key [%#v] with nil value", key)
 		return errors.New("error writing leveldbprovider with nil value")
 	}
 	wo := &opt.WriteOptions{Sync: true}
@@ -154,6 +155,14 @@ func (h *LevelDBHandle) WriteBatch(batch protocol.StoreBatcher, sync bool) error
 		return errors.Wrap(err, "error writing batch to leveldbprovider")
 	}
 	return nil
+}
+
+// CompactRange compacts the underlying DB for the given key range.
+func (h *LevelDBHandle) CompactRange(start, limit []byte) error {
+	return h.db.CompactRange(util.Range{
+		Start: start,
+		Limit: limit,
+	})
 }
 
 // NewIteratorWithRange returns an iterator that contains all the key-values between given key ranges

@@ -13,8 +13,8 @@ import (
 	"sort"
 	"sync"
 
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
-	abftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/abft"
+	"chainmaker.org/chainmaker/pb-go/consensus/abft"
+	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
 	"github.com/NebulousLabs/merkletree"
 	"github.com/klauspost/reedsolomon"
 )
@@ -39,7 +39,7 @@ func NewRBC(cfg *Config) *RBC {
 	cfg.logger.Infof("NewRBC config: %s", cfg)
 	enc, err := reedsolomon.New(cfg.faultsNum+1, cfg.nodesNum-cfg.faultsNum-1)
 	if err != nil {
-		cfg.logger.DPanicf("[%s] new reedsolomon error: %v", cfg.nodeID, err)
+		cfg.logger.Panicf("[%s] new reedsolomon error: %v", cfg.nodeID, err)
 	}
 
 	rbc := &RBC{

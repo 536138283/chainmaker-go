@@ -7,20 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
+	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
 	"fmt"
 	"sync"
 
-	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 )
 
 type txValidateFunc func(tx *commonPb.Transaction, source protocol.TxSource) error
 
 type txQueue struct {
-	log      *logger.CMLogger
+	log      protocol.Logger
 	validate txValidateFunc
 
 	commonTxQueue *txList   // common transaction queue
@@ -28,14 +27,14 @@ type txQueue struct {
 	pendingCache  *sync.Map // Caches transactions that are already in the block to be deleted
 }
 
-func newQueue(blockStore protocol.BlockchainStore, log *logger.CMLogger, validate txValidateFunc, consensusType consensuspb.ConsensusType) *txQueue {
+func newQueue(blockStore protocol.BlockchainStore, log protocol.Logger, validate txValidateFunc, consensusType consensuspb.ConsensusType) *txQueue {
 	pendingCache := sync.Map{}
 	queue := txQueue{
 		log:           log,
 		validate:      validate,
 		pendingCache:  &pendingCache,
-		commonTxQueue: newTxList(log, &pendingCache, blockStore,consensusType),
-		configTxQueue: newTxList(log, &pendingCache, blockStore,consensusType),
+		commonTxQueue: newTxList(log, &pendingCache, blockStore, consensusType),
+		configTxQueue: newTxList(log, &pendingCache, blockStore, consensusType),
 	}
 	return &queue
 }

@@ -8,9 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
 
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 )
 
@@ -58,7 +58,7 @@ func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 		if snapshot == nil || snapshot.GetPreSnapshot() == nil {
 			continue
 		}
-		prevFp := m.delegate.calcSnapshotFingerPrint(snapshot.GetPreSnapshot().(*SnapshotImpl))
+		prevFp := m.delegate.calcSnapshotFingerPrint(snapshot.GetPreSnapshot().(*SnapshotEvidence).delegate)
 		if deleteFp == prevFp {
 			snapshot.SetPreSnapshot(nil)
 		}
@@ -72,11 +72,11 @@ func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 		if snapshot == nil || snapshot.GetPreSnapshot() == nil {
 			continue
 		}
-		preSnapshot := snapshot.GetPreSnapshot().(*SnapshotImpl)
+		preSnapshot := snapshot.GetPreSnapshot().(*SnapshotEvidence)
 		if block.Header.BlockHeight-preSnapshot.GetBlockHeight() > 8 {
-			deleteOldFp := m.delegate.calcSnapshotFingerPrint(preSnapshot)
+			deleteOldFp := m.delegate.calcSnapshotFingerPrint(preSnapshot.delegate)
 			delete(m.snapshots, deleteOldFp)
-			log.Infof("delete snapshot %v at height %d while gc", deleteFp, preSnapshot.blockHeight)
+			log.Infof("delete snapshot %v at height %d while gc", deleteFp, preSnapshot.GetBlockHeight())
 			snapshot.SetPreSnapshot(nil)
 		}
 	}

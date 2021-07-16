@@ -8,17 +8,16 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
-	"chainmaker.org/chainmaker-go/common/concurrentlru"
-	bccrypto "chainmaker.org/chainmaker-go/common/crypto"
-	"chainmaker.org/chainmaker-go/common/crypto/asym"
-	"chainmaker.org/chainmaker-go/common/crypto/pkcs11"
-	bcx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
+	"chainmaker.org/chainmaker/common/concurrentlru"
+	bccrypto "chainmaker.org/chainmaker/common/crypto"
+	"chainmaker.org/chainmaker/common/crypto/asym"
+	"chainmaker.org/chainmaker/common/crypto/pkcs11"
+	bcx509 "chainmaker.org/chainmaker/common/crypto/x509"
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/logger"
-	pbac "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/config"
-	"chainmaker.org/chainmaker-go/protocol"
+	pbac "chainmaker.org/chainmaker/pb-go/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/config"
+	"chainmaker.org/chainmaker/protocol"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/hex"
@@ -80,12 +79,13 @@ type accessControl struct {
 	localOrg           *organization
 	localSigningMember protocol.SigningMember
 
-	log *logger.CMLogger
+	log protocol.Logger
 }
 
-func NewAccessControlWithChainConfig(localPrivKeyFile, localPrivKeyPwd, localCertFile string, chainConfig protocol.ChainConf, localOrgId string, store protocol.BlockchainStore) (protocol.AccessControlProvider, error) {
+func NewAccessControlWithChainConfig(localPrivKeyFile, localPrivKeyPwd, localCertFile string, chainConfig protocol.ChainConf,
+	localOrgId string, store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
 	conf := chainConfig.ChainConfig()
-	acp, err := newAccessControlWithChainConfigPb(localPrivKeyFile, localPrivKeyPwd, localCertFile, conf, localOrgId, store)
+	acp, err := newAccessControlWithChainConfigPb(localPrivKeyFile, localPrivKeyPwd, localCertFile, conf, localOrgId, store, log)
 	if err != nil {
 		return nil, err
 	}
@@ -94,7 +94,8 @@ func NewAccessControlWithChainConfig(localPrivKeyFile, localPrivKeyPwd, localCer
 	return acp, err
 }
 
-func newAccessControlWithChainConfigPb(localPrivKeyFile, localPrivKeyPwd, localCertFile string, chainConfig *config.ChainConfig, localOrgId string, store protocol.BlockchainStore) (*accessControl, error) {
+func newAccessControlWithChainConfigPb(localPrivKeyFile, localPrivKeyPwd, localCertFile string, chainConfig *config.ChainConfig,
+	localOrgId string, store protocol.BlockchainStore, log protocol.Logger) (*accessControl, error) {
 	ac := &accessControl{
 		authMode:              AuthMode(chainConfig.AuthType),
 		orgList:               &sync.Map{},
@@ -112,7 +113,7 @@ func newAccessControlWithChainConfigPb(localPrivKeyFile, localPrivKeyPwd, localC
 			Roots:         bcx509.NewCertPool(),
 		},
 		localOrg: nil,
-		log:      logger.GetLoggerByChain(logger.MODULE_ACCESS, chainConfig.ChainId),
+		log:      log,
 	}
 	err := ac.initTrustRoots(chainConfig.TrustRoots, localOrgId)
 	if err != nil {

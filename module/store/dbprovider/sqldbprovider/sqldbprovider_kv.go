@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type KeyValue struct {
@@ -118,7 +118,7 @@ func (p *SqlDBHandle) WriteBatch(batch protocol.StoreBatcher, sync bool) error {
 // NewIteratorWithRange returns an iterator that contains all the key-values between given key ranges
 // start is included in the results and limit is excluded.
 func (p *SqlDBHandle) NewIteratorWithRange(start []byte, limit []byte) protocol.Iterator {
-	sql := "select * from key_values where object_key between ? and ?"
+	sql := "select * from key_values where object_key >= ? and object_key < ?"
 	rows, err := p.QueryMulti(sql, start, limit)
 	if err != nil {
 		return nil
@@ -157,13 +157,6 @@ type kvIterator struct {
 	count     int
 }
 
-func newKVIterator() *kvIterator {
-	return &kvIterator{
-		keyValues: make([]*KeyValue, 0),
-		idx:       0,
-		count:     0,
-	}
-}
 func (kvi *kvIterator) append(kv *KeyValue) {
 	kvi.keyValues = append(kvi.keyValues, kv)
 	kvi.count++

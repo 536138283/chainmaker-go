@@ -7,19 +7,20 @@ SPDX-License-Identifier: Apache-2.0
 package leveldbprovider
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/logger"
+	"chainmaker.org/chainmaker/protocol/test"
 	"chainmaker.org/chainmaker-go/store/types"
 	"github.com/stretchr/testify/assert"
 )
 
-var dbPath = filepath.Join(os.TempDir(), "unit_test_db")
-var dbName = "db_test"
-var log = &logger.GoLogger{}
+var dbPath = filepath.Join(os.TempDir(), fmt.Sprintf("%d_unit_test_db", time.Now().UnixNano()))
+var log = &test.GoLogger{}
 var dbConfig = &localconf.LevelDbConfig{
 	StorePath: dbPath,
 }

@@ -7,12 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package cache
 
 import (
-	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
 	"errors"
 	"sync"
-
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker-go/utils"
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
 )
 
 //Abft tx batch structure

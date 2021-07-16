@@ -10,7 +10,7 @@ package types
 import (
 	"bytes"
 
-	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
+	storePb "chainmaker.org/chainmaker/pb-go/store"
 	"chainmaker.org/chainmaker-go/store/blockdb"
 	"chainmaker.org/chainmaker-go/store/historydb"
 	"chainmaker.org/chainmaker-go/store/resultdb"
@@ -24,7 +24,8 @@ type HistoryIteratorImpl struct {
 	blockStore   blockdb.BlockDB
 }
 
-func NewHistoryIterator(contractName string, key []byte, dbItr historydb.HistoryIterator, resultStore resultdb.ResultDB, blockStore blockdb.BlockDB) *HistoryIteratorImpl {
+func NewHistoryIterator(contractName string, key []byte, dbItr historydb.HistoryIterator,
+	resultStore resultdb.ResultDB, blockStore blockdb.BlockDB) *HistoryIteratorImpl {
 	return &HistoryIteratorImpl{
 		contractName: contractName,
 		key:          key,
