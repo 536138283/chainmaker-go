@@ -32,7 +32,7 @@ func NewContractManager() *ContractManager {
 		logger:          logger.NewDockerLogger(logger.MODULE_CONTRACT_MANAGER),
 	}
 
-	mountDir = os.Getenv("MountDir")
+	mountDir = os.Getenv("DockerMountDir")
 
 	_ = contractManager.initialContractMap()
 	return contractManager

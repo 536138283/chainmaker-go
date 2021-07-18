@@ -33,9 +33,6 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
-	r.Log.Debugf("--------------------------------------")
-	r.Log.Debugf("Start to run contract in docker")
-
 	// contract response
 	contractResult = &commonPb.ContractResult{
 		Code:    commonPb.ContractResultCode_FAIL,

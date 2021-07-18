@@ -60,8 +60,8 @@ func NewCDMServer() (*CDMServer, error) {
 	maxRecvSize, _ := strconv.Atoi(maxRecvSizeConfig)
 
 	serverOpts = append(serverOpts, grpc.ConnectionTimeout(ConnectionTimeout))
-	serverOpts = append(serverOpts, grpc.MaxSendMsgSize(maxSendSize))
-	serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(maxRecvSize))
+	serverOpts = append(serverOpts, grpc.MaxSendMsgSize(maxSendSize*1024*1024))
+	serverOpts = append(serverOpts, grpc.MaxRecvMsgSize(maxRecvSize*1024*1024))
 
 	server := grpc.NewServer(serverOpts...)
 
