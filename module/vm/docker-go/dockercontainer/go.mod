@@ -6,9 +6,10 @@ require (
 	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk v0.0.0-00010101000000-000000000000
 	github.com/enriquebris/goconcurrentqueue v0.6.0
 	github.com/gogo/protobuf v1.3.2
+	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.0
 	go.uber.org/zap v1.18.1
-	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/grpc v1.39.0
 	gopkg.in/natefinch/lumberjack.v2 v2.0.0
 )
