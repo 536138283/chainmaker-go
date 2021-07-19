@@ -178,9 +178,9 @@ func initGasmTest() {
 }
 
 func initDockerGoTest() {
-	WasmPath = "./wasm/docker-go-contract1"
-	WasmUpgradePath = "./wasm/docker-go-contract1"
-	contractName = "contract17"
+	WasmPath = "./wasm/docker-go-contract20_big"
+	WasmUpgradePath = "./wasm/docker-go-contract20_big"
+	contractName = "contract20"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO
 }
 func initWxwmTest() {

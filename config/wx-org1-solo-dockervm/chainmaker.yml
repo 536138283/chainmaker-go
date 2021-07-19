@@ -73,9 +73,9 @@ docker:
   mount_dir: C:\Users\jiana\Desktop\mount\ #mount point
   docker_mount_dir: /mount
   rpc:
-    port: 12355
-    max_send_message_size: 100  # 100 MiB
-    max_recv_message_size: 100  # 100 MiB
+    port: 12356
+    max_send_message_size: 100  # MiB
+    max_recv_message_size: 100  # MiB
   log:
     log_file: /docker_vm.log
     display_in_console: true
@@ -83,7 +83,7 @@ docker:
     log_level: INFO
   vm:
     tx_size: 1000
-    user_num: 10
+    user_num: 100
     time_limit: 10 # second
     uds_sock_file: /uds.sock
 

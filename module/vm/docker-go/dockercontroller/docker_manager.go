@@ -118,7 +118,7 @@ func (m *DockerManager) constructEnvs() []string {
 
 	m.convertConfigToMap(dockerConfig.DockerRpcConfig, configsMap)
 
-	configsMap["DockerMountDir"] = dockerConfig.DockerMountDir
+	configsMap["DockerMountDir"] = fmt.Sprintf("%s=%s", "DockerMountDir", dockerConfig.DockerMountDir)
 
 	configs := make([]string, len(configsMap))
 	index := 0
@@ -282,34 +282,7 @@ func displayBuildProcess(rd io.Reader) error {
 // StartContainer Start Container
 func (m *DockerManager) StartContainer() error {
 
-	// check image exist or not, if not exist, create new image
-	imageExisted, err := m.imageExist()
-	if err != nil {
-		return err
-	}
-	if !imageExisted {
-
-		m.Log.Infof("Docker Manager -- Starting building image --- %s", m.imageName)
-		err = m.buildImage(m.dockerDir)
-		if err != nil {
-			return err
-		}
-	} else {
-		m.Log.Infof("Docker Manager -- Image %s already exist", m.imageName)
-	}
-
-	// check container exist or not, if not exist, create new container
-	containerExist, err := m.getContainer(true)
-	if err != nil {
-		return err
-	}
-	if !containerExist {
-		m.Log.Infof("Docker Manager -- Container doesn't exist -- %s", m.containerName)
-		err := m.createContainer()
-		if err != nil {
-			return err
-		}
-	}
+	var err error
 
 	// check container is running or not
 	// if running, stop it,
@@ -318,16 +291,55 @@ func (m *DockerManager) StartContainer() error {
 		return err
 	}
 	if isRunning {
-		m.Log.Infof("Docker Manager -- Container is running -- %s", m.containerName)
-		err := m.stopContainer()
+		m.Log.Debugf("stop running container [%s]", m.containerName)
+		err = m.stopContainer()
 		if err != nil {
 			return err
 		}
 	}
 
+	// check container exist or not, if not exist, create new container
+	containerExist, err := m.getContainer(true)
+	if err != nil {
+		return err
+	}
+
+	if containerExist {
+		m.Log.Debugf("remove container [%s]", m.containerName)
+		err = m.removeContainer()
+		if err != nil {
+			return err
+		}
+	}
+
+	// check image exist or not, if not exist, create new image
+	imageExisted, err := m.imageExist()
+	if err != nil {
+		return err
+	}
+
+	if imageExisted {
+		err = m.removeImage()
+		if err != nil {
+			return err
+		}
+	}
+
+	m.Log.Debugf("Starting building image --- %s", m.imageName)
+	err = m.buildImage(m.dockerDir)
+	if err != nil {
+		return err
+	}
+
+	m.Log.Debugf("create container [%s]", m.containerName)
+	err = m.createContainer()
+	if err != nil {
+		return err
+	}
+
 	// running container
-	m.Log.Infof("Docker Manager -- Start Running Container -- %s", m.containerName)
-	if err := m.client.ContainerStart(m.ctx, m.containerName, types.ContainerStartOptions{}); err != nil {
+	m.Log.Infof("start running container [%s]", m.containerName)
+	if err = m.client.ContainerStart(m.ctx, m.containerName, types.ContainerStartOptions{}); err != nil {
 		return err
 	}
 
@@ -413,21 +425,26 @@ func removeAllContainers(ctx context.Context, cli *client.Client) error {
 // remove image
 func (m *DockerManager) removeImage() error {
 
-	m.Log.Infof("Docker Manager -- Removing image [%s] ...", m.imageName)
+	m.Log.Infof("Removing image [%s] ...", m.imageName)
 	if _, err := m.client.ImageRemove(m.ctx, m.imageName, types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
 		return err
 	}
-	m.Log.Infof("Docker Manager -- Successfully Remove Container [%s] ...", m.imageName)
+	return nil
+}
+
+func (m *DockerManager) removeContainer() error {
+	m.Log.Infof("Removing container [%s] ...", m.imageName)
+	if err := m.client.ContainerRemove(m.ctx, m.containerName, types.ContainerRemoveOptions{}); err != nil {
+		return err
+	}
 	return nil
 }
 
 // stop container
 func (m *DockerManager) stopContainer() error {
-	m.Log.Infof("Docker Manager -- Stopping container [%s] ...", m.containerName)
 	if err := m.client.ContainerStop(m.ctx, m.containerName, nil); err != nil {
 		return err
 	}
-	m.Log.Infof("Docker Manager -- Successfully Stop container [%s] ...", m.containerName)
 	return nil
 }
 

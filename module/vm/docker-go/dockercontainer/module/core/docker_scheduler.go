@@ -158,7 +158,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	// get contract from contract manager
 	contractKey := s.ConstructContractKey(txRequest.ContractName, txRequest.ContractVersion)
 	contractPath, err := s.contractManager.GetContract(txRequest.TxId, contractKey)
-	if err != nil {
+	if err != nil || len(contractPath) == 0 {
 		s.logger.Errorf("fail to get contract path -- contractName is [%s], err is [%s]", contractKey, err)
 		return
 	}
@@ -214,14 +214,14 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 	cmd.Stdout = os.Stdout
 
 	//set namespace
-	//cmd.SysProcAttr = &syscall.SysProcAttr{
-	//	Credential: &syscall.Credential{
-	//		Uid: uint32(user.Uid),
-	//	},
-	//	Cloneflags: syscall.CLONE_NEWIPC |
-	//		syscall.CLONE_NEWPID |
-	//		syscall.CLONE_NEWNET,
-	//}
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Credential: &syscall.Credential{
+			Uid: uint32(user.Uid),
+		},
+		Cloneflags: syscall.CLONE_NEWIPC |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNET,
+	}
 
 	// start app
 	if err := cmd.Start(); err != nil {
@@ -235,7 +235,7 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 	if err != nil {
 		timeLimit = 2
 	}
-	s.logger.Infof("time limit is %d second", timeLimit)
+	s.logger.Debugf("time limit is %d second", timeLimit)
 	timer := time.AfterFunc(time.Duration(timeLimit)*time.Second, func() {
 		err := cmd.Process.Kill()
 		if err != nil {
