@@ -488,10 +488,17 @@ func (vb *VerifierBlock) ValidateBlock(
 	startSigTick := utils.CurrentTimeMillisSeconds()
 	hashType := vb.chainConf.ChainConfig().Crypto.Hash
 	vb.log.Debugf("verify block \n %s", utils.FormatBlock(block))
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	// abft's block proposer is nil
+	if block.Header.Proposer != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			return nil, nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil", vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts = append(timeLasts, sigLasts)
 

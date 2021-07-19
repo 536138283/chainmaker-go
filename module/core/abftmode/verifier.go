@@ -176,6 +176,7 @@ func (v *Verifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) 
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, verifyResult))
 	}
 
+	v.log.Debugf("verify block[%d] finish", block.Header.BlockHeight)
 	return nil
 }
 
