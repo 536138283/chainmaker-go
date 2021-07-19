@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package abftmode
 
 import (
+	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker/common/msgbus"
-	"chainmaker.org/chainmaker-go/core/cache"
 	commonPb "chainmaker.org/chainmaker/pb-go/common"
 	"chainmaker.org/chainmaker/pb-go/consensus/abft"
 	"chainmaker.org/chainmaker/protocol"
@@ -27,11 +27,11 @@ type CoreEngine struct {
 	ac              protocol.AccessControlProvider
 	blockchainStore protocol.BlockchainStore
 	chainConf       protocol.ChainConf // chain config
-	log             protocol.Logger   // logger
-
-	Committer *Committer
-	Proposer  *Proposer
-	Verifier  *Verifier
+	log             protocol.Logger    // logger
+	HotStuffHelper  protocol.HotStuffHelper
+	Committer       *Committer
+	Proposer        *Proposer
+	Verifier        *Verifier
 }
 
 func NewCoreEngine(ceConfig *conf.CoreEngineConfig) (*CoreEngine, error) {
@@ -115,11 +115,11 @@ func (c *CoreEngine) Start() {
 }
 
 func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
-	return nil
+	return c.Committer
 }
 
 func (c *CoreEngine) GetBlockVerifier() protocol.BlockVerifier {
-	return nil
+	return c.Verifier
 }
 
 func (c *CoreEngine) DiscardAboveHeight(baseHeight int64) {
