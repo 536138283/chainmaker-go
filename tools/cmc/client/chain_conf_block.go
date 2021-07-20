@@ -9,7 +9,10 @@ package client
 
 import (
 	"fmt"
+
 	"github.com/spf13/cobra"
+
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 )
 
 func updateBlockConfigCMD() *cobra.Command {
@@ -34,8 +37,9 @@ func updateBlockIntervalCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagOrgId, flagEnableCertHash,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagClientCrtFilePaths, flagClientKeyFilePaths,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 		flagBlockInterval,
 	})
 
@@ -48,7 +52,7 @@ func updateBlockIntervalCMD() *cobra.Command {
 }
 
 func updateBlockInterval() error {
-	client, err := createClientWithConfig()
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("create user client failed, %s", err.Error())
 	}
@@ -82,7 +86,7 @@ func updateBlockInterval() error {
 	if err != nil {
 		return fmt.Errorf("send chain config update request failed, %s", err.Error())
 	}
-	err = checkProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, true)
 	if err != nil {
 		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
 	}

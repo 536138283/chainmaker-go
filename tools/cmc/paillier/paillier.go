@@ -1,19 +1,19 @@
 /*
 Copyright (C) BABEC. All rights reserved.
-Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
 package paillier
 
 import (
-	"chainmaker.org/chainmaker-go/common/crypto/paillier"
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+
+	"chainmaker.org/chainmaker-go/common/crypto/paillier"
+	"github.com/spf13/cobra"
 )
 
 var (
@@ -66,8 +66,7 @@ func genKey() error {
 	if err != nil {
 		return err
 	}
-	keyGenerator := paillier.Helper().NewKeyGenerator()
-	prvKey, err := keyGenerator.GenKey()
+	prvKey, err := paillier.GenKey()
 	if err != nil {
 		return err
 	}

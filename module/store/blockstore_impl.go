@@ -7,19 +7,18 @@ SPDX-License-Identifier: Apache-2.0
 package store
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
 	"sync"
 
-	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
-
-	"errors"
-
 	"chainmaker.org/chainmaker-go/localconf"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
 	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
 	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/store/archive"
 	"chainmaker.org/chainmaker-go/store/binlog"
 	"chainmaker.org/chainmaker-go/store/blockdb"
 	"chainmaker.org/chainmaker-go/store/contracteventdb"
@@ -38,7 +37,7 @@ const (
 	//logDBBlockKeyPrefix = 'n'
 )
 
-// BlockStoreImpl provides an implementation of `protocal.BlockchainStore`.
+// BlockStoreImpl provides an implementation of `protocol.BlockchainStore`.
 type BlockStoreImpl struct {
 	blockDB         blockdb.BlockDB
 	stateDB         statedb.StateDB
@@ -48,6 +47,7 @@ type BlockStoreImpl struct {
 	wal             binlog.BinLoger
 	//一个本地数据库，用于对外提供一些本节点的数据存储服务
 	commonDB         protocol.DBHandle
+	ArchiveMgr       *archive.ArchiveMgr
 	workersSemaphore *semaphore.Weighted
 	logger           protocol.Logger
 	storeConfig      *localconf.StorageConfig
@@ -90,12 +90,17 @@ func NewBlockStoreImpl(chainId string,
 		logger:           logger,
 		storeConfig:      storeConfig,
 	}
+
+	if err := blockStore.InitArchiveMgr(chainId); err != nil {
+		return nil, err
+	}
+
 	//binlog 有SavePoint，不是空数据库，进行数据恢复
-	if i, err := blockStore.getLastSavepoint(); err == nil && i > 0 {
+	if i, errbs := blockStore.getLastSavepoint(); errbs == nil && i > 0 {
 		//check savepoint and recover
-		err = blockStore.recover()
-		if err != nil {
-			return nil, err
+		errbs = blockStore.recover()
+		if errbs != nil {
+			return nil, errbs
 		}
 	} else {
 		logger.Info("binlog is empty, don't need recover")
@@ -135,18 +140,22 @@ func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) erro
 		return err
 	}
 	//4. 初始化历史数据库
-	err = bs.historyDB.InitGenesis(blockWithSerializedInfo)
-	if err != nil {
-		bs.logger.Errorf("chain[%s] failed to write historyDB, block[%d]",
-			block.Header.ChainId, block.Header.BlockHeight)
-		return err
+	if !bs.storeConfig.DisableHistoryDB {
+		err = bs.historyDB.InitGenesis(blockWithSerializedInfo)
+		if err != nil {
+			bs.logger.Errorf("chain[%s] failed to write historyDB, block[%d]",
+				block.Header.ChainId, block.Header.BlockHeight)
+			return err
+		}
 	}
 	//5. 初始化Result数据库
-	err = bs.resultDB.InitGenesis(blockWithSerializedInfo)
-	if err != nil {
-		bs.logger.Errorf("chain[%s] failed to write resultDB, block[%d]",
-			block.Header.ChainId, block.Header.BlockHeight)
-		return err
+	if !bs.storeConfig.DisableResultDB {
+		err = bs.resultDB.InitGenesis(blockWithSerializedInfo)
+		if err != nil {
+			bs.logger.Errorf("chain[%s] failed to write resultDB, block[%d]",
+				block.Header.ChainId, block.Header.BlockHeight)
+			return err
+		}
 	}
 	//6. init contract event db
 	if !bs.storeConfig.DisableContractEventDB {
@@ -164,7 +173,14 @@ func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) erro
 	}
 	bs.logger.Infof("chain[%s]: put block[%d] (txs:%d bytes:%d), ",
 		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs), len(blockBytes))
-	return nil
+
+	//7. init archive manager
+	err = bs.InitArchiveMgr(block.Header.ChainId)
+	if err != nil {
+		return err
+	}
+
+	return err
 }
 func checkGenesis(genesisBlock *storePb.BlockWithRWSet) error {
 	if genesisBlock.Block.Header.BlockHeight != 0 {
@@ -270,6 +286,44 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 	return nil
 }
 
+// GetArchivedPivot return archived pivot
+func (bs *BlockStoreImpl) GetArchivedPivot() uint64 {
+	if !bs.isSupportArchive() {
+		return 0
+	}
+	height, _ := bs.ArchiveMgr.GetArchivedPivot()
+	return height
+}
+
+// ArchiveBlock the block after backup
+func (bs *BlockStoreImpl) ArchiveBlock(archiveHeight uint64) error {
+	if !bs.isSupportArchive() {
+		return nil
+	}
+	return bs.ArchiveMgr.ArchiveBlock(archiveHeight)
+}
+
+// RestoreBlocks restore blocks from outside serialized block data
+func (bs *BlockStoreImpl) RestoreBlocks(serializedBlocks [][]byte) error {
+	if !bs.isSupportArchive() {
+		return nil
+	}
+	blockInfos := make([]*serialization.BlockWithSerializedInfo, 0, len(serializedBlocks))
+	for _, blockInfo := range serializedBlocks {
+		bwsInfo, err := serialization.DeserializeBlock(blockInfo)
+		if err != nil {
+			return err
+		}
+		_, s, err := serialization.SerializeBlock(bwsInfo)
+		if err != nil {
+			return err
+		}
+		blockInfos = append(blockInfos, s)
+	}
+
+	return bs.ArchiveMgr.RestoreBlock(blockInfos)
+}
+
 type commitBlock func(blockInfo *serialization.BlockWithSerializedInfo) error
 
 func (bs *BlockStoreImpl) putBlock2DB(blockWithSerializedInfo *serialization.BlockWithSerializedInfo,
@@ -291,6 +345,16 @@ func (bs *BlockStoreImpl) BlockExists(blockHash []byte) (bool, error) {
 // GetBlockByHash returns a block given it's hash, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetBlockByHash(blockHash []byte) (*commonPb.Block, error) {
 	return bs.blockDB.GetBlockByHash(blockHash)
+}
+
+// GetHeightByHash returns a block height given it's hash, or returns nil if none exists.
+func (bs *BlockStoreImpl) GetHeightByHash(blockHash []byte) (uint64, error) {
+	return bs.blockDB.GetHeightByHash(blockHash)
+}
+
+// GetBlockHeaderByHeight returns a block header by given it's height, or returns nil if none exists.
+func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader, error) {
+	return bs.blockDB.GetBlockHeaderByHeight(height)
 }
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
@@ -322,6 +386,12 @@ func (bs *BlockStoreImpl) GetBlockByTx(txId string) (*commonPb.Block, error) {
 func (bs *BlockStoreImpl) GetTx(txId string) (*commonPb.Transaction, error) {
 	return bs.blockDB.GetTx(txId)
 }
+
+// GetTxHeight retrieves a transaction height by txid, or returns nil if none exists.
+func (bs *BlockStoreImpl) GetTxHeight(txId string) (uint64, error) {
+	return bs.blockDB.GetTxHeight(txId)
+}
+
 func (bs *BlockStoreImpl) GetTxWithBlockInfo(txId string) (*commonPb.TransactionInfo, error) {
 	return bs.blockDB.GetTxWithBlockInfo(txId)
 }
@@ -371,14 +441,32 @@ func (bs *BlockStoreImpl) GetContractTxHistory(contractName string) (protocol.Tx
 
 // GetTxRWSet returns an txRWSet for given txId, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetTxRWSet(txId string) (*commonPb.TxRWSet, error) {
-	return bs.resultDB.GetTxRWSet(txId)
+	var (
+		rwSet      *commonPb.TxRWSet
+		err        error
+		isArchived bool
+	)
+
+	if rwSet, err = bs.resultDB.GetTxRWSet(txId); err != nil {
+		return nil, err
+	}
+
+	if rwSet == nil {
+		if isArchived, err = bs.blockDB.TxArchived(txId); err != nil {
+			return nil, err
+		} else if isArchived {
+			return nil, archive.ArchivedRWSetError
+		}
+	}
+
+	return rwSet, err
 }
 
 // GetTxRWSetsByHeight returns all the rwsets corresponding to the block,
 // or returns nil if zhe block does not exist
 func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet, error) {
 	blockStoreInfo, err := bs.blockDB.GetFilteredBlock(height)
-	if err != nil {
+	if err != nil || blockStoreInfo == nil {
 		return nil, err
 	}
 	var txRWSets = make([]*commonPb.TxRWSet, len(blockStoreInfo.TxIds))
@@ -387,6 +475,10 @@ func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet
 		txRWSet, err := bs.GetTxRWSet(txId)
 		if err != nil {
 			return nil, err
+		}
+		if txRWSet == nil { //数据库未找到记录，这不正常，记录日志，初始化空实例
+			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", txId)
+			txRWSet = &commonPb.TxRWSet{}
 		}
 		txRWSets[i] = txRWSet
 		bs.logger.Debugf("getTxRWSetsByHeight, txid:%s", txId)
@@ -422,6 +514,10 @@ func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRW
 		if err != nil {
 			return nil, err
 		}
+		if txRWSet == nil { //数据库未找到记录，这不正常，记录日志，初始化空实例
+			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", tx.Header.TxId)
+			txRWSet = &commonPb.TxRWSet{}
+		}
 		blockWithRWSets.TxRWSets[i] = txRWSet
 		//}
 	}
@@ -441,10 +537,10 @@ func (bs *BlockStoreImpl) GetDBHandle(dbName string) protocol.DBHandle {
 func (bs *BlockStoreImpl) Close() error {
 	bs.blockDB.Close()
 	bs.stateDB.Close()
-	if !bs.storeConfig.DisableHistoryDB {
+	if !bs.storeConfig.DisableHistoryDB && bs.historyDB != nil {
 		bs.historyDB.Close()
 	}
-	if !bs.storeConfig.DisableContractEventDB {
+	if !bs.storeConfig.DisableContractEventDB && bs.contractEventDB != nil {
 		if parseEngineType(bs.storeConfig.ContractEventDbConfig.SqlDbConfig.SqlDbType) == types.MySQL &&
 			bs.storeConfig.ContractEventDbConfig.Provider == localconf.DbConfig_Provider_Sql {
 			bs.contractEventDB.Close()
@@ -452,7 +548,7 @@ func (bs *BlockStoreImpl) Close() error {
 			return errors.New("contract event db config err")
 		}
 	}
-	if !bs.storeConfig.DisableResultDB {
+	if !bs.storeConfig.DisableResultDB && bs.resultDB != nil {
 		bs.resultDB.Close()
 	}
 	bs.wal.Close()
@@ -499,30 +595,30 @@ func (bs *BlockStoreImpl) recover() error {
 		logSavepoint, blockSavepoint, stateSavepoint, historySavepoint, contractEventSavepoint)
 	//recommit blockdb
 	if err := bs.recoverBlockDB(blockSavepoint, logSavepoint); err != nil {
-		return nil
+		return err
 	}
 
 	//recommit statedb
 	if err := bs.recoverStateDB(stateSavepoint, logSavepoint); err != nil {
-		return nil
+		return err
 	}
 
 	if !bs.storeConfig.DisableHistoryDB {
 		//recommit historydb
 		if err := bs.recoverHistoryDB(stateSavepoint, logSavepoint); err != nil {
-			return nil
+			return err
 		}
 	}
 	if !bs.storeConfig.DisableResultDB {
 		//recommit resultdb
 		if err := bs.recoverResultDB(resultSavepoint, logSavepoint); err != nil {
-			return nil
+			return err
 		}
 	}
 	//recommit contract event db
 	if !bs.storeConfig.DisableContractEventDB {
 		if err := bs.recoverContractEventDB(contractEventSavepoint, logSavepoint); err != nil {
-			return nil
+			return err
 		}
 	}
 	return nil
@@ -559,6 +655,7 @@ func (bs *BlockStoreImpl) recoverStateDB(currentHeight uint64, savePoint uint64)
 	}
 	return nil
 }
+
 func (bs *BlockStoreImpl) recoverContractEventDB(currentHeight uint64, savePoint uint64) error {
 	height := bs.calculateRecoverHeight(currentHeight, savePoint)
 	for ; height <= savePoint; height++ {
@@ -575,6 +672,7 @@ func (bs *BlockStoreImpl) recoverContractEventDB(currentHeight uint64, savePoint
 	}
 	return nil
 }
+
 func (bs *BlockStoreImpl) recoverHistoryDB(currentHeight uint64, savePoint uint64) error {
 	height := bs.calculateRecoverHeight(currentHeight, savePoint)
 	for ; height <= savePoint; height++ {
@@ -598,7 +696,8 @@ func (bs *BlockStoreImpl) recoverHistoryDB(currentHeight uint64, savePoint uint6
 }
 
 func (bs *BlockStoreImpl) recoverResultDB(currentHeight uint64, savePoint uint64) error {
-	for height := currentHeight + 1; height <= savePoint; height++ {
+	height := bs.calculateRecoverHeight(currentHeight, savePoint)
+	for ; height <= savePoint; height++ {
 		bs.logger.Infof("[HistoryDB] recommitting lost blocks, blockNum=%d, lastBlockNum=%d", height, savePoint)
 		blockWithSerializedInfo, err := bs.getBlockFromLog(height)
 		if err != nil {
@@ -640,7 +739,12 @@ func (bs *BlockStoreImpl) getBlockFromLog(num uint64) (*serialization.BlockWithS
 		bs.logger.Errorf("read log failed, err:%s", err)
 		return nil, err
 	}
-	return serialization.DeserializeBlock(bytes)
+	blockWithRWSet, err := serialization.DeserializeBlock(bytes)
+	if err != nil {
+		return nil, err
+	}
+	_, s, err := serialization.SerializeBlock(blockWithRWSet)
+	return s, err
 }
 
 func (bs *BlockStoreImpl) deleteBlockFromLog(num uint64) error {
@@ -712,4 +816,22 @@ func (bs *BlockStoreImpl) calculateRecoverHeight(currentHeight uint64, savePoint
 	}
 
 	return height
+}
+
+func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
+	if bs.isSupportArchive() {
+		archiveMgr, err := archive.NewArchiveMgr(chainId, bs.blockDB, bs.resultDB, bs.storeConfig, bs.logger)
+		if err != nil {
+			return err
+		}
+
+		bs.ArchiveMgr = archiveMgr
+	}
+
+	return nil
+}
+
+func (bs *BlockStoreImpl) isSupportArchive() bool {
+	return bs.storeConfig.BlockDbConfig.IsKVDB() &&
+		(bs.storeConfig.ResultDbConfig!=nil &&bs.storeConfig.ResultDbConfig.IsKVDB())
 }

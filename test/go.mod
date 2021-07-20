@@ -12,6 +12,8 @@ require (
 	chainmaker.org/chainmaker-go/utils v0.0.0
 	github.com/ethereum/go-ethereum v1.9.25
 	github.com/gogo/protobuf v1.3.2
+	github.com/golang/protobuf v1.4.3 // indirect
+	github.com/mr-tron/base58 v1.2.0
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0
 	github.com/spf13/cobra v1.1.1
 	github.com/stretchr/testify v1.7.0

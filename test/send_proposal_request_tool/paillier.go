@@ -83,8 +83,7 @@ func decryptCMD() *cobra.Command {
 }
 
 func generatePrvPubKeys() error {
-	KeyGenerator := paillier.Helper().NewKeyGenerator()
-	prvKey, err := KeyGenerator.GenKey()
+	prvKey, err := paillier.GenKey()
 	if err != nil {
 		return err
 	}
@@ -105,12 +104,12 @@ func generatePrvPubKeys() error {
 	}
 
 	fmt.Printf("paillier pubKey: [%s]\n", pubKeyBytes)
-	fmt.Printf("paillier prvKey: [%s]\n", prvKeyBytes)
+	fmt.Printf("paillier prvKey: \n%s", prvKeyBytes)
 	return nil
 }
 
 func paillierEncrypt() error {
-	pubKey := paillier.Helper().NewPubKey()
+	pubKey := new(paillier.PubKey)
 	err := pubKey.Unmarshal([]byte(pubKeyStr))
 	if err != nil {
 		return err
@@ -132,13 +131,13 @@ func paillierEncrypt() error {
 }
 
 func paillierDecrypt() error {
-	prvKey := paillier.Helper().NewPrvKey()
+	prvKey := new(paillier.PrvKey)
 
 	if err := prvKey.Unmarshal([]byte(prvKeyStr)); err != nil {
 		return err
 	}
 
-	ct := paillier.Helper().NewCiphertext()
+	ct := new(paillier.Ciphertext)
 	base64Decode, err := base64.StdEncoding.DecodeString(ciphertextStr)
 	if err != nil {
 		return err
