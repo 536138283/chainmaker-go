@@ -97,8 +97,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			contractName := string(recvMsg.Payload)
 
 			dockerConfig := localconf.ChainMakerConfig.DockerConfig
-			mountDir := dockerConfig.MountDir
-			contractPath := filepath.Join(mountDir, contractName)
+			hostMountDir := dockerConfig.HostMountDir
+			contractPath := filepath.Join(hostMountDir, "contracts", contractName)
 
 			err := r.saveBytesToDisk(byteCode, contractPath)
 			if err != nil {

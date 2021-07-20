@@ -19,6 +19,8 @@ type ManagerImpl struct {
 
 func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 
+	// retrieve all
+
 	// new users controller
 	userController := core.NewUsersManager()
 

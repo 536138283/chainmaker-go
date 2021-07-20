@@ -348,20 +348,22 @@ type coreConfig struct {
 }
 
 type dockerConfig struct {
-	ImageName       string          `mapstructure:"image_name"`
-	ContainerName   string          `mapstructure:"container_name"`
-	DockerDir       string          `mapstructure:"docker_dir"`
-	MountDir        string          `mapstructure:"mount_dir"`
-	DockerMountDir  string          `mapstructure:"docker_mount_dir"`
-	DockerRpcConfig dockerRpcConfig `mapstructure:"rpc"`
-	DockerLogConfig dockerLogConfig `mapstructure:"log"`
-	DockerVmConfig  dockerVmConfig  `mapstructure:"vm"`
+	ImageName          string          `mapstructure:"image_name"`
+	ContainerName      string          `mapstructure:"container_name"`
+	DockerContainerDir string          `mapstructure:"docker_container_dir"`
+	HostMountDir       string          `mapstructure:"host_mount_dir"`
+	DockerMountDir     string          `mapstructure:"docker_mount_dir"`
+	DockerRpcConfig    dockerRpcConfig `mapstructure:"rpc"`
+	DockerLogConfig    dockerLogConfig `mapstructure:"log"`
+	DockerVmConfig     dockerVmConfig  `mapstructure:"vm"`
 }
 
 type dockerRpcConfig struct {
-	Port               uint32 `mapstructure:"port"`
-	MaxSendMessageSize uint32 `mapstructure:"max_send_message_size"`
-	MaxRecvMessageSize uint32 `mapstructure:"max_recv_message_size"`
+	UdsOpen            bool   `mapstructure:"uds_open"`
+	Port               int32  `mapstructure:"port"`
+	CdmUdsSockPath     string `mapstructure:"cdm_uds_sock_path"`
+	MaxSendMessageSize int32  `mapstructure:"max_send_message_size"`
+	MaxRecvMessageSize int32  `mapstructure:"max_recv_message_size"`
 }
 
 type dockerLogConfig struct {
@@ -372,10 +374,9 @@ type dockerLogConfig struct {
 }
 
 type dockerVmConfig struct {
-	TxSize      uint32 `mapstructure:"tx_size"`
-	UserNum     uint32 `mapstructure:"user_num"`
-	TimeLimit   uint32 `mapstructure:"time_limit"`
-	UdsSockFile string `mapstructure:"uds_sock_file"`
+	TxSize    int32 `mapstructure:"tx_size"`
+	UserNum   int32 `mapstructure:"user_num"`
+	TimeLimit int32 `mapstructure:"time_limit"`
 }
 
 // CMConfig - Local config struct

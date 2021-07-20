@@ -60,13 +60,54 @@ func NewDockerManager(chainId string) *DockerManager {
 		return nil
 	}
 
-	log := logger.GetLoggerByChain("[Docker Manager]", chainId)
+	Logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
 	cdmClient := module.NewCDMClient(chainId)
 
 	dockerConfig := localconf.ChainMakerConfig.DockerConfig
 
 	hostPort := strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
 	openPort := nat.Port(hostPort + "/tcp")
+
+	var dockerContainerDir string
+	var sourceDir string
+	var targetDir string
+	var imageName string
+	var containerName string
+
+	if dockerConfig.DockerContainerDir == "" {
+		Logger.Errorf("doesn't set docker container path")
+		log.Fatal()
+	} else {
+		dockerContainerDir = dockerConfig.DockerContainerDir
+	}
+
+	if dockerConfig.HostMountDir == "" {
+		Logger.Errorf("doesn't set host mount directory path")
+		log.Fatal()
+	} else {
+		sourceDir = dockerConfig.HostMountDir
+	}
+
+	if dockerConfig.DockerMountDir == "" {
+		Logger.Errorf("doesn't set docker mount directory path")
+		log.Fatal()
+	} else {
+		targetDir = dockerConfig.DockerMountDir
+	}
+
+	if dockerConfig.ImageName == "" {
+		Logger.Infof("image name doesn't set, set as default: image1")
+		imageName = "image1"
+	} else {
+		imageName = dockerConfig.ImageName
+	}
+
+	if dockerConfig.ContainerName == "" {
+		Logger.Infof("container name doesn't set, set as default: container1")
+		containerName = "container1"
+	} else {
+		containerName = dockerConfig.ContainerName
+	}
 
 	newDockerManager := &DockerManager{
 		AttachStdOut:  true,
@@ -75,23 +116,23 @@ func NewDockerManager(chainId string) *DockerManager {
 		ShowStderr:    true,
 		ctx:           ctx,
 		client:        cli,
-		Log:           log,
+		Log:           Logger,
 		CDMClient:     cdmClient,
 		CDMState:      false,
 		lock:          sync.Mutex{},
-		imageName:     dockerConfig.ImageName,
-		containerName: dockerConfig.ContainerName,
-		sourceDir:     dockerConfig.MountDir,
-		targetDir:     dockerConfig.DockerMountDir,
+		imageName:     imageName,
+		containerName: containerName,
+		sourceDir:     sourceDir,
+		targetDir:     targetDir,
 		hostPort:      hostPort,
 		openPort:      openPort,
-		dockerDir:     dockerConfig.DockerDir,
+		dockerDir:     dockerContainerDir,
 	}
 
 	//todo add restart logic
 	err = newDockerManager.StartContainer()
 	if err != nil {
-		log.Errorf("problem when start container: %s ", err)
+		Logger.Errorf("problem when start container: %s ", err)
 	}
 
 	return newDockerManager

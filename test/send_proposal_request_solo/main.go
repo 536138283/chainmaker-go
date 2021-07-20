@@ -69,7 +69,7 @@ func main() {
 	//initWxwmTest()
 	initDockerGoTest()
 
-	createContract := true
+	createContract := false
 
 	conn, err := initGRPCConnect(true)
 	if err != nil {
@@ -104,10 +104,10 @@ func main() {
 	//}
 
 	// 3) invoke 测试
-	//testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+	testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
 
 	// 4) query 测试
-	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
+	//testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
 	// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
@@ -178,7 +178,7 @@ func initGasmTest() {
 }
 
 func initDockerGoTest() {
-	WasmPath = "./wasm/docker-go-contract20_big"
+	WasmPath = "./wasm/docker-go-contract20_"
 	WasmUpgradePath = "./wasm/docker-go-contract20_big"
 	contractName = "contract20"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO

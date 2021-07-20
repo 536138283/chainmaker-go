@@ -12,4 +12,8 @@ const (
 	MountDir        = "/mount"
 	ContractBaseDir = "/mount/contracts"
 	ShareBaseDir    = "/mount/share"
+	SockBaseDir     = "/mount/sock"
+
+	DMSDir      = "/dms"
+	DMSSockPath = "dms.sock"
 )
