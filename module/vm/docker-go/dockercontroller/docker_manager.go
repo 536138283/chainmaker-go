@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
@@ -24,10 +25,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-)
-
-const (
-	logTemplate string = "Docker Manager  -- %s"
 )
 
 type DockerManager struct {
@@ -129,12 +126,6 @@ func NewDockerManager(chainId string) *DockerManager {
 		dockerDir:     dockerContainerDir,
 	}
 
-	//todo add restart logic
-	err = newDockerManager.StartContainer()
-	if err != nil {
-		Logger.Errorf("problem when start container: %s ", err)
-	}
-
 	return newDockerManager
 }
 
@@ -227,7 +218,7 @@ func (m *DockerManager) createContainer() error {
 		return err
 	}
 
-	m.Log.Infof(logTemplate, "Successfully Create Container")
+	m.Log.Infof("create container [%s] success :)", m.containerName)
 	return nil
 }
 
@@ -265,7 +256,7 @@ func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
 		return err
 	}
 
-	m.Log.Infof(logTemplate, "Successfully Build Image")
+	m.Log.Infof("build image [%s] success :)", m.imageName)
 
 	return nil
 }
@@ -322,7 +313,7 @@ func displayBuildProcess(rd io.Reader) error {
 
 // StartContainer Start Container
 func (m *DockerManager) StartContainer() error {
-
+	m.Log.Info("start docker vm...")
 	var err error
 
 	// check container is running or not
@@ -384,9 +375,32 @@ func (m *DockerManager) StartContainer() error {
 		return err
 	}
 
+	m.Log.Info("docker vm start success :)")
 	// display container info in the console
-	go m.displayInConsole(m.containerName)
+	//go m.displayInConsole(m.containerName)
 
+	return nil
+}
+
+func (m *DockerManager) StopAndRemoveVM() error {
+	var err error
+
+	err = m.stopContainer()
+	if err != nil {
+		return err
+	}
+
+	err = m.removeContainer()
+	if err != nil {
+		return err
+	}
+
+	err = m.removeImage()
+	if err != nil {
+		return err
+	}
+
+	m.Log.Info("stop and remove docker vm")
 	return nil
 }
 
@@ -428,41 +442,6 @@ func (m *DockerManager) getContainer(all bool) (bool, error) {
 	return false, nil
 }
 
-// stop all containers
-func stopAllContainers(ctx context.Context, cli *client.Client) error {
-
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, specContainer := range containers {
-		log.Print("Stopping container ", specContainer.ID[:10], "... ")
-		if err := cli.ContainerStop(ctx, specContainer.ID, nil); err != nil {
-			return err
-		}
-		log.Println("Success")
-	}
-	return nil
-}
-
-// remove all containers
-func removeAllContainers(ctx context.Context, cli *client.Client) error {
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{All: true})
-	if err != nil {
-		return err
-	}
-
-	for _, specContainer := range containers {
-		log.Println("Removing container ", specContainer.ID[:10], "... ")
-		if err := cli.ContainerRemove(ctx, specContainer.ID, types.ContainerRemoveOptions{}); err != nil {
-			return err
-		}
-		log.Println("Success remove container ", specContainer.ID[:10])
-	}
-	return nil
-}
-
 // remove image
 func (m *DockerManager) removeImage() error {
 
@@ -470,11 +449,17 @@ func (m *DockerManager) removeImage() error {
 	if _, err := m.client.ImageRemove(m.ctx, m.imageName, types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
 		return err
 	}
+
+	_, err := m.client.ImagesPrune(m.ctx, filters.Args{})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
+// remove container
 func (m *DockerManager) removeContainer() error {
-	m.Log.Infof("Removing container [%s] ...", m.imageName)
+	m.Log.Infof("Removing container [%s] ...", m.containerName)
 	if err := m.client.ContainerRemove(m.ctx, m.containerName, types.ContainerRemoveOptions{}); err != nil {
 		return err
 	}

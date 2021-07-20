@@ -5,6 +5,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"go.uber.org/zap"
 	"os"
+	"path/filepath"
 )
 
 type SecurityEnv struct {
@@ -26,39 +27,90 @@ func (s *SecurityEnv) InitSecurityEnv() error {
 		return err
 	}
 
-	if err := s.createContractDir(); err != nil {
-		return err
-	}
-
-	if err := s.setDMSDir(); err != nil {
-		return err
-	}
-
 	s.logger.Infof("init security env completed")
 
 	return nil
 }
 
-func (s *SecurityEnv) setDMSDir() error {
+func (s *SecurityEnv) InitDirectory() error {
 
-	return os.Mkdir(config.DMSDir, 755)
-}
+	var err error
 
-func (s *SecurityEnv) setMountDir() error {
-	// set mount directory mod as 755
+	// set mount dir mod
 	mountDir := os.Getenv("DockerMountDir")
-	err := os.Chmod(mountDir, 755)
+	err = os.Chmod(mountDir, 0755)
 	if err != nil {
 		return err
+	}
+	s.logger.Debug("set mount dir: ", mountDir)
+
+	// create sub directory: contracts, share, sock
+	contractDir := filepath.Join(mountDir, config.ContractsDir)
+	err = s.createSubDir(contractDir)
+	if err != nil {
+		return err
+	}
+	config.ContractBaseDir = contractDir
+	s.logger.Debug("set contract dir: ", contractDir)
+
+	shareDir := filepath.Join(mountDir, config.ShareDir)
+	err = s.createSubDir(shareDir)
+	if err != nil {
+		return err
+	}
+	config.ShareBaseDir = shareDir
+	s.logger.Debug("set share dir: ", shareDir)
+
+	sockDir := filepath.Join(mountDir, config.SockDir)
+	err = s.createSubDir(sockDir)
+	if err != nil {
+		return err
+	}
+	config.SockBaseDir = sockDir
+	s.logger.Debug("set sock dir: ", sockDir)
+
+	// set dms directory
+	if err = s.setDMSDir(); err != nil {
+		return err
+	}
+	s.logger.Debug("set dms dir: ", config.DMSDir)
+
+	return nil
+
+}
+
+func (s *SecurityEnv) createSubDir(subDir string) error {
+	exist, err := s.exists(subDir)
+	if err != nil {
+		return err
+	}
+
+	if !exist {
+		err := os.Mkdir(subDir, 0755)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
 }
 
-func (s *SecurityEnv) setTmpMod() error {
-	return os.Chmod("/tmp/", 0755)
+// exists returns whether the given file or directory exists
+func (s *SecurityEnv) exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }
 
-func (s *SecurityEnv) createContractDir() error {
-	return os.Mkdir("/contracts", 0755)
+func (s *SecurityEnv) setDMSDir() error {
+	return os.Mkdir(config.DMSDir, 0755)
+}
+
+func (s *SecurityEnv) setTmpMod() error {
+	return os.Chmod("/tmp/", 0755)
 }

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
@@ -8,6 +9,7 @@ import (
 	"github.com/enriquebris/goconcurrentqueue"
 	"go.uber.org/zap"
 	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -91,7 +93,7 @@ func (u *UsersManager) generateNewUser(newUserId int) error {
 func (u *UsersManager) constructNewUser(userId int) *security.User {
 
 	userName := fmt.Sprintf("u-%d", userId)
-	sockPath := os.Getenv("UdsSockFile")
+	sockPath := filepath.Join(config.DMSDir, config.DMSSockPath)
 
 	return &security.User{
 		Uid:      userId,

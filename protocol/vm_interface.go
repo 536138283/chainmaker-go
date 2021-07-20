@@ -108,6 +108,10 @@ type VmManager interface {
 	// RunContract run native or user contract according ContractName in contractId, and call the specified function
 	RunContract(contractId *common.ContractId, method string, byteCode []byte, parameters map[string]string,
 		txContext TxSimContext, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, common.TxStatusCode)
+	// Start start docker vm
+	Start() error
+	// Stop stop docker vm
+	Stop() error
 }
 
 type ContractWacsiCommon interface {

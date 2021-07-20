@@ -81,6 +81,14 @@ type ManagerImpl struct {
 	DockerManager          *dockercontroller.DockerManager
 }
 
+func (m *ManagerImpl) Start() error {
+	return m.DockerManager.StartContainer()
+}
+
+func (m *ManagerImpl) Stop() error {
+	return m.DockerManager.StopAndRemoveVM()
+}
+
 func (m *ManagerImpl) GetAccessControl() protocol.AccessControlProvider {
 	return m.AccessControl
 }

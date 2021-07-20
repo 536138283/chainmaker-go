@@ -69,7 +69,7 @@ func main() {
 	//initWxwmTest()
 	initDockerGoTest()
 
-	createContract := false
+	createContract := true
 
 	conn, err := initGRPCConnect(true)
 	if err != nil {
@@ -178,7 +178,7 @@ func initGasmTest() {
 }
 
 func initDockerGoTest() {
-	WasmPath = "./wasm/docker-go-contract20_"
+	WasmPath = "./wasm/docker-go-contract20_big"
 	WasmUpgradePath = "./wasm/docker-go-contract20_big"
 	contractName = "contract20"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO

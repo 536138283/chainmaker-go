@@ -18,6 +18,7 @@ func (bc *Blockchain) Start() error {
 	// 4、consensus module
 	// 5、tx pool
 	// 6、sync service
+	// 7、vm manager (docker vm)
 
 	var startModules = make([]map[string]func() error, 0)
 	if bc.isModuleInit(moduleNameNetService) && !bc.isModuleStartUp(moduleNameNetService) {
@@ -37,6 +38,9 @@ func (bc *Blockchain) Start() error {
 	}
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
+	}
+	if bc.isModuleInit(moduleNameVM) && !bc.isModuleStartUp(moduleNameVM) {
+		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVm})
 	}
 
 	total := len(startModules)
@@ -102,6 +106,16 @@ func (bc *Blockchain) startTxPool() error {
 		return err
 	}
 	bc.startModules[moduleNameTxPool] = struct{}{}
+	return nil
+}
+
+func (bc *Blockchain) startVm() error {
+	err := bc.vmMgr.Start()
+	if err != nil {
+		bc.log.Errorf("start vm manager failed, %s", err)
+		return err
+	}
+	bc.startModules[moduleNameVM] = struct{}{}
 	return nil
 }
 

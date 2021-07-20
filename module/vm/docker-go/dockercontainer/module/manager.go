@@ -19,7 +19,13 @@ type ManagerImpl struct {
 
 func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 
-	// retrieve all
+	// set mount dir
+	securityEnv := security2.NewSecurityEnv()
+	err := securityEnv.InitDirectory()
+	if err != nil {
+		managerLogger.Errorf("fail to init directory: %s", err)
+		return nil, err
+	}
 
 	// new users controller
 	userController := core.NewUsersManager()
@@ -47,7 +53,7 @@ func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 		dmsRpcServer:    dmsRpcServer,
 		scheduler:       scheduler,
 		userController:  userController,
-		securityEnv:     security2.NewSecurityEnv(),
+		securityEnv:     securityEnv,
 		handlerRegister: handlerRegister,
 		logger:          managerLogger,
 	}

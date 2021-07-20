@@ -8,6 +8,7 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -32,6 +33,9 @@ type RuntimeInstance struct {
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
+
+	log.Println("-----------")
+	log.Println("start contract")
 
 	// contract response
 	contractResult = &commonPb.ContractResult{
@@ -132,9 +136,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 			close(responseCh)
 
-			r.Log.Debug("-----------------------------------------------")
-			r.Log.Debug("End to run contract in docker")
-			r.Log.Debug(contractResult)
+			log.Println("----------------------------")
+			log.Println(contractResult)
 
 			return contractResult
 		default:
