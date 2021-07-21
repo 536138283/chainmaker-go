@@ -68,10 +68,11 @@ rpc:
 #  ShareBaseDir    = "/mount/share/" // go prof and log file
 #  sockBaseDir     = "/mount/sock/
 docker:
-  image_name: image1
-  container_name: container1
-  docker_container_dir: D:\WorkSpace\chainmaker-go\module\vm\docker-go\dockercontainer
-  host_mount_dir: D:\WorkSpace\chainmaker-go\module\vm\docker-go\mount #mount point, need abs path
+  open_dockervm: true
+  image_name: chainmaker-docker-go-image
+  container_name: chainmaker-docker-go-container
+  docker_container_dir: ../module/vm/docker-go/dockercontainer
+  host_mount_dir: ../module/vm/docker-go/mount
   docker_mount_dir: /mount
   rpc:
     uds_open: false

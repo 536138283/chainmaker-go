@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package blockchain
 
+import "chainmaker.org/chainmaker-go/localconf"
+
 // Start all the modules.
 func (bc *Blockchain) Start() error {
 	// start all module
@@ -39,7 +41,10 @@ func (bc *Blockchain) Start() error {
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
 	}
-	if bc.isModuleInit(moduleNameVM) && !bc.isModuleStartUp(moduleNameVM) {
+	// if open_docker vm is false, will not start module vm
+	// start module vm actually just start docker vm
+	startVm := localconf.ChainMakerConfig.DockerConfig.OpenDockerVM
+	if bc.isModuleInit(moduleNameVM) && !bc.isModuleStartUp(moduleNameVM) && startVm {
 		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVm})
 	}
 

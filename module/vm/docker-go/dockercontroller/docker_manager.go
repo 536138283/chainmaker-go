@@ -18,7 +18,6 @@ import (
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -51,6 +50,12 @@ type DockerManager struct {
 
 // NewDockerManager return docker manager and running a default container
 func NewDockerManager(chainId string) *DockerManager {
+
+	// if open docker vm is false, docker manager is nil
+	startDockerVm := localconf.ChainMakerConfig.DockerConfig.OpenDockerVM
+	if !startDockerVm {
+		return nil
+	}
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
@@ -73,21 +78,28 @@ func NewDockerManager(chainId string) *DockerManager {
 
 	if dockerConfig.DockerContainerDir == "" {
 		Logger.Errorf("doesn't set docker container path")
-		log.Fatal()
+		return nil
 	} else {
 		dockerContainerDir = dockerConfig.DockerContainerDir
 	}
 
 	if dockerConfig.HostMountDir == "" {
 		Logger.Errorf("doesn't set host mount directory path")
-		log.Fatal()
+		return nil
 	} else {
 		sourceDir = dockerConfig.HostMountDir
+		if !filepath.IsAbs(sourceDir) {
+			sourceDir, err = filepath.Abs(sourceDir)
+			if err != nil {
+				Logger.Errorf("doesn't set host mount directory path correctly")
+				return nil
+			}
+		}
 	}
 
 	if dockerConfig.DockerMountDir == "" {
 		Logger.Errorf("doesn't set docker mount directory path")
-		log.Fatal()
+		return nil
 	} else {
 		targetDir = dockerConfig.DockerMountDir
 	}

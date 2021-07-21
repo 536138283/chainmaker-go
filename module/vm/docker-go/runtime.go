@@ -8,7 +8,6 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
-	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -34,8 +33,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
-	log.Println("-----------")
-	log.Println("start contract")
+	//log.Println("-----------")
+	//log.Println("start contract")
 
 	// contract response
 	contractResult = &commonPb.ContractResult{
@@ -136,8 +135,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 			close(responseCh)
 
-			log.Println("----------------------------")
-			log.Println(contractResult)
+			//log.Println("----------------------------")
+			//log.Println(contractResult)
 
 			return contractResult
 		default:

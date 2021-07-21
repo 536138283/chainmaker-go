@@ -348,6 +348,7 @@ type coreConfig struct {
 }
 
 type dockerConfig struct {
+	OpenDockerVM       bool            `mapstructure:"open_dockervm"`
 	ImageName          string          `mapstructure:"image_name"`
 	ContainerName      string          `mapstructure:"container_name"`
 	DockerContainerDir string          `mapstructure:"docker_container_dir"`

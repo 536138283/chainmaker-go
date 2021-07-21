@@ -104,8 +104,8 @@ func main() {
 	//}
 
 	// 3) invoke 测试
-	testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
-
+	txId := testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+	time.Sleep(10 * time.Second)
 	// 4) query 测试
 	//testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
@@ -113,37 +113,37 @@ func main() {
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
 
 	//testInvokeFactSave(sk3, &client, CHAIN1)
-	//time.Sleep(4 * time.Second)
+
 	//
 	//////3) 合约查询
 	//testQueryFindByHash(sk3, &client, CHAIN1)
 	//
-	//// 4) 根据TxId查交易
-	//testGetTxByTxId(sk3, &client, txId, CHAIN1)
+	// 4) 根据TxId查交易
+	testGetTxByTxId(sk3, &client, txId, CHAIN1)
 	//
-	//// 5) 根据区块高度查区块，若height为-1，表示查当前区块
-	//hash := testGetBlockByHeight(sk3, &client, CHAIN1, -1)
+	// 5) 根据区块高度查区块，若height为-1，表示查当前区块
+	hash := testGetBlockByHeight(sk3, &client, CHAIN1, -1)
 	//
-	//// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
-	//testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, -1)
+	// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
+	testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, -1)
 	//
-	//// 7) 根据区块哈希查区块
-	//testGetBlockByHash(sk3, &client, CHAIN1, hash)
+	// 7) 根据区块哈希查区块
+	testGetBlockByHash(sk3, &client, CHAIN1, hash)
 	//
-	//// 8) 根据区块哈希查区块（包含读写集）
+	// 8) 根据区块哈希查区块（包含读写集）
 	//testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
 	//
 	//// 9) 根据TxId查区块
-	//testGetBlockByTxId(sk3, &client, txId, CHAIN1)
+	testGetBlockByTxId(sk3, &client, txId, CHAIN1)
 	//
 	//// 10) 查询最新配置块
 	//testGetLastConfigBlock(sk3, &client, CHAIN1)
 	//
-	//// 11) 查询最新区块
-	//testGetLastBlock(sk3, &client, CHAIN1)
+	// 11) 查询最新区块
+	testGetLastBlock(sk3, &client, CHAIN1)
 	//
-	//// 12) 查询链信息
-	//testGetChainInfo(sk3, &client, CHAIN1)
+	// 12) 查询链信息
+	testGetChainInfo(sk3, &client, CHAIN1)
 	//
 	//// 13) 合约升级
 	//testUpgrade(sk3, &client, CHAIN1)
