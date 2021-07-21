@@ -91,3 +91,4 @@ debug:
   is_prevote_lost: false
   is_precommit_duplicately: false
   is_precommit_old_height: false
+  is_trace_memory_usage: true
