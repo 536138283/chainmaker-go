@@ -33,6 +33,9 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
+	//log.Println("-----------")
+	//log.Println("start contract")
+
 	// contract response
 	contractResult = &commonPb.ContractResult{
 		Code:    commonPb.ContractResultCode_FAIL,
@@ -97,8 +100,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			contractName := string(recvMsg.Payload)
 
 			dockerConfig := localconf.ChainMakerConfig.DockerConfig
-			mountDir := dockerConfig.MountDir
-			contractPath := filepath.Join(mountDir, contractName)
+			hostMountDir := dockerConfig.HostMountDir
+			contractPath := filepath.Join(hostMountDir, "contracts", contractName)
 
 			err := r.saveBytesToDisk(byteCode, contractPath)
 			if err != nil {
@@ -132,9 +135,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 			close(responseCh)
 
-			r.Log.Debug("-----------------------------------------------")
-			r.Log.Debug("End to run contract in docker")
-			r.Log.Debug(contractResult)
+			//log.Println("----------------------------")
+			//log.Println(contractResult)
 
 			return contractResult
 		default:

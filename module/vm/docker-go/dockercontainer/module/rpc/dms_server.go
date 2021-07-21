@@ -2,15 +2,16 @@ package rpc
 
 import (
 	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"errors"
-	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 	"log"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 )
 
@@ -23,17 +24,14 @@ type DMSServer struct {
 // NewDMSServer build new docker manager to sandbox server, current: each server in charge of one sandbox
 func NewDMSServer() (*DMSServer, error) {
 
-	sockPath := os.Getenv("UdsSockFile")
-	if sockPath == "" {
-		return nil, fmt.Errorf("invalid sock path")
-	}
+	dmsSockPath := filepath.Join(config.DMSDir, config.DMSSockPath)
 
-	listenAddress, err := net.ResolveUnixAddr("unix", sockPath)
+	listenAddress, err := net.ResolveUnixAddr("unix", dmsSockPath)
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
 
-	listener, err := CreateUnixListener(listenAddress, sockPath)
+	listener, err := CreateUnixListener(listenAddress, dmsSockPath)
 	if err != nil {
 		log.Fatalf("Failed to listen1: %v", err)
 	}
@@ -78,9 +76,7 @@ start:
 		}
 		goto start
 	} else {
-
-		// todo change 777: limit delete for user
-		if err := os.Chmod(sockPath, 0777); err != nil {
+		if err = os.Chmod(sockPath, 0777); err != nil {
 			return nil, err
 		}
 		return listener, nil
