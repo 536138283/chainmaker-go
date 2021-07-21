@@ -81,6 +81,14 @@ type ManagerImpl struct {
 	DockerManager          *dockercontroller.DockerManager
 }
 
+func (m *ManagerImpl) Start() error {
+	return m.DockerManager.StartContainer()
+}
+
+func (m *ManagerImpl) Stop() error {
+	return m.DockerManager.StopAndRemoveVM()
+}
+
 func (m *ManagerImpl) GetAccessControl() protocol.AccessControlProvider {
 	return m.AccessControl
 }
@@ -740,6 +748,11 @@ func (m *ManagerImpl) invokeUserContractByRuntime(contractId *commonPb.ContractI
 			ContractId:   contractId,
 		}
 	case commonPb.RuntimeType_DOCKER_GO:
+
+		if m.DockerManager == nil {
+			contractResult.Message = fmt.Sprintf("docker vm runtime doesn't start")
+			return contractResult, commonPb.TxStatusCode_INVALID_CONTRACT_PARAMETER_RUNTIME_TYPE
+		}
 
 		if !m.DockerManager.CDMState {
 			m.DockerManager.StartCDMClient()
