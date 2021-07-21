@@ -38,6 +38,9 @@ func (bc *Blockchain) Stop() {
 	if bc.isModuleStartUp(moduleNameTxPool) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameTxPool: bc.stopTxPool})
 	}
+	if bc.isModuleStartUp(moduleNameVM) {
+		stopModules = append(stopModules, map[string]func() error{moduleNameVM: bc.stopVm})
+	}
 
 	total := len(stopModules)
 
@@ -157,5 +160,17 @@ func (bc *Blockchain) stopTxPool() error {
 		return err
 	}
 	delete(bc.startModules, moduleNameTxPool)
+	return nil
+}
+
+func (bc *Blockchain) stopVm() error {
+	// stop tx pool
+	err := bc.vmMgr.Stop()
+	if err != nil {
+		bc.log.Errorf("stop vm manager failed, %s", err)
+
+		return err
+	}
+	delete(bc.startModules, moduleNameVM)
 	return nil
 }

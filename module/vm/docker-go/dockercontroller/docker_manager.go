@@ -12,22 +12,18 @@ import (
 	"fmt"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/go-connections/nat"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-)
-
-const (
-	logTemplate string = "Docker Manager  -- %s"
 )
 
 type DockerManager struct {
@@ -54,19 +50,73 @@ type DockerManager struct {
 
 // NewDockerManager return docker manager and running a default container
 func NewDockerManager(chainId string) *DockerManager {
+
+	// if open docker vm is false, docker manager is nil
+	startDockerVm := localconf.ChainMakerConfig.DockerConfig.OpenDockerVM
+	if !startDockerVm {
+		return nil
+	}
 	ctx := context.Background()
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil
 	}
 
-	log := logger.GetLoggerByChain("[Docker Manager]", chainId)
+	Logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
 	cdmClient := module.NewCDMClient(chainId)
 
 	dockerConfig := localconf.ChainMakerConfig.DockerConfig
 
 	hostPort := strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
 	openPort := nat.Port(hostPort + "/tcp")
+
+	var dockerContainerDir string
+	var sourceDir string
+	var targetDir string
+	var imageName string
+	var containerName string
+
+	if dockerConfig.DockerContainerDir == "" {
+		Logger.Errorf("doesn't set docker container path")
+		return nil
+	} else {
+		dockerContainerDir = dockerConfig.DockerContainerDir
+	}
+
+	if dockerConfig.HostMountDir == "" {
+		Logger.Errorf("doesn't set host mount directory path")
+		return nil
+	} else {
+		sourceDir = dockerConfig.HostMountDir
+		if !filepath.IsAbs(sourceDir) {
+			sourceDir, err = filepath.Abs(sourceDir)
+			if err != nil {
+				Logger.Errorf("doesn't set host mount directory path correctly")
+				return nil
+			}
+		}
+	}
+
+	if dockerConfig.DockerMountDir == "" {
+		Logger.Errorf("doesn't set docker mount directory path")
+		return nil
+	} else {
+		targetDir = dockerConfig.DockerMountDir
+	}
+
+	if dockerConfig.ImageName == "" {
+		Logger.Infof("image name doesn't set, set as default: image1")
+		imageName = "image1"
+	} else {
+		imageName = dockerConfig.ImageName
+	}
+
+	if dockerConfig.ContainerName == "" {
+		Logger.Infof("container name doesn't set, set as default: container1")
+		containerName = "container1"
+	} else {
+		containerName = dockerConfig.ContainerName
+	}
 
 	newDockerManager := &DockerManager{
 		AttachStdOut:  true,
@@ -75,23 +125,17 @@ func NewDockerManager(chainId string) *DockerManager {
 		ShowStderr:    true,
 		ctx:           ctx,
 		client:        cli,
-		Log:           log,
+		Log:           Logger,
 		CDMClient:     cdmClient,
 		CDMState:      false,
 		lock:          sync.Mutex{},
-		imageName:     dockerConfig.ImageName,
-		containerName: dockerConfig.ContainerName,
-		sourceDir:     dockerConfig.MountDir,
-		targetDir:     dockerConfig.DockerMountDir,
+		imageName:     imageName,
+		containerName: containerName,
+		sourceDir:     sourceDir,
+		targetDir:     targetDir,
 		hostPort:      hostPort,
 		openPort:      openPort,
-		dockerDir:     dockerConfig.DockerDir,
-	}
-
-	//todo add restart logic
-	err = newDockerManager.StartContainer()
-	if err != nil {
-		log.Errorf("problem when start container: %s ", err)
+		dockerDir:     dockerContainerDir,
 	}
 
 	return newDockerManager
@@ -186,7 +230,7 @@ func (m *DockerManager) createContainer() error {
 		return err
 	}
 
-	m.Log.Infof(logTemplate, "Successfully Create Container")
+	m.Log.Infof("create container [%s] success :)", m.containerName)
 	return nil
 }
 
@@ -224,7 +268,7 @@ func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
 		return err
 	}
 
-	m.Log.Infof(logTemplate, "Successfully Build Image")
+	m.Log.Infof("build image [%s] success :)", m.imageName)
 
 	return nil
 }
@@ -281,7 +325,7 @@ func displayBuildProcess(rd io.Reader) error {
 
 // StartContainer Start Container
 func (m *DockerManager) StartContainer() error {
-
+	m.Log.Info("start docker vm...")
 	var err error
 
 	// check container is running or not
@@ -343,9 +387,32 @@ func (m *DockerManager) StartContainer() error {
 		return err
 	}
 
+	m.Log.Info("docker vm start success :)")
 	// display container info in the console
-	go m.displayInConsole(m.containerName)
+	//go m.displayInConsole(m.containerName)
 
+	return nil
+}
+
+func (m *DockerManager) StopAndRemoveVM() error {
+	var err error
+
+	err = m.stopContainer()
+	if err != nil {
+		return err
+	}
+
+	err = m.removeContainer()
+	if err != nil {
+		return err
+	}
+
+	err = m.removeImage()
+	if err != nil {
+		return err
+	}
+
+	m.Log.Info("stop and remove docker vm")
 	return nil
 }
 
@@ -387,41 +454,6 @@ func (m *DockerManager) getContainer(all bool) (bool, error) {
 	return false, nil
 }
 
-// stop all containers
-func stopAllContainers(ctx context.Context, cli *client.Client) error {
-
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{})
-	if err != nil {
-		return err
-	}
-
-	for _, specContainer := range containers {
-		log.Print("Stopping container ", specContainer.ID[:10], "... ")
-		if err := cli.ContainerStop(ctx, specContainer.ID, nil); err != nil {
-			return err
-		}
-		log.Println("Success")
-	}
-	return nil
-}
-
-// remove all containers
-func removeAllContainers(ctx context.Context, cli *client.Client) error {
-	containers, err := cli.ContainerList(ctx, types.ContainerListOptions{All: true})
-	if err != nil {
-		return err
-	}
-
-	for _, specContainer := range containers {
-		log.Println("Removing container ", specContainer.ID[:10], "... ")
-		if err := cli.ContainerRemove(ctx, specContainer.ID, types.ContainerRemoveOptions{}); err != nil {
-			return err
-		}
-		log.Println("Success remove container ", specContainer.ID[:10])
-	}
-	return nil
-}
-
 // remove image
 func (m *DockerManager) removeImage() error {
 
@@ -429,11 +461,17 @@ func (m *DockerManager) removeImage() error {
 	if _, err := m.client.ImageRemove(m.ctx, m.imageName, types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
 		return err
 	}
+
+	_, err := m.client.ImagesPrune(m.ctx, filters.Args{})
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
+// remove container
 func (m *DockerManager) removeContainer() error {
-	m.Log.Infof("Removing container [%s] ...", m.imageName)
+	m.Log.Infof("Removing container [%s] ...", m.containerName)
 	if err := m.client.ContainerRemove(m.ctx, m.containerName, types.ContainerRemoveOptions{}); err != nil {
 		return err
 	}

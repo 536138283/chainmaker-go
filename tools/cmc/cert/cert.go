@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 package cert
 
 import (
-	"chainmaker.org/chainmaker-go/common/crypto/x509"
 	"crypto/rand"
 	"crypto/x509/pkix"
 	"encoding/pem"
@@ -18,6 +17,8 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"chainmaker.org/chainmaker-go/common/crypto/x509"
 
 	"chainmaker.org/chainmaker-go/common/random/uuid"
 
@@ -50,6 +51,7 @@ func CertCMD() *cobra.Command {
 	certCmd.AddCommand(createCertCrlCMD())
 	certCmd.AddCommand(nodeIdCMD())
 	certCmd.AddCommand(addrCMD())
+	certCmd.AddCommand(certToUserAddrInStake())
 	return certCmd
 }
 

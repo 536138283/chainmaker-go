@@ -1,7 +1,7 @@
 /*
-Copyright (C) BABEC. All rights reserved.
-
-SPDX-License-Identifier: Apache-2.0
+ Copyright (C) BABEC. All rights reserved.
+ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+   SPDX-License-Identifier: Apache-2.0
 */
 
 package native
@@ -55,6 +55,8 @@ func initContract(log *logger.CMLogger) map[string]Contract {
 	contracts[commonPb.ContractName_SYSTEM_CONTRACT_GOVERNANCE.String()] = newGovernmentContract(log)
 	contracts[commonPb.ContractName_SYSTEM_CONTRACT_MULTI_SIGN.String()] = newMultiSignContract(log)
 	contracts[commonPb.ContractName_SYSTEM_CONTRACT_PRIVATE_COMPUTE.String()] = newPrivateComputeContact(log)
+	contracts[commonPb.ContractName_SYSTEM_CONTRACT_DPOS_ERC20.String()] = newDPoSERC20Contract(log)
+	contracts[commonPb.ContractName_SYSTEM_CONTRACT_DPOS_STAKE.String()] = newDPoSStakeContract(log)
 	return contracts
 }
 
@@ -90,7 +92,6 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, methodName str
 		result.Message = err.Error()
 		return result
 	}
-
 	result.Code = commonPb.ContractResultCode_OK
 	result.Message = commonPb.ContractResultCode_OK.String()
 	result.Result = bytes

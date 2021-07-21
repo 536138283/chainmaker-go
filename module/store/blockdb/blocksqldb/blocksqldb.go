@@ -20,6 +20,8 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
+var NotImplementError = errors.New("implement me")
+
 // BlockSqlDB provider a implementation of `blockdb.BlockDB`
 // This implementation provides a mysql based data model
 type BlockSqlDB struct {
@@ -27,6 +29,63 @@ type BlockSqlDB struct {
 	workersSemaphore *semaphore.Weighted
 	logger           protocol.Logger
 	dbName           string
+}
+
+func (db *BlockSqlDB) GetHeightByHash(blockHash []byte) (uint64, error) {
+	sql := "SELECT block_height FROM block_infos WHERE block_hash=?"
+	var height uint64
+	res, err := db.db.QuerySingle(sql, blockHash)
+	if err != nil {
+		return 0, err
+	}
+	err = res.ScanColumns(&height)
+	if err != nil {
+		return 0, err
+	}
+	return height, nil
+}
+
+func (db *BlockSqlDB) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader, error) {
+	sql := "SELECT * from block_infos WHERE block_height=?"
+	blockInfo, err := db.getBlockInfoBySql(sql, height)
+	if err != nil {
+		return nil, err
+	}
+	if blockInfo == nil && err == nil {
+		return nil, nil
+	}
+	return blockInfo.GetBlockHeader(), nil
+}
+
+func (db *BlockSqlDB) GetTxHeight(txId string) (uint64, error) {
+	sql := "SELECT block_height FROM tx_infos WHERE tx_id=?"
+	var height uint64
+	res, err := db.db.QuerySingle(sql, txId)
+	if err != nil {
+		return 0, err
+	}
+	err = res.ScanColumns(&height)
+	if err != nil {
+		return 0, err
+	}
+	return height, nil
+
+}
+
+func (db *BlockSqlDB) TxArchived(txId string) (bool, error) {
+	return false, nil
+}
+
+func (db *BlockSqlDB) GetArchivedPivot() (uint64, error) {
+	return 0, nil
+}
+
+func (db *BlockSqlDB) ShrinkBlocks(startHeight uint64, endHeight uint64) (map[uint64][]string, error) {
+	return nil, NotImplementError
+}
+
+func (db *BlockSqlDB) RestoreBlocks(blockInfos []*serialization.BlockWithSerializedInfo) error {
+	return NotImplementError
 }
 
 // NewBlockSqlDB constructs a new `BlockSqlDB` given an chainId and engine type
@@ -341,7 +400,7 @@ func (b *BlockSqlDB) getTxsByBlockHeight(blockHeight int64) ([]*commonPb.Transac
 	return result, nil
 }
 func (b *BlockSqlDB) GetTxConfirmedTime(txId string) (int64, error) {
-	panic("implement me")
+	return 0, NotImplementError
 }
 
 // Close is used to close database

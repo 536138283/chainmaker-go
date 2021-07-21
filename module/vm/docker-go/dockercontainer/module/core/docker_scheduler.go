@@ -213,7 +213,8 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 
 	cmd.Stdout = os.Stdout
 
-	//set namespace
+	//set namespace, these settings just working in linux
+	// but it doens't affect running, cause it will put into docker to run
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{
 			Uid: uint32(user.Uid),

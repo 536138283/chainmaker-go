@@ -8,13 +8,19 @@ SPDX-License-Identifier: Apache-2.0
 package cert
 
 import (
-	bcx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
-	"chainmaker.org/chainmaker-go/common/evmutils"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
+
+	"chainmaker.org/chainmaker-go/common/crypto"
+	hashAlo "chainmaker.org/chainmaker-go/common/crypto/hash"
+	bcx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
+	"chainmaker.org/chainmaker-go/common/evmutils"
+	sdk "chainmaker.org/chainmaker-sdk-go"
+
+	"github.com/mr-tron/base58"
+	"github.com/spf13/cobra"
 )
 
 func addrCMD() *cobra.Command {
@@ -59,3 +65,44 @@ func getAddr() error {
 	return nil
 }
 
+func certToUserAddrInStake() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "userAddr",
+		Short: "get user addr feature of the DPoS from cert",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			if len(certPath) == 0 {
+				return fmt.Errorf("cert path is null")
+			}
+			certContent, err := ioutil.ReadFile(certPath)
+			if err != nil {
+				return fmt.Errorf("read cert content failed, reason: %s", err)
+			}
+			cert, err := sdk.ParseCert(certContent)
+			if err != nil {
+				return fmt.Errorf("parse cert failed, reason: %s", err)
+			}
+			pubkey, err := cert.PublicKey.Bytes()
+			if err != nil {
+				return fmt.Errorf("get pubkey failed from cert, reason: %s", err)
+			}
+			var (
+				hashBz []byte
+			)
+			if cert.SignatureAlgorithm == bcx509.SM3WithSM2 {
+				hashBz, err = hashAlo.GetByStrType(crypto.CRYPTO_ALGO_SM3, pubkey)
+			} else {
+				hashBz, err = hashAlo.GetByStrType(crypto.CRYPTO_ALGO_SHA256, pubkey)
+			}
+			addr := base58.Encode(hashBz[:])
+			fmt.Printf("address: %s \n\nfrom cert: %s\n", addr, certPath)
+			return nil
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagCertPath,
+	})
+
+	cmd.MarkFlagRequired(certPath)
+	return cmd
+}

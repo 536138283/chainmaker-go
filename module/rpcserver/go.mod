@@ -10,15 +10,17 @@ require (
 	chainmaker.org/chainmaker-go/monitor v0.0.0
 	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
 	chainmaker.org/chainmaker-go/protocol v0.0.0
+	chainmaker.org/chainmaker-go/store v0.0.0
 	chainmaker.org/chainmaker-go/subscriber v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
 	chainmaker.org/chainmaker-go/vm v0.0.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/grpc-ecosystem/go-grpc-middleware v1.0.1-0.20190118093823-f849b5445de4
+	github.com/golang/protobuf v1.5.2
+	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/prometheus/client_golang v1.9.0
 	github.com/stretchr/testify v1.7.0
-	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
-	google.golang.org/grpc v1.38.0
+	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
+	google.golang.org/grpc v1.37.0
 )
 
 replace (
@@ -28,6 +30,7 @@ replace (
 	chainmaker.org/chainmaker-go/common => ../../common
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
+	chainmaker.org/chainmaker-go/dpos => ../dpos
 	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
 	chainmaker.org/chainmaker-go/evm => ../vm/evm

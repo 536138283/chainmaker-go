@@ -9,10 +9,13 @@ package client
 
 import (
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"path/filepath"
 	"strings"
+
+	"github.com/spf13/cobra"
+
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 )
 
 func certManageCMD() *cobra.Command {
@@ -38,8 +41,9 @@ func freezeCertCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagOrgId, flagChainId, flagSyncResult,
-		flagClientCrtFilePaths, flagClientKeyFilePaths, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 		flagCertFilePaths, flagEnableCertHash,
 	})
 
@@ -62,8 +66,9 @@ func unfreezeCertCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagOrgId, flagChainId, flagSyncResult,
-		flagClientCrtFilePaths, flagClientKeyFilePaths, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 		flagCertFilePaths, flagEnableCertHash,
 	})
 
@@ -86,8 +91,9 @@ func revokeCertCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagOrgId, flagChainId, flagSyncResult,
-		flagClientCrtFilePaths, flagClientKeyFilePaths, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 		flagCertCrlPath, flagEnableCertHash,
 	})
 
@@ -111,7 +117,7 @@ func freezeOrUnfreezeCert(which int) error {
 		certStr := string(certBytes)
 		certFiles[idx] = certStr
 	}
-	client, err := createClientWithConfig()
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("create user client failed, %s", err.Error())
 	}
@@ -145,7 +151,7 @@ func freezeOrUnfreezeCert(which int) error {
 	if err != nil {
 		return fmt.Errorf("send cert manage request failed, %s", err.Error())
 	}
-	err = checkProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, true)
 	if err != nil {
 		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
 	}
@@ -158,7 +164,7 @@ func revokeCert() error {
 	if err != nil {
 		return err
 	}
-	client, err := createClientWithConfig()
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("create user client failed, %s", err.Error())
 	}
@@ -180,7 +186,7 @@ func revokeCert() error {
 	if err != nil {
 		return fmt.Errorf("send cert manage request failed, %s", err.Error())
 	}
-	err = checkProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, true)
 	if err != nil {
 		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
 	}

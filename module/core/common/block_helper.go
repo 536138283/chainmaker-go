@@ -11,24 +11,23 @@ import (
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
 	commonErrors "chainmaker.org/chainmaker-go/common/errors"
 	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/core/common/scheduler"
+	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/monitor"
 	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
-	"chainmaker.org/chainmaker-go/store/statedb/statesqldb"
 	"chainmaker.org/chainmaker-go/subscriber"
 	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"sync"
 )
 
 const (
-	DEFAULTDURATION = 1000     // default proposal duration, millis seconds
-	DEFAULTVERSION  = "v1.0.0" // default version of chain
+	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
 )
 
 type BlockBuilderConf struct {
@@ -41,6 +40,7 @@ type BlockBuilderConf struct {
 	ProposalCache   protocol.ProposalCache
 	ChainConf       protocol.ChainConf // chain config
 	Log             protocol.Logger
+	StoreHelper     conf.StoreHelper
 }
 
 type BlockBuilder struct {
@@ -53,6 +53,7 @@ type BlockBuilder struct {
 	proposalCache   protocol.ProposalCache
 	chainConf       protocol.ChainConf // chain config
 	log             protocol.Logger
+	storeHelper     conf.StoreHelper
 }
 
 func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
@@ -66,6 +67,7 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 		proposalCache:   conf.ProposalCache,
 		chainConf:       conf.ChainConf,
 		log:             conf.Log,
+		storeHelper:     conf.StoreHelper,
 	}
 
 	return creatorBlock
@@ -105,9 +107,7 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight int64, preHash []byte, 
 	snapshot := bb.snapshotManager.NewSnapshot(lastBlock, block)
 	vmStartTick := utils.CurrentTimeMillisSeconds()
 	ssLasts := vmStartTick - ssStartTick
-	if bb.chainConf.ChainConfig().Contract.EnableSqlSupport {
-		snapshot.GetBlockchainStore().BeginDbTransaction(block.GetTxKey())
-	}
+	bb.storeHelper.BeginDbTransaction(snapshot.GetBlockchainStore(), block.GetTxKey())
 	txRWSetMap, contractEventMap, err := bb.txScheduler.Schedule(block, validatedTxs, snapshot)
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
 	timeLasts = append(timeLasts, ssLasts, vmLasts)
@@ -117,20 +117,26 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight int64, preHash []byte, 
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
 
-	//if len(block.Txs) == 0 {
-	//	return nil, timeLasts, fmt.Errorf("no txs in scheduled block, proposing block ends")
-	//}
+	// deal with the special situation：
+	// 1. only one tx and schedule time out
+	// 2. package the empty block
+	if !utils.CanProposeEmptyBlock(bb.chainConf.ChainConfig().Consensus.Type) && len(block.Txs) == 0 {
+		return nil, timeLasts, fmt.Errorf("no txs in scheduled block, proposing block ends")
+	}
 
+	finalizeStartTick := utils.CurrentTimeMillisSeconds()
 	err = FinalizeBlock(
 		block,
 		txRWSetMap,
 		aclFailTxs,
 		bb.chainConf.ChainConfig().Crypto.Hash,
 		bb.log)
+	finalizeLasts := utils.CurrentTimeMillisSeconds() - finalizeStartTick
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
 			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
 	}
+	timeLasts = append(timeLasts, finalizeLasts)
 	// get txs schedule timeout and put back to txpool
 	var txsTimeout = make([]*commonpb.Transaction, 0)
 	if len(txRWSetMap) < len(txBatch) {
@@ -186,7 +192,7 @@ func InitNewBlock(
 			PreBlockHash:   lastBlock.Header.BlockHash,
 			BlockHash:      nil,
 			PreConfHeight:  preConfHeight,
-			BlockVersion:   getChainVersion(chainConf),
+			BlockVersion:   []byte(protocol.DefaultBlockVersion),
 			DagHash:        nil,
 			RwSetRoot:      nil,
 			TxRoot:         nil,
@@ -330,7 +336,7 @@ func IsTxDuplicate(txs []*commonpb.Transaction) bool {
 func IsMerkleRootValid(block *commonpb.Block, txHashes [][]byte, hashType string) error {
 	txRoot, err := hash.GetMerkleRoot(hashType, txHashes)
 	if err != nil || !bytes.Equal(txRoot, block.Header.TxRoot) {
-		return fmt.Errorf("txroot expect %x, got %x", block.Header.TxRoot, txRoot)
+		return fmt.Errorf("txroot expect %x, got %x, err: %s", block.Header.TxRoot, txRoot, err.Error())
 	}
 	return nil
 }
@@ -358,9 +364,10 @@ func IsRWSetHashValid(block *commonpb.Block, hashType string) error {
 
 // getChainVersion, get chain version from config.
 // If not access from config, use default value.
+// @Deprecated
 func getChainVersion(chainConf protocol.ChainConf) []byte {
 	if chainConf == nil || chainConf.ChainConfig() == nil {
-		return []byte(DEFAULTVERSION)
+		return []byte(protocol.DefaultBlockVersion)
 	}
 	return []byte(chainConf.ChainConfig().Version)
 }
@@ -417,6 +424,7 @@ type VerifierBlockConf struct {
 	TxPool          protocol.TxPool
 	BlockchainStore protocol.BlockchainStore
 	ProposalCache   protocol.ProposalCache // proposal cache
+	StoreHelper     conf.StoreHelper
 }
 
 type VerifierBlock struct {
@@ -426,10 +434,11 @@ type VerifierBlock struct {
 	ac              protocol.AccessControlProvider
 	snapshotManager protocol.SnapshotManager
 	vmMgr           protocol.VmManager
-	txScheduler     *TxScheduler
+	txScheduler     protocol.TxScheduler
 	txPool          protocol.TxPool
 	blockchainStore protocol.BlockchainStore
 	proposalCache   protocol.ProposalCache // proposal cache
+	storeHelper     conf.StoreHelper
 }
 
 func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
@@ -443,8 +452,10 @@ func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
 		txPool:          conf.TxPool,
 		blockchainStore: conf.BlockchainStore,
 		proposalCache:   conf.ProposalCache,
+		storeHelper:     conf.StoreHelper,
 	}
-	verifyBlock.txScheduler = NewTxScheduler(verifyBlock.vmMgr, verifyBlock.chainConf)
+	var schedulerFactory scheduler.TxSchedulerFactory
+	verifyBlock.txScheduler = schedulerFactory.NewTxScheduler(verifyBlock.vmMgr, verifyBlock.chainConf, conf.StoreHelper)
 	return verifyBlock
 }
 
@@ -488,6 +499,9 @@ func (vb *VerifierBlock) ValidateBlock(
 	if err != nil {
 		return nil, nil, timeLasts, err
 	}
+	// we must new a snapshot for the vacant block,
+	// otherwise the subsequent snapshot can not link to the previous snapshot.
+	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
 		return nil, nil, timeLasts, nil
 	}
@@ -498,10 +512,7 @@ func (vb *VerifierBlock) ValidateBlock(
 
 	// simulate with DAG, and verify read write set
 	startVMTick := utils.CurrentTimeMillisSeconds()
-	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
-	if vb.chainConf.ChainConfig().Contract.EnableSqlSupport {
-		snapshot.GetBlockchainStore().BeginDbTransaction(block.GetTxKey())
-	}
+	vb.storeHelper.BeginDbTransaction(snapshot.GetBlockchainStore(), block.GetTxKey())
 	txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(block, snapshot)
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts = append(timeLasts, vmLasts)
@@ -550,7 +561,6 @@ func (vb *VerifierBlock) ValidateBlock(
 		}
 		contractEventMap[tx.Header.TxId] = events
 	}
-
 	// verify TxRoot
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
@@ -585,7 +595,7 @@ type BlockCommitterImpl struct {
 
 	ledgerCache           protocol.LedgerCache        // ledger cache
 	proposalCache         protocol.ProposalCache      // proposal cache
-	log                   protocol.Logger            // logger
+	log                   protocol.Logger             // logger
 	msgBus                msgbus.MessageBus           // message bus
 	mu                    sync.Mutex                  // lock, to avoid concurrent block commit
 	subscriber            *subscriber.EventSubscriber // subscriber
@@ -595,6 +605,7 @@ type BlockCommitterImpl struct {
 	metricBlockCounter    *prometheus.CounterVec   // metric block counter
 	metricTxCounter       *prometheus.CounterVec   // metric transaction counter
 	metricBlockCommitTime *prometheus.HistogramVec // metric block commit time
+	storeHelper           conf.StoreHelper
 }
 
 type BlockCommitterConfig struct {
@@ -608,6 +619,7 @@ type BlockCommitterConfig struct {
 	MsgBus          msgbus.MessageBus
 	Subscriber      *subscriber.EventSubscriber
 	Verifier        protocol.BlockVerifier
+	StoreHelper     conf.StoreHelper
 }
 
 func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protocol.BlockCommitter, error) {
@@ -623,6 +635,7 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 		msgBus:          config.MsgBus,
 		subscriber:      config.Subscriber,
 		verifier:        config.Verifier,
+		storeHelper:     config.StoreHelper,
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
@@ -640,13 +653,13 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 	}
 
 	cbConf := &CommitBlockConf{
-		Store:                 config.BlockchainStore,
+		Store:                 blockchain.blockchainStore,
 		Log:                   blockchain.log,
-		SnapshotManager:       config.SnapshotManager,
-		TxPool:                config.TxPool,
-		LedgerCache:           config.LedgerCache,
-		ChainConf:             config.ChainConf,
-		MsgBus:                config.MsgBus,
+		SnapshotManager:       blockchain.snapshotManager,
+		TxPool:                blockchain.txPool,
+		LedgerCache:           blockchain.ledgerCache,
+		ChainConf:             blockchain.chainConf,
+		MsgBus:                blockchain.msgBus,
 		MetricBlockCommitTime: blockchain.metricBlockCommitTime,
 		MetricBlockCounter:    blockchain.metricBlockCounter,
 		MetricBlockSize:       blockchain.metricBlockSize,
@@ -689,24 +702,18 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonpb.Block) error {
 
 func (chain *BlockCommitterImpl) AddBlock(block *commonpb.Block) (err error) {
 	defer func() {
+		panicErr := recover()
 		if err == nil {
-			return
+			if panicErr != nil {
+				err = fmt.Errorf(fmt.Sprint(panicErr))
+			} else {
+				return
+			}
 		}
 		// rollback sql
-		chain.log.Error(err)
-		if chain.chainConf.ChainConfig().Contract.EnableSqlSupport {
-			txKey := block.GetTxKey()
-			_ = chain.blockchainStore.RollbackDbTransaction(txKey)
-			// drop database if create contract fail
-			if len(block.Txs) == 0 && utils.IsManageContractAsConfigTx(block.Txs[0], true) {
-				var payload commonpb.ContractMgmtPayload
-				if err := proto.Unmarshal(block.Txs[0].RequestPayload, &payload); err == nil {
-					if payload.ContractId != nil {
-						dbName := statesqldb.GetContractDbName(chain.chainId, payload.ContractId.ContractName)
-						chain.blockchainStore.ExecDdlSql(payload.ContractId.ContractName, "drop database "+dbName)
-					}
-				}
-			}
+		chain.log.Error("cache add block err: ", err)
+		if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
+			chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 		}
 	}()
 

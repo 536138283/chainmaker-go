@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 
 package blockchain
 
+import "chainmaker.org/chainmaker-go/localconf"
+
 // Start all the modules.
 func (bc *Blockchain) Start() error {
 	// start all module
@@ -18,6 +20,7 @@ func (bc *Blockchain) Start() error {
 	// 4、consensus module
 	// 5、tx pool
 	// 6、sync service
+	// 7、vm manager (docker vm)
 
 	var startModules = make([]map[string]func() error, 0)
 	if bc.isModuleInit(moduleNameNetService) && !bc.isModuleStartUp(moduleNameNetService) {
@@ -37,6 +40,12 @@ func (bc *Blockchain) Start() error {
 	}
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
+	}
+	// if open_docker vm is false, will not start module vm
+	// start module vm actually just start docker vm
+	startVm := localconf.ChainMakerConfig.DockerConfig.OpenDockerVM
+	if bc.isModuleInit(moduleNameVM) && !bc.isModuleStartUp(moduleNameVM) && startVm {
+		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVm})
 	}
 
 	total := len(startModules)
@@ -102,6 +111,16 @@ func (bc *Blockchain) startTxPool() error {
 		return err
 	}
 	bc.startModules[moduleNameTxPool] = struct{}{}
+	return nil
+}
+
+func (bc *Blockchain) startVm() error {
+	err := bc.vmMgr.Start()
+	if err != nil {
+		bc.log.Errorf("start vm manager failed, %s", err)
+		return err
+	}
+	bc.startModules[moduleNameVM] = struct{}{}
 	return nil
 }
 

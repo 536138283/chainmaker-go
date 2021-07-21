@@ -8,12 +8,12 @@ require (
 	chainmaker.org/chainmaker-go/common v0.0.0
 	chainmaker.org/chainmaker-go/consensus v0.0.0
 	chainmaker.org/chainmaker-go/core v0.0.0
+	chainmaker.org/chainmaker-go/dpos v0.0.0
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/logger v0.0.0
 	chainmaker.org/chainmaker-go/net v0.0.0
 	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
 	chainmaker.org/chainmaker-go/protocol v0.0.0
-	chainmaker.org/chainmaker-go/provider v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/snapshot v0.0.0
 	chainmaker.org/chainmaker-go/store v0.0.0
 	chainmaker.org/chainmaker-go/subscriber v0.0.0
@@ -29,6 +29,7 @@ replace (
 	chainmaker.org/chainmaker-go/common => ../../common
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
+	chainmaker.org/chainmaker-go/dpos => ../dpos
 	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
 	chainmaker.org/chainmaker-go/evm => ../vm/evm
@@ -40,13 +41,12 @@ replace (
 	chainmaker.org/chainmaker-go/net => ../net
 	chainmaker.org/chainmaker-go/pb/protogo => ../../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ../../protocol
-	chainmaker.org/chainmaker-go/provider => ../provider
 	chainmaker.org/chainmaker-go/snapshot => ../snapshot
 	chainmaker.org/chainmaker-go/store => ../store
 	chainmaker.org/chainmaker-go/subscriber => ../subscriber
 	chainmaker.org/chainmaker-go/sync => ../sync
 	chainmaker.org/chainmaker-go/txpool => ../txpool
-	chainmaker.org/chainmaker-go/txpool/batchtxpool => ./../txpool/batch
+	//chainmaker.org/chainmaker-go/txpool/batchtxpool => ./../txpool/batch
 	chainmaker.org/chainmaker-go/utils => ../utils
 	chainmaker.org/chainmaker-go/vm => ../vm
 	chainmaker.org/chainmaker-go/wasi => ../vm/wasi

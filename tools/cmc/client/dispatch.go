@@ -8,10 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 package client
 
 import (
-	sdk "chainmaker.org/chainmaker-sdk-go"
-	sdkPbCommon "chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
 	"fmt"
 	"sync"
+
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	sdk "chainmaker.org/chainmaker-sdk-go"
+	sdkPbCommon "chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
 )
 
 func Dispatch(client *sdk.ChainClient, contractName, method string, params map[string]string) {
@@ -30,9 +32,9 @@ func DispatchTimes(client *sdk.ChainClient, contractName, method string, params 
 	var (
 		wgSendReq sync.WaitGroup
 	)
-	times := maxi(1, sendTimes)
+	times := util.MaxInt(1, sendTimes)
 	wgSendReq.Add(times)
-	txId := GetRandTxId()
+	txId := sdk.GetRandTxId()
 	for i := 0; i < times; i++ {
 		go runInvokeContractOnce(client, contractName, method, params, &wgSendReq, txId)
 	}

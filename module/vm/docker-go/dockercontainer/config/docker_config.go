@@ -9,7 +9,17 @@ const (
 	SwapLimitFile   = "memory.swappiness"
 	RssLimit        = 500 // 10 MB
 
-	MountDir        = "/mount"
-	ContractBaseDir = "/mount/contracts"
-	ShareBaseDir    = "/mount/share"
+	DMSDir      = "/dms"
+	DMSSockPath = "dms.sock"
+
+	ContractsDir = "contracts"
+	ShareDir     = "share"
+	SockDir      = "sock"
+)
+
+var (
+	MountDir        = ""
+	ContractBaseDir = ""
+	ShareBaseDir    = ""
+	SockBaseDir     = ""
 )
