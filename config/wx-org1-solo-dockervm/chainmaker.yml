@@ -64,20 +64,24 @@ rpc:
 
 
 #  MountDir        = "/mount"
-#  ContractBaseDir = "/mount/contracts"
-#  ShareBaseDir    = "/mount/share" // go prof and log file
+#  ContractBaseDir = "/mount/contracts/"
+#  ShareBaseDir    = "/mount/share/" // go prof and log file
+#  sockBaseDir     = "/mount/sock/
 docker:
-  image_name: image1
-  container_name: container1
-  docker_dir: ../module/vm/docker-go/dockercontainer
-  mount_dir: C:\Users\jiana\Desktop\mount\ #mount point
+  open_dockervm: true
+  image_name: chainmaker-docker-go-image
+  container_name: chainmaker-docker-go-container
+  docker_container_dir: ../module/vm/docker-go/dockercontainer
+  host_mount_dir: ../module/vm/docker-go/mount
   docker_mount_dir: /mount
   rpc:
-    port: 12356
+    uds_open: false
+    port: 12356 # default is tcp connection
+    cdm_uds_sock_path: /mount/sock/cdm.sock # if uds_open is true, must set sock path
     max_send_message_size: 100  # MiB
     max_recv_message_size: 100  # MiB
   log:
-    log_file: /docker_vm.log
+    log_file: /mount/share/docker_vm.log
     display_in_console: true
     show_line: false
     log_level: INFO
@@ -85,7 +89,6 @@ docker:
     tx_size: 1000
     user_num: 100
     time_limit: 10 # second
-    uds_sock_file: /uds.sock
 
 
 monitor:

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
@@ -32,7 +33,7 @@ func NewContractManager() *ContractManager {
 		logger:          logger.NewDockerLogger(logger.MODULE_CONTRACT_MANAGER),
 	}
 
-	mountDir = os.Getenv("DockerMountDir")
+	mountDir = config.ContractBaseDir
 
 	_ = contractManager.initialContractMap()
 	return contractManager

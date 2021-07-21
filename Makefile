@@ -13,6 +13,9 @@ VERSION=V1.2.0
 chainmaker:
 	@cd main && go build -mod=mod -o ../bin/chainmaker
 
+dockervm:
+	@cd module/vm/docker-go/dockercontainer && go mod vendor
+
 package:
 	@cd main && GOPATH=${GOPATH} go build -mod=mod -o ../bin/chainmaker
 	@mkdir -p ./release
