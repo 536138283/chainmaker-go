@@ -382,7 +382,7 @@ func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessageReq) {
 		consensus.responseWithCode(msg, abftpb.ErrorCode_FailOfOutdatedHeight)
 		return
 	} else if msg.Height > consensus.height {
-		consensus.msgBuffer = append(consensus.msgBuffer, msg)
+		//consensus.msgBuffer = append(consensus.msgBuffer, msg)
 		return
 	}
 	if msg.To != consensus.Id {
