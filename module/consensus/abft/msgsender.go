@@ -29,7 +29,7 @@ type msgSender struct {
 	id     string
 	mu     sync.Mutex
 	seq    uint64
-	events map[int64]map[uint64]*gtimer.Entry
+	events map[uint64]map[uint64]*gtimer.Entry
 	timer  *gtimer.Timer
 	msgCh  chan *abftpb.ABFTMessageReq
 }
@@ -39,7 +39,7 @@ func newMsgSender(logger *logger.CMLogger, id string) *msgSender {
 		logger: logger,
 		id:     id,
 		seq:    1,
-		events: make(map[int64]map[uint64]*gtimer.Entry),
+		events: make(map[uint64]map[uint64]*gtimer.Entry),
 		timer:  gtimer.New(),
 		msgCh:  make(chan *abftpb.ABFTMessageReq, defaultMsgChSize),
 	}
@@ -96,7 +96,7 @@ func (m *msgSender) ack(msg *abftpb.ABFTMessageRsp) {
 	delete(seqEntry, msg.Seq)
 }
 
-func (m *msgSender) cleanHeight(height int64) {
+func (m *msgSender) cleanHeight(height uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 

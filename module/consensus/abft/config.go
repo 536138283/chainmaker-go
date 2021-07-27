@@ -15,7 +15,7 @@ import (
 type Config struct {
 	logger protocol.Logger
 	sync.Mutex
-	height    int64    // height
+	height    uint64   // height
 	id        string   // id of the RBC or BBA instance
 	nodeID    string   // nodeID of current node
 	nodes     []string // the list of nodes

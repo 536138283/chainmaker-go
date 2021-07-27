@@ -62,7 +62,7 @@ type ConsensusABFTImpl struct {
 	chainConf   protocol.ChainConf
 	singer      protocol.SigningMember
 	ledgerCache protocol.LedgerCache
-	height      int64
+	height      uint64
 	msgSender   *msgSender
 	waldir      string
 	wal         *wal.Log
@@ -411,7 +411,7 @@ func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessageReq) {
 	}
 }
 
-func (consensus *ConsensusABFTImpl) sendPackageSingal(height int64) {
+func (consensus *ConsensusABFTImpl) sendPackageSingal(height uint64) {
 	consensus.logger.Debugf("[%s] sendPackageSingal height: %d", consensus.Id, height)
 	signal := &abftpb.PackagedSignal{BlockHeight: height}
 	consensus.msgbus.PublishSafe(msgbus.PackageSignal, signal)
@@ -575,7 +575,7 @@ func (consensus *ConsensusABFTImpl) replayWal() error {
 	return nil
 }
 
-func (consensus *ConsensusABFTImpl) deleteWalEntry(num int64, index uint64) error {
+func (consensus *ConsensusABFTImpl) deleteWalEntry(num uint64, index uint64) error {
 	// Block height is begin from zero,Delete the block data every 10 blocks.
 	// If the block height is 10, there are 11 blocks in total and delete the consensus state data of the first 10 blocks
 	i := num % 10

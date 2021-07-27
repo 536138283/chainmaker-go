@@ -13,6 +13,7 @@ import (
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/monitor"
 	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker/pb-go/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/common"
 	"chainmaker.org/chainmaker/pb-go/consensus/abft"
 	"chainmaker.org/chainmaker/protocol"
@@ -54,8 +55,8 @@ func NewCommitter(ceConfig *conf.CoreEngineConfig) *Committer {
 	}
 
 	var metricBlockSize *prometheus.HistogramVec
-	var metricBlockCounter    *prometheus.CounterVec
-	var metricTxCounter       *prometheus.CounterVec
+	var metricBlockCounter *prometheus.CounterVec
+	var metricTxCounter *prometheus.CounterVec
 	var metricBlockCommitTime *prometheus.HistogramVec
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		metricBlockSize = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_COMMITTER, monitor.MetricBlockSize,
@@ -148,7 +149,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	}
 
 	// set proposer nil
-	block.Header.Proposer = []byte{}
+	block.Header.Proposer = &accesscontrol.Member{}
 	hash, sig, err := utils.SignBlock(c.chainConf.ChainConfig().Crypto.Hash, c.identity, block)
 	if err != nil {
 		c.log.Errorf("[%s]sign block failed, %s", c.identity.GetMemberId(), err)
@@ -226,7 +227,7 @@ func (c *Committer) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA
 	for _, BatchID := range failTxBatchIDList {
 		Batch := txBatchMapBeforeABA[BatchID]
 		for _, tx := range Batch.Txs {
-			if _, ok := c.merger.allTxsMap[tx.Header.TxId]; !ok {
+			if _, ok := c.merger.allTxsMap[tx.Payload.TxId]; !ok {
 				c.retryList = append(c.retryList, tx)
 			}
 		}

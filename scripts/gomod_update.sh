@@ -5,7 +5,7 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 set -x
-BRANCH=v2.0.0_qc
+BRANCH=v2.0.0_qc_abft
 
 cd ../module/accesscontrol
 go get chainmaker.org/chainmaker/protocol@${BRANCH}
@@ -42,7 +42,7 @@ go get chainmaker.org/chainmaker/protocol@${BRANCH}
 go get chainmaker.org/chainmaker/pb-go@${BRANCH}
 go get chainmaker.org/chainmaker/common@${BRANCH}
 go mod tidy
-go test ./...
+#go test ./...
 cd ../logger
 go get chainmaker.org/chainmaker/protocol@${BRANCH}
 go get chainmaker.org/chainmaker/pb-go@${BRANCH}

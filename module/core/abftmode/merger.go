@@ -47,7 +47,7 @@ func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
 
 	// record baseTxBatch 's tx
 	for _, tx := range baseTxBatch.Txs {
-		m.allTxsMap[tx.Header.TxId] = tx
+		m.allTxsMap[tx.Payload.TxId] = tx
 	}
 
 	// merge Tx start with the second txBatch
@@ -90,7 +90,7 @@ func (m *Merger) doMerge(
 	failTxWriteTable := make(map[string]struct{})
 	repeatTx := int64(0)
 	for _, tx := range txBatch.Txs {
-		txId := tx.Header.TxId
+		txId := tx.Payload.TxId
 		rwSet := rwSetMap[txId]
 		// discard repeat tx
 		if _, ok := m.allTxsMap[txId]; ok {
@@ -121,7 +121,7 @@ func (m *Merger) doMerge(
 		m.allTxsMap[txId] = tx
 	}
 	m.log.Debugf("merge tx branch, height[%d], branchId[%s], repeatTx[%d], totalTx[%d], proposer[%s], ",
-		baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx, txBatch.Header.TxCount, hex.EncodeToString(txBatch.Header.Proposer))
+		baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx, txBatch.Header.TxCount, hex.EncodeToString(txBatch.Header.Proposer.MemberInfo))
 }
 
 func (m *Merger) getRepeatTx(txBatchID string) ([]int, map[string]struct{}) {
@@ -133,7 +133,7 @@ func (m *Merger) getRepeatTx(txBatchID string) ([]int, map[string]struct{}) {
 	if info, ok := m.txBatchInfo[txBatchID]; ok {
 		txs := info.txBatch.Txs
 		for i, _ := range txs {
-			txID := txs[i].Header.TxId
+			txID := txs[i].Payload.TxId
 
 			// set all Transaction to a Map(txId=>tx)
 			if _, ok := m.allTxsMap[txID]; !ok {
@@ -156,7 +156,7 @@ func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb
 	m.log.Debugf("start building DAG for block %d with %d txs", txBatch.Header.BlockHeight, txCount)
 	txRWSetTable := make([]*commonpb.TxRWSet, 0)
 	for _, tx := range txBatch.Txs {
-		txRWSetTable = append(txRWSetTable, rwSetMap[tx.Header.TxId])
+		txRWSetTable = append(txRWSetTable, rwSetMap[tx.Payload.TxId])
 	}
 
 	// build read-write bitmap for all transactions
@@ -197,10 +197,10 @@ func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb
 
 		// build DAG based on directReach bitmap
 		dag.Vertexes[i] = &commonpb.DAG_Neighbor{
-			Neighbors: make([]int32, 0, 16),
+			Neighbors: make([]uint32, 0, 16),
 		}
 		for _, j := range directReachFromI.Pos1() {
-			dag.Vertexes[i].Neighbors = append(dag.Vertexes[i].Neighbors, int32(j))
+			dag.Vertexes[i].Neighbors = append(dag.Vertexes[i].Neighbors, uint32(j))
 		}
 	}
 	m.log.Debugf("build DAG for block %d finished", txBatch.Header.BlockHeight)
@@ -215,7 +215,7 @@ func ifConflict(rwSet *commonpb.TxRWSet, writeTable, failTxWriteTable map[string
 func getRepeatTxIndexFromBaseBatch(baseTxBatch *commonpb.Block, repeatTxMap map[string]struct{}) map[string]int {
 	repeatTxIndexInBaseBatch := make(map[string]int, 0)
 	for index, tx := range baseTxBatch.Txs {
-		txId := tx.Header.TxId
+		txId := tx.Payload.TxId
 		if _, ok := repeatTxMap[txId]; ok {
 			repeatTxIndexInBaseBatch[txId] = index
 		}
@@ -280,7 +280,7 @@ func modifyTxResult(tx *commonpb.Transaction) {
 	tx.Result = &commonpb.Result{
 		Code: commonpb.TxStatusCode_CONTRACT_FAIL,
 		ContractResult: &commonpb.ContractResult{
-			Code:    commonpb.ContractResultCode_FAIL,
+			Code:    1,
 			Result:  nil,
 			Message: "Transaction conflict",
 		},

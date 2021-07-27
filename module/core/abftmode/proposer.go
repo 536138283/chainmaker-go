@@ -7,15 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package abftmode
 
 import (
-	"chainmaker.org/chainmaker-go/core/common/scheduler"
-	"chainmaker.org/chainmaker-go/core/provider/conf"
-	"chainmaker.org/chainmaker/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
+	"chainmaker.org/chainmaker-go/core/common/scheduler"
+	"chainmaker.org/chainmaker-go/core/provider/conf"
+	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker/common/msgbus"
 	commonpb "chainmaker.org/chainmaker/pb-go/common"
 	"chainmaker.org/chainmaker/pb-go/consensus/abft"
 	"chainmaker.org/chainmaker/protocol"
-	"chainmaker.org/chainmaker-go/utils"
 	"context"
 	"encoding/hex"
 	"sync"
@@ -145,7 +145,7 @@ func (p *Proposer) doPropose(lastBlock, blockBatch *commonpb.Block) error {
 	var txsTimeout = make([]*commonpb.Transaction, 0)
 	if len(txRWSetMap) < len(p.txBatch) {
 		for _, tx := range p.txBatch {
-			if _, ok := txRWSetMap[tx.Header.TxId]; !ok {
+			if _, ok := txRWSetMap[tx.Payload.TxId]; !ok {
 				txsTimeout = append(txsTimeout, tx)
 			}
 		}
@@ -162,7 +162,7 @@ func (p *Proposer) doPropose(lastBlock, blockBatch *commonpb.Block) error {
 	return nil
 }
 
-func (p *Proposer) getTxBatchFromTxPool(height int64, ctx context.Context) {
+func (p *Proposer) getTxBatchFromTxPool(height uint64, ctx context.Context) {
 	for {
 		select {
 		case <-ctx.Done():
