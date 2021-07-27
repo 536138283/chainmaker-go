@@ -115,7 +115,7 @@ func (m *msgSender) cleanHeight(height uint64) {
 func backOffDelay(n int) time.Duration {
 	delay := initBackOff << n
 
-	if delay > maxBackOff {
+	if delay > maxBackOff || delay < 0 {
 		delay = maxBackOff
 	}
 
