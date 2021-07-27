@@ -497,7 +497,7 @@ func (vb *VerifierBlock) ValidateBlock(
 	})
 
 	// abft's block proposer is nil
-	if block.Header.Proposer != nil {
+	if block.Header.Proposer.MemberInfo != nil {
 		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
 			return nil, nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
