@@ -21,8 +21,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker/protocol"
 	"chainmaker.org/chainmaker-go/store/types"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 var defaultMaxIdleConns = 10
@@ -203,7 +203,7 @@ func (p *SqlDBHandle) CreateDatabaseIfNotExist(dbName string) error {
 			p.log.Error(err)
 			return errDatabase //创建失败
 		}
-		p.log.Debugf("create database %s", dbName)
+		p.log.Infof("create database %s", dbName)
 		//创建成功，再次切换数据库
 		_, err = p.db.Exec("use " + dbName)
 		if err != nil {

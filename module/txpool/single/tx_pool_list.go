@@ -9,6 +9,7 @@ package single
 import (
 	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
 	"fmt"
+	"math"
 	"sync"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/common"
@@ -67,9 +68,9 @@ func (l *txList) Put(txs []*commonPb.Transaction, source protocol.TxSource, vali
 	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if utils.IsConfigTx(txs[0]) {
-			go l.metricTxPoolSize.WithLabelValues(txs[0].Header.ChainId, "config").Set(float64(l.queue.Size()))
+			go l.metricTxPoolSize.WithLabelValues(txs[0].Payload.ChainId, "config").Set(float64(l.queue.Size()))
 		} else {
-			go l.metricTxPoolSize.WithLabelValues(txs[0].Header.ChainId, "normal").Set(float64(l.queue.Size()))
+			go l.metricTxPoolSize.WithLabelValues(txs[0].Payload.ChainId, "normal").Set(float64(l.queue.Size()))
 		}
 	}
 }
@@ -79,14 +80,14 @@ func (l *txList) addTxs(tx *commonPb.Transaction, source protocol.TxSource, vali
 	defer l.rwLock.Unlock()
 	if validate == nil || validate(tx, source) == nil {
 		if source != protocol.INTERNAL {
-			if val, ok := l.pendingCache.Load(tx.Header.TxId); ok && val != nil {
+			if val, ok := l.pendingCache.Load(tx.Payload.TxId); ok && val != nil {
 				return
 			}
 		}
-		if l.queue.Get(tx.Header.TxId) != nil {
+		if l.queue.Get(tx.Payload.TxId) != nil {
 			return
 		}
-		l.queue.Add(tx.Header.TxId, tx)
+		l.queue.Add(tx.Payload.TxId, tx)
 	}
 }
 
@@ -103,7 +104,7 @@ func (l *txList) Delete(txIds []string) {
 }
 
 // Fetch Gets a list of stored transactions
-func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error, blockHeight int64, consensusType consensuspb.ConsensusType) ([]*commonPb.Transaction, []string) {
+func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error, blockHeight uint64, consensusType consensuspb.ConsensusType) ([]*commonPb.Transaction, []string) {
 	queueLen := l.queue.Size()
 	if queueLen < count {
 		count = queueLen
@@ -125,8 +126,8 @@ func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error,
 			l.queue.Remove(txId)
 		}
 		for _, val := range cacheKVs {
-			l.queue.Remove(val.tx.Header.TxId)
-			l.pendingCache.Store(val.tx.Header.TxId, val)
+			l.queue.Remove(val.tx.Payload.TxId)
+			l.pendingCache.Store(val.tx.Payload.TxId, val)
 		}
 		l.rwLock.Unlock()
 		l.log.Debugf("eliminate data, elapse time: %d", utils.CurrentTimeMillisSeconds()-begin)
@@ -140,7 +141,7 @@ func (l *txList) Fetch(count int, validate func(tx *commonPb.Transaction) error,
 	return txs, txIds
 }
 
-func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx *commonPb.Transaction) error, consensusType consensuspb.ConsensusType) (
+func (l *txList) getTxsFromQueue(count int, blockHeight uint64, validate func(tx *commonPb.Transaction) error, consensusType consensuspb.ConsensusType) (
 	cacheKVs []*valInPendingCache, txs []*commonPb.Transaction, txIds []string, errKeys []string) {
 
 	txs = make([]*commonPb.Transaction, 0, count)
@@ -202,7 +203,7 @@ func (l *txList) getTxsFromQueue(count int, blockHeight int64, validate func(tx 
 }
 
 func (l *txList) monitor(tx *commonPb.Transaction, len int) {
-	chainId := tx.Header.ChainId
+	chainId := tx.Payload.ChainId
 	isConfigTx := utils.IsConfigTx(tx)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled && chainId != "" {
@@ -230,7 +231,7 @@ func (l *txList) Has(txId string, checkPending bool) (exist bool) {
 // inBlockHeight: return -1 when the transaction does not exist,
 // return 0 when the transaction is in the queue to wait to be generate block,
 // return positive integer, indicating that the tx is in an unchained block.
-func (l *txList) Get(txId string) (tx *commonPb.Transaction, inBlockHeight int64) {
+func (l *txList) Get(txId string) (tx *commonPb.Transaction, inBlockHeight uint64) {
 	if pendingVal, ok := l.pendingCache.Load(txId); ok && pendingVal != nil {
 		l.log.Debugw(fmt.Sprintf("txList Get Transaction by txId = %s in pendingCache", txId), "exist", true)
 		val := pendingVal.(*valInPendingCache)
@@ -244,15 +245,15 @@ func (l *txList) Get(txId string) (tx *commonPb.Transaction, inBlockHeight int64
 		return val.(*commonPb.Transaction), 0
 	}
 	l.log.Debugw(fmt.Sprintf("txList Get Transaction by txId = %s", txId), "exist", false)
-	return nil, -1
+	return nil, math.MaxUint64
 }
 
-func (l *txList) appendTxsToPendingCache(txs []*commonPb.Transaction, blockHeight int64) {
+func (l *txList) appendTxsToPendingCache(txs []*commonPb.Transaction, blockHeight uint64) {
 	l.rwLock.Lock()
 	defer l.rwLock.Unlock()
 	for _, tx := range txs {
-		l.pendingCache.Store(tx.Header.TxId, &valInPendingCache{tx: tx, inBlockHeight: blockHeight})
-		l.queue.Remove(tx.Header.TxId)
+		l.pendingCache.Store(tx.Payload.TxId, &valInPendingCache{tx: tx, inBlockHeight: blockHeight})
+		l.queue.Remove(tx.Payload.TxId)
 	}
 }
 

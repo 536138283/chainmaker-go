@@ -1,5 +1,7 @@
 /*
+Copyright (C) BABEC. All rights reserved.
 Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+
 SPDX-License-Identifier: Apache-2.0
 */
 
@@ -7,6 +9,7 @@ package util
 
 import (
 	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
 )
 
 // IsConfBlock is it a configuration block
@@ -32,10 +35,10 @@ func isValidConfigTx(tx *common.Transaction) bool {
 	return true
 }
 
-// isConfigTx the transaction is a config transaction or not
+// IsConfigTx the transaction is a config transaction or not
 func isConfigTx(tx *common.Transaction) bool {
-	if tx == nil || tx.Header == nil {
+	if tx == nil {
 		return false
 	}
-	return tx.Header.TxType == common.TxType_UPDATE_CHAIN_CONFIG
+	return tx.Payload.ContractName == syscontract.SystemContract_CHAIN_CONFIG.String()
 }

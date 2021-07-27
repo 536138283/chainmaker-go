@@ -1,10 +1,18 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package bulletproofs
 
 import (
-	"chainmaker.org/chainmaker/common/crypto/bulletproofs"
 	"encoding/base64"
 	"errors"
 	"fmt"
+
+	"chainmaker.org/chainmaker/common/crypto/bulletproofs"
+
 	"github.com/spf13/cobra"
 )
 
@@ -45,7 +53,7 @@ func pedersenVerify() error {
 		return err
 	}
 
-	ok, err := bulletproofs.Helper().NewBulletproofs().PedersenVerify(commitment, opening, uint64(valueX))
+	ok, err := bulletproofs.PedersenVerify(commitment, opening, uint64(valueX))
 	if err != nil {
 		return err
 	}

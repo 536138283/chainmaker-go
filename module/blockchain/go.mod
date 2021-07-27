@@ -7,7 +7,6 @@ require (
 	chainmaker.org/chainmaker-go/chainconf v0.0.0
 	chainmaker.org/chainmaker-go/consensus v0.0.0
 	chainmaker.org/chainmaker-go/core v0.0.0
-	chainmaker.org/chainmaker-go/dpos v0.0.0
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/logger v0.0.0
 	chainmaker.org/chainmaker-go/net v0.0.0
@@ -18,9 +17,9 @@ require (
 	chainmaker.org/chainmaker-go/txpool v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
 	chainmaker.org/chainmaker-go/vm v0.0.0
-	chainmaker.org/chainmaker/common v0.0.0-20210716073912-23342d03c025
-	chainmaker.org/chainmaker/pb-go v0.0.0-20210716074416-57a247439ad5
-	chainmaker.org/chainmaker/protocol v0.0.0-20210624151907-50fa3348c696
+	chainmaker.org/chainmaker/common v0.0.0-20210722032200-380ced605d25
+	chainmaker.org/chainmaker/pb-go v0.0.0-20210723070658-764cafbc33fe
+	chainmaker.org/chainmaker/protocol v0.0.0-20210722032803-8365b24e96d9
 )
 
 replace (
@@ -29,7 +28,6 @@ replace (
 
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
-	chainmaker.org/chainmaker-go/dpos => ../dpos
 	chainmaker.org/chainmaker-go/evm => ../vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../conf/localconf

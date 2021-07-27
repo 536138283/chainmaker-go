@@ -16,10 +16,10 @@ import (
 	"chainmaker.org/chainmaker-go/accesscontrol"
 	"chainmaker.org/chainmaker-go/chainconf"
 	"chainmaker.org/chainmaker-go/consensus"
+	"chainmaker.org/chainmaker-go/consensus/dpos"
 	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
 	providerConf "chainmaker.org/chainmaker-go/core/provider/conf"
-	"chainmaker.org/chainmaker-go/dpos"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/net"
@@ -331,12 +331,18 @@ func (bc *Blockchain) initVM() (err error) {
 	// init VM
 	var vmFactory vm.Factory
 	if bc.netService == nil {
-		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, nil, bc.chainConf)
+		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, &soloChainNodesInfoProvider{}, bc.chainConf)
 	} else {
 		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, bc.netService.GetChainNodesInfoProvider(), bc.chainConf)
 	}
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
+}
+
+type soloChainNodesInfoProvider struct{}
+
+func (s *soloChainNodesInfoProvider) GetChainNodesInfo() ([]*protocol.ChainNodeInfo, error) {
+	return []*protocol.ChainNodeInfo{}, nil
 }
 
 func (bc *Blockchain) initCore() (err error) {

@@ -9,6 +9,7 @@ package cache
 
 import (
 	"errors"
+	"math"
 	"sync"
 
 	commonpb "chainmaker.org/chainmaker/pb-go/common"
@@ -45,11 +46,11 @@ func (lc *LedgerCache) SetLastCommittedBlock(b *commonpb.Block) {
 }
 
 // CurrentHeight get current block height
-func (lc *LedgerCache) CurrentHeight() (int64, error) {
+func (lc *LedgerCache) CurrentHeight() (uint64, error) {
 	lc.rwMu.RLock()
 	defer lc.rwMu.RUnlock()
 	if lc.lastCommittedBlock == nil {
-		return -1, errors.New("last committed block == nil")
+		return math.MaxUint64, errors.New("last committed block == nil")
 	}
 	return lc.lastCommittedBlock.Header.BlockHeight, nil
 }
