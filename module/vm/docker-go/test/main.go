@@ -10,6 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"io"
 	"io/ioutil"
+	"net"
 	"sync"
 	"time"
 )
@@ -23,13 +24,15 @@ const (
 )
 
 var (
-	ContractPath = ""
-	ContractName = ""
+	ContractPath  = ""
+	ContractName  = ""
+	MountSockPath = ""
 )
 
 func InitTest() {
-	ContractPath = "D:\\WorkSpace\\chainmaker-go\\test\\wasm\\docker-go-contract1"
-	ContractName = "contract100"
+	ContractPath = "/home/jianan/Documents/workspace/chainmaker-go/test/wasm/docker-go-contract20_big"
+	ContractName = "contract20"
+	MountSockPath = "/home/jianan/Documents/workspace/chainmaker-go/module/vm/docker-go/mount/sock/cdm.sock"
 }
 
 func main() {
@@ -40,23 +43,28 @@ func main() {
 
 	createContract := false
 
-	stream, _ := initGRPCConnect()
+	stream, _ := initGRPCConnect(true)
 	client := NewCDMClient(stream)
 
 	// 1) 合约创建
 	if createContract {
 		testDeployContract(client)
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 
 	// 2) 批量测试
-	txNum := 1000
+	txNum := 100
 
-	for i := 0; i < 20; i++ {
+	for i := 0; i < 50; i++ {
 		testPerformance(client, txNum, i)
+		time.Sleep(1 * time.Second)
 	}
 
-	client.stream.CloseSend()
+	err := client.stream.CloseSend()
+	if err != nil {
+		fmt.Println("err in close send")
+		return
+	}
 
 	fmt.Println("end test")
 
@@ -186,7 +194,7 @@ func contractInvokeMsg() *protogo.CDMMessage {
 }
 
 // NewClientConn create client connection
-func NewClientConn() (*grpc.ClientConn, error) {
+func NewClientConn(udsOpen bool) (*grpc.ClientConn, error) {
 
 	dialOpts := []grpc.DialOption{
 		grpc.WithInsecure(),
@@ -197,7 +205,23 @@ func NewClientConn() (*grpc.ClientConn, error) {
 		),
 	}
 
-	return grpc.Dial(Port, dialOpts...)
+	if udsOpen {
+
+		dialOpts = append(dialOpts, grpc.WithContextDialer(func(ctx context.Context, sock string) (net.Conn, error) {
+			unixAddress, err := net.ResolveUnixAddr("unix", sock)
+			conn, err := net.DialUnix("unix", nil, unixAddress)
+			return conn, err
+		}))
+
+		sockAddress := MountSockPath
+
+		return grpc.DialContext(context.Background(), sockAddress, dialOpts...)
+
+	} else {
+
+		return grpc.Dial(Port, dialOpts...)
+	}
+
 }
 
 // GetCDMClientStream get rpc stream
@@ -205,8 +229,8 @@ func GetCDMClientStream(conn *grpc.ClientConn) (protogo.CDMRpc_CDMCommunicateCli
 	return protogo.NewCDMRpcClient(conn).CDMCommunicate(context.Background())
 }
 
-func initGRPCConnect() (protogo.CDMRpc_CDMCommunicateClient, error) {
-	conn, err := NewClientConn()
+func initGRPCConnect(udsOpen bool) (protogo.CDMRpc_CDMCommunicateClient, error) {
+	conn, err := NewClientConn(udsOpen)
 	if err != nil {
 		fmt.Println("fail to create connection: ", err)
 		return nil, err

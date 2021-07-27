@@ -19,9 +19,9 @@ type ManagerImpl struct {
 
 func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 
-	// set mount dir
+	// set config
 	securityEnv := security2.NewSecurityEnv()
-	err := securityEnv.InitDirectory()
+	err := securityEnv.InitConfig()
 	if err != nil {
 		managerLogger.Errorf("fail to init directory: %s", err)
 		return nil, err

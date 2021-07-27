@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"errors"
@@ -9,6 +10,7 @@ import (
 	"google.golang.org/grpc/keepalive"
 	"net"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -22,16 +24,36 @@ type CDMServer struct {
 // NewCDMServer build new chainmaker to docker manager rpc server
 func NewCDMServer() (*CDMServer, error) {
 
-	port := os.Getenv("Port")
+	enableUnixDomainSocket, _ := strconv.ParseBool(os.Getenv("UdsOpen"))
 
-	if port == "" {
-		return nil, errors.New("server listen port not provided")
-	}
+	var listener net.Listener
+	var err error
 
-	//create listener
-	listener, err := net.Listen("tcp", ":"+port)
-	if err != nil {
-		return nil, err
+	if !enableUnixDomainSocket {
+		port := os.Getenv("Port")
+
+		if port == "" {
+			return nil, errors.New("server listen port not provided")
+		}
+
+		listener, err = net.Listen("tcp", ":"+port)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+
+		absCdmUDSPath := filepath.Join(config.SockBaseDir, config.SockName)
+
+		listenAddress, err := net.ResolveUnixAddr("unix", absCdmUDSPath)
+		if err != nil {
+			return nil, err
+		}
+
+		listener, err = CreateUnixListener(listenAddress, absCdmUDSPath)
+		if err != nil {
+			return nil, err
+		}
+
 	}
 
 	//set up server options for keepalive and TLS

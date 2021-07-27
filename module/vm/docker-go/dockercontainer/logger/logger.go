@@ -1,10 +1,12 @@
 package logger
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 )
@@ -52,10 +54,16 @@ func InitialConfig() {
 		displayInConsoleFromConfig = false
 	}
 
-	// todo error handle give default value
-	logPathFromConfig = os.Getenv("LogPath")
-	logLevelFromConfig = os.Getenv("LogLevel")
+	logName := os.Getenv("LogFile")
+	if logName == "" {
+		logName = "docker_vm_default.log"
+	}
+	logPathFromConfig = filepath.Join(config.ShareBaseDir, logName)
 
+	logLevelFromConfig = os.Getenv("LogLevel")
+	if logLevelFromConfig == "" {
+		logLevelFromConfig = "INFO"
+	}
 }
 
 func NewDockerLogger(name string) *zap.SugaredLogger {

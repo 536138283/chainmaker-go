@@ -349,23 +349,24 @@ type coreConfig struct {
 }
 
 type dockerConfig struct {
-	OpenDockerVM       bool            `mapstructure:"open_dockervm"`
-	ImageName          string          `mapstructure:"image_name"`
-	ContainerName      string          `mapstructure:"container_name"`
-	DockerContainerDir string          `mapstructure:"docker_container_dir"`
-	HostMountDir       string          `mapstructure:"host_mount_dir"`
-	DockerMountDir     string          `mapstructure:"docker_mount_dir"`
-	DockerRpcConfig    dockerRpcConfig `mapstructure:"rpc"`
-	DockerLogConfig    dockerLogConfig `mapstructure:"log"`
-	DockerVmConfig     dockerVmConfig  `mapstructure:"vm"`
+	OpenDockerVM       bool              `mapstructure:"open_dockervm"`
+	ImageName          string            `mapstructure:"image_name"`
+	ContainerName      string            `mapstructure:"container_name"`
+	DockerContainerDir string            `mapstructure:"docker_container_dir"`
+	HostMountDir       string            `mapstructure:"host_mount_dir"`
+	DockerMountDir     string            `mapstructure:"docker_mount_dir"`
+	CleanHostMountDir  bool              `mapstructure:"clean_host_mount_dir"`
+	DockerRpcConfig    dockerRpcConfig   `mapstructure:"rpc"`
+	DockerLogConfig    dockerLogConfig   `mapstructure:"log"`
+	DockerVmConfig     dockerVmConfig    `mapstructure:"vm"`
+	DockerPprofConfig  dockerPprofConfig `mapstructure:"pprof"`
 }
 
 type dockerRpcConfig struct {
-	UdsOpen            bool   `mapstructure:"uds_open"`
-	Port               int32  `mapstructure:"port"`
-	CdmUdsSockPath     string `mapstructure:"cdm_uds_sock_path"`
-	MaxSendMessageSize int32  `mapstructure:"max_send_message_size"`
-	MaxRecvMessageSize int32  `mapstructure:"max_recv_message_size"`
+	UdsOpen            bool  `mapstructure:"uds_open"`
+	Port               int32 `mapstructure:"port"`
+	MaxSendMessageSize int32 `mapstructure:"max_send_message_size"`
+	MaxRecvMessageSize int32 `mapstructure:"max_recv_message_size"`
 }
 
 type dockerLogConfig struct {
@@ -379,6 +380,11 @@ type dockerVmConfig struct {
 	TxSize    int32 `mapstructure:"tx_size"`
 	UserNum   int32 `mapstructure:"user_num"`
 	TimeLimit int32 `mapstructure:"time_limit"`
+}
+
+type dockerPprofConfig struct {
+	PProfEnabled bool `mapstructure:"pprof_enabled"`
+	PProfPort    int  `mapstructure:"pprof_port"`
 }
 
 // CMConfig - Local config struct

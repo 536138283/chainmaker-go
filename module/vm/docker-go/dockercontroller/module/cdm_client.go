@@ -1,12 +1,15 @@
 package module
 
 import (
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	"context"
 	"google.golang.org/grpc"
 	"io"
+	"net"
+	"path/filepath"
 	"strconv"
 	"sync"
 )
@@ -15,7 +18,7 @@ type CDMClient struct {
 	txSendCh            chan *protogo.CDMMessage // channel receive tx from docker-go instance
 	stateResponseSendCh chan *protogo.CDMMessage // channel receive state response
 
-	lock      sync.Mutex
+	lock      sync.RWMutex
 	recvChMap map[string]chan *protogo.CDMMessage // store tx_id to chan, retrieve chan to send tx response back to docker-go instance
 
 	stream protogo.CDMRpc_CDMCommunicateClient
@@ -33,7 +36,7 @@ func NewCDMClient(chainId string) *CDMClient {
 		txSendCh:            make(chan *protogo.CDMMessage, dockerConfig.DockerVmConfig.TxSize),   // tx request
 		stateResponseSendCh: make(chan *protogo.CDMMessage, dockerConfig.DockerVmConfig.TxSize*8), // get_state response and bytecode response
 		recvChMap:           make(map[string]chan *protogo.CDMMessage),
-		lock:                sync.Mutex{},
+		lock:                sync.RWMutex{},
 		stream:              nil,
 		logger:              logger.GetLoggerByChain("[CDM Client]", chainId),
 		stop:                nil,
@@ -62,6 +65,12 @@ func (c *CDMClient) deleteRecvChan(txId string) {
 
 	c.logger.Debugf("delete recv chan [%s]", txId[:5])
 	delete(c.recvChMap, txId)
+}
+
+func (c *CDMClient) getRecvChan(txId string) chan *protogo.CDMMessage {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+	return c.recvChMap[txId]
 }
 
 func (c *CDMClient) StartClient() bool {
@@ -155,14 +164,14 @@ func (c *CDMClient) recvMsgRoutine() {
 
 			switch recvMsg.Type {
 			case protogo.CDMType_CDM_TYPE_TX_RESPONSE:
-				waitCh := c.recvChMap[recvMsg.TxId]
+				waitCh := c.getRecvChan(recvMsg.TxId)
 				waitCh <- recvMsg
 				c.deleteRecvChan(recvMsg.TxId)
 			case protogo.CDMType_CDM_TYPE_GET_STATE:
-				waitCh := c.recvChMap[recvMsg.TxId]
+				waitCh := c.getRecvChan(recvMsg.TxId)
 				waitCh <- recvMsg
 			case protogo.CDMType_CDM_TYPE_GET_BYTECODE:
-				waitCh := c.recvChMap[recvMsg.TxId]
+				waitCh := c.getRecvChan(recvMsg.TxId)
 				waitCh <- recvMsg
 			default:
 				c.logger.Errorf("unknown message type")
@@ -198,9 +207,24 @@ func NewClientConn() (*grpc.ClientConn, error) {
 		),
 	}
 
-	port := ":" + strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
+	if dockerConfig.DockerRpcConfig.UdsOpen {
 
-	return grpc.Dial(port, dialOpts...)
+		dialOpts = append(dialOpts, grpc.WithContextDialer(func(ctx context.Context, sock string) (net.Conn, error) {
+			unixAddress, err := net.ResolveUnixAddr("unix", sock)
+			conn, err := net.DialUnix("unix", nil, unixAddress)
+			return conn, err
+		}))
+
+		sockAddress := filepath.Join(dockerConfig.HostMountDir, config.SockDir, config.SockName)
+
+		return grpc.DialContext(context.Background(), sockAddress, dialOpts...)
+
+	} else {
+		port := ":" + strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
+
+		return grpc.Dial(port, dialOpts...)
+	}
+
 }
 
 // GetCDMClientStream get rpc stream
