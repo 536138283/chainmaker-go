@@ -123,7 +123,7 @@ func runTest() {
 	//time.Sleep(10 * time.Second)
 
 	// 4) query 测试
-	//testDockerQuery(sk3, &client, CHAIN1, "1", "2")
+	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
 	//// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有

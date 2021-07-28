@@ -87,7 +87,7 @@ docker:
     log_level: INFO
   vm:
     tx_size: 1000
-    user_num: 600
+    user_num: 200
     time_limit: 5                              # second
   pprof:
     pprof_enabled: true
