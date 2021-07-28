@@ -40,7 +40,7 @@ func (s *DMSApi) DMSCommunicate(stream protogo.DMSRpc_DMSCommunicateServer) erro
 
 	if handler == nil {
 		// todo
-		fmt.Println("no handler")
+		s.logger.Errorf("no handler found")
 	}
 
 	handler.SetStream(stream)

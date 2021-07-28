@@ -6,7 +6,6 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
-	"github.com/enriquebris/goconcurrentqueue"
 	"go.uber.org/zap"
 	"os"
 	"path/filepath"
@@ -16,7 +15,7 @@ import (
 )
 
 type UsersManager struct {
-	userQueue *goconcurrentqueue.FixedFIFO
+	userQueue *utils.FixedFIFO
 	logger    *zap.SugaredLogger
 	userNum   int
 }
@@ -29,7 +28,7 @@ func NewUsersManager() *UsersManager {
 		userNum = 50
 	}
 
-	userQueue := goconcurrentqueue.NewFixedFIFO(userNum)
+	userQueue := utils.NewFixedFIFO(userNum)
 
 	usersManager := &UsersManager{
 		userQueue: userQueue,

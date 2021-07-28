@@ -2,6 +2,7 @@ package dockercontroller
 
 import (
 	"bufio"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontroller/module"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
@@ -26,6 +27,14 @@ import (
 	"sync"
 )
 
+var (
+	dockerContainerDir string
+	sourceDir          string
+	targetDir          string
+	imageName          string
+	containerName      string
+)
+
 type DockerManager struct {
 	AttachStdOut  bool
 	AttachStderr  bool
@@ -37,6 +46,8 @@ type DockerManager struct {
 	targetDir     string
 	openPort      nat.Port
 	hostPort      string
+	pprofOpenPort nat.Port
+	pprofHostPort string
 	dockerDir     string
 
 	lock   sync.Mutex
@@ -49,278 +60,69 @@ type DockerManager struct {
 }
 
 // NewDockerManager return docker manager and running a default container
+// if has error: log error and return nil
 func NewDockerManager(chainId string) *DockerManager {
 
+	config := localconf.ChainMakerConfig
+	Logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
+
+	// init docker manager
+	newDockerManager := &DockerManager{
+		AttachStdOut: true,
+		AttachStderr: true,
+		ShowStdout:   true,
+		ShowStderr:   true,
+		Log:          Logger,
+		CDMState:     false,
+		lock:         sync.Mutex{},
+	}
+
+	// validate settings
+	valid, err := newDockerManager.validateConfig(config)
+	if err != nil || !valid {
+		Logger.Errorf("fail to init docker manager, please check the docker config, %s", err)
+		return nil
+	}
+
 	// if open docker vm is false, docker manager is nil
-	startDockerVm := localconf.ChainMakerConfig.DockerConfig.OpenDockerVM
+	startDockerVm := config.DockerConfig.OpenDockerVM
 	if !startDockerVm {
 		return nil
 	}
-	ctx := context.Background()
+
+	// init docker manager
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil
 	}
 
-	Logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
-	cdmClient := module.NewCDMClient(chainId)
-
-	dockerConfig := localconf.ChainMakerConfig.DockerConfig
-
-	hostPort := strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
+	hostPort := strconv.Itoa(int(config.DockerConfig.DockerRpcConfig.Port))
 	openPort := nat.Port(hostPort + "/tcp")
 
-	var dockerContainerDir string
-	var sourceDir string
-	var targetDir string
-	var imageName string
-	var containerName string
+	hostPprofPort := strconv.Itoa(int(config.DockerConfig.DockerPprofConfig.PProfPort))
+	openPprofPort := nat.Port(hostPprofPort + "/tcp")
 
-	if dockerConfig.DockerContainerDir == "" {
-		Logger.Errorf("doesn't set docker container path")
+	newDockerManager.ctx = context.Background()
+	newDockerManager.client = cli
+	newDockerManager.CDMClient = module.NewCDMClient(chainId)
+	newDockerManager.imageName = imageName
+	newDockerManager.containerName = containerName
+	newDockerManager.sourceDir = sourceDir
+	newDockerManager.targetDir = targetDir
+	newDockerManager.hostPort = hostPort
+	newDockerManager.openPort = openPort
+	newDockerManager.pprofHostPort = hostPprofPort
+	newDockerManager.pprofOpenPort = openPprofPort
+	newDockerManager.dockerDir = dockerContainerDir
+
+	// init mount directory and subdirectory
+	err = newDockerManager.InitMountDirectory()
+	if err != nil {
+		Logger.Errorf("fail to init mount directory: %s", err)
 		return nil
-	} else {
-		dockerContainerDir = dockerConfig.DockerContainerDir
-	}
-
-	if dockerConfig.HostMountDir == "" {
-		Logger.Errorf("doesn't set host mount directory path")
-		return nil
-	} else {
-		sourceDir = dockerConfig.HostMountDir
-		if !filepath.IsAbs(sourceDir) {
-			sourceDir, err = filepath.Abs(sourceDir)
-			if err != nil {
-				Logger.Errorf("doesn't set host mount directory path correctly")
-				return nil
-			}
-		}
-	}
-
-	if dockerConfig.DockerMountDir == "" {
-		Logger.Errorf("doesn't set docker mount directory path")
-		return nil
-	} else {
-		targetDir = dockerConfig.DockerMountDir
-	}
-
-	if dockerConfig.ImageName == "" {
-		Logger.Infof("image name doesn't set, set as default: image1")
-		imageName = "image1"
-	} else {
-		imageName = dockerConfig.ImageName
-	}
-
-	if dockerConfig.ContainerName == "" {
-		Logger.Infof("container name doesn't set, set as default: container1")
-		containerName = "container1"
-	} else {
-		containerName = dockerConfig.ContainerName
-	}
-
-	newDockerManager := &DockerManager{
-		AttachStdOut:  true,
-		AttachStderr:  true,
-		ShowStdout:    true,
-		ShowStderr:    true,
-		ctx:           ctx,
-		client:        cli,
-		Log:           Logger,
-		CDMClient:     cdmClient,
-		CDMState:      false,
-		lock:          sync.Mutex{},
-		imageName:     imageName,
-		containerName: containerName,
-		sourceDir:     sourceDir,
-		targetDir:     targetDir,
-		hostPort:      hostPort,
-		openPort:      openPort,
-		dockerDir:     dockerContainerDir,
 	}
 
 	return newDockerManager
-}
-
-func (m *DockerManager) StartCDMClient() {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	state := m.CDMClient.StartClient()
-
-	m.CDMState = state
-
-	m.Log.Debugf("cdm client state is: %v", state)
-}
-
-func (m *DockerManager) constructEnvs() []string {
-	dockerConfig := localconf.ChainMakerConfig.DockerConfig
-
-	configsMap := make(map[string]string)
-
-	m.convertConfigToMap(dockerConfig.DockerLogConfig, configsMap)
-
-	m.convertConfigToMap(dockerConfig.DockerVmConfig, configsMap)
-
-	m.convertConfigToMap(dockerConfig.DockerRpcConfig, configsMap)
-
-	configsMap["DockerMountDir"] = fmt.Sprintf("%s=%s", "DockerMountDir", dockerConfig.DockerMountDir)
-
-	configs := make([]string, len(configsMap))
-	index := 0
-	for _, value := range configsMap {
-		configs[index] = value
-		index++
-	}
-
-	return configs
-}
-
-func (m *DockerManager) convertConfigToMap(config interface{}, configsMap map[string]string) {
-	v := reflect.ValueOf(config)
-	typeOfS := v.Type()
-
-	for i := 0; i < v.NumField(); i++ {
-		fieldName := typeOfS.Field(i).Name
-		value := v.Field(i).Interface()
-
-		env := fmt.Sprintf("%s=%v", fieldName, value)
-		configsMap[fieldName] = env
-	}
-}
-
-// create container based on image
-func (m *DockerManager) createContainer() error {
-
-	envs := m.constructEnvs()
-
-	_, err := m.client.ContainerCreate(m.ctx, &container.Config{
-		Cmd:          nil,
-		Image:        m.imageName,
-		Env:          envs,
-		AttachStdout: m.AttachStdOut,
-		AttachStderr: m.AttachStderr,
-		ExposedPorts: nat.PortSet{
-			m.openPort: struct{}{},
-		},
-	}, &container.HostConfig{
-		PortBindings: nat.PortMap{
-			m.openPort: []nat.PortBinding{nat.PortBinding{
-				HostIP:   "0.0.0.0",
-				HostPort: m.hostPort,
-			}},
-		},
-		Privileged: true,
-		Mounts: []mount.Mount{
-			{
-				Type:        mount.TypeBind,
-				Source:      m.sourceDir,
-				Target:      m.targetDir,
-				ReadOnly:    false,
-				Consistency: mount.ConsistencyFull,
-				BindOptions: &mount.BindOptions{
-					Propagation:  mount.PropagationRPrivate,
-					NonRecursive: false,
-				},
-				VolumeOptions: nil,
-				TmpfsOptions:  nil,
-			},
-		},
-	}, nil, nil, m.containerName)
-
-	if err != nil {
-		return err
-	}
-
-	m.Log.Infof("create container [%s] success :)", m.containerName)
-	return nil
-}
-
-// BuildImage build image based on Dockerfile
-func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
-
-	// get absolute path for docker folder
-	dockerFolderPath, err := filepath.Abs(dockerFolderRelPath)
-
-	if err != nil {
-		return err
-	}
-
-	// tar whole directory
-	buildCtx, err := archive.TarWithOptions(dockerFolderPath, &archive.TarOptions{})
-	if err != nil {
-		return err
-	}
-
-	buildOpts := types.ImageBuildOptions{
-		Dockerfile: "Dockerfile",
-		Tags:       []string{m.imageName},
-		Remove:     true,
-	}
-
-	// build image
-	resp, err := m.client.ImageBuild(m.ctx, buildCtx, buildOpts)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-
-	err = displayBuildProcess(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	m.Log.Infof("build image [%s] success :)", m.imageName)
-
-	return nil
-}
-
-type ErrorLine struct {
-	Error       string      `json:"error"`
-	ErrorDetail ErrorDetail `json:"errorDetail"`
-}
-
-type ErrorDetail struct {
-	Message string `json:"message"`
-}
-
-// display build process
-func displayBuildProcess(rd io.Reader) error {
-	var lastLine string
-
-	scanner := bufio.NewScanner(rd)
-	for scanner.Scan() {
-
-		lastLine = scanner.Text()
-		lastLine = strings.TrimLeft(lastLine, "{\"stream\":\"")
-		lastLine = strings.TrimRight(lastLine, "\"}")
-		lastLine = strings.TrimRight(lastLine, "\\n")
-		if len(lastLine) == 0 {
-			continue
-		}
-		if strings.Contains(lastLine, "---\\u003e") {
-			continue
-		}
-
-		if strings.Contains(lastLine, "Removing intermediate") {
-			continue
-		}
-
-		if strings.Contains(lastLine, "ux\":{\"ID\":\"sha256") {
-			continue
-		}
-		fmt.Println(lastLine)
-	}
-
-	errLine := &ErrorLine{}
-	json.Unmarshal([]byte(lastLine), errLine)
-	if errLine.Error != "" {
-		return errors.New(errLine.Error)
-	}
-
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	return nil
 }
 
 // StartContainer Start Container
@@ -362,17 +164,12 @@ func (m *DockerManager) StartContainer() error {
 		return err
 	}
 
-	if imageExisted {
-		err = m.removeImage()
+	if !imageExisted {
+		m.Log.Debugf("Starting building image --- %s", m.imageName)
+		err = m.buildImage(m.dockerDir)
 		if err != nil {
 			return err
 		}
-	}
-
-	m.Log.Debugf("Starting building image --- %s", m.imageName)
-	err = m.buildImage(m.dockerDir)
-	if err != nil {
-		return err
 	}
 
 	m.Log.Debugf("create container [%s]", m.containerName)
@@ -388,14 +185,25 @@ func (m *DockerManager) StartContainer() error {
 	}
 
 	m.Log.Info("docker vm start success :)")
+
 	// display container info in the console
-	//go m.displayInConsole(m.containerName)
+	go m.displayInConsole(m.containerName)
 
 	return nil
 }
 
+// StopAndRemoveVM stop docker vm and remove container, image
 func (m *DockerManager) StopAndRemoveVM() error {
 	var err error
+
+	removeHostMountDir := localconf.ChainMakerConfig.DockerConfig.CleanHostMountDir
+	if removeHostMountDir {
+		err := os.RemoveAll(m.sourceDir)
+		if err != nil {
+			return err
+		}
+		m.Log.Infof("removing mount directory: %s", m.sourceDir)
+	}
 
 	err = m.stopContainer()
 	if err != nil {
@@ -416,6 +224,61 @@ func (m *DockerManager) StopAndRemoveVM() error {
 	return nil
 }
 
+func (m *DockerManager) StartCDMClient() {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+	state := m.CDMClient.StartClient()
+
+	m.CDMState = state
+
+	m.Log.Debugf("cdm client state is: %v", state)
+}
+
+// ------------------ image functions --------------
+
+// BuildImage build image based on Dockerfile
+func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
+
+	// get absolute path for docker folder
+	dockerFolderPath, err := filepath.Abs(dockerFolderRelPath)
+	if err != nil {
+		return err
+	}
+
+	// tar whole directory
+	buildCtx, err := archive.TarWithOptions(dockerFolderPath, &archive.TarOptions{})
+	if err != nil {
+		return err
+	}
+
+	buildOpts := types.ImageBuildOptions{
+		Dockerfile: "Dockerfile",
+		Tags:       []string{m.imageName},
+		Remove:     true,
+	}
+
+	// build image
+	resp, err := m.client.ImageBuild(m.ctx, buildCtx, buildOpts)
+	if err != nil {
+		return err
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
+
+	err = m.displayBuildProcess(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	m.Log.Infof("build image [%s] success :)", m.imageName)
+
+	return nil
+}
+
 // check docker m image exist or not
 func (m *DockerManager) imageExist() (bool, error) {
 	imageList, err := m.client.ImageList(m.ctx, types.ImageListOptions{All: true})
@@ -427,26 +290,6 @@ func (m *DockerManager) imageExist() (bool, error) {
 		for _, v2 := range v1.RepoTags {
 			currentImageName := strings.Split(v2, ":")
 			if currentImageName[0] == m.imageName {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-// check container status: exist, not exist, running, or not running
-// all true: docker ps -a
-// all false: docker ps
-func (m *DockerManager) getContainer(all bool) (bool, error) {
-	containerList, err := m.client.ContainerList(m.ctx, types.ContainerListOptions{All: all})
-	if err != nil {
-		return false, err
-	}
-
-	indexName := "/" + m.containerName
-	for _, v1 := range containerList {
-		for _, v2 := range v1.Names {
-			if v2 == indexName {
 				return true, nil
 			}
 		}
@@ -469,6 +312,85 @@ func (m *DockerManager) removeImage() error {
 	return nil
 }
 
+// ------------------ container functions --------------
+
+// create container based on image
+func (m *DockerManager) createContainer() error {
+
+	// test mount dir is exit or not
+
+	envs := m.constructEnvs()
+
+	_, err := m.client.ContainerCreate(m.ctx, &container.Config{
+		Cmd:          nil,
+		Image:        m.imageName,
+		Env:          envs,
+		AttachStdout: m.AttachStdOut,
+		AttachStderr: m.AttachStderr,
+		ExposedPorts: nat.PortSet{
+			m.openPort: struct{}{},
+		},
+	}, &container.HostConfig{
+		PortBindings: nat.PortMap{
+			m.openPort: []nat.PortBinding{
+				{
+					HostIP:   "0.0.0.0",
+					HostPort: m.hostPort,
+				},
+			},
+			m.pprofOpenPort: []nat.PortBinding{
+				{
+					HostIP:   "0.0.0.0",
+					HostPort: m.pprofHostPort, //todo: doesn't work for now, add another port
+				},
+			},
+		},
+		Privileged: true,
+		Mounts: []mount.Mount{
+			{
+				Type:        mount.TypeBind,
+				Source:      m.sourceDir,
+				Target:      m.targetDir,
+				ReadOnly:    false,
+				Consistency: mount.ConsistencyFull,
+				BindOptions: &mount.BindOptions{
+					Propagation:  mount.PropagationRPrivate,
+					NonRecursive: false,
+				},
+				VolumeOptions: nil,
+				TmpfsOptions:  nil,
+			},
+		},
+	}, nil, nil, m.containerName)
+
+	if err != nil {
+		return err
+	}
+
+	m.Log.Infof("create container [%s] success :)", m.containerName)
+	return nil
+}
+
+// check container status: exist, not exist, running, or not running
+// all true: docker ps -a
+// all false: docker ps
+func (m *DockerManager) getContainer(all bool) (bool, error) {
+	containerList, err := m.client.ContainerList(m.ctx, types.ContainerListOptions{All: all})
+	if err != nil {
+		return false, err
+	}
+
+	indexName := "/" + m.containerName
+	for _, v1 := range containerList {
+		for _, v2 := range v1.Names {
+			if v2 == indexName {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
 // remove container
 func (m *DockerManager) removeContainer() error {
 	m.Log.Infof("Removing container [%s] ...", m.containerName)
@@ -484,6 +406,95 @@ func (m *DockerManager) stopContainer() error {
 		return err
 	}
 	return nil
+}
+
+// InitMountDirectory init mount directory and sub directories
+// if not exist, create directories
+func (m *DockerManager) InitMountDirectory() error {
+
+	var err error
+
+	// create mount directory
+	mountDir := m.sourceDir
+	err = m.createDir(mountDir)
+	if err != nil {
+		return nil
+	}
+	m.Log.Debug("set mount dir: ", mountDir)
+
+	// create sub directory: contracts, share, sock
+	contractDir := filepath.Join(mountDir, config.ContractsDir)
+	err = m.createDir(contractDir)
+	if err != nil {
+		return err
+	}
+	m.Log.Debug("set contract dir: ", contractDir)
+
+	shareDir := filepath.Join(mountDir, config.ShareDir)
+	err = m.createDir(shareDir)
+	if err != nil {
+		return err
+	}
+	m.Log.Debug("set share dir: ", shareDir)
+
+	sockDir := filepath.Join(mountDir, config.SockDir)
+	err = m.createDir(sockDir)
+	if err != nil {
+		return err
+	}
+	m.Log.Debug("set sock dir: ", sockDir)
+
+	return nil
+
+}
+
+// ------------------ utility functions --------------
+
+func (m *DockerManager) constructEnvs() []string {
+	dockerConfig := localconf.ChainMakerConfig.DockerConfig
+
+	configsMap := make(map[string]string)
+
+	m.convertConfigToMap(dockerConfig.DockerLogConfig, configsMap)
+
+	m.convertConfigToMap(dockerConfig.DockerVmConfig, configsMap)
+
+	m.convertConfigToMap(dockerConfig.DockerRpcConfig, configsMap)
+
+	m.convertConfigToMap(dockerConfig.DockerPprofConfig, configsMap)
+
+	configsMap["DockerMountDir"] = fmt.Sprintf("%s=%s", "DockerMountDir", dockerConfig.DockerMountDir)
+
+	configs := make([]string, len(configsMap))
+	index := 0
+	for _, value := range configsMap {
+		configs[index] = value
+		index++
+	}
+
+	return configs
+}
+
+func (m *DockerManager) convertConfigToMap(config interface{}, configsMap map[string]string) {
+	v := reflect.ValueOf(config)
+	typeOfS := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldName := typeOfS.Field(i).Name
+		value := v.Field(i).Interface()
+
+		env := fmt.Sprintf("%s=%v", fieldName, value)
+		configsMap[fieldName] = env
+	}
+}
+
+type ErrorLine struct {
+	Error       string      `json:"error"`
+	ErrorDetail ErrorDetail `json:"errorDetail"`
+}
+
+type ErrorDetail struct {
+	Message string `json:"message"`
 }
 
 // display container std out in host std out -- need finish loop accept
@@ -522,4 +533,122 @@ func (m *DockerManager) displayInConsole(containerID string) error {
 	}
 
 	return nil
+}
+
+// display build process
+func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
+	var lastLine string
+
+	scanner := bufio.NewScanner(rd)
+	for scanner.Scan() {
+
+		lastLine = scanner.Text()
+		lastLine = strings.TrimLeft(lastLine, "{\"stream\":\"")
+		lastLine = strings.TrimRight(lastLine, "\"}")
+		lastLine = strings.TrimRight(lastLine, "\\n")
+		if len(lastLine) == 0 {
+			continue
+		}
+		if strings.Contains(lastLine, "---\\u003e") {
+			continue
+		}
+
+		if strings.Contains(lastLine, "Removing intermediate") {
+			continue
+		}
+
+		if strings.Contains(lastLine, "ux\":{\"ID\":\"sha256") {
+			continue
+		}
+		fmt.Println(lastLine)
+	}
+
+	errLine := &ErrorLine{}
+	json.Unmarshal([]byte(lastLine), errLine)
+	if errLine.Error != "" {
+		return errors.New(errLine.Error)
+	}
+
+	if err := scanner.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (m *DockerManager) createDir(directory string) error {
+	exist, err := m.exists(directory)
+	if err != nil {
+		return err
+	}
+
+	if !exist {
+		err := os.Mkdir(directory, 0755)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// exists returns whether the given file or directory exists
+func (m *DockerManager) exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (m *DockerManager) validateConfig(config *localconf.CMConfig) (bool, error) {
+	dockerConfig := config.DockerConfig
+	var err error
+
+	if dockerConfig.DockerContainerDir == "" {
+		m.Log.Errorf("doesn't set docker container path")
+		return false, nil
+	} else {
+		dockerContainerDir = dockerConfig.DockerContainerDir
+	}
+
+	if dockerConfig.HostMountDir == "" {
+		m.Log.Errorf("doesn't set host mount directory path")
+		return false, nil
+	} else {
+		sourceDir = dockerConfig.HostMountDir
+		if !filepath.IsAbs(sourceDir) {
+			sourceDir, err = filepath.Abs(sourceDir)
+			if err != nil {
+				m.Log.Errorf("doesn't set host mount directory path correctly")
+				return false, err
+			}
+		}
+	}
+
+	if dockerConfig.DockerMountDir == "" {
+		m.Log.Errorf("doesn't set docker mount directory path")
+		return false, nil
+	} else {
+		targetDir = dockerConfig.DockerMountDir
+	}
+
+	if dockerConfig.ImageName == "" {
+		m.Log.Infof("image name doesn't set, set as default: chainmaker-docker-go-image")
+		imageName = "chainmaker-docker-go-image"
+	} else {
+		imageName = dockerConfig.ImageName
+	}
+
+	if dockerConfig.ContainerName == "" {
+		m.Log.Infof("container name doesn't set, set as default: chainmaker-docker-go-container")
+		containerName = "chainmaker-docker-go-container"
+	} else {
+		containerName = dockerConfig.ContainerName
+	}
+
+	return true, nil
 }

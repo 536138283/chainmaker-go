@@ -43,6 +43,33 @@ net:
     priv_key_file: ../config/wx-org1/certs/node/consensus1/consensus1.tls.key
     cert_file:     ../config/wx-org1/certs/node/consensus1/consensus1.tls.crt
 
+docker:
+  open_dockervm: true
+  image_name: chainmaker-docker-go-image
+  container_name: chainmaker-docker-go-container
+  docker_container_dir: ../module/vm/docker-go/dockercontainer
+  host_mount_dir: ../module/vm/docker-go/mount  # mount point in chain maker
+  docker_mount_dir: /mount                      # mount point in docker vm
+  clean_host_mount_dir: false                    #clean host mount directory when stop the chain maker
+  rpc:
+    uds_open: true
+    port: 12356                                 # default is tcp connection
+    max_send_message_size: 100                  # MiB
+    max_recv_message_size: 100                  # MiB
+  log:
+    log_file: docker_vm.log
+    display_in_console: true
+    show_line: false
+    log_level: INFO
+  vm:
+    tx_size: 1000
+    user_num: 600
+    time_limit: 5                              # second
+  pprof:
+    pprof_enabled: false
+    pprof_port: 12655
+
+
 txpool:
   max_txpool_size: 5120 # 普通交易池上限
   max_config_txpool_size: 10 # config交易池的上限

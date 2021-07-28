@@ -59,7 +59,7 @@ func (cdm *CDMApi) closeConnection() {
 // type3: get_bytecode response or path
 func (cdm *CDMApi) recvMsgRoutine() {
 
-	cdm.logger.Debugf("start receiving cdm message ")
+	cdm.logger.Infof("start receiving cdm message ")
 
 	var err error
 
@@ -109,7 +109,7 @@ func (cdm *CDMApi) recvMsgRoutine() {
 
 func (cdm *CDMApi) sendMsgRoutine() {
 
-	cdm.logger.Debugf("start sending cdm message")
+	cdm.logger.Infof("start sending cdm message")
 
 	var err error
 
