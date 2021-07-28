@@ -426,7 +426,7 @@ func (consensus *ConsensusABFTImpl) sendPackageSingal(height uint64) {
 }
 
 func (consensus *ConsensusABFTImpl) publishToMsgbus(msg *netpb.NetMsg) {
-	consensus.logger.Debugf("[%s] publishToMsgbus size: %d", consensus.Id, proto.Size(msg))
+	consensus.logger.Debugf("[%s] publishToMsgbus size: %d to: %s", consensus.Id, proto.Size(msg), msg.To)
 	consensus.msgbus.PublishSafe(msgbus.SendConsensusMsg, msg)
 }
 

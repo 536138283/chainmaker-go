@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker-go/logger"
 	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
 	"github.com/stretchr/testify/assert"
 	"github.com/thoas/go-funk"
@@ -138,6 +139,92 @@ func TestBBA_Output(t *testing.T) {
 			case <-time.After(2 * time.Second):
 				assert.Fail(t, "timeout: BBA not finished")
 			case <-finishC:
+			}
+		})
+	}
+}
+
+func Test_receivedVals(t *testing.T) {
+	logger := logger.GetLoggerByChain(logger.MODULE_CONSENSUS, "test")
+	cfg := &Config{
+		logger: logger,
+		height: 10,
+		id:     "id",
+		nodeID: "id",
+	}
+	cfg.fillWithDefaults()
+
+	type args struct {
+		sender string
+		val    bool
+	}
+	tests := []struct {
+		name           string
+		args           []args
+		wantAddValErrs []error
+		wantLength     int
+		wantCounts     []int
+	}{
+		{
+			"add 1 val of 1 sender",
+			[]args{
+				{"sender1", true},
+			},
+			[]error{nil},
+			1,
+			[]int{1, 0},
+		},
+		{
+			"add 1 val of 2 sender",
+			[]args{
+				{"sender1", true},
+				{"sender2", true},
+			},
+			[]error{nil, nil},
+			2,
+			[]int{2, 0},
+		},
+		{
+			"add 2 val of 2 sender",
+			[]args{
+				{"sender1", true},
+				{"sender1", false},
+				{"sender2", true},
+				{"sender2", false},
+			},
+			[]error{nil, nil, nil, nil},
+			2,
+			[]int{2, 2},
+		},
+		{
+			"add multiple duplicate val of 1 sender",
+			[]args{
+				{"sender1", true},
+				{"sender1", true},
+				{"sender1", true},
+			},
+			[]error{nil, ErrDuplicatedRBCRequest, ErrDuplicatedRBCRequest},
+			1,
+			[]int{1, 0},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bba := NewBBA(cfg)
+			r := newReceivedVals(bba, "bval")
+			for i, arg := range tt.args {
+				if err := r.addVal(arg.sender, arg.val); err != tt.wantAddValErrs[i] {
+					t.Errorf("receivedVals.addVal() error = %v, wantErr %v", err, tt.wantAddValErrs[i])
+				}
+			}
+			if l := r.length(); l != tt.wantLength {
+				t.Errorf("receivedVals.length() l = %v, wantLength %v", l, tt.wantLength)
+			}
+			if count := r.countVals(true); count != tt.wantCounts[0] {
+				t.Errorf("receivedVals.countVals(true) count = %v, wantCounts %v", count, tt.wantCounts[0])
+			}
+			if count := r.countVals(false); count != tt.wantCounts[1] {
+				t.Errorf("receivedVals.countVals(false) count = %v, wantCounts %v", count, tt.wantCounts[1])
 			}
 		})
 	}

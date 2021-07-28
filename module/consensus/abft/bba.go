@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
+	"fmt"
+	"strings"
 	"sync"
 
 	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
@@ -22,14 +24,74 @@ type auxDelayedMsg struct {
 	aux    *abftpb.AuxRequest
 }
 
+type receivedVals struct {
+	bba *BBA
+	typ string
+	set map[string][]bool
+}
+
+func newReceivedVals(bba *BBA, typ string) *receivedVals {
+	return &receivedVals{
+		bba: bba,
+		typ: typ,
+		set: make(map[string][]bool),
+	}
+}
+
+func (r *receivedVals) String() string {
+	var builder strings.Builder
+	fmt.Fprintf(&builder, "type: %s, set{", r.typ)
+	for k, vals := range r.set {
+		fmt.Fprintf(&builder, "%s: [", k)
+		for _, v := range vals {
+			fmt.Fprintf(&builder, "%v, ", v)
+		}
+		builder.WriteString("], ")
+	}
+	builder.WriteString("}")
+	return builder.String()
+}
+
+func (r *receivedVals) addVal(sender string, val bool) error {
+	if vals, ok := r.set[sender]; ok {
+		for _, v := range vals {
+			if v == val {
+				r.bba.logger.Debugf("[%s](%d-%s-%d) BBA %s receivedVals add val: %v multiple times",
+					r.bba.nodeID, r.bba.height, r.bba.id, r.bba.epoch, r.typ, val)
+				return ErrDuplicatedRBCRequest
+			}
+		}
+	}
+
+	r.set[sender] = append(r.set[sender], val)
+	return nil
+}
+
+func (r *receivedVals) countVals(val bool) int {
+	n := 0
+
+	for _, s := range r.set {
+		for _, v := range s {
+			if v == val {
+				n++
+			}
+		}
+	}
+	return n
+}
+
+func (r *receivedVals) length() int {
+	return len(r.set)
+}
+
 type BBA struct {
 	*Config
 	sync.Mutex
 	epoch                         uint32
 	binValues                     []bool
 	sentBvals                     []bool
-	receivedBvals                 map[string]bool
-	receivedAux                   map[string]bool
+	receivedBvals                 *receivedVals
+	receivedAux                   *receivedVals
 	done                          bool
 	estimated, outputted, decided bool
 	estimation, output, decision  bool
@@ -41,13 +103,13 @@ type BBA struct {
 func NewBBA(cfg *Config) *BBA {
 	cfg.logger.Infof("NewBBA config: %s", cfg)
 	bba := &BBA{
-		Config:        cfg,
-		epoch:         0,
-		binValues:     []bool{},
-		sentBvals:     []bool{},
-		receivedBvals: make(map[string]bool),
-		receivedAux:   make(map[string]bool),
+		Config:    cfg,
+		epoch:     0,
+		binValues: []bool{},
+		sentBvals: []bool{},
 	}
+	bba.receivedBvals = newReceivedVals(bba, "Bvals")
+	bba.receivedAux = newReceivedVals(bba, "Aux")
 
 	return bba
 }
@@ -133,8 +195,11 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 	}
 
 	val := bval.Value
-	bba.receivedBvals[sender] = val
-	bvalCount := bba.countBvals(val)
+
+	if err := bba.receivedBvals.addVal(sender, val); err != nil {
+		return err
+	}
+	bvalCount := bba.receivedBvals.countVals(val)
 
 	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Bval value: %v, from: %v, bvalCount: %v",
 		bba.nodeID, bba.height, bba.id, bba.epoch, bval.Value, sender, bvalCount)
@@ -145,10 +210,14 @@ func (bba *BBA) handleBvalRequest(sender string, bval *abftpb.BValRequest) error
 	}
 
 	if bvalCount == 2*bba.faultsNum+1 {
-		bba.binValues = append(bba.binValues, val)
-		if len(bba.binValues) == 1 {
-			bba.appendAuxRequests(val)
+		for _, v := range bba.binValues {
+			// Exits if the bba.binValues set contains val already
+			if v == val {
+				return nil
+			}
 		}
+		bba.binValues = append(bba.binValues, val)
+		bba.appendAuxRequests(val)
 		bba.logger.Debugf("[%s](%d-%s-%d) BBA handleBvalRequest binValues: %v",
 			bba.nodeID, bba.height, bba.id, bba.epoch, bba.binValues)
 		return nil
@@ -172,7 +241,9 @@ func (bba *BBA) handleAuxRequest(sender string, aux *abftpb.AuxRequest) error {
 	bba.logger.Debugf("[%s](%d-%s-%d) BBA receive Aux value: %v from: %v",
 		bba.nodeID, bba.height, bba.id, bba.epoch, aux.Value, sender)
 	val := aux.Value
-	bba.receivedAux[sender] = val
+	if err := bba.receivedAux.addVal(sender, val); err != nil {
+		return err
+	}
 	bba.tryOutputAgreement()
 	return nil
 }
@@ -236,37 +307,17 @@ func (bba *BBA) increaseEpoch() {
 	bba.logger.Debugf("[%s](%d-%s-%d) BBA increaseEpoch", bba.nodeID, bba.height, bba.id, bba.epoch)
 	bba.binValues = []bool{}
 	bba.sentBvals = []bool{}
-	bba.receivedBvals = make(map[string]bool)
-	bba.receivedAux = make(map[string]bool)
+	bba.receivedBvals = newReceivedVals(bba, "Bvals")
+	bba.receivedAux = newReceivedVals(bba, "Aux")
 	bba.epoch++
 }
 
-func (bba *BBA) countBvals(val bool) int {
-	n := 0
-
-	for _, v := range bba.receivedBvals {
-		if v == val {
-			n++
-		}
-	}
-	return n
-}
-
 func (bba *BBA) countOutputs() (int, []bool) {
-	m := map[bool]string{}
-	for s, val := range bba.receivedAux {
-		m[val] = s
-	}
-	vals := []bool{}
-	for _, val := range bba.binValues {
-		if _, ok := m[val]; ok {
-			vals = append(vals, val)
-		}
-	}
+	length := bba.receivedAux.length()
 
-	bba.logger.Debugf("[%s](%d-%s-%d) BBA countOutputs receivedAux: %v, binValues: %v",
-		bba.nodeID, bba.height, bba.id, bba.epoch, bba.receivedAux, bba.binValues)
-	return len(bba.receivedAux), vals
+	bba.logger.Debugf("[%s](%d-%s-%d) BBA countOutputs receivedAux: %s, binValues: %v",
+		bba.nodeID, bba.height, bba.id, bba.epoch, bba.receivedAux.String(), bba.binValues)
+	return length, bba.binValues
 }
 
 func (bba *BBA) hasSentBval(val bool) bool {
