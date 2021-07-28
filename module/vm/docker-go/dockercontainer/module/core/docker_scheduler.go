@@ -160,6 +160,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	contractPath, err := s.contractManager.GetContract(txRequest.TxId, contractKey)
 	if err != nil || len(contractPath) == 0 {
 		s.logger.Errorf("fail to get contract path -- contractName is [%s], err is [%s]", contractKey, err)
+		s.returnErrorTxResponse(txRequest.TxId,err)
 		return
 	}
 	s.logger.Debugf("get contract path [%s]", contractPath)
@@ -176,7 +177,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	handlerName := s.constructHandlerName(txRequest)
 	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName, txRequest.ContractName)
 	if err != nil {
-		s.logger.Errorf("fail to generate new handler: %s -- txId [%s]", err, txRequest.TxId)
+		s.logger.Errorf("fail to generate new handler: [%s] -- txId [%s]", err, txRequest.TxId)
 		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
@@ -186,6 +187,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	// start sand box
 	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
 	if err != nil {
+		s.logger.Errorf("faild to start sand box : [%s] -- txId [%s]",err,txRequest.TxId)
 		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}

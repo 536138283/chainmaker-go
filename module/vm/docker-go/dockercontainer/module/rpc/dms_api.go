@@ -32,6 +32,7 @@ func (s *DMSApi) DMSCommunicate(stream protogo.DMSRpc_DMSCommunicateServer) erro
 	// get handler from handler_register
 	registerMsg, err := stream.Recv()
 	if err != nil {
+		s.logger.Errorf("fail to get handler from handler_register")
 		return err
 	}
 

@@ -24,6 +24,7 @@ func (s *SecurityEnv) InitSecurityEnv() error {
 	}
 
 	if err := SetCGroup(); err != nil {
+		s.logger.Errorf("fail to setCGroup, err : [%s]",err)
 		return err
 	}
 
@@ -40,6 +41,7 @@ func (s *SecurityEnv) InitDirectory() error {
 	mountDir := os.Getenv("DockerMountDir")
 	err = os.Chmod(mountDir, 0755)
 	if err != nil {
+		s.logger.Errorf("fail to set mount dir mod, err : [%s]",err)
 		return err
 	}
 	s.logger.Debug("set mount dir: ", mountDir)
@@ -48,6 +50,7 @@ func (s *SecurityEnv) InitDirectory() error {
 	contractDir := filepath.Join(mountDir, config.ContractsDir)
 	err = s.createSubDir(contractDir)
 	if err != nil {
+		s.logger.Errorf("fail to create sub directory, contractDir: [%s], err: [%s]",contractDir,err)
 		return err
 	}
 	config.ContractBaseDir = contractDir
@@ -56,6 +59,7 @@ func (s *SecurityEnv) InitDirectory() error {
 	shareDir := filepath.Join(mountDir, config.ShareDir)
 	err = s.createSubDir(shareDir)
 	if err != nil {
+		s.logger.Errorf("fail to create sub directory, shareDir: [%s], err: [%s]",shareDir,err)
 		return err
 	}
 	config.ShareBaseDir = shareDir
@@ -64,6 +68,7 @@ func (s *SecurityEnv) InitDirectory() error {
 	sockDir := filepath.Join(mountDir, config.SockDir)
 	err = s.createSubDir(sockDir)
 	if err != nil {
+		s.logger.Errorf("fail to create sub directory, sockDir: [%s], err: [%s]",sockDir,err)
 		return err
 	}
 	config.SockBaseDir = sockDir
@@ -71,6 +76,7 @@ func (s *SecurityEnv) InitDirectory() error {
 
 	// set dms directory
 	if err = s.setDMSDir(); err != nil {
+		s.logger.Errorf("fail to set dms directory, err: [%s]",err)
 		return err
 	}
 	s.logger.Debug("set dms dir: ", config.DMSDir)

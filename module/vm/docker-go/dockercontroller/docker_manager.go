@@ -227,6 +227,7 @@ func (m *DockerManager) createContainer() error {
 	}, nil, nil, m.containerName)
 
 	if err != nil {
+		m.Log.Errorf("create container [%s] failed",m.containerName)
 		return err
 	}
 
@@ -241,12 +242,14 @@ func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
 	dockerFolderPath, err := filepath.Abs(dockerFolderRelPath)
 
 	if err != nil {
+		m.Log.Errorf("fail to get absolute path for docker folder, dockerFolderPath: [%s]", dockerFolderPath)
 		return err
 	}
 
 	// tar whole directory
 	buildCtx, err := archive.TarWithOptions(dockerFolderPath, &archive.TarOptions{})
 	if err != nil {
+		m.Log.Errorf("fail to tar whole directory, dockerFolderPath: [%s]", dockerFolderPath)
 		return err
 	}
 
@@ -259,12 +262,14 @@ func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
 	// build image
 	resp, err := m.client.ImageBuild(m.ctx, buildCtx, buildOpts)
 	if err != nil {
+		m.Log.Errorf("fail to build image, err: [%s]",err)
 		return err
 	}
 	defer resp.Body.Close()
 
 	err = displayBuildProcess(resp.Body)
 	if err != nil {
+		m.Log.Errorf("fail to display build process, err: [%s]",err)
 		return err
 	}
 
@@ -332,12 +337,14 @@ func (m *DockerManager) StartContainer() error {
 	// if running, stop it,
 	isRunning, err := m.getContainer(false)
 	if err != nil {
+		m.Log.Errorf("fail to get container, err: [%s]",err)
 		return err
 	}
 	if isRunning {
 		m.Log.Debugf("stop running container [%s]", m.containerName)
 		err = m.stopContainer()
 		if err != nil {
+			m.Log.Errorf("fail to stop container, err: [%s]",err)
 			return err
 		}
 	}
@@ -345,6 +352,7 @@ func (m *DockerManager) StartContainer() error {
 	// check container exist or not, if not exist, create new container
 	containerExist, err := m.getContainer(true)
 	if err != nil {
+		m.Log.Errorf("fail to get container, err: [%s]",err)
 		return err
 	}
 
@@ -352,6 +360,7 @@ func (m *DockerManager) StartContainer() error {
 		m.Log.Debugf("remove container [%s]", m.containerName)
 		err = m.removeContainer()
 		if err != nil {
+			m.Log.Errorf("fail to remove container, err: [%s]",err)
 			return err
 		}
 	}
@@ -359,12 +368,14 @@ func (m *DockerManager) StartContainer() error {
 	// check image exist or not, if not exist, create new image
 	imageExisted, err := m.imageExist()
 	if err != nil {
+		m.Log.Errorf("fail to check image exist or not, err: [%s]",err)
 		return err
 	}
 
 	if imageExisted {
 		err = m.removeImage()
 		if err != nil {
+			m.Log.Errorf("fail to remove image, err: [%s]",err)
 			return err
 		}
 	}
@@ -372,6 +383,7 @@ func (m *DockerManager) StartContainer() error {
 	m.Log.Debugf("Starting building image --- %s", m.imageName)
 	err = m.buildImage(m.dockerDir)
 	if err != nil {
+		m.Log.Errorf("fail to build image, err: [%s]",err)
 		return err
 	}
 
@@ -399,16 +411,19 @@ func (m *DockerManager) StopAndRemoveVM() error {
 
 	err = m.stopContainer()
 	if err != nil {
+		m.Log.Errorf("fail to stop container, err: [%s]",err)
 		return err
 	}
 
 	err = m.removeContainer()
 	if err != nil {
+		m.Log.Errorf("fail to remove container, err: [%s]",err)
 		return err
 	}
 
 	err = m.removeImage()
 	if err != nil {
+		m.Log.Errorf("fail to remove image, err: [%s]",err)
 		return err
 	}
 

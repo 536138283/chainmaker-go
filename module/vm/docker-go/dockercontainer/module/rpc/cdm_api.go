@@ -160,6 +160,7 @@ func (cdm *CDMApi) handleTxRequest(cdmMessage *protogo.CDMMessage) error {
 	var txRequest protogo.TxRequest
 	err := proto.Unmarshal(cdmMessage.Payload, &txRequest)
 	if err != nil {
+		cdm.logger.Errorf("fail to unmarshal cdmMessage.Payload [%s] to protogo.TxRequest ",cdmMessage.Payload)
 		return err
 	}
 
