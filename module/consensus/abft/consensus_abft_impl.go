@@ -401,9 +401,15 @@ func (consensus *ConsensusABFTImpl) handleMessage(msg *abftpb.ABFTMessageReq) {
 	} else {
 		err := consensus.acs.HandleMessage(msg.From, msg.Id, msg.Acs)
 		if err != nil {
-			consensus.logger.Errorf("[%s] handleMessage to: %s, error: %v", consensus.Id, msg.To, err)
-			if msg.From != consensus.Id {
-				consensus.responseWithCode(msg, abftpb.ErrorCode_FailOfUnkown)
+			if err == ErrDuplicatedRBCRequest {
+				if msg.From != consensus.Id {
+					consensus.responseWithCode(msg, abftpb.ErrorCode_Success)
+				}
+			} else {
+				consensus.logger.Errorf("[%s] handleMessage to: %s, error: %v", consensus.Id, msg.To, err)
+				if msg.From != consensus.Id {
+					consensus.responseWithCode(msg, abftpb.ErrorCode_FailOfUnkown)
+				}
 			}
 			return
 		}

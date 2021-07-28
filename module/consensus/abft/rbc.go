@@ -160,8 +160,9 @@ func (rbc *RBC) handleProofRequest(sender string, msg *abftpb.ProofRequest) erro
 	}
 
 	if rbc.echoSent {
-		return fmt.Errorf("[%s](%d-%s) RBC receive proof: %x from: %v multiple times",
+		rbc.logger.Debugf("[%s](%d-%s) RBC receive proof: %x from: %v multiple times",
 			rbc.nodeID, rbc.height, rbc.id, msg.RootHash, sender)
+		return ErrDuplicatedRBCRequest
 	}
 
 	if !rbc.verifyProofRequest(msg) {
@@ -179,7 +180,8 @@ func (rbc *RBC) handleProofRequest(sender string, msg *abftpb.ProofRequest) erro
 
 func (rbc *RBC) handleEchoRequest(sender string, msg *abftpb.EchoRequest) error {
 	if _, ok := rbc.receivedEchos[sender]; ok {
-		return fmt.Errorf("[%s](%d) receive multiple echos from: %s", rbc.nodeID, rbc.height, sender)
+		rbc.logger.Debugf("[%s](%d) receive multiple echos from: %s", rbc.nodeID, rbc.height, sender)
+		return ErrDuplicatedRBCRequest
 	}
 
 	if !rbc.verifyProofRequest(msg.ProofRequest) {
@@ -200,7 +202,8 @@ func (rbc *RBC) handleEchoRequest(sender string, msg *abftpb.EchoRequest) error 
 
 func (rbc *RBC) handleReadyRequest(sender string, msg *abftpb.ReadyRequest) error {
 	if _, ok := rbc.receivedReadys[sender]; ok {
-		return fmt.Errorf("[%s](%d) receive multiple readys from: %s", rbc.nodeID, rbc.height, sender)
+		rbc.logger.Debugf("[%s](%d) receive multiple readys from: %s", rbc.nodeID, rbc.height, sender)
+		return ErrDuplicatedRBCRequest
 	}
 	rbc.logger.Debugf("[%s](%d-%s) RBC receive ready: %x from: %v", rbc.nodeID, rbc.height, rbc.id, msg.RootHash, sender)
 
@@ -239,7 +242,7 @@ func (rbc *RBC) tryDecodeValue(hash []byte) error {
 	rbc.logger.Debugf("[%s](%d-%s) RBC tryDecodeValue outputDecoded: %v, countEchos: %v, countReady: %v",
 		rbc.nodeID, rbc.height, rbc.id, rbc.outputDecoded, rbc.countEchos(hash), rbc.countReady(hash))
 	if rbc.outputDecoded ||
-		rbc.countEchos(hash) < rbc.faultsNum ||
+		rbc.countEchos(hash) <= rbc.faultsNum ||
 		rbc.countReady(hash) <= 2*rbc.faultsNum {
 		return nil
 	}
