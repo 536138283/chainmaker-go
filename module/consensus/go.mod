@@ -12,7 +12,7 @@ require (
 	chainmaker.org/chainmaker-go/vm v0.0.0
 	chainmaker.org/chainmaker/common v0.0.0-20210727061430-d5c93b3ffac9
 	chainmaker.org/chainmaker/pb-go v0.0.0-20210727051745-8312e6b09f15
-	chainmaker.org/chainmaker/protocol v0.0.0-20210722032803-8365b24e96d9
+	chainmaker.org/chainmaker/protocol v0.0.0-20210727101110-59285b10f1ef
 	github.com/NebulousLabs/errors v0.0.0-20181203160057-9f787ce8f69e // indirect
 	github.com/NebulousLabs/fastrand v0.0.0-20181203155948-6fb6489aac4e // indirect
 	github.com/NebulousLabs/merkletree v0.0.0-20181203152040-08d5d54b07f5

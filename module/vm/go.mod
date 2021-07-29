@@ -14,7 +14,7 @@ require (
 	chainmaker.org/chainmaker-go/wxvm v0.0.0
 	chainmaker.org/chainmaker/common v0.0.0-20210727061430-d5c93b3ffac9
 	chainmaker.org/chainmaker/pb-go v0.0.0-20210727051745-8312e6b09f15
-	chainmaker.org/chainmaker/protocol v0.0.0-20210722032803-8365b24e96d9
+	chainmaker.org/chainmaker/protocol v0.0.0-20210727101110-59285b10f1ef
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.4.3
