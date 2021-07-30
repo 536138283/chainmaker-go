@@ -46,7 +46,7 @@ func TestAddTxsToConfigQueue(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, true)
 
@@ -80,7 +80,7 @@ func TestAddTxsToCommonQueue(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, false)
 
@@ -112,7 +112,7 @@ func TestGetInQueue(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, false)
 
@@ -155,7 +155,7 @@ func TestHasInQueue(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, internalTxs := generateTxsBySource(10, false)
 
@@ -190,7 +190,7 @@ func TestDeleteConfigTxs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, true)
 
@@ -220,7 +220,7 @@ func TestDeleteCommonTxs(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, false)
 
@@ -250,7 +250,7 @@ func TestAppendTxsToPendingCache(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, false)
 
@@ -283,18 +283,18 @@ func TestFetchInQueue(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil)
+	queue := newQueue(blockChainStore.store, logger.GetLogger(testQueueLogName), nil, consensusType)
 	queue.validate = mockValidateInQueue(queue, blockChainStore.store)
 	rpcTxs, p2pTxs, _ := generateTxsBySource(10, false)
 
 	// 1. put txs to queue and check appendTxsToPendingCache
 	queue.addTxsToCommonQueue(rpcTxs)
-	fetchTxs := queue.fetch(100, 99, nil)
+	fetchTxs := queue.fetch(100, 99, nil, consensusType)
 	require.EqualValues(t, rpcTxs.txs, fetchTxs)
 	//require.EqualValues(t, len(rpcTxs.txs), queue.configTxQueue.pendingCache.Size())
 
 	// 2. fetch txs nil
-	fetchTxs = queue.fetch(100, 99, nil)
+	fetchTxs = queue.fetch(100, 99, nil, consensusType)
 	require.EqualValues(t, 0, len(fetchTxs))
 
 	// 3. modify p2pTxs txType to commonPb.TxType_INVOKE_CONTRACT and push txs to config queue
@@ -305,12 +305,12 @@ func TestFetchInQueue(t *testing.T) {
 	queue.addTxsToConfigQueue(p2pTxs)
 
 	// 4. fetch config tx
-	fetchTxs = queue.fetch(100, 100, nil)
+	fetchTxs = queue.fetch(100, 100, nil, consensusType)
 	require.EqualValues(t, p2pTxs.txs[:1], fetchTxs)
 	//require.EqualValues(t, 11, queue.configTxQueue.pendingCache.Size())
 
 	// 5. next fetch
-	fetchTxs = queue.fetch(100, 101, nil)
+	fetchTxs = queue.fetch(100, 101, nil, consensusType)
 	require.EqualValues(t, p2pTxs.txs[1:2], fetchTxs)
 	//require.EqualValues(t, 12, queue.configTxQueue.pendingCache.Size())
 }

@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
+	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
 	"fmt"
 	"sync"
 	"testing"
@@ -22,6 +23,8 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
+
+const consensusType = consensusPb.ConsensusType_ABFT
 
 func mockValidate(txList *txList, blockChainStore protocol.BlockchainStore) txValidateFunc {
 	return func(tx *commonPb.Transaction, source protocol.TxSource) error {
@@ -76,7 +79,7 @@ func TestTxList_Put(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockStore := newMockBlockChainStore(ctrl)
-	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, mockStore.store)
+	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, mockStore.store, consensusType)
 	validateFunc := mockValidate(list, mockStore.store)
 
 	// 1. put 30 rpc txs and check num in txList
@@ -137,7 +140,7 @@ func TestTxList_Get(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store)
+	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store, consensusType)
 	validateFunc := mockValidate(list, blockChainStore.store)
 
 	// 1. put txs[:30] txs and check existence
@@ -171,7 +174,7 @@ func TestTxList_Has(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store)
+	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store, consensusType)
 	validateFunc := mockValidate(list, blockChainStore.store)
 
 	// 1. put txs[:30] txs and check existence
@@ -202,7 +205,7 @@ func TestTxList_Delete(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store)
+	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store, consensusType)
 	validateFunc := mockValidate(list, blockChainStore.store)
 
 	// 1. put txs[:30]
@@ -239,13 +242,13 @@ func TestTxList_Fetch(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store)
+	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store, consensusType)
 	validateFunc := mockValidate(list, blockChainStore.store)
 
 	// 1. put txs[:30] and Fetch txs
 	list.Put(txs[:30], protocol.RPC, validateFunc)
 
-	fetchTxs, fetchTxIds := list.Fetch(100, nil, 99)
+	fetchTxs, fetchTxIds := list.Fetch(100, nil, 99, consensusType)
 	require.EqualValues(t, 30, len(fetchTxs))
 	require.EqualValues(t, 30, len(fetchTxIds))
 	require.EqualValues(t, 0, list.Size())
@@ -256,18 +259,18 @@ func TestTxList_Fetch(t *testing.T) {
 	require.EqualValues(t, 0, list.Size())
 
 	// 3. fetch txs nil due to not exist txs in txList
-	fetchTxs, fetchTxIds = list.Fetch(100, nil, 99)
+	fetchTxs, fetchTxIds = list.Fetch(100, nil, 99, consensusType)
 	require.EqualValues(t, 0, len(fetchTxs))
 	require.EqualValues(t, 0, len(fetchTxIds))
 
 	// 4. put txs[30:100] and Fetch txs with less number
 	list.Put(txs[30:], protocol.RPC, validateFunc)
-	fetchTxs, fetchTxIds = list.Fetch(10, nil, 111)
+	fetchTxs, fetchTxIds = list.Fetch(10, nil, 111, consensusType)
 	require.EqualValues(t, 10, len(fetchTxs))
 	require.EqualValues(t, 10, len(fetchTxIds))
 
 	// 5. fetch all remaining txs
-	fetchTxs, fetchTxIds = list.Fetch(100, nil, 112)
+	fetchTxs, fetchTxIds = list.Fetch(100, nil, 112, consensusType)
 	require.EqualValues(t, 60, len(fetchTxs))
 	require.EqualValues(t, 60, len(fetchTxIds))
 
@@ -275,7 +278,7 @@ func TestTxList_Fetch(t *testing.T) {
 	list.Put(txs[30:], protocol.INTERNAL, validateFunc)
 	require.EqualValues(t, 70, list.Size())
 
-	fetchTxs, fetchTxIds = list.Fetch(100, nil, 112)
+	fetchTxs, fetchTxIds = list.Fetch(100, nil, 112, consensusType)
 	require.EqualValues(t, 70, len(fetchTxs))
 	require.EqualValues(t, 70, len(fetchTxIds))
 }
@@ -285,7 +288,7 @@ func TestTxList_Fetch_Bench(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	blockChainStore := newMockBlockChainStore(ctrl)
-	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store)
+	list := newTxList(logger.GetLogger(testListLogName), &sync.Map{}, blockChainStore.store, consensusType)
 	validateFunc := mockValidate(list, blockChainStore.store)
 
 	// 1. put txs
@@ -297,7 +300,7 @@ func TestTxList_Fetch_Bench(t *testing.T) {
 	fetchNum := 100000
 	for i := 0; i < len(txs)/fetchNum; i++ {
 		beginFetch := utils.CurrentTimeMillisSeconds()
-		fetchTxs, _ := list.Fetch(fetchNum, nil, 999)
+		fetchTxs, _ := list.Fetch(fetchNum, nil, 999, consensusType)
 		fmt.Printf("fetch txs:%d, elapse time: %d\n", len(fetchTxs), utils.CurrentTimeMillisSeconds()-beginFetch)
 	}
 	require.EqualValues(t, 0, list.queue.Size())
