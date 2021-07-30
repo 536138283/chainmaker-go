@@ -5,6 +5,10 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module"
 	"fmt"
 	"go.uber.org/zap"
+	"net/http"
+	_ "net/http/pprof"
+	"os"
+	"strconv"
 	"time"
 )
 
@@ -14,6 +18,12 @@ func main() {
 
 	managerLogger = logger.NewDockerLogger(logger.MODULE_MANAGER)
 
+	// pprof
+	enablePprof, _ := strconv.ParseBool(os.Getenv("PProfEnabled"))
+	if enablePprof {
+		startPprof()
+	}
+
 	manager, err := module.NewManager(managerLogger)
 	if err != nil {
 		managerLogger.Errorf("Err in creating docker manager: %s", err)
@@ -22,16 +32,26 @@ func main() {
 
 	managerLogger.Infof("docker manager created")
 
-	manager.InitContainer()
+	go manager.InitContainer()
 
 	managerLogger.Infof("docker manager init...")
 
-	fmt.Println("testing")
-
 	// infinite loop
-	// todo wait node send stop
 	for i := 0; ; i++ {
-		fmt.Println("in main process -- ", i)
-		time.Sleep(time.Minute)
+		time.Sleep(time.Hour)
 	}
+}
+
+func startPprof() {
+
+	// change to runtime pprof
+	go func() {
+		pprofPort, _ := strconv.Atoi(os.Getenv("Port"))
+		addr := fmt.Sprintf(":%d", pprofPort)
+		err := http.ListenAndServe(addr, nil)
+		if err != nil {
+			fmt.Println(err)
+		}
+	}()
+
 }

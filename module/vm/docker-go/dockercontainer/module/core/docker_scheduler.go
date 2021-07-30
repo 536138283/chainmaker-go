@@ -1,6 +1,7 @@
 package core
 
 import (
+	"bytes"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
@@ -8,12 +9,11 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
-	"fmt"
+	"errors"
 	"go.uber.org/zap"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -160,7 +160,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	contractPath, err := s.contractManager.GetContract(txRequest.TxId, contractKey)
 	if err != nil || len(contractPath) == 0 {
 		s.logger.Errorf("fail to get contract path -- contractName is [%s], err is [%s]", contractKey, err)
-		s.returnErrorTxResponse(txRequest.TxId,err)
+		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
 	s.logger.Debugf("get contract path [%s]", contractPath)
@@ -178,6 +178,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName, txRequest.ContractName)
 	if err != nil {
 		s.logger.Errorf("fail to generate new handler: [%s] -- txId [%s]", err, txRequest.TxId)
+		_ = s.userController.FreeUser(user)
 		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
@@ -188,6 +189,8 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
 	if err != nil {
 		s.logger.Errorf("faild to start sand box : [%s] -- txId [%s]",err,txRequest.TxId)
+		s.handlerRegister.FreeHandler(handlerName)
+		_ = s.userController.FreeUser(user)
 		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
@@ -207,15 +210,16 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 }
 
 func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, handlerName, contractPath string) error {
+	var err error           // sandbox global error
+	var stderr bytes.Buffer // used to capture the error message from sandbox
 
 	cmd := exec.Cmd{
 		Path: contractPath,
 		Args: []string{user.SockPath, handlerName, contractName},
 	}
+	cmd.Stderr = &stderr
 
-	cmd.Stdout = os.Stdout
-
-	//set namespace, these settings just working in linux
+	// set namespace, these settings just working in linux
 	// but it doens't affect running, cause it will put into docker to run
 	cmd.SysProcAttr = &syscall.SysProcAttr{
 		Credential: &syscall.Credential{
@@ -226,45 +230,39 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 			syscall.CLONE_NEWNET,
 	}
 
-	// start app
-	if err := cmd.Start(); err != nil {
-		s.logger.Errorf("fail to run child process [%s] -- txId [%s]", err, txId)
+	// start sandbox
+	if err = cmd.Start(); err != nil {
+		s.logger.Errorf("fail to start tx: txId [%s], err [%s]", txId, err)
 		return err
 	}
 
 	// set timeout
-	timeLimitConfig := os.Getenv("TimeLimit")
-	timeLimit, err := strconv.Atoi(timeLimitConfig)
-	if err != nil {
-		timeLimit = 2
-	}
-	s.logger.Debugf("time limit is %d second", timeLimit)
-	timer := time.AfterFunc(time.Duration(timeLimit)*time.Second, func() {
-		err := cmd.Process.Kill()
-		if err != nil {
-			s.logger.Errorf("fail to kill process [%s] -- txId [%s]", err, txId)
-			return
-		}
+	timer := time.AfterFunc(time.Duration(config.SandBoxTimeout)*time.Second, func() {
+		_ = cmd.Process.Kill()
+		s.logger.Errorf("timeout: kill tx: txId [%s]", txId)
+		return
 	})
+	defer timer.Stop()
 
-	// set cgroup procs id
+	// add control group
 	memoryPath := filepath.Join(config.CGroupRoot, config.ProcsFile)
-	err = utils.WriteToFile(memoryPath, cmd.Process.Pid)
-	if err != nil {
+	if err = utils.WriteToFile(memoryPath, cmd.Process.Pid); err != nil {
 		s.logger.Errorf("fail to add cgroup [%s] -- txId [%s]", err, txId)
 		return err
 	}
-
 	s.logger.Debugf("Add Pid [%d] to file [%s]", cmd.Process.Pid, config.ProcsFile)
 
-	err = cmd.Wait()
-	if err != nil {
-		s.logger.Errorf("fail to wait child process end [%s] -- txId [%s]", err, txId)
-		return err
+	// wait sandbox end
+	if err = cmd.Wait(); err != nil {
+		s.logger.Errorf("fail to wait tx end: txId [%s], err [%s]", txId, err)
+		s.logger.Errorf("tx error: [%s]", stderr.String())
+		err = errors.New(stderr.String())
 	}
 
-	// timeout, stop the process
-	timer.Stop()
+	//err = cmd.Process.Release()
+	//if err != nil {
+	//	return err
+	//}
 
 	// capture current process exit status
 	// code : 0 : process run successfully
@@ -280,12 +278,12 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 
 	s.exitCh <- exitStatus
 
-	if status.Signaled() {
-		exitStatus.Signal = status.Signal()
-		return fmt.Errorf("fail to run child process with kill signal")
-	}
+	//if status.Signaled() {
+	//	exitStatus.Signal = status.Signal()
+	//	return fmt.Errorf("fail to run child process with kill signal")
+	//}
 
-	return nil
+	return err
 }
 
 func (s *DockerScheduler) returnErrorTxResponse(txId string, err error) {

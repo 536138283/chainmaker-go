@@ -108,21 +108,22 @@ func runTest() {
 	// 1) 合约创建
 	if createContract {
 		testCreate(sk3, &client, CHAIN1)
-		time.Sleep(4 * time.Second)
+		time.Sleep(10 * time.Second)
 	}
 
 	// 2) 批量测试
 	//for i := 0; i < 10; i++ {
 	//	testDockerPerformanceModeTransfer(sk3, &client, CHAIN1)
 	//
-	//	time.Sleep(10 * time.Second)
+	//	time.Sleep(5 * time.Second)
 	//}
 
 	// 3) invoke 测试
-	txId := testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
-	time.Sleep(10 * time.Second)
+	//txId := testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+	//time.Sleep(10 * time.Second)
+
 	// 4) query 测试
-	//testDockerQuery(sk3, &client, CHAIN1, "1", "2")
+	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
 	//// 2) 执行合约
 	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
@@ -143,31 +144,31 @@ func runTest() {
 	//}
 	//
 	// 4) 根据TxId查交易
-	testGetTxByTxId(sk3, &client, txId, CHAIN1)
+	//testGetTxByTxId(sk3, &client, txId, CHAIN1)
 	//
 	// 5) 根据区块高度查区块，若height为-1，表示查当前区块
-	hash := testGetBlockByHeight(sk3, &client, CHAIN1, -1)
+	//hash := testGetBlockByHeight(sk3, &client, CHAIN1, -1)
 	//
 	// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
-	testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, -1)
+	//testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, -1)
 	//
 	// 7) 根据区块哈希查区块
-	testGetBlockByHash(sk3, &client, CHAIN1, hash)
+	//testGetBlockByHash(sk3, &client, CHAIN1, hash)
 	//
 	// 8) 根据区块哈希查区块（包含读写集）
 	//testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
 	//
 	//// 9) 根据TxId查区块
-	testGetBlockByTxId(sk3, &client, txId, CHAIN1)
+	//testGetBlockByTxId(sk3, &client, txId, CHAIN1)
 	//
 	//// 10) 查询最新配置块
 	//testGetLastConfigBlock(sk3, &client, CHAIN1)
 	//
 	// 11) 查询最新区块
-	testGetLastBlock(sk3, &client, CHAIN1)
+	//testGetLastBlock(sk3, &client, CHAIN1)
 	//
 	// 12) 查询链信息
-	testGetChainInfo(sk3, &client, CHAIN1)
+	//testGetChainInfo(sk3, &client, CHAIN1)
 	//
 	//// 13) 合约升级
 	//testUpgrade(sk3, &client, CHAIN1)
@@ -246,7 +247,7 @@ func testDockerPerformanceModeTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcN
 	wg.Wait()
 	end := utils.CurrentTimeMillisSeconds()
 	spend := end - start
-	fmt.Println("发送100个交易所花时间", spend, "ms")
+	fmt.Println("发送1000个交易所花时间", spend, "ms")
 }
 
 func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {
@@ -289,7 +290,7 @@ func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId
 
 func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {
 	txId := utils.GetRandTxId()
-	fmt.Printf("\n============ invoke contract %s[sum][%s] ============\n", contractName, txId)
+	//fmt.Printf("\n============ invoke contract %s[sum][%s] ============\n", contractName, txId)
 
 	// 构造Payload
 	pairs := []*commonPb.KeyValuePair{
@@ -318,10 +319,10 @@ func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 		log.Fatalf(logTempMarshalPayLoadFailed, err.Error())
 	}
 
-	resp := proposalRequest(sk3, client, commonPb.TxType_INVOKE_USER_CONTRACT,
+	proposalRequest(sk3, client, commonPb.TxType_INVOKE_USER_CONTRACT,
 		chainId, txId, payloadBytes)
 
-	fmt.Printf(logTempSendTx, resp.Code, resp.Message, resp.ContractResult)
+	//fmt.Printf(logTempSendTx, resp.Code, resp.Message, resp.ContractResult)
 	return txId
 
 }

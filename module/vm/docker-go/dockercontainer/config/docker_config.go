@@ -15,11 +15,14 @@ const (
 	ContractsDir = "contracts"
 	ShareDir     = "share"
 	SockDir      = "sock"
+	SockName     = "cdm.sock"
 )
 
 var (
-	MountDir        = ""
-	ContractBaseDir = ""
-	ShareBaseDir    = ""
-	SockBaseDir     = ""
+	ContractBaseDir string
+	ShareBaseDir    string
+	SockBaseDir     string
+	SandBoxTimeout  = 2
+
+	EnablePProf = false
 )

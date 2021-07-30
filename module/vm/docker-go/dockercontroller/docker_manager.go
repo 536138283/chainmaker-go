@@ -2,6 +2,7 @@ package dockercontroller
 
 import (
 	"bufio"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontroller/module"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
@@ -26,6 +27,14 @@ import (
 	"sync"
 )
 
+var (
+	dockerContainerDir string
+	sourceDir          string
+	targetDir          string
+	imageName          string
+	containerName      string
+)
+
 type DockerManager struct {
 	AttachStdOut  bool
 	AttachStderr  bool
@@ -37,6 +46,8 @@ type DockerManager struct {
 	targetDir     string
 	openPort      nat.Port
 	hostPort      string
+	pprofOpenPort nat.Port
+	pprofHostPort string
 	dockerDir     string
 
 	lock   sync.Mutex
@@ -49,96 +60,168 @@ type DockerManager struct {
 }
 
 // NewDockerManager return docker manager and running a default container
+// if has error: log error and return nil
 func NewDockerManager(chainId string) *DockerManager {
 
+	config := localconf.ChainMakerConfig
+	Logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
+
+	// init docker manager
+	newDockerManager := &DockerManager{
+		AttachStdOut: true,
+		AttachStderr: true,
+		ShowStdout:   true,
+		ShowStderr:   true,
+		Log:          Logger,
+		CDMState:     false,
+		lock:         sync.Mutex{},
+	}
+
+	// validate settings
+	valid, err := newDockerManager.validateConfig(config)
+	if err != nil || !valid {
+		Logger.Errorf("fail to init docker manager, please check the docker config, %s", err)
+		return nil
+	}
+
 	// if open docker vm is false, docker manager is nil
-	startDockerVm := localconf.ChainMakerConfig.DockerConfig.OpenDockerVM
+	startDockerVm := config.DockerConfig.OpenDockerVM
 	if !startDockerVm {
 		return nil
 	}
-	ctx := context.Background()
+
+	// init docker manager
 	cli, err := client.NewClientWithOpts(client.FromEnv, client.WithAPIVersionNegotiation())
 	if err != nil {
 		return nil
 	}
 
-	Logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
-	cdmClient := module.NewCDMClient(chainId)
-
-	dockerConfig := localconf.ChainMakerConfig.DockerConfig
-
-	hostPort := strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
+	hostPort := strconv.Itoa(int(config.DockerConfig.DockerRpcConfig.Port))
 	openPort := nat.Port(hostPort + "/tcp")
 
-	var dockerContainerDir string
-	var sourceDir string
-	var targetDir string
-	var imageName string
-	var containerName string
+	hostPprofPort := strconv.Itoa(int(config.DockerConfig.DockerPprofConfig.PProfPort))
+	openPprofPort := nat.Port(hostPprofPort + "/tcp")
 
-	if dockerConfig.DockerContainerDir == "" {
-		Logger.Errorf("doesn't set docker container path")
+	newDockerManager.ctx = context.Background()
+	newDockerManager.client = cli
+	newDockerManager.CDMClient = module.NewCDMClient(chainId)
+	newDockerManager.imageName = imageName
+	newDockerManager.containerName = containerName
+	newDockerManager.sourceDir = sourceDir
+	newDockerManager.targetDir = targetDir
+	newDockerManager.hostPort = hostPort
+	newDockerManager.openPort = openPort
+	newDockerManager.pprofHostPort = hostPprofPort
+	newDockerManager.pprofOpenPort = openPprofPort
+	newDockerManager.dockerDir = dockerContainerDir
+
+	// init mount directory and subdirectory
+	err = newDockerManager.InitMountDirectory()
+	if err != nil {
+		Logger.Errorf("fail to init mount directory: %s", err)
 		return nil
-	} else {
-		dockerContainerDir = dockerConfig.DockerContainerDir
-	}
-
-	if dockerConfig.HostMountDir == "" {
-		Logger.Errorf("doesn't set host mount directory path")
-		return nil
-	} else {
-		sourceDir = dockerConfig.HostMountDir
-		if !filepath.IsAbs(sourceDir) {
-			sourceDir, err = filepath.Abs(sourceDir)
-			if err != nil {
-				Logger.Errorf("doesn't set host mount directory path correctly")
-				return nil
-			}
-		}
-	}
-
-	if dockerConfig.DockerMountDir == "" {
-		Logger.Errorf("doesn't set docker mount directory path")
-		return nil
-	} else {
-		targetDir = dockerConfig.DockerMountDir
-	}
-
-	if dockerConfig.ImageName == "" {
-		Logger.Infof("image name doesn't set, set as default: image1")
-		imageName = "image1"
-	} else {
-		imageName = dockerConfig.ImageName
-	}
-
-	if dockerConfig.ContainerName == "" {
-		Logger.Infof("container name doesn't set, set as default: container1")
-		containerName = "container1"
-	} else {
-		containerName = dockerConfig.ContainerName
-	}
-
-	newDockerManager := &DockerManager{
-		AttachStdOut:  true,
-		AttachStderr:  true,
-		ShowStdout:    true,
-		ShowStderr:    true,
-		ctx:           ctx,
-		client:        cli,
-		Log:           Logger,
-		CDMClient:     cdmClient,
-		CDMState:      false,
-		lock:          sync.Mutex{},
-		imageName:     imageName,
-		containerName: containerName,
-		sourceDir:     sourceDir,
-		targetDir:     targetDir,
-		hostPort:      hostPort,
-		openPort:      openPort,
-		dockerDir:     dockerContainerDir,
 	}
 
 	return newDockerManager
+}
+
+// StartContainer Start Container
+func (m *DockerManager) StartContainer() error {
+	m.Log.Info("start docker vm...")
+	var err error
+
+	// check container is running or not
+	// if running, stop it,
+	isRunning, err := m.getContainer(false)
+	if err != nil {
+		return err
+	}
+	if isRunning {
+		m.Log.Debugf("stop running container [%s]", m.containerName)
+		err = m.stopContainer()
+		if err != nil {
+			return err
+		}
+	}
+
+	// check container exist or not, if not exist, create new container
+	containerExist, err := m.getContainer(true)
+	if err != nil {
+		return err
+	}
+
+	if containerExist {
+		m.Log.Debugf("remove container [%s]", m.containerName)
+		err = m.removeContainer()
+		if err != nil {
+			return err
+		}
+	}
+
+	// check image exist or not, if not exist, create new image
+	imageExisted, err := m.imageExist()
+	if err != nil {
+		return err
+	}
+
+	if !imageExisted {
+		m.Log.Debugf("Starting building image --- %s", m.imageName)
+		err = m.buildImage(m.dockerDir)
+		if err != nil {
+			return err
+		}
+	}
+
+	m.Log.Debugf("create container [%s]", m.containerName)
+	err = m.createContainer()
+	if err != nil {
+		return err
+	}
+
+	// running container
+	m.Log.Infof("start running container [%s]", m.containerName)
+	if err = m.client.ContainerStart(m.ctx, m.containerName, types.ContainerStartOptions{}); err != nil {
+		return err
+	}
+
+	m.Log.Info("docker vm start success :)")
+
+	// display container info in the console
+	go m.displayInConsole(m.containerName)
+
+	return nil
+}
+
+// StopAndRemoveVM stop docker vm and remove container, image
+func (m *DockerManager) StopAndRemoveVM() error {
+	var err error
+
+	removeHostMountDir := localconf.ChainMakerConfig.DockerConfig.CleanHostMountDir
+	if removeHostMountDir {
+		err := os.RemoveAll(m.sourceDir)
+		if err != nil {
+			return err
+		}
+		m.Log.Infof("removing mount directory: %s", m.sourceDir)
+	}
+
+	err = m.stopContainer()
+	if err != nil {
+		return err
+	}
+
+	err = m.removeContainer()
+	if err != nil {
+		return err
+	}
+
+	err = m.removeImage()
+	if err != nil {
+		return err
+	}
+
+	m.Log.Info("stop and remove docker vm")
+	return nil
 }
 
 func (m *DockerManager) StartCDMClient() {
@@ -151,44 +234,90 @@ func (m *DockerManager) StartCDMClient() {
 	m.Log.Debugf("cdm client state is: %v", state)
 }
 
-func (m *DockerManager) constructEnvs() []string {
-	dockerConfig := localconf.ChainMakerConfig.DockerConfig
+// ------------------ image functions --------------
 
-	configsMap := make(map[string]string)
+// BuildImage build image based on Dockerfile
+func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
 
-	m.convertConfigToMap(dockerConfig.DockerLogConfig, configsMap)
-
-	m.convertConfigToMap(dockerConfig.DockerVmConfig, configsMap)
-
-	m.convertConfigToMap(dockerConfig.DockerRpcConfig, configsMap)
-
-	configsMap["DockerMountDir"] = fmt.Sprintf("%s=%s", "DockerMountDir", dockerConfig.DockerMountDir)
-
-	configs := make([]string, len(configsMap))
-	index := 0
-	for _, value := range configsMap {
-		configs[index] = value
-		index++
+	// get absolute path for docker folder
+	dockerFolderPath, err := filepath.Abs(dockerFolderRelPath)
+	if err != nil {
+		return err
 	}
 
-	return configs
-}
-
-func (m *DockerManager) convertConfigToMap(config interface{}, configsMap map[string]string) {
-	v := reflect.ValueOf(config)
-	typeOfS := v.Type()
-
-	for i := 0; i < v.NumField(); i++ {
-		fieldName := typeOfS.Field(i).Name
-		value := v.Field(i).Interface()
-
-		env := fmt.Sprintf("%s=%v", fieldName, value)
-		configsMap[fieldName] = env
+	// tar whole directory
+	buildCtx, err := archive.TarWithOptions(dockerFolderPath, &archive.TarOptions{})
+	if err != nil {
+		return err
 	}
+
+	buildOpts := types.ImageBuildOptions{
+		Dockerfile: "Dockerfile",
+		Tags:       []string{m.imageName},
+		Remove:     true,
+	}
+
+	// build image
+	resp, err := m.client.ImageBuild(m.ctx, buildCtx, buildOpts)
+	if err != nil {
+		return err
+	}
+	defer func(Body io.ReadCloser) {
+		err := Body.Close()
+		if err != nil {
+
+		}
+	}(resp.Body)
+
+	err = m.displayBuildProcess(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	m.Log.Infof("build image [%s] success :)", m.imageName)
+
+	return nil
 }
+
+// check docker m image exist or not
+func (m *DockerManager) imageExist() (bool, error) {
+	imageList, err := m.client.ImageList(m.ctx, types.ImageListOptions{All: true})
+	if err != nil {
+		return false, err
+	}
+
+	for _, v1 := range imageList {
+		for _, v2 := range v1.RepoTags {
+			currentImageName := strings.Split(v2, ":")
+			if currentImageName[0] == m.imageName {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// remove image
+func (m *DockerManager) removeImage() error {
+
+	m.Log.Infof("Removing image [%s] ...", m.imageName)
+	if _, err := m.client.ImageRemove(m.ctx, m.imageName, types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
+		return err
+	}
+
+	_, err := m.client.ImagesPrune(m.ctx, filters.Args{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// ------------------ container functions --------------
 
 // create container based on image
 func (m *DockerManager) createContainer() error {
+
+	// test mount dir is exit or not
 
 	envs := m.constructEnvs()
 
@@ -203,10 +332,18 @@ func (m *DockerManager) createContainer() error {
 		},
 	}, &container.HostConfig{
 		PortBindings: nat.PortMap{
-			m.openPort: []nat.PortBinding{nat.PortBinding{
-				HostIP:   "0.0.0.0",
-				HostPort: m.hostPort,
-			}},
+			m.openPort: []nat.PortBinding{
+				{
+					HostIP:   "0.0.0.0",
+					HostPort: m.hostPort,
+				},
+			},
+			m.pprofOpenPort: []nat.PortBinding{
+				{
+					HostIP:   "0.0.0.0",
+					HostPort: m.pprofHostPort, //todo: doesn't work for now, add another port
+				},
+			},
 		},
 		Privileged: true,
 		Mounts: []mount.Mount{
@@ -235,47 +372,124 @@ func (m *DockerManager) createContainer() error {
 	return nil
 }
 
-// BuildImage build image based on Dockerfile
-func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
-
-	// get absolute path for docker folder
-	dockerFolderPath, err := filepath.Abs(dockerFolderRelPath)
-
+// check container status: exist, not exist, running, or not running
+// all true: docker ps -a
+// all false: docker ps
+func (m *DockerManager) getContainer(all bool) (bool, error) {
+	containerList, err := m.client.ContainerList(m.ctx, types.ContainerListOptions{All: all})
 	if err != nil {
-		m.Log.Errorf("fail to get absolute path for docker folder, dockerFolderPath: [%s]", dockerFolderPath)
+		return false, err
+	}
+
+	indexName := "/" + m.containerName
+	for _, v1 := range containerList {
+		for _, v2 := range v1.Names {
+			if v2 == indexName {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// remove container
+func (m *DockerManager) removeContainer() error {
+	m.Log.Infof("Removing container [%s] ...", m.containerName)
+	if err := m.client.ContainerRemove(m.ctx, m.containerName, types.ContainerRemoveOptions{}); err != nil {
 		return err
 	}
+	return nil
+}
 
-	// tar whole directory
-	buildCtx, err := archive.TarWithOptions(dockerFolderPath, &archive.TarOptions{})
-	if err != nil {
-		m.Log.Errorf("fail to tar whole directory, dockerFolderPath: [%s]", dockerFolderPath)
+
+// stop container
+func (m *DockerManager) stopContainer() error {
+	if err := m.client.ContainerStop(m.ctx, m.containerName, nil); err != nil {
 		return err
 	}
+	return nil
+}
 
-	buildOpts := types.ImageBuildOptions{
-		Dockerfile: "Dockerfile",
-		Tags:       []string{m.imageName},
-		Remove:     true,
+// InitMountDirectory init mount directory and sub directories
+// if not exist, create directories
+func (m *DockerManager) InitMountDirectory() error {
+
+	var err error
+
+	// create mount directory
+	mountDir := m.sourceDir
+	err = m.createDir(mountDir)
+	if err != nil {
+		return nil
 	}
+	m.Log.Debug("set mount dir: ", mountDir)
 
-	// build image
-	resp, err := m.client.ImageBuild(m.ctx, buildCtx, buildOpts)
+	// create sub directory: contracts, share, sock
+	contractDir := filepath.Join(mountDir, config.ContractsDir)
+	err = m.createDir(contractDir)
 	if err != nil {
 		m.Log.Errorf("fail to build image, err: [%s]",err)
 		return err
 	}
-	defer resp.Body.Close()
+	m.Log.Debug("set contract dir: ", contractDir)
 
-	err = displayBuildProcess(resp.Body)
+	shareDir := filepath.Join(mountDir, config.ShareDir)
+	err = m.createDir(shareDir)
 	if err != nil {
 		m.Log.Errorf("fail to display build process, err: [%s]",err)
 		return err
 	}
+	m.Log.Debug("set share dir: ", shareDir)
 
-	m.Log.Infof("build image [%s] success :)", m.imageName)
+	sockDir := filepath.Join(mountDir, config.SockDir)
+	err = m.createDir(sockDir)
+	if err != nil {
+		return err
+	}
+	m.Log.Debug("set sock dir: ", sockDir)
 
 	return nil
+
+}
+
+// ------------------ utility functions --------------
+
+func (m *DockerManager) constructEnvs() []string {
+	dockerConfig := localconf.ChainMakerConfig.DockerConfig
+
+	configsMap := make(map[string]string)
+
+	m.convertConfigToMap(dockerConfig.DockerLogConfig, configsMap)
+
+	m.convertConfigToMap(dockerConfig.DockerVmConfig, configsMap)
+
+	m.convertConfigToMap(dockerConfig.DockerRpcConfig, configsMap)
+
+	m.convertConfigToMap(dockerConfig.DockerPprofConfig, configsMap)
+
+	configsMap["DockerMountDir"] = fmt.Sprintf("%s=%s", "DockerMountDir", dockerConfig.DockerMountDir)
+
+	configs := make([]string, len(configsMap))
+	index := 0
+	for _, value := range configsMap {
+		configs[index] = value
+		index++
+	}
+
+	return configs
+}
+
+func (m *DockerManager) convertConfigToMap(config interface{}, configsMap map[string]string) {
+	v := reflect.ValueOf(config)
+	typeOfS := v.Type()
+
+	for i := 0; i < v.NumField(); i++ {
+		fieldName := typeOfS.Field(i).Name
+		value := v.Field(i).Interface()
+
+		env := fmt.Sprintf("%s=%v", fieldName, value)
+		configsMap[fieldName] = env
+	}
 }
 
 type ErrorLine struct {
@@ -287,8 +501,46 @@ type ErrorDetail struct {
 	Message string `json:"message"`
 }
 
+// display container std out in host std out -- need finish loop accept
+func (m *DockerManager) displayInConsole(containerID string) error {
+	//display container std out
+	out, err := m.client.ContainerLogs(m.ctx, containerID, types.ContainerLogsOptions{
+		ShowStdout: m.ShowStdout,
+		ShowStderr: m.ShowStderr,
+		Follow:     true,
+		Timestamps: false,
+	})
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	hdr := make([]byte, 8)
+	for {
+		_, err := out.Read(hdr)
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+		}
+		var w io.Writer
+		switch hdr[0] {
+		case 1:
+			w = os.Stdout
+		default:
+			w = os.Stderr
+		}
+		count := binary.BigEndian.Uint32(hdr[4:])
+		dat := make([]byte, count)
+		_, err = out.Read(dat)
+		fmt.Fprint(w, string(dat))
+	}
+
+	return nil
+}
+
 // display build process
-func displayBuildProcess(rd io.Reader) error {
+func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
 	var lastLine string
 
 	scanner := bufio.NewScanner(rd)
@@ -328,213 +580,85 @@ func displayBuildProcess(rd io.Reader) error {
 	return nil
 }
 
-// StartContainer Start Container
-func (m *DockerManager) StartContainer() error {
-	m.Log.Info("start docker vm...")
-	var err error
 
-	// check container is running or not
-	// if running, stop it,
-	isRunning, err := m.getContainer(false)
-	if err != nil {
-		m.Log.Errorf("fail to get container, err: [%s]",err)
-		return err
-	}
-	if isRunning {
-		m.Log.Debugf("stop running container [%s]", m.containerName)
-		err = m.stopContainer()
-		if err != nil {
-			m.Log.Errorf("fail to stop container, err: [%s]",err)
-			return err
-		}
-	}
 
-	// check container exist or not, if not exist, create new container
-	containerExist, err := m.getContainer(true)
+func (m *DockerManager) createDir(directory string) error {
+	exist, err := m.exists(directory)
 	if err != nil {
 		m.Log.Errorf("fail to get container, err: [%s]",err)
 		return err
 	}
 
-	if containerExist {
-		m.Log.Debugf("remove container [%s]", m.containerName)
-		err = m.removeContainer()
-		if err != nil {
-			m.Log.Errorf("fail to remove container, err: [%s]",err)
-			return err
-		}
-	}
 
-	// check image exist or not, if not exist, create new image
-	imageExisted, err := m.imageExist()
-	if err != nil {
-		m.Log.Errorf("fail to check image exist or not, err: [%s]",err)
-		return err
-	}
-
-	if imageExisted {
-		err = m.removeImage()
+	if !exist {
+		err := os.Mkdir(directory, 0755)
 		if err != nil {
 			m.Log.Errorf("fail to remove image, err: [%s]",err)
 			return err
 		}
 	}
 
-	m.Log.Debugf("Starting building image --- %s", m.imageName)
-	err = m.buildImage(m.dockerDir)
-	if err != nil {
-		m.Log.Errorf("fail to build image, err: [%s]",err)
-		return err
-	}
-
-	m.Log.Debugf("create container [%s]", m.containerName)
-	err = m.createContainer()
-	if err != nil {
-		return err
-	}
-
-	// running container
-	m.Log.Infof("start running container [%s]", m.containerName)
-	if err = m.client.ContainerStart(m.ctx, m.containerName, types.ContainerStartOptions{}); err != nil {
-		return err
-	}
-
-	m.Log.Info("docker vm start success :)")
-	// display container info in the console
-	//go m.displayInConsole(m.containerName)
 
 	return nil
 }
 
-func (m *DockerManager) StopAndRemoveVM() error {
+// exists returns whether the given file or directory exists
+func (m *DockerManager) exists(path string) (bool, error) {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
+}
+
+func (m *DockerManager) validateConfig(config *localconf.CMConfig) (bool, error) {
+	dockerConfig := config.DockerConfig
 	var err error
 
-	err = m.stopContainer()
-	if err != nil {
-		m.Log.Errorf("fail to stop container, err: [%s]",err)
-		return err
+	if dockerConfig.DockerContainerDir == "" {
+		m.Log.Errorf("doesn't set docker container path")
+		return false, nil
+	} else {
+		dockerContainerDir = dockerConfig.DockerContainerDir
 	}
 
-	err = m.removeContainer()
-	if err != nil {
-		m.Log.Errorf("fail to remove container, err: [%s]",err)
-		return err
-	}
-
-	err = m.removeImage()
-	if err != nil {
-		m.Log.Errorf("fail to remove image, err: [%s]",err)
-		return err
-	}
-
-	m.Log.Info("stop and remove docker vm")
-	return nil
-}
-
-// check docker m image exist or not
-func (m *DockerManager) imageExist() (bool, error) {
-	imageList, err := m.client.ImageList(m.ctx, types.ImageListOptions{All: true})
-	if err != nil {
-		return false, err
-	}
-
-	for _, v1 := range imageList {
-		for _, v2 := range v1.RepoTags {
-			currentImageName := strings.Split(v2, ":")
-			if currentImageName[0] == m.imageName {
-				return true, nil
+	if dockerConfig.HostMountDir == "" {
+		m.Log.Errorf("doesn't set host mount directory path")
+		return false, nil
+	} else {
+		sourceDir = dockerConfig.HostMountDir
+		if !filepath.IsAbs(sourceDir) {
+			sourceDir, err = filepath.Abs(sourceDir)
+			if err != nil {
+				m.Log.Errorf("doesn't set host mount directory path correctly")
+				return false, err
 			}
 		}
 	}
-	return false, nil
-}
 
-// check container status: exist, not exist, running, or not running
-// all true: docker ps -a
-// all false: docker ps
-func (m *DockerManager) getContainer(all bool) (bool, error) {
-	containerList, err := m.client.ContainerList(m.ctx, types.ContainerListOptions{All: all})
-	if err != nil {
-		return false, err
+	if dockerConfig.DockerMountDir == "" {
+		m.Log.Errorf("doesn't set docker mount directory path")
+		return false, nil
+	} else {
+		targetDir = dockerConfig.DockerMountDir
 	}
 
-	indexName := "/" + m.containerName
-	for _, v1 := range containerList {
-		for _, v2 := range v1.Names {
-			if v2 == indexName {
-				return true, nil
-			}
-		}
-	}
-	return false, nil
-}
-
-// remove image
-func (m *DockerManager) removeImage() error {
-
-	m.Log.Infof("Removing image [%s] ...", m.imageName)
-	if _, err := m.client.ImageRemove(m.ctx, m.imageName, types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
-		return err
+	if dockerConfig.ImageName == "" {
+		m.Log.Infof("image name doesn't set, set as default: chainmaker-docker-go-image")
+		imageName = "chainmaker-docker-go-image"
+	} else {
+		imageName = dockerConfig.ImageName
 	}
 
-	_, err := m.client.ImagesPrune(m.ctx, filters.Args{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// remove container
-func (m *DockerManager) removeContainer() error {
-	m.Log.Infof("Removing container [%s] ...", m.containerName)
-	if err := m.client.ContainerRemove(m.ctx, m.containerName, types.ContainerRemoveOptions{}); err != nil {
-		return err
-	}
-	return nil
-}
-
-// stop container
-func (m *DockerManager) stopContainer() error {
-	if err := m.client.ContainerStop(m.ctx, m.containerName, nil); err != nil {
-		return err
-	}
-	return nil
-}
-
-// display container std out in host std out -- need finish loop accept
-func (m *DockerManager) displayInConsole(containerID string) error {
-	//display container std out
-	out, err := m.client.ContainerLogs(m.ctx, containerID, types.ContainerLogsOptions{
-		ShowStdout: m.ShowStdout,
-		ShowStderr: m.ShowStderr,
-		Follow:     true,
-		Timestamps: false,
-	})
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	hdr := make([]byte, 8)
-	for {
-		_, err := out.Read(hdr)
-		if err != nil {
-			if err == io.EOF {
-				break
-			}
-		}
-		var w io.Writer
-		switch hdr[0] {
-		case 1:
-			w = os.Stdout
-		default:
-			w = os.Stderr
-		}
-		count := binary.BigEndian.Uint32(hdr[4:])
-		dat := make([]byte, count)
-		_, err = out.Read(dat)
-		fmt.Fprint(w, string(dat))
+	if dockerConfig.ContainerName == "" {
+		m.Log.Infof("container name doesn't set, set as default: chainmaker-docker-go-container")
+		containerName = "chainmaker-docker-go-container"
+	} else {
+		containerName = dockerConfig.ContainerName
 	}
 
-	return nil
+	return true, nil
 }
