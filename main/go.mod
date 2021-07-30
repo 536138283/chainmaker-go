@@ -15,15 +15,16 @@ require (
 )
 
 replace (
+	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../module/vm/docker-go/dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/accesscontrol => ../module/accesscontrol
 	chainmaker.org/chainmaker-go/blockchain => ../module/blockchain
 	chainmaker.org/chainmaker-go/chainconf => ./../module/conf/chainconf
 	chainmaker.org/chainmaker-go/common => ./../common
 	chainmaker.org/chainmaker-go/consensus => ./../module/consensus
 	chainmaker.org/chainmaker-go/core => ./../module/core
-	chainmaker.org/chainmaker-go/dpos => ../module/dpos
 	chainmaker.org/chainmaker-go/docker-go => ../module/vm/docker-go
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../module/vm/docker-go/dockercontainer
+	chainmaker.org/chainmaker-go/dpos => ../module/dpos
 	chainmaker.org/chainmaker-go/evm => ../module/vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../module/vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../module/conf/localconf
@@ -50,5 +51,4 @@ replace (
 	github.com/libp2p/go-libp2p => ./../module/net/p2p/libp2p
 	github.com/libp2p/go-libp2p-core => ./../module/net/p2p/libp2pcore
 	github.com/libp2p/go-libp2p-pubsub => ./../module/net/p2p/libp2ppubsub
-	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../module/vm/docker-go/dockercontainer/pb_sdk
 )
