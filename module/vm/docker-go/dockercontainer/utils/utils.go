@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"strings"
 )
-//todo error handler
 // WriteToFile WriteFile write value to file
 func WriteToFile(path string, value int) error {
 	if err := ioutil.WriteFile(path, []byte(fmt.Sprintf("%d", value)), 0755); err != nil {
