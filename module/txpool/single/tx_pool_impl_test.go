@@ -31,6 +31,11 @@ var log = &test.GoLogger{}
 
 func TestNewTxPoolImpl(t *testing.T) {
 	chainConf, _ := chainconf.NewChainConf(nil)
+	chainConf.ChainConf = &configpb.ChainConfig{
+		Consensus: &configpb.ConsensusConfig{
+			Type: consensusType,
+		},
+	}
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	txPool, err := NewTxPoolImpl("", newMockBlockChainStore(ctrl).store, newMockMessageBus(ctrl), chainConf, newMockAccessControlProvider(ctrl), newMockNet(ctrl), log)
@@ -52,6 +57,23 @@ func newTestPool(t *testing.T, txCount uint32) (*testPool, func()) {
 	chainConf.ChainConf = &configpb.ChainConfig{
 		Block:    &configpb.BlockConfig{},
 		Contract: &configpb.ContractConfig{},
+		Consensus: &configpb.ConsensusConfig{
+			Type: consensusType,
+			Nodes: []*configpb.OrgConfig{&configpb.OrgConfig{
+				OrgId:  "wx-org1.chainmaker.org",
+				NodeId: []string{"QmcQHCuAXaFkbcsPUj7e37hXXfZ9DdN7bozseo5oX4qiC4"},
+			}, &configpb.OrgConfig{
+				OrgId:  "wx-org2.chainmaker.org",
+				NodeId: []string{"QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"},
+			}, &configpb.OrgConfig{
+				OrgId:  "wx-org3.chainmaker.org",
+				NodeId: []string{"QmXf6mnQDBR9aHauRmViKzSuZgpumkn7x6rNxw1oqqRr45"},
+			}, &configpb.OrgConfig{
+				OrgId:  "wx-org4.chainmaker.org",
+				NodeId: []string{"QmRRWXJpAVdhFsFtd9ah5F4LDQWFFBDVKpECAF8hssqj6H"},
+			},
+			},
+		},
 	}
 	localconf.ChainMakerConfig.TxPoolConfig.MaxTxPoolSize = txCount
 	localconf.ChainMakerConfig.TxPoolConfig.MaxConfigTxPoolSize = 1000
@@ -293,7 +315,9 @@ func TestTxPoolImpl_FetchTxBatch(t *testing.T) {
 	// 2. sleep to wait txs flush
 	time.Sleep(time.Millisecond * 100)
 	txsInPool := txPool.FetchTxBatch(99)
-	require.EqualValues(t, commonTxs[:50], txsInPool)
+	if imlPool.chainConf.ChainConfig().Consensus.Type != consensusType {
+		require.EqualValues(t, commonTxs[:50], txsInPool)
+	}
 	require.EqualValues(t, 0, imlPool.queue.commonTxsCount())
 }
 
