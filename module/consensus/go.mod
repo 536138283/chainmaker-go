@@ -10,12 +10,17 @@ require (
 	chainmaker.org/chainmaker-go/store v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
 	chainmaker.org/chainmaker-go/vm v0.0.0
-	chainmaker.org/chainmaker/common v0.0.0-20210803074600-028f232695a9
-	chainmaker.org/chainmaker/pb-go v0.0.0-20210723070658-764cafbc33fe
+	chainmaker.org/chainmaker/common v0.0.0-20210803125737-39d843e4c85e
+	chainmaker.org/chainmaker/pb-go v0.0.0-20210727051745-8312e6b09f15
 	chainmaker.org/chainmaker/protocol v0.0.0-20210727101110-59285b10f1ef
+	github.com/NebulousLabs/errors v0.0.0-20181203160057-9f787ce8f69e // indirect
+	github.com/NebulousLabs/fastrand v0.0.0-20181203155948-6fb6489aac4e // indirect
+	github.com/NebulousLabs/merkletree v0.0.0-20181203152040-08d5d54b07f5
+	github.com/gogf/gf v1.16.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
+	github.com/klauspost/reedsolomon v1.9.12
 	github.com/kr/pretty v0.2.0 // indirect
 	github.com/prometheus/client_golang v1.9.0 // indirect
 	github.com/spf13/viper v1.7.1
