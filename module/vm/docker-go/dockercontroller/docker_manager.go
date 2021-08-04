@@ -220,7 +220,7 @@ func (m *DockerManager) StopAndRemoveVM() error {
 		return err
 	}
 
-	m.Log.Info("stop and remove docker vm")
+	m.Log.Info("stop and remove docker vm [%s]", m.containerName)
 	return nil
 }
 
@@ -299,13 +299,17 @@ func (m *DockerManager) imageExist() (bool, error) {
 
 // remove image
 func (m *DockerManager) removeImage() error {
+	imageExist, err := m.imageExist()
+	if !imageExist || err != nil {
+		return nil
+	}
 
 	m.Log.Infof("Removing image [%s] ...", m.imageName)
 	if _, err := m.client.ImageRemove(m.ctx, m.imageName, types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
 		return err
 	}
 
-	_, err := m.client.ImagesPrune(m.ctx, filters.Args{})
+	_, err = m.client.ImagesPrune(m.ctx, filters.Args{})
 	if err != nil {
 		return err
 	}
@@ -331,6 +335,7 @@ func (m *DockerManager) createContainer() error {
 			m.openPort: struct{}{},
 		},
 	}, &container.HostConfig{
+		//NetworkMode: "none",
 		PortBindings: nat.PortMap{
 			m.openPort: []nat.PortBinding{
 				{

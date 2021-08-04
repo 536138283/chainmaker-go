@@ -55,9 +55,9 @@ func main() {
 	// 2) 批量测试
 	txNum := 100
 
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 500; i++ {
 		testPerformance(client, txNum, i)
-		time.Sleep(1 * time.Second)
+		time.Sleep(50 * time.Microsecond)
 	}
 
 	err := client.stream.CloseSend()

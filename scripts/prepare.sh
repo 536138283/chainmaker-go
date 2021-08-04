@@ -12,6 +12,7 @@ NODE_CNT=$1
 CHAIN_CNT=$2
 P2P_PORT_PREFIX=$3
 RPC_PORT_PREFIX=$4
+DOCKERVM_PORT_PREFIX=$5
 
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
@@ -25,7 +26,7 @@ CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/crypto_config_template.yml
 
 function show_help() {
     echo "Usage:  "
-    echo "  prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4) p2p_port_prefix(default:11300) rpc_port_prefix(default:12300)"
+    echo "  prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4) p2p_port_prefix(default:11300) rpc_port_prefix(default:12300) dockervm_rpc_port_prefix(default:13300)"
     echo "    eg1: prepare.sh 4 1"
     echo "    eg2: prepare.sh 4 1 11300 12300"
 }
@@ -92,6 +93,16 @@ function check_params() {
         show_help
         exit 1
     fi
+
+    if [[ ! -n $DOCKERVM_PORT_PREFIX ]]; then
+      DOCKERVM_PORT_PREFIX=13300
+    fi
+
+    if  [ ${DOCKERVM_PORT_PREFIX} -ge 60000 ] || [ ${DOCKERVM_PORT_PREFIX} -le 10000 ];then
+            echo "dockervm_rpc_port_prefix should >=10000 && <=60000"
+            show_help
+            exit 1
+        fi
 }
 
 function generate_certs() {
@@ -116,6 +127,7 @@ function generate_config() {
     MONITOR_PORT_PREFIX=14320
     PPROF_PORT_PREFIX=24320
     TRUSTED_PORT_PREFIX=13300
+    DOCKER_VM_CONTAINER_NAME_PREFIX="chainmaker-docker-go-container"
 
     if  [ $NODE_CNT -eq 1 ]; then
         CONSENSUS_TYPE=0
@@ -161,6 +173,8 @@ function generate_config() {
         xsed "s%{monitor_port}%$(($MONITOR_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
         xsed "s%{pprof_port}%$(($PPROF_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
         xsed "s%{trusted_port}%$(($TRUSTED_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
+        xsed "s%{dockervm_rpc_port}%$(($DOCKERVM_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
+        xsed "s%{docker_container_name}%"${DOCKER_VM_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
 
         system=$(uname)
 

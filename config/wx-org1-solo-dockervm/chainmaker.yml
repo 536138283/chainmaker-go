@@ -87,10 +87,10 @@ docker:
     log_level: INFO
   vm:
     tx_size: 1000
-    user_num: 200
-    time_limit: 5                              # second
+    user_num: 500
+    time_limit: 2                              # second
   pprof:
-    pprof_enabled: true
+    pprof_enabled: false
     pprof_port: 12655
 
 

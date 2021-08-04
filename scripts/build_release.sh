@@ -44,6 +44,7 @@ function check_env() {
 function build() {
     cd $PROJECT_PATH
     make
+    make dockervm
 }
 
 function package() {
@@ -66,11 +67,13 @@ function package() {
         mkdir $chainmaker_file/lib
         mkdir -p $chainmaker_file/config/$file
         mkdir $chainmaker_file/log
+        mkdir $chainmaker_file/docker-go
         cp $PROJECT_PATH/bin/chainmaker   $chainmaker_file/bin
         cp $CURRENT_PATH/bin/start.sh     $chainmaker_file/bin
         cp $CURRENT_PATH/bin/stop.sh      $chainmaker_file/bin
         cp $CURRENT_PATH/bin/restart.sh   $chainmaker_file/bin
         cp $CURRENT_PATH/service/*        $chainmaker_file/bin
+        cp -r $PROJECT_PATH/module/vm/docker-go/dockercontainer $chainmaker_file/docker-go
         if [ "${system}" = "Linux" ]; then
           cp -r $PROJECT_PATH/main/libwasmer_runtime_c_api.so     $chainmaker_file/lib/libwasmer.so
           cp -r $PROJECT_PATH/main/prebuilt/linux/wxdec           $chainmaker_file/lib/

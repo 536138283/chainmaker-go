@@ -133,3 +133,29 @@ core:
   evidence: false
 scheduler:
   rwset_log: false #whether log the txRWSet map in the debug mode
+
+docker:
+  open_dockervm: true
+  image_name: chainmaker-docker-go-image
+  container_name: {docker_container_name}
+  docker_container_dir: ../docker-go/dockercontainer
+  host_mount_dir: ../docker-go/mount  # mount point in chain maker
+  docker_mount_dir: /mount                      # mount point in docker vm
+  clean_host_mount_dir: true                    #clean host mount directory when stop the chain maker
+  rpc:
+    uds_open: true
+    port: {dockervm_rpc_port}                                 # default is tcp connection
+    max_send_message_size: 100                  # MiB
+    max_recv_message_size: 100                  # MiB
+  log:
+    log_file: docker_vm.log
+    display_in_console: true
+    show_line: false
+    log_level: INFO
+  vm:
+    tx_size: 1000
+    user_num: 500
+    time_limit: 2                              # second
+  pprof:
+    pprof_enabled: false
+    pprof_port: 12655
