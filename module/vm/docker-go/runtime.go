@@ -59,7 +59,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		ContractVersion: contractId.ContractVersion,
 		Method:          method,
 		ByteCode:        nil,
-		Parameters:      argsMap,
+		Parameters:      parameters,
 	}
 
 	txPayload, _ := proto.Marshal(txRequest)
