@@ -224,9 +224,10 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 		Credential: &syscall.Credential{
 			Uid: uint32(user.Uid),
 		},
-		Cloneflags: syscall.CLONE_NEWIPC |
-			syscall.CLONE_NEWPID |
-			syscall.CLONE_NEWNET,
+		Cloneflags: syscall.CLONE_NEWPID,
+		//Cloneflags: syscall.CLONE_NEWIPC |
+		//	syscall.CLONE_NEWPID |
+		//	syscall.CLONE_NEWNET,
 	}
 
 	// start sandbox
@@ -257,11 +258,6 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 		s.logger.Errorf("tx error: [%s]", stderr.String())
 		err = errors.New(stderr.String())
 	}
-
-	//err = cmd.Process.Release()
-	//if err != nil {
-	//	return err
-	//}
 
 	// capture current process exit status
 	// code : 0 : process run successfully
