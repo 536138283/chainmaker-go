@@ -135,7 +135,7 @@ scheduler:
   rwset_log: false #whether log the txRWSet map in the debug mode
 
 docker:
-  open_dockervm: true
+  open_dockervm: {enalbe_dockervm}
   image_name: chainmaker-docker-go-image
   container_name: {docker_container_name}
   docker_container_dir: ../docker-go/dockercontainer

@@ -119,6 +119,8 @@ func (h *DMSHandler) afterFirstReady() error {
 	switch h.txRequest.Method {
 	case "init_contract":
 		return h.sendInit()
+	case "upgrade":
+		return h.sendInit()
 	case "invoke_contract":
 		return h.sendInvoke()
 	default:

@@ -5,6 +5,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
+	"errors"
 	"go.uber.org/zap"
 	"golang.org/x/sync/singleflight"
 	"io/ioutil"
@@ -79,7 +80,11 @@ func (cm *ContractManager) lookupContractFromDB(txId, contractName string) (stri
 
 	cm.scheduler.GetGetByteCodeReqCh() <- getByteCodeMsg
 
-	<-responseChan
+	returnMsg := <-responseChan
+
+	if returnMsg.Payload == nil {
+		return "", errors.New("fail to get bytecode")
+	}
 
 	// set contract mod
 	contractPath := filepath.Join(mountDir, contractName)

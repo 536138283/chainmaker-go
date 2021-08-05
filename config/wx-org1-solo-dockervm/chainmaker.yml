@@ -74,12 +74,12 @@ docker:
   docker_container_dir: ../module/vm/docker-go/dockercontainer
   host_mount_dir: ../module/vm/docker-go/mount  # mount point in chain maker
   docker_mount_dir: /mount                      # mount point in docker vm
-  clean_host_mount_dir: false                    #clean host mount directory when stop the chain maker
+  clean_host_mount_dir: true                    #clean host mount directory when stop the chain maker
   rpc:
     uds_open: true
     port: 12356                                 # default is tcp connection
-    max_send_message_size: 100                  # MiB
-    max_recv_message_size: 100                  # MiB
+    max_send_message_size: 10                  # MiB
+    max_recv_message_size: 10                  # MiB
   log:
     log_file: docker_vm.log
     display_in_console: true

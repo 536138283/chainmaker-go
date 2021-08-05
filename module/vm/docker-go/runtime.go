@@ -9,8 +9,13 @@ import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+)
+
+const (
+	MountContractDir = "contracts"
 )
 
 type CDMClient interface {
@@ -35,6 +40,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 	//log.Println("-----------")
 	//log.Println("start contract")
+	//log.Println("method: ", method)
 
 	// contract response
 	contractResult = &commonPb.ContractResult{
@@ -84,36 +90,81 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 		switch recvMsg.Type {
 		case protogo.CDMType_CDM_TYPE_GET_STATE:
-			value, err := txSimContext.Get(contractId.ContractName, recvMsg.Payload)
-			if err != nil {
-				return r.errorResult(contractResult, err, "fail to get state from sim context")
-			}
-			r.Log.Debug("get value: ", string(value))
 
-			r.Client.GetStateResponseSendCh() <- &protogo.CDMMessage{
+			getStateResponse := &protogo.CDMMessage{
 				TxId:    txId,
 				Type:    protogo.CDMType_CDM_TYPE_GET_STATE_RESPONSE,
-				Payload: value,
+				Payload: nil,
 			}
+
+			value, err := txSimContext.Get(contractId.ContractName, recvMsg.Payload)
+			if err != nil {
+				// if has error, return payload is nil
+				r.Log.Errorf("failt to get state from sim context: %s", err)
+				r.Client.GetStateResponseSendCh() <- getStateResponse
+				continue
+			}
+
+			r.Log.Debug("get value: ", string(value))
+			getStateResponse.Payload = value
+
+			r.Client.GetStateResponseSendCh() <- getStateResponse
 
 		case protogo.CDMType_CDM_TYPE_GET_BYTECODE:
-			contractName := string(recvMsg.Payload)
 
-			dockerConfig := localconf.ChainMakerConfig.DockerConfig
-			hostMountDir := dockerConfig.HostMountDir
-			contractPath := filepath.Join(hostMountDir, "contracts", contractName)
-
-			err := r.saveBytesToDisk(byteCode, contractPath)
-			if err != nil {
-				return r.errorResult(contractResult, err, "fail to save bytecode to disk")
-			}
-			r.Log.Debug("get contract path: ", contractPath)
-
-			r.Client.GetStateResponseSendCh() <- &protogo.CDMMessage{
+			getBytecodeResponse := &protogo.CDMMessage{
 				TxId:    txId,
 				Type:    protogo.CDMType_CDM_TYPE_GET_BYTECODE_RESPONSE,
 				Payload: nil,
 			}
+
+			contractFullName := string(recvMsg.Payload)             // contract1#1.0.0
+			contractName := strings.Split(contractFullName, "#")[0] // contract1
+
+			dockerConfig := localconf.ChainMakerConfig.DockerConfig
+			hostMountDir := dockerConfig.HostMountDir
+
+			contractDir := filepath.Join(hostMountDir, MountContractDir)
+			contractZipPath := filepath.Join(contractDir, fmt.Sprintf("%s.7z", contractName)) // contract1.7z
+			contractPathWithoutVersion := filepath.Join(contractDir, contractName)
+			contractPathWithVersion := filepath.Join(contractDir, contractFullName)
+
+			// save bytecode to disk
+			err := r.saveBytesToDisk(byteCode, contractZipPath)
+			if err != nil {
+				r.Log.Errorf("fail to save bytecode to disk: %s", err)
+				r.Client.GetStateResponseSendCh() <- getBytecodeResponse
+				continue
+			}
+			r.Log.Debug("write zip file: ", contractZipPath)
+
+			// extract 7z file
+			unzipCommand := fmt.Sprintf("7z e %s -o%s -y", contractZipPath, contractDir) // contract1
+			err = r.runCmd(unzipCommand)
+			if err != nil {
+				r.Log.Errorf("fail to extract contract: %s", err)
+				r.Client.GetStateResponseSendCh() <- getBytecodeResponse
+				continue
+			}
+			r.Log.Debug("extract zip file: ", contractZipPath)
+
+			// remove 7z file
+			err = os.Remove(contractZipPath)
+			if err != nil {
+				return r.errorResult(contractResult, err, "fail to remove zipped file")
+			}
+
+			// replace contract name to contractName:version
+			err = os.Rename(contractPathWithoutVersion, contractPathWithVersion)
+			if err != nil {
+				r.Log.Errorf("fail to rename original file name: %s, please make sure contract name should be same as zipped file", err)
+				r.Client.GetStateResponseSendCh() <- getBytecodeResponse
+				continue
+			}
+
+			getBytecodeResponse.Payload = []byte(contractFullName)
+
+			r.Client.GetStateResponseSendCh() <- getBytecodeResponse
 
 		case protogo.CDMType_CDM_TYPE_TX_RESPONSE:
 
@@ -159,10 +210,6 @@ func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, e
 	return contractResult
 }
 
-func (r *RuntimeInstance) ConstructContractKey(contractName, contractVersion string) string {
-	return contractName + ":" + contractVersion
-}
-
 func (r *RuntimeInstance) saveBytesToDisk(bytes []byte, newFilePath string) error {
 
 	f, err := os.Create(newFilePath)
@@ -182,4 +229,20 @@ func (r *RuntimeInstance) saveBytesToDisk(bytes []byte, newFilePath string) erro
 	}
 
 	return f.Sync()
+}
+
+// RunCmd exec cmd
+func (r *RuntimeInstance) runCmd(command string) error {
+	commands := strings.Split(command, " ")
+	cmd := exec.Command(commands[0], commands[1:]...)
+
+	if err := cmd.Start(); err != nil {
+		return err
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return err
+	}
+
+	return nil
 }

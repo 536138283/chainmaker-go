@@ -226,8 +226,6 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 		},
 		Cloneflags: syscall.CLONE_NEWPID,
 		//Cloneflags: syscall.CLONE_NEWIPC |
-		//	syscall.CLONE_NEWPID |
-		//	syscall.CLONE_NEWNET,
 	}
 
 	// start sandbox

@@ -58,8 +58,8 @@ const (
 	subscriberRateLimitDefaultTokenPerSecond  = 1000
 	subscriberRateLimitDefaultTokenBucketSize = 1000
 
-	maxRecvMessageSize = 100 * 1024 * 1024 // 100 MiB
-	maxSendMessageSize = 100 * 1024 * 1024 // 100 MiB
+	maxRecvMessageSize = 10 * 1024 * 1024 // 100 MiB
+	maxSendMessageSize = 10 * 1024 * 1024 // 100 MiB
 )
 
 // TLS Mode
