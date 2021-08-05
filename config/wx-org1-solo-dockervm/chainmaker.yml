@@ -83,7 +83,7 @@ docker:
   log:
     log_file: docker_vm.log
     display_in_console: true
-    show_line: false
+    show_line: true
     log_level: INFO
   vm:
     tx_size: 1000

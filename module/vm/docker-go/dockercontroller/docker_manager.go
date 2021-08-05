@@ -340,7 +340,7 @@ func (m *DockerManager) createContainer() error {
 			m.openPort: struct{}{},
 		},
 	}, &container.HostConfig{
-		//NetworkMode: "none",
+		NetworkMode: "none",
 		PortBindings: nat.PortMap{
 			m.openPort: []nat.PortBinding{
 				{

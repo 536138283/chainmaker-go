@@ -78,14 +78,14 @@ func (u *UsersManager) generateNewUser(newUserId int) error {
 	addUserCommand := fmt.Sprintf(AddUserFormat, newUserId, newUser.UserName)
 
 	if err := utils.RunCmd(addUserCommand); err != nil {
-		u.logger.Errorf("fail to run cmd : [%s]",addUserCommand)
+		u.logger.Errorf("fail to run cmd : [%s], [%s]", addUserCommand, err)
 		return err
 	}
 
 	// add created user to queue
 	err := u.userQueue.Enqueue(newUser)
 	if err != nil {
-		u.logger.Errorf("fail to add created user to queue, newUser : [%v]",newUser)
+		u.logger.Errorf("fail to add created user to queue, newUser : [%v]", newUser)
 		return err
 	}
 	return nil

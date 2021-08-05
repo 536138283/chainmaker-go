@@ -96,7 +96,7 @@ func (h *DMSHandler) handleCreated(registerMsg *SDKProtogo.DMSMessage) error {
 	}
 
 	if err := h.sendMessage(registeredMsg); err != nil {
-		h.logger.Errorf("fail to send message : [%v]",registeredMsg)
+		h.logger.Errorf("fail to send message : [%v]", registeredMsg)
 		return err
 	}
 	h.state = prepared
@@ -224,7 +224,7 @@ func (h *DMSHandler) handleCompleted(completedMsg *SDKProtogo.DMSMessage) error 
 		txResponse.WriteMap = responseWithWriteMap.WriteMap
 	} else {
 		txResponse.Code = protogo.ContractResultCode_FAIL
-		txResponse.Result = responseWithWriteMap.Response.Payload
+		txResponse.Result = []byte(responseWithWriteMap.Response.Message)
 		txResponse.Message = "Fail"
 		txResponse.WriteMap = nil
 	}
