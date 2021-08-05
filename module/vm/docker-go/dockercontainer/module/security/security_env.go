@@ -25,6 +25,7 @@ func (s *SecurityEnv) InitSecurityEnv() error {
 	}
 
 	if err := SetCGroup(); err != nil {
+		s.logger.Errorf("fail to setCGroup, err : [%s]",err)
 		return err
 	}
 
@@ -42,6 +43,7 @@ func (s *SecurityEnv) InitConfig() error {
 
 	// set mount sub directory: contracts, share, sock
 	contractDir := filepath.Join(mountDir, config.ContractsDir)
+
 	config.ContractBaseDir = contractDir
 
 	shareDir := filepath.Join(mountDir, config.ShareDir)
@@ -54,12 +56,14 @@ func (s *SecurityEnv) InitConfig() error {
 	timeLimitConfig := os.Getenv("TimeLimit")
 	timeLimit, err := strconv.Atoi(timeLimitConfig)
 	if err != nil {
+		s.logger.Errorf("fail to convert timeLimitConfig: [%s], err: [%s]",timeLimitConfig,err)
 		timeLimit = 2
 	}
 	config.SandBoxTimeout = timeLimit
 
 	// set dms directory
 	if err = s.setDMSDir(); err != nil {
+		s.logger.Errorf("fail to set dms directory, err: [%s]",err)
 		return err
 	}
 	s.logger.Debug("set dms dir: ", config.DMSDir)

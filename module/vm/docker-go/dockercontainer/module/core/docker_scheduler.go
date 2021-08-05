@@ -177,7 +177,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	handlerName := s.constructHandlerName(txRequest)
 	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName, txRequest.ContractName)
 	if err != nil {
-		s.logger.Errorf("fail to generate new handler: %s -- txId [%s]", err, txRequest.TxId)
+		s.logger.Errorf("fail to generate new handler: [%s] -- txId [%s]", err, txRequest.TxId)
 		_ = s.userController.FreeUser(user)
 		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
@@ -188,6 +188,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	// start sand box
 	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
 	if err != nil {
+		s.logger.Errorf("faild to start sand box : [%s] -- txId [%s]",err,txRequest.TxId)
 		s.handlerRegister.FreeHandler(handlerName)
 		_ = s.userController.FreeUser(user)
 		s.returnErrorTxResponse(txRequest.TxId, err)

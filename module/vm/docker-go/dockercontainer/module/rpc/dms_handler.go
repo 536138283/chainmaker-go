@@ -96,6 +96,7 @@ func (h *DMSHandler) handleCreated(registerMsg *SDKProtogo.DMSMessage) error {
 	}
 
 	if err := h.sendMessage(registeredMsg); err != nil {
+		h.logger.Errorf("fail to send message : [%v]",registeredMsg)
 		return err
 	}
 	h.state = prepared

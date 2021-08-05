@@ -39,12 +39,14 @@ func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 	// new docker manager to sandbox server
 	dmsRpcServer, err := rpc.NewDMSServer()
 	if err != nil {
+		managerLogger.Errorf("fail to init new DMSServer, err: [%s]",err)
 		return nil, err
 	}
 
 	// new chain maker to docker manager server
 	cdmRpcServer, err := rpc.NewCDMServer()
 	if err != nil {
+		managerLogger.Errorf("fail to init new DMSServer, err: [%s]",err)
 		return nil, err
 	}
 

@@ -369,6 +369,7 @@ func (m *DockerManager) createContainer() error {
 	}, nil, nil, m.containerName)
 
 	if err != nil {
+		m.Log.Errorf("create container [%s] failed",m.containerName)
 		return err
 	}
 
@@ -405,6 +406,7 @@ func (m *DockerManager) removeContainer() error {
 	return nil
 }
 
+
 // stop container
 func (m *DockerManager) stopContainer() error {
 	if err := m.client.ContainerStop(m.ctx, m.containerName, nil); err != nil {
@@ -431,6 +433,7 @@ func (m *DockerManager) InitMountDirectory() error {
 	contractDir := filepath.Join(mountDir, config.ContractsDir)
 	err = m.createDir(contractDir)
 	if err != nil {
+		m.Log.Errorf("fail to build image, err: [%s]",err)
 		return err
 	}
 	m.Log.Debug("set contract dir: ", contractDir)
@@ -438,6 +441,7 @@ func (m *DockerManager) InitMountDirectory() error {
 	shareDir := filepath.Join(mountDir, config.ShareDir)
 	err = m.createDir(shareDir)
 	if err != nil {
+		m.Log.Errorf("fail to display build process, err: [%s]",err)
 		return err
 	}
 	m.Log.Debug("set share dir: ", shareDir)
@@ -581,18 +585,24 @@ func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
 	return nil
 }
 
+
+
 func (m *DockerManager) createDir(directory string) error {
 	exist, err := m.exists(directory)
 	if err != nil {
+		m.Log.Errorf("fail to get container, err: [%s]",err)
 		return err
 	}
+
 
 	if !exist {
 		err := os.Mkdir(directory, 0755)
 		if err != nil {
+			m.Log.Errorf("fail to remove image, err: [%s]",err)
 			return err
 		}
 	}
+
 
 	return nil
 }

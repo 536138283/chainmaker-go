@@ -78,12 +78,14 @@ func (u *UsersManager) generateNewUser(newUserId int) error {
 	addUserCommand := fmt.Sprintf(AddUserFormat, newUserId, newUser.UserName)
 
 	if err := utils.RunCmd(addUserCommand); err != nil {
+		u.logger.Errorf("fail to run cmd : [%s]",addUserCommand)
 		return err
 	}
 
 	// add created user to queue
 	err := u.userQueue.Enqueue(newUser)
 	if err != nil {
+		u.logger.Errorf("fail to add created user to queue, newUser : [%v]",newUser)
 		return err
 	}
 	return nil
@@ -107,6 +109,7 @@ func (u *UsersManager) GetAvailableUser() (*security.User, error) {
 
 	user, err := u.userQueue.DequeueOrWaitForNextElement()
 	if err != nil {
+		u.logger.Errorf("fail to call DequeueOrWaitForNextElement")
 		return nil, err
 	}
 
@@ -118,6 +121,7 @@ func (u *UsersManager) GetAvailableUser() (*security.User, error) {
 func (u *UsersManager) FreeUser(user *security.User) error {
 	err := u.userQueue.Enqueue(user)
 	if err != nil {
+		u.logger.Errorf("fail to call Enqueue")
 		return err
 	}
 	u.logger.Debugf("free user: [%v]", user)
