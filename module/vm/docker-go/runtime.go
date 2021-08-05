@@ -49,15 +49,6 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Message: "",
 	}
 
-	// split args from parameters
-	// todo is ok?
-	argsMap := make(map[string]string)
-	for key, value := range parameters {
-		if strings.Contains(key, "arg") {
-			argsMap[key] = value
-		}
-	}
-
 	// construct cdm message
 	txRequest := &protogo.TxRequest{
 		TxId:            txId,

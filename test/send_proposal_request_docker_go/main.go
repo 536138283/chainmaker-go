@@ -76,7 +76,7 @@ func runTest() {
 		client apiPb.RpcNodeClient
 		sk3    crypto.PrivateKey
 		err    error
-		//txId   string
+		txId   string
 	)
 	// init
 	{
@@ -114,27 +114,23 @@ func runTest() {
 	//}
 
 	// 3) invoke 测试
-	//txId = testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
-	//time.Sleep(5 * time.Second)
+	txId = testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
+	time.Sleep(5 * time.Second)
 
 	// 4) query 测试
 	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
-	//txId = testInvokeFactSave(sk3, &client, CHAIN1)
-	//time.Sleep(2 * time.Second)
-	//testWaitTx(sk3, &client, CHAIN1, txId)
-
 	// 4) 根据TxId查交易
-	//testGetTxByTxId(sk3, &client, txId, CHAIN1)
+	testGetTxByTxId(sk3, &client, txId, CHAIN1)
 
 	// 5) 根据区块高度查区块，若height为-1，表示查当前区块
-	//hash := testGetBlockByHeight(sk3, &client, CHAIN1, -1)
+	hash := testGetBlockByHeight(sk3, &client, CHAIN1, -1)
 
 	// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
-	//testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, -1)
+	testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, -1)
 	//
 	// 7) 根据区块哈希查区块
-	//testGetBlockByHash(sk3, &client, CHAIN1, hash)
+	testGetBlockByHash(sk3, &client, CHAIN1, hash)
 	//
 	// 8) 根据区块哈希查区块（包含读写集）
 	//testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
@@ -152,11 +148,11 @@ func runTest() {
 	//testGetChainInfo(sk3, &client, CHAIN1)
 	//
 	//// 13) 合约升级
-	testUpgrade(sk3, &client, CHAIN1)
-	time.Sleep(4 * time.Second)
+	//testUpgrade(sk3, &client, CHAIN1)
+	//time.Sleep(4 * time.Second)
 	////
 	////// 14) 合约执行
-	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
+	//testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
 	//// 16) 功能测试
 	//testInvokeFunctionalVerify(sk3, &client, CHAIN1)
