@@ -3,7 +3,6 @@ package main
 import (
 	"chainmaker.org/chainmaker-go/common/random/uuid"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
-	"chainmaker.org/chainmaker-go/logger"
 	"context"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
@@ -18,9 +17,9 @@ import (
 const (
 	maxRecvMessageSize = 100 * 1024 * 1024 // 100 MiB
 	maxSendMessageSize = 100 * 1024 * 1024 // 100 MiB
-	Port               = ":12355"
-	ChanSize           = 1000
-	StateChanSize      = 1000
+	port               = ":12355"
+	chanSize           = 1000
+	//stateChanSize      = 1000
 )
 
 var (
@@ -87,7 +86,7 @@ func testDeployContract(client *CDMClient) {
 
 	recvMsg, _ := client.stream.Recv()
 	var result protogo.TxResponse
-	err = proto.Unmarshal(recvMsg.Payload, &result)
+	_ = proto.Unmarshal(recvMsg.Payload, &result)
 	fmt.Printf("\n============ create contract result ============\n [%s]\n", result.String())
 
 }
@@ -143,14 +142,14 @@ func contractCreateMsg(txId string) *protogo.CDMMessage {
 
 	// construct cdm message
 	params := make(map[string]string)
-	ContractBin, _ := ioutil.ReadFile(ContractPath)
+	contractBin, _ := ioutil.ReadFile(ContractPath)
 
 	txRequest := &protogo.TxRequest{
 		TxId:            txId,
 		ContractName:    ContractName,
 		ContractVersion: "1.0.0",
 		Method:          "init_contract",
-		ByteCode:        ContractBin,
+		ByteCode:        contractBin,
 		Parameters:      params,
 	}
 
@@ -208,7 +207,7 @@ func NewClientConn(udsOpen bool) (*grpc.ClientConn, error) {
 	if udsOpen {
 
 		dialOpts = append(dialOpts, grpc.WithContextDialer(func(ctx context.Context, sock string) (net.Conn, error) {
-			unixAddress, err := net.ResolveUnixAddr("unix", sock)
+			unixAddress, _ := net.ResolveUnixAddr("unix", sock)
 			conn, err := net.DialUnix("unix", nil, unixAddress)
 			return conn, err
 		}))
@@ -217,10 +216,9 @@ func NewClientConn(udsOpen bool) (*grpc.ClientConn, error) {
 
 		return grpc.DialContext(context.Background(), sockAddress, dialOpts...)
 
-	} else {
-
-		return grpc.Dial(Port, dialOpts...)
 	}
+
+	return grpc.Dial(port, dialOpts...)
 
 }
 
@@ -254,15 +252,13 @@ type CDMClient struct {
 
 	stream protogo.CDMRpc_CDMCommunicateClient
 
-	logger *logger.CMLogger
-
 	stop chan bool
 }
 
 func NewCDMClient(stream protogo.CDMRpc_CDMCommunicateClient) *CDMClient {
 
 	return &CDMClient{
-		txSendCh:  make(chan *protogo.CDMMessage, ChanSize),
+		txSendCh:  make(chan *protogo.CDMMessage, chanSize),
 		recvChMap: make(map[string]chan *protogo.CDMMessage),
 		lock:      sync.Mutex{},
 		stream:    stream,

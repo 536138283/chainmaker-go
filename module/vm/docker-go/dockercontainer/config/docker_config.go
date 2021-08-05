@@ -3,26 +3,41 @@ package config
 const (
 
 	// CGroupRoot cgroup location is not allow user to change
-	CGroupRoot      = "/sys/fs/cgroup/memory/chainmaker"
-	ProcsFile       = "cgroup.procs"
+	CGroupRoot = "/sys/fs/cgroup/memory/chainmaker"
+	// ProcsFile process file
+	ProcsFile = "cgroup.procs"
+	// MemoryLimitFile memory limit file
 	MemoryLimitFile = "memory.limit_in_bytes"
-	SwapLimitFile   = "memory.swappiness"
-	RssLimit        = 500 // 10 MB
+	// SwapLimitFile swap setting file
+	SwapLimitFile = "memory.swappiness"
+	// RssLimit rss limit file
+	RssLimit = 500 // 10 MB
 
-	DMSDir      = "/dms"
+	// DMSDir docker manager sandbox dir
+	DMSDir = "/dms"
+	// DMSSockPath docker manager sandbox domain socket path
 	DMSSockPath = "dms.sock"
 
+	// ContractsDir dir save executable contract
 	ContractsDir = "contracts"
-	ShareDir     = "share"
-	SockDir      = "sock"
-	SockName     = "cdm.sock"
+	// ShareDir dir save log
+	ShareDir = "share"
+	// SockDir dir save domain socket file
+	SockDir = "sock"
+	// SockName domain socket file name
+	SockName = "cdm.sock"
 )
 
 var (
+	// ContractBaseDir contract base directory, save here for easy use
 	ContractBaseDir string
-	ShareBaseDir    string
-	SockBaseDir     string
-	SandBoxTimeout  = 2
+	// ShareBaseDir share base directory
+	ShareBaseDir string
+	// SockBaseDir domain socket directory
+	SockBaseDir string
+	// SandBoxTimeout sandbox timeout
+	SandBoxTimeout = 2
 
+	// EnablePProf enable pprof
 	EnablePProf = false
 )

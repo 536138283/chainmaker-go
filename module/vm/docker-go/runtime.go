@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	MountContractDir = "contracts"
+	mountContractDir = "contracts"
 )
 
 type CDMClient interface {
@@ -115,7 +115,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			dockerConfig := localconf.ChainMakerConfig.DockerConfig
 			hostMountDir := dockerConfig.HostMountDir
 
-			contractDir := filepath.Join(hostMountDir, MountContractDir)
+			contractDir := filepath.Join(hostMountDir, mountContractDir)
 			contractZipPath := filepath.Join(contractDir, fmt.Sprintf("%s.7z", contractName)) // contract1.7z
 			contractPathWithoutVersion := filepath.Join(contractDir, contractName)
 			contractPathWithVersion := filepath.Join(contractDir, contractFullName)
@@ -208,7 +208,7 @@ func (r *RuntimeInstance) saveBytesToDisk(bytes []byte, newFilePath string) erro
 		return err
 	}
 	defer func(f *os.File) {
-		err := f.Close()
+		err = f.Close()
 		if err != nil {
 			return
 		}

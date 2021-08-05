@@ -64,7 +64,7 @@ type DockerManager struct {
 func NewDockerManager(chainId string) *DockerManager {
 
 	config := localconf.ChainMakerConfig
-	Logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
+	logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
 
 	// init docker manager
 	newDockerManager := &DockerManager{
@@ -72,7 +72,7 @@ func NewDockerManager(chainId string) *DockerManager {
 		AttachStderr: true,
 		ShowStdout:   true,
 		ShowStderr:   true,
-		Log:          Logger,
+		Log:          logger,
 		CDMState:     false,
 		lock:         sync.Mutex{},
 	}
@@ -80,7 +80,7 @@ func NewDockerManager(chainId string) *DockerManager {
 	// validate settings
 	valid, err := newDockerManager.validateConfig(config)
 	if err != nil || !valid {
-		Logger.Errorf("fail to init docker manager, please check the docker config, %s", err)
+		logger.Errorf("fail to init docker manager, please check the docker config, %s", err)
 		return nil
 	}
 
@@ -118,7 +118,7 @@ func NewDockerManager(chainId string) *DockerManager {
 	// init mount directory and subdirectory
 	err = newDockerManager.InitMountDirectory()
 	if err != nil {
-		Logger.Errorf("fail to init mount directory: %s", err)
+		logger.Errorf("fail to init mount directory: %s", err)
 		return nil
 	}
 
@@ -187,7 +187,12 @@ func (m *DockerManager) StartContainer() error {
 	m.Log.Info("docker vm start success :)")
 
 	// display container info in the console
-	go m.displayInConsole(m.containerName)
+	go func() {
+		err := m.displayInConsole(m.containerName)
+		if err != nil {
+			return
+		}
+	}()
 
 	return nil
 }
@@ -198,7 +203,7 @@ func (m *DockerManager) StopAndRemoveVM() error {
 
 	removeHostMountDir := localconf.ChainMakerConfig.DockerConfig.CleanHostMountDir
 	if removeHostMountDir {
-		err := os.RemoveAll(m.sourceDir)
+		err = os.RemoveAll(m.sourceDir)
 		if err != nil {
 			return err
 		}
@@ -262,10 +267,10 @@ func (m *DockerManager) buildImage(dockerFolderRelPath string) error {
 	if err != nil {
 		return err
 	}
-	defer func(Body io.ReadCloser) {
-		err := Body.Close()
+	defer func(body io.ReadCloser) {
+		err = body.Close()
 		if err != nil {
-
+			return
 		}
 	}(resp.Body)
 
@@ -369,7 +374,7 @@ func (m *DockerManager) createContainer() error {
 	}, nil, nil, m.containerName)
 
 	if err != nil {
-		m.Log.Errorf("create container [%s] failed",m.containerName)
+		m.Log.Errorf("create container [%s] failed", m.containerName)
 		return err
 	}
 
@@ -400,19 +405,12 @@ func (m *DockerManager) getContainer(all bool) (bool, error) {
 // remove container
 func (m *DockerManager) removeContainer() error {
 	m.Log.Infof("Removing container [%s] ...", m.containerName)
-	if err := m.client.ContainerRemove(m.ctx, m.containerName, types.ContainerRemoveOptions{}); err != nil {
-		return err
-	}
-	return nil
+	return m.client.ContainerRemove(m.ctx, m.containerName, types.ContainerRemoveOptions{})
 }
-
 
 // stop container
 func (m *DockerManager) stopContainer() error {
-	if err := m.client.ContainerStop(m.ctx, m.containerName, nil); err != nil {
-		return err
-	}
-	return nil
+	return m.client.ContainerStop(m.ctx, m.containerName, nil)
 }
 
 // InitMountDirectory init mount directory and sub directories
@@ -433,7 +431,7 @@ func (m *DockerManager) InitMountDirectory() error {
 	contractDir := filepath.Join(mountDir, config.ContractsDir)
 	err = m.createDir(contractDir)
 	if err != nil {
-		m.Log.Errorf("fail to build image, err: [%s]",err)
+		m.Log.Errorf("fail to build image, err: [%s]", err)
 		return err
 	}
 	m.Log.Debug("set contract dir: ", contractDir)
@@ -441,7 +439,7 @@ func (m *DockerManager) InitMountDirectory() error {
 	shareDir := filepath.Join(mountDir, config.ShareDir)
 	err = m.createDir(shareDir)
 	if err != nil {
-		m.Log.Errorf("fail to display build process, err: [%s]",err)
+		m.Log.Errorf("fail to display build process, err: [%s]", err)
 		return err
 	}
 	m.Log.Debug("set share dir: ", shareDir)
@@ -573,7 +571,7 @@ func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
 	}
 
 	errLine := &ErrorLine{}
-	json.Unmarshal([]byte(lastLine), errLine)
+	_ = json.Unmarshal([]byte(lastLine), errLine)
 	if errLine.Error != "" {
 		return errors.New(errLine.Error)
 	}
@@ -585,24 +583,20 @@ func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
 	return nil
 }
 
-
-
 func (m *DockerManager) createDir(directory string) error {
 	exist, err := m.exists(directory)
 	if err != nil {
-		m.Log.Errorf("fail to get container, err: [%s]",err)
+		m.Log.Errorf("fail to get container, err: [%s]", err)
 		return err
 	}
-
 
 	if !exist {
 		err := os.Mkdir(directory, 0755)
 		if err != nil {
-			m.Log.Errorf("fail to remove image, err: [%s]",err)
+			m.Log.Errorf("fail to remove image, err: [%s]", err)
 			return err
 		}
 	}
-
 
 	return nil
 }
@@ -626,30 +620,27 @@ func (m *DockerManager) validateConfig(config *localconf.CMConfig) (bool, error)
 	if dockerConfig.DockerContainerDir == "" {
 		m.Log.Errorf("doesn't set docker container path")
 		return false, nil
-	} else {
-		dockerContainerDir = dockerConfig.DockerContainerDir
 	}
+	dockerContainerDir = dockerConfig.DockerContainerDir
 
 	if dockerConfig.HostMountDir == "" {
 		m.Log.Errorf("doesn't set host mount directory path")
 		return false, nil
-	} else {
-		sourceDir = dockerConfig.HostMountDir
-		if !filepath.IsAbs(sourceDir) {
-			sourceDir, err = filepath.Abs(sourceDir)
-			if err != nil {
-				m.Log.Errorf("doesn't set host mount directory path correctly")
-				return false, err
-			}
+	}
+	sourceDir = dockerConfig.HostMountDir
+	if !filepath.IsAbs(sourceDir) {
+		sourceDir, err = filepath.Abs(sourceDir)
+		if err != nil {
+			m.Log.Errorf("doesn't set host mount directory path correctly")
+			return false, err
 		}
 	}
 
 	if dockerConfig.DockerMountDir == "" {
 		m.Log.Errorf("doesn't set docker mount directory path")
 		return false, nil
-	} else {
-		targetDir = dockerConfig.DockerMountDir
 	}
+	targetDir = dockerConfig.DockerMountDir
 
 	if dockerConfig.ImageName == "" {
 		m.Log.Infof("image name doesn't set, set as default: chainmaker-docker-go-image")

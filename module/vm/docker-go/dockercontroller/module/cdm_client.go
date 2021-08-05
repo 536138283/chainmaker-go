@@ -210,7 +210,7 @@ func NewClientConn() (*grpc.ClientConn, error) {
 	if dockerConfig.DockerRpcConfig.UdsOpen {
 
 		dialOpts = append(dialOpts, grpc.WithContextDialer(func(ctx context.Context, sock string) (net.Conn, error) {
-			unixAddress, err := net.ResolveUnixAddr("unix", sock)
+			unixAddress, _ := net.ResolveUnixAddr("unix", sock)
 			conn, err := net.DialUnix("unix", nil, unixAddress)
 			return conn, err
 		}))
@@ -219,11 +219,10 @@ func NewClientConn() (*grpc.ClientConn, error) {
 
 		return grpc.DialContext(context.Background(), sockAddress, dialOpts...)
 
-	} else {
-		port := ":" + strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
-
-		return grpc.Dial(port, dialOpts...)
 	}
+	port := ":" + strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
+
+	return grpc.Dial(port, dialOpts...)
 
 }
 
