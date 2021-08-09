@@ -97,6 +97,7 @@ func New(config *ConsensusABFTImplConfig) (*ConsensusABFTImpl, error) {
 	consensus.ledgerCache = config.LedgerCache
 	consensus.msgBuffer = make([]*abftpb.ABFTMessageReq, 0)
 	consensus.msgSender = newMsgSender(logger, consensus.Id)
+	consensus.closeC = make(chan struct{})
 
 	height, err := config.LedgerCache.CurrentHeight()
 	if err != nil {
@@ -151,8 +152,9 @@ func (consensus *ConsensusABFTImpl) Stop() error {
 	consensus.Lock()
 	defer consensus.Unlock()
 
+	consensus.wal.Sync()
 	close(consensus.closeC)
-	consensus.logger.Infof("[%s] stopped", consensus.Id)
+	consensus.logger.Infof("[%s](%d) stopped", consensus.Id, consensus.height)
 	return nil
 }
 
