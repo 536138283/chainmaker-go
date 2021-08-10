@@ -292,10 +292,15 @@ func (consensus *ConsensusABFTImpl) onBlockInfo(message *msgbus.Message) {
 			consensus.Id, consensus.height, err)
 	}
 
-	consensus.msgSender.cleanHeight(consensus.height)
-
 	consensus.height = blockInfo.Block.Header.BlockHeight + 1
 	nodeList, _ := GetNodeListFromConfig(consensus.chainConf.ChainConfig())
+
+	for _, id := range nodeList {
+		if id == consensus.Id {
+			consensus.msgSender.cleanHeight(consensus.height - 1)
+		}
+	}
+
 	cfg := &Config{
 		logger: consensus.logger,
 		height: consensus.height,
