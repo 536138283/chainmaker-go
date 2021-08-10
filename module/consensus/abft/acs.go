@@ -68,27 +68,32 @@ func (acs *ACS) InputRBC(val []byte) error {
 	acs.Lock()
 	defer acs.Unlock()
 	acs.logger.Debugf("[%s](%d-%s) ACS input RBC len: %v", acs.nodeID, acs.height, acs.id, len(val))
-	rbc, ok := acs.rbcInstances[acs.nodeID]
-	if !ok {
-		return fmt.Errorf("[%s](%d) cannot find rbc instance: %s", acs.nodeID, acs.height, acs.nodeID)
-	}
+	for _, id := range acs.nodes {
+		if id == acs.nodeID {
 
-	if err := rbc.Input(val); err != nil {
-		return err
-	}
+			rbc, ok := acs.rbcInstances[acs.nodeID]
+			if !ok {
+				return fmt.Errorf("[%s](%d) cannot find rbc instance: %s", acs.nodeID, acs.height, acs.nodeID)
+			}
 
-	acs.appendMessages(rbc.Messages())
+			if err := rbc.Input(val); err != nil {
+				return err
+			}
 
-	if output := rbc.Output(); output != nil {
-		acs.handleRBCOutput(acs.nodeID, output)
-		// acs.rbcResults[acs.nodeID] = output
-		// acs.processBBA(acs.nodeID, func(bba *BBA) error {
-		//   if bba.AcceptInput() {
-		//     return bba.Input(true)
-		//   }
+			acs.appendMessages(rbc.Messages())
 
-		//   return nil
-		// })
+			if output := rbc.Output(); output != nil {
+				acs.handleRBCOutput(acs.nodeID, output)
+				// acs.rbcResults[acs.nodeID] = output
+				// acs.processBBA(acs.nodeID, func(bba *BBA) error {
+				//   if bba.AcceptInput() {
+				//     return bba.Input(true)
+				//   }
+
+				//   return nil
+				// })
+			}
+		}
 	}
 
 	return nil
