@@ -118,31 +118,36 @@ func New(config *ConsensusABFTImplConfig) (*ConsensusABFTImpl, error) {
 // Start implements the Stop method of ConsensusEngine interface
 // and starts the abft instance.
 func (consensus *ConsensusABFTImpl) Start() error {
-	consensus.logger.Infof("[%s] started", consensus.Id)
 
 	// consensus.acsInstances = make(map[int64]*ACS)
 	nodeList, _ := GetNodeListFromConfig(consensus.chainConf.ChainConfig())
-	cfg := &Config{
-		logger: consensus.logger,
-		height: consensus.height,
-		id:     consensus.Id,
-		nodeID: consensus.Id,
-		nodes:  nodeList,
-	}
-	cfg.fillWithDefaults()
-	consensus.acs = NewACS(cfg)
 
-	go consensus.run()
-	err := consensus.replayWal()
-	if err != nil {
-		return err
-	}
+	for _, id := range nodeList {
+		if id == consensus.Id {
+			cfg := &Config{
+				logger: consensus.logger,
+				height: consensus.height,
+				id:     consensus.Id,
+				nodeID: consensus.Id,
+				nodes:  nodeList,
+			}
+			cfg.fillWithDefaults()
+			consensus.acs = NewACS(cfg)
+			go consensus.run()
+			err := consensus.replayWal()
+			if err != nil {
+				return err
+			}
 
-	consensus.sendPackageSingal(consensus.height)
-	consensus.msgbus.Register(msgbus.ProposedBlock, consensus)
-	consensus.msgbus.Register(msgbus.VerifyResult, consensus)
-	consensus.msgbus.Register(msgbus.BlockInfo, consensus)
-	consensus.msgbus.Register(msgbus.RecvConsensusMsg, consensus)
+			consensus.sendPackageSingal(consensus.height)
+			consensus.msgbus.Register(msgbus.ProposedBlock, consensus)
+			consensus.msgbus.Register(msgbus.VerifyResult, consensus)
+			consensus.msgbus.Register(msgbus.BlockInfo, consensus)
+			consensus.msgbus.Register(msgbus.RecvConsensusMsg, consensus)
+
+			consensus.logger.Infof("[%s] started", consensus.Id)
+		}
+	}
 	return nil
 }
 
