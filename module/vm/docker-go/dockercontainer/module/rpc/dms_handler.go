@@ -219,7 +219,7 @@ func (h *DMSHandler) handleCompleted(completedMsg *SDKProtogo.DMSMessage) error 
 
 	if responseWithWriteMap.Response.Status == 200 {
 		txResponse.Code = protogo.ContractResultCode_OK
-		txResponse.Result = responseWithWriteMap.Response.Payload
+		txResponse.Result = []byte(responseWithWriteMap.Response.Message)
 		txResponse.Message = "Success"
 		txResponse.WriteMap = responseWithWriteMap.WriteMap
 	} else {

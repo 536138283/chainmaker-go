@@ -220,10 +220,10 @@ func (m *DockerManager) StopAndRemoveVM() error {
 		return err
 	}
 
-	err = m.removeImage()
-	if err != nil {
-		return err
-	}
+	//err = m.removeImage()
+	//if err != nil {
+	//	return err
+	//}
 
 	m.Log.Info("stop and remove docker vm [%s]", m.containerName)
 	return nil
