@@ -10,6 +10,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"errors"
+	"fmt"
 	"go.uber.org/zap"
 	"os"
 	"os/exec"
@@ -188,7 +189,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	// start sand box
 	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
 	if err != nil {
-		s.logger.Errorf("faild to start sand box : [%s] -- txId [%s]",err,txRequest.TxId)
+		s.logger.Errorf("faild to start sand box : [%s] -- txId [%s]", err, txRequest.TxId)
 		s.handlerRegister.FreeHandler(handlerName)
 		_ = s.userController.FreeUser(user)
 		s.returnErrorTxResponse(txRequest.TxId, err)
@@ -212,12 +213,14 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, handlerName, contractPath string) error {
 	var err error           // sandbox global error
 	var stderr bytes.Buffer // used to capture the error message from sandbox
+	var stdout bytes.Buffer
 
 	cmd := exec.Cmd{
 		Path: contractPath,
 		Args: []string{user.SockPath, handlerName, contractName},
 	}
 	cmd.Stderr = &stderr
+	cmd.Stdout = &stdout
 
 	// set namespace, these settings just working in linux
 	// but it doens't affect running, cause it will put into docker to run
@@ -226,7 +229,6 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 			Uid: uint32(user.Uid),
 		},
 		Cloneflags: syscall.CLONE_NEWPID,
-		//Cloneflags: syscall.CLONE_NEWIPC |
 	}
 
 	// start sandbox
@@ -256,6 +258,7 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 		s.logger.Errorf("fail to wait tx end: txId [%s], err [%s]", txId, err)
 		s.logger.Errorf("tx error: [%s]", stderr.String())
 		err = errors.New(stderr.String())
+		fmt.Println(stdout.String())
 	}
 
 	// capture current process exit status

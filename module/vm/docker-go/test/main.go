@@ -30,7 +30,7 @@ var (
 
 func InitTest() {
 	ContractPath = "/home/jianan/Documents/workspace/chainmaker-go/test/wasm/docker-go-contract20_big"
-	ContractName = "contract20"
+	ContractName = "contract1p2"
 	MountSockPath = "/home/jianan/Documents/workspace/chainmaker-go/module/vm/docker-go/mount/sock/cdm.sock"
 }
 
@@ -52,9 +52,9 @@ func main() {
 	}
 
 	// 2) 批量测试
-	txNum := 100
+	txNum := 1000
 
-	for i := 0; i < 500; i++ {
+	for i := 0; i < 50; i++ {
 		testPerformance(client, txNum, i)
 		time.Sleep(50 * time.Microsecond)
 	}

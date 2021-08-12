@@ -16,6 +16,13 @@ func WriteToFile(path string, value int) error {
 	return nil
 }
 
+func WriteToFIle(path, info string) error {
+	if err := ioutil.WriteFile(path, []byte(info), 0755); err != nil {
+		return err
+	}
+	return nil
+}
+
 // RunCmd exec cmd
 func RunCmd(command string) error {
 	commands := strings.Split(command, " ")
