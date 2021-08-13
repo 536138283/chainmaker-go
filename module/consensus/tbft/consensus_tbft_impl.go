@@ -1443,8 +1443,6 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 	if err != nil {
 		return err
 	}
-	consensus.logger.Infof("[%s] replayWal lastIndex of wal: %d", consensus.Id, lastIndex)
-
 	data, err := consensus.wal.Read(lastIndex)
 	if err == wal.ErrNotFound {
 		consensus.logger.Infof("[%s] replayWal can't found log entry in wal", consensus.Id)
@@ -1457,6 +1455,9 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 
 	entry := &tbftpb.WalEntry{}
 	mustUnmarshal(data, entry)
+
+	consensus.heightFirstIndex = entry.HeightFirstIndex
+	consensus.logger.Infof("[%s] replayWal lastIndex of wal: %d and HeightFirstIndex of wal: %d", consensus.Id, lastIndex, entry.HeightFirstIndex)
 
 	height := entry.Height
 	if currentHeight < height-1 {
@@ -1472,7 +1473,7 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 		// replay wal log
 		consensus.enterNewHeight(height, true)
 		for i := entry.HeightFirstIndex; i <= lastIndex; i++ {
-			consensus.logger.Debugf("[%d] replay entry type: %s, Data.len: %d", consensus.Id, entry.Type, len(entry.Data))
+			consensus.logger.Debugf("[%s] replay entry type: %s, Data.len: %d", consensus.Id, entry.Type, len(entry.Data))
 			switch entry.Type {
 			case tbftpb.WalEntryType_TimeoutEntry:
 				timeoutInfoProto := new(tbftpb.TimeoutInfo)
