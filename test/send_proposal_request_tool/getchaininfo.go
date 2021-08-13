@@ -8,10 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	discoveryPb "chainmaker.org/chainmaker-go/pb/protogo/discovery"
-	"encoding/json"
 	"fmt"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	discoveryPb "chainmaker.org/chainmaker/pb-go/discovery"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
@@ -34,13 +35,12 @@ func getChainInfo() error {
 	// 构造Payload
 	pairs := []*commonPb.KeyValuePair{}
 
-	payloadBytes, err := constructPayload(commonPb.ContractName_SYSTEM_CONTRACT_QUERY.String(), "GET_CHAIN_INFO", pairs)
+	payloadBytes, err := constructQueryPayload(chainId, syscontract.SystemContract_CHAIN_QUERY.String(), "GET_CHAIN_INFO", pairs)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_QUERY_SYSTEM_CONTRACT,
-		chainId, "", payloadBytes)
+	resp, err = proposalRequest(sk3, client, payloadBytes)
 	if err != nil {
 		return err
 	}
@@ -56,11 +56,7 @@ func getChainInfo() error {
 		ContractResultMessage: resp.ContractResult.Message,
 		ChainInfo:             chainInfo,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }

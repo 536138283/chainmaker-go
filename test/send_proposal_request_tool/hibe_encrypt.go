@@ -8,15 +8,15 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"chainmaker.org/chainmaker-go/common/crypto"
-	localhibe "chainmaker.org/chainmaker-go/common/crypto/hibe"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"encoding/json"
 	"fmt"
-	"github.com/samkumar/hibe"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"strings"
+
+	"chainmaker.org/chainmaker/common/crypto"
+	"chainmaker.org/chainmaker/common/crypto/hibe"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"github.com/spf13/cobra"
 )
 
 func HibeEncryptCMD() *cobra.Command {
@@ -82,7 +82,7 @@ func constructHibeTxPayloadPairsExc() (string, commonPb.TxStatusCode, string) {
 		return result_output, 1, fmt.Sprintf("invalid symKeyType, %s", symKeyType)
 	}
 
-	msg, err := localhibe.EncryptHibeMsg([]byte(hibePlaintext), receiverIds, paramsList, keyType)
+	msg, err := hibe.EncryptHibeMsg([]byte(hibePlaintext), receiverIds, paramsList, keyType)
 	if err != nil {
 		return result_output, 1, fmt.Sprintf("EncryptHibeMsg failure!, err: %s", err)
 	}
@@ -110,10 +110,6 @@ func constructHibeTxPayloadPairs() error {
 		HibeExecMsg:           hibeMsgStr,
 	}
 
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 	return nil
 }

@@ -275,11 +275,6 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 
 	s.exitCh <- exitStatus
 
-	//if status.Signaled() {
-	//	exitStatus.Signal = status.Signal()
-	//	return fmt.Errorf("fail to run child process with kill signal")
-	//}
-
 	return err
 }
 

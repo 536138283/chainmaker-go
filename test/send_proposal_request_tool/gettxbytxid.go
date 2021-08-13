@@ -8,9 +8,10 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"encoding/json"
 	"fmt"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
@@ -34,22 +35,22 @@ func GetTxByTxIdCMD() *cobra.Command {
 
 func getTxByTxId() error {
 	// 构造Payload
-	pair := &commonPb.KeyValuePair{Key: "txId", Value: txId}
+	pair := &commonPb.KeyValuePair{Key: "txId", Value: []byte(txId)}
 	var pairs []*commonPb.KeyValuePair
 	pairs = append(pairs, pair)
 
-	payloadBytes, err := constructPayload(commonPb.ContractName_SYSTEM_CONTRACT_QUERY.String(), "GET_TX_BY_TX_ID", pairs)
+	payloadBytes, err := constructQueryPayload(chainId, syscontract.SystemContract_CHAIN_QUERY.String(), "GET_TX_BY_TX_ID", pairs)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_QUERY_SYSTEM_CONTRACT,
-		chainId, txId, payloadBytes)
+	resp, err = proposalRequest(sk3, client, payloadBytes)
 	if err != nil {
 		return err
 	}
-
-	fmt.Printf("send tx resp: code:%d, msg:%s\n", resp.Code, resp.Message)
+	log.DebugDynamic(func() string {
+		return fmt.Sprintf("send tx resp: code:%d, msg:%s", resp.Code, resp.Message)
+	})
 
 	transactionInfo := &commonPb.TransactionInfo{}
 	if err = proto.Unmarshal(resp.ContractResult.Result, transactionInfo); err != nil {
@@ -62,11 +63,7 @@ func getTxByTxId() error {
 		ContractResultMessage: resp.ContractResult.Message,
 		TransactionInfo:       transactionInfo,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }

@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/hibe"
 	"chainmaker.org/chainmaker-go/tools/cmc/key"
 	"chainmaker.org/chainmaker-go/tools/cmc/paillier"
+	"chainmaker.org/chainmaker-go/tools/cmc/payload"
 	"chainmaker.org/chainmaker-go/tools/cmc/query"
 )
 
@@ -40,6 +41,7 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(paillier.PaillierCMD())
 	mainCmd.AddCommand(archive.NewArchiveCMD())
 	mainCmd.AddCommand(query.NewQueryOnChainCMD())
+	mainCmd.AddCommand(payload.NewPayloadCMD())
 	mainCmd.AddCommand(console.NewConsoleCMD(mainCmd))
 	mainCmd.AddCommand(bulletproofs.BulletproofsCMD())
 	mainCmd.AddCommand(tee.NewTeeCMD())

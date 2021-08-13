@@ -27,10 +27,13 @@ test/*/main
 build
 pkg
 tools
+tools/cmc/cmc
 !tools/
 /data/
 /log/
 .DS_Store
 /module/vm/test/*/tmp/
 nohup.out
+main/chainmaker
+vendor
 /module/vm/docker-go/dockercontainer/vendor/

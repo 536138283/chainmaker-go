@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
+	"chainmaker.org/chainmaker/pb-go/common"
 )
 
 func CheckProposalRequestResp(resp *common.TxResponse, needContractResult bool) error {
@@ -21,7 +21,7 @@ func CheckProposalRequestResp(resp *common.TxResponse, needContractResult bool) 
 		return fmt.Errorf("contract result is nil")
 	}
 
-	if resp.ContractResult != nil && resp.ContractResult.Code != common.ContractResultCode_OK {
+	if resp.ContractResult != nil && resp.ContractResult.Code != 0 {
 		return errors.New(resp.ContractResult.Message)
 	}
 

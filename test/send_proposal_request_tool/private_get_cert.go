@@ -8,9 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	"encoding/json"
 	"fmt"
+
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
+
 	"github.com/spf13/cobra"
 )
 
@@ -36,9 +38,9 @@ func getCert() error {
 		"enclave_id": enclaveId,
 	})
 
-	payloadBytes, err := constructQueryPayload(
-		common.ContractName_SYSTEM_CONTRACT_PRIVATE_COMPUTE.String(),
-		common.PrivateComputeContractFunction_GET_CA_CERT.String(),
+	payloadBytes, err := constructQueryPayload(chainId,
+		syscontract.SystemContract_PRIVATE_COMPUTE.String(),
+		syscontract.PrivateComputeFunction_GET_CA_CERT.String(),
 		pairs,
 	)
 
@@ -46,13 +48,13 @@ func getCert() error {
 		return fmt.Errorf("marshal get data payload failed, %s", err.Error())
 	}
 
-	resp, err = proposalRequest(sk3, client, common.TxType_QUERY_SYSTEM_CONTRACT, chainId, "", payloadBytes)
+	resp, err = proposalRequest(sk3, client, payloadBytes)
 	if err != nil {
-		return fmt.Errorf(errStringFormat, common.TxType_QUERY_SYSTEM_CONTRACT.String(), err.Error())
+		return fmt.Errorf(errStringFormat, common.TxType_QUERY_CONTRACT.String(), err.Error())
 	}
 
 	if err = checkProposalRequestResp(resp, true); err != nil {
-		return fmt.Errorf(errStringFormat, common.TxType_QUERY_SYSTEM_CONTRACT.String(), err.Error())
+		return fmt.Errorf(errStringFormat, common.TxType_QUERY_CONTRACT.String(), err.Error())
 	}
 
 	resultStruct := &Result{
@@ -68,11 +70,7 @@ func getCert() error {
 		fmt.Println("resp.ContractResult is nil ")
 	}
 
-	bytes, err := json.Marshal(resultStruct)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(resultStruct.ToJsonString())
 
 	return nil
 }

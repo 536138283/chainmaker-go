@@ -11,16 +11,17 @@ import (
 	"runtime"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/dbprovider/rawsqlprovider"
 	"chainmaker.org/chainmaker-go/store/serialization"
 	"chainmaker.org/chainmaker-go/utils"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	storePb "chainmaker.org/chainmaker/pb-go/store"
+	"chainmaker.org/chainmaker/protocol"
 	"golang.org/x/sync/semaphore"
 )
 
-var NotImplementError = errors.New("implement me")
+var errNotImplement = errors.New("implement me")
+var errNullPoint = errors.New("null point")
 
 // BlockSqlDB provider a implementation of `blockdb.BlockDB`
 // This implementation provides a mysql based data model
@@ -45,7 +46,7 @@ func (db *BlockSqlDB) GetHeightByHash(blockHash []byte) (uint64, error) {
 	return height, nil
 }
 
-func (db *BlockSqlDB) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader, error) {
+func (db *BlockSqlDB) GetBlockHeaderByHeight(height uint64) (*commonPb.BlockHeader, error) {
 	sql := "SELECT * from block_infos WHERE block_height=?"
 	blockInfo, err := db.getBlockInfoBySql(sql, height)
 	if err != nil {
@@ -81,11 +82,11 @@ func (db *BlockSqlDB) GetArchivedPivot() (uint64, error) {
 }
 
 func (db *BlockSqlDB) ShrinkBlocks(startHeight uint64, endHeight uint64) (map[uint64][]string, error) {
-	return nil, NotImplementError
+	return nil, errNotImplement
 }
 
 func (db *BlockSqlDB) RestoreBlocks(blockInfos []*serialization.BlockWithSerializedInfo) error {
-	return NotImplementError
+	return errNotImplement
 }
 
 // NewBlockSqlDB constructs a new `BlockSqlDB` given an chainId and engine type
@@ -98,7 +99,7 @@ func NewBlockSqlDB(chainId string, dbConfig *localconf.SqlDbConfig, logger proto
 //如果数据库不存在，则创建数据库，然后切换到这个数据库，创建表
 //如果数据库存在，则切换数据库，检查表是否存在，不存在则创建表。
 func (db *BlockSqlDB) initDb(dbName string) {
-	err := db.db.CreateDatabaseIfNotExist(dbName)
+	_, err := db.db.CreateDatabaseIfNotExist(dbName)
 	if err != nil {
 		panic("init state sql db fail")
 	}
@@ -126,11 +127,7 @@ func newBlockSqlDB(dbName string, db protocol.SqlDBHandle, logger protocol.Logge
 	}
 	return blockDB, nil
 }
-func (b *BlockSqlDB) SaveBlockHeader(header *commonPb.BlockHeader) error {
-	blockInfo := ConvertHeader2BlockInfo(header)
-	_, err := b.db.Save(blockInfo)
-	return err
-}
+
 func (b *BlockSqlDB) InitGenesis(genesisBlock *serialization.BlockWithSerializedInfo) error {
 	b.initDb(b.dbName)
 	return b.CommitBlock(genesisBlock)
@@ -224,15 +221,13 @@ func (b *BlockSqlDB) GetBlockByHash(blockHash []byte) (*commonPb.Block, error) {
 func (b *BlockSqlDB) getBlockInfoBySql(sql string, values ...interface{}) (*BlockInfo, error) {
 	//get block info from mysql
 	var blockInfo BlockInfo
-	res, err := b.db.QuerySingle(sql, values...)
-	if err != nil {
-		return nil, err
-	}
-	if res.IsEmpty() {
+	res, _ := b.db.QuerySingle(sql, values...)
+
+	if res == nil || res.IsEmpty() {
 		b.logger.Infof("sql[%s] %v return empty result", sql, values)
 		return nil, nil
 	}
-	err = blockInfo.ScanObject(res.ScanColumns)
+	err := blockInfo.ScanObject(res.ScanColumns)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +254,7 @@ func (b *BlockSqlDB) getFullBlockBySql(sql string, values ...interface{}) (*comm
 }
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
-func (b *BlockSqlDB) GetBlock(height int64) (*commonPb.Block, error) {
+func (b *BlockSqlDB) GetBlock(height uint64) (*commonPb.Block, error) {
 	return b.getFullBlockBySql("select * from block_infos where block_height =?", height)
 }
 
@@ -283,7 +278,7 @@ func (b *BlockSqlDB) GetLastConfigBlock() (*commonPb.Block, error) {
 }
 
 // GetFilteredBlock returns a filtered block given it's block height, or return nil if none exists.
-func (b *BlockSqlDB) GetFilteredBlock(height int64) (*storePb.SerializedBlock, error) {
+func (b *BlockSqlDB) GetFilteredBlock(height uint64) (*storePb.SerializedBlock, error) {
 	blockInfo, err := b.getBlockInfoBySql("select * from block_infos where block_height = ?", height)
 	if err != nil {
 		return nil, err
@@ -322,6 +317,9 @@ func (b *BlockSqlDB) GetBlockByTx(txId string) (*commonPb.Block, error) {
 
 // GetTx retrieves a transaction by txid, or returns nil if none exists.
 func (b *BlockSqlDB) GetTx(txId string) (*commonPb.Transaction, error) {
+	if len(txId) == 0 {
+		return nil, errors.New("parameter is null")
+	}
 	var txInfo TxInfo
 	res, err := b.db.QuerySingle("select * from tx_infos where tx_id = ?", txId)
 	if err != nil {
@@ -379,7 +377,7 @@ func (b *BlockSqlDB) TxExists(txId string) (bool, error) {
 }
 
 //获得某个区块高度下的所有交易
-func (b *BlockSqlDB) getTxsByBlockHeight(blockHeight int64) ([]*commonPb.Transaction, error) {
+func (b *BlockSqlDB) getTxsByBlockHeight(blockHeight uint64) ([]*commonPb.Transaction, error) {
 	res, err := b.db.QueryMulti("select * from tx_infos where block_height = ? order by offset", blockHeight)
 	if err != nil {
 		return nil, err
@@ -400,7 +398,7 @@ func (b *BlockSqlDB) getTxsByBlockHeight(blockHeight int64) ([]*commonPb.Transac
 	return result, nil
 }
 func (b *BlockSqlDB) GetTxConfirmedTime(txId string) (int64, error) {
-	return 0, NotImplementError
+	return 0, errNotImplement
 }
 
 // Close is used to close database

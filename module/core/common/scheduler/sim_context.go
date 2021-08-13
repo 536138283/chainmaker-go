@@ -1,20 +1,20 @@
 /*
-Copyright (C) BABEC. All rights reserved.
-
-SPDX-License-Identifier: Apache-2.0
+ Copyright (C) BABEC. All rights reserved.
+ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+   SPDX-License-Identifier: Apache-2.0
 */
 
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker-go/utils"
 	"errors"
 	"fmt"
 	"sort"
 
-	acpb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
-	"github.com/gogo/protobuf/proto"
+	acpb "chainmaker.org/chainmaker/pb-go/accesscontrol"
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // Storage interface for smart contracts
@@ -35,13 +35,13 @@ type txSimContextImpl struct {
 	hisResult        []*callContractResult
 	sqlRowCache      map[int32]protocol.SqlRows
 	kvRowCache       map[int32]protocol.StateIterator
-	blockVersion     string
+	blockVersion     uint32
 }
 
 type callContractResult struct {
 	contractName string
 	method       string
-	param        map[string]string
+	param        map[string][]byte
 	depth        int
 	gasUsed      uint64
 	result       []byte
@@ -95,23 +95,17 @@ func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []
 	return s.snapshot.GetBlockchainStore().SelectObject(contractName, startKey, limit)
 }
 
-func (s *txSimContextImpl) GetCreator(contractName string) *acpb.SerializedMember {
-	creatorByte, err := s.Get(commonpb.ContractName_SYSTEM_CONTRACT_STATE.String(), []byte(protocol.ContractCreator+contractName))
-	if creatorByte == nil || err != nil {
-		creatorByte, err = s.Get(contractName, []byte(protocol.ContractCreator))
-	}
+func (s *txSimContextImpl) GetCreator(contractName string) *acpb.Member {
+	contract, err := utils.GetContractByName(s.Get, contractName)
 	if err != nil {
+		//TODO log
 		return nil
 	}
-	creator := &acpb.SerializedMember{}
-	if err = proto.Unmarshal(creatorByte, creator); err != nil {
-		return nil
-	}
-	return creator
+	return contract.Creator
 }
 
-func (s *txSimContextImpl) GetSender() *acpb.SerializedMember {
-	return s.tx.Header.Sender
+func (s *txSimContextImpl) GetSender() *acpb.Member {
+	return s.tx.Sender.GetSigner()
 }
 
 func (s *txSimContextImpl) putIntoReadSet(contractName string, key []byte, value []byte) {
@@ -177,7 +171,7 @@ func (s *txSimContextImpl) GetTxRWSet(runVmSuccess bool) *commonpb.TxRWSet {
 		return s.txRWSet
 	}
 	s.txRWSet = &commonpb.TxRWSet{
-		TxId:     s.tx.Header.TxId,
+		TxId:     s.tx.Payload.TxId,
 		TxReads:  nil,
 		TxWrites: nil,
 	}
@@ -214,11 +208,11 @@ func (s *txSimContextImpl) GetTxRWSet(runVmSuccess bool) *commonpb.TxRWSet {
 }
 
 // Get the height of the corresponding block
-func (s *txSimContextImpl) GetBlockHeight() int64 {
+func (s *txSimContextImpl) GetBlockHeight() uint64 {
 	return s.snapshot.GetBlockHeight()
 }
 
-func (s *txSimContextImpl) GetBlockProposer() []byte {
+func (s *txSimContextImpl) GetBlockProposer() *acpb.Member {
 	return s.snapshot.GetBlockProposer()
 }
 
@@ -243,12 +237,14 @@ func (s *txSimContextImpl) SetTxResult(txResult *commonpb.Result) {
 }
 
 // Cross contract call
-func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method string, byteCode []byte, parameter map[string]string, gasUsed uint64, refTxType commonpb.TxType) (*commonpb.ContractResult, commonpb.TxStatusCode) {
+func (s *txSimContextImpl) CallContract(contract *commonpb.Contract, method string, byteCode []byte,
+	parameter map[string][]byte, gasUsed uint64, refTxType commonpb.TxType) (
+	*commonpb.ContractResult, commonpb.TxStatusCode) {
 	s.gasUsed = gasUsed
 	s.currentDepth = s.currentDepth + 1
 	if s.currentDepth > protocol.CallContractDepth {
 		contractResult := &commonpb.ContractResult{
-			Code:    commonpb.ContractResultCode_FAIL,
+			Code:    uint32(1),
 			Result:  nil,
 			Message: fmt.Sprintf("CallContract too depth %d", s.currentDepth),
 		}
@@ -256,19 +252,26 @@ func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method 
 	}
 	if s.gasUsed > protocol.GasLimit {
 		contractResult := &commonpb.ContractResult{
-			Code:    commonpb.ContractResultCode_FAIL,
+			Code:    uint32(1),
 			Result:  nil,
 			Message: fmt.Sprintf("There is not enough gas, gasUsed %d GasLimit %d ", gasUsed, int64(protocol.GasLimit)),
 		}
 		return contractResult, commonpb.TxStatusCode_CONTRACT_FAIL
 	}
-	r, code := s.vmManager.RunContract(contractId, method, byteCode, parameter, s, s.gasUsed, refTxType)
+	if len(byteCode) == 0 {
+		dbByteCode, err := utils.GetContractBytecode(s.Get, contract.Name)
+		if err != nil {
+			return nil, commonpb.TxStatusCode_CONTRACT_FAIL
+		}
+		byteCode = dbByteCode
+	}
+	r, code := s.vmManager.RunContract(contract, method, byteCode, parameter, s, s.gasUsed, refTxType)
 
 	result := callContractResult{
 		depth:        s.currentDepth,
 		gasUsed:      s.gasUsed,
 		result:       r.Result,
-		contractName: contractId.ContractName,
+		contractName: contract.Name,
 		method:       method,
 		param:        parameter,
 	}
@@ -311,6 +314,6 @@ func (s *txSimContextImpl) GetStateKvHandle(index int32) (protocol.StateIterator
 	data, ok := s.kvRowCache[index]
 	return data, ok
 }
-func (s *txSimContextImpl) GetBlockVersion() string {
+func (s *txSimContextImpl) GetBlockVersion() uint32 {
 	return s.blockVersion
 }

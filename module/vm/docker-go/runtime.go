@@ -4,8 +4,8 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"os"
@@ -26,37 +26,40 @@ type CDMClient interface {
 	RegisterRecvChan(txId string, recvCh chan *protogo.CDMMessage)
 }
 
-// RuntimeInstance evm runtime
+// RuntimeInstance docker-go runtime
 type RuntimeInstance struct {
-	ContainerName string
-	ChainId       string // chain id
-	Client        CDMClient
-	Log           *logger.CMLogger
+	ChainId string // chain id
+	Client  CDMClient
+	Log     *logger.CMLogger
 }
 
-func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
+func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
 	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
-	txId := txSimContext.GetTx().GetHeader().TxId
-
-	//log.Println("-----------")
-	//log.Println("start contract")
-	//log.Println("method: ", method)
+	txId := txSimContext.GetTx().Payload.TxId
 
 	// contract response
 	contractResult = &commonPb.ContractResult{
-		Code:    commonPb.ContractResultCode_FAIL,
+		Code:    uint32(1),
 		Result:  nil,
 		Message: "",
+	}
+
+	formatParams := make(map[string]string)
+	for key, value := range parameters {
+		if strings.Contains(key, "CONTRACT") {
+			continue
+		}
+		formatParams[key] = string(value)
 	}
 
 	// construct cdm message
 	txRequest := &protogo.TxRequest{
 		TxId:            txId,
-		ContractName:    contractId.ContractName,
-		ContractVersion: contractId.ContractVersion,
+		ContractName:    contract.Name,
+		ContractVersion: contract.Version,
 		Method:          method,
 		ByteCode:        nil,
-		Parameters:      parameters,
+		Parameters:      formatParams,
 	}
 
 	txPayload, _ := proto.Marshal(txRequest)
@@ -88,7 +91,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 				Payload: nil,
 			}
 
-			value, err := txSimContext.Get(contractId.ContractName, recvMsg.Payload)
+			value, err := txSimContext.Get(contract.Name, recvMsg.Payload)
 			if err != nil {
 				// if has error, return payload is nil
 				r.Log.Errorf("failt to get state from sim context: %s", err)
@@ -163,22 +166,19 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			var txResponse protogo.TxResponse
 			_ = proto.UnmarshalMerge(recvMsg.Payload, &txResponse)
 
-			contractResult.Code = commonPb.ContractResultCode(txResponse.Code)
+			contractResult.Code = 0
 			contractResult.Result = txResponse.Result
 			contractResult.Message = txResponse.Message
 
 			// merge the sim context write map
 			for key, value := range txResponse.WriteMap {
-				err := txSimContext.Put(contractId.ContractName, []byte(key), value)
+				err := txSimContext.Put(contract.Name, []byte(key), value)
 				if err != nil {
 					return r.errorResult(contractResult, err, "fail to put in sim context")
 				}
 			}
 
 			close(responseCh)
-
-			//log.Println("----------------------------")
-			//log.Println(contractResult)
 
 			return contractResult
 		default:
@@ -192,7 +192,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 }
 
 func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, err error, errMsg string) *commonPb.ContractResult {
-	contractResult.Code = commonPb.ContractResultCode_FAIL
+	contractResult.Code = uint32(1)
 	if err != nil {
 		errMsg += ", " + err.Error()
 	}

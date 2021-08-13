@@ -11,12 +11,8 @@ import (
 
 	"chainmaker.org/chainmaker-go/localconf"
 
-	"chainmaker.org/chainmaker-go/pb/protogo/store"
-	"chainmaker.org/chainmaker-go/protocol"
-)
-
-const (
-	contractStoreSeparator = '#'
+	"chainmaker.org/chainmaker/pb-go/store"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // StateInfo defines mysql orm model, used to create mysql table 'state_infos'

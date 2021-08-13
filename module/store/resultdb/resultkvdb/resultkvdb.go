@@ -10,12 +10,12 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/cache"
 	"chainmaker.org/chainmaker-go/store/serialization"
 	"chainmaker.org/chainmaker-go/store/types"
 	"chainmaker.org/chainmaker-go/utils"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -112,8 +112,8 @@ func (h *ResultKvDB) RestoreBlocks(blockInfos []*serialization.BlockWithSerializ
 
 	writeTime := utils.CurrentTimeMillisSeconds() - beforeWrite
 	h.Logger.Infof("restore block RWSets from [%d] to [%d] time used (prepare_txs:%d write_batch:%d, total:%d)",
-		blockInfos[len(blockInfos)-1].Block.Header.BlockHeight, blockInfos[0].Block.Header.BlockHeight, beforeWrite-startTime, writeTime,
-		utils.CurrentTimeMillisSeconds()-startTime)
+		blockInfos[len(blockInfos)-1].Block.Header.BlockHeight, blockInfos[0].Block.Header.BlockHeight,
+		beforeWrite-startTime, writeTime, utils.CurrentTimeMillisSeconds()-startTime)
 
 	return nil
 }
@@ -154,7 +154,7 @@ func (h *ResultKvDB) Close() {
 	h.DbHandle.Close()
 }
 
-func (h *ResultKvDB) writeBatch(blockHeight int64, batch protocol.StoreBatcher) error {
+func (h *ResultKvDB) writeBatch(blockHeight uint64, batch protocol.StoreBatcher) error {
 	//update cache
 	h.Cache.AddBlock(blockHeight, batch)
 	go func() {

@@ -8,16 +8,19 @@ else
   endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=V1.2.0
+VERSION=v2.0.0
 
 chainmaker:
-	@cd main && go build -mod=mod -o ../bin/chainmaker
+	@cd main && go build -o ../bin/chainmaker
+
+chainmaker-vendor:
+	@cd main && go build -mod=vendor -o ../bin/chainmaker
 
 dockervm:
 	@cd module/vm/docker-go/dockercontainer && go mod vendor
 
 package:
-	@cd main && GOPATH=${GOPATH} go build -mod=mod -o ../bin/chainmaker
+	@cd main && GOPATH=${GOPATH} go build -o ../bin/chainmaker
 	@mkdir -p ./release
 	@rm -rf ./tmp/chainmaker/
 	@mkdir -p ./tmp/chainmaker/
@@ -30,80 +33,28 @@ package:
 	@rm -rf ./tmp/
 
 compile:
-	@cd main && go build -mod=mod -o ../bin/chainmaker
+	@cd main && go build -o ../bin/chainmaker
 
 cmc:
-	@cd tools/cmc && GOPATH=${GOPATH} go build -mod=mod -o ../../bin/cmc
+	@cd tools/cmc && GOPATH=${GOPATH} go build -o ../../bin/cmc
 
 scanner:
-	@cd tools/scanner && GOPATH=${GOPATH} go build -mod=mod -o ../../bin/scanner
+	@cd tools/scanner && GOPATH=${GOPATH} go build -o ../../bin/scanner
 
-dep: pb-dep mockgen-dep
+dep:
 	@go get golang.org/x/tools/cmd/stringer
 
 generate:
 	go generate ./...
 
-pb:
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative accesscontrol/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative common/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative discovery/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative net/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative store/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative sync/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative txpool/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative consensus/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo  --gogofaster_opt=paths=source_relative consensus/tbft/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative config/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=:../protogo --gogofaster_opt=paths=source_relative dpos/*.proto
-	cd pb/proto && protoc -I=. --gogofaster_out=plugins=grpc:../protogo --gogofaster_opt=paths=source_relative api/rpc_node.proto
-
-pb-dep:
-	go get -u google.golang.org/grpc/cmd/protoc-gen-go-grpc
-	go get -u github.com/golang/protobuf/protoc-gen-go
-	go get -u google.golang.org/grpc
-	go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-grpc-gateway
-	GO111MODULE=on go get -u github.com/grpc-ecosystem/grpc-gateway/protoc-gen-swagger
-	go get -u github.com/gogo/protobuf/protoc-gen-gogofaster
-
-clean-pb:
-	rm -f pb/*.pb.go
-	rm -f pb/api/*.pb.go
-	rm -f pb/api/*.gw.go
-	rm -f pb/api/*.json
-	rm -f pb/api/demo/*.pb.go
-	rm -f pb/api/demo/*.gw.go
-	rm -f pb/api/demo/*.json
-
-
-.PHONY: pb
-
-mockgen:
-	cd protocol && mockgen -destination ../mock/access_control_mock.go -package mock -source access_control_interface.go
-	cd protocol && mockgen -destination ../mock/cache_mock.go -package mock -source cache_interface.go
-	cd protocol && mockgen -destination ../mock/consensus_mock.go -package mock -source consensus_interface.go
-	cd protocol && mockgen -destination ../mock/core_mock.go -package mock -source core_interface.go
-	cd protocol && mockgen -destination ../mock/net_mock.go -package mock -source net_interface.go
-	cd protocol && mockgen -destination ../mock/scheduler_mock.go -package mock -source scheduler_interface.go
-	cd protocol && mockgen -destination ../mock/snapshot_mock.go -package mock -source snapshot_interface.go
-	cd protocol && mockgen -destination ../mock/store_mock.go -package mock -source store_interface.go
-	cd protocol && mockgen -destination ../mock/sync_mock.go -package mock -source sync_interface.go
-	cd protocol && mockgen -destination ../mock/tx_pool_mock.go -package mock -source tx_pool_interface.go
-	cd protocol && mockgen -destination ../mock/vm_mock.go -package mock -source vm_interface.go
-	cd protocol && mockgen -destination ../mock/chainconf_mock.go -package mock -source chainconf_interface.go
-	cd common/msgbus && mockgen -destination ../../mock/msgbus_mock.go -package mock -source message_bus.go
-
-mockgen-dep:
-	go get -u github.com/golang/mock/gomock
-	go get -u github.com/golang/mock/mockgen
-
 docker-build:
+	cd main && go mod vendor
 	docker build -t chainmaker -f ./DOCKER/Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.0
+	docker tag chainmaker chainmaker:${VERSION}
 
 docker-build-dev: chainmaker
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.0
+	docker tag chainmaker chainmaker:${VERSION}
 
 docker-compose-start: docker-compose-stop
 	docker-compose up -d
@@ -112,7 +63,6 @@ docker-compose-stop:
 	docker-compose down
 
 ut:
-	#cd common && go test -cover ./...
 	cd main && go test -cover ./...
 	cd module/accesscontrol && go test -cover ./...
 	cd module/blockchain && go test -cover ./...
@@ -130,9 +80,8 @@ ut:
 	cd module/txpool && go test -cover ./...
 	cd module/utils && go test -cover ./...
 	cd module/vm && go test -cover ./...
-	cd tools/cmc && go test -cover ./...
-	cd tools/scanner && go test -cover ./...
-	#cd tools/sdk && go test -cover ./...
+	#cd tools/cmc && go test -cover ./...
+	#cd tools/scanner && go test -cover ./...
 
 lint:
 #	cd common && golangci-lint run ./...
@@ -146,12 +95,18 @@ lint:
 #	cd module/net && golangci-lint run ./...
 #	cd module/rpcserver && golangci-lint run ./...
 #	cd module/snapshot && golangci-lint run ./...
-	#cd module/store && golangci-lint run ./...
+	cd module/store && golangci-lint run ./...
 #	cd module/subscriber && golangci-lint run ./...
 #	cd module/sync && golangci-lint run ./...
 #	cd module/txpool && golangci-lint run ./...
 #	cd module/utils && golangci-lint run ./...
 #	cd module/vm && golangci-lint run ./...
-	#cd tools/cmc && golangci-lint run ./...
+#	cd tools/cmc && golangci-lint run ./...
 #	cd tools/scanner && golangci-lint run ./...
 #	cd tools/sdk && golangci-lint run ./...
+
+gomod:
+	cd scripts && ./gomod_update.sh
+
+test-deploy:
+	cd scripts/test/ && ./quick_deploy.sh

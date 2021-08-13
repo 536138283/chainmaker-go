@@ -18,8 +18,8 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-sdk-go/pb/protogo/store"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/store"
 )
 
 func newQueryOffChainCMD() *cobra.Command {
@@ -80,7 +80,7 @@ func newQueryTxOffChainCMD() *cobra.Command {
 
 			if blkWithRWSet.Block != nil {
 				for idx, tx := range blkWithRWSet.Block.Txs {
-					if tx.Header.TxId == args[0] {
+					if tx.Payload.TxId == args[0] {
 						txInfo = &common.TransactionInfo{
 							Transaction: tx,
 							BlockHeight: uint64(blkWithRWSet.Block.Header.BlockHeight),
@@ -124,7 +124,7 @@ func newQueryBlockByHeightOffChainCMD() *cobra.Command {
 		Long:  "query off-chain block by height",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			height, err := strconv.ParseInt(args[0], 10, 64)
+			height, err := strconv.ParseUint(args[0], 10, 64)
 			if err != nil {
 				return err
 			}
@@ -338,7 +338,7 @@ func newQueryArchivedHeightOffChainCMD() *cobra.Command {
 				return err
 			}
 
-			output, err := prettyjson.Marshal(map[string]int64{"archived_height": archivedBlkHeightOffChain})
+			output, err := prettyjson.Marshal(map[string]uint64{"archived_height": archivedBlkHeightOffChain})
 			if err != nil {
 				return err
 			}

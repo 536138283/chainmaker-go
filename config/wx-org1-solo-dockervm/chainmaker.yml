@@ -46,7 +46,7 @@ net:
 txpool:
   max_txpool_size: 5120 # 普通交易池上限
   max_config_txpool_size: 10 # config交易池的上限
-  full_notify_again_time: 10 # 交易池溢出后，再次通知的时间间隔(秒)
+  full_notify_again_time: 30 # 交易池溢出后，再次通知的时间间隔(秒)
 
 rpc:
   provider: grpc
@@ -77,7 +77,7 @@ docker:
   clean_host_mount_dir: true                    #clean host mount directory when stop the chain maker
   rpc:
     uds_open: true
-    port: 12356                                 # default is tcp connection
+    port: 12356                                 # default is unix domain socket connection
     max_send_message_size: 10                  # MiB
     max_recv_message_size: 10                  # MiB
   log:

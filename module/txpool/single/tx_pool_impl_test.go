@@ -13,14 +13,15 @@ import (
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker/protocol/test"
+
 	"chainmaker.org/chainmaker-go/chainconf"
-	commonErrors "chainmaker.org/chainmaker-go/common/errors"
 	"chainmaker.org/chainmaker-go/localconf"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	configpb "chainmaker.org/chainmaker-go/pb/protogo/config"
-	"chainmaker.org/chainmaker-go/protocol"
-	"chainmaker.org/chainmaker-go/protocol/test"
 	"chainmaker.org/chainmaker-go/utils"
+	commonErrors "chainmaker.org/chainmaker/common/errors"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	configpb "chainmaker.org/chainmaker/pb-go/config"
+	"chainmaker.org/chainmaker/protocol"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -106,7 +107,7 @@ func TestTxPoolImpl_AddTx(t *testing.T) {
 
 	// 6. add txs to blockchain
 	for _, tx := range commonTxs[20:25] {
-		testPool.extTxs[tx.Header.TxId] = tx
+		testPool.extTxs[tx.Payload.TxId] = tx
 	}
 
 	// 7. add txs[20:25] failed due to txs exist in blockchain
@@ -207,7 +208,7 @@ func TestTxPoolImpl_GetTxByTxId(t *testing.T) {
 
 	// 2. check txs[:20] existence
 	for _, tx := range commonTxs[:20] {
-		txInPool, inBlockHeight := txPool.GetTxByTxId(tx.Header.TxId)
+		txInPool, inBlockHeight := txPool.GetTxByTxId(tx.Payload.TxId)
 		require.EqualValues(t, tx, txInPool)
 		require.EqualValues(t, 0, inBlockHeight)
 		require.True(t, txPool.TxExists(tx))
@@ -215,7 +216,7 @@ func TestTxPoolImpl_GetTxByTxId(t *testing.T) {
 
 	// 3. check txs[20:50] not existence
 	for _, tx := range commonTxs[20:] {
-		txInPool, inBlockHeight := txPool.GetTxByTxId(tx.Header.TxId)
+		txInPool, inBlockHeight := txPool.GetTxByTxId(tx.Payload.TxId)
 		require.Nil(t, txInPool)
 		require.EqualValues(t, -1, inBlockHeight)
 		require.False(t, txPool.TxExists(tx))
@@ -223,12 +224,12 @@ func TestTxPoolImpl_GetTxByTxId(t *testing.T) {
 
 	// 4. add txs[20:30] to pendingCache
 	for _, tx := range commonTxs[20:30] {
-		imlPool.queue.commonTxQueue.pendingCache.Store(tx.Header.TxId, &valInPendingCache{tx: tx, inBlockHeight: 99})
+		imlPool.queue.commonTxQueue.pendingCache.Store(tx.Payload.TxId, &valInPendingCache{tx: tx, inBlockHeight: 99})
 	}
 
 	// 5. check txs[:20] existence
 	for _, tx := range commonTxs[20:30] {
-		txInPool, inBlockHeight := txPool.GetTxByTxId(tx.Header.TxId)
+		txInPool, inBlockHeight := txPool.GetTxByTxId(tx.Payload.TxId)
 		require.EqualValues(t, tx, txInPool)
 		require.EqualValues(t, 99, inBlockHeight)
 		require.True(t, txPool.TxExists(tx))
@@ -252,28 +253,28 @@ func TestTxPoolImpl_GetTxsByTxIds(t *testing.T) {
 	// 2. check txs[:20] existence
 	txsInPool, txsHeightInPool := txPool.GetTxsByTxIds(getTxIds(commonTxs[:20]))
 	for _, tx := range commonTxs[:20] {
-		require.EqualValues(t, tx, txsInPool[tx.Header.TxId])
-		require.EqualValues(t, 0, txsHeightInPool[tx.Header.TxId])
+		require.EqualValues(t, tx, txsInPool[tx.Payload.TxId])
+		require.EqualValues(t, 0, txsHeightInPool[tx.Payload.TxId])
 	}
 
 	// 3. check txs[20:50] not existence
 	txsInPool, txsHeightInPool = txPool.GetTxsByTxIds(getTxIds(commonTxs[20:]))
 	for _, tx := range commonTxs[20:50] {
-		require.Nil(t, txsInPool[tx.Header.TxId])
-		_, exist := txsHeightInPool[tx.Header.TxId]
+		require.Nil(t, txsInPool[tx.Payload.TxId])
+		_, exist := txsHeightInPool[tx.Payload.TxId]
 		require.False(t, exist)
 	}
 
 	// 4. add txs[20:30] to pendingCache
 	for _, tx := range commonTxs[20:30] {
-		imlPool.queue.commonTxQueue.pendingCache.Store(tx.Header.TxId, &valInPendingCache{tx: tx, inBlockHeight: 99})
+		imlPool.queue.commonTxQueue.pendingCache.Store(tx.Payload.TxId, &valInPendingCache{tx: tx, inBlockHeight: 99})
 	}
 
 	// 5. check txs[:20] existence
 	txsInPool, txsHeightInPool = txPool.GetTxsByTxIds(getTxIds(commonTxs[20:30]))
 	for _, tx := range commonTxs[20:30] {
-		require.EqualValues(t, tx, txsInPool[tx.Header.TxId])
-		require.EqualValues(t, 99, txsHeightInPool[tx.Header.TxId])
+		require.EqualValues(t, tx, txsInPool[tx.Payload.TxId])
+		require.EqualValues(t, 99, txsHeightInPool[tx.Payload.TxId])
 	}
 }
 
@@ -330,7 +331,7 @@ func TestTxPoolImpl_RetryAndRemoveTxs(t *testing.T) {
 
 	// 6. Add txs[:50] to pendingCache, and retry txs[:50] and delRetry = true
 	for _, tx := range commonTxs[:50] {
-		imlPool.queue.pendingCache.Store(tx.Header.TxId, &valInPendingCache{tx: tx, inBlockHeight: 999})
+		imlPool.queue.pendingCache.Store(tx.Payload.TxId, &valInPendingCache{tx: tx, inBlockHeight: 999})
 	}
 	//require.EqualValues(t, 50, imlPool.queue.pendingCache.Size())
 	txPool.RetryAndRemoveTxs(commonTxs[:50], nil)
@@ -346,7 +347,7 @@ func TestPoolImplConcurrencyInvoke(t *testing.T) {
 	commonTxs := generateTxs(500000, false)
 	txIds := make([]string, 0, len(commonTxs))
 	for _, tx := range commonTxs {
-		txIds = append(txIds, tx.Header.TxId)
+		txIds = append(txIds, tx.Payload.TxId)
 	}
 
 	// 1. Concurrent Adding Transactions to txPool
@@ -368,7 +369,7 @@ func TestPoolImplConcurrencyInvoke(t *testing.T) {
 	// 2. Simulate the logic for generating blocks
 	fetchTimes := make([]int64, 0, 100)
 	go func() {
-		height := int64(100)
+		height := uint64(100)
 		fetchTicker := time.NewTicker(time.Millisecond * 100)
 		fetchTimer := time.NewTimer(2 * time.Minute)
 		defer func() {

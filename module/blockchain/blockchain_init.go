@@ -16,16 +16,13 @@ import (
 	"chainmaker.org/chainmaker-go/accesscontrol"
 	"chainmaker.org/chainmaker-go/chainconf"
 	"chainmaker.org/chainmaker-go/consensus"
+	"chainmaker.org/chainmaker-go/consensus/dpos"
 	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
 	providerConf "chainmaker.org/chainmaker-go/core/provider/conf"
-	"chainmaker.org/chainmaker-go/dpos"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/net"
-	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/snapshot"
 	"chainmaker.org/chainmaker-go/store"
 	"chainmaker.org/chainmaker-go/subscriber"
@@ -33,6 +30,9 @@ import (
 	"chainmaker.org/chainmaker-go/txpool"
 	"chainmaker.org/chainmaker-go/utils"
 	"chainmaker.org/chainmaker-go/vm"
+	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
+	storePb "chainmaker.org/chainmaker/pb-go/store"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // Init all the modules.
@@ -277,13 +277,25 @@ func (bc *Blockchain) initAC() (err error) {
 		}
 	}
 	acLog := logger.GetLoggerByChain(logger.MODULE_ACCESS, bc.chainId)
-	bc.ac, err = accesscontrol.NewAccessControlWithChainConfig(skFile, nodeConfig.PrivKeyPassword, certFile, bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	//bc.ac, err = accesscontrol.NewAccessControlWithChainConfig(bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	//if err != nil {
+	//	bc.log.Errorf("get organization information failed, %s", err.Error())
+	//	return
+	//}
+	acFactory := accesscontrol.ACFactory()
+	bc.ac, err = acFactory.NewACProvider("CERT", bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
 	if err != nil {
 		bc.log.Errorf("get organization information failed, %s", err.Error())
 		return
 	}
 
-	bc.identity = bc.ac.GetLocalSigningMember()
+	bc.identity, err = accesscontrol.InitCertSigningMember(bc.chainConf.ChainConfig().GetCrypto().GetHash(), nodeConfig.OrgId,
+		nodeConfig.PrivKeyFile, nodeConfig.PrivKeyPassword, nodeConfig.CertFile)
+	if err != nil {
+		bc.log.Errorf("initialize identity failed, %s", err.Error())
+		return
+	}
+
 	bc.initModules[moduleNameAccessControl] = struct{}{}
 	return
 }
@@ -331,12 +343,18 @@ func (bc *Blockchain) initVM() (err error) {
 	// init VM
 	var vmFactory vm.Factory
 	if bc.netService == nil {
-		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, nil, bc.chainConf)
+		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, &soloChainNodesInfoProvider{}, bc.chainConf)
 	} else {
 		bc.vmMgr = vmFactory.NewVmManager(localconf.ChainMakerConfig.StorageConfig.StorePath, bc.ac, bc.netService.GetChainNodesInfoProvider(), bc.chainConf)
 	}
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
+}
+
+type soloChainNodesInfoProvider struct{}
+
+func (s *soloChainNodesInfoProvider) GetChainNodesInfo() ([]*protocol.ChainNodeInfo, error) {
+	return []*protocol.ChainNodeInfo{}, nil
 }
 
 func (bc *Blockchain) initCore() (err error) {

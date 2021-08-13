@@ -7,11 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package wasmer
 
 import (
-	"chainmaker.org/chainmaker-go/common/random/uuid"
 	"chainmaker.org/chainmaker-go/logger"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/utils"
 	wasm "chainmaker.org/chainmaker-go/wasmer/wasmer-go"
+	"chainmaker.org/chainmaker/common/random/uuid"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"crypto/md5"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -44,7 +45,7 @@ type VmPoolManager struct {
 // vm pool can grow and shrink on demand
 type vmPool struct {
 	// the corresponding contract info
-	contractId *commonPb.ContractId
+	contractId *commonPb.Contract
 	byteCode   []byte
 	// byteCode wasm module
 	module *wasm.Module
@@ -93,16 +94,16 @@ func NewVmPoolManager(chainId string) *VmPoolManager {
 }
 
 // NewRuntimeInstance init vm pool and check byteCode correctness
-func (m *VmPoolManager) NewRuntimeInstance(contractId *commonPb.ContractId, byteCode []byte) (*RuntimeInstance, error) {
+func (m *VmPoolManager) NewRuntimeInstance(contractId *commonPb.Contract, byteCode []byte) (*RuntimeInstance, error) {
 	var err error
-	if contractId == nil || contractId.ContractName == "" || contractId.ContractVersion == "" {
-		err = fmt.Errorf("contract id is nil")
+	if contractId == nil || contractId.Name == "" || contractId.Version == "" {
+		err = fmt.Errorf("contract is nil")
 		m.log.Warn(err)
 		return nil, err
 	}
 
 	if byteCode == nil || len(byteCode) == 0 {
-		err = fmt.Errorf("[%s_%s], byte code is nil", contractId.ContractName, contractId.ContractVersion)
+		err = fmt.Errorf("[%s_%s], byte code is nil", contractId.Name, contractId.Version)
 		m.log.Warn(err)
 		return nil, err
 	}
@@ -121,9 +122,9 @@ func (m *VmPoolManager) NewRuntimeInstance(contractId *commonPb.ContractId, byte
 	return runtime, nil
 }
 
-func (m *VmPoolManager) getVmPool(contractId *commonPb.ContractId, byteCode []byte) (*vmPool, error) {
+func (m *VmPoolManager) getVmPool(contractId *commonPb.Contract, byteCode []byte) (*vmPool, error) {
 	var err error
-	key := contractId.ContractName + "_" + contractId.ContractVersion
+	key := contractId.Name + "_" + contractId.Version
 
 	pool, ok := m.instanceMap[key]
 	if !ok {
@@ -206,14 +207,23 @@ func (p *vmPool) RevertInstance(instance *wrappedInstance) {
 	}
 }
 
-func newVmPool(contractId *commonPb.ContractId, byteCode []byte, log *logger.CMLogger) (*vmPool, error) {
+func newVmPool(contractId *commonPb.Contract, byteCode []byte, log *logger.CMLogger) (*vmPool, error) {
+	{ // for debug
+		md5Hex := fmt.Sprintf("%x", md5.Sum(byteCode))
+		log.Infof("byteCodeMd5:%s", md5Hex)
+	}
+
 	if ok := wasm.Validate(byteCode); !ok {
-		return nil, fmt.Errorf("[%s_%s], byte code validation failed", contractId.ContractName, contractId.ContractVersion)
+		err := fmt.Errorf("[%s_%s], wasmer byte code validation failed, byteCodeLen[%d]", contractId.Name, contractId.Version, len(byteCode))
+		log.Warn(err)
+		return nil, err
 	}
 
 	module, err := wasm.Compile(byteCode)
 	if err != nil {
-		return nil, fmt.Errorf("[%s_%s], byte code compile failed", contractId.ContractName, contractId.ContractVersion)
+		msg := fmt.Errorf("[%s_%s], wasmer byte code compile failed, byteCodeLen[%d], error:%s", contractId.Name, contractId.Version, len(byteCode), err)
+		log.Warn(msg)
+		return nil, err
 	}
 
 	vmPool := &vmPool{
@@ -235,7 +245,9 @@ func newVmPool(contractId *commonPb.ContractId, byteCode []byte, log *logger.CML
 
 	instance, err := vmPool.newInstanceFromModule()
 	if err != nil {
-		return nil, fmt.Errorf("[%s_%s], byte code compile failed, %s", contractId.ContractName, contractId.ContractVersion, err.Error())
+		msg := fmt.Errorf("[%s_%s], wasmer byte code compile failed, byteCodeLen[%d], error: %s", contractId.Name, contractId.Version, len(byteCode), err)
+		log.Warn(msg)
+		return nil, msg
 	}
 
 	instance.wasmInstance.Close()
@@ -251,7 +263,7 @@ func newVmPool(contractId *commonPb.ContractId, byteCode []byte, log *logger.CML
 func (p *vmPool) startRefreshingLoop() {
 
 	refreshTimer := time.NewTimer(defaultRefreshTime)
-	key := p.contractId.ContractName + "_" + p.contractId.ContractVersion
+	key := p.contractId.Name + "_" + p.contractId.Version
 	for {
 		select {
 		case <-p.applySignalC:
@@ -439,8 +451,8 @@ func (p *vmPool) close() {
 }
 
 // close the contract vm pool
-func (m *VmPoolManager) closeAVmPool(contractId *commonPb.ContractId) {
-	key := contractId.ContractName + "_" + contractId.ContractVersion
+func (m *VmPoolManager) closeAVmPool(contractId *commonPb.Contract) {
+	key := contractId.Name + "_" + contractId.Version
 	pool, ok := m.instanceMap[key]
 	if ok {
 		m.log.Infof("close pool %s", key)
@@ -458,9 +470,9 @@ func (m *VmPoolManager) closeAllVmPool() {
 
 // FIXME: 确认函数名是否多了字符A？@taifu
 // reset a contract vm pool install
-func (m *VmPoolManager) resetAVmPool(contractId *commonPb.ContractId) {
+func (m *VmPoolManager) resetAVmPool(contractId *commonPb.Contract) {
 
-	key := contractId.ContractName + "_" + contractId.ContractVersion
+	key := contractId.Name + "_" + contractId.Version
 	pool, ok := m.instanceMap[key]
 	if ok {
 		m.log.Infof("reset pool %s", key)

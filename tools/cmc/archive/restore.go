@@ -16,9 +16,9 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/db/mysql"
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdk "chainmaker.org/chainmaker-sdk-go"
-	"chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-sdk-go/pb/protogo/store"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/store"
+	sdk "chainmaker.org/chainmaker/sdk-go"
 )
 
 const (
@@ -87,8 +87,8 @@ func runRestoreCMD() error {
 	})
 	progress.Start()
 	defer progress.Stop()
-	for height := archivedBlkHeightOnChain; height >= restoreStartBlockHeight; height-- {
-		if err := restoreBlock(cc, db, height); err != nil {
+	for height := int64(archivedBlkHeightOnChain); height >= int64(restoreStartBlockHeight); height-- {
+		if err := restoreBlock(cc, db, uint64(height)); err != nil {
 			return err
 		}
 
@@ -98,7 +98,7 @@ func runRestoreCMD() error {
 }
 
 // validateRestore basic params validation
-func validateRestore(archivedBlkHeightOnChain, restoreStartBlkHeight int64) error {
+func validateRestore(archivedBlkHeightOnChain, restoreStartBlkHeight uint64) error {
 	if restoreStartBlkHeight < 0 {
 		return errors.New("restore start block height must >= 0")
 	}
@@ -109,7 +109,7 @@ func validateRestore(archivedBlkHeightOnChain, restoreStartBlkHeight int64) erro
 	return nil
 }
 
-func restoreBlock(cc *sdk.ChainClient, db *gorm.DB, height int64) error {
+func restoreBlock(cc *sdk.ChainClient, db *gorm.DB, height uint64) error {
 	tx := db.Begin()
 	if tx.Error != nil {
 		return tx.Error
@@ -137,7 +137,7 @@ func restoreBlock(cc *sdk.ChainClient, db *gorm.DB, height int64) error {
 		return err
 	}
 
-	var archivedBlkHeight int64
+	var archivedBlkHeight uint64
 	if height > 0 {
 		archivedBlkHeight = height - 1
 	}
@@ -166,8 +166,8 @@ func restoreBlock(cc *sdk.ChainClient, db *gorm.DB, height int64) error {
 func restoreBlockOnChain(cc *sdk.ChainClient, fullBlock []byte) error {
 	var (
 		err                error
-		payload            []byte
-		signedPayloadBytes []byte
+		payload            *common.Payload
+		signedPayloadBytes *common.Payload
 		resp               *common.TxResponse
 	)
 

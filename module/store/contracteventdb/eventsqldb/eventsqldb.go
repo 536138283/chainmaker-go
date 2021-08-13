@@ -4,10 +4,10 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/dbprovider/rawsqlprovider"
 	"chainmaker.org/chainmaker-go/store/serialization"
 	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 // BlockMysqlDB provider a implementation of `contracteventdb.ContractEventDB`
@@ -37,7 +37,7 @@ func newContractEventDB(dbName string, db protocol.SqlDBHandle, logger protocol.
 
 func (c *ContractEventSqlDB) initDb(dbName string) {
 
-	err := c.db.CreateDatabaseIfNotExist(dbName)
+	_, err := c.db.CreateDatabaseIfNotExist(dbName)
 	if err != nil {
 		panic(fmt.Sprintf("failed to create database %s db:%s", dbName, err))
 	}
@@ -81,7 +81,7 @@ func (c *ContractEventSqlDB) CommitBlock(blockInfo *serialization.BlockWithSeria
 	if err != nil {
 		return err
 	}
-	var preBlockHeight int64
+	var preBlockHeight uint64
 	single, err := c.db.QuerySingle("select block_height from " + BlockHeightIndexTableName + "  order by id desc limit 1")
 	if err != nil {
 		c.Logger.Errorf("failed to get block_height err%s", err)

@@ -12,7 +12,7 @@ import (
 
 	"chainmaker.org/chainmaker-go/logger"
 
-	tbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/tbft"
+	tbftpb "chainmaker.org/chainmaker/pb-go/consensus/tbft"
 )
 
 var (
@@ -23,7 +23,7 @@ var (
 // timeout
 type timeoutInfo struct {
 	time.Duration
-	Height int64
+	Height uint64
 	Round  int32
 	Step   tbftpb.Step
 }

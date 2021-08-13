@@ -8,28 +8,31 @@ package p2p
 
 import (
 	"bufio"
-	"chainmaker.org/chainmaker-go/net/p2p/libp2pgmtls"
-	"chainmaker.org/chainmaker-go/net/p2p/libp2ptls"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	netPb "chainmaker.org/chainmaker-go/pb/protogo/net"
-	"chainmaker.org/chainmaker-go/utils"
 	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
 	"errors"
 	"fmt"
-	"github.com/tjfoc/gmsm/sm2"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
 
-	cmx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
-	"chainmaker.org/chainmaker-go/common/helper"
+	"chainmaker.org/chainmaker-go/net/p2p/libp2pgmtls"
+	"chainmaker.org/chainmaker-go/net/p2p/libp2ptls"
+	"chainmaker.org/chainmaker-go/utils"
+	pbac "chainmaker.org/chainmaker/pb-go/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	netPb "chainmaker.org/chainmaker/pb-go/net"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
+	"github.com/tjfoc/gmsm/sm2"
+
+	cmx509 "chainmaker.org/chainmaker/common/crypto/x509"
+	"chainmaker.org/chainmaker/common/helper"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
 
-	api "chainmaker.org/chainmaker-go/protocol"
+	api "chainmaker.org/chainmaker/protocol"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	libP2pPubSub "github.com/libp2p/go-libp2p-pubsub"
@@ -871,20 +874,20 @@ func (ln *LibP2pNet) AddAC(chainId string, ac api.AccessControlProvider) {
 }
 
 func (ln *LibP2pNet) CheckRevokeTlsCerts(ac api.AccessControlProvider, certManageSystemContractPayload []byte) error {
-	var payload commonPb.SystemContractPayload
+	var payload commonPb.Payload
 	err := proto.Unmarshal(certManageSystemContractPayload, &payload)
 	if err != nil {
 		return fmt.Errorf("resolve payload failed: %v", err)
 	}
 	switch payload.Method {
-	case commonPb.CertManageFunction_CERTS_REVOKE.String():
+	case syscontract.CertManageFunction_CERTS_REVOKE.String():
 		return ln.checkRevokeTlsCertsCertsRevokeMethod(ac, &payload)
 	default:
 		return nil
 	}
 }
 
-func (ln *LibP2pNet) checkRevokeTlsCertsCertsRevokeMethod(ac api.AccessControlProvider, payload *commonPb.SystemContractPayload) error {
+func (ln *LibP2pNet) checkRevokeTlsCertsCertsRevokeMethod(ac api.AccessControlProvider, payload *commonPb.Payload) error {
 	// get all node tls cert
 	peerIdCertBytesMap := ln.libP2pHost.peerIdTlsCertStore.storeCopy()
 	if len(peerIdCertBytesMap) == 0 {
@@ -911,12 +914,25 @@ func parsePeerIdCertBytesMapToPeerIdCertMap(peerIdCertBytesMap map[string][]byte
 	return peerIdCertMap, nil
 }
 
-func (ln *LibP2pNet) checkRevokeTlsCertsCertsRevokeMethodRevokePeerId(ac api.AccessControlProvider, payload *commonPb.SystemContractPayload, peerIdCertMap map[string]*cmx509.Certificate) error {
+func (ln *LibP2pNet) checkRevokeTlsCertsCertsRevokeMethodRevokePeerId(ac api.AccessControlProvider, payload *commonPb.Payload, peerIdCertMap map[string]*cmx509.Certificate) error {
 	for _, param := range payload.Parameters {
 		if param.Key == "cert_crl" {
 
-			crl := strings.Replace(param.Value, ",", "\n", -1)
-			crls, err := ac.ValidateCRL([]byte(crl))
+			crlStr := strings.Replace(string(param.Value), ",", "\n", -1)
+			_, err := ac.VerifyRelatedMaterial(pbac.VerifyType_CRL, []byte(crlStr))
+			if err != nil {
+				logger.Errorf("[Net] validate crl failed, %s", err.Error())
+				return err
+			}
+
+			var crls []*pkix.CertificateList
+
+			crl, err := x509.ParseCRL([]byte(crlStr))
+			if err != nil {
+				logger.Errorf("[Net] validate crl failed, %s", err.Error())
+				return err
+			}
+			crls = append(crls, crl)
 			if err != nil {
 				logger.Errorf("[Net] validate crl failed, %s", err.Error())
 				return err

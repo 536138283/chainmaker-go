@@ -8,20 +8,21 @@ package proposer
 
 import (
 	"bytes"
+	pbac "chainmaker.org/chainmaker/pb-go/accesscontrol"
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/monitor"
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus/chainedbft"
-	txpoolpb "chainmaker.org/chainmaker-go/pb/protogo/txpool"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker/common/msgbus"
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
+	"chainmaker.org/chainmaker/pb-go/consensus/chainedbft"
+	txpoolpb "chainmaker.org/chainmaker/pb-go/txpool"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -57,7 +58,7 @@ type BlockProposerImpl struct {
 	finishProposeC chan bool // channel to receive signal to yield propose block
 
 	metricBlockPackageTime *prometheus.HistogramVec
-	proposer               []byte // this node identity
+	proposer               *pbac.Member
 
 	blockBuilder *common.BlockBuilder
 	storeHelper  conf.StoreHelper
@@ -106,7 +107,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 	}
 
 	var err error
-	blockProposerImpl.proposer, err = blockProposerImpl.identity.Serialize(true)
+	blockProposerImpl.proposer, err = blockProposerImpl.identity.GetMember()
 	if err != nil {
 		blockProposerImpl.log.Warnf("identity serialize failed, %s", err)
 		return nil, err
@@ -189,7 +190,7 @@ func (bp *BlockProposerImpl) startProposingLoop() {
  * Only for *BFT consensus
  * if node is proposer, and node is not propose right now, and last proposed block is committed, then return true
  */
-func (bp *BlockProposerImpl) shouldProposeByBFT(height int64) bool {
+func (bp *BlockProposerImpl) shouldProposeByBFT(height uint64) bool {
 	if !bp.isIdle() {
 		// concurrent control, proposer is proposing now
 		bp.log.Debugf("proposer is busy, not propose [%d] ", height)
@@ -244,7 +245,7 @@ func (bp *BlockProposerImpl) proposeBlock() {
 }
 
 // proposing, propose a block in new height
-func (bp *BlockProposerImpl) proposing(height int64, preHash []byte) *commonpb.Block {
+func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.Block {
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
 
@@ -334,7 +335,7 @@ func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) []*
 			defer wg.Done()
 			result := make([]*commonpb.Transaction, 0)
 			for _, tx := range b {
-				exist, err := bp.blockchainStore.TxExists(tx.Header.TxId)
+				exist, err := bp.blockchainStore.TxExists(tx.Payload.TxId)
 				if err == nil && !exist {
 					result = append(result, tx)
 				}
@@ -382,7 +383,7 @@ func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 // OnReceiveChainedBFTProposal, to check if this proposer should propose a new block
 // Only for chained bft consensus
 func (bp *BlockProposerImpl) OnReceiveChainedBFTProposal(proposal *chainedbft.BuildProposal) {
-	proposingHeight := int64(proposal.Height)
+	proposingHeight := proposal.Height
 	preHash := proposal.PreHash
 	if !bp.shouldProposeByChainedBFT(proposingHeight, preHash) {
 		bp.log.Infof("not a legal proposal request [%d](%x)", proposingHeight, preHash)
@@ -444,11 +445,12 @@ func (bp *BlockProposerImpl) getDuration() time.Duration {
 // getChainVersion, get chain version from config.
 // If not access from config, use default value.
 // @Deprecated
-func (bp *BlockProposerImpl) getChainVersion() []byte {
-	if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
-		return []byte(protocol.DefaultBlockVersion)
-	}
-	return []byte(bp.chainConf.ChainConfig().Version)
+func (bp *BlockProposerImpl) getChainVersion() uint32 {
+	//if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
+	//	return []byte(protocol.DefaultBlockVersion)
+	//}
+	//return []byte(bp.chainConf.ChainConfig().Version)
+	return protocol.DefaultBlockVersion
 }
 
 // setNotIdle, set not idle status
@@ -500,7 +502,7 @@ func (bp *BlockProposerImpl) isSelfProposer() bool {
  * shouldProposeByChainedBFT, check if node should propose new block
  * Only for chained bft consensus
  */
-func (bp *BlockProposerImpl) shouldProposeByChainedBFT(height int64, preHash []byte) bool {
+func (bp *BlockProposerImpl) shouldProposeByChainedBFT(height uint64, preHash []byte) bool {
 	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
 	if committedBlock == nil {
 		bp.log.Errorf("no committed block found")

@@ -8,14 +8,16 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	"github.com/spf13/cobra"
 	"io/ioutil"
+	"time"
+
+	"chainmaker.org/chainmaker-go/utils"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+
+	"github.com/spf13/cobra"
 )
 
 func UpgradeContractCMD() *cobra.Command {
@@ -90,41 +92,23 @@ func upgradeContract() error {
 	//	pairs = []*commonPb.KeyValuePair{
 	//		{
 	//			Key:   "data",
-	//			Value: data,
+	//			Value: []byte(data),
 	//		},
 	//	}
 	//	wasmBin, err = hex.DecodeString(string(wasmBin))
 	//
 	//}
+	payload, _ := GenerateUpgradeContractPayload(contractName, version, commonPb.RuntimeType(runTime), wasmBin, pairs)
+	payload.TxId = txId
+	payload.ChainId = chainId
+	payload.Timestamp = time.Now().Unix()
 
-	method := commonPb.ManageUserContractFunction_UPGRADE_CONTRACT.String()
-
-	payload := &commonPb.ContractMgmtPayload{
-		ChainId: chainId,
-		ContractId: &commonPb.ContractId{
-			ContractName:    contractName,
-			ContractVersion: version,
-			RuntimeType:     commonPb.RuntimeType(runTime),
-		},
-		Method:      method,
-		Parameters:  pairs,
-		ByteCode:    wasmBin,
-		Endorsement: nil,
-	}
-
-	if endorsement, err := acSign(payload); err == nil {
-		payload.Endorsement = endorsement
-	} else {
-		return err
-	}
-
-	payloadBytes, err := proto.Marshal(payload)
+	endorsement, err := acSign(payload)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_MANAGE_USER_CONTRACT,
-		chainId, txId, payloadBytes)
+	resp, err = proposalRequestWithMultiSign(sk3, client, payload, endorsement)
 	if err != nil {
 		return err
 	}
@@ -132,13 +116,10 @@ func upgradeContract() error {
 	result := &Result{
 		Code:    resp.Code,
 		Message: resp.Message,
-		TxId:    txId,
+		TxId:    resp.TxId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }

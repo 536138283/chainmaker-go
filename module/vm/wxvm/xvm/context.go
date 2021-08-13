@@ -1,16 +1,16 @@
 package xvm
 
 import (
-	"chainmaker.org/chainmaker-go/common/serialize"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/common/serialize"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type Context struct {
 	ID             int64
-	Parameters     map[string]string
+	Parameters     map[string][]byte
 	TxSimContext   protocol.TxSimContext
-	ContractId     *commonPb.ContractId
+	ContractId     *commonPb.Contract
 	ContractResult *commonPb.ContractResult
 
 	callArgs      []*serialize.EasyCodecItem

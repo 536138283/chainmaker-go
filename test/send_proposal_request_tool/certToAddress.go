@@ -8,10 +8,10 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	evm "chainmaker.org/chainmaker-go/common/evmutils"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"encoding/json"
 	"fmt"
+
+	evm "chainmaker.org/chainmaker/common/evmutils"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
 	"github.com/spf13/cobra"
 )
 
@@ -41,11 +41,7 @@ func certReturnResult(code commonPb.TxStatusCode, message string, addr *evm.Addr
 
 	fmt.Println("addr: ", addr, "result: ", result)
 
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 	return nil
 }
 

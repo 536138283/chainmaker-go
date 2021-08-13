@@ -8,10 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"encoding/json"
 	"errors"
 	"fmt"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
 
 	"github.com/spf13/cobra"
 )
@@ -84,15 +85,15 @@ func trustRootAdd() error {
 	pairs := make([]*commonPb.KeyValuePair, 0)
 	pairs = append(pairs, &commonPb.KeyValuePair{
 		Key:   "org_id",
-		Value: trustRootOrgId,
+		Value: []byte(trustRootOrgId),
 	})
 	pairs = append(pairs, &commonPb.KeyValuePair{
 		Key:   "root",
-		Value: trustRootCrt,
+		Value: []byte(trustRootCrt),
 	})
 
-	resp, txId, err := configUpdateRequest(sk3, client, &InvokerMsg{txType: commonPb.TxType_UPDATE_CHAIN_CONFIG, chainId: chainId,
-		contractName: commonPb.ContractName_SYSTEM_CONTRACT_CHAIN_CONFIG.String(), method: commonPb.ConfigFunction_TRUST_ROOT_ADD.String(), pairs: pairs, oldSeq: seq})
+	resp, txId, err := configUpdateRequest(sk3, client, &InvokerMsg{txType: commonPb.TxType_INVOKE_CONTRACT, chainId: chainId,
+		contractName: syscontract.SystemContract_CHAIN_CONFIG.String(), method: syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pairs: pairs, oldSeq: seq})
 	if err != nil {
 		return err
 	}
@@ -102,11 +103,7 @@ func trustRootAdd() error {
 		Message: resp.Message,
 		TxId:    txId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }
@@ -119,15 +116,15 @@ func trustRootUpdate() error {
 	pairs := make([]*commonPb.KeyValuePair, 0)
 	pairs = append(pairs, &commonPb.KeyValuePair{
 		Key:   "org_id",
-		Value: trustRootOrgId,
+		Value: []byte(trustRootOrgId),
 	})
 	pairs = append(pairs, &commonPb.KeyValuePair{
 		Key:   "root",
-		Value: trustRootCrt,
+		Value: []byte(trustRootCrt),
 	})
 
-	resp, txId, err := configUpdateRequest(sk3, client, &InvokerMsg{txType: commonPb.TxType_UPDATE_CHAIN_CONFIG, chainId: chainId,
-		contractName: commonPb.ContractName_SYSTEM_CONTRACT_CHAIN_CONFIG.String(), method: commonPb.ConfigFunction_TRUST_ROOT_UPDATE.String(), pairs: pairs, oldSeq: seq})
+	resp, txId, err := configUpdateRequest(sk3, client, &InvokerMsg{txType: commonPb.TxType_INVOKE_CONTRACT, chainId: chainId,
+		contractName: syscontract.SystemContract_CHAIN_CONFIG.String(), method: syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pairs: pairs, oldSeq: seq})
 	if err != nil {
 		return err
 	}
@@ -137,11 +134,7 @@ func trustRootUpdate() error {
 		Message: resp.Message,
 		TxId:    txId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }
@@ -154,11 +147,11 @@ func trustRootDelete() error {
 	pairs := make([]*commonPb.KeyValuePair, 0)
 	pairs = append(pairs, &commonPb.KeyValuePair{
 		Key:   "org_id",
-		Value: trustRootOrgId,
+		Value: []byte(trustRootOrgId),
 	})
 
-	resp, txId, err := configUpdateRequest(sk3, client, &InvokerMsg{txType: commonPb.TxType_UPDATE_CHAIN_CONFIG, chainId: chainId,
-		contractName: commonPb.ContractName_SYSTEM_CONTRACT_CHAIN_CONFIG.String(), method: commonPb.ConfigFunction_TRUST_ROOT_DELETE.String(), pairs: pairs, oldSeq: seq})
+	resp, txId, err := configUpdateRequest(sk3, client, &InvokerMsg{txType: commonPb.TxType_INVOKE_CONTRACT, chainId: chainId,
+		contractName: syscontract.SystemContract_CHAIN_CONFIG.String(), method: syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pairs: pairs, oldSeq: seq})
 	if err != nil {
 		return err
 	}
@@ -168,11 +161,7 @@ func trustRootDelete() error {
 		Message: resp.Message,
 		TxId:    txId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }

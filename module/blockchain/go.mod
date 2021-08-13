@@ -5,15 +5,11 @@ go 1.15
 require (
 	chainmaker.org/chainmaker-go/accesscontrol v0.0.0
 	chainmaker.org/chainmaker-go/chainconf v0.0.0
-	chainmaker.org/chainmaker-go/common v0.0.0
 	chainmaker.org/chainmaker-go/consensus v0.0.0
 	chainmaker.org/chainmaker-go/core v0.0.0
-	chainmaker.org/chainmaker-go/dpos v0.0.0
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/logger v0.0.0
 	chainmaker.org/chainmaker-go/net v0.0.0
-	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
-	chainmaker.org/chainmaker-go/protocol v0.0.0
 	chainmaker.org/chainmaker-go/snapshot v0.0.0
 	chainmaker.org/chainmaker-go/store v0.0.0
 	chainmaker.org/chainmaker-go/subscriber v0.0.0
@@ -21,26 +17,28 @@ require (
 	chainmaker.org/chainmaker-go/txpool v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
 	chainmaker.org/chainmaker-go/vm v0.0.0
+	chainmaker.org/chainmaker/common v0.0.0-20210812042900-40fd24729b4a
+	chainmaker.org/chainmaker/pb-go v0.0.0-20210812134751-dc3557ac21d8
+	chainmaker.org/chainmaker/protocol v0.0.0-20210813080941-26ecc435a401
 )
 
 replace (
+	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
 	chainmaker.org/chainmaker-go/chainconf => ./../conf/chainconf
-	chainmaker.org/chainmaker-go/common => ../../common
+
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
-	chainmaker.org/chainmaker-go/dpos => ../dpos
 	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
 	chainmaker.org/chainmaker-go/evm => ../vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../conf/localconf
 	chainmaker.org/chainmaker-go/logger => ../logger
-	chainmaker.org/chainmaker-go/mock => ../../mock
+
 	chainmaker.org/chainmaker-go/monitor => ../monitor
 	chainmaker.org/chainmaker-go/net => ../net
-	chainmaker.org/chainmaker-go/pb/protogo => ../../pb/protogo
-	chainmaker.org/chainmaker-go/protocol => ../../protocol
+
 	chainmaker.org/chainmaker-go/snapshot => ../snapshot
 	chainmaker.org/chainmaker-go/store => ../store
 	chainmaker.org/chainmaker-go/subscriber => ../subscriber
@@ -55,6 +53,5 @@ replace (
 	github.com/libp2p/go-libp2p => ../net/p2p/libp2p
 	github.com/libp2p/go-libp2p-core => ../net/p2p/libp2pcore
 	github.com/libp2p/go-libp2p-pubsub => ../net/p2p/libp2ppubsub
-	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 
 )

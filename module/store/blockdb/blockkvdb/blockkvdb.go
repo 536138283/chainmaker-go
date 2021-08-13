@@ -9,17 +9,20 @@ package blockkvdb
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/archive"
 	"chainmaker.org/chainmaker-go/store/cache"
 	"chainmaker.org/chainmaker-go/store/serialization"
 	"chainmaker.org/chainmaker-go/store/types"
 	"chainmaker.org/chainmaker-go/utils"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	storePb "chainmaker.org/chainmaker/pb-go/store"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/gogo/protobuf/proto"
 	"golang.org/x/sync/semaphore"
 )
@@ -35,12 +38,8 @@ const (
 	archivedPivotKey         = "archivedPivotKey"
 )
 
-const (
-	blockDBName = ""
-)
-
 var (
-	ValueNotFoundError = errors.New("value not found")
+	errValueNotFound = errors.New("value not found")
 )
 
 // BlockKvDB provider a implementation of `blockdb.BlockDB`
@@ -54,11 +53,6 @@ type BlockKvDB struct {
 	Logger protocol.Logger
 }
 
-func (b *BlockKvDB) SaveBlockHeader(header *commonPb.BlockHeader) error {
-	heightKey := constructBlockNumKey(uint64(header.BlockHeight))
-	data, _ := header.Marshal()
-	return b.DbHandle.Put(heightKey, data)
-}
 func (b *BlockKvDB) InitGenesis(genesisBlock *serialization.BlockWithSerializedInfo) error {
 	return b.CommitBlock(genesisBlock)
 }
@@ -75,7 +69,7 @@ func (b *BlockKvDB) CommitBlock(blockInfo *serialization.BlockWithSerializedInfo
 	batch.Put([]byte(lastBlockNumKeyStr), lastBlockNumBytes)
 
 	// 2. height-> blockInfo
-	heightKey := constructBlockNumKey(uint64(block.Header.BlockHeight))
+	heightKey := constructBlockNumKey(block.Header.BlockHeight)
 	batch.Put(heightKey, blockInfo.SerializedMeta)
 
 	// 3. hash-> height
@@ -88,13 +82,14 @@ func (b *BlockKvDB) CommitBlock(blockInfo *serialization.BlockWithSerializedInfo
 	startPrepareTxs := utils.CurrentTimeMillisSeconds()
 	for index, txBytes := range blockInfo.SerializedTxs {
 		tx := blockInfo.Block.Txs[index]
-		txIdKey := constructTxIDKey(tx.Header.TxId)
+		txIdKey := constructTxIDKey(tx.Payload.TxId)
 		batch.Put(txIdKey, txBytes)
 
-		blockTxIdKey := constructBlockTxIDKey(tx.Header.TxId)
-		batch.Put(blockTxIdKey, heightKey)
+		blockTxIdKey := constructBlockTxIDKey(tx.Payload.TxId)
+		txBlockInf := constructTxIDBlockInfo(block.Header.BlockHeight, block.Header.BlockHash, uint32(index))
+		batch.Put(blockTxIdKey, txBlockInf)
 		b.Logger.Debugf("chain[%s]: blockInfo[%d] batch transaction index[%d] txid[%s]",
-			block.Header.ChainId, block.Header.BlockHeight, index, tx.Header.TxId)
+			block.Header.ChainId, block.Header.BlockHeight, index, tx.Payload.TxId)
 	}
 	elapsedPrepareTxs := utils.CurrentTimeMillisSeconds() - startPrepareTxs
 
@@ -137,7 +132,6 @@ func (b *BlockKvDB) GetArchivedPivot() (uint64, error) {
 	return b.archivedPivot, nil
 }
 
-
 // ShrinkBlocks remove ranged txid--SerializedTx from kvdb
 func (b *BlockKvDB) ShrinkBlocks(startHeight uint64, endHeight uint64) (map[uint64][]string, error) {
 	var (
@@ -150,7 +144,7 @@ func (b *BlockKvDB) ShrinkBlocks(startHeight uint64, endHeight uint64) (map[uint
 	}
 
 	if utils.IsConfBlock(block) {
-		return nil, archive.ConfigBlockArchiveError
+		return nil, archive.ErrConfigBlockArchive
 	}
 
 	txIdsMap := make(map[uint64][]string)
@@ -171,8 +165,8 @@ func (b *BlockKvDB) ShrinkBlocks(startHeight uint64, endHeight uint64) (map[uint
 		txIds := make([]string, 0, len(blk.Txs))
 		for _, tx := range blk.Txs {
 			// delete tx data
-			batch.Delete(constructTxIDKey(tx.Header.TxId))
-			txIds = append(txIds, tx.Header.TxId)
+			batch.Delete(constructTxIDKey(tx.Payload.TxId))
+			txIds = append(txIds, tx.Payload.TxId)
 		}
 		txIdsMap[height] = txIds
 		//set archivedPivotKey to db
@@ -212,14 +206,14 @@ func (b *BlockKvDB) RestoreBlocks(blockInfos []*serialization.BlockWithSerialize
 		}
 
 		if !bytes.Equal(blockInfo.Block.Header.BlockHash, sBlock.Header.BlockHash) {
-			return archive.InvalidateRestoreBlocksError
+			return archive.ErrInvalidateRestoreBlocks
 		}
 
 		batch := types.NewUpdateBatch()
 		//verify imported block txs
 		for index, stx := range blockInfo.SerializedTxs {
 			// put tx data
-			batch.Put(constructTxIDKey(blockInfo.Block.Txs[index].Header.TxId), stx)
+			batch.Put(constructTxIDKey(blockInfo.Block.Txs[index].Payload.TxId), stx)
 		}
 
 		archivePivot, err = b.getNextArchivePivot(blockInfo.Block)
@@ -269,21 +263,21 @@ func (b *BlockKvDB) GetHeightByHash(blockHash []byte) (uint64, error) {
 	}
 
 	if heightBytes == nil {
-		return 0, ValueNotFoundError
+		return 0, errValueNotFound
 	}
 
 	return decodeBlockNumKey(heightBytes), nil
 }
 
 // GetBlockHeaderByHeight returns a block header by given it's height, or returns nil if none exists.
-func (b *BlockKvDB) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader, error) {
+func (b *BlockKvDB) GetBlockHeaderByHeight(height uint64) (*commonPb.BlockHeader, error) {
 	vBytes, err := b.get(constructBlockNumKey(uint64(height)))
 	if err != nil {
 		return nil, err
 	}
 
 	if vBytes == nil {
-		return nil, ValueNotFoundError
+		return nil, errValueNotFound
 	}
 
 	var blockStoreInfo storePb.SerializedBlock
@@ -296,7 +290,7 @@ func (b *BlockKvDB) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader,
 }
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
-func (b *BlockKvDB) GetBlock(height int64) (*commonPb.Block, error) {
+func (b *BlockKvDB) GetBlock(height uint64) (*commonPb.Block, error) {
 	heightBytes := constructBlockNumKey(uint64(height))
 	return b.getBlockByHeightBytes(heightBytes)
 }
@@ -323,7 +317,7 @@ func (b *BlockKvDB) GetLastConfigBlock() (*commonPb.Block, error) {
 }
 
 // GetFilteredBlock returns a filtered block given it's block height, or return nil if none exists.
-func (b *BlockKvDB) GetFilteredBlock(height int64) (*storePb.SerializedBlock, error) {
+func (b *BlockKvDB) GetFilteredBlock(height uint64) (*storePb.SerializedBlock, error) {
 	heightKey := constructBlockNumKey(uint64(height))
 	bytes, err := b.get(heightKey)
 	if err != nil {
@@ -355,27 +349,30 @@ func (b *BlockKvDB) GetLastSavepoint() (uint64, error) {
 // GetBlockByTx returns a block which contains a tx.
 func (b *BlockKvDB) GetBlockByTx(txId string) (*commonPb.Block, error) {
 	blockTxIdKey := constructBlockTxIDKey(txId)
-	heightBytes, err := b.get(blockTxIdKey)
+	txIdBlockInfoBytes, err := b.get(blockTxIdKey)
 	if err != nil {
 		return nil, err
 	}
-
-	return b.getBlockByHeightBytes(heightBytes)
+	height, _, _, err := parseTxIdBlockInfo(txIdBlockInfoBytes)
+	if err != nil {
+		return nil, err
+	}
+	return b.GetBlock(height)
 }
 
 // GetTxHeight retrieves a transaction height by txid, or returns nil if none exists.
 func (b *BlockKvDB) GetTxHeight(txId string) (uint64, error) {
 	blockTxIdKey := constructBlockTxIDKey(txId)
-	vBytes, err := b.get(blockTxIdKey)
+	txIdBlockInfoBytes, err := b.get(blockTxIdKey)
 	if err != nil {
 		return 0, err
 	}
 
-	if vBytes == nil {
-		return 0, ValueNotFoundError
+	if txIdBlockInfoBytes == nil {
+		return 0, errValueNotFound
 	}
-
-	return decodeBlockNumKey(vBytes), nil
+	height, _, _, err := parseTxIdBlockInfo(txIdBlockInfoBytes)
+	return height, err
 }
 
 // GetTx retrieves a transaction by txid, or returns nil if none exists.
@@ -387,7 +384,7 @@ func (b *BlockKvDB) GetTx(txId string) (*commonPb.Transaction, error) {
 	} else if len(bytes) == 0 {
 		isArchived, erra := b.TxArchived(txId)
 		if erra == nil && isArchived {
-			return nil, archive.ArchivedTxError
+			return nil, archive.ErrArchivedTx
 		}
 
 		return nil, nil
@@ -409,7 +406,7 @@ func (b *BlockKvDB) GetTxWithBlockInfo(txId string) (*commonPb.TransactionInfo, 
 	} else if len(vBytes) == 0 {
 		isArchived, erra := b.TxArchived(txId)
 		if erra == nil && isArchived {
-			return nil, archive.ArchivedTxError
+			return nil, archive.ErrArchivedTx
 		}
 		return nil, nil
 	}
@@ -419,8 +416,15 @@ func (b *BlockKvDB) GetTxWithBlockInfo(txId string) (*commonPb.TransactionInfo, 
 	if err != nil {
 		return nil, err
 	}
-	//TODO devin add block info
-	return &commonPb.TransactionInfo{Transaction: &tx}, nil
+	txIDBlockInfoBytes, err := b.get(constructBlockTxIDKey(txId))
+	if err != nil {
+		return nil, err
+	}
+	height, blockHash, txIndex, err := parseTxIdBlockInfo(txIDBlockInfoBytes)
+	if err != nil {
+		return nil, err
+	}
+	return &commonPb.TransactionInfo{Transaction: &tx, BlockHeight: height, BlockHash: blockHash, TxIndex: txIndex}, nil
 }
 
 // TxExists returns true if the tx exist, or returns false if none exists.
@@ -435,21 +439,24 @@ func (b *BlockKvDB) TxExists(txId string) (bool, error) {
 
 // TxArchived returns true if the tx archived, or returns false.
 func (b *BlockKvDB) TxArchived(txId string) (bool, error) {
-	heightBytes, err := b.DbHandle.Get(constructBlockTxIDKey(txId))
+	txIdBlockInfoBytes, err := b.DbHandle.Get(constructBlockTxIDKey(txId))
 	if err != nil {
 		return false, err
 	}
 
-	if heightBytes == nil {
-		return false, ValueNotFoundError
+	if txIdBlockInfoBytes == nil {
+		return false, errValueNotFound
 	}
 
 	archivedPivot, err := b.GetArchivedPivot()
 	if err != nil {
 		return false, err
 	}
-
-	if decodeBlockNumKey(heightBytes) <= archivedPivot {
+	height, _, _, err := parseTxIdBlockInfo(txIdBlockInfoBytes)
+	if err != nil {
+		return false, err
+	}
+	if height <= archivedPivot {
 		return true, nil
 	}
 
@@ -509,8 +516,8 @@ func (b *BlockKvDB) getBlockByHeightBytes(height []byte) (*commonPb.Block, error
 		//	defer batchWG.Done()
 		tx, err1 := b.GetTx(txid)
 		if err1 != nil {
-			if err1 == archive.ArchivedTxError {
-				return nil, archive.ArchivedBlockError
+			if err1 == archive.ErrArchivedTx {
+				return nil, archive.ErrArchivedBlock
 			}
 			//errsChan <- err
 			return nil, err1
@@ -528,7 +535,7 @@ func (b *BlockKvDB) getBlockByHeightBytes(height []byte) (*commonPb.Block, error
 	return &block, nil
 }
 
-func (b *BlockKvDB) writeBatch(blockHeight int64, batch protocol.StoreBatcher) error {
+func (b *BlockKvDB) writeBatch(blockHeight uint64, batch protocol.StoreBatcher) error {
 	//update cache
 	b.Cache.AddBlock(blockHeight, batch)
 	go func() {
@@ -583,9 +590,9 @@ func (b *BlockKvDB) getNextArchivePivot(pivotBlock *commonPb.Block) (uint64, err
 
 		//we should not get block data only if it is config block
 		archivedPivot = archivedPivot - 1
-		_, errb := b.GetBlock(int64(archivedPivot))
-		if errb == archive.ArchivedBlockError {
-			curIsConf = false
+		_, errb := b.GetBlock(archivedPivot)
+		if errb == archive.ErrArchivedBlock {
+			//curIsConf = false
 			break
 		} else if errb != nil {
 			return 0, errb
@@ -638,4 +645,26 @@ func (b *BlockKvDB) compactRange() {
 		}
 		//time.Sleep(2 * time.Second)
 	}
+}
+func constructTxIDBlockInfo(height uint64, blockHash []byte, txIndex uint32) []byte {
+	value := fmt.Sprintf("%d,%x,%d", height, blockHash, txIndex)
+	return []byte(value)
+}
+func parseTxIdBlockInfo(value []byte) (height uint64, blockHash []byte, txIndex uint32, err error) {
+	strArray := strings.Split(string(value), ",")
+	if len(strArray) != 3 {
+		err = fmt.Errorf("invalid input[%s]", value)
+		return
+	}
+	height, err = strconv.ParseUint(strArray[0], 10, 64)
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	blockHash, err = hex.DecodeString(strArray[1])
+	if err != nil {
+		return 0, nil, 0, err
+	}
+	idx, err := strconv.Atoi(strArray[2])
+	txIndex = uint32(idx)
+	return
 }

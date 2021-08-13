@@ -11,7 +11,8 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/common/crypto/bulletproofs"
+	"chainmaker.org/chainmaker/common/crypto/bulletproofs"
+
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +40,7 @@ func prove() error {
 	commitmentStr := ""
 	proofStr := ""
 	if openingStr == "" {
-		proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveRandomOpening(uint64(valueX))
+		proof, commitment, opening, err := bulletproofs.ProveRandomOpening(uint64(valueX))
 		if err != nil {
 			return err
 		}
@@ -51,7 +52,7 @@ func prove() error {
 		if err != nil {
 			return err
 		}
-		proof, commitment, err := bulletproofs.Helper().NewBulletproofs().ProveSpecificOpening(uint64(valueX), opening)
+		proof, commitment, err := bulletproofs.ProveSpecificOpening(uint64(valueX), opening)
 		if err != nil {
 			return err
 		}

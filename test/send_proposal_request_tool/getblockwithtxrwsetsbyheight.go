@@ -8,10 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"encoding/json"
 	"fmt"
-	"strconv"
+	"math"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
@@ -28,7 +29,7 @@ func GetBlockWithRWSetsByHeightCMD() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.IntVarP(&height, "height", "H", -1, "specify block height")
+	flags.Uint64VarP(&height, "height", "H", math.MaxUint64, "specify block height")
 
 	return cmd
 }
@@ -38,17 +39,16 @@ func getBlockWithRWSetsByHeight() error {
 	pairs := []*commonPb.KeyValuePair{
 		{
 			Key:   "blockHeight",
-			Value: strconv.Itoa(height),
+			Value: []byte(fmt.Sprintf("%d", height)),
 		},
 	}
 
-	payloadBytes, err := constructPayload(commonPb.ContractName_SYSTEM_CONTRACT_QUERY.String(), "GET_BLOCK_WITH_TXRWSETS_BY_HEIGHT", pairs)
+	payloadBytes, err := constructQueryPayload(chainId, syscontract.SystemContract_CHAIN_QUERY.String(), "GET_BLOCK_WITH_TXRWSETS_BY_HEIGHT", pairs)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_QUERY_SYSTEM_CONTRACT,
-		chainId, "", payloadBytes)
+	resp, err = proposalRequest(sk3, client, payloadBytes)
 	if err != nil {
 		return err
 	}
@@ -64,11 +64,7 @@ func getBlockWithRWSetsByHeight() error {
 		ContractResultMessage: resp.ContractResult.Message,
 		BlockInfo:             blockInfo,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }

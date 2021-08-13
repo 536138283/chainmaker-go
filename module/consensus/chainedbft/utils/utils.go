@@ -11,12 +11,12 @@ import (
 	"math"
 	"time"
 
-	pbac "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	chainedbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/chainedbft"
-	"chainmaker.org/chainmaker-go/protocol"
 	chainUtils "chainmaker.org/chainmaker-go/utils"
+	pbac "chainmaker.org/chainmaker/pb-go/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/consensus"
+	chainedbftpb "chainmaker.org/chainmaker/pb-go/consensus/chainedbft"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -110,7 +110,7 @@ func SignConsensusMsg(msg *chainedbftpb.ConsensusMsg, hashType string,
 	if err != nil {
 		return fmt.Errorf("sign data failed, err %v data %v", err, data)
 	}
-	serializeMember, err := signer.GetSerializedMember(true)
+	serializeMember, err := signer.GetMember()
 	if err != nil {
 		return fmt.Errorf("get signer serializeMember failed, err %v", err)
 	}
@@ -177,12 +177,12 @@ func VerifyDataSign(data []byte, signEnrty *common.EndorsementEntry,
 	return nil
 }
 
-//GetUidFromProtoSigner get uid from SerializedMember using netservice
-func GetUidFromProtoSigner(signerpb *pbac.SerializedMember, netservice protocol.NetService, ac protocol.AccessControlProvider) (string, error) {
+//GetUidFromProtoSigner get uid from Member using netservice
+func GetUidFromProtoSigner(signerpb *pbac.Member, netservice protocol.NetService, ac protocol.AccessControlProvider) (string, error) {
 	if signerpb == nil {
 		return "", fmt.Errorf("signer is nil")
 	}
-	member, err := ac.NewMemberFromProto(signerpb)
+	member, err := ac.NewMember(signerpb)
 	if err != nil {
 		return "", fmt.Errorf("new member from proto failed, err: %v", err)
 	}

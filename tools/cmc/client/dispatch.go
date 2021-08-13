@@ -11,75 +11,102 @@ import (
 	"fmt"
 	"sync"
 
+	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
+
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdk "chainmaker.org/chainmaker-sdk-go"
-	sdkPbCommon "chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
+	sdkPbCommon "chainmaker.org/chainmaker/pb-go/common"
+	sdk "chainmaker.org/chainmaker/sdk-go"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/utils"
 )
 
-func Dispatch(client *sdk.ChainClient, contractName, method string, params map[string]string) {
+func Dispatch(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+	evmMethod *ethabi.Method) {
 	var (
 		wgSendReq sync.WaitGroup
 	)
 
 	for i := 0; i < concurrency; i++ {
 		wgSendReq.Add(1)
-		go runInvokeContract(client, contractName, method, params, &wgSendReq)
+		go runInvokeContract(client, contractName, method, kvs, &wgSendReq, evmMethod)
 	}
 
 	wgSendReq.Wait()
 }
-func DispatchTimes(client *sdk.ChainClient, contractName, method string, params map[string]string) {
+func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+	evmMethod *ethabi.Method) {
 	var (
 		wgSendReq sync.WaitGroup
 	)
 	times := util.MaxInt(1, sendTimes)
 	wgSendReq.Add(times)
-	txId := sdk.GetRandTxId()
 	for i := 0; i < times; i++ {
-		go runInvokeContractOnce(client, contractName, method, params, &wgSendReq, txId)
+		go runInvokeContractOnce(client, contractName, method, kvs, &wgSendReq, evmMethod)
 	}
 	wgSendReq.Wait()
 }
 
-func runInvokeContract(client *sdk.ChainClient, contractName, method string, params map[string]string,
-	wg *sync.WaitGroup) {
+func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+	wg *sync.WaitGroup, evmMethod *ethabi.Method) {
 
 	defer func() {
 		wg.Done()
 	}()
 
 	for i := 0; i < totalCntPerGoroutine; i++ {
-		resp, err := client.InvokeContract(contractName, method, "", params, int64(timeout), syncResult)
+		txId := sdkutils.GetRandTxId()
+		resp, err := client.InvokeContract(contractName, method, txId, kvs, timeout, syncResult)
 		if err != nil {
 			fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 			return
 		}
 
 		if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
-			fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]\n", resp.Code, resp.Message)
+			fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
 			return
 		}
 
-		fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]\n", resp.Code, resp.Message, resp.ContractResult)
+		if evmMethod != nil {
+			output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
+			if err != nil {
+				fmt.Println(err)
+				return
+			}
+			resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
+		}
+
+		fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]/[txId:%s]\n", resp.Code, resp.Message,
+			resp.ContractResult, txId)
 	}
 }
-func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, params map[string]string,
-	wg *sync.WaitGroup, txId string) {
+
+func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+	wg *sync.WaitGroup, evmMethod *ethabi.Method) {
 
 	defer func() {
 		wg.Done()
 	}()
-	resp, err := client.InvokeContract(contractName, method, txId, params, int64(timeout), syncResult)
+
+	txId := sdkutils.GetRandTxId()
+	resp, err := client.InvokeContract(contractName, method, txId, kvs, timeout, syncResult)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 		return
 	}
 
 	if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
-		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]\n", resp.Code, resp.Message)
+		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
 		return
 	}
 
-	fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]\n", resp.Code, resp.Message, resp.ContractResult)
+	if evmMethod != nil {
+		output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+		resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
+	}
 
+	fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]/[txId:%s]\n", resp.Code, resp.Message,
+		resp.ContractResult, txId)
 }

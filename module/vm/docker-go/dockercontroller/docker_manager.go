@@ -63,8 +63,8 @@ type DockerManager struct {
 // if has error: log error and return nil
 func NewDockerManager(chainId string) *DockerManager {
 
-	config := localconf.ChainMakerConfig
-	logger := logger.GetLoggerByChain("[Docker Manager]", chainId)
+	chainmakerConfig := localconf.ChainMakerConfig
+	dockerManagerLogger := logger.GetLoggerByChain("[Docker Manager]", chainId)
 
 	// init docker manager
 	newDockerManager := &DockerManager{
@@ -72,20 +72,20 @@ func NewDockerManager(chainId string) *DockerManager {
 		AttachStderr: true,
 		ShowStdout:   true,
 		ShowStderr:   true,
-		Log:          logger,
+		Log:          dockerManagerLogger,
 		CDMState:     false,
 		lock:         sync.Mutex{},
 	}
 
 	// validate settings
-	valid, err := newDockerManager.validateConfig(config)
+	valid, err := newDockerManager.validateConfig(chainmakerConfig)
 	if err != nil || !valid {
-		logger.Errorf("fail to init docker manager, please check the docker config, %s", err)
+		dockerManagerLogger.Errorf("fail to init docker manager, please check the docker config, %s", err)
 		return nil
 	}
 
 	// if open docker vm is false, docker manager is nil
-	startDockerVm := config.DockerConfig.OpenDockerVM
+	startDockerVm := chainmakerConfig.DockerConfig.OpenDockerVM
 	if !startDockerVm {
 		return nil
 	}
@@ -96,10 +96,10 @@ func NewDockerManager(chainId string) *DockerManager {
 		return nil
 	}
 
-	hostPort := strconv.Itoa(int(config.DockerConfig.DockerRpcConfig.Port))
+	hostPort := strconv.Itoa(int(chainmakerConfig.DockerConfig.DockerRpcConfig.Port))
 	openPort := nat.Port(hostPort + "/tcp")
 
-	hostPprofPort := strconv.Itoa(int(config.DockerConfig.DockerPprofConfig.PProfPort))
+	hostPprofPort := strconv.Itoa(int(chainmakerConfig.DockerConfig.DockerPprofConfig.PProfPort))
 	openPprofPort := nat.Port(hostPprofPort + "/tcp")
 
 	newDockerManager.ctx = context.Background()
@@ -118,7 +118,7 @@ func NewDockerManager(chainId string) *DockerManager {
 	// init mount directory and subdirectory
 	err = newDockerManager.InitMountDirectory()
 	if err != nil {
-		logger.Errorf("fail to init mount directory: %s", err)
+		dockerManagerLogger.Errorf("fail to init mount directory: %s", err)
 		return nil
 	}
 
@@ -188,7 +188,7 @@ func (m *DockerManager) StartContainer() error {
 
 	// display container info in the console
 	go func() {
-		err := m.displayInConsole(m.containerName)
+		err = m.displayInConsole(m.containerName)
 		if err != nil {
 			return
 		}
@@ -220,10 +220,10 @@ func (m *DockerManager) StopAndRemoveVM() error {
 		return err
 	}
 
-	//err = m.removeImage()
-	//if err != nil {
-	//	return err
-	//}
+	err = m.removeImage()
+	if err != nil {
+		return err
+	}
 
 	m.Log.Info("stop and remove docker vm [%s]", m.containerName)
 	return nil
