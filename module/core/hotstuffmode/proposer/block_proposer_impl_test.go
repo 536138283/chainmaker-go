@@ -7,16 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package proposer
 //
 //import (
-//	"chainmaker.org/chainmaker-go/common/random/uuid"
+//	"chainmaker.org/chainmaker/common/random/uuid"
 //	"chainmaker.org/chainmaker-go/core/cache"
 //	"chainmaker.org/chainmaker-go/localconf"
 //	"chainmaker.org/chainmaker-go/logger"
-//	"chainmaker.org/chainmaker-go/mock"
-//	acpb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
-//	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-//	configpb "chainmaker.org/chainmaker-go/pb/protogo/config"
-//	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
-//	txpoolpb "chainmaker.org/chainmaker-go/pb/protogo/txpool"
+//	"chainmaker.org/chainmaker/protocol/mock"
+//	acpb "chainmaker.org/chainmaker/pb-go/accesscontrol"
+//	commonpb "chainmaker.org/chainmaker/pb-go/common"
+//	configpb "chainmaker.org/chainmaker/pb-go/config"
+//	"chainmaker.org/chainmaker/pb-go/consensus"
+//	txpoolpb "chainmaker.org/chainmaker/pb-go/txpool"
 //	"chainmaker.org/chainmaker-go/utils"
 //	"crypto/sha256"
 //	"fmt"
@@ -305,7 +305,7 @@ package proposer
 //	block.Dag = dag
 //	confKV := &commonpb.KeyValuePair{
 //		Key:   "IsExtreme",
-//		Value: "true",
+//		Value: []byte("true"),
 //	}
 //	kvs := make([]*commonpb.KeyValuePair, 1)
 //	kvs[0] = confKV
@@ -353,7 +353,7 @@ package proposer
 //	pairs := []*commonpb.KeyValuePair{
 //		{
 //			Key:   "file_hash",
-//			Value: txId[len(txId)/2:],
+//			Value: []byte(txId)[len(txId)/2:],
 //		},
 //	}
 //	return &commonpb.TransactPayload{
@@ -367,10 +367,10 @@ package proposer
 //	return &commonpb.Transaction{
 //		Header: &commonpb.TxHeader{
 //			ChainId: "chain1",
-//			Sender: &acpb.SerializedMember{
+//			Sender: &acpb.Member{
 //				OrgId:      "wx-org1.chainmaker.org",
 //				MemberInfo: []byte("wx-org1.chainmaker.org"),
-//				IsFullCert: false,
+//				MemberType: acPb.MemberType_CERT_HASH,
 //			},
 //			TxType:         0,
 //			TxId:           txId,
@@ -392,7 +392,7 @@ package proposer
 //	}
 //}
 //
-//func createNewTestBlock(height int64) *commonpb.Block {
+//func createNewTestBlock(height uint64) *commonpb.Block {
 //	var hash = []byte("0123456789")
 //	var version = []byte("0")
 //	var block = &commonpb.Block{

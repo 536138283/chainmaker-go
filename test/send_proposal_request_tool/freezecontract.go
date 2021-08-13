@@ -8,12 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"encoding/json"
 	"fmt"
 
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+
+	"chainmaker.org/chainmaker/pb-go/syscontract"
+
 	"chainmaker.org/chainmaker-go/utils"
-	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
 )
 
@@ -33,29 +34,20 @@ func FreezeContractCMD() *cobra.Command {
 func freezeContract() error {
 	txId := utils.GetRandTxId()
 
-	method := commonPb.ManageUserContractFunction_FREEZE_CONTRACT.String()
-
-	payload := &commonPb.ContractMgmtPayload{
-		ChainId: chainId,
-		ContractId: &commonPb.ContractId{
-			ContractName: contractName,
-		},
-		Method: method,
-	}
-
-	if endorsement, err := acSign(payload); err == nil {
-		payload.Endorsement = endorsement
-	} else {
-		return err
-	}
-
-	payloadBytes, err := proto.Marshal(payload)
+	method := syscontract.ContractManageFunction_FREEZE_CONTRACT.String()
+	var pairs []*commonPb.KeyValuePair
+	pairs = append(pairs, &commonPb.KeyValuePair{
+		Key:   syscontract.FreezeContract_CONTRACT_NAME.String(),
+		Value: []byte(contractName),
+	})
+	payload, _ := constructInvokePayload(chainId, syscontract.SystemContract_CONTRACT_MANAGE.String(), method, pairs)
+	payload.TxId = txId
+	endorsement, err := acSign(payload)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_MANAGE_USER_CONTRACT,
-		chainId, txId, payloadBytes)
+	resp, err := proposalRequestWithMultiSign(sk3, client, payload, endorsement)
 	if err != nil {
 		return err
 	}
@@ -63,13 +55,9 @@ func freezeContract() error {
 	result := &Result{
 		Code:    resp.Code,
 		Message: resp.Message,
-		TxId:    txId,
+		TxId:    resp.TxId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }
@@ -90,29 +78,21 @@ func UnfreezeContractCMD() *cobra.Command {
 func unfreezeContract() error {
 	txId := utils.GetRandTxId()
 
-	method := commonPb.ManageUserContractFunction_UNFREEZE_CONTRACT.String()
+	method := syscontract.ContractManageFunction_UNFREEZE_CONTRACT.String()
+	var pairs []*commonPb.KeyValuePair
+	pairs = append(pairs, &commonPb.KeyValuePair{
+		Key:   syscontract.UpgradeContract_CONTRACT_NAME.String(),
+		Value: []byte(contractName),
+	})
+	payload, _ := constructInvokePayload(chainId, syscontract.SystemContract_CONTRACT_MANAGE.String(), method, pairs)
+	payload.TxId = txId
 
-	payload := &commonPb.ContractMgmtPayload{
-		ChainId: chainId,
-		ContractId: &commonPb.ContractId{
-			ContractName: contractName,
-		},
-		Method: method,
-	}
-
-	if endorsement, err := acSign(payload); err == nil {
-		payload.Endorsement = endorsement
-	} else {
-		return err
-	}
-
-	payloadBytes, err := proto.Marshal(payload)
+	endorsement, err := acSign(payload)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_MANAGE_USER_CONTRACT,
-		chainId, txId, payloadBytes)
+	resp, err := proposalRequestWithMultiSign(sk3, client, payload, endorsement)
 	if err != nil {
 		return err
 	}
@@ -120,13 +100,9 @@ func unfreezeContract() error {
 	result := &Result{
 		Code:    resp.Code,
 		Message: resp.Message,
-		TxId:    txId,
+		TxId:    resp.TxId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }
@@ -147,29 +123,21 @@ func RevokeContractCMD() *cobra.Command {
 func RevokeContract() error {
 	txId := utils.GetRandTxId()
 
-	method := commonPb.ManageUserContractFunction_REVOKE_CONTRACT.String()
+	method := syscontract.ContractManageFunction_REVOKE_CONTRACT.String()
+	var pairs []*commonPb.KeyValuePair
+	pairs = append(pairs, &commonPb.KeyValuePair{
+		Key:   syscontract.UpgradeContract_CONTRACT_NAME.String(),
+		Value: []byte(contractName),
+	})
+	payload, _ := constructInvokePayload(chainId, syscontract.SystemContract_CONTRACT_MANAGE.String(), method, pairs)
+	payload.TxId = txId
 
-	payload := &commonPb.ContractMgmtPayload{
-		ChainId: chainId,
-		ContractId: &commonPb.ContractId{
-			ContractName: contractName,
-		},
-		Method: method,
-	}
-
-	if endorsement, err := acSign(payload); err == nil {
-		payload.Endorsement = endorsement
-	} else {
-		return err
-	}
-
-	payloadBytes, err := proto.Marshal(payload)
+	endorsement, err := acSign(payload)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_MANAGE_USER_CONTRACT,
-		chainId, txId, payloadBytes)
+	resp, err := proposalRequestWithMultiSign(sk3, client, payload, endorsement)
 	if err != nil {
 		return err
 	}
@@ -177,13 +145,9 @@ func RevokeContract() error {
 	result := &Result{
 		Code:    resp.Code,
 		Message: resp.Message,
-		TxId:    txId,
+		TxId:    resp.TxId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }

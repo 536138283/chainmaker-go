@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	acPb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 var _ protocol.TxSimContext = (*MockSimContextImpl)(nil)
@@ -41,11 +41,12 @@ func (s *MockSimContextImpl) GetTxExecSeq() int {
 func (s *MockSimContextImpl) GetDepth() int {
 	return s.currentDepth
 }
-func (s *MockSimContextImpl) GetBlockVersion() string {
+func (s *MockSimContextImpl) GetBlockVersion() uint32 {
 	return protocol.DefaultBlockVersion
 }
 
-func (s *MockSimContextImpl) CallContract(contractId *commonPb.ContractId, method string, byteCode []byte, parameter map[string]string, gasUsed uint64, refTxType commonPb.TxType) (*commonPb.ContractResult, commonPb.TxStatusCode) {
+func (s *MockSimContextImpl) CallContract(contractId *commonPb.Contract, method string, byteCode []byte,
+	parameter map[string][]byte, gasUsed uint64, refTxType commonPb.TxType) (*commonPb.ContractResult, commonPb.TxStatusCode) {
 	panic(implement_me)
 }
 
@@ -53,7 +54,7 @@ func (s *MockSimContextImpl) GetCurrentResult() []byte {
 	panic(implement_me)
 }
 
-func (s *MockSimContextImpl) GetCreator(namespace string) *acPb.SerializedMember {
+func (s *MockSimContextImpl) GetCreator(namespace string) *acPb.Member {
 	panic(implement_me)
 }
 
@@ -61,11 +62,11 @@ func (s *MockSimContextImpl) Select(namespace string, startKey []byte, limit []b
 	panic(implement_me)
 }
 
-func (s *MockSimContextImpl) GetBlockHeight() int64 {
+func (s *MockSimContextImpl) GetBlockHeight() uint64 {
 	panic(implement_me)
 }
 
-func (s *MockSimContextImpl) GetBlockProposer() []byte {
+func (s *MockSimContextImpl) GetBlockProposer() *acPb.Member {
 	panic(implement_me)
 }
 
@@ -77,7 +78,7 @@ func (s *MockSimContextImpl) SetTxResult(result *commonPb.Result) {
 	s.txResult = result
 }
 
-func (s *MockSimContextImpl) GetSender() *acPb.SerializedMember {
+func (s *MockSimContextImpl) GetSender() *acPb.Member {
 	panic(implement_me)
 }
 
@@ -181,7 +182,7 @@ func testSnapshot(t *testing.T, i int) {
 
 	txSimContext := &MockSimContextImpl{
 		tx: &commonPb.Transaction{
-			Header: &commonPb.TxHeader{
+			Payload: &commonPb.Payload{
 				TxId: "tx id in snapshot",
 			},
 		},

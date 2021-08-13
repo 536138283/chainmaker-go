@@ -7,18 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package store
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"path/filepath"
 	"runtime"
 	"sync"
 
-	"chainmaker.org/chainmaker-go/common/wal"
 	"chainmaker.org/chainmaker-go/localconf"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
-	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/archive"
 	"chainmaker.org/chainmaker-go/store/binlog"
 	"chainmaker.org/chainmaker-go/store/blockdb"
@@ -29,6 +25,11 @@ import (
 	"chainmaker.org/chainmaker-go/store/statedb"
 	"chainmaker.org/chainmaker-go/store/types"
 	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker/common/wal"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	configPb "chainmaker.org/chainmaker/pb-go/config"
+	storePb "chainmaker.org/chainmaker/pb-go/store"
+	"chainmaker.org/chainmaker/protocol"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -111,6 +112,10 @@ func NewBlockStoreImpl(chainId string,
 //InitGenesis 初始化创世区块到数据库，对应的数据库必须为空数据库，否则报错
 func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) error {
 	bs.logger.Debug("start initial genesis block to database...")
+	bs.logger.InfoDynamic(func() string {
+		j, _ := json.Marshal(genesisBlock)
+		return "Genesis JSON:" + string(j)
+	})
 	//1.检查创世区块是否有异常
 	if err := checkGenesis(genesisBlock); err != nil {
 		return err
@@ -171,8 +176,8 @@ func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) erro
 			return errors.New("contract event db config err")
 		}
 	}
-	bs.logger.Infof("chain[%s]: put block[%d] (txs:%d bytes:%d), ",
-		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs), len(blockBytes))
+	bs.logger.Infof("chain[%s]: put block[%d] hash[%x] (txs:%d bytes:%d), ",
+		block.Header.ChainId, block.Header.BlockHeight, block.Header.BlockHash, len(block.Txs), len(blockBytes))
 
 	//7. init archive manager
 	err = bs.InitArchiveMgr(block.Header.ChainId)
@@ -191,7 +196,8 @@ func checkGenesis(genesisBlock *storePb.BlockWithRWSet) error {
 
 // PutBlock commits the block and the corresponding rwsets in an atomic operation
 func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.TxRWSet) error {
-	bs.logger.Infof("chain[%s]: start put block[%d]", block.Header.ChainId, block.Header.BlockHeight)
+	bs.logger.Debugf("chain[%s]: start put block[%d] (txs:%d)",
+		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs))
 
 	startPutBlock := utils.CurrentTimeMillisSeconds()
 	//1. commit log
@@ -278,9 +284,9 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 				block.Header.ChainId, block.Header.BlockHeight, err)
 		}
 	}()
-	bs.logger.Infof("chain[%s]: put block[%d] (txs:%d bytes:%d), "+
+	bs.logger.Infof("chain[%s]: put block[%d] hash[%x] (txs:%d bytes:%d), "+
 		"time used (mashal:%d, log:%d, commit:%d, total:%d)",
-		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs), len(blockBytes),
+		block.Header.ChainId, block.Header.BlockHeight, block.Header.BlockHash, len(block.Txs), len(blockBytes),
 		elapsedMarshalBlockAndRWSet, elapsedCommitlogDB, elapsedCommitBlock,
 		utils.CurrentTimeMillisSeconds()-startPutBlock)
 	return nil
@@ -353,12 +359,12 @@ func (bs *BlockStoreImpl) GetHeightByHash(blockHash []byte) (uint64, error) {
 }
 
 // GetBlockHeaderByHeight returns a block header by given it's height, or returns nil if none exists.
-func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader, error) {
+func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height uint64) (*commonPb.BlockHeader, error) {
 	return bs.blockDB.GetBlockHeaderByHeight(height)
 }
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
-func (bs *BlockStoreImpl) GetBlock(height int64) (*commonPb.Block, error) {
+func (bs *BlockStoreImpl) GetBlock(height uint64) (*commonPb.Block, error) {
 	return bs.blockDB.GetBlock(height)
 }
 
@@ -455,7 +461,7 @@ func (bs *BlockStoreImpl) GetTxRWSet(txId string) (*commonPb.TxRWSet, error) {
 		if isArchived, err = bs.blockDB.TxArchived(txId); err != nil {
 			return nil, err
 		} else if isArchived {
-			return nil, archive.ArchivedRWSetError
+			return nil, archive.ErrArchivedRWSet
 		}
 	}
 
@@ -464,7 +470,7 @@ func (bs *BlockStoreImpl) GetTxRWSet(txId string) (*commonPb.TxRWSet, error) {
 
 // GetTxRWSetsByHeight returns all the rwsets corresponding to the block,
 // or returns nil if zhe block does not exist
-func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet, error) {
+func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height uint64) ([]*commonPb.TxRWSet, error) {
 	blockStoreInfo, err := bs.blockDB.GetFilteredBlock(height)
 	if err != nil || blockStoreInfo == nil {
 		return nil, err
@@ -490,7 +496,7 @@ func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet
 
 // GetBlockWithRWSets returns the block and all the rwsets corresponding to the block,
 // or returns nil if zhe block does not exist
-func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRWSet, error) {
+func (bs *BlockStoreImpl) GetBlockWithRWSets(height uint64) (*storePb.BlockWithRWSet, error) {
 	block, err := bs.GetBlock(height)
 	if err != nil {
 		return nil, err
@@ -510,12 +516,12 @@ func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRW
 		//go func(i int, tx *commonPb.Transaction) {
 		//	defer bs.workersSemaphore.Release(1)
 		//	defer batchWG.Done()
-		txRWSet, err := bs.GetTxRWSet(tx.Header.TxId)
+		txRWSet, err := bs.GetTxRWSet(tx.Payload.TxId)
 		if err != nil {
 			return nil, err
 		}
 		if txRWSet == nil { //数据库未找到记录，这不正常，记录日志，初始化空实例
-			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", tx.Header.TxId)
+			bs.logger.Errorf("not found rwset data in database by txid=%d, please check database", tx.Payload.TxId)
 			txRWSet = &commonPb.TxRWSet{}
 		}
 		blockWithRWSets.TxRWSets[i] = txRWSet
@@ -780,8 +786,8 @@ func (bs *BlockStoreImpl) QueryMulti(contractName, sql string, values ...interfa
 }
 
 //ExecDdlSql execute DDL SQL in a contract
-func (bs *BlockStoreImpl) ExecDdlSql(contractName, sql string) error {
-	return bs.stateDB.ExecDdlSql(contractName, sql)
+func (bs *BlockStoreImpl) ExecDdlSql(contractName, sql, version string) error {
+	return bs.stateDB.ExecDdlSql(contractName, sql, version)
 }
 
 //BeginDbTransaction 启用一个事务
@@ -833,5 +839,11 @@ func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
 
 func (bs *BlockStoreImpl) isSupportArchive() bool {
 	return bs.storeConfig.BlockDbConfig.IsKVDB() &&
-		(bs.storeConfig.ResultDbConfig!=nil &&bs.storeConfig.ResultDbConfig.IsKVDB())
+		(bs.storeConfig.ResultDbConfig != nil && bs.storeConfig.ResultDbConfig.IsKVDB())
+}
+func (bs *BlockStoreImpl) GetContractByName(name string) (*commonPb.Contract, error) {
+	return utils.GetContractByName(bs.stateDB.ReadObject, name)
+}
+func (bs *BlockStoreImpl) GetContractBytecode(name string) ([]byte, error) {
+	return utils.GetContractBytecode(bs.stateDB.ReadObject, name)
 }

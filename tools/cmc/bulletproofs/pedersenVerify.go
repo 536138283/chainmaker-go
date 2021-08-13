@@ -11,7 +11,8 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/common/crypto/bulletproofs"
+	"chainmaker.org/chainmaker/common/crypto/bulletproofs"
+
 	"github.com/spf13/cobra"
 )
 
@@ -52,7 +53,7 @@ func pedersenVerify() error {
 		return err
 	}
 
-	ok, err := bulletproofs.Helper().NewBulletproofs().PedersenVerify(commitment, opening, uint64(valueX))
+	ok, err := bulletproofs.PedersenVerify(commitment, opening, uint64(valueX))
 	if err != nil {
 		return err
 	}

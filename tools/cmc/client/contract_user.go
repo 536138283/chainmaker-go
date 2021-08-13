@@ -8,27 +8,26 @@ SPDX-License-Identifier: Apache-2.0
 package client
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
-	"github.com/gogo/protobuf/proto"
+	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
+	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 
-	"chainmaker.org/chainmaker-go/common/crypto"
-	bcx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker-sdk-go/pb/protogo/accesscontrol"
-	"chainmaker.org/chainmaker-sdk-go/pb/protogo/common"
+	"chainmaker.org/chainmaker/pb-go/common"
+	sdk "chainmaker.org/chainmaker/sdk-go"
 )
 
 const CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT = "checkProposalRequestResp failed, %s"
 const SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT = "SendContractManageRequest failed, %s"
-const MERGE_CONTRACT_MANAGE_SIGNED_PAYLOAD_FAILED_FORMAT = "MergeContractManageSignedPayload failed, %s"
-const SIGN_CONTRACT_MANAGE_PAYLOAD_FAILED_FORMAT = "SignContractManagePayload failed, %s"
-const CREATE_USER_CLIENT_FAILED_FORMAT = "create user client failed, %s"
-const ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT = "admin orgId & key & cert list length not equal, [orgIds len: %d]/[keys len: %d]/[certs len:%d]"
+const ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT = "admin orgId & key & cert list length not equal, [keys len: %d]/[certs len:%d]"
 
 var (
 	ErrAdminOrgIdKeyCertIsEmpty = errors.New("admin orgId or key or cert list is empty")
@@ -73,7 +72,7 @@ func createUserContractCMD() *cobra.Command {
 		flagUserTlsKeyFilePath, flagUserTlsCrtFilePath, flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
-		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -83,7 +82,6 @@ func createUserContractCMD() *cobra.Command {
 	cmd.MarkFlagRequired(flagRuntimeType)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
-	cmd.MarkFlagRequired(flagAdminOrgIds)
 
 	return cmd
 }
@@ -101,7 +99,7 @@ func invokeUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
-		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult,
+		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -123,7 +121,7 @@ func invokeContractTimesCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -170,7 +168,7 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
-		flagAdminOrgIds, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -178,7 +176,6 @@ func upgradeUserContractCMD() *cobra.Command {
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
 	cmd.MarkFlagRequired(flagRuntimeType)
-	cmd.MarkFlagRequired(flagAdminOrgIds)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 
@@ -198,13 +195,11 @@ func freezeUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes, flagTimeout, flagParams,
-		flagSyncResult, flagEnableCertHash,
-		flagAdminOrgIds, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
-	cmd.MarkFlagRequired(flagAdminOrgIds)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 
@@ -223,14 +218,12 @@ func unfreezeUserContractCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
-		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes,
-		flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
-		flagAdminOrgIds, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes, flagTimeout, flagParams,
+		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
-	cmd.MarkFlagRequired(flagAdminOrgIds)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 
@@ -249,14 +242,12 @@ func revokeUserContractCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
-		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes,
-		flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
-		flagAdminOrgIds, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes, flagTimeout, flagParams,
+		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
-	cmd.MarkFlagRequired(flagAdminOrgIds)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 
@@ -264,19 +255,18 @@ func revokeUserContractCMD() *cobra.Command {
 }
 
 func createUserContract() error {
-	adminOrgIdSlice := strings.Split(adminOrgIds, ",")
 	adminKeys := strings.Split(adminKeyFilePaths, ",")
 	adminCrts := strings.Split(adminCrtFilePaths, ",")
-	if len(adminKeys) == 0 || len(adminCrts) == 0 || len(adminOrgIdSlice) == 0 {
+	if len(adminKeys) == 0 || len(adminCrts) == 0 {
 		return ErrAdminOrgIdKeyCertIsEmpty
 	}
-	if len(adminKeys) != len(adminCrts) || len(adminOrgIdSlice) != len(adminCrts) {
-		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminOrgIdSlice), len(adminKeys), len(adminCrts))
+	if len(adminKeys) != len(adminCrts) {
+		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
 	}
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err)
+		return err
 	}
 	defer client.Stop()
 
@@ -285,48 +275,50 @@ func createUserContract() error {
 		return fmt.Errorf("unknown runtime type [%s]", runtimeType)
 	}
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+
+	if runtimeType != "EVM" {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
+	} else {
+		byteCode, err := ioutil.ReadFile(byteCodePath)
 		if err != nil {
 			return err
 		}
+		byteCodePath = string(byteCode)
+
+		if !ethcmn.IsHexAddress(contractName) {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
 	}
-	pairsKv := paramsMap2KVPairs(pairs)
-	fmt.Printf("create user contract params:%+v\n", pairsKv)
-	payloadBytes, err := client.CreateContractCreatePayload(contractName, version, byteCodePath, common.RuntimeType(rt), pairsKv)
+
+	payload, err := client.CreateContractCreatePayload(contractName, version, byteCodePath, common.RuntimeType(rt), kvs)
 	if err != nil {
 		return err
 	}
 
-	signedPayloads := make([][]byte, len(adminKeys))
+	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
 	for i := range adminKeys {
-		_, privKey, err := dealUserKey(adminKeys[i])
-		if err != nil {
-			return err
-		}
-		crtBytes, crt, err := dealUserCrt(adminCrts[i])
+		e, err := sdk.SignPayloadWithPath(adminKeys[i], adminCrts[i], payload)
 		if err != nil {
 			return err
 		}
 
-		signedPayload, err := signContractManagePayload(payloadBytes, crtBytes, privKey, crt, adminOrgIdSlice[i])
-		if err != nil {
-			return err
-		}
-		signedPayloads[i] = signedPayload
+		endorsementEntrys[i] = e
 	}
 
-	mergedSignedPayloadBytes, err := client.MergeContractManageSignedPayload(signedPayloads)
+	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {
 		return err
 	}
-
-	resp, err := client.SendContractManageRequest(mergedSignedPayloadBytes, int64(timeout), false)
-	if err != nil {
-		return err
-	}
-	err = util.CheckProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return err
 	}
@@ -337,48 +329,131 @@ func createUserContract() error {
 func invokeUserContract() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err.Error())
+		return err
 	}
+	defer client.Stop()
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+	var evmMethod *ethabi.Method
+
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
+
+		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		m, exist := contractAbi.Methods[method]
+		if !exist {
+			return fmt.Errorf("method '%s' not found", method)
+		}
+		evmMethod = &m
+
+		inputData, err := util.Pack(evmMethod, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+		method = inputDataHexStr[0:8]
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+
+		if !ethcmn.IsHexAddress(contractName) {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
+	} else {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
 	}
 
-	Dispatch(client, contractName, method, pairs)
-
-	client.Stop()
+	Dispatch(client, contractName, method, kvs, evmMethod)
 	return nil
 }
 
 func invokeContractTimes() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err.Error())
+		return err
 	}
+	defer client.Stop()
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+	var evmMethod *ethabi.Method
+
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
+
+		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		m, exist := contractAbi.Methods[method]
+		if !exist {
+			return fmt.Errorf("method '%s' not found", method)
+		}
+		evmMethod = &m
+
+		inputData, err := util.Pack(evmMethod, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+		method = inputDataHexStr[0:8]
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+
+		if !ethcmn.IsHexAddress(contractName) {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
+	} else {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
 	}
 
-	DispatchTimes(client, contractName, method, pairs)
-
-	client.Stop()
+	DispatchTimes(client, contractName, method, kvs, evmMethod)
 	return nil
 }
 
 func getUserContract() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err.Error())
+		return err
 	}
+	defer client.Stop()
 
 	pairs := make(map[string]string)
 	if params != "" {
@@ -388,44 +463,29 @@ func getUserContract() error {
 		}
 	}
 
-	resp, err := client.QueryContract(contractName, method, pairs, -1)
+	resp, err := client.QueryContract(contractName, method, util.ConvertParameters(pairs), -1)
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}
 
 	fmt.Printf("QUERY contract resp: %+v\n", resp)
 
-	client.Stop()
 	return nil
 }
 
-func paramsMap2KVPairs(params map[string]string) (kvPairs []*common.KeyValuePair) {
-	for key, val := range params {
-		kvPair := &common.KeyValuePair{
-			Key:   key,
-			Value: val,
-		}
-
-		kvPairs = append(kvPairs, kvPair)
-	}
-
-	return
-}
-
 func upgradeUserContract() error {
-	adminOrgIdSlice := strings.Split(adminOrgIds, ",")
 	adminKeys := strings.Split(adminKeyFilePaths, ",")
 	adminCrts := strings.Split(adminCrtFilePaths, ",")
-	if len(adminKeys) == 0 || len(adminCrts) == 0 || len(adminOrgIdSlice) == 0 {
+	if len(adminKeys) == 0 || len(adminCrts) == 0 {
 		return ErrAdminOrgIdKeyCertIsEmpty
 	}
-	if len(adminKeys) != len(adminCrts) || len(adminOrgIdSlice) != len(adminCrts) {
-		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminOrgIdSlice), len(adminKeys), len(adminCrts))
+	if len(adminKeys) != len(adminCrts) {
+		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
 	}
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err.Error())
+		return err
 	}
 	defer client.Stop()
 
@@ -441,43 +501,30 @@ func upgradeUserContract() error {
 			return err
 		}
 	}
-	pairsKv := paramsMap2KVPairs(pairs)
+	pairsKv := util.ConvertParameters(pairs)
 	fmt.Printf("upgrade user contract params:%+v\n", pairsKv)
-	payloadBytes, err := client.CreateContractUpgradePayload(contractName, version, byteCodePath, common.RuntimeType(rt), pairsKv)
+	payload, err := client.CreateContractUpgradePayload(contractName, version, byteCodePath, common.RuntimeType(rt), pairsKv)
 	if err != nil {
 		return err
 	}
 
-	signedPayloads := make([][]byte, len(adminKeys))
+	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
 	for i := range adminKeys {
-		_, privKey, err := dealUserKey(adminKeys[i])
-		if err != nil {
-			return err
-		}
-		crtBytes, crt, err := dealUserCrt(adminCrts[i])
+		e, err := sdk.SignPayloadWithPath(adminKeys[i], adminCrts[i], payload)
 		if err != nil {
 			return err
 		}
 
-		signedPayload, err := signContractManagePayload(payloadBytes, crtBytes, privKey, crt, adminOrgIdSlice[i])
-		if err != nil {
-			return err
-		}
-		signedPayloads[i] = signedPayload
-	}
-
-	mergeSignedPayloadBytes, err := client.MergeContractManageSignedPayload(signedPayloads)
-	if err != nil {
-		return fmt.Errorf(MERGE_CONTRACT_MANAGE_SIGNED_PAYLOAD_FAILED_FORMAT, err.Error())
+		endorsementEntrys[i] = e
 	}
 
 	// 发送更新合约请求
-	resp, err := client.SendContractManageRequest(mergeSignedPayloadBytes, int64(timeout), syncResult)
+	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf(SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT, err.Error())
 	}
 
-	err = util.CheckProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
 	}
@@ -488,36 +535,35 @@ func upgradeUserContract() error {
 }
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {
-	adminOrgIdSlice := strings.Split(adminOrgIds, ",")
 	adminKeys := strings.Split(adminKeyFilePaths, ",")
 	adminCrts := strings.Split(adminCrtFilePaths, ",")
-	if len(adminKeys) == 0 || len(adminCrts) == 0 || len(adminOrgIdSlice) == 0 {
+	if len(adminKeys) == 0 || len(adminCrts) == 0 {
 		return ErrAdminOrgIdKeyCertIsEmpty
 	}
-	if len(adminKeys) != len(adminCrts) || len(adminOrgIdSlice) != len(adminCrts) {
-		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminOrgIdSlice), len(adminKeys), len(adminCrts))
+	if len(adminKeys) != len(adminCrts) {
+		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
 	}
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err.Error())
+		return err
 	}
 	defer client.Stop()
 
 	var (
-		payloadBytes   []byte
+		payload        *common.Payload
 		whichOperation string
 	)
 
 	switch which {
 	case 1:
-		payloadBytes, err = client.CreateContractFreezePayload(contractName)
+		payload, err = client.CreateContractFreezePayload(contractName)
 		whichOperation = "freeze"
 	case 2:
-		payloadBytes, err = client.CreateContractUnfreezePayload(contractName)
+		payload, err = client.CreateContractUnfreezePayload(contractName)
 		whichOperation = "unfreeze"
 	case 3:
-		payloadBytes, err = client.CreateContractRevokePayload(contractName)
+		payload, err = client.CreateContractRevokePayload(contractName)
 		whichOperation = "revoke"
 	default:
 		err = fmt.Errorf("wrong which param")
@@ -526,36 +572,23 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return fmt.Errorf("create cert manage %s payload failed, %s", whichOperation, err.Error())
 	}
 
-	signedPayloads := make([][]byte, len(adminKeys))
+	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
 	for i := range adminKeys {
-		_, privKey, err := dealUserKey(adminKeys[i])
-		if err != nil {
-			return err
-		}
-		crtBytes, crt, err := dealUserCrt(adminCrts[i])
+		e, err := sdk.SignPayloadWithPath(adminKeys[i], adminCrts[i], payload)
 		if err != nil {
 			return err
 		}
 
-		signedPayload, err := signContractManagePayload(payloadBytes, crtBytes, privKey, crt, adminOrgIdSlice[i])
-		if err != nil {
-			return err
-		}
-		signedPayloads[i] = signedPayload
-	}
-
-	mergeSignedPayloadBytes, err := client.MergeContractManageSignedPayload(signedPayloads)
-	if err != nil {
-		return fmt.Errorf(MERGE_CONTRACT_MANAGE_SIGNED_PAYLOAD_FAILED_FORMAT, err.Error())
+		endorsementEntrys[i] = e
 	}
 
 	// 发送创建合约请求
-	resp, err := client.SendContractManageRequest(mergeSignedPayloadBytes, int64(timeout), syncResult)
+	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf(SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT, err.Error())
 	}
 
-	err = util.CheckProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
 	}
@@ -563,38 +596,4 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 	fmt.Printf("%s contract resp: %+v\n", whichOperation, resp)
 
 	return nil
-}
-
-func signContractManagePayload(payloadBytes, userCrtBytes []byte, privateKey crypto.PrivateKey, userCrt *bcx509.Certificate, orgId string) ([]byte, error) {
-	payload := &common.ContractMgmtPayload{}
-	if err := proto.Unmarshal(payloadBytes, payload); err != nil {
-		return nil, fmt.Errorf("unmarshal contract manage payload failed, %s", err)
-	}
-
-	signBytes, err := signTx(privateKey, userCrt, payloadBytes)
-	if err != nil {
-		return nil, fmt.Errorf("SignPayload failed, %s", err)
-	}
-
-	sender := &accesscontrol.SerializedMember{
-		OrgId:      orgId,
-		MemberInfo: userCrtBytes,
-		IsFullCert: true,
-	}
-
-	entry := &common.EndorsementEntry{
-		Signer:    sender,
-		Signature: signBytes,
-	}
-
-	payload.Endorsement = []*common.EndorsementEntry{
-		entry,
-	}
-
-	signedPayloadBytes, err := proto.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("marshal contract manage sigend payload failed, %s", err)
-	}
-
-	return signedPayloadBytes, nil
 }

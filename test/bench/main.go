@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -19,8 +18,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"chainmaker.org/chainmaker-go/common/crypto"
-	"chainmaker.org/chainmaker-go/common/crypto/asym"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+
+	"chainmaker.org/chainmaker/common/crypto"
+	"chainmaker.org/chainmaker/common/crypto/asym"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -30,8 +31,8 @@ var (
 	PORT                           = 17988
 	DEFAULT_CERT_ROOT_PATH         = "../config"
 	DEFAULT_WASM_PATH              = "../wasm/fact.wasm"
-	DEFAULT_USER_KEY_PATH          = "/crypto-config/%s/user/client1/client1.tls.key"
-	DEFAULT_USER_CRT_PATH          = "/crypto-config/%s/user/client1/client1.tls.crt"
+	DEFAULT_USER_KEY_PATH          = "/crypto-config/%s/user/client1/client1.sign.key"
+	DEFAULT_USER_CRT_PATH          = "/crypto-config/%s/user/client1/client1.sign.crt"
 	DEFAULT_CA_PATH                = "/crypto-config/%s/ca"
 	DEFAULT_USER_ADMIN_PATH        = "/crypto-config/%s/user/admin1/"
 	DEFAULT_ORGID                  = "wx-org1.chainmaker.org"
@@ -135,7 +136,7 @@ func (b *Benchmarker) ProcessTxSend(index int64) {
 		res, err := b.Sender.SendTxByClientIndex(b.Url, tx, index)
 		if nil != err {
 			atomic.AddInt64(b.Metrics.TxTotalFail, 1)
-			log.Printf("send tx error: %s , %+v", tx.Header.TxId, err)
+			log.Printf("send tx error: %s , %+v", tx.Payload.TxId, err)
 
 			continue
 		}
@@ -155,11 +156,11 @@ func (b *Benchmarker) ProcessTxSend(index int64) {
 					atomic.AddInt64(b.Metrics.TxOtherFail, 1)
 				}
 			*/
-			log.Printf("tx error: %s , code:%d, msg:%s", tx.Header.TxId, res.Code, res.Message)
+			log.Printf("tx error: %s , code:%d, msg:%s", tx.Payload.TxId, res.Code, res.Message)
 		} else {
 			atomic.AddInt64(b.Metrics.TxSucc, 1)
 			if (*b.Metrics.TxSucc)%int64(updateHeightTxCount) == 0 {
-				go b.updateBlockHeight(index, tx.Header.TxId)
+				go b.updateBlockHeight(index, tx.Payload.TxId)
 			}
 		}
 	}

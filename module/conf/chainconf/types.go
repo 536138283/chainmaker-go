@@ -8,27 +8,35 @@ SPDX-License-Identifier: Apache-2.0
 package chainconf
 
 import (
-	"chainmaker.org/chainmaker-go/localconf"
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker-go/common/helper"
+	"chainmaker.org/chainmaker/pb-go/syscontract"
+
+	"chainmaker.org/chainmaker-go/localconf"
+
 	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/config"
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
-	"github.com/golang/protobuf/proto"
+	"chainmaker.org/chainmaker/common/helper"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/config"
+	"chainmaker.org/chainmaker/pb-go/consensus"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type consensusVerifier map[consensus.ConsensusType]protocol.Verifier
 
-const regChainId = "^[a-zA-Z0-9_]{1,30}$"
+const (
+	minTxTimeout       = 600
+	minBlockInterval   = 10
+	minBlockTxCapacity = 1
+	minBlockSize       = 1
+	minNodeIds         = 1
+	minTrustRoots      = 1
+)
 
 var (
 	chainConsensusVerifier = make(map[string]consensusVerifier, 0)
@@ -65,6 +73,10 @@ func VerifyChainConfig(cconfig *config.ChainConfig) (*chainConfig, error) {
 		return nil, err
 	}
 
+	if err := verifyChainConfigTrustMembers(cconfig); err != nil {
+		return nil, err
+	}
+
 	if err := verifyChainConfigConsensus(cconfig, mConfig); err != nil {
 		return nil, err
 	}
@@ -73,34 +85,41 @@ func VerifyChainConfig(cconfig *config.ChainConfig) (*chainConfig, error) {
 		return nil, err
 	}
 
-	if len(mConfig.TrustRoots) < 1 {
-		log.Errorw("trust roots len is low", "trustRoots len", len(mConfig.TrustRoots))
-		return nil, errors.New("trust roots len is low")
+	if len(mConfig.TrustRoots) < minTrustRoots {
+		msg := fmt.Sprintf("trustRoots len less than %d, trustRoots len is %d", minTrustRoots, len(mConfig.TrustRoots))
+		log.Error(msg)
+		return nil, errors.New(msg)
 	}
-	if len(mConfig.NodeIds) < 1 {
-		log.Errorw("nodeIds len is low", "nodeIds len", len(mConfig.NodeIds))
-		return nil, errors.New("node ids len is low")
+
+	if len(mConfig.NodeIds) < minNodeIds {
+		msg := fmt.Sprintf("nodeIds len less than %d, nodeIds len is %d", minNodeIds, len(mConfig.NodeIds))
+		log.Error(msg)
+		return nil, errors.New(msg)
 	}
 	// block
-	if cconfig.Block.TxTimeout < 600 {
+	if cconfig.Block.TxTimeout < minTxTimeout {
 		// timeout
-		log.Errorw("txTimeout len is low", "txTimeout len", cconfig.Block.TxTimeout)
-		return nil, errors.New("tx_time is low")
+		msg := fmt.Sprintf("txTimeout less than %d, txTimeout is %d", minTxTimeout, cconfig.Block.TxTimeout)
+		log.Error(msg)
+		return nil, errors.New(msg)
 	}
-	if cconfig.Block.BlockTxCapacity < 1 {
+	if cconfig.Block.BlockTxCapacity < minBlockTxCapacity {
 		// block tx cap
-		log.Errorw("blockTxCapacity is low", "blockTxCapacity", cconfig.Block.BlockTxCapacity)
-		return nil, errors.New("block_tx_capacity is low")
+		msg := fmt.Sprintf("blockTxCapacity less than %d, blockTxCapacity is %d", minBlockTxCapacity, cconfig.Block.BlockTxCapacity)
+		log.Error(msg)
+		return nil, errors.New(msg)
 	}
-	if cconfig.Block.BlockSize < 1 {
+	if cconfig.Block.BlockSize < minBlockSize {
 		// block size
-		log.Errorw("blockSize is low", "blockSize", cconfig.Block.BlockSize)
-		return nil, errors.New("blockSize is low")
+		msg := fmt.Sprintf("blockSize less than %d, blockSize is %d", minBlockSize, cconfig.Block.BlockSize)
+		log.Error(msg)
+		return nil, errors.New(msg)
 	}
-	if cconfig.Block.BlockInterval < 10 {
+	if cconfig.Block.BlockInterval < minBlockInterval {
 		// block interval
-		log.Errorw("blockInterval is low", "blockInterval", cconfig.Block.BlockInterval)
-		return nil, errors.New("blockInterval is low")
+		msg := fmt.Sprintf("blockInterval less than %d, blockInterval is %d", minBlockInterval, cconfig.Block.BlockInterval)
+		log.Error(msg)
+		return nil, errors.New(msg)
 	}
 
 	if cconfig.Contract == nil {
@@ -133,22 +152,36 @@ func VerifyChainConfig(cconfig *config.ChainConfig) (*chainConfig, error) {
 
 func verifyChainConfigTrustRoots(config *config.ChainConfig, mConfig *chainConfig) error {
 	// load all ca root certs
-	for _, root := range config.TrustRoots {
-		if _, ok := mConfig.CaRoots[root.OrgId]; ok {
-			err := fmt.Errorf("check root certificate failed, org id [%s] already exists", root.OrgId)
+	for _, orgRoots := range config.TrustRoots {
+		if _, ok := mConfig.CaRoots[orgRoots.OrgId]; ok {
+			err := fmt.Errorf("check root certificate failed, org id [%s] already exists", orgRoots.OrgId)
 			log.Error(err)
 			return err
 		}
-		// check root cert
-		if ok, err := utils.CheckRootCertificate(root.Root); err != nil && !ok {
-			log.Errorf("check root certificate failed, %s", err.Error())
-			return err
+		for _, root := range orgRoots.Root {
+			// check root cert
+			if ok, err := utils.CheckRootCertificate(root); err != nil && !ok {
+				log.Errorf("check root certificate failed, %s", err.Error())
+				return err
+			}
+			block, _ := pem.Decode([]byte(root))
+			if block == nil {
+				return errors.New("root is empty")
+			}
 		}
-		mConfig.CaRoots[root.OrgId] = struct{}{}
-		block, _ := pem.Decode([]byte(root.Root))
+		mConfig.CaRoots[orgRoots.OrgId] = struct{}{}
+	}
+	return nil
+}
+
+func verifyChainConfigTrustMembers(config *config.ChainConfig) error {
+	// load all ca root certs
+	for _, member := range config.TrustMembers {
+		block, _ := pem.Decode([]byte(member.MemberInfo))
 		if block == nil {
-			return errors.New("root is empty")
+			return errors.New("trust member is empty")
 		}
+
 	}
 	return nil
 }
@@ -240,7 +273,8 @@ func verifyPolicy(resourcePolicy *config.ResourcePolicy) error {
 
 		// self only for NODE_ID_UPDATE or TRUST_ROOT_UPDATE
 		if policy.Rule == string(protocol.RuleSelf) {
-			if resourceName != common.ConfigFunction_NODE_ID_UPDATE.String() && resourceName != common.ConfigFunction_NODE_ID_UPDATE.String() && resourceName != common.ConfigFunction_TRUST_ROOT_UPDATE.String() {
+			//if resourceName != common.ConfigFunction_NODE_ID_UPDATE.String() && resourceName != common.ConfigFunction_NODE_ID_UPDATE.String() && resourceName != common.ConfigFunction_TRUST_ROOT_UPDATE.String() {
+			if resourceName != syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+syscontract.ChainConfigFunction_NODE_ID_UPDATE.String() && resourceName != syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String() {
 				err := fmt.Errorf("self rule can only be used by NODE_ID_UPDATE or TRUST_ROOT_UPDATE")
 				return err
 			}
@@ -282,8 +316,8 @@ func validateParams(config *config.ChainConfig) error {
 	if config.Block == nil {
 		return errors.New("chainconfig block is nil")
 	}
-	match, err := regexp.MatchString(regChainId, config.ChainId)
-	if err != nil || !match {
+	match := utils.CheckChainIdFormat(config.ChainId)
+	if !match {
 		return fmt.Errorf("chain id[%s] can only consist of numbers, letters and underscores and chainId length must less than 30", config.ChainId)
 	}
 	return nil
@@ -321,45 +355,42 @@ func initChainConsensusVerifier(chainId string) {
 
 // IsNative whether the contractName is a native
 func IsNative(contractName string) bool {
-	switch contractName {
-	case common.ContractName_SYSTEM_CONTRACT_CHAIN_CONFIG.String(),
-		common.ContractName_SYSTEM_CONTRACT_QUERY.String(),
-		common.ContractName_SYSTEM_CONTRACT_CERT_MANAGE.String(),
-		common.ContractName_SYSTEM_CONTRACT_MULTI_SIGN.String(),
-		common.ContractName_SYSTEM_CONTRACT_GOVERNANCE.String(),
-		common.ContractName_SYSTEM_CONTRACT_PRIVATE_COMPUTE.String():
-		return true
-	default:
-		return false
-	}
+	_, ok := syscontract.SystemContract_value[contractName]
+	return ok
+	//switch contractName {
+	//case syscontract.SystemContract_CHAIN_CONFIG.String(),
+	//	syscontract.SystemContract_CHAIN_QUERY.String(),
+	//	syscontract.SystemContract_CERT_MANAGE.String(),
+	//	syscontract.SystemContract_MULTI_SIGN.String(),
+	//	syscontract.SystemContract_GOVERNANCE.String(),
+	//	syscontract.SystemContract_PRIVATE_COMPUTE.String():
+	//	return true
+	//default:
+	//	return false
+	//}
 }
 
 // IsNativeTx whether the transaction is a native
 func IsNativeTx(tx *common.Transaction) (contract string, b bool) {
-	if tx == nil || tx.Header == nil {
+	if tx == nil || tx.Payload == nil {
 		return "", false
 	}
-	txType := tx.Header.TxType
+	txType := tx.Payload.TxType
 	switch txType {
-	case common.TxType_INVOKE_SYSTEM_CONTRACT, common.TxType_UPDATE_CHAIN_CONFIG:
-		payloadBytes := tx.RequestPayload
-		payload := new(common.SystemContractPayload)
-		err := proto.Unmarshal(payloadBytes, payload)
-		if err != nil {
-			return "", false
-		}
+	case common.TxType_INVOKE_CONTRACT:
+		payload := tx.Payload
 		return payload.ContractName, IsNative(payload.ContractName)
-	case common.TxType_MANAGE_USER_CONTRACT:
-		payloadBytes := tx.RequestPayload
-		payload := new(common.ContractMgmtPayload)
-		err := proto.Unmarshal(payloadBytes, payload)
-		if err != nil {
-			return "", false
-		}
-		if payload.ContractId == nil {
-			return "", false
-		}
-		return payload.ContractId.ContractName, IsNative(payload.ContractId.ContractName)
+	//case common.TxType_MANAGE_USER_CONTRACT:
+	//	payloadBytes := tx.RequestPayload
+	//	payload := new(common.Payload)
+	//	err := proto.Unmarshal(payloadBytes, payload)
+	//	if err != nil {
+	//		return "", false
+	//	}
+	//	if payload.Contract == nil {
+	//		return "", false
+	//	}
+	//	return payload.Contract.Name, IsNative(payload.Contract.Name)
 	default:
 		return "", false
 	}

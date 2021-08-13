@@ -14,8 +14,8 @@ package gasmtest
 //	"time"
 //
 //	"chainmaker.org/chainmaker-go/gasm"
-//	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-//	"chainmaker.org/chainmaker-go/protocol"
+//	commonPb "chainmaker.org/chainmaker/pb-go/common"
+//	"chainmaker.org/chainmaker/protocol"
 //	"chainmaker.org/chainmaker-go/vm/test"
 //	"github.com/stretchr/testify/require"
 //)
@@ -39,7 +39,7 @@ package gasmtest
 //	byteCode, err := ioutil.ReadFile("C:\\workspace\\chainmaker-go\\module\\vm\\sdk\\c\\counter-c.wasm")
 //	require.NoError(t, err)
 //
-//	contractId := &commonPb.ContractId{
+//	contractId := &commonPb.Contract{
 //		ContractName:    "",
 //		ContractVersion: "",
 //		RuntimeType:     0,
@@ -97,7 +97,7 @@ package gasmtest
 //
 //	byteCode, err := ioutil.ReadFile("C:\\workspace\\chainmaker-go\\module\\vm\\sdk\\go\\counter-go.wasm")
 //	require.NoError(t, err)
-//	contractId := &commonPb.ContractId{
+//	contractId := &commonPb.Contract{
 //		ContractName:    "",
 //		ContractVersion: "",
 //		RuntimeType:     0,

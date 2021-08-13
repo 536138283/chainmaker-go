@@ -12,8 +12,8 @@ package gasmtest
 //	"time"
 //
 //	"chainmaker.org/chainmaker-go/gasm"
-//	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-//	"chainmaker.org/chainmaker-go/protocol"
+//	commonPb "chainmaker.org/chainmaker/pb-go/common"
+//	"chainmaker.org/chainmaker/protocol"
 //	"chainmaker.org/chainmaker-go/vm/test"
 //)
 //
@@ -51,7 +51,7 @@ package gasmtest
 //	//time.Sleep(time.Second * 5) // 73m
 //}
 //
-//func invokeCallContractCallContract(method string, id int32, contractId *commonPb.ContractId, txContext protocol.TxSimContext, byteCode []byte) {
+//func invokeCallContractCallContract(method string, id int32, contractId *commonPb.Contract, txContext protocol.TxSimContext, byteCode []byte) {
 //	parameters := make(map[string]string)
 //	test.BaseParam(parameters)
 //	parameters["contract_name"] = test.ContractNameTest

@@ -10,11 +10,11 @@ import (
 	"errors"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/store/dbprovider/rawsqlprovider"
 	"chainmaker.org/chainmaker-go/store/serialization"
 	"chainmaker.org/chainmaker-go/store/types"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -37,7 +37,7 @@ func NewResultSqlDB(chainId string, dbConfig *localconf.SqlDbConfig, logger prot
 //如果数据库存在，则切换数据库，检查表是否存在，不存在则创建表。
 func (db *ResultSqlDB) initDb(dbName string) {
 	db.logger.Debugf("create result database %s to save transaction receipt", dbName)
-	err := db.db.CreateDatabaseIfNotExist(dbName)
+	_, err := db.db.CreateDatabaseIfNotExist(dbName)
 	if err != nil {
 		db.logger.Panicf("init state sql db fail,error:%s", err)
 	}
@@ -81,7 +81,7 @@ func (h *ResultSqlDB) CommitBlock(blockInfo *serialization.BlockWithSerializedIn
 	for i, txRWSet := range txRWSets {
 		tx := block.Txs[i]
 
-		resultInfo := NewResultInfo(tx.Header.TxId, block.Header.BlockHeight, i, tx.Result.ContractResult, txRWSet)
+		resultInfo := NewResultInfo(tx.Payload.TxId, block.Header.BlockHeight, uint32(i), tx.Result.ContractResult, txRWSet)
 		_, err = dbtx.Save(resultInfo)
 		if err != nil {
 			err2 := h.db.RollbackDbTransaction(blockHashStr)

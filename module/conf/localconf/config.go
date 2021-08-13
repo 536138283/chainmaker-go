@@ -10,7 +10,7 @@ package localconf
 
 import (
 	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker/pb-go/common"
 	"errors"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
@@ -221,7 +221,7 @@ func UpdateDebugConfig(pairs []*common.KeyValuePair) error {
 		if _, ok := elem.Type().FieldByName(pair.Key); !ok {
 			continue
 		}
-		elem.FieldByName(pair.Key).SetBool(strings.ToLower(pair.Value) == "true")
+		elem.FieldByName(pair.Key).SetBool(strings.ToLower(string(pair.Value)) == "true")
 	}
 	return nil
 }

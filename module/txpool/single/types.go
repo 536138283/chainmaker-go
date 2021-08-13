@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type mempoolTxs struct {
@@ -18,6 +18,6 @@ type mempoolTxs struct {
 }
 
 type valInPendingCache struct {
-	inBlockHeight int64
+	inBlockHeight uint64
 	tx            *commonPb.Transaction
 }

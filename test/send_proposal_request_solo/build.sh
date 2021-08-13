@@ -7,4 +7,4 @@
 cd ../../main
 rm -rf main
 rm -rf chainmaker
-CGO_ENABLED=1 GOOS=darwin GOARCH=amd64 go build -o chainmaker
+go build -o chainmaker

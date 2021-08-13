@@ -8,15 +8,15 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
+	"chainmaker.org/chainmaker/pb-go/accesscontrol"
 	"fmt"
-	"strings"
 	"sync"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
 
-	"chainmaker.org/chainmaker-go/common/bitmap"
-	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker/common/bitmap"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 var ForceConflictedKey = []byte{0xFF}
@@ -38,8 +38,8 @@ type SnapshotImpl struct {
 
 	chainId        string
 	blockTimestamp int64
-	blockProposer  []byte
-	blockHeight    int64
+	blockProposer  *accesscontrol.Member
+	blockHeight    uint64
 	preBlockHash   []byte
 
 	preSnapshot protocol.Snapshot
@@ -80,33 +80,37 @@ func (s *SnapshotImpl) GetTxResultMap() map[string]*commonPb.Result {
 
 func (s *SnapshotImpl) GetTxRWSetTable() []*commonPb.TxRWSet {
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
-		info := "rwset: "
-		for i, txRWSet := range s.txRWSetTable {
-			info += fmt.Sprintf("read set for tx id:[%s], count [%d]<", s.txTable[i].Header.TxId, len(txRWSet.TxReads))
-			for _, txRead := range txRWSet.TxReads {
-				if !strings.HasPrefix(string(txRead.Key), protocol.ContractByteCode) {
-					info += fmt.Sprintf("[%v] -> [%v], contract name [%v], version [%v],", txRead.Key, txRead.Value, txRead.ContractName, txRead.Version)
+		log.DebugDynamic(func() string {
+
+			info := "rwset: "
+			for i, txRWSet := range s.txRWSetTable {
+				info += fmt.Sprintf("read set for tx id:[%s], count [%d]<", s.txTable[i].Payload.TxId, len(txRWSet.TxReads))
+				//for _, txRead := range txRWSet.TxReads {
+				//	if !strings.HasPrefix(string(txRead.Key), protocol.ContractByteCode) {
+				//		info += fmt.Sprintf("[%v] -> [%v], contract name [%v], version [%v],", txRead.Key, txRead.Value, txRead.ContractName, txRead.Version)
+				//	}
+				//}
+				info += "> "
+				info += fmt.Sprintf("write set for tx id:[%s], count [%d]<", s.txTable[i].Payload.TxId, len(txRWSet.TxWrites))
+				for _, txWrite := range txRWSet.TxWrites {
+					info += fmt.Sprintf("[%v] -> [%v], contract name [%v], ", txWrite.Key, txWrite.Value, txWrite.ContractName)
 				}
+				info += ">"
 			}
-			info += "> "
-			info += fmt.Sprintf("write set for tx id:[%s], count [%d]<", s.txTable[i].Header.TxId, len(txRWSet.TxWrites))
-			for _, txWrite := range txRWSet.TxWrites {
-				info += fmt.Sprintf("[%v] -> [%v], contract name [%v], ", txWrite.Key, txWrite.Value, txWrite.ContractName)
-			}
-			info += ">"
-		}
-		log.Debugf(info)
+			return info
+		})
+		//log.Debugf(info)
 	}
 
-	for _, txRWSet := range s.txRWSetTable {
-		for _, txRead := range txRWSet.TxReads {
-			if strings.HasPrefix(string(txRead.Key), protocol.ContractByteCode) ||
-				strings.HasPrefix(string(txRead.Key), protocol.ContractCreator) ||
-				txRead.ContractName == commonPb.ContractName_SYSTEM_CONTRACT_CERT_MANAGE.String() {
-				txRead.Value = nil
-			}
-		}
-	}
+	//for _, txRWSet := range s.txRWSetTable {
+	//	for _, txRead := range txRWSet.TxReads {
+	//		if strings.HasPrefix(string(txRead.Key), protocol.ContractByteCode) ||
+	//			strings.HasPrefix(string(txRead.Key), protocol.ContractCreator) ||
+	//			txRead.ContractName == syscontract.SystemContract_CERT_MANAGE.String() {
+	//			txRead.Value = nil
+	//		}
+	//	}
+	//}
 	return s.txRWSetTable
 }
 
@@ -207,7 +211,7 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 	s.txRWSetTable = append(s.txRWSetTable, txRWSet)
 
 	// Add to tx result map
-	s.txResultMap[tx.Header.TxId] = txResult
+	s.txResultMap[tx.Payload.TxId] = txResult
 
 	// Add to transaction table
 	s.txTable = append(s.txTable, tx)
@@ -221,12 +225,12 @@ func (s *SnapshotImpl) IsSealed() bool {
 }
 
 // get block height for current snapshot
-func (s *SnapshotImpl) GetBlockHeight() int64 {
+func (s *SnapshotImpl) GetBlockHeight() uint64 {
 	return s.blockHeight
 }
 
 // Get Block Proposer for current snapshot
-func (s *SnapshotImpl) GetBlockProposer() []byte {
+func (s *SnapshotImpl) GetBlockProposer() *accesscontrol.Member {
 	return s.blockProposer
 }
 
@@ -336,10 +340,10 @@ func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
 	if isSql {
 		for i := 0; i < txCount; i++ {
 			dag.Vertexes[i] = &commonPb.DAG_Neighbor{
-				Neighbors: make([]int32, 0, 1),
+				Neighbors: make([]uint32, 0, 1),
 			}
 			if i != 0 {
-				dag.Vertexes[i].Neighbors = append(dag.Vertexes[i].Neighbors, int32(i-1))
+				dag.Vertexes[i].Neighbors = append(dag.Vertexes[i].Neighbors, uint32(i-1))
 			}
 		}
 	} else {
@@ -362,10 +366,10 @@ func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
 
 			// build DAG based on directReach bitmap
 			dag.Vertexes[i] = &commonPb.DAG_Neighbor{
-				Neighbors: make([]int32, 0, 16),
+				Neighbors: make([]uint32, 0, 16),
 			}
 			for _, j := range directReachFromI.Pos1() {
-				dag.Vertexes[i].Neighbors = append(dag.Vertexes[i].Neighbors, int32(j))
+				dag.Vertexes[i].Neighbors = append(dag.Vertexes[i].Neighbors, uint32(j))
 			}
 		}
 	}

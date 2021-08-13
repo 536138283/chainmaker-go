@@ -11,17 +11,17 @@ import (
 	"fmt"
 	"sync"
 
-	commonErrors "chainmaker.org/chainmaker-go/common/errors"
-	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/consensus"
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/monitor"
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	commonErrors "chainmaker.org/chainmaker/common/errors"
+	"chainmaker.org/chainmaker/common/msgbus"
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -93,6 +93,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		ProposalCache:   v.proposalCache,
 		VmMgr:           config.VmMgr,
 		StoreHelper:     config.StoreHelper,
+		TxScheduler:     config.TxScheduler,
 	}
 	v.verifierBlock = common.NewVerifierBlock(conf)
 
@@ -169,6 +170,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	// sync mode, need to verify consensus vote signature
+	beginConsensCheck := utils.CurrentTimeMillisSeconds()
 	if protocol.SYNC_VERIFY == mode {
 		if err = v.verifyVoteSig(block); err != nil {
 			v.log.Warnf("verify failed [%d](%x), votesig %s",
@@ -176,6 +178,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 			return err
 		}
 	}
+	consensusCheckUsed := utils.CurrentTimeMillisSeconds() - beginConsensCheck
 
 	// verify success, cache block and read write set
 	v.log.Debugf("set proposed block(%d,%x)", block.Header.BlockHeight, block.Header.BlockHash)
@@ -191,8 +194,8 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid, txRWSetMap))
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	v.log.Infof("verify success [%d,%x](%v,%d)", block.Header.BlockHeight, block.Header.BlockHash,
-		timeLasts, elapsed)
+	v.log.Infof("verify success [%d,%x](%v,consensusCheckUsed: %d, total: %d)", block.Header.BlockHeight,
+		block.Header.BlockHash, timeLasts, consensusCheckUsed, elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
@@ -204,7 +207,7 @@ func (v *BlockVerifierImpl) validateBlock(block *commonpb.Block) (map[string]*co
 	timeLasts := make([]int64, 0)
 	var err error
 	var lastBlock *commonpb.Block
-	txCapacity := int64(v.chainConf.ChainConfig().Block.BlockTxCapacity)
+	txCapacity := v.chainConf.ChainConfig().Block.BlockTxCapacity
 	if block.Header.TxCount > txCapacity {
 		return nil, nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
 	}
@@ -230,7 +233,7 @@ func (v *BlockVerifierImpl) validateBlock(block *commonpb.Block) (map[string]*co
 }
 
 func (v *BlockVerifierImpl) checkPreBlock_HOTSTUFF(block *commonpb.Block, lastBlock *commonpb.Block, err error,
-	lastBlockHash []byte, proposedHeight int64) error {
+	lastBlockHash []byte, proposedHeight uint64) error {
 
 	if block.Header.BlockHeight == lastBlock.Header.BlockHeight+1 {
 		if err = common.IsPreHashValid(block, lastBlock.Header.BlockHash); err != nil {
@@ -279,16 +282,16 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	cutTxs := make([]*commonpb.Transaction, 0)
 	txMap := make(map[string]interface{})
 	for _, tx := range blockToKeep.Txs {
-		txMap[tx.Header.TxId] = struct{}{}
+		txMap[tx.Payload.TxId] = struct{}{}
 	}
 	for _, blockToCut := range blocksToCut {
 		v.log.Infof("cut block block hash: %s, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
 		for _, txToCut := range blockToCut.Txs {
-			if _, ok := txMap[txToCut.Header.TxId]; ok {
+			if _, ok := txMap[txToCut.Payload.TxId]; ok {
 				// this transaction is kept, do NOT cut it.
 				continue
 			}
-			v.log.Debugf("cut tx hash: %s", txToCut.Header.TxId)
+			v.log.Debugf("cut tx hash: %s", txToCut.Payload.TxId)
 			cutTxs = append(cutTxs, txToCut)
 		}
 	}

@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package helper
 
 import (
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type hotStuffHelper struct {
@@ -23,7 +23,7 @@ func NewHotStuffHelper(txPool protocol.TxPool,
 	return &hotStuffHelper{txPool: txPool, chainConf: chainConf, proposalCache: proposalCache}
 }
 
-func (hp *hotStuffHelper) DiscardAboveHeight(baseHeight int64) {
+func (hp *hotStuffHelper) DiscardAboveHeight(baseHeight uint64) {
 	if hp.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_HOTSTUFF {
 		return
 	}

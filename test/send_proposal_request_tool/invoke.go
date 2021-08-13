@@ -8,12 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/utils"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+
+	"github.com/spf13/cobra"
 )
 
 func InvokeCMD() *cobra.Command {
@@ -37,7 +38,7 @@ func InvokeCMD() *cobra.Command {
 }
 
 func invoke() error {
-	txId := utils.GetRandTxId()
+	txId := ""
 
 	// 构造Payload
 	if pairsString == "" {
@@ -63,18 +64,18 @@ func invoke() error {
 	} else {
 		fmt.Println("pairs: ", pairs, ", method: ", method)
 
-		payloadBytes, err := constructPayload(contractName, method, pairs)
+		payloadBytes, err := constructInvokePayload(chainId, contractName, method, pairs)
 		if err != nil {
 			return err
 		}
 
-		resp, err = proposalRequest(sk3, client, commonPb.TxType_INVOKE_USER_CONTRACT,
-			chainId, txId, payloadBytes)
+		resp, err = proposalRequest(sk3, client, payloadBytes)
 		if err != nil {
 			return err
 		}
 		testCode = resp.Code
 		testMessage = resp.Message
+		txId = resp.TxId
 	}
 
 	////暂时不支持传参
@@ -92,7 +93,7 @@ func invoke() error {
 	//	pairs = []*commonPb.KeyValuePair{
 	//		{
 	//			Key:   "data",
-	//			Value: data,
+	//			Value: []byte(data),
 	//		},
 	//	}
 	//}
@@ -102,11 +103,7 @@ func invoke() error {
 		Message: testMessage,
 		TxId:    txId,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 
 	return nil
 }

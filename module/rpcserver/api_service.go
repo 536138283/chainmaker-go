@@ -8,23 +8,22 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
-	"chainmaker.org/chainmaker-go/blockchain"
-	commonErr "chainmaker.org/chainmaker-go/common/errors"
-	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/monitor"
-	apiPb "chainmaker.org/chainmaker-go/pb/protogo/api"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
-	netPb "chainmaker.org/chainmaker-go/pb/protogo/net"
-	"chainmaker.org/chainmaker-go/protocol"
-	"chainmaker.org/chainmaker-go/store/archive"
-	"chainmaker.org/chainmaker-go/utils"
-	"chainmaker.org/chainmaker-go/vm/native"
 	"context"
 	"encoding/hex"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
+
+	"chainmaker.org/chainmaker-go/blockchain"
+	"chainmaker.org/chainmaker-go/localconf"
+	"chainmaker.org/chainmaker-go/logger"
+	"chainmaker.org/chainmaker-go/monitor"
+	"chainmaker.org/chainmaker-go/store/archive"
+	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker-go/vm/native"
+	commonErr "chainmaker.org/chainmaker/common/errors"
+	apiPb "chainmaker.org/chainmaker/pb-go/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	configPb "chainmaker.org/chainmaker/pb-go/config"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/time/rate"
 )
@@ -42,8 +41,7 @@ type ApiService struct {
 	subscriberRateLimiter *rate.Limiter
 	metricQueryCounter    *prometheus.CounterVec
 	metricInvokeCounter   *prometheus.CounterVec
-
-	ctx context.Context
+	ctx                   context.Context
 }
 
 // NewApiService - new ApiService object
@@ -85,12 +83,15 @@ func NewApiService(chainMakerServer *blockchain.ChainMakerServer, ctx context.Co
 
 // SendRequest - deal received TxRequest
 func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
-
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("SendRequest[%s],payload:%#v,\n----signer:%v\n----endorsers:%+v",
+			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
+	})
 	return s.invoke(&commonPb.Transaction{
-		Header:           req.Header,
-		RequestPayload:   req.Payload,
-		RequestSignature: req.Signature,
-		Result:           nil}, protocol.RPC), nil
+		Payload:   req.Payload,
+		Sender:    req.Sender,
+		Endorsers: req.Endorsers,
+		Result:    nil}, protocol.RPC), nil
 }
 
 // validate tx
@@ -100,7 +101,7 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		bc  *blockchain.Blockchain
 	)
 
-	_, err = s.chainMakerServer.GetChainConf(tx.Header.ChainId)
+	_, err = s.chainMakerServer.GetChainConf(tx.Payload.ChainId)
 	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_CHAIN_CONF
 		errMsg = s.getErrMsg(errCode, err)
@@ -108,7 +109,7 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		return
 	}
 
-	bc, err = s.chainMakerServer.GetBlockchain(tx.Header.ChainId)
+	bc, err = s.chainMakerServer.GetBlockchain(tx.Payload.ChainId)
 	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_BLOCKCHAIN
 		errMsg = s.getErrMsg(errCode, err)
@@ -116,10 +117,10 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		return
 	}
 
-	if err = utils.VerifyTxWithoutPayload(tx, tx.Header.ChainId, bc.GetAccessControl()); err != nil {
+	if err = utils.VerifyTxWithoutPayload(tx, tx.Payload.ChainId, bc.GetAccessControl()); err != nil {
 		errCode = commonErr.ERR_CODE_TX_VERIFY_FAILED
-		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s", errCode.String(), err.Error(), tx.Header.TxId,
-			hex.EncodeToString(tx.Header.Sender.MemberInfo))
+		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s", errCode.String(), err.Error(), tx.Payload.TxId,
+			hex.EncodeToString(tx.Sender.Signer.MemberInfo))
 		s.log.Error(errMsg)
 		return
 	}
@@ -139,21 +140,22 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		resp    = &commonPb.TxResponse{}
 	)
 
-	if tx.Header.ChainId != SYSTEM_CHAIN {
+	if tx.Payload.ChainId != SYSTEM_CHAIN {
 		errCode, errMsg = s.validate(tx)
 		if errCode != commonErr.ERR_CODE_OK {
 			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 			resp.Message = errMsg
+			resp.TxId = tx.Payload.TxId
 			return resp
 		}
 	}
 
-	switch tx.Header.TxType {
-	case commonPb.TxType_QUERY_SYSTEM_CONTRACT, commonPb.TxType_QUERY_USER_CONTRACT:
+	switch tx.Payload.TxType {
+	case commonPb.TxType_QUERY_CONTRACT:
 		return s.dealQuery(tx, source)
-	case commonPb.TxType_INVOKE_USER_CONTRACT, commonPb.TxType_UPDATE_CHAIN_CONFIG, commonPb.TxType_MANAGE_USER_CONTRACT, commonPb.TxType_INVOKE_SYSTEM_CONTRACT:
+	case commonPb.TxType_INVOKE_CONTRACT:
 		return s.dealTransact(tx, source)
-	case commonPb.TxType_ARCHIVE_FULL_BLOCK, commonPb.TxType_RESTORE_FULL_BLOCK:
+	case commonPb.TxType_ARCHIVE:
 		return s.doArchive(tx)
 	default:
 		return &commonPb.TxResponse{
@@ -169,13 +171,12 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		err     error
 		errMsg  string
 		errCode commonErr.ErrCode
-		payload commonPb.TransactPayload
 		store   protocol.BlockchainStore
 		vmMgr   protocol.VmManager
-		resp    = &commonPb.TxResponse{}
+		resp    = &commonPb.TxResponse{TxId: tx.Payload.TxId}
 	)
 
-	chainId := tx.Header.ChainId
+	chainId := tx.Payload.ChainId
 
 	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
 		errCode = commonErr.ERR_CODE_GET_STORE
@@ -183,6 +184,7 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		s.log.Error(errMsg)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 		resp.Message = errMsg
+		resp.TxId = tx.Payload.TxId
 		return resp
 	}
 
@@ -192,20 +194,12 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		s.log.Error(errMsg)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 		resp.Message = errMsg
-		return resp
-	}
-
-	if err = proto.Unmarshal(tx.RequestPayload, &payload); err != nil {
-		errCode = commonErr.ERR_CODE_SYSTEM_CONTRACT_PB_UNMARSHAL
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = errMsg
+		resp.TxId = tx.Payload.TxId
 		return resp
 	}
 
 	if chainId == SYSTEM_CHAIN {
-		return s.dealSystemChainQuery(tx, vmMgr, source)
+		return s.dealSystemChainQuery(tx, vmMgr)
 	}
 
 	ctx := &txQuerySimContextImpl{
@@ -221,9 +215,33 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		blockVersion:     protocol.DefaultBlockVersion,
 	}
 
-	txResult, txStatusCode := vmMgr.RunContract(&commonPb.ContractId{ContractName: payload.ContractName}, payload.Method, nil, s.kvPair2Map(payload.Parameters), ctx, 0, tx.Header.TxType)
+	contract, err := store.GetContractByName(tx.Payload.ContractName)
+	if err != nil {
+		s.log.Error(err)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = err.Error()
+		resp.TxId = tx.Payload.TxId
+		return resp
+	}
+	var bytecode []byte
+	if contract.RuntimeType != commonPb.RuntimeType_NATIVE {
+		bytecode, err = store.GetContractBytecode(tx.Payload.ContractName)
+		if err != nil {
+			s.log.Error(err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.TxId = tx.Payload.TxId
+			return resp
+		}
+	}
+	txResult, txStatusCode := vmMgr.RunContract(contract, tx.Payload.Method,
+		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("vmMgr.RunContract: txStatusCode:%d, resultCode:%d, contractName[%s] method[%s] txType[%s], message[%s],result len: %d",
+			txStatusCode, txResult.Code, tx.Payload.ContractName, tx.Payload.Method, tx.Payload.TxType, txResult.Message, len(txResult.Result))
+	})
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != commonPb.ContractResultCode_FAIL {
+		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
 		} else {
 			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
@@ -232,54 +250,44 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
 		errCode = commonErr.ERR_CODE_INVOKE_CONTRACT
 		errMsg = fmt.Sprintf("txStatusCode:%d, resultCode:%d, contractName[%s] method[%s] txType[%s], %s",
-			txStatusCode, txResult.Code, payload.ContractName, payload.Method, tx.Header.TxType, txResult.Message)
-		s.log.Error(errMsg)
+			txStatusCode, txResult.Code, tx.Payload.ContractName, tx.Payload.Method, tx.Payload.TxType, txResult.Message)
+		s.log.Warn(errMsg)
 
 		resp.Code = txStatusCode
-		if txResult.Message == archive.ArchivedBlockError.Error() {
+		if txResult.Message == archive.ErrArchivedBlock.Error() {
 			resp.Code = commonPb.TxStatusCode_ARCHIVED_BLOCK
-		} else if txResult.Message == archive.ArchivedTxError.Error() {
+		} else if txResult.Message == archive.ErrArchivedTx.Error() {
 			resp.Code = commonPb.TxStatusCode_ARCHIVED_TX
 		}
 
 		resp.Message = errMsg
 		resp.ContractResult = txResult
+		resp.TxId = tx.Payload.TxId
 		return resp
 	}
 
-	if txResult.Code == commonPb.ContractResultCode_FAIL {
+	if txResult.Code == 1 {
 		resp.Code = commonPb.TxStatusCode_CONTRACT_FAIL
 		resp.Message = commonPb.TxStatusCode_CONTRACT_FAIL.String()
 		resp.ContractResult = txResult
+		resp.TxId = tx.Payload.TxId
 		return resp
 	}
 
 	resp.Code = commonPb.TxStatusCode_SUCCESS
 	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
 	resp.ContractResult = txResult
+	resp.TxId = tx.Payload.TxId
 	return resp
 }
 
 // dealSystemChainQuery - deal system chain query
-func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protocol.VmManager, source protocol.TxSource) *commonPb.TxResponse {
+func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protocol.VmManager) *commonPb.TxResponse {
 	var (
-		err     error
-		errMsg  string
-		errCode commonErr.ErrCode
-		payload commonPb.TransactPayload
-		resp    = &commonPb.TxResponse{}
+		resp = &commonPb.TxResponse{}
 	)
 
-	chainId := tx.Header.ChainId
-
-	if err = proto.Unmarshal(tx.RequestPayload, &payload); err != nil {
-		errCode = commonErr.ERR_CODE_SYSTEM_CONTRACT_PB_UNMARSHAL
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = errMsg
-		return resp
-	}
+	chainId := tx.Payload.ChainId
 
 	ctx := &txQuerySimContextImpl{
 		tx:               tx,
@@ -294,39 +302,41 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 	}
 
 	runtimeInstance := native.GetRuntimeInstance(chainId)
-	txResult := runtimeInstance.Invoke(&commonPb.ContractId{
-		ContractName: payload.ContractName,
+	txResult := runtimeInstance.Invoke(&commonPb.Contract{
+		Name: tx.Payload.ContractName,
 	},
-		payload.Method,
+		tx.Payload.Method,
 		nil,
-		s.kvPair2Map(payload.Parameters),
+		s.kvPair2Map(tx.Payload.Parameters),
 		ctx,
 	)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		if txResult.Code != commonPb.ContractResultCode_FAIL {
+		if txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
 		} else {
 			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
 		}
 	}
 
-	if txResult.Code == commonPb.ContractResultCode_FAIL {
+	if txResult.Code == 1 {
 		resp.Code = commonPb.TxStatusCode_CONTRACT_FAIL
 		resp.Message = commonPb.TxStatusCode_CONTRACT_FAIL.String()
 		resp.ContractResult = txResult
+		resp.TxId = tx.Payload.TxId
 		return resp
 	}
 
 	resp.Code = commonPb.TxStatusCode_SUCCESS
 	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
 	resp.ContractResult = txResult
+	resp.TxId = tx.Payload.TxId
 	return resp
 }
 
 // kvPair2Map - change []*commonPb.KeyValuePair to map[string]string
-func (s *ApiService) kvPair2Map(kvPair []*commonPb.KeyValuePair) map[string]string {
-	kvMap := make(map[string]string)
+func (s *ApiService) kvPair2Map(kvPair []*commonPb.KeyValuePair) map[string][]byte {
+	kvMap := make(map[string][]byte)
 
 	for _, kv := range kvPair {
 		kvMap[kv.Key] = kv.Value
@@ -341,42 +351,32 @@ func (s *ApiService) dealTransact(tx *commonPb.Transaction, source protocol.TxSo
 		err     error
 		errMsg  string
 		errCode commonErr.ErrCode
-		resp    = &commonPb.TxResponse{}
+		resp    = &commonPb.TxResponse{TxId: tx.Payload.TxId}
 	)
 
-	// whether modify tx payload
-	if localconf.ChainMakerConfig.DebugConfig.IsModifyTxPayload {
-		tx.RequestPayload = append(tx.RequestPayload, byte(0)) // append zero byte
-	}
+	err = s.chainMakerServer.AddTx(tx.Payload.ChainId, tx, source)
 
-	// spv logic
-	if localconf.ChainMakerConfig.NodeConfig.Type == "spv" {
-		return s.doSpvLogin(tx, resp)
-	}
-
-	err = s.chainMakerServer.AddTx(tx.Header.ChainId, tx, source)
-
-	s.incInvokeCounter(tx.Header.ChainId, err)
+	s.incInvokeCounter(tx.Payload.ChainId, err)
 
 	if err != nil {
 		s.log.Warnf("Add tx failed, %s, chainId:%s, txId:%s",
-			err.Error(), tx.Header.ChainId, tx.Header.TxId)
+			err.Error(), tx.Payload.ChainId, tx.Payload.TxId)
 
 		errCode = commonErr.ERR_CODE_TX_ADD_FAILED
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 		resp.Message = errMsg
+		resp.TxId = tx.Payload.TxId
 		return resp
-
 	}
 
-	s.log.Debugf("Add tx success, chainId:%s, txId:%s", tx.Header.ChainId, tx.Header.TxId)
+	s.log.Debugf("Add tx success, chainId:%s, txId:%s", tx.Payload.ChainId, tx.Payload.TxId)
 
 	errCode = commonErr.ERR_CODE_OK
 	resp.Code = commonPb.TxStatusCode_SUCCESS
 	resp.Message = errCode.String()
-
+	resp.TxId = tx.Payload.TxId
 	return resp
 }
 
@@ -388,70 +388,6 @@ func (s *ApiService) incInvokeCounter(chainId string, err error) {
 			s.metricInvokeCounter.WithLabelValues(chainId, "false").Inc()
 		}
 	}
-}
-
-func (s *ApiService) doSpvLogin(tx *commonPb.Transaction, resp *commonPb.TxResponse) *commonPb.TxResponse {
-	var (
-		err    error
-		errMsg string
-		store  protocol.BlockchainStore
-	)
-
-	chainId := tx.Header.ChainId
-
-	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		errMsg = fmt.Sprintf("%s", err.Error())
-		s.log.Error(errMsg)
-		resp.Message = errMsg
-		return resp
-	}
-
-	exist, err := store.TxExists(tx.Header.TxId)
-	if err != nil {
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		errMsg = fmt.Sprintf("%s", err.Error())
-		s.log.Error(errMsg)
-		resp.Message = errMsg
-		return resp
-	}
-
-	if exist {
-		resp.Code = commonPb.TxStatusCode_SUCCESS
-		resp.Message = commonErr.ERR_CODE_OK.String()
-		return resp
-	}
-
-	txMsg, err := proto.Marshal(tx)
-	if err != nil {
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		errMsg = fmt.Sprintf("%s", err.Error())
-		s.log.Error(errMsg)
-		resp.Message = errMsg
-		return resp
-	}
-
-	netService, err := s.chainMakerServer.GetNetService(chainId)
-	if err != nil {
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		errMsg = fmt.Sprintf("%s", err.Error())
-		s.log.Error(errMsg)
-		resp.Message = errMsg
-		return resp
-	}
-
-	err = netService.BroadcastMsg(txMsg, netPb.NetMsg_TX)
-	if err != nil {
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		errMsg = fmt.Sprintf("%s", err.Error())
-		s.log.Error(errMsg)
-		resp.Message = errMsg
-		return resp
-	}
-
-	resp.Code = commonPb.TxStatusCode_SUCCESS
-	resp.Message = commonErr.ERR_CODE_OK.String()
-	return resp
 }
 
 // RefreshLogLevelsConfig - refresh log level

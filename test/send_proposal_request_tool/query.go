@@ -8,14 +8,15 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"io/ioutil"
 	"strings"
 
-	"chainmaker.org/chainmaker-go/utils"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+
+	"github.com/ethereum/go-ethereum/accounts/abi"
+
 	"github.com/spf13/cobra"
 )
 
@@ -39,7 +40,7 @@ func QueryCMD() *cobra.Command {
 	return cmd
 }
 
-func returnResult(code commonPb.TxStatusCode, message string, contractCode commonPb.ContractResultCode, contractMessage string, data string) error {
+func returnResult(code commonPb.TxStatusCode, message string, contractCode uint32, contractMessage string, data string) error {
 	var result *Result
 	result = &Result{
 		Code:                  code,
@@ -48,17 +49,11 @@ func returnResult(code commonPb.TxStatusCode, message string, contractCode commo
 		ContractResultMessage: contractMessage,
 		ContractQueryResult:   data,
 	}
-	bytes, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(bytes))
+	fmt.Println(result.ToJsonString())
 	return nil
 }
 
 func query() error {
-	txId := utils.GetRandTxId()
-
 	// 构造Payload
 	if pairsString == "" {
 		bytes, err := ioutil.ReadFile(pairsFile)
@@ -77,7 +72,7 @@ func query() error {
 	var abiData *[]byte
 	method, pairs, err = makePairs(method, abiPath, pairs, commonPb.RuntimeType(runTime), abiData)
 	if err != nil {
-		err = returnResult(1, "make pairs filure!", 0, "error", "")
+		err = returnResult(1, "make pairs failure!", 0, "error", "")
 		return err
 	}
 	////暂时不支持传参
@@ -95,23 +90,24 @@ func query() error {
 	//	pairs = []*commonPb.KeyValuePair{
 	//		{
 	//			Key:   "data",
-	//			Value: data,
+	//			Value: []byte(data),
 	//		},
 	//	}
 	//}
 
-	payloadBytes, err := constructPayload(contractName, method, pairs)
+	payloadBytes, err := constructQueryPayload(chainId, contractName, method, pairs)
 	if err != nil {
 		return err
 	}
 
-	resp, err = proposalRequest(sk3, client, commonPb.TxType_QUERY_USER_CONTRACT,
-		chainId, txId, payloadBytes)
-	fmt.Println("resp: ", resp, "err:", err)
+	resp, err = proposalRequest(sk3, client, payloadBytes)
 	if err != nil {
 		return err
 	}
-
+	log.DebugDynamic(func() string {
+		respJson, _ := json.Marshal(resp)
+		return string(respJson)
+	})
 	var dataByte []interface{}
 	//var result *Result
 	//暂时不支持传参

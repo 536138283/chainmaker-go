@@ -3,12 +3,13 @@ module chainmaker.org/chainmaker-go/docker-go
 go 1.15
 
 require (
-	chainmaker.org/chainmaker-go/common v0.0.0
+
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/localconf v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/logger v0.0.0
-	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
-	chainmaker.org/chainmaker-go/protocol v0.0.0
+	chainmaker.org/chainmaker/common v0.0.0-20210812042900-40fd24729b4a
+	chainmaker.org/chainmaker/pb-go v0.0.0-20210812134751-dc3557ac21d8
+	chainmaker.org/chainmaker/protocol v0.0.0-20210812135658-51819764013f
 	github.com/Microsoft/go-winio v0.5.0 // indirect
 	github.com/Microsoft/hcsshim v0.8.17 // indirect
 	github.com/containerd/containerd v1.5.2 // indirect
@@ -31,10 +32,9 @@ require (
 
 replace (
 	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ./dockercontainer/pb_sdk
-	chainmaker.org/chainmaker-go/common => ../../../common
+
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ./dockercontainer
 	chainmaker.org/chainmaker-go/localconf => ../../conf/localconf
 	chainmaker.org/chainmaker-go/logger => ../../logger
-	chainmaker.org/chainmaker-go/pb/protogo => ../../../pb/protogo
-	chainmaker.org/chainmaker-go/protocol => ../../../protocol
+
 )

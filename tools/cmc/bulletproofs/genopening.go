@@ -10,7 +10,7 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/common/crypto/bulletproofs"
+	"chainmaker.org/chainmaker/common/crypto/bulletproofs"
 	"github.com/spf13/cobra"
 )
 
@@ -28,7 +28,7 @@ func genOpeningCMD() *cobra.Command {
 }
 
 func genOpening() error {
-	opening, err := bulletproofs.Helper().NewBulletproofs().PedersenRNG()
+	opening, err := bulletproofs.PedersenRNG()
 	if err != nil {
 		return err
 	}

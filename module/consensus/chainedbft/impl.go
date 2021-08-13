@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker-go/chainconf"
-	"chainmaker.org/chainmaker-go/common/msgbus"
-	"chainmaker.org/chainmaker-go/common/wal"
 	"chainmaker.org/chainmaker-go/consensus/chainedbft/message"
 	timeservice "chainmaker.org/chainmaker-go/consensus/chainedbft/time_service"
 	"chainmaker.org/chainmaker-go/consensus/chainedbft/types"
@@ -24,12 +22,13 @@ import (
 	"chainmaker.org/chainmaker-go/consensus/governance"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	chainedbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/chainedbft"
-	"chainmaker.org/chainmaker-go/pb/protogo/net"
-	"chainmaker.org/chainmaker-go/protocol"
-
+	"chainmaker.org/chainmaker/common/msgbus"
+	"chainmaker.org/chainmaker/common/wal"
+	"chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/consensus"
+	chainedbftpb "chainmaker.org/chainmaker/pb-go/consensus/chainedbft"
+	"chainmaker.org/chainmaker/pb-go/net"
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -54,9 +53,9 @@ type ConsensusChainedBftImpl struct {
 	protocolMsgCh   chan *chainedbftpb.ConsensusMsg // Transmit Hotstuff protocol information: proposal, vote
 
 	mtx                sync.RWMutex
-	nextEpoch          *epochManager       // next epoch
-	commitHeight       uint64              // The height of the latest committed block
-	governanceContract protocol.Government // The management contract on the block chain
+	nextEpoch          *epochManager                     // next epoch
+	commitHeight       uint64                            // The height of the latest committed block
+	governanceContract *governance.GovernanceContractImp // The management contract on the block chain
 	lastCommitWalIndex uint64
 
 	// wal info
@@ -97,6 +96,11 @@ func New(chainID string, id string, singer protocol.SigningMember, ac protocol.A
 	blockCommitter protocol.BlockCommitter, netService protocol.NetService, store protocol.BlockchainStore,
 	msgBus msgbus.MessageBus, chainConf protocol.ChainConf, helper protocol.HotStuffHelper) (*ConsensusChainedBftImpl, error) {
 
+	slog := logger.GetLoggerByChain(logger.MODULE_CONSENSUS, chainConf.ChainConfig().ChainId)
+	if chainConf.ChainConfig().Contract.EnableSqlSupport {
+		slog.Error("hotstuff consensus doesn't support sql contract")
+		return nil, fmt.Errorf("hotstuff consensus doesn't support sql contract")
+	}
 	service := &ConsensusChainedBftImpl{
 		id:                 id,
 		chainID:            chainID,
@@ -120,7 +124,7 @@ func New(chainID string, id string, singer protocol.SigningMember, ac protocol.A
 		blockVerifier:         blockVerifier,
 		blockCommitter:        blockCommitter,
 		accessControlProvider: ac,
-		logger:                logger.GetLoggerByChain(logger.MODULE_CONSENSUS, chainConf.ChainConfig().ChainId),
+		logger:                slog,
 		governanceContract:    governance.NewGovernanceContract(store, ledgerCache),
 
 		quitCh:         make(chan struct{}),
@@ -156,7 +160,7 @@ func New(chainID string, id string, singer protocol.SigningMember, ac protocol.A
 	return service, nil
 }
 
-func (cbi *ConsensusChainedBftImpl) initTimeOutConfig(governanceContract protocol.Government) {
+func (cbi *ConsensusChainedBftImpl) initTimeOutConfig(governanceContract *governance.GovernanceContractImp) {
 	base := governanceContract.GetRoundTimeoutMill()
 	if base == 0 {
 		base = uint64(timeservice.DefaultRoundTimeout)
@@ -200,8 +204,8 @@ func (cbi *ConsensusChainedBftImpl) startConsensus() {
 	}
 	cbi.processCertificates(cbi.chainStore.getCurrentQC(), nil)
 	if cbi.isValidProposer(cbi.smr.getCurrentLevel(), cbi.selfIndexInEpoch) {
-		cbi.smr.updateState(chainedbftpb.ConsStateType_Propose)
-		cbi.processNewPropose(cbi.smr.getHeight(), cbi.smr.getCurrentLevel(), cbi.chainStore.getCurrentQC().BlockID)
+		cbi.smr.updateState(chainedbftpb.ConsStateType_PROPOSE)
+		cbi.processNewPropose(cbi.smr.getHeight(), cbi.smr.getCurrentLevel(), cbi.chainStore.getCurrentQC().BlockId)
 	}
 }
 
@@ -279,9 +283,9 @@ func (cbi *ConsensusChainedBftImpl) protocolLoop() {
 				continue
 			}
 			switch msg.Payload.Type {
-			case chainedbftpb.MessageType_ProposalMessage:
+			case chainedbftpb.MessageType_PROPOSAL_MESSAGE:
 				cbi.onReceivedProposal(msg)
-			case chainedbftpb.MessageType_VoteMessage:
+			case chainedbftpb.MessageType_VOTE_MESSAGE:
 				cbi.onReceivedVote(msg)
 			default:
 				cbi.logger.Warnf("service selfIndexInEpoch [%v] received non-protocol msg %v", cbi.selfIndexInEpoch, msg.Payload.Type)
@@ -300,9 +304,9 @@ func (cbi *ConsensusChainedBftImpl) syncLoop() {
 				continue
 			}
 			switch msg.Payload.Type {
-			case chainedbftpb.MessageType_BlockFetchMessage:
+			case chainedbftpb.MessageType_BLOCK_FETCH_MESSAGE:
 				cbi.onReceiveBlockFetch(msg)
-			case chainedbftpb.MessageType_BlockFetchRespMessage:
+			case chainedbftpb.MessageType_BLOCK_FETCH_RESP_MESSAGE:
 				cbi.onReceiveBlockFetchRsp(msg)
 			default:
 				cbi.logger.Warnf("service selfIndexInEpoch [%v] received non-sync msg %v", cbi.selfIndexInEpoch, msg.Payload.Type)
@@ -363,22 +367,22 @@ func (cbi *ConsensusChainedBftImpl) onConsensusMsg(msg *chainedbftpb.ConsensusMs
 	defer t.Stop()
 
 	switch msg.Payload.Type {
-	case chainedbftpb.MessageType_ProposalMessage:
+	case chainedbftpb.MessageType_PROPOSAL_MESSAGE:
 		select {
 		case cbi.protocolMsgCh <- msg:
 		case <-t.C:
 		}
-	case chainedbftpb.MessageType_VoteMessage:
+	case chainedbftpb.MessageType_VOTE_MESSAGE:
 		select {
 		case cbi.protocolMsgCh <- msg:
 		case <-t.C:
 		}
-	case chainedbftpb.MessageType_BlockFetchMessage:
+	case chainedbftpb.MessageType_BLOCK_FETCH_MESSAGE:
 		select {
 		case cbi.syncMsgCh <- msg:
 		case <-t.C:
 		}
-	case chainedbftpb.MessageType_BlockFetchRespMessage:
+	case chainedbftpb.MessageType_BLOCK_FETCH_RESP_MESSAGE:
 		select {
 		case cbi.syncMsgCh <- msg:
 		case <-t.C:
@@ -398,7 +402,7 @@ func (cbi *ConsensusChainedBftImpl) onFiredEvent(te *timeservice.TimerEvent) {
 	}
 	cbi.logger.Infof("receive time out event, state: %s, height: %d, level: %d, duration: %s", te.State.String(), te.Height, te.Level, te.Duration.String())
 	switch te.State {
-	case chainedbftpb.ConsStateType_PaceMaker:
+	case chainedbftpb.ConsStateType_PACEMAKER:
 		cbi.processLocalTimeout(te.Height, te.Level)
 	default:
 		cbi.logger.Errorf("service selfIndexInEpoch [%v] received invalid event %v", cbi.selfIndexInEpoch, te)
@@ -445,7 +449,7 @@ func (cbi *ConsensusChainedBftImpl) VerifyBlockSignatures(block *common.Block) e
 		quorumCert    []byte
 		newViewNum    int
 		votedBlockNum int
-		blockID       = block.GetHeader().GetBlockHash()
+		BlockId       = block.GetHeader().GetBlockHash()
 	)
 	if quorumCert = utils.GetQCFromBlock(block); len(quorumCert) == 0 {
 		return errors.New("qc is nil")
@@ -455,15 +459,15 @@ func (cbi *ConsensusChainedBftImpl) VerifyBlockSignatures(block *common.Block) e
 		cbi.logger.Errorf("service selfIndexInEpoch [%v] unmarshal qc failed, err %v", cbi.selfIndexInEpoch, err)
 		return fmt.Errorf("unmarshal qc failed, err %v", err)
 	}
-	if qc.BlockID == nil {
+	if qc.BlockId == nil {
 		cbi.logger.Errorf("service selfIndexInEpoch [%v] validate qc failed, nil block id", cbi.selfIndexInEpoch)
 		return fmt.Errorf("nil block id in qc")
 	}
-	if !bytes.Equal(qc.BlockID, blockID) {
-		cbi.logger.Errorf("service selfIndexInEpoch [%v] validate qc failed, wrong qc blockID [%v],"+
-			"expected [%v]", cbi.selfIndexInEpoch, qc.BlockID, blockID)
+	if !bytes.Equal(qc.BlockId, BlockId) {
+		cbi.logger.Errorf("service selfIndexInEpoch [%v] validate qc failed, wrong qc BlockId [%v],"+
+			"expected [%v]", cbi.selfIndexInEpoch, qc.BlockId, BlockId)
 		return fmt.Errorf("wrong qc block id [%v], expected [%v]",
-			qc.BlockID, blockID)
+			qc.BlockId, BlockId)
 	}
 	if newViewNum, votedBlockNum, err = cbi.countNumFromVotes(qc); err != nil {
 		return err
@@ -506,7 +510,7 @@ func (cbi *ConsensusChainedBftImpl) countNumFromVotes(qc *chainedbftpb.QuorumCer
 		if vote.NewView {
 			votedNewView[vote.AuthorIdx] = vote
 		}
-		if len(vote.BlockID) > 0 && bytes.Equal(vote.BlockID, qc.BlockID) {
+		if len(vote.BlockId) > 0 && bytes.Equal(vote.BlockId, qc.BlockId) {
 			votedBlock[vote.AuthorIdx] = vote
 		}
 	}
@@ -531,11 +535,11 @@ func VerifyBlockSignatures(chainConf protocol.ChainConf, ac protocol.AccessContr
 	if err := proto.Unmarshal(quorumCert, qc); err != nil {
 		return fmt.Errorf("failed to unmarshal qc, err %v", err)
 	}
-	if qc.BlockID == nil {
+	if qc.BlockId == nil {
 		return fmt.Errorf("nil block id in qc")
 	}
-	if blockID := block.GetHeader().GetBlockHash(); !bytes.Equal(qc.BlockID, blockID) {
-		return fmt.Errorf("wrong qc block id [%v], expected [%v]", qc.BlockID, blockID)
+	if BlockId := block.GetHeader().GetBlockHash(); !bytes.Equal(qc.BlockId, BlockId) {
+		return fmt.Errorf("wrong qc block id [%v], expected [%v]", qc.BlockId, BlockId)
 	}
 
 	// because the validator set has changed after the generation switch, so that validate by validators
@@ -555,7 +559,7 @@ func VerifyBlockSignatures(chainConf protocol.ChainConf, ac protocol.AccessContr
 	for _, v := range validatorsMembers {
 		validator := &types.Validator{
 			Index:  uint64(v.Index),
-			NodeID: v.NodeID,
+			NodeID: v.NodeId,
 		}
 		curValidators = append(curValidators, validator)
 	}
@@ -642,12 +646,12 @@ func countNumFromVotes(qc *chainedbftpb.QuorumCert, curvalidators []*types.Valid
 				vote.AuthorIdx, vote.Height, vote.Level)
 		}
 		voteIdxes[vote.AuthorIdx] = true
-		if vote.NewView && vote.BlockID == nil {
+		if vote.NewView && vote.BlockId == nil {
 			newViewNum++
 			continue
 		}
 
-		if qc.BlockID != nil && (bytes.Compare(vote.BlockID, qc.BlockID) < 0) {
+		if qc.BlockId != nil && (bytes.Compare(vote.BlockId, qc.BlockId) < 0) {
 			continue
 		}
 		votedBlockNum++

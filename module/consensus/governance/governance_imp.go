@@ -10,21 +10,21 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker-go/logger"
-	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
-	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	"chainmaker.org/chainmaker-go/protocol"
+	configPb "chainmaker.org/chainmaker/pb-go/config"
+	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type GovernanceContractImp struct {
 	log                *logger.CMLogger
-	Height             int64 //Cache height
+	Height             uint64 //Cache height
 	store              protocol.BlockchainStore
 	ledger             protocol.LedgerCache
 	governmentContract *consensusPb.GovernanceContract //Cache government data
 	sync.RWMutex
 }
 
-func NewGovernanceContract(store protocol.BlockchainStore, ledger protocol.LedgerCache) protocol.Government {
+func NewGovernanceContract(store protocol.BlockchainStore, ledger protocol.LedgerCache) *GovernanceContractImp {
 	governmentContract := &GovernanceContractImp{
 		log:                logger.GetLogger(logger.MODULE_CONSENSUS),
 		Height:             0,
@@ -122,7 +122,7 @@ func (gcr *GovernanceContractImp) GetMembers() interface{} {
 	var members []*consensusPb.GovernanceMember
 	for _, member := range governmentContract.Members {
 		members = append(members, &consensusPb.GovernanceMember{
-			Index: member.Index, NodeID: member.NodeID,
+			Index: member.Index, NodeId: member.NodeId,
 		})
 	}
 	return members
@@ -138,7 +138,7 @@ func (gcr *GovernanceContractImp) GetValidators() interface{} {
 	var members []*consensusPb.GovernanceMember
 	for _, member := range governmentContract.Validators {
 		members = append(members, &consensusPb.GovernanceMember{
-			Index: member.Index, NodeID: member.NodeID,
+			Index: member.Index, NodeId: member.NodeId,
 		})
 	}
 	return members
@@ -155,7 +155,7 @@ func (gcr *GovernanceContractImp) GetNextValidators() interface{} {
 	for _, member := range governmentContract.NextValidators {
 		newMember := &consensusPb.GovernanceMember{
 			Index:  member.Index,
-			NodeID: member.NodeID,
+			NodeId: member.NodeId,
 		}
 		members = append(members, newMember)
 	}

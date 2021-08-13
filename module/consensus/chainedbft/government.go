@@ -11,8 +11,7 @@ import (
 	"chainmaker.org/chainmaker-go/consensus/chainedbft/types"
 	"chainmaker.org/chainmaker-go/consensus/chainedbft/utils"
 	"chainmaker.org/chainmaker-go/consensus/governance"
-	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	"chainmaker.org/chainmaker-go/protocol"
+	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
 )
 
 //epochManager manages the components that shared across epoch
@@ -26,7 +25,7 @@ type epochManager struct {
 
 	msgPool            *message.MsgPool   //The msg pool associated to next epoch
 	useValidators      []*types.Validator //The peer pool associated to next epoch
-	governanceContract protocol.Government
+	governanceContract *governance.GovernanceContractImp
 }
 
 // createNextEpochIfRequired If the conditions are met, create the next epoch
@@ -53,7 +52,7 @@ func (cbi *ConsensusChainedBftImpl) createEpoch(height uint64) {
 	}
 	for _, v := range validatorsMembers {
 		validators = append(validators, &types.Validator{
-			Index: uint64(v.Index), NodeID: v.NodeID,
+			Index: uint64(v.Index), NodeID: v.NodeId,
 		})
 	}
 
@@ -74,7 +73,7 @@ func (cbi *ConsensusChainedBftImpl) createEpoch(height uint64) {
 		members = membersInterface.([]*consensusPb.GovernanceMember)
 	}
 	for _, v := range members {
-		if v.NodeID == cbi.id {
+		if v.NodeId == cbi.id {
 			epoch.index = uint64(v.Index)
 			break
 		}

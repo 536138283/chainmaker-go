@@ -10,13 +10,13 @@ import (
 	"sort"
 	"testing"
 
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
+	"chainmaker.org/chainmaker/pb-go/common"
 )
 
 func TestConsensusChainedBftImpl_ProcessProposedBlock(t *testing.T) {
 	blks := make([]*common.Block, 0, 5)
 	for i := 0; i < cap(blks); i++ {
-		blks = append(blks, &common.Block{Header: &common.BlockHeader{BlockHeight: int64(100 - i)}})
+		blks = append(blks, &common.Block{Header: &common.BlockHeader{BlockHeight: uint64(100 - i)}})
 	}
 	fmt.Println(blks)
 

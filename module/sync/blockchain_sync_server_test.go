@@ -11,11 +11,11 @@ import (
 	"testing"
 	"time"
 
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	netPb "chainmaker.org/chainmaker-go/pb/protogo/net"
-	syncPb "chainmaker.org/chainmaker-go/pb/protogo/sync"
-	"chainmaker.org/chainmaker-go/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	netPb "chainmaker.org/chainmaker/pb-go/net"
+	syncPb "chainmaker.org/chainmaker/pb-go/sync"
 
+	"chainmaker.org/chainmaker/protocol"
 	"github.com/golang/mock/gomock"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/require"
@@ -27,7 +27,7 @@ func getNodeStatusReq(t *testing.T) []byte {
 	return bz
 }
 
-func getNodeStatusResp(t *testing.T, height int64) []byte {
+func getNodeStatusResp(t *testing.T, height uint64) []byte {
 	bz, err := proto.Marshal(&syncPb.BlockHeightBCM{BlockHeight: height})
 	require.NoError(t, err)
 	bz, err = proto.Marshal(&syncPb.SyncMsg{Type: syncPb.SyncMsg_NODE_STATUS_RESP, Payload: bz})
@@ -35,7 +35,7 @@ func getNodeStatusResp(t *testing.T, height int64) []byte {
 	return bz
 }
 
-func getBlockReq(t *testing.T, height, batchSize int64) []byte {
+func getBlockReq(t *testing.T, height, batchSize uint64) []byte {
 	bz, err := proto.Marshal(&syncPb.BlockSyncReq{BlockHeight: height, BatchSize: batchSize})
 	require.NoError(t, err)
 	bz, err = proto.Marshal(&syncPb.SyncMsg{Type: syncPb.SyncMsg_BLOCK_SYNC_REQ, Payload: bz})
@@ -43,9 +43,9 @@ func getBlockReq(t *testing.T, height, batchSize int64) []byte {
 	return bz
 }
 
-func getBlockResp(t *testing.T, height int64) []byte {
+func getBlockResp(t *testing.T, height uint64) []byte {
 	bz, err := proto.Marshal(&syncPb.SyncBlockBatch{
-		Data: &syncPb.SyncBlockBatch_BlockBatch{BlockBatch: &syncPb.BlockBatch{Batchs: []*commonPb.Block{
+		Data: &syncPb.SyncBlockBatch_BlockBatch{BlockBatch: &syncPb.BlockBatch{Batches: []*commonPb.Block{
 			{Header: &commonPb.BlockHeader{BlockHeight: height}},
 		}}},
 	})
