@@ -12,7 +12,6 @@ NODE_CNT=$1
 CHAIN_CNT=$2
 P2P_PORT_PREFIX=$3
 RPC_PORT_PREFIX=$4
-DOCKERVM_PORT_PREFIX=$5
 
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
@@ -94,15 +93,6 @@ function check_params() {
         exit 1
     fi
 
-    if [[ ! -n $DOCKERVM_PORT_PREFIX ]]; then
-      DOCKERVM_PORT_PREFIX=13300
-    fi
-
-    if  [ ${DOCKERVM_PORT_PREFIX} -ge 60000 ] || [ ${DOCKERVM_PORT_PREFIX} -le 10000 ];then
-            echo "dockervm_rpc_port_prefix should >=10000 && <=60000"
-            show_help
-            exit 1
-        fi
 }
 
 function generate_certs() {
@@ -183,7 +173,6 @@ function generate_config() {
         xsed "s%{pprof_port}%$(($PPROF_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
         xsed "s%{trusted_port}%$(($TRUSTED_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
         xsed "s%{enalbe_dockervm}%$ENABLE_DOCKERVM%g" node$i/chainmaker.yml
-        xsed "s%{dockervm_rpc_port}%$(($DOCKERVM_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
         xsed "s%{docker_container_name}%"${DOCKER_VM_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
 
         system=$(uname)

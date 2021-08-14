@@ -10,9 +10,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"errors"
-	"fmt"
 	"go.uber.org/zap"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"sync"
@@ -20,17 +18,10 @@ import (
 	"time"
 )
 
-type ExitStatus struct {
-	Signal os.Signal
-	Code   int
-	PID    int
-	User   *security.User
-	TxId   string
-}
-
 const (
 	ReqChanSize      = 1000
 	ResponseChanSize = 1000 //todo how to set number
+	runtimePanic     = "runtime panic"
 )
 
 type DockerScheduler struct {
@@ -41,7 +32,6 @@ type DockerScheduler struct {
 	handlerRegister *HandlerRegister
 	contractManager *ContractManager
 
-	exitCh                chan ExitStatus
 	txReqCh               chan *protogo.TxRequest
 	txResponseCh          chan *protogo.TxResponse
 	getStateReqCh         chan *protogo.CDMMessage
@@ -60,7 +50,6 @@ func NewDockerScheduler(userController protocol.UserController, handlerRegister 
 		handlerRegister: handlerRegister,
 		contractManager: contractManager,
 
-		exitCh:                make(chan ExitStatus, ReqChanSize),
 		txReqCh:               make(chan *protogo.TxRequest, ReqChanSize),
 		txResponseCh:          make(chan *protogo.TxResponse, ResponseChanSize),
 		getStateReqCh:         make(chan *protogo.CDMMessage, ReqChanSize*8),
@@ -112,41 +101,22 @@ func (s *DockerScheduler) StartScheduler() {
 
 	go s.listenIncomingTxRequest()
 
-	go s.monitorSandBox()
-
 }
 
 func (s *DockerScheduler) StopScheduler() {
 	s.logger.Infof("stop docker scheduler")
 	close(s.txResponseCh)
 	close(s.txReqCh)
-	close(s.exitCh)
 	close(s.getStateReqCh)
 	close(s.getByteCodeReqCh)
 }
 
 func (s *DockerScheduler) listenIncomingTxRequest() {
-	s.logger.Infof("start listen incoming tx request")
+	s.logger.Debugf("start listen incoming tx request")
 
 	for {
 		txRequest := <-s.txReqCh
 		go s.handleTx(txRequest)
-	}
-}
-
-func (s *DockerScheduler) monitorSandBox() {
-	for {
-		status := <-s.exitCh
-
-		switch status.Signal {
-		case os.Kill:
-			// means process run fail, todo
-			s.logger.Debugf("process %d fail with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
-		default:
-			// means process run successful, return the value back
-			s.logger.Debugf("process %d success with code: %d, txId: %s\n", status.PID, status.Code, status.TxId)
-		}
-
 	}
 }
 
@@ -173,37 +143,30 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
+	defer func(userController protocol.UserController, user *security.User) {
+		err = userController.FreeUser(user)
+		if err != nil {
+			s.logger.Errorf("fail to free user: err [%s] -- user[%v] -- txId [%s]", err, user, txRequest.TxId)
+		}
+	}(s.userController, user)
 
 	// register new handler
 	handlerName := s.constructHandlerName(txRequest)
 	dmsHandler, err := rpc.NewDMSHandler(user, txRequest, s, handlerName, txRequest.ContractName)
 	if err != nil {
 		s.logger.Errorf("fail to generate new handler: [%s] -- txId [%s]", err, txRequest.TxId)
-		_ = s.userController.FreeUser(user)
 		s.returnErrorTxResponse(txRequest.TxId, err)
 		return
 	}
 
 	s.handlerRegister.RegisterNewHandler(handlerName, dmsHandler)
+	defer s.handlerRegister.FreeHandler(handlerName)
 
-	// start sand box
+	// start sandbox
 	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
 	if err != nil {
-		s.logger.Errorf("faild to start sand box : [%s] -- txId [%s]", err, txRequest.TxId)
-		s.handlerRegister.FreeHandler(handlerName)
-		_ = s.userController.FreeUser(user)
+		s.logger.Errorf("faild to run contract : [%s] -- txId [%s]", err, txRequest.TxId)
 		s.returnErrorTxResponse(txRequest.TxId, err)
-		return
-	}
-
-	// free handler
-	s.handlerRegister.FreeHandler(handlerName)
-
-	// free current user
-	if err = s.userController.FreeUser(user); err != nil {
-		s.logger.Errorf("fail to free user: err [%s] -- user[%v] -- txId [%s]", err, user, txRequest.TxId)
-		s.returnErrorTxResponse(txRequest.TxId, err)
-		return
 	}
 
 	s.logger.Debugf("cost time for running sandbox is: %s", time.Since(startTime))
@@ -213,14 +176,14 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, handlerName, contractPath string) error {
 	var err error           // sandbox global error
 	var stderr bytes.Buffer // used to capture the error message from sandbox
-	var stdout bytes.Buffer
+	//var stdout bytes.Buffer //todo delete
 
 	cmd := exec.Cmd{
 		Path: contractPath,
 		Args: []string{user.SockPath, handlerName, contractName},
 	}
 	cmd.Stderr = &stderr
-	cmd.Stdout = &stdout
+	//cmd.Stdout = os.Stdout
 
 	// set namespace, these settings just working in linux
 	// but it doens't affect running, cause it will put into docker to run
@@ -255,25 +218,9 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 
 	// wait sandbox end
 	if err = cmd.Wait(); err != nil {
-		s.logger.Errorf("fail to wait tx end: txId [%s], err [%s]", txId, err)
-		s.logger.Errorf("tx error: [%s]", stderr.String())
-		err = errors.New(stderr.String())
-		fmt.Println(stdout.String())
+		s.logger.Errorf("tx fail: txId [%s], err [%s]", txId, stderr.String())
+		err = errors.New(runtimePanic)
 	}
-
-	// capture current process exit status
-	// code : 0 : process run successfully
-	// code : -1 : process run fail, maybe timeout, maybe memory out
-	status := cmd.ProcessState.Sys().(syscall.WaitStatus)
-
-	exitStatus := ExitStatus{
-		Code: status.ExitStatus(),
-		PID:  cmd.Process.Pid,
-		User: user,
-		TxId: txId,
-	}
-
-	s.exitCh <- exitStatus
 
 	return err
 }

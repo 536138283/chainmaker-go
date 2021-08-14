@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -54,6 +53,10 @@ const (
 	userCrtPath    = certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt"
 	orgId          = "wx-org1.chainmaker.org"
 	prePathFmt     = certPathPrefix + "/crypto-config/wx-org%s.chainmaker.org/user/admin1/"
+
+	//userKeyPath = "/home/jianan/Documents/workspace/chainmaker-go/build/release/chainmaker-V1.0.0-wx-org.chainmaker.org/config/wx-org.chainmaker.org/certs/user/client1/client1.sign.key"
+	//userCrtPath = "/home/jianan/Documents/workspace/chainmaker-go/build/release/chainmaker-V1.0.0-wx-org.chainmaker.org/config/wx-org.chainmaker.org/certs/user/client1/client1.sign.crt"
+	//prePathFmt  = "/home/jianan/Documents/workspace/chainmaker-go/build/release/chainmaker-V1.0.0-wx-org.chainmaker.org/config/wx-org.chainmaker.org/certs/user/admin1"
 )
 
 var (
@@ -64,14 +67,16 @@ var (
 )
 
 func initDockerGoTest() {
-	DockerGoContractPath = "./docker-go/contract_get_put.7z"
+	DockerGoContractPath = "./docker-go/contract_math_ops.7z"
 	DockerGoContractUpgradePath = "./docker-go/contract_get_put_upgrade.7z"
-	contractName = "contract_get_put"
+	contractName = "contract_math_ops"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO
 	printConfig("docker-go")
 }
 
 var caPaths = []string{certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/ca"}
+
+//var caPaths = []string{"/home/jianan/Documents/workspace/chainmaker-go/build/crypto-config/wx-org1.chainmaker.org/ca"}
 
 // vm wasmer 整体功能测试，合约创建、升级、执行、查询、冻结、解冻、吊销、交易区块的查询、链配置信息的查询
 func main() {
@@ -111,41 +116,41 @@ func runTest() {
 		}
 	}
 	// 1) 合约创建
-	testCreate(sk3, &client, CHAIN1)
-	time.Sleep(5 * time.Second)
+	//testCreate(sk3, &client, CHAIN1)
+	//time.Sleep(5 * time.Second)
 
 	// 2) 执行合约
-	txId = testDockerInvoke(sk3, &client, CHAIN1, "1", "2")
-	time.Sleep(5 * time.Second)
+	//txId = testDockerInvoke(sk3, &client, CHAIN1, "10", "2")
+	//time.Sleep(5 * time.Second)
 	// 4) query 测试
-	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
+	testDockerQuery(sk3, &client, CHAIN1, "15", "3")
 
-	// 4) 根据TxId查交易
-	testGetTxByTxId(sk3, &client, txId, CHAIN1)
-
-	// 5) 根据区块高度查区块，若height为max，表示查当前区块
-	hash := testGetBlockByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+	//// 4) 根据TxId查交易
+	//testGetTxByTxId(sk3, &client, txId, CHAIN1)
 	//
-	// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
-	//testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+	//// 5) 根据区块高度查区块，若height为max，表示查当前区块
+	//hash := testGetBlockByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+	////
+	//// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
+	////testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+	////
+	//// 7) 根据区块哈希查区块
+	//testGetBlockByHash(sk3, &client, CHAIN1, hash)
+	////
+	//// 8) 根据区块哈希查区块（包含读写集）
+	////testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
 	//
-	// 7) 根据区块哈希查区块
-	testGetBlockByHash(sk3, &client, CHAIN1, hash)
+	//// 9) 根据TxId查区块
+	//testGetBlockByTxId(sk3, &client, txId, CHAIN1)
 	//
-	// 8) 根据区块哈希查区块（包含读写集）
-	//testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
-
-	// 9) 根据TxId查区块
-	testGetBlockByTxId(sk3, &client, txId, CHAIN1)
-
-	// 10) 查询最新配置块
-	testGetLastConfigBlock(sk3, &client, CHAIN1)
-
-	// 11) 查询最新区块
-	testGetLastBlock(sk3, &client, CHAIN1)
-
-	// 12) 查询链信息
-	testGetChainInfo(sk3, &client, CHAIN1)
+	//// 10) 查询最新配置块
+	//testGetLastConfigBlock(sk3, &client, CHAIN1)
+	//
+	//// 11) 查询最新区块
+	//testGetLastBlock(sk3, &client, CHAIN1)
+	//
+	//// 12) 查询链信息
+	//testGetChainInfo(sk3, &client, CHAIN1)
 
 	// 13) 合约升级
 	//testUpgrade(sk3, &client, CHAIN1)
@@ -198,7 +203,7 @@ func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 	pairs := []*commonPb.KeyValuePair{
 		{
 			Key:   "arg0",
-			Value: []byte("sum"),
+			Value: []byte("div"),
 		},
 		{
 			Key:   "arg1",
@@ -232,7 +237,7 @@ func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId
 	pairs := []*commonPb.KeyValuePair{
 		{
 			Key:   "arg0",
-			Value: []byte("sum"),
+			Value: []byte("div"),
 		},
 		{
 			Key:   "arg1",
