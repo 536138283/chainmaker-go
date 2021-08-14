@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -48,7 +49,7 @@ const (
 	CHAIN1         = "chain1"
 	IP             = "localhost"
 	Port           = 12301
-	certPathPrefix = "../config"
+	certPathPrefix = "../../config"
 	userKeyPath    = certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key"
 	userCrtPath    = certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt"
 	orgId          = "wx-org1.chainmaker.org"
@@ -109,71 +110,71 @@ func runTest() {
 	time.Sleep(4 * time.Second)
 
 	// 2) 执行合约
-	//testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
+	testUpgradeInvokeSum(sk3, &client, CHAIN1) // method [sum] not export, 合约升级后则有
 
 	txId = testInvokeFactSave(sk3, &client, CHAIN1)
-	//time.Sleep(2 * time.Second)
-	//testWaitTx(sk3, &client, CHAIN1, txId)
-	//
-	//// 3) 合约查询
-	//_, result := testQueryFindByHash(sk3, &client, CHAIN1)
-	//if string(result) != "{\"file_hash\":\"b4018d181b6f\",\"file_name\":\"长安链chainmaker\",\"time\":\"1615188470000\"}" {
-	//	fmt.Println("query result:", string(result))
-	//	log.Panicf("query error")
-	//} else {
-	//	fmt.Println("    【testQueryFindByHash】 pass")
-	//}
-	//
-	//// 4) 根据TxId查交易
+	time.Sleep(2 * time.Second)
+	testWaitTx(sk3, &client, CHAIN1, txId)
+
+	// 3) 合约查询
+	_, result := testQueryFindByHash(sk3, &client, CHAIN1)
+	if string(result) != "{\"file_hash\":\"b4018d181b6f\",\"file_name\":\"长安链chainmaker\",\"time\":\"1615188470000\"}" {
+		fmt.Println("query result:", string(result))
+		log.Panicf("query error")
+	} else {
+		fmt.Println("    【testQueryFindByHash】 pass")
+	}
+
+	// 4) 根据TxId查交易
 	testGetTxByTxId(sk3, &client, txId, CHAIN1)
-	//
-	//// 5) 根据区块高度查区块，若height为max，表示查当前区块
-	//hash := testGetBlockByHeight(sk3, &client, CHAIN1, math.MaxUint64)
-	//
-	//// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
-	//testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, math.MaxUint64)
-	//
-	//// 7) 根据区块哈希查区块
-	//testGetBlockByHash(sk3, &client, CHAIN1, hash)
-	//
-	//// 8) 根据区块哈希查区块（包含读写集）
-	//testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
-	//
-	//// 9) 根据TxId查区块
-	//testGetBlockByTxId(sk3, &client, txId, CHAIN1)
-	//
-	//// 10) 查询最新配置块
-	//testGetLastConfigBlock(sk3, &client, CHAIN1)
-	//
-	//// 11) 查询最新区块
-	//testGetLastBlock(sk3, &client, CHAIN1)
-	//
-	//// 12) 查询链信息
-	//testGetChainInfo(sk3, &client, CHAIN1)
-	//
-	//// 13) 合约升级
-	//testUpgrade(sk3, &client, CHAIN1)
-	//time.Sleep(4 * time.Second)
-	//
-	//// 14) 合约执行
-	//testUpgradeInvokeSum(sk3, &client, CHAIN1)
-	//
-	//// 15) 批量执行
-	//txId = testInvokeFactSave(sk3, &client, CHAIN1)
-	//time.Sleep(2 * time.Second)
-	//testWaitTx(sk3, &client, CHAIN1, txId)
-	//testPerformanceModeTransfer(sk3, &client, CHAIN1)
-	//time.Sleep(5 * time.Second)
-	//
-	//// 16) 功能测试
-	//testInvokeFunctionalVerify(sk3, &client, CHAIN1)
-	//time.Sleep(5 * time.Second)
-	//
-	//// 17) KV迭代器测试
-	//testKvIterator(sk3, &client)
-	//
-	//// 18) 冻结、解冻、吊销用户合约功能测试
-	//testFreezeOrUnfreezeOrRevokeFlow(sk3, client)
+
+	// 5) 根据区块高度查区块，若height为max，表示查当前区块
+	hash := testGetBlockByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+
+	// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
+	testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+
+	// 7) 根据区块哈希查区块
+	testGetBlockByHash(sk3, &client, CHAIN1, hash)
+
+	// 8) 根据区块哈希查区块（包含读写集）
+	testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
+
+	// 9) 根据TxId查区块
+	testGetBlockByTxId(sk3, &client, txId, CHAIN1)
+
+	// 10) 查询最新配置块
+	testGetLastConfigBlock(sk3, &client, CHAIN1)
+
+	// 11) 查询最新区块
+	testGetLastBlock(sk3, &client, CHAIN1)
+
+	// 12) 查询链信息
+	testGetChainInfo(sk3, &client, CHAIN1)
+
+	// 13) 合约升级
+	testUpgrade(sk3, &client, CHAIN1)
+	time.Sleep(4 * time.Second)
+
+	// 14) 合约执行
+	testUpgradeInvokeSum(sk3, &client, CHAIN1)
+
+	// 15) 批量执行
+	txId = testInvokeFactSave(sk3, &client, CHAIN1)
+	time.Sleep(2 * time.Second)
+	testWaitTx(sk3, &client, CHAIN1, txId)
+	testPerformanceModeTransfer(sk3, &client, CHAIN1)
+	time.Sleep(5 * time.Second)
+
+	// 16) 功能测试
+	testInvokeFunctionalVerify(sk3, &client, CHAIN1)
+	time.Sleep(5 * time.Second)
+
+	// 17) KV迭代器测试
+	testKvIterator(sk3, &client)
+
+	// 18) 冻结、解冻、吊销用户合约功能测试
+	testFreezeOrUnfreezeOrRevokeFlow(sk3, client)
 
 	fmt.Println("    【runTest】 pass", "txId", txId)
 }
@@ -185,7 +186,7 @@ func initWasmerTest() {
 	printConfig("wasmer")
 }
 func initGasmTest() {
-	WasmPath = "./wasm/go-fact-2.0.0.wasm"
+	WasmPath = "../wasm/go-fact-2.0.0.wasm"
 	WasmUpgradePath = WasmPath
 	contractName = "contract201"
 	runtimeType = commonPb.RuntimeType_GASM
