@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package raft
 
 import (
+	"chainmaker.org/chainmaker-go/logger"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -22,7 +23,6 @@ import (
 	"github.com/jfcg/sorty"
 	"go.uber.org/zap"
 
-	"chainmaker.org/chainmaker-go/logger"
 	"go.etcd.io/etcd/raft/v3"
 	"go.etcd.io/etcd/client/pkg/v3/fileutil"
 
@@ -97,7 +97,7 @@ func sortU8(input ...uint64) []uint64 {
 }
 
 func TestConsensusRaftImpl_getPeersFromChainConf(t *testing.T) {
-	logger := NewLogger(zap.L().Sugar())
+	logger := logger.GetLogger(logger.MODULE_CONSENSUS)
 	config := &configpb.ChainConfig{
 		Consensus: &configpb.ConsensusConfig{
 			Type:  consensuspb.ConsensusType_RAFT,
