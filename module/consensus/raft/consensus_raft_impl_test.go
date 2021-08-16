@@ -21,7 +21,6 @@ import (
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"github.com/golang/mock/gomock"
 	"github.com/jfcg/sorty"
-	"go.uber.org/zap"
 
 	"go.etcd.io/etcd/raft/v3"
 	"go.etcd.io/etcd/client/pkg/v3/fileutil"
