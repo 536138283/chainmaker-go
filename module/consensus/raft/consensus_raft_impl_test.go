@@ -169,7 +169,7 @@ func TestConsensusRaftImpl_getPeersFromChainConf(t *testing.T) {
 				t.Errorf("ConsensusRaftImpl.getPeersFromChainConf() = %v, want %v", got, tt.want)
 			}
 
-		}
+		})
 	}
 }
 /**
