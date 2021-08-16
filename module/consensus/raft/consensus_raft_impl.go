@@ -296,7 +296,6 @@ func (consensus *ConsensusRaftImpl) PurgeFile(dirname string) {
 	}
 }
 
-
 func (consensus *ConsensusRaftImpl) serve() {
 	snapshot, err := consensus.raftStorage.Snapshot()
 	if err != nil {
@@ -323,7 +322,7 @@ func (consensus *ConsensusRaftImpl) serve() {
 	for {
 		select {
 		case <-consensus.closeC:
-			return nil
+			return
 		case <-ticker.C:
 			consensus.node.Tick()
 			consensus.logger.Debugf("[%x] status: %s", consensus.Id, consensus.node.Status())
@@ -341,7 +340,6 @@ func (consensus *ConsensusRaftImpl) serve() {
 		}
 	}
 }
-
 
 func (consensus *ConsensusRaftImpl) NodeReady(ready etcdraft.Ready) {
 	consensus.logger.DebugDynamic(func() string {
@@ -397,7 +395,7 @@ func (consensus *ConsensusRaftImpl) ProposeBlock(block *common.Block) {
 		}
 	}
 
-	serializeMember, err := consensus.singer.GetMember()
+	serializeMember, err := consensus.singer.GetSerializedMember(true)
 	if err != nil {
 		consensus.logger.Fatalf("[%x] get serialize member failed: %v", consensus.Id, err)
 		return
