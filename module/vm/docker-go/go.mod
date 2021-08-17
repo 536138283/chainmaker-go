@@ -3,7 +3,6 @@ module chainmaker.org/chainmaker-go/docker-go
 go 1.15
 
 require (
-
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/localconf v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/logger v0.0.0

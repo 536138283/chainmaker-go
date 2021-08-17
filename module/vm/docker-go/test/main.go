@@ -1,8 +1,8 @@
 package main
 
 import (
-	"chainmaker.org/chainmaker-go/common/random/uuid"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker/common/random/uuid"
 	"context"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
@@ -52,7 +52,7 @@ func main() {
 	}
 
 	// 2) 批量测试
-	txNum := 1000
+	txNum := 10
 
 	for i := 0; i < 50; i++ {
 		testPerformance(client, txNum, i)
@@ -176,7 +176,7 @@ func contractInvokeMsg() *protogo.CDMMessage {
 	txRequest := &protogo.TxRequest{
 		TxId:            txId,
 		ContractName:    ContractName,
-		ContractVersion: "1.0.0",
+		ContractVersion: "1.2.1",
 		Method:          "invoke_contract",
 		ByteCode:        nil,
 		Parameters:      params,

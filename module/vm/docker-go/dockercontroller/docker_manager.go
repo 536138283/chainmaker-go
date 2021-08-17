@@ -46,8 +46,6 @@ type DockerManager struct {
 	targetDir     string
 	openPort      nat.Port
 	hostPort      string
-	pprofOpenPort nat.Port
-	pprofHostPort string
 	dockerDir     string
 
 	lock   sync.Mutex
@@ -99,9 +97,6 @@ func NewDockerManager(chainId string) *DockerManager {
 	hostPort := strconv.Itoa(int(chainmakerConfig.DockerConfig.DockerRpcConfig.Port))
 	openPort := nat.Port(hostPort + "/tcp")
 
-	hostPprofPort := strconv.Itoa(int(chainmakerConfig.DockerConfig.DockerPprofConfig.PProfPort))
-	openPprofPort := nat.Port(hostPprofPort + "/tcp")
-
 	newDockerManager.ctx = context.Background()
 	newDockerManager.client = cli
 	newDockerManager.CDMClient = module.NewCDMClient(chainId)
@@ -111,8 +106,6 @@ func NewDockerManager(chainId string) *DockerManager {
 	newDockerManager.targetDir = targetDir
 	newDockerManager.hostPort = hostPort
 	newDockerManager.openPort = openPort
-	newDockerManager.pprofHostPort = hostPprofPort
-	newDockerManager.pprofOpenPort = openPprofPort
 	newDockerManager.dockerDir = dockerContainerDir
 
 	// init mount directory and subdirectory
@@ -346,12 +339,6 @@ func (m *DockerManager) createContainer() error {
 				{
 					HostIP:   "0.0.0.0",
 					HostPort: m.hostPort,
-				},
-			},
-			m.pprofOpenPort: []nat.PortBinding{
-				{
-					HostIP:   "0.0.0.0",
-					HostPort: m.pprofHostPort, //todo: doesn't work for now, add another port
 				},
 			},
 		},

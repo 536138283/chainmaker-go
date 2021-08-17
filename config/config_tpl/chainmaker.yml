@@ -160,13 +160,13 @@ docker:
   docker_mount_dir: /mount                      # mount point in docker vm
   clean_host_mount_dir: true                    #clean host mount directory when stop the chain maker
   rpc:
-    uds_open: true
-    port: {dockervm_rpc_port}                                 # default is tcp connection
+    uds_open: true                              # default is unix domain socket connection
+    port: {dockervm_rpc_port}                   # doesn't support tcp for now
     max_send_message_size: 100                  # MiB
     max_recv_message_size: 100                  # MiB
   log:
     log_file: docker_vm.log
-    display_in_console: true
+    display_in_console: false
     show_line: false
     log_level: INFO
   vm:
@@ -175,4 +175,3 @@ docker:
     time_limit: 2                              # second
   pprof:
     pprof_enabled: false
-    pprof_port: 12655

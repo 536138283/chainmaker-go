@@ -67,9 +67,9 @@ var (
 )
 
 func initDockerGoTest() {
-	DockerGoContractPath = "./docker-go/contract_math_ops.7z"
+	DockerGoContractPath = "./docker-go/contract1p2.7z"
 	DockerGoContractUpgradePath = "./docker-go/contract_get_put_upgrade.7z"
-	contractName = "contract_math_ops"
+	contractName = "contract1p2"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO
 	printConfig("docker-go")
 }
@@ -116,14 +116,14 @@ func runTest() {
 		}
 	}
 	// 1) 合约创建
-	//testCreate(sk3, &client, CHAIN1)
-	//time.Sleep(5 * time.Second)
+	testCreate(sk3, &client, CHAIN1)
+	time.Sleep(5 * time.Second)
 
 	// 2) 执行合约
 	//txId = testDockerInvoke(sk3, &client, CHAIN1, "10", "2")
 	//time.Sleep(5 * time.Second)
 	// 4) query 测试
-	testDockerQuery(sk3, &client, CHAIN1, "15", "3")
+	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
 
 	//// 4) 根据TxId查交易
 	//testGetTxByTxId(sk3, &client, txId, CHAIN1)
@@ -237,7 +237,7 @@ func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId
 	pairs := []*commonPb.KeyValuePair{
 		{
 			Key:   "arg0",
-			Value: []byte("div"),
+			Value: []byte("sum"),
 		},
 		{
 			Key:   "arg1",
