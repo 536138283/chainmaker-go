@@ -36,4 +36,5 @@ tools/cmc/cmc
 nohup.out
 main/chainmaker
 vendor
+cover.out
 /module/vm/docker-go/dockercontainer/vendor/

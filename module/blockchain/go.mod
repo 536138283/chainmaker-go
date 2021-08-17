@@ -19,7 +19,7 @@ require (
 	chainmaker.org/chainmaker-go/vm v0.0.0
 	chainmaker.org/chainmaker/common v0.0.0-20210812042900-40fd24729b4a
 	chainmaker.org/chainmaker/pb-go v0.0.0-20210812134751-dc3557ac21d8
-	chainmaker.org/chainmaker/protocol v0.0.0-20210813080941-26ecc435a401
+	chainmaker.org/chainmaker/protocol v0.0.0-20210817092804-f396a326ba2a
 )
 
 replace (
@@ -53,5 +53,4 @@ replace (
 	github.com/libp2p/go-libp2p => ../net/p2p/libp2p
 	github.com/libp2p/go-libp2p-core => ../net/p2p/libp2pcore
 	github.com/libp2p/go-libp2p-pubsub => ../net/p2p/libp2ppubsub
-
 )

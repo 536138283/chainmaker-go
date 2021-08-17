@@ -9,6 +9,7 @@ package contractmgr
 
 import (
 	"crypto/md5"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -159,7 +160,7 @@ func (r *ContractManagerRuntime) GetContractInfo(context protocol.TxSimContext, 
 		r.log.Warnf(err.Error())
 		return nil, err
 	}
-	return utils.GetContractByName(context.Get, name)
+	return context.GetContractByName(name)
 }
 func (r *ContractManagerRuntime) GetContractByteCode(context protocol.TxSimContext, name string) ([]byte, error) {
 	if utils.IsAnyBlank(name) {
@@ -167,7 +168,7 @@ func (r *ContractManagerRuntime) GetContractByteCode(context protocol.TxSimConte
 		r.log.Warnf(err.Error())
 		return nil, err
 	}
-	return utils.GetContractBytecode(context.Get, name)
+	return context.GetContractBytecode(name)
 }
 
 //GetAllContracts 查询所有合约的详细信息
@@ -220,6 +221,10 @@ func (r *ContractManagerRuntime) InstallContract(context protocol.TxSimContext, 
 	context.Put(ContractName, key, cdata)
 	byteCodeKey := utils.GetContractByteCodeDbKey(name)
 	context.Put(ContractName, byteCodeKey, byteCode)
+	r.log.DebugDynamic(func() string {
+		codeHash := sha256.Sum256(byteCode)
+		return fmt.Sprintf("put contract[%s] bytecode hash:%x", name, codeHash)
+	})
 	//实例化合约，并init合约，产生读写集
 	result, statusCode := context.CallContract(contract, protocol.ContractInitMethod, byteCode, initParameters, 0, commonPb.TxType_INVOKE_CONTRACT)
 	if statusCode != commonPb.TxStatusCode_SUCCESS {
@@ -236,6 +241,10 @@ func (r *ContractManagerRuntime) InstallContract(context protocol.TxSimContext, 
 			if err != nil {
 				return nil, fmt.Errorf("%s, %s", errContractInitFail, err)
 			}
+			r.log.DebugDynamic(func() string {
+				codeHash := sha256.Sum256(result.Result)
+				return fmt.Sprintf("update EVM contract[%s] bytecode hash:%x", name, codeHash)
+			})
 		}
 	}
 	return contract, nil
@@ -299,7 +308,7 @@ func (r *ContractManagerRuntime) RevokeContract(context protocol.TxSimContext, n
 		r.log.Warnf(err.Error())
 		return nil, err
 	}
-	contract, err := utils.GetContractByName(context.Get, name)
+	contract, err := context.GetContractByName(name)
 	if err != nil {
 		return nil, err
 	}
@@ -324,7 +333,7 @@ func (r *ContractManagerRuntime) changeContractStatus(context protocol.TxSimCont
 		r.log.Warnf(err.Error())
 		return nil, err
 	}
-	contract, err := utils.GetContractByName(context.Get, name)
+	contract, err := context.GetContractByName(name)
 	if err != nil {
 		return nil, err
 	}

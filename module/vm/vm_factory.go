@@ -17,8 +17,6 @@ import (
 
 	"chainmaker.org/chainmaker/pb-go/syscontract"
 
-	"chainmaker.org/chainmaker-go/utils"
-
 	docker_go "chainmaker.org/chainmaker-go/docker-go"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontroller"
 	"chainmaker.org/chainmaker-go/evm"
@@ -122,7 +120,7 @@ func (m *VmManagerImpl) RunContract(contract *commonPb.Contract, method string, 
 
 	if len(contract.Version) == 0 {
 		var err error
-		contract, err = utils.GetContractByName(txContext.Get, contractName)
+		contract, err = txContext.GetContractByName(contractName)
 		if err != nil {
 			contractResult.Message = fmt.Sprintf("query contract[%s] error", contractName)
 			return contractResult, commonPb.TxStatusCode_INVALID_CONTRACT_PARAMETER_CONTRACT_NAME
@@ -265,7 +263,7 @@ func (v *verifyType) commonVerify(txContext protocol.TxSimContext, contractId *c
 	var byteCode []byte
 	if v.requireByteCode {
 		//versionedByteCodeKey := append([]byte(protocol.ContractByteCode+contractName), []byte(resultVersion)...)
-		if byteCodeInContext, err := utils.GetContractBytecode(txContext.Get, contractName); err != nil {
+		if byteCodeInContext, err := txContext.GetContractBytecode(contractName); err != nil {
 			contractResult.Message = fmt.Sprintf("%s failed to check byte code in tx context for contract[%s], %s", msgPre, contractName, err.Error())
 			return v.errorResult(contractResult, commonPb.TxStatusCode_GET_FROM_TX_CONTEXT_FAILED, resultVersion)
 		} else if len(byteCodeInContext) == 0 {
@@ -385,7 +383,7 @@ func (m *VmManagerImpl) invokeUserContractByRuntime(contract *commonPb.Contract,
 	} else {
 		parameters[protocol.ContractSenderOrgIdParam] = []byte(senderMember.GetOrgId())
 		parameters[protocol.ContractSenderRoleParam] = []byte(senderMember.GetRole())
-		parameters[protocol.ContractSenderPkParam] = []byte(senderMember.GetMemberId())
+		parameters[protocol.ContractSenderPkParam] = []byte(senderMember.GetUid())
 	}
 
 	// Get three items in the certificate: orgid PK role
@@ -395,7 +393,7 @@ func (m *VmManagerImpl) invokeUserContractByRuntime(contract *commonPb.Contract,
 	} else {
 		parameters[protocol.ContractCreatorOrgIdParam] = []byte(creator.OrgId)
 		parameters[protocol.ContractCreatorRoleParam] = []byte(creatorMember.GetRole())
-		parameters[protocol.ContractCreatorPkParam] = []byte(creatorMember.GetMemberId())
+		parameters[protocol.ContractCreatorPkParam] = []byte(creatorMember.GetUid())
 	}
 
 	parameters[protocol.ContractTxIdParam] = []byte(txId)

@@ -15,10 +15,10 @@ require (
 	chainmaker.org/chainmaker-go/wxvm v0.0.0
 	chainmaker.org/chainmaker/common v0.0.0-20210812042900-40fd24729b4a
 	chainmaker.org/chainmaker/pb-go v0.0.0-20210812134751-dc3557ac21d8
-	chainmaker.org/chainmaker/protocol v0.0.0-20210812135658-51819764013f
+	chainmaker.org/chainmaker/protocol v0.0.0-20210817020238-7ad0d408ae23
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
-	github.com/golang/protobuf v1.4.3
+	github.com/golang/protobuf v1.5.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/spf13/cobra v1.1.1
 	github.com/spf13/pflag v1.0.5
@@ -28,6 +28,7 @@ require (
 )
 
 replace (
+	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ./docker-go/dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
 	chainmaker.org/chainmaker-go/chainconf => ../conf/chainconf
 	chainmaker.org/chainmaker-go/docker-go => ./docker-go
@@ -41,5 +42,4 @@ replace (
 	chainmaker.org/chainmaker-go/wasi => ./wasi
 	chainmaker.org/chainmaker-go/wasmer => ./wasmer
 	chainmaker.org/chainmaker-go/wxvm => ./wxvm
-	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ./docker-go/dockercontainer/pb_sdk
 )
