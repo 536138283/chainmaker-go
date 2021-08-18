@@ -1,17 +1,24 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"errors"
-	"go.uber.org/zap"
-	"golang.org/x/sync/singleflight"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
+	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 )
 
 var (
@@ -61,7 +68,7 @@ func (cm *ContractManager) GetContract(txId, contractName string) (string, error
 		return cm.lookupContractFromDB(txId, contractName)
 	})
 	if err != nil {
-		cm.logger.Errorf("fail to get contract path from chain maker, contract name : [%s] -- txId [%s] ",contractName,txId)
+		cm.logger.Errorf("fail to get contract path from chain maker, contract name : [%s] -- txId [%s] ", contractName, txId)
 		return "", err
 	}
 
@@ -106,7 +113,7 @@ func (cm *ContractManager) setFileMod(filePath string) error {
 
 	err := os.Chmod(filePath, 0755)
 	if err != nil {
-		cm.logger.Errorf("fail to set contract mod , filePath : [%s] ",filePath)
+		cm.logger.Errorf("fail to set contract mod , filePath : [%s] ", filePath)
 		return err
 	}
 

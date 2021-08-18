@@ -1,12 +1,19 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpc
 
 import (
-	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"io"
+
+	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"go.uber.org/zap"
 )
 
 type HandlerRegisterInterface interface {

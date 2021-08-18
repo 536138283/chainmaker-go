@@ -1,17 +1,25 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package logger
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 const (
+	// docker module for logging
 	MODULE_MANAGER          = "[Docker MANAGER]"
 	MODULE_SCHEDULER        = "[Docker Scheduler]"
 	MODULE_USERCONTROLLER   = "[Docker User Controller]"
@@ -86,7 +94,9 @@ func NewDockerLogger(name string) *zap.SugaredLogger {
 	)
 
 	logger := zap.New(core).Named(name)
-	defer logger.Sync()
+	defer func(logger *zap.Logger) {
+		_ = logger.Sync()
+	}(logger)
 
 	if showLineFromConfig {
 		logger = logger.WithOptions(zap.AddCaller())

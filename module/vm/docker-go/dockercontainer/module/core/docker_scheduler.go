@@ -1,7 +1,20 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
 	"bytes"
+	"errors"
+	"os/exec"
+	"path/filepath"
+	"sync"
+	"syscall"
+	"time"
+
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
@@ -9,18 +22,14 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
-	"errors"
 	"go.uber.org/zap"
-	"os/exec"
-	"path/filepath"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (
-	ReqChanSize      = 1000
-	ResponseChanSize = 1000 //todo how to set number
+	// ReqChanSize tx request chan size
+	ReqChanSize = 1000
+	// ResponseChanSize tx response chan size
+	ResponseChanSize = 1000
 	runtimePanic     = "runtime panic"
 )
 
@@ -173,7 +182,8 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 }
 
-func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, handlerName, contractPath string) error {
+func (s *DockerScheduler) startSandBox(user *security.User, txId,
+	contractName, handlerName, contractPath string) error {
 	var err error           // sandbox global error
 	var stderr bytes.Buffer // used to capture the error message from sandbox
 	//var stdout bytes.Buffer //todo delete
@@ -204,7 +214,6 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 	timer := time.AfterFunc(time.Duration(config.SandBoxTimeout)*time.Second, func() {
 		_ = cmd.Process.Kill()
 		s.logger.Errorf("timeout: kill tx: txId [%s]", txId)
-		return
 	})
 	defer timer.Stop()
 

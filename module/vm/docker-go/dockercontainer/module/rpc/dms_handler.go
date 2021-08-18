@@ -1,12 +1,19 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpc
 
 import (
+	"fmt"
+
 	SDKProtogo "chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
-	"fmt"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
 )
@@ -36,7 +43,8 @@ type DMSHandler struct {
 	scheduler protocol.Scheduler
 }
 
-func NewDMSHandler(user *security.User, txRequest *protogo.TxRequest, scheduler protocol.Scheduler, handlerName, contractName string) (*DMSHandler, error) {
+func NewDMSHandler(user *security.User, txRequest *protogo.TxRequest, scheduler protocol.Scheduler,
+	handlerName, contractName string) (*DMSHandler, error) {
 
 	loggerName := "[DMS Handler " + handlerName + " ]"
 
@@ -85,8 +93,10 @@ func (h *DMSHandler) HandleMessage(msg *SDKProtogo.DMSMessage) error {
 }
 
 func (h *DMSHandler) handleCreated(registerMsg *SDKProtogo.DMSMessage) error {
-	if registerMsg.Type != SDKProtogo.DMSMessageType_DMS_MESSAGE_TYPE_REGISTER {
-		return fmt.Errorf("handler [%s] cannot handle message (%s) while in state: %s", h.handlerName, registerMsg.Type, h.state)
+	if registerMsg.Type !=
+		SDKProtogo.DMSMessageType_DMS_MESSAGE_TYPE_REGISTER {
+		return fmt.Errorf("handler [%s] cannot handle message (%s) while in state: %s",
+			h.handlerName, registerMsg.Type, h.state)
 	}
 
 	registeredMsg := &SDKProtogo.DMSMessage{
@@ -175,7 +185,8 @@ func (h *DMSHandler) handleReady(readyMsg *SDKProtogo.DMSMessage) error {
 	case SDKProtogo.DMSMessageType_DMS_MESSAGE_TYPE_COMPLETED:
 		return h.handleCompleted(readyMsg)
 	default:
-		return fmt.Errorf("contract [%s] handler cannot handle ready message (%s) while in state: %s", h.txRequest.ContractName, readyMsg.Type, h.state)
+		return fmt.Errorf("contract [%s] handler cannot handle ready message (%s) while in state: %s",
+			h.txRequest.ContractName, readyMsg.Type, h.state)
 	}
 
 }

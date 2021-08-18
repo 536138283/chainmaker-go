@@ -1,17 +1,23 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
 package main
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
-	"chainmaker.org/chainmaker/common/random/uuid"
 	"context"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	"google.golang.org/grpc"
 	"io"
 	"io/ioutil"
 	"net"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker/common/random/uuid"
+	"github.com/gogo/protobuf/proto"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -23,15 +29,15 @@ const (
 )
 
 var (
-	ContractPath  = ""
-	ContractName  = ""
-	MountSockPath = ""
+	contractPath  = ""
+	contractName  = ""
+	mountSockPath = ""
 )
 
 func InitTest() {
-	ContractPath = "/home/jianan/Documents/workspace/chainmaker-go/test/wasm/docker-go-contract20_big"
-	ContractName = "contract1p2"
-	MountSockPath = "/home/jianan/Documents/workspace/chainmaker-go/module/vm/docker-go/mount/sock/cdm.sock"
+	contractPath = "/home/jianan/Documents/workspace/chainmaker-go/test/wasm/docker-go-contract20_big"
+	contractName = "contract1p2"
+	mountSockPath = "/home/jianan/Documents/workspace/chainmaker-go/module/vm/docker-go/mount/sock/cdm.sock"
 }
 
 func main() {
@@ -52,9 +58,9 @@ func main() {
 	}
 
 	// 2) 批量测试
-	txNum := 10
+	txNum := 2000
 
-	for i := 0; i < 50; i++ {
+	for i := 0; i < 1000; i++ {
 		testPerformance(client, txNum, i)
 		time.Sleep(50 * time.Microsecond)
 	}
@@ -73,7 +79,7 @@ func testDeployContract(client *CDMClient) {
 
 	txId := GetRandTxId()
 
-	fmt.Printf("\n============ create contract %s [%s] ============\n", ContractName, txId)
+	fmt.Printf("\n============ create contract %s [%s] ============\n", contractName, txId)
 
 	cdmMsg := contractCreateMsg(txId)
 
@@ -142,11 +148,11 @@ func contractCreateMsg(txId string) *protogo.CDMMessage {
 
 	// construct cdm message
 	params := make(map[string]string)
-	contractBin, _ := ioutil.ReadFile(ContractPath)
+	contractBin, _ := ioutil.ReadFile(contractPath)
 
 	txRequest := &protogo.TxRequest{
 		TxId:            txId,
-		ContractName:    ContractName,
+		ContractName:    contractName,
 		ContractVersion: "1.0.0",
 		Method:          "init_contract",
 		ByteCode:        contractBin,
@@ -175,7 +181,7 @@ func contractInvokeMsg() *protogo.CDMMessage {
 
 	txRequest := &protogo.TxRequest{
 		TxId:            txId,
-		ContractName:    ContractName,
+		ContractName:    contractName,
 		ContractVersion: "1.2.1",
 		Method:          "invoke_contract",
 		ByteCode:        nil,
@@ -212,7 +218,7 @@ func NewClientConn(udsOpen bool) (*grpc.ClientConn, error) {
 			return conn, err
 		}))
 
-		sockAddress := MountSockPath
+		sockAddress := mountSockPath
 
 		return grpc.DialContext(context.Background(), sockAddress, dialOpts...)
 
@@ -244,11 +250,11 @@ func initGRPCConnect(udsOpen bool) (protogo.CDMRpc_CDMCommunicateClient, error) 
 }
 
 type CDMClient struct {
-	txSendCh    chan *protogo.CDMMessage // channel receive tx from docker-go instance
-	stateSendCh chan *protogo.CDMMessage // channel receive state response
+	txSendCh chan *protogo.CDMMessage // channel receive tx from docker-go instance
 
-	lock      sync.Mutex
-	recvChMap map[string]chan *protogo.CDMMessage // store tx_id to chan, retrieve chan to send tx response back to docker-go instance
+	lock sync.Mutex
+	// store tx_id to chan, retrieve chan to send tx response back to docker-go instance
+	recvChMap map[string]chan *protogo.CDMMessage
 
 	stream protogo.CDMRpc_CDMCommunicateClient
 

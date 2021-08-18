@@ -74,7 +74,7 @@ docker:
   docker_container_dir: ../module/vm/docker-go/dockercontainer
   host_mount_dir: ../module/vm/docker-go/mount  # mount point in chain maker
   docker_mount_dir: /mount                      # mount point in docker vm
-  clean_host_mount_dir: true                    #clean host mount directory when stop the chain maker
+  clean_host_mount_dir: false                    #clean host mount directory when stop the chain maker
   rpc:
     uds_open: true                            # default is unix domain socket connection
     port: 12356                                # doesn't support tcp for now
@@ -87,10 +87,10 @@ docker:
     log_level: INFO
   vm:
     tx_size: 1000
-    user_num: 100
+    user_num: 500
     time_limit: 2                              # second
   pprof:
-    pprof_enabled: false
+    pprof_enabled: true
 
 
 monitor:
