@@ -1,12 +1,13 @@
 package rpc
 
 import (
-	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"errors"
 	"fmt"
-	"go.uber.org/zap"
 	"io"
+
+	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"go.uber.org/zap"
 )
 
 type HandlerRegisterInterface interface {
@@ -20,7 +21,7 @@ type DMSApi struct {
 
 func NewDMSApi(handlerRegister HandlerRegisterInterface) *DMSApi {
 	return &DMSApi{
-		logger:          logger.NewDockerLogger(logger.MODULE_CDM_SERVER),
+		logger:          logger.NewDockerLogger(logger.MODULE_DMS_SERVER),
 		handlerRegister: handlerRegister,
 	}
 }
@@ -41,11 +42,10 @@ func (s *DMSApi) DMSCommunicate(stream protogo.DMSRpc_DMSCommunicateServer) erro
 
 	if handler == nil {
 		// todo
-		s.logger.Errorf("no handler found")
+		s.logger.Errorf("no handler found: [%s]", handlerName)
 	}
 
 	handler.SetStream(stream)
-	s.logger.Debugf("get handler: %s", handlerName)
 
 	err = handler.HandleMessage(registerMsg)
 	if err != nil {

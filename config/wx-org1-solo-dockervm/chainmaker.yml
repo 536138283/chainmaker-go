@@ -84,7 +84,7 @@ docker:
     log_file: docker_vm.log
     display_in_console: true
     show_line: true
-    log_level: INFO
+    log_level: DEBUG
   vm:
     tx_size: 1000
     user_num: 100

@@ -2,6 +2,13 @@ package core
 
 import (
 	"bytes"
+	"errors"
+	"os/exec"
+	"path/filepath"
+	"sync"
+	"syscall"
+	"time"
+
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
@@ -9,13 +16,7 @@ import (
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
-	"errors"
 	"go.uber.org/zap"
-	"os/exec"
-	"path/filepath"
-	"sync"
-	"syscall"
-	"time"
 )
 
 const (
@@ -124,7 +125,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 	startTime := time.Now()
 
-	s.logger.Debugf("begin handle tx request")
+	s.logger.Debugf("begin handle tx request: txid: [%s]", txRequest.TxId)
 
 	// get contract from contract manager
 	contractKey := s.ConstructContractKey(txRequest.ContractName, txRequest.ContractVersion)
@@ -241,7 +242,7 @@ func (s *DockerScheduler) constructErrorResponse(txId string, err error) *protog
 
 // handlerName: contractName:contractVersion:txId[:10]
 func (s *DockerScheduler) constructHandlerName(tx *protogo.TxRequest) string {
-	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId[:10]
+	handlerName := tx.ContractName + ":" + tx.ContractVersion + ":" + tx.TxId
 	return handlerName
 }
 
