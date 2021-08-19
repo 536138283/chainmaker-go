@@ -32,6 +32,9 @@ var (
 	contractPath  = ""
 	contractName  = ""
 	mountSockPath = ""
+	min           int
+	max           int
+	totalTime     int
 )
 
 func InitTest() {
@@ -46,24 +49,32 @@ func main() {
 
 	InitTest()
 
-	createContract := false
+	//createContract := false
 
 	stream, _ := initGRPCConnect(true)
 	client := NewCDMClient(stream)
 
-	// 1) 合约创建
-	if createContract {
-		testDeployContract(client)
-		time.Sleep(5 * time.Second)
-	}
+	//// 1) 合约创建
+	//if createContract {
+	//	testDeployContract(client)
+	//	time.Sleep(5 * time.Second)
+	//}
 
 	// 2) 批量测试
-	txNum := 2000
+	min = 100000
+	max = 0
 
-	for i := 0; i < 1000; i++ {
+	txNum := 1000
+	batchNum := 100
+
+	for i := 0; i < batchNum; i++ {
 		testPerformance(client, txNum, i)
 		time.Sleep(50 * time.Microsecond)
 	}
+
+	fmt.Printf("avg time is: [%d] ms\n", totalTime/batchNum)
+	fmt.Printf("min time is: [%d] ms\n", min)
+	fmt.Printf("max time is: [%d] ms\n", max)
 
 	err := client.stream.CloseSend()
 	if err != nil {
@@ -123,8 +134,19 @@ func testPerformance(client *CDMClient, txNum, batchSeq int) {
 
 			recvNum++
 			if recvNum >= txNum {
-				fmt.Printf("[%d] tx running time is: [%s]\n", txNum, time.Since(startTime))
+				currentTime := time.Since(startTime)
+				fmt.Printf("[%d] tx running time is: [%s]\n", txNum, currentTime)
 				close(waitc)
+
+				if int(currentTime/time.Millisecond) < min {
+					min = int(currentTime / time.Millisecond)
+				}
+
+				if int(currentTime/time.Millisecond) > max {
+					max = int(currentTime / time.Millisecond)
+				}
+
+				totalTime += int(currentTime / time.Millisecond)
 				return
 			}
 

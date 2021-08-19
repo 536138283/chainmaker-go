@@ -17,7 +17,7 @@ import (
 )
 
 type HandlerRegisterInterface interface {
-	GetHandlerByName(handlerName string) *DMSHandler
+	GetHandlerByName(handlerName string) (*DMSHandler, error)
 }
 
 type DMSApi struct {
@@ -44,11 +44,9 @@ func (s *DMSApi) DMSCommunicate(stream protogo.DMSRpc_DMSCommunicateServer) erro
 	}
 
 	handlerName := string(registerMsg.Payload)
-	handler := s.handlerRegister.GetHandlerByName(handlerName)
-
-	if handler == nil {
-		// todo
-		s.logger.Errorf("no handler found")
+	handler, err := s.handlerRegister.GetHandlerByName(handlerName)
+	if err != nil {
+		return err
 	}
 
 	handler.SetStream(stream)
