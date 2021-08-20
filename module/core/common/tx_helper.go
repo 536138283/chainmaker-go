@@ -40,7 +40,7 @@ type VerifyStat struct {
 }
 
 func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transaction, blockHeight int64,
-	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
+	stat *VerifyStat, block *commonpb.Block,
 	consensusType consensuspb.ConsensusType, hashType string, store protocol.BlockchainStore,
 	chainId string, ac protocol.AccessControlProvider) error {
 	txInPool, existTx := txsRet[tx.Header.TxId]
@@ -73,7 +73,6 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	}
 	stat.SigLasts += utils.CurrentTimeMillisSeconds() - startSigTicker
 	// tx valid and put into txpool
-	newAddTxs = append(newAddTxs, tx)
 
 	return nil
 }
@@ -252,10 +251,11 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 	newAddTxs := make([]*commonpb.Transaction, 0) // tx that verified and not in txpool, need to be added to txpool
 	for _, tx := range txs {
 		blockHeight := txsHeightRet[tx.Header.TxId]
-		if err := ValidateTx(txsRet, tx, blockHeight, stat, newAddTxs, block,
+		if err := ValidateTx(txsRet, tx, blockHeight, stat, block,
 			vt.chainConf.ChainConfig().Consensus.Type, vt.chainConf.ChainConfig().Crypto.Hash, vt.store, vt.chainConf.ChainConfig().ChainId, vt.ac); err != nil {
 			return nil, nil, err
 		}
+		newAddTxs = append(newAddTxs, tx)
 		startOthersTicker := utils.CurrentTimeMillisSeconds()
 		rwSet := vt.txRWSetMap[tx.Header.TxId]
 		result := vt.txResultMap[tx.Header.TxId]
