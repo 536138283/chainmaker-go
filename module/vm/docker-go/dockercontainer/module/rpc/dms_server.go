@@ -1,18 +1,25 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpc
 
 import (
-	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"errors"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 	"log"
 	"net"
 	"os"
 	"path/filepath"
 	"time"
+
+	"chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk/protogo"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 type DMSServer struct {
@@ -75,15 +82,15 @@ start:
 			return nil, err
 		}
 		goto start
-	} else {
-		if err = os.Chmod(sockPath, 0777); err != nil {
-			return nil, err
-		}
-		return listener, nil
 	}
+	if err = os.Chmod(sockPath, 0777); err != nil {
+		return nil, err
+	}
+	return listener, nil
+
 }
 
-// 	Start the server
+// StartDMSServer Start the server
 func (dms *DMSServer) StartDMSServer(dmsApi *DMSApi) error {
 
 	if dms.Listener == nil {

@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package core
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
 	"testing"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/rpc"
 )
 
 //func (hr *HandlerRegister) RegisterNewHandler(handlerName string, handler *rpc.DMSHandler) {
-func  TestRegisterNewHandler(t *testing.T) {
-	name := "handlerName1"
+func TestRegisterNewHandler(t *testing.T) {
+	const name = "handlerName1"
 	hd := &rpc.DMSHandler{}
 	hr := NewHandlerRegister()
 	hr.RegisterNewHandler(name, hd)
@@ -28,7 +29,7 @@ func  TestRegisterNewHandler(t *testing.T) {
 
 //func (hr *HandlerRegister) FreeHandler(handlerName string) {
 func TestFreeHandler(t *testing.T) {
-	name := "handlerName1"
+	const name = "handlerName1"
 	hd := &rpc.DMSHandler{}
 	hr := NewHandlerRegister()
 	hr.RegisterNewHandler(name, hd)
@@ -55,4 +56,3 @@ func TestGetHandlerByName(t *testing.T) {
 		}
 	})
 }
-

@@ -1,15 +1,15 @@
 package main
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module"
-	"fmt"
-	"go.uber.org/zap"
-	"net/http"
-	_ "net/http/pprof"
+	"log"
 	"os"
+	"runtime/pprof"
 	"strconv"
 	"time"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module"
+	"go.uber.org/zap"
 )
 
 var managerLogger *zap.SugaredLogger
@@ -44,14 +44,22 @@ func main() {
 
 func startPprof() {
 
+	cpuProfileFile := "/mount/share/cpu_pprof"
+
 	// change to runtime pprof
-	go func() {
-		pprofPort, _ := strconv.Atoi(os.Getenv("Port"))
-		addr := fmt.Sprintf(":%d", pprofPort)
-		err := http.ListenAndServe(addr, nil)
-		if err != nil {
-			fmt.Println(err)
-		}
-	}()
+	f, err := os.Create(cpuProfileFile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	err = pprof.StartCPUProfile(f)
+	if err != nil {
+		return
+	}
+	managerLogger.Infof("start pprof")
+
+	time.AfterFunc(30*time.Minute, func() {
+		pprof.StopCPUProfile()
+		managerLogger.Infof("finish pprof")
+	})
 
 }

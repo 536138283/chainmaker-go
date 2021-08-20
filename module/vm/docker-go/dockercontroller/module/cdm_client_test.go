@@ -1,16 +1,23 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package module
 
 import (
-	"chainmaker.org/chainmaker-go/common/random/uuid"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
-	"chainmaker.org/chainmaker-go/localconf"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	"github.com/spf13/viper"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"chainmaker.org/chainmaker-go/localconf"
+	"chainmaker.org/chainmaker/common/random/uuid"
+	"github.com/gogo/protobuf/proto"
+	"github.com/spf13/viper"
 )
 
 /*
@@ -70,7 +77,7 @@ func TestStartClient(t *testing.T) {
 	t.Helper()
 	t.Run("testStartClient", func(t *testing.T) {
 		client := NewCDMClient("chain1")
-		 res := client.StartClient()
+		res := client.StartClient()
 		if res != true {
 			t.Fatalf("Start Client failed")
 		}
@@ -83,7 +90,6 @@ func TestStartClient(t *testing.T) {
 		client.closeConnection()
 	})
 }
-
 
 func TestCDMClient_RegisterAndDeleteRecvChan(t *testing.T) {
 	c := NewCDMClient("chain1")

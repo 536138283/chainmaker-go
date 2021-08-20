@@ -1,17 +1,24 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"fmt"
-	"go.uber.org/zap"
 	"os"
 	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/module/security"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
+	"go.uber.org/zap"
 )
 
 type UsersManager struct {
@@ -45,14 +52,14 @@ func (u *UsersManager) CreateNewUsers() error {
 	var err error
 
 	startTime := time.Now()
-	const BaseUid = 10000
+	const baseUid = 10000
 
 	var wg sync.WaitGroup
 	for i := 0; i < 10; i++ {
 		wg.Add(1)
 		go func(i int) {
 			for j := 0; j < u.userNum/10; j++ {
-				newUserId := BaseUid + i*u.userNum/10 + j
+				newUserId := baseUid + i*u.userNum/10 + j
 				err = u.generateNewUser(newUserId)
 
 				if err != nil {
@@ -72,10 +79,10 @@ func (u *UsersManager) CreateNewUsers() error {
 
 func (u *UsersManager) generateNewUser(newUserId int) error {
 
-	const AddUserFormat = "useradd -u %d %s"
+	const addUserFormat = "useradd -u %d %s"
 
 	newUser := u.constructNewUser(newUserId)
-	addUserCommand := fmt.Sprintf(AddUserFormat, newUserId, newUser.UserName)
+	addUserCommand := fmt.Sprintf(addUserFormat, newUserId, newUser.UserName)
 
 	if err := utils.RunCmd(addUserCommand); err != nil {
 		u.logger.Errorf("fail to run cmd : [%s], [%s]", addUserCommand, err)
@@ -113,7 +120,7 @@ func (u *UsersManager) GetAvailableUser() (*security.User, error) {
 		return nil, err
 	}
 
-	u.logger.Debugf("get avaiable user: [%v]", user)
+	u.logger.Debugf("get available user: [%v]", user)
 	return user.(*security.User), nil
 }
 

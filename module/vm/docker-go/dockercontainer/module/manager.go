@@ -1,3 +1,9 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package module
 
 import (
@@ -100,14 +106,12 @@ func (m *ManagerImpl) InitContainer() {
 	m.logger.Infof("docker vm start successfully")
 
 	// listen error signal
-	select {
-	case err := <-errorC:
-		if err != nil {
-			m.logger.Error("docker vm encounters error ", err)
-		}
-		m.StopManager()
-		close(errorC)
+	err = <-errorC
+	if err != nil {
+		m.logger.Error("docker vm encounters error ", err)
 	}
+	m.StopManager()
+	close(errorC)
 
 }
 

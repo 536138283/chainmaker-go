@@ -1,10 +1,16 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
 package dockercontroller
 
 import (
-	"github.com/spf13/viper"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/spf13/viper"
 
 	"chainmaker.org/chainmaker-go/localconf"
 )
@@ -143,7 +149,6 @@ func TestBuildAndRemoveImage(t *testing.T) {
 		}
 	})
 }
-
 
 func TestMain(m *testing.M) {
 	err := InitConfig()

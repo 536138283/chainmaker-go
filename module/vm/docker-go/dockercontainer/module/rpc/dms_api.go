@@ -1,3 +1,9 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpc
 
 import (
@@ -11,7 +17,7 @@ import (
 )
 
 type HandlerRegisterInterface interface {
-	GetHandlerByName(handlerName string) *DMSHandler
+	GetHandlerByName(handlerName string) (*DMSHandler, error)
 }
 
 type DMSApi struct {
@@ -21,7 +27,7 @@ type DMSApi struct {
 
 func NewDMSApi(handlerRegister HandlerRegisterInterface) *DMSApi {
 	return &DMSApi{
-		logger:          logger.NewDockerLogger(logger.MODULE_DMS_SERVER),
+		logger:          logger.NewDockerLogger(logger.MODULE_CDM_SERVER),
 		handlerRegister: handlerRegister,
 	}
 }
@@ -38,14 +44,13 @@ func (s *DMSApi) DMSCommunicate(stream protogo.DMSRpc_DMSCommunicateServer) erro
 	}
 
 	handlerName := string(registerMsg.Payload)
-	handler := s.handlerRegister.GetHandlerByName(handlerName)
-
-	if handler == nil {
-		// todo
-		s.logger.Errorf("no handler found: [%s]", handlerName)
+	handler, err := s.handlerRegister.GetHandlerByName(handlerName)
+	if err != nil {
+		return err
 	}
 
 	handler.SetStream(stream)
+	s.logger.Debugf("get handler: %s", handlerName)
 
 	err = handler.HandleMessage(registerMsg)
 	if err != nil {
