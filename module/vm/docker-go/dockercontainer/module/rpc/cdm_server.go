@@ -1,18 +1,25 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpc
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"errors"
-	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/keepalive"
 	"net"
 	"os"
 	"path/filepath"
 	"strconv"
 	"time"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 type CDMServer struct {
@@ -94,7 +101,7 @@ func NewCDMServer() (*CDMServer, error) {
 	}, nil
 }
 
-// 	Start the server
+// StartCDMServer Start the server
 func (cdm *CDMServer) StartCDMServer(apiInstance *CDMApi) error {
 
 	var err error

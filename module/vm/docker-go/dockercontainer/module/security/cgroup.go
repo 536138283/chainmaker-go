@@ -1,10 +1,17 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package security
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"os"
 	"path/filepath"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 )
 
 type CGroup struct {
@@ -15,7 +22,10 @@ type CGroup struct {
 
 func SetCGroup() error {
 	if _, err := os.Stat(config.CGroupRoot); os.IsNotExist(err) {
-		os.Mkdir(config.CGroupRoot, 0755)
+		err = os.Mkdir(config.CGroupRoot, 0755)
+		if err != nil {
+			return err
+		}
 	}
 
 	err := setMemoryList()

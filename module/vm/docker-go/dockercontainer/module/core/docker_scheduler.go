@@ -1,3 +1,9 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package core
 
 import (
@@ -20,8 +26,10 @@ import (
 )
 
 const (
-	ReqChanSize      = 1000
-	ResponseChanSize = 1000 //todo how to set number
+	// ReqChanSize tx request chan size
+	ReqChanSize = 1000
+	// ResponseChanSize tx response chan size
+	ResponseChanSize = 1000
 	runtimePanic     = "runtime panic"
 )
 
@@ -128,7 +136,7 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 	s.logger.Debugf("begin handle tx request: txid: [%s]", txRequest.TxId)
 
 	// get contract from contract manager
-	contractKey := s.ConstructContractKey(txRequest.ContractName, txRequest.ContractVersion)
+	contractKey := s.constructContractKey(txRequest.ContractName, txRequest.ContractVersion)
 	contractPath, err := s.contractManager.GetContract(txRequest.TxId, contractKey)
 	if err != nil || len(contractPath) == 0 {
 		s.logger.Errorf("fail to get contract path -- contractName is [%s], err is [%s]", contractKey, err)
@@ -160,8 +168,12 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 		return
 	}
 
-	s.handlerRegister.RegisterNewHandler(handlerName, dmsHandler)
-	defer s.handlerRegister.FreeHandler(handlerName)
+	err = s.handlerRegister.RegisterNewHandler(handlerName, dmsHandler)
+	if err != nil {
+		s.logger.Errorf("fail to register handler: [%s] -- txId [%s]", err, txRequest.TxId)
+		s.returnErrorTxResponse(txRequest.TxId, err)
+		return
+	}
 
 	// start sandbox
 	err = s.startSandBox(user, txRequest.TxId, txRequest.ContractName, handlerName, contractPath)
@@ -174,10 +186,10 @@ func (s *DockerScheduler) handleTx(txRequest *protogo.TxRequest) {
 
 }
 
-func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, handlerName, contractPath string) error {
+func (s *DockerScheduler) startSandBox(user *security.User, txId,
+	contractName, handlerName, contractPath string) error {
 	var err error           // sandbox global error
 	var stderr bytes.Buffer // used to capture the error message from sandbox
-	//var stdout bytes.Buffer //todo delete
 
 	cmd := exec.Cmd{
 		Path: contractPath,
@@ -205,7 +217,6 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId, contractName, 
 	timer := time.AfterFunc(time.Duration(config.SandBoxTimeout)*time.Second, func() {
 		_ = cmd.Process.Kill()
 		s.logger.Errorf("timeout: kill tx: txId [%s]", txId)
-		return
 	})
 	defer timer.Stop()
 
@@ -246,7 +257,7 @@ func (s *DockerScheduler) constructHandlerName(tx *protogo.TxRequest) string {
 	return handlerName
 }
 
-// ConstructContractKey contractKey: contractName:contractVersion
-func (s *DockerScheduler) ConstructContractKey(contractName, contractVersion string) string {
+// constructContractKey contractKey: contractName:contractVersion
+func (s *DockerScheduler) constructContractKey(contractName, contractVersion string) string {
 	return contractName + "#" + contractVersion
 }

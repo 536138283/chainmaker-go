@@ -1,13 +1,20 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package security
 
 import (
+	"os"
+	"path/filepath"
+	"strconv"
+
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/utils"
 	"go.uber.org/zap"
-	"os"
-	"path/filepath"
-	"strconv"
 )
 
 const (

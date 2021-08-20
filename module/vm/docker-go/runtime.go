@@ -1,17 +1,24 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package docker_go
 
 import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker/pb-go/common"
 	"chainmaker.org/chainmaker/protocol"
-	"fmt"
 	"github.com/gogo/protobuf/proto"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 )
 
 const (
@@ -33,8 +40,9 @@ type RuntimeInstance struct {
 	Log     *logger.CMLogger
 }
 
-func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
-	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
+func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string,
+	byteCode []byte, parameters map[string][]byte, txSimContext protocol.TxSimContext,
+	gasUsed uint64) (contractResult *commonPb.ContractResult) {
 	txId := txSimContext.GetTx().Payload.TxId
 
 	// contract response
@@ -151,7 +159,8 @@ func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string, byt
 			// replace contract name to contractName:version
 			err = os.Rename(contractPathWithoutVersion, contractPathWithVersion)
 			if err != nil {
-				r.Log.Errorf("fail to rename original file name: %s, please make sure contract name should be same as zipped file", err)
+				r.Log.Errorf("fail to rename original file name: %s, "+
+					"please make sure contract name should be same as zipped file", err)
 				r.Client.GetStateResponseSendCh() <- getBytecodeResponse
 				continue
 			}
@@ -191,7 +200,8 @@ func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string, byt
 
 }
 
-func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, err error, errMsg string) *commonPb.ContractResult {
+func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult,
+	err error, errMsg string) *commonPb.ContractResult {
 	contractResult.Code = uint32(1)
 	if err != nil {
 		errMsg += ", " + err.Error()
@@ -231,9 +241,5 @@ func (r *RuntimeInstance) runCmd(command string) error {
 		return err
 	}
 
-	if err := cmd.Wait(); err != nil {
-		return err
-	}
-
-	return nil
+	return cmd.Wait()
 }

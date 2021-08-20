@@ -1,14 +1,21 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpc
 
 import (
+	"errors"
+	"io"
+	"sync"
+
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/logger"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/protocol"
-	"errors"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
-	"io"
-	"sync"
 )
 
 type CDMApi struct {
@@ -160,7 +167,7 @@ func (cdm *CDMApi) handleTxRequest(cdmMessage *protogo.CDMMessage) error {
 	var txRequest protogo.TxRequest
 	err := proto.Unmarshal(cdmMessage.Payload, &txRequest)
 	if err != nil {
-		cdm.logger.Errorf("fail to unmarshal cdmMessage.Payload [%s] to protogo.TxRequest ",cdmMessage.Payload)
+		cdm.logger.Errorf("fail to unmarshal cdmMessage.Payload [%s] to protogo.TxRequest ", cdmMessage.Payload)
 		return err
 	}
 

@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package core
 
 import (
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"os"
 	"testing"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 )
 
 //func (cm *ContractManager) GetContract(txId, contractName string) (string, error) {
@@ -20,19 +21,19 @@ func TestGetContract(t *testing.T) {
 	cm.contractsMap[c1Name] = c1Code
 
 	tests := []struct {
-		name string
-		want string
+		name    string
+		want    string
 		wantErr interface{}
 	}{
 		{
-			name: "test1",
-			want: c1Code,
+			name:    "test1",
+			want:    c1Code,
 			wantErr: nil,
 		},
 	}
 
-	for _, test := range tests{
-		t.Run(test.name, func(t *testing.T){
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			contract, err := cm.GetContract("", c1Name)
 
 			if contract != test.want || err != test.wantErr {
@@ -51,10 +52,10 @@ func TestLookupContractFromDB(t *testing.T) {
 	cm.scheduler = NewDockerScheduler(userController, handlerRegister)
 
 	txId := "tx1"
-	contractName := "DockerContract1"
+	const contractName = "DockerContract1"
 	go func() {
 		byteCodeCh := cm.scheduler.GetGetByteCodeReqCh()
-		<- byteCodeCh
+		<-byteCodeCh
 
 		os.Create(contractName)
 		msg := &protogo.CDMMessage{}
@@ -62,7 +63,7 @@ func TestLookupContractFromDB(t *testing.T) {
 		resCh <- msg
 	}()
 
-	t.Run("test1", func(t *testing.T){
+	t.Run("test1", func(t *testing.T) {
 		path, err := cm.lookupContractFromDB(txId, contractName)
 
 		if path != contractName || err != nil {
@@ -71,6 +72,7 @@ func TestLookupContractFromDB(t *testing.T) {
 	})
 
 }
+
 //func (cm *ContractManager) setFileMod(filePath string) error {
 func TestSetFileMod(t *testing.T) {
 	contractName := "DockerContract1"
@@ -79,21 +81,20 @@ func TestSetFileMod(t *testing.T) {
 
 	t.Run("test1", func(t *testing.T) {
 		err := cm.setFileMod(contractName)
-		if err != nil{
+		if err != nil {
 			t.Errorf("cm.setFileMod error = %v", err)
 		}
 	})
 }
 
 //func (cm *ContractManager) initialContractMap() error {
-func  TestInitialContractMap(t *testing.T) {
+func TestInitialContractMap(t *testing.T) {
 	cm := NewContractManager()
 	mountDir, _ = os.Getwd()
 
-
 	t.Run("test1", func(t *testing.T) {
 		err := cm.initialContractMap()
-		if err != nil{
+		if err != nil {
 			t.Errorf("cm.initialContractMap error = %v", err)
 		}
 	})
