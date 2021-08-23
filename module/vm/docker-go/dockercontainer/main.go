@@ -46,7 +46,6 @@ func startPprof() {
 
 	cpuProfileFile := "/mount/share/cpu_pprof"
 
-	// change to runtime pprof
 	f, err := os.Create(cpuProfileFile)
 	if err != nil {
 		log.Fatal(err)
