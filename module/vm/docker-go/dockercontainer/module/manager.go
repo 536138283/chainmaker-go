@@ -69,6 +69,7 @@ func NewManager(managerLogger *zap.SugaredLogger) (*ManagerImpl, error) {
 	return manager, nil
 }
 
+// InitContainer init all servers
 func (m *ManagerImpl) InitContainer() {
 
 	errorC := make(chan error, 1)
@@ -115,6 +116,7 @@ func (m *ManagerImpl) InitContainer() {
 
 }
 
+// StopManager stop all servers
 func (m *ManagerImpl) StopManager() {
 	m.cdmRpcServer.StopCDMServer()
 	m.dmsRpcServer.StopDMSServer()
