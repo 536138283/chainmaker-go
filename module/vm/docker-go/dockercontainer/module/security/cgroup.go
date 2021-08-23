@@ -15,9 +15,6 @@ import (
 )
 
 type CGroup struct {
-	// memory state + monitor
-	// cpu state + monitor
-
 }
 
 func SetCGroup() error {
