@@ -42,7 +42,8 @@ type TxSimContext interface {
 	Select(name string, startKey []byte, limit []byte) (StateIterator, error)
 	// Cross contract call, return (contract result, gas used)
 	CallContract(contractId *common.ContractId, method string, byteCode []byte,
-		parameter map[string]string, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, common.TxStatusCode)
+		parameter map[string]string, gasUsed uint64, refTxType common.TxType) (
+		*common.ContractResult, SpecialTxType, common.TxStatusCode)
 	// Get cross contract call result, cache for len
 	GetCurrentResult() []byte
 	// Get related transaction

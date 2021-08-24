@@ -33,8 +33,9 @@ type RuntimeInstance struct {
 }
 
 // Invoke contract by call vm, implement protocol.RuntimeInstance
-func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
-	txSimContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
+func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte,
+	parameters map[string]string, txSimContext protocol.TxSimContext, gasUsed uint64) (
+	contractResult *commonPb.ContractResult, specialTxType protocol.SpecialTxType) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
 	// contract response
@@ -43,6 +44,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Result:  nil,
 		Message: "",
 	}
+	specialTxType = protocol.SpecialTxTypeNormal
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -156,7 +158,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	contractResult.GasUsed = int64(gasLeft - result.GasLeft)
 	contractResult.Result = result.ResultData
 	contractResult.ContractEvent = r.ContractEvent
-	return contractResult
+	return contractResult, protocol.SpecialTxTypeNormal
 }
 
 func (r *RuntimeInstance) callback(result evm_go.ExecuteResult, err error) {
@@ -222,14 +224,15 @@ func (r *RuntimeInstance) callback(result evm_go.ExecuteResult, err error) {
 	r.Log.Debug("result:", result.ResultData)
 }
 
-func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, err error, errMsg string) *commonPb.ContractResult {
+func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, err error, errMsg string) (
+	*commonPb.ContractResult, protocol.SpecialTxType) {
 	contractResult.Code = commonPb.ContractResultCode_FAIL
 	if err != nil {
 		errMsg += ", " + err.Error()
 	}
 	contractResult.Message = errMsg
 	r.Log.Error(errMsg)
-	return contractResult
+	return contractResult, protocol.SpecialTxTypeNormal
 }
 func (r *RuntimeInstance) emitContractEvent(result evm_go.ExecuteResult) error {
 	//parse log

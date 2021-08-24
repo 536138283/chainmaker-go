@@ -116,6 +116,13 @@ const (
 	BulletProofsVerify                      = "BulletproofsVerify"
 )
 
+type SpecialTxType int
+
+const (
+	SpecialTxTypeNormal SpecialTxType = iota
+	SpecialTxTypeIterator
+)
+
 type SqlType int8
 
 const (
@@ -132,7 +139,8 @@ type VmManager interface {
 	GetChainNodesInfoProvider() ChainNodesInfoProvider
 	// RunContract run native or user contract according ContractName in contractId, and call the specified function
 	RunContract(contractId *common.ContractId, method string, byteCode []byte, parameters map[string]string,
-		txContext TxSimContext, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, common.TxStatusCode)
+		txContext TxSimContext, gasUsed uint64, refTxType common.TxType) (
+		*common.ContractResult, SpecialTxType, common.TxStatusCode)
 }
 
 type ContractWacsiCommon interface {

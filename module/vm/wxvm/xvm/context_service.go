@@ -261,7 +261,7 @@ func (c *ContextService) SetOutput(ctxId int64) int32 {
 	return protocol.ContractSdkSignalResultSuccess
 }
 
-// CallContract implements Syscall interface
+// CallContract implements Syscall interface, just for wxvm
 func (c *ContextService) CallContract(ctxId int64) int32 {
 	context, _ := c.Context(ctxId)
 	ec := serialize.NewEasyCodecWithItems(context.in)
@@ -276,7 +276,8 @@ func (c *ContextService) CallContract(ctxId int64) int32 {
 
 	ecArg := serialize.NewEasyCodecWithBytes(args)
 	paramMap := ecArg.ToMap()
-	contractResult, txStatusCode := context.TxSimContext.CallContract(&commonPb.ContractId{ContractName: contract}, method, nil, paramMap, context.gasUsed, commonPb.TxType_INVOKE_USER_CONTRACT)
+	contractResult, _, txStatusCode := context.TxSimContext.CallContract(&commonPb.ContractId{ContractName: contract},
+		method, nil, paramMap, context.gasUsed, commonPb.TxType_INVOKE_USER_CONTRACT)
 
 	ecParam := serialize.NewEasyCodec()
 	ecParam.AddInt32("code", int32(contractResult.Code))

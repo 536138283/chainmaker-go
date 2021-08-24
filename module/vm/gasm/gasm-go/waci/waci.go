@@ -36,6 +36,7 @@ type WaciInstance struct {
 	ChainId        string
 	Method         string
 	ContractEvent  []*commonPb.ContractEvent
+	SpecialTxType  protocol.SpecialTxType
 }
 
 // LogMessage print log to file
@@ -54,7 +55,8 @@ func (s *WaciInstance) LogMessage() int32 {
 
 // SysCall wasmer vm call chain entry
 func (s *WaciInstance) SysCall(vm *wasm.VirtualMachine) reflect.Value {
-	return reflect.ValueOf(func(requestHeaderPtr int32, requestHeaderLen int32, requestBodyPtr int32, requestBodyLen int32) int32 {
+	return reflect.ValueOf(func(requestHeaderPtr int32, requestHeaderLen int32, requestBodyPtr int32,
+		requestBodyLen int32) int32 {
 		if requestHeaderLen == 0 {
 			s.Log.Errorf("gasm log>> [%s] requestHeader is null.", s.TxSimContext.GetTx().Header.TxId)
 			return protocol.ContractSdkSignalResultFail
@@ -72,7 +74,8 @@ func (s *WaciInstance) SysCall(vm *wasm.VirtualMachine) reflect.Value {
 		s.RequestBody = requestBody
 		method, err := ec.GetValue("method", serialize.EasyKeyType_SYSTEM)
 		if err != nil {
-			msg := fmt.Sprintf("get method failed:%s requestHeader=%s requestBody=%s", "request header have no method", string(requestHeaderByte), string(requestBody))
+			msg := fmt.Sprintf("get method failed:%s requestHeader=%s requestBody=%s",
+				"request header have no method", string(requestHeaderByte), string(requestBody))
 			return s.recordMsg(msg)
 		}
 		switch method {
@@ -110,8 +113,10 @@ func (s *WaciInstance) SysCall(vm *wasm.VirtualMachine) reflect.Value {
 			return s.DeleteState()
 		//kv author:whang1234
 		case protocol.ContractMethodKvIterator:
+			s.SpecialTxType = protocol.SpecialTxTypeIterator
 			return s.KvIterator()
 		case protocol.ContractMethodKvPreIterator:
+			s.SpecialTxType = protocol.SpecialTxTypeIterator
 			return s.KvPreIterator()
 		case protocol.ContractMethodKvIteratorHasNext:
 			return s.KvIteratorHasNext()
@@ -220,9 +225,11 @@ func (s *WaciInstance) CallContract() int32 {
 }
 
 func (s *WaciInstance) callContractCore(isLen bool) int32 {
-	data, err, gas := wacsi.CallContract(s.RequestBody, s.TxSimContext, s.Vm.Memory, s.GetStateCache, s.Vm.Gas, isLen)
+	data, err, gas, specialTxType := wacsi.CallContract(s.RequestBody, s.TxSimContext, s.Vm.Memory,
+		s.GetStateCache, s.Vm.Gas, isLen)
 	s.GetStateCache = data // reset data
 	s.Vm.Gas = gas
+	s.SpecialTxType = specialTxType
 	if err != nil {
 		s.recordMsg(err.Error())
 		return protocol.ContractSdkSignalResultFail

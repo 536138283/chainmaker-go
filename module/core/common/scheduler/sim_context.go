@@ -274,7 +274,9 @@ func (s *txSimContextImpl) SetTxResult(txResult *commonpb.Result) {
 }
 
 // Cross contract call
-func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method string, byteCode []byte, parameter map[string]string, gasUsed uint64, refTxType commonpb.TxType) (*commonpb.ContractResult, commonpb.TxStatusCode) {
+func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method string, byteCode []byte,
+    parameter map[string]string, gasUsed uint64, refTxType commonpb.TxType) (
+    *commonpb.ContractResult, protocol.SpecialTxType, commonpb.TxStatusCode) {
     s.gasUsed = gasUsed
     s.currentDepth = s.currentDepth + 1
     if s.currentDepth > protocol.CallContractDepth {
@@ -283,7 +285,7 @@ func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method 
             Result:  nil,
             Message: fmt.Sprintf("CallContract too depth %d", s.currentDepth),
         }
-        return contractResult, commonpb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
+        return contractResult, protocol.SpecialTxTypeNormal, commonpb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
     }
     if s.gasUsed > protocol.GasLimit {
         contractResult := &commonpb.ContractResult{
@@ -291,9 +293,9 @@ func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method 
             Result:  nil,
             Message: fmt.Sprintf("There is not enough gas, gasUsed %d GasLimit %d ", gasUsed, int64(protocol.GasLimit)),
         }
-        return contractResult, commonpb.TxStatusCode_CONTRACT_FAIL
+        return contractResult, protocol.SpecialTxTypeNormal, commonpb.TxStatusCode_CONTRACT_FAIL
     }
-    r, code := s.vmManager.RunContract(contractId, method, byteCode, parameter, s, s.gasUsed, refTxType)
+    r, specialTxType, code := s.vmManager.RunContract(contractId, method, byteCode, parameter, s, s.gasUsed, refTxType)
 
     result := callContractResult{
         depth:        s.currentDepth,
@@ -306,7 +308,8 @@ func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method 
     s.hisResult = append(s.hisResult, &result)
     s.currentResult = r.Result
     s.currentDepth = s.currentDepth - 1
-    return r, code
+
+    return r, specialTxType, code
 }
 
 // Obtain the execution result of current contract (cross contract)

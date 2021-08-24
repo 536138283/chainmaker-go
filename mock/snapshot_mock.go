@@ -87,18 +87,21 @@ func (m *MockSnapshot) EXPECT() *MockSnapshotMockRecorder {
 }
 
 // ApplyTxSimContext mocks base method.
-func (m *MockSnapshot) ApplyTxSimContext(arg0 protocol.TxSimContext, arg1 bool) (bool, int) {
+func (m *MockSnapshot) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.SpecialTxType,
+	runVmSuccess bool, withSpecialTx bool) (bool, int) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ApplyTxSimContext", arg0, arg1)
+	ret := m.ctrl.Call(m, "ApplyTxSimContext", txSimContext, runVmSuccess)
 	ret0, _ := ret[0].(bool)
 	ret1, _ := ret[1].(int)
 	return ret0, ret1
 }
 
 // ApplyTxSimContext indicates an expected call of ApplyTxSimContext.
-func (mr *MockSnapshotMockRecorder) ApplyTxSimContext(arg0, arg1 interface{}) *gomock.Call {
+func (mr *MockSnapshotMockRecorder) ApplyTxSimContext(arg0, specialTxType protocol.SpecialTxType,
+	arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyTxSimContext", reflect.TypeOf((*MockSnapshot)(nil).ApplyTxSimContext), arg0, arg1)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyTxSimContext",
+		reflect.TypeOf((*MockSnapshot)(nil).ApplyTxSimContext), arg0, arg1)
 }
 
 // BuildDAG mocks base method.
@@ -112,7 +115,8 @@ func (m *MockSnapshot) BuildDAG(isSql bool) *common.DAG {
 // BuildDAG indicates an expected call of BuildDAG.
 func (mr *MockSnapshotMockRecorder) BuildDAG(isSql interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildDAG", reflect.TypeOf((*MockSnapshot)(nil).BuildDAG), isSql)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "BuildDAG",
+		reflect.TypeOf((*MockSnapshot)(nil).BuildDAG), isSql)
 }
 
 // GetBlockHeight mocks base method.
@@ -126,7 +130,8 @@ func (m *MockSnapshot) GetBlockHeight() int64 {
 // GetBlockHeight indicates an expected call of GetBlockHeight.
 func (mr *MockSnapshotMockRecorder) GetBlockHeight() *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHeight", reflect.TypeOf((*MockSnapshot)(nil).GetBlockHeight))
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetBlockHeight",
+		reflect.TypeOf((*MockSnapshot)(nil).GetBlockHeight))
 }
 
 // GetBlockProposer mocks base method.

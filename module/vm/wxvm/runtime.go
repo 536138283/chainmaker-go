@@ -22,8 +22,9 @@ type RuntimeInstance struct {
 }
 
 // Invoke contract by call vm, implement protocol.RuntimeInstance
-func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
-	txContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
+func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte,
+	parameters map[string]string, txContext protocol.TxSimContext, gasUsed uint64) (
+	contractResult *commonPb.ContractResult, specialTxType protocol.SpecialTxType) {
 
 	tx := txContext.GetTx()
 
@@ -36,6 +37,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			} else if e, ok := err.(string); ok {
 				contractResult.Message = e
 			}
+			specialTxType = protocol.SpecialTxTypeNormal
 			debug.PrintStack()
 		}
 	}()
@@ -45,6 +47,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Result:  nil,
 		Message: "",
 	}
+	specialTxType = protocol.SpecialTxTypeNormal
 
 	context := r.CtxService.MakeContext(contractId, txContext, contractResult, parameters)
 	execCode, err := r.CodeManager.GetExecCode(r.ChainId, contractId, byteCode, r.CtxService)
