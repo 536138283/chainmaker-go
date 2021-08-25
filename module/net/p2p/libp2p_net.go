@@ -8,11 +8,6 @@ package p2p
 
 import (
 	"bufio"
-	"chainmaker.org/chainmaker-go/net/p2p/libp2pgmtls"
-	"chainmaker.org/chainmaker-go/net/p2p/libp2ptls"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	netPb "chainmaker.org/chainmaker-go/pb/protogo/net"
-	"chainmaker.org/chainmaker-go/utils"
 	"context"
 	"crypto/x509"
 	"crypto/x509/pkix"
@@ -25,10 +20,14 @@ import (
 
 	cmx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
 	"chainmaker.org/chainmaker-go/common/helper"
+	"chainmaker.org/chainmaker-go/net/p2p/libp2pgmtls"
+	"chainmaker.org/chainmaker-go/net/p2p/libp2ptls"
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	netPb "chainmaker.org/chainmaker-go/pb/protogo/net"
+	api "chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/utils"
 	"github.com/gogo/protobuf/proto"
 	"github.com/libp2p/go-libp2p-core/network"
-
-	api "chainmaker.org/chainmaker-go/protocol"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/protocol"
 	libP2pPubSub "github.com/libp2p/go-libp2p-pubsub"
@@ -597,6 +596,53 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 		return
 	}
 
+	// re verify myself
+	removeSelf := false
+	myCertBytes, ok := peerIdTlsCertMap[ln.GetNodeUid()]
+	if ok {
+		if ln.libP2pHost.isGmTls {
+			chainTrustRoots := ln.libP2pHost.gmTlsChainTrustRoots
+			// tls cert exist, parse to cert
+			cert, err := cmx509.ParseCertificate(myCertBytes)
+			if err != nil {
+				logger.Errorf("[Net] [ReVerifyTrustRoots] parse tls cert failed. %s", err.Error())
+				return
+			}
+			// whether verify failed, if failed remove it
+			if !chainTrustRoots.VerifyCertOfChain(chainId, cert) {
+				removeSelf = true
+			}
+			delete(peerIdTlsCertMap, ln.GetNodeUid())
+		} else if ln.libP2pHost.isTls {
+			chainTrustRoots := ln.libP2pHost.tlsChainTrustRoots
+			// tls cert exist, parse to cert
+			cert, err := x509.ParseCertificate(myCertBytes)
+			if err != nil {
+				logger.Errorf("[Net] [ReVerifyTrustRoots] parse tls cert failed. %s", err.Error())
+				return
+			}
+			// whether verify failed, if failed remove it
+			if !chainTrustRoots.VerifyCertOfChain(chainId, cert) {
+				removeSelf = true
+			}
+			delete(peerIdTlsCertMap, ln.GetNodeUid())
+		}
+	}
+
+	if removeSelf {
+		logger.Infof("[Net] [ReVerifyTrustRoots] remove myself from chain, (pid: %s, chain id: %s)",
+			ln.GetNodeUid(), chainId)
+		existPeers := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
+		for _, existPeerId := range existPeers {
+			ln.libP2pHost.peerChainIdsRecorder.removePeerChainId(existPeerId, chainId)
+			if err := ln.removeChainPubSubWhiteList(chainId, existPeerId); err != nil {
+				logger.Warnf("[Net] [ReVerifyTrustRoots] remove chain pub-sub white list failed, %s",
+					err.Error())
+			}
+		}
+		return
+	}
+
 	// re verify exist peers
 	existPeers := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
 	for _, existPeerId := range existPeers {
@@ -613,14 +659,14 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 				// whether verify failed, if failed remove it
 				if !chainTrustRoots.VerifyCertOfChain(chainId, cert) {
 					ln.libP2pHost.peerChainIdsRecorder.removePeerChainId(existPeerId, chainId)
+					if err = ln.removeChainPubSubWhiteList(chainId, existPeerId); err != nil {
+						logger.Warnf("[Net] [ReVerifyTrustRoots] remove chain pub-sub white list failed, %s",
+							err.Error())
+					}
 					logger.Infof("[Net] [ReVerifyTrustRoots] remove peer from chain, (pid: %s, chain id: %s)",
 						existPeerId, chainId)
 				}
 				delete(peerIdTlsCertMap, existPeerId)
-				if err = ln.removeChainPubSubWhiteList(chainId, existPeerId); err != nil {
-					logger.Warnf("[Net] [ReVerifyTrustRoots] remove chain pub-sub white list failed, %s",
-						err.Error())
-				}
 				continue
 			} else if ln.libP2pHost.isTls {
 				chainTrustRoots := ln.libP2pHost.tlsChainTrustRoots
@@ -633,14 +679,14 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 				// whether verify failed, if failed remove it
 				if !chainTrustRoots.VerifyCertOfChain(chainId, cert) {
 					ln.libP2pHost.peerChainIdsRecorder.removePeerChainId(existPeerId, chainId)
+					if err = ln.removeChainPubSubWhiteList(chainId, existPeerId); err != nil {
+						logger.Warnf("[Net] [ReVerifyTrustRoots] remove chain pub-sub white list failed, %s",
+							err.Error())
+					}
 					logger.Infof("[Net] [ReVerifyTrustRoots] remove peer from chain, (pid: %s, chain id: %s)",
 						existPeerId, chainId)
 				}
 				delete(peerIdTlsCertMap, existPeerId)
-				if err = ln.removeChainPubSubWhiteList(chainId, existPeerId); err != nil {
-					logger.Warnf("[Net] [ReVerifyTrustRoots] remove chain pub-sub white list failed, %s",
-						err.Error())
-				}
 				continue
 			}
 		} else {
@@ -661,12 +707,12 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 			// whether verify success, if success add it
 			if chainTrustRoots.VerifyCertOfChain(chainId, cert) {
 				ln.libP2pHost.peerChainIdsRecorder.addPeerChainId(pid, chainId)
-				logger.Infof("[LiquidNet] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
-					pid, chainId)
 				if err = ln.addChainPubSubWhiteList(chainId, pid); err != nil {
 					logger.Warnf("[Net] [ReVerifyTrustRoots] add chain pub-sub white list failed, %s",
 						err.Error())
 				}
+				logger.Infof("[LiquidNet] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
+					pid, chainId)
 			}
 			continue
 		} else if ln.libP2pHost.isTls {
@@ -679,12 +725,12 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 			// whether verify success, if success add it
 			if chainTrustRoots.VerifyCertOfChain(chainId, cert) {
 				ln.libP2pHost.peerChainIdsRecorder.addPeerChainId(pid, chainId)
-				logger.Infof("[LiquidNet] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
-					pid, chainId)
 				if err = ln.addChainPubSubWhiteList(chainId, pid); err != nil {
 					logger.Warnf("[Net] [ReVerifyTrustRoots] add chain pub-sub white list failed, %s",
 						err.Error())
 				}
+				logger.Infof("[LiquidNet] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
+					pid, chainId)
 			}
 		}
 	}
