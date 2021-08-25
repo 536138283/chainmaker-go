@@ -56,7 +56,7 @@ func startPprof() {
 	}
 	managerLogger.Infof("start pprof")
 
-	time.AfterFunc(30*time.Minute, func() {
+	time.AfterFunc(10*time.Minute, func() {
 		pprof.StopCPUProfile()
 		managerLogger.Infof("finish pprof")
 	})

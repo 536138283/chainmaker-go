@@ -67,9 +67,9 @@ var (
 )
 
 func initDockerGoTest() {
-	DockerGoContractPath = "./docker-go/DockerGo7Fun.7z"
+	DockerGoContractPath = "./docker-go/contract1p2.7z"
 	DockerGoContractUpgradePath = "./docker-go/contract_get_put_upgrade.7z"
-	contractName = "DockerGo7Fun"
+	contractName = "contract1p2"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO
 	printConfig("docker-go")
 }
@@ -123,13 +123,13 @@ func runTest() {
 	//txId = testDockerInvoke(sk3, &client, CHAIN1, "10", "2")
 	//time.Sleep(5 * time.Second)
 
-	// 4) query 测试
-	//testDockerQuery(sk3, &client, CHAIN1, "1", "2")
-	//time.Sleep(5 * time.Second)
+	//4) query 测试
+	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
+	time.Sleep(5 * time.Second)
 	//
-	for i := 0; i < 1000; i++ {
-		testDockerInvoke(sk3, &client, CHAIN1, "10", "2")
-	}
+	//for i := 0; i < 1000; i++ {
+	//	testDockerInvoke(sk3, &client, CHAIN1, "10", "2")
+	//}
 
 	//// 4) 根据TxId查交易
 	//testGetTxByTxId(sk3, &client, txId, CHAIN1)

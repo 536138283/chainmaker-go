@@ -61,7 +61,7 @@ func (s *SecurityEnv) InitConfig() error {
 	var err error
 
 	// set mount dir mod
-	mountDir := os.Getenv("DockerMountDir")
+	mountDir := config.DockerMountDir
 
 	// set mount sub directory: contracts, share, sock
 	contractDir := filepath.Join(mountDir, config.ContractsDir)

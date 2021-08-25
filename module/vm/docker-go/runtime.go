@@ -13,8 +13,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/localconf"
+
+	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker/pb-go/common"
 	"chainmaker.org/chainmaker/protocol"
@@ -124,9 +125,9 @@ func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string,
 			contractName := strings.Split(contractFullName, "#")[0] // contract1
 
 			dockerConfig := localconf.ChainMakerConfig.DockerConfig
-			hostMountDir := dockerConfig.HostMountDir
+			hostMountPath := dockerConfig.MountPath
 
-			contractDir := filepath.Join(hostMountDir, mountContractDir)
+			contractDir := filepath.Join(hostMountPath, mountContractDir)
 			contractZipPath := filepath.Join(contractDir, fmt.Sprintf("%s.7z", contractName)) // contract1.7z
 			contractPathWithoutVersion := filepath.Join(contractDir, contractName)
 			contractPathWithVersion := filepath.Join(contractDir, contractFullName)

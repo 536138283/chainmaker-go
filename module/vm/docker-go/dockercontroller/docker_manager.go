@@ -17,7 +17,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -31,15 +30,17 @@ import (
 	"github.com/docker/docker/api/types/mount"
 	"github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
-	"github.com/docker/go-connections/nat"
 )
 
 var (
 	dockerContainerDir string
 	sourceDir          string
-	targetDir          string
 	imageName          string
 	containerName      string
+)
+
+const (
+	targetDir = "/mount"
 )
 
 type DockerManager struct {
@@ -51,8 +52,6 @@ type DockerManager struct {
 	containerName string
 	sourceDir     string
 	targetDir     string
-	openPort      nat.Port
-	hostPort      string
 	dockerDir     string
 
 	lock   sync.Mutex
@@ -70,7 +69,7 @@ func NewDockerManager(chainId string) *DockerManager {
 
 	chainmakerConfig := localconf.ChainMakerConfig
 	dockerManagerLogger := logger.GetLoggerByChain("[Docker Manager]", chainId)
-
+	dockerManagerLogger.Debugf("init docker manager")
 	// init docker manager
 	newDockerManager := &DockerManager{
 		AttachStdOut: true,
@@ -89,8 +88,8 @@ func NewDockerManager(chainId string) *DockerManager {
 		return nil
 	}
 
-	// if open docker vm is false, docker manager is nil
-	startDockerVm := chainmakerConfig.DockerConfig.OpenDockerVM
+	// if enable docker vm is false, docker manager is nil
+	startDockerVm := chainmakerConfig.DockerConfig.EnableDockerVM
 	if !startDockerVm {
 		return nil
 	}
@@ -101,9 +100,6 @@ func NewDockerManager(chainId string) *DockerManager {
 		return nil
 	}
 
-	hostPort := strconv.Itoa(int(chainmakerConfig.DockerConfig.DockerRpcConfig.Port))
-	openPort := nat.Port(hostPort + "/tcp")
-
 	newDockerManager.ctx = context.Background()
 	newDockerManager.client = cli
 	newDockerManager.CDMClient = module.NewCDMClient(chainId)
@@ -111,8 +107,6 @@ func NewDockerManager(chainId string) *DockerManager {
 	newDockerManager.containerName = containerName
 	newDockerManager.sourceDir = sourceDir
 	newDockerManager.targetDir = targetDir
-	newDockerManager.hostPort = hostPort
-	newDockerManager.openPort = openPort
 	newDockerManager.dockerDir = dockerContainerDir
 
 	// init mount directory and subdirectory
@@ -200,15 +194,6 @@ func (m *DockerManager) StartContainer() error {
 // StopAndRemoveVM stop docker vm and remove container, image
 func (m *DockerManager) StopAndRemoveVM() error {
 	var err error
-
-	removeHostMountDir := localconf.ChainMakerConfig.DockerConfig.CleanHostMountDir
-	if removeHostMountDir {
-		err = os.RemoveAll(m.sourceDir)
-		if err != nil {
-			return err
-		}
-		m.Log.Infof("removing mount directory: %s", m.sourceDir)
-	}
 
 	err = m.stopContainer()
 	if err != nil {
@@ -310,7 +295,8 @@ func (m *DockerManager) removeImage() error {
 	}
 
 	m.Log.Infof("Removing image [%s] ...", m.imageName)
-	if _, err := m.client.ImageRemove(m.ctx, m.imageName, types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
+	if _, err = m.client.ImageRemove(m.ctx, m.imageName,
+		types.ImageRemoveOptions{PruneChildren: true, Force: true}); err != nil {
 		return err
 	}
 
@@ -336,20 +322,9 @@ func (m *DockerManager) createContainer() error {
 		Env:          envs,
 		AttachStdout: m.AttachStdOut,
 		AttachStderr: m.AttachStderr,
-		ExposedPorts: nat.PortSet{
-			m.openPort: struct{}{},
-		},
 	}, &container.HostConfig{
 		NetworkMode: "none",
-		PortBindings: nat.PortMap{
-			m.openPort: []nat.PortBinding{
-				{
-					HostIP:   "0.0.0.0",
-					HostPort: m.hostPort,
-				},
-			},
-		},
-		Privileged: true,
+		Privileged:  true,
 		Mounts: []mount.Mount{
 			{
 				Type:        mount.TypeBind,
@@ -464,8 +439,6 @@ func (m *DockerManager) constructEnvs() []string {
 
 	m.convertConfigToMap(dockerConfig.DockerPprofConfig, configsMap)
 
-	configsMap["DockerMountDir"] = fmt.Sprintf("%s=%s", "DockerMountDir", dockerConfig.DockerMountDir)
-
 	configs := make([]string, len(configsMap))
 	index := 0
 	for _, value := range configsMap {
@@ -510,7 +483,12 @@ func (m *DockerManager) displayInConsole(containerID string) error {
 	if err != nil {
 		return err
 	}
-	defer out.Close()
+	defer func(out io.ReadCloser) {
+		err = out.Close()
+		if err != nil {
+			return
+		}
+	}(out)
 
 	hdr := make([]byte, 8)
 	for {
@@ -529,8 +507,11 @@ func (m *DockerManager) displayInConsole(containerID string) error {
 		}
 		count := binary.BigEndian.Uint32(hdr[4:])
 		dat := make([]byte, count)
-		_, err = out.Read(dat)
-		fmt.Fprint(w, string(dat))
+		_, _ = out.Read(dat)
+		_, err = fmt.Fprint(w, string(dat))
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -544,7 +525,7 @@ func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
 	for scanner.Scan() {
 
 		lastLine = scanner.Text()
-		lastLine = strings.TrimLeft(lastLine, "{\"stream\":\"")
+		lastLine = strings.TrimLeft(lastLine, "{stream\":")
 		lastLine = strings.TrimRight(lastLine, "\"}")
 		lastLine = strings.TrimRight(lastLine, "\\n")
 		if len(lastLine) == 0 {
@@ -561,7 +542,7 @@ func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
 		if strings.Contains(lastLine, "ux\":{\"ID\":\"sha256") {
 			continue
 		}
-		fmt.Println(lastLine)
+		//fmt.Println(lastLine)
 	}
 
 	errLine := &ErrorLine{}
@@ -570,11 +551,7 @@ func (m *DockerManager) displayBuildProcess(rd io.Reader) error {
 		return errors.New(errLine.Error)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return err
-	}
-
-	return nil
+	return scanner.Err()
 }
 
 func (m *DockerManager) createDir(directory string) error {
@@ -585,7 +562,7 @@ func (m *DockerManager) createDir(directory string) error {
 	}
 
 	if !exist {
-		err := os.Mkdir(directory, 0755)
+		err = os.MkdirAll(directory, 0755)
 		if err != nil {
 			m.Log.Errorf("fail to remove image, err: [%s]", err)
 			return err
@@ -617,11 +594,7 @@ func (m *DockerManager) validateConfig(config *localconf.CMConfig) (bool, error)
 	}
 	dockerContainerDir = dockerConfig.DockerContainerDir
 
-	if dockerConfig.HostMountDir == "" {
-		m.Log.Errorf("doesn't set host mount directory path")
-		return false, nil
-	}
-	sourceDir = dockerConfig.HostMountDir
+	sourceDir = dockerConfig.MountPath
 	if !filepath.IsAbs(sourceDir) {
 		sourceDir, err = filepath.Abs(sourceDir)
 		if err != nil {
@@ -629,12 +602,6 @@ func (m *DockerManager) validateConfig(config *localconf.CMConfig) (bool, error)
 			return false, err
 		}
 	}
-
-	if dockerConfig.DockerMountDir == "" {
-		m.Log.Errorf("doesn't set docker mount directory path")
-		return false, nil
-	}
-	targetDir = dockerConfig.DockerMountDir
 
 	if dockerConfig.ImageName == "" {
 		m.Log.Infof("image name doesn't set, set as default: chainmaker-docker-go-image")

@@ -142,7 +142,7 @@ function generate_config() {
       fi
     fi
 
-    read -p "enable docker vm (YES | NO(default))" enable_dockervm
+    read -p "enable docker vm (YES|NO(default))" enable_dockervm
     if  [ ! -z "$enable_dockervm" ]; then
       if  [ $enable_dockervm == "YES" ]; then
           ENABLE_DOCKERVM="true"
@@ -172,7 +172,7 @@ function generate_config() {
         xsed "s%{monitor_port}%$(($MONITOR_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
         xsed "s%{pprof_port}%$(($PPROF_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
         xsed "s%{trusted_port}%$(($TRUSTED_PORT_PREFIX+$i))%g" node$i/chainmaker.yml
-        xsed "s%{enalbe_dockervm}%$ENABLE_DOCKERVM%g" node$i/chainmaker.yml
+        xsed "s%{enable_dockervm}%$ENABLE_DOCKERVM%g" node$i/chainmaker.yml
         xsed "s%{docker_container_name}%"${DOCKER_VM_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
 
         system=$(uname)

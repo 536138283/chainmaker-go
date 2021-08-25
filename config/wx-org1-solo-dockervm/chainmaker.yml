@@ -63,31 +63,24 @@ rpc:
     cert_file:      ../config/wx-org1-solo-dockervm/certs/node/consensus1/consensus1.tls.crt
 
 
-#  MountDir        = "/mount"
-#  ContractBaseDir = "/mount/contracts/"
-#  ShareBaseDir    = "/mount/share/" // go prof and log file
-#  sockBaseDir     = "/mount/sock/
 docker:
-  open_dockervm: true
+  enable_dockervm: true
   image_name: chainmaker-docker-go-image
   container_name: chainmaker-docker-go-container
   docker_container_dir: ../module/vm/docker-go/dockercontainer
-  host_mount_dir: ../module/vm/docker-go/mount  # mount point in chain maker
-  docker_mount_dir: /mount                      # mount point in docker vm
-  clean_host_mount_dir: true                    #clean host mount directory when stop the chain maker
+  mount_path: ../data/org1/docker-go/mount     # mount point in chain maker
   rpc:
-    uds_open: true                            # default is unix domain socket connection
-    port: 12356                                # doesn't support tcp for now
+    uds_open: true                             # default is unix domain socket connection
     max_send_message_size: 10                  # MiB
     max_recv_message_size: 10                  # MiB
   log:
     log_file: docker_vm.log
     display_in_console: true
     show_line: true
-    log_level: INFO
+    log_level: DEBUG
   vm:
     tx_size: 1000
-    user_num: 500
+    user_num: 100
     time_limit: 1                              # second
   pprof:
     pprof_enabled: false

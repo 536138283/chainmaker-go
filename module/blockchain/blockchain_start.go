@@ -39,7 +39,7 @@ func (bc *Blockchain) Start() error {
 	}
 	// if open_docker vm is false, will not start module vm
 	// start module vm actually just start docker vm
-	startVm := localconf.ChainMakerConfig.DockerConfig.OpenDockerVM
+	startVm := localconf.ChainMakerConfig.DockerConfig.EnableDockerVM
 	if bc.isModuleInit(moduleNameVM) && !bc.isModuleStartUp(moduleNameVM) && startVm {
 		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVm})
 	}

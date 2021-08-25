@@ -32,6 +32,8 @@ const (
 	SockDir = "sock"
 	// SockName domain socket file name
 	SockName = "cdm.sock"
+	// DockerMountDir mount directory in docker
+	DockerMountDir = "/mount"
 )
 
 var (
@@ -43,7 +45,4 @@ var (
 	SockBaseDir string
 	// SandBoxTimeout sandbox timeout
 	SandBoxTimeout = 2
-
-	// EnablePProf enable pprof
-	EnablePProf = false
 )

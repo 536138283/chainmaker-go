@@ -339,13 +339,11 @@ type coreConfig struct {
 }
 
 type dockerConfig struct {
-	OpenDockerVM       bool              `mapstructure:"open_dockervm"`
+	EnableDockerVM     bool              `mapstructure:"enable_dockervm"`
 	ImageName          string            `mapstructure:"image_name"`
 	ContainerName      string            `mapstructure:"container_name"`
 	DockerContainerDir string            `mapstructure:"docker_container_dir"`
-	HostMountDir       string            `mapstructure:"host_mount_dir"`
-	DockerMountDir     string            `mapstructure:"docker_mount_dir"`
-	CleanHostMountDir  bool              `mapstructure:"clean_host_mount_dir"`
+	MountPath          string            `mapstructure:"mount_path"`
 	DockerRpcConfig    dockerRpcConfig   `mapstructure:"rpc"`
 	DockerLogConfig    dockerLogConfig   `mapstructure:"log"`
 	DockerVmConfig     dockerVmConfig    `mapstructure:"vm"`
@@ -354,7 +352,6 @@ type dockerConfig struct {
 
 type dockerRpcConfig struct {
 	UdsOpen            bool  `mapstructure:"uds_open"`
-	Port               int32 `mapstructure:"port"`
 	MaxSendMessageSize int32 `mapstructure:"max_send_message_size"`
 	MaxRecvMessageSize int32 `mapstructure:"max_recv_message_size"`
 }

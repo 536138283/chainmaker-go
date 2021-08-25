@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"path/filepath"
-	"strconv"
 	"sync"
 
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/config"
@@ -210,22 +209,15 @@ func NewClientConn() (*grpc.ClientConn, error) {
 		),
 	}
 
-	if dockerConfig.DockerRpcConfig.UdsOpen {
+	dialOpts = append(dialOpts, grpc.WithContextDialer(func(ctx context.Context, sock string) (net.Conn, error) {
+		unixAddress, _ := net.ResolveUnixAddr("unix", sock)
+		conn, err := net.DialUnix("unix", nil, unixAddress)
+		return conn, err
+	}))
 
-		dialOpts = append(dialOpts, grpc.WithContextDialer(func(ctx context.Context, sock string) (net.Conn, error) {
-			unixAddress, _ := net.ResolveUnixAddr("unix", sock)
-			conn, err := net.DialUnix("unix", nil, unixAddress)
-			return conn, err
-		}))
+	sockAddress := filepath.Join(dockerConfig.MountPath, config.SockDir, config.SockName)
 
-		sockAddress := filepath.Join(dockerConfig.HostMountDir, config.SockDir, config.SockName)
-
-		return grpc.DialContext(context.Background(), sockAddress, dialOpts...)
-
-	}
-	port := ":" + strconv.Itoa(int(dockerConfig.DockerRpcConfig.Port))
-
-	return grpc.Dial(port, dialOpts...)
+	return grpc.DialContext(context.Background(), sockAddress, dialOpts...)
 
 }
 
