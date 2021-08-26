@@ -701,7 +701,7 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 			chainTrustRoots := ln.libP2pHost.gmTlsChainTrustRoots
 			cert, err := cmx509.ParseCertificate(bytes)
 			if err != nil {
-				logger.Errorf("[LiquidNet] [ReVerifyTrustRoots] re-verify tls cert failed. %s", err.Error())
+				logger.Errorf("[Net] [ReVerifyTrustRoots] re-verify tls cert failed. %s", err.Error())
 				continue
 			}
 			// whether verify success, if success add it
@@ -711,7 +711,7 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 					logger.Warnf("[Net] [ReVerifyTrustRoots] add chain pub-sub white list failed, %s",
 						err.Error())
 				}
-				logger.Infof("[LiquidNet] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
+				logger.Infof("[Net] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
 					pid, chainId)
 			}
 			continue
@@ -719,7 +719,7 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 			chainTrustRoots := ln.libP2pHost.tlsChainTrustRoots
 			cert, err := x509.ParseCertificate(bytes)
 			if err != nil {
-				logger.Errorf("[LiquidNet] [ReVerifyTrustRoots] re-verify tls cert failed. %s", err.Error())
+				logger.Errorf("[Net] [ReVerifyTrustRoots] re-verify tls cert failed. %s", err.Error())
 				continue
 			}
 			// whether verify success, if success add it
@@ -729,7 +729,7 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 					logger.Warnf("[Net] [ReVerifyTrustRoots] add chain pub-sub white list failed, %s",
 						err.Error())
 				}
-				logger.Infof("[LiquidNet] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
+				logger.Infof("[Net] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
 					pid, chainId)
 			}
 		}
