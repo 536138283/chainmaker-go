@@ -34,6 +34,10 @@ const (
 	SockName = "cdm.sock"
 	// DockerMountDir mount directory in docker
 	DockerMountDir = "/mount"
+	// DockerLogDir mount directory for log
+	DockerLogDir = "/log"
+	// LogFileName log name
+	LogFileName = "docker-go.log"
 )
 
 var (

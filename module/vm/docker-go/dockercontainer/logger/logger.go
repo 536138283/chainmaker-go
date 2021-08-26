@@ -41,18 +41,10 @@ var (
 func InitialConfig() {
 
 	// init show line config
-	b1, err := strconv.ParseBool(os.Getenv("ShowLine"))
-	if err != nil {
-		showLineFromConfig = false
-	}
-	if b1 {
-		showLineFromConfig = true
-	} else {
-		showLineFromConfig = false
-	}
+	showLineFromConfig = true
 
 	// init display in console config
-	b2, err := strconv.ParseBool(os.Getenv("DisplayInConsole"))
+	b2, err := strconv.ParseBool(os.Getenv("Log_In_Console"))
 	if err != nil {
 		displayInConsoleFromConfig = false
 	}
@@ -62,13 +54,10 @@ func InitialConfig() {
 		displayInConsoleFromConfig = false
 	}
 
-	logName := os.Getenv("LogFile")
-	if logName == "" {
-		logName = "docker_vm_default.log"
-	}
-	logPathFromConfig = filepath.Join(config.ShareBaseDir, logName)
+	logName := config.LogFileName
+	logPathFromConfig = filepath.Join(config.DockerLogDir, logName)
 
-	logLevelFromConfig = os.Getenv("LogLevel")
+	logLevelFromConfig = os.Getenv("Log_Level")
 	if logLevelFromConfig == "" {
 		logLevelFromConfig = "INFO"
 	}

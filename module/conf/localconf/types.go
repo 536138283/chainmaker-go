@@ -345,7 +345,6 @@ type dockerConfig struct {
 	DockerContainerDir string            `mapstructure:"docker_container_dir"`
 	MountPath          string            `mapstructure:"mount_path"`
 	DockerRpcConfig    dockerRpcConfig   `mapstructure:"rpc"`
-	DockerLogConfig    dockerLogConfig   `mapstructure:"log"`
 	DockerVmConfig     dockerVmConfig    `mapstructure:"vm"`
 	DockerPprofConfig  dockerPprofConfig `mapstructure:"pprof"`
 }
@@ -354,13 +353,6 @@ type dockerRpcConfig struct {
 	UdsOpen            bool  `mapstructure:"uds_open"`
 	MaxSendMessageSize int32 `mapstructure:"max_send_message_size"`
 	MaxRecvMessageSize int32 `mapstructure:"max_recv_message_size"`
-}
-
-type dockerLogConfig struct {
-	LogPath          string `mapstructure:"log_file"`
-	DisplayInConsole bool   `mapstructure:"display_in_console"`
-	ShowLine         bool   `mapstructure:"show_line"`
-	LogLevel         string `mapstructure:"log_level"`
 }
 
 type dockerVmConfig struct {

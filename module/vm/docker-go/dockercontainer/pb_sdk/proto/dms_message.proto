@@ -44,15 +44,25 @@ message Response {
 
 message Input {
     map<string, string> args = 1;
-
 }
 
 
 // completed message
+message Event {
+    // Event topic
+    string topic = 1;
+    // Event payload
+    repeated string data = 2;
+}
+
 message ResponseWithWriteMap {
     Response response = 1;
 
     map<string, bytes> write_map = 2;
+
+    repeated Event events = 3;
+
+
 }
 
 

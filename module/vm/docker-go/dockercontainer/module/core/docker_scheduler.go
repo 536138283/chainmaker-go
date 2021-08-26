@@ -190,13 +190,14 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId,
 	contractName, handlerName, contractPath string) error {
 	var err error           // sandbox global error
 	var stderr bytes.Buffer // used to capture the error message from sandbox
+	var stdout bytes.Buffer
 
 	cmd := exec.Cmd{
 		Path: contractPath,
 		Args: []string{user.SockPath, handlerName, contractName, config.SandBoxLogLevel},
 	}
 	cmd.Stderr = &stderr
-	//cmd.Stdout = os.Stdout
+	cmd.Stdout = &stdout
 
 	// set namespace, these settings just working in linux
 	// but it doens't affect running, cause it will put into docker to run
@@ -233,6 +234,7 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId,
 		s.logger.Errorf("tx fail: txId [%s], err [%s]", txId, stderr.String())
 		err = errors.New(runtimePanic)
 	}
+	s.logger.Debugf(stdout.String())
 
 	return err
 }

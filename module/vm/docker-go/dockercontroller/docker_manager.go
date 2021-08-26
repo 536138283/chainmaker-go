@@ -17,6 +17,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -37,10 +38,12 @@ var (
 	sourceDir          string
 	imageName          string
 	containerName      string
+	hostLogDir         string
 )
 
 const (
-	targetDir = "/mount"
+	targetDir    = "/mount"
+	dockerLogDir = "/log"
 )
 
 type DockerManager struct {
@@ -53,6 +56,9 @@ type DockerManager struct {
 	sourceDir     string
 	targetDir     string
 	dockerDir     string
+
+	hostLogDir   string
+	dockerLogDir string
 
 	lock   sync.Mutex
 	ctx    context.Context
@@ -108,6 +114,9 @@ func NewDockerManager(chainId string) *DockerManager {
 	newDockerManager.sourceDir = sourceDir
 	newDockerManager.targetDir = targetDir
 	newDockerManager.dockerDir = dockerContainerDir
+
+	newDockerManager.hostLogDir = hostLogDir
+	newDockerManager.dockerLogDir = dockerLogDir
 
 	// init mount directory and subdirectory
 	err = newDockerManager.InitMountDirectory()
@@ -339,6 +348,19 @@ func (m *DockerManager) createContainer() error {
 				VolumeOptions: nil,
 				TmpfsOptions:  nil,
 			},
+			{
+				Type:        mount.TypeBind,
+				Source:      m.hostLogDir,
+				Target:      m.dockerLogDir,
+				ReadOnly:    false,
+				Consistency: mount.ConsistencyFull,
+				BindOptions: &mount.BindOptions{
+					Propagation:  mount.PropagationRPrivate,
+					NonRecursive: false,
+				},
+				VolumeOptions: nil,
+				TmpfsOptions:  nil,
+			},
 		},
 	}, nil, nil, m.containerName)
 
@@ -420,6 +442,14 @@ func (m *DockerManager) InitMountDirectory() error {
 	}
 	m.Log.Debug("set sock dir: ", sockDir)
 
+	// create log directory
+	logDir := m.hostLogDir
+	err = m.createDir(logDir)
+	if err != nil {
+		return nil
+	}
+	m.Log.Debug("set log dir: ", logDir)
+
 	return nil
 
 }
@@ -431,14 +461,20 @@ func (m *DockerManager) constructEnvs() []string {
 
 	configsMap := make(map[string]string)
 
-	m.convertConfigToMap(dockerConfig.DockerLogConfig, configsMap)
-
 	m.convertConfigToMap(dockerConfig.DockerVmConfig, configsMap)
 
 	m.convertConfigToMap(dockerConfig.DockerRpcConfig, configsMap)
 
 	m.convertConfigToMap(dockerConfig.DockerPprofConfig, configsMap)
 
+	// set log level
+	configsMap["Log_Level"] = fmt.Sprintf("Log_Level=%s", localconf.ChainMakerConfig.LogConfig.SystemLog.LogLevels["vm"])
+
+	// set log in console
+	logInConsole := strconv.FormatBool(localconf.ChainMakerConfig.LogConfig.SystemLog.LogInConsole)
+	configsMap["Log_In_Console"] = fmt.Sprintf("Log_In_Console=%s", logInConsole)
+
+	// assembly envs
 	configs := make([]string, len(configsMap))
 	index := 0
 	for _, value := range configsMap {
@@ -594,11 +630,22 @@ func (m *DockerManager) validateConfig(config *localconf.CMConfig) (bool, error)
 	}
 	dockerContainerDir = dockerConfig.DockerContainerDir
 
+	// host mount directory
 	sourceDir = dockerConfig.MountPath
 	if !filepath.IsAbs(sourceDir) {
 		sourceDir, err = filepath.Abs(sourceDir)
 		if err != nil {
 			m.Log.Errorf("doesn't set host mount directory path correctly")
+			return false, err
+		}
+	}
+
+	// host log directory
+	hostLogDir = localconf.ChainMakerConfig.LogConfig.SystemLog.DockerFilePath
+	if !filepath.IsAbs(hostLogDir) {
+		hostLogDir, err = filepath.Abs(hostLogDir)
+		if err != nil {
+			m.Log.Errorf("doesn't set host log directory path correctly")
 			return false, err
 		}
 	}

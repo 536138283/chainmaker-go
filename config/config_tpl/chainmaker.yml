@@ -161,11 +161,6 @@ docker:
     uds_open: true                              # default is unix domain socket connection
     max_send_message_size: 10                  # MiB
     max_recv_message_size: 10                  # MiB
-  log:
-    log_file: docker_vm.log
-    display_in_console: false
-    show_line: false
-    log_level: INFO
   vm:
     tx_size: 1000
     user_num: 100

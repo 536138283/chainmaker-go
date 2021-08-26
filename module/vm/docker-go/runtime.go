@@ -187,6 +187,28 @@ func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string,
 				}
 			}
 
+			// merge events
+			var contractEvents []*commonPb.ContractEvent
+
+			if len(txResponse.Events) > protocol.EventDataMaxCount-1 {
+				err := fmt.Errorf("too many event data")
+				return r.errorResult(contractResult, err, "fail to put event data")
+			}
+
+			for _, event := range txResponse.Events {
+				contractEvent := &commonPb.ContractEvent{
+					Topic:           event.Topic,
+					TxId:            txId,
+					ContractName:    contract.Name,
+					ContractVersion: contract.Version,
+					EventData:       event.Data,
+				}
+
+				contractEvents = append(contractEvents, contractEvent)
+			}
+
+			contractResult.ContractEvent = contractEvents
+
 			close(responseCh)
 
 			return contractResult

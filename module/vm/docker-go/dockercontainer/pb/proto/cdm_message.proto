@@ -61,6 +61,15 @@ message TxResponse {
 
     map<string, bytes> write_map = 5;
 
+    repeated Event events = 6;
+
+}
+
+message Event {
+    // Event topic
+    string topic = 1;
+    // Event payload
+    repeated string data = 2;
 }
 
 

@@ -240,6 +240,15 @@ func (h *DMSHandler) handleCompleted(completedMsg *SDKProtogo.DMSMessage) error 
 		txResponse.WriteMap = nil
 	}
 
+	var events []*protogo.Event
+	for _, event := range responseWithWriteMap.Events {
+		events = append(events, &protogo.Event{
+			Topic: event.Topic,
+			Data:  event.Data,
+		})
+	}
+
+	txResponse.Events = events
 	// give back result to scheduler  -- for multiple tx incoming
 	h.scheduler.GetTxResponseCh() <- txResponse
 
