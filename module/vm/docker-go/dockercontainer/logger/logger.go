@@ -72,6 +72,7 @@ func InitialConfig() {
 	if logLevelFromConfig == "" {
 		logLevelFromConfig = "INFO"
 	}
+	config.SandBoxLogLevel = logLevelFromConfig
 }
 
 func NewDockerLogger(name string) *zap.SugaredLogger {

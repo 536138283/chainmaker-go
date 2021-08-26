@@ -87,7 +87,6 @@ func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string,
 	r.Client.GetTxSendCh() <- cdmMessage
 
 	// wait this chan
-	//todo set timeout
 	for {
 		recvMsg := <-responseCh
 
@@ -102,8 +101,8 @@ func (r *RuntimeInstance) Invoke(contract *commonPb.Contract, method string,
 
 			value, err := txSimContext.Get(contract.Name, recvMsg.Payload)
 			if err != nil {
-				// if has error, return payload is nil
-				r.Log.Errorf("failt to get state from sim context: %s", err)
+				// if it has error, return payload is nil
+				r.Log.Errorf("fail to get state from sim context: %s", err)
 				r.Client.GetStateResponseSendCh() <- getStateResponse
 				continue
 			}

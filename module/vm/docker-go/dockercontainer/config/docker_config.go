@@ -45,4 +45,6 @@ var (
 	SockBaseDir string
 	// SandBoxTimeout sandbox timeout
 	SandBoxTimeout = 2
+	// SandBoxLogLevel sand box log level defaut is INFO
+	SandBoxLogLevel string
 )

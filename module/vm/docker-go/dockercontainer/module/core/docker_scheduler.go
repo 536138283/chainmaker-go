@@ -193,7 +193,7 @@ func (s *DockerScheduler) startSandBox(user *security.User, txId,
 
 	cmd := exec.Cmd{
 		Path: contractPath,
-		Args: []string{user.SockPath, handlerName, contractName},
+		Args: []string{user.SockPath, handlerName, contractName, config.SandBoxLogLevel},
 	}
 	cmd.Stderr = &stderr
 	//cmd.Stdout = os.Stdout

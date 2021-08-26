@@ -67,9 +67,9 @@ var (
 )
 
 func initDockerGoTest() {
-	DockerGoContractPath = "./docker-go/contract1p2.7z"
+	DockerGoContractPath = "./docker-go/contract40.7z"
 	DockerGoContractUpgradePath = "./docker-go/contract_get_put_upgrade.7z"
-	contractName = "contract1p2"
+	contractName = "contract40"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO
 	printConfig("docker-go")
 }
