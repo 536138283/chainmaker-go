@@ -240,9 +240,9 @@ func (h *DMSHandler) handleCompleted(completedMsg *SDKProtogo.DMSMessage) error 
 		txResponse.WriteMap = nil
 	}
 
-	var events []*protogo.Event
+	var events []*protogo.DockerContractEvent
 	for _, event := range responseWithWriteMap.Events {
-		events = append(events, &protogo.Event{
+		events = append(events, &protogo.DockerContractEvent{
 			Topic: event.Topic,
 			Data:  event.Data,
 		})

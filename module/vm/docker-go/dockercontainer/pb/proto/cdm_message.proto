@@ -61,11 +61,11 @@ message TxResponse {
 
     map<string, bytes> write_map = 5;
 
-    repeated Event events = 6;
+    repeated DockerContractEvent events = 6;
 
 }
 
-message Event {
+message DockerContractEvent {
     // Event topic
     string topic = 1;
     // Event payload

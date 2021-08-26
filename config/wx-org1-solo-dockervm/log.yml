@@ -11,7 +11,7 @@ log:
     log_levels:
       core: INFO
       net: INFO
-      vm: DEBUG
+      vm: INFO
       storage: INFO
     file_path: ../log/org1/system.log
     docker_file_path: ../log/org1/docker-go
