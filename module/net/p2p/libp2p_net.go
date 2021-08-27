@@ -256,7 +256,8 @@ func (ln *LibP2pNet) topicSubLoop(chainId string, topicSub *libP2pPubSub.Subscri
 			continue
 		}
 		// if author of the msg not belong to this chain, drop it
-		if !ln.peerChainIdsRecorder().isPeerBelongToChain(message.GetFrom().Pretty(), chainId) {
+		if !ln.peerChainIdsRecorder().isPeerBelongToChain(message.ReceivedFrom.Pretty(), chainId) ||
+			!ln.peerChainIdsRecorder().isPeerBelongToChain(message.GetFrom().Pretty(), chainId) {
 			continue
 		}
 		bytes := message.GetData()
