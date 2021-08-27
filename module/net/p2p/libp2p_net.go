@@ -370,7 +370,7 @@ func (ln *LibP2pNet) SendMsg(chainId string, node string, msgFlag string, netMsg
 
 func (ln *LibP2pNet) registerMsgHandle() error {
 	var streamReadHandler = func(stream network.Stream) {
-		streamReadHandlerFunc := NewStreamReadHandlerFunc(ln.messageHandlerDistributor)
+		streamReadHandlerFunc := NewStreamReadHandlerFunc(ln)
 		go streamReadHandlerFunc(stream)
 
 		// if you want to use two-way stream , open this
@@ -381,7 +381,7 @@ func (ln *LibP2pNet) registerMsgHandle() error {
 }
 
 // NewStreamReadHandlerFunc create new function for listening stream reading.
-func NewStreamReadHandlerFunc(mhd *MessageHandlerDistributor) func(stream network.Stream) {
+func NewStreamReadHandlerFunc(ln *LibP2pNet) func(stream network.Stream) {
 	return func(stream network.Stream) {
 		id := stream.Conn().RemotePeer().Pretty() // sender peer id
 		reader := bufio.NewReader(stream)
@@ -424,9 +424,14 @@ func NewStreamReadHandlerFunc(mhd *MessageHandlerDistributor) func(stream networ
 				logger.Error("[Net] unmarshal net pb msg failed, %s", err.Error())
 				continue
 			}
-			handler := mhd.handler(msg.GetChainId(), msg.GetFlag())
+			if !ln.peerChainIdsRecorder().isPeerBelongToChain(id, msg.GetChainId()) {
+				logger.Debugf("[Net] sender not belong to chain. drop message. (chainId:%s, sender:%s)",
+					msg.GetChainId(), id)
+			}
+			handler := ln.messageHandlerDistributor.handler(msg.GetChainId(), msg.GetFlag())
 			if handler == nil {
-				logger.Warnf("[Net] handler not registered. drop message. (chainId:%s, flag:%s)", msg.GetChainId(), msg.GetFlag())
+				logger.Warnf("[Net] handler not registered. drop message. (chainId:%s, flag:%s)",
+					msg.GetChainId(), msg.GetFlag())
 				continue
 			}
 			readMsgCallHandler(id, msg.GetMsg(), handler)
