@@ -70,7 +70,7 @@
 
 2. 操作系统
 
-   目前仅支持在Linux系统下部署和运行Docker VM。
+   目前仅支持在Linux系统下部署和运行Docker VM。长安链与Docker VM的通信是基于unix domain socket，在非Linux系统中，会出现权限问题。
 
 
 
