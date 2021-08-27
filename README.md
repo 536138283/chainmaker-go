@@ -44,33 +44,31 @@
          GitCommit:        de40ad0
        
        ```
-
-
-
-2. 7zip
-
-   启动长安链之前，确认7zip已经安装完毕；
-
-   ```bash
-   $ 7z -version
-   
-   7-Zip [64] 16.02 : Copyright (c) 1999-2016 Igor Pavlov : 2016-05-21
-   p7zip Version 16.02 (locale=en_US.UTF-8,Utf16=on,HugeFiles=on,64 bits,8 CPUs Intel(R) Core(TM) i5-1035G1 CPU @ 1.00GHz (706E5),ASM,AES-NI)
-   
-   ```
-
-   安装7zip
-
-   ```bash
-   # ubuntu安装
-   $ sudo apt install p7zip-full pzip-rar
-   ```
-
-
-
+       
+    2. 7zip
+    
+       启动长安链之前，确认7zip已经安装完毕；
+    
+       ```bash
+       $ 7z -version
+       
+       7-Zip [64] 16.02 : Copyright (c) 1999-2016 Igor Pavlov : 2016-05-21
+       p7zip Version 16.02 (locale=en_US.UTF-8,Utf16=on,HugeFiles=on,64 bits,8 CPUs Intel(R) Core(TM) i5-1035G1 CPU @ 1.00GHz (706E5),ASM,AES-NI)
+          
+       ```
+    
+       安装7zip
+    
+       ```bash
+       # ubuntu安装
+       $ sudo apt install p7zip-full pzip-rar
+       ```
+    
+       
+    
 2. 操作系统
 
-   目前仅支持在Linux系统下部署和运行Docker VM。长安链与Docker VM的通信是基于unix domain socket，在非Linux系统中，会出现权限问题。
+    目前仅支持在Linux系统下部署和运行Docker VM。长安链与Docker VM的通信是基于unix domain socket，在非Linux系统中，会出现权限问题。
 
 
 
@@ -198,6 +196,11 @@
    $ tar xvf /data/contract_docker_go_template.tar.gz
    $ cd contract_docker_go
    $ ./build.sh
+   please input contract name, contract name should be same as name in tx: 
+   <contract_name> #此处contract_name必须和交易中的合约名一致
+   please input zip file: 
+   <zip_file_name> #建议与contract_name保持一致
+   ...
    ```
 
 
