@@ -15,6 +15,8 @@ import (
 	"regexp"
 	"strconv"
 
+	"chainmaker.org/chainmaker-go/dockervm_interface"
+
 	"chainmaker.org/chainmaker/pb-go/syscontract"
 
 	docker_go "chainmaker.org/chainmaker-go/docker-go"
@@ -38,7 +40,7 @@ type Factory struct {
 
 // NewVmManager get vm runtime manager
 func (f *Factory) NewVmManager(wxvmCodePathPrefix string, accessControl protocol.AccessControlProvider,
-	chainNodesInfoProvider protocol.ChainNodesInfoProvider, chainConf protocol.ChainConf) protocol.VmManager {
+	chainNodesInfoProvider protocol.ChainNodesInfoProvider, chainConf protocol.ChainConf) dockervm_interface.VmManager {
 
 	chainId := chainConf.ChainConfig().ChainId
 	log := logger.GetLoggerByChain(logger.MODULE_VM, chainId)
@@ -83,11 +85,11 @@ type VmManagerImpl struct {
 	DockerManager          *dockercontroller.DockerManager
 }
 
-func (m *VmManagerImpl) Start() error {
+func (m *VmManagerImpl) StartDockerVM() error {
 	return m.DockerManager.StartContainer()
 }
 
-func (m *VmManagerImpl) Stop() error {
+func (m *VmManagerImpl) StopDockerVM() error {
 	return m.DockerManager.StopAndRemoveVM()
 }
 

@@ -7,6 +7,7 @@ require (
 	chainmaker.org/chainmaker-go/chainconf v0.0.0
 	chainmaker.org/chainmaker-go/consensus v0.0.0
 	chainmaker.org/chainmaker-go/core v0.0.0
+	chainmaker.org/chainmaker-go/dockervm_interface v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/logger v0.0.0
 	chainmaker.org/chainmaker-go/net v0.0.0
@@ -19,32 +20,29 @@ require (
 	chainmaker.org/chainmaker-go/vm v0.0.0
 	chainmaker.org/chainmaker/common v0.0.0-20210812042900-40fd24729b4a
 	chainmaker.org/chainmaker/pb-go v0.0.0-20210825102713-0125b30c15d4
-	chainmaker.org/chainmaker/protocol v0.0.0-20210817092804-f396a326ba2a
+	chainmaker.org/chainmaker/protocol v0.0.0-20210817020238-7ad0d408ae23
 )
 
 replace (
 	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
 	chainmaker.org/chainmaker-go/chainconf => ./../conf/chainconf
-
 	chainmaker.org/chainmaker-go/consensus => ../consensus
 	chainmaker.org/chainmaker-go/core => ../core
 	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
+	chainmaker.org/chainmaker-go/dockervm_interface => ../dockervm_interface
 	chainmaker.org/chainmaker-go/evm => ../vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../conf/localconf
 	chainmaker.org/chainmaker-go/logger => ../logger
-
 	chainmaker.org/chainmaker-go/monitor => ../monitor
 	chainmaker.org/chainmaker-go/net => ../net
-
 	chainmaker.org/chainmaker-go/snapshot => ../snapshot
 	chainmaker.org/chainmaker-go/store => ../store
 	chainmaker.org/chainmaker-go/subscriber => ../subscriber
 	chainmaker.org/chainmaker-go/sync => ../sync
 	chainmaker.org/chainmaker-go/txpool => ../txpool
-	//chainmaker.org/chainmaker-go/txpool/batchtxpool => ./../txpool/batch
 	chainmaker.org/chainmaker-go/utils => ../utils
 	chainmaker.org/chainmaker-go/vm => ../vm
 	chainmaker.org/chainmaker-go/wasi => ../vm/wasi

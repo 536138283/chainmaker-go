@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -67,9 +68,9 @@ var (
 )
 
 func initDockerGoTest() {
-	DockerGoContractPath = "./docker-go/contract50.7z"
+	DockerGoContractPath = "./docker-go/contract_fact_1.7z"
 	DockerGoContractUpgradePath = "./docker-go/contract_fact.7z"
-	contractName = "contract50"
+	contractName = "contract_fact_1"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO
 	printConfig("docker-go")
 }
@@ -133,20 +134,20 @@ func runTest() {
 	// 3) 根据TxId查交易
 	testGetTxByTxId(sk3, &client, txId, CHAIN1)
 
-	//// 5) 根据区块高度查区块，若height为max，表示查当前区块
-	//hash := testGetBlockByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+	// 5) 根据区块高度查区块，若height为max，表示查当前区块
+	hash := testGetBlockByHeight(sk3, &client, CHAIN1, math.MaxUint64)
 	////
-	//// 6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
-	////testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, math.MaxUint64)
+	//6) 根据区块高度查区块（包含读写集），若height为-1，表示查当前区块
+	testGetBlockWithTxRWSetsByHeight(sk3, &client, CHAIN1, math.MaxUint64)
 	////
-	//// 7) 根据区块哈希查区块
-	//testGetBlockByHash(sk3, &client, CHAIN1, hash)
+	// 7) 根据区块哈希查区块
+	testGetBlockByHash(sk3, &client, CHAIN1, hash)
 	////
-	//// 8) 根据区块哈希查区块（包含读写集）
-	////testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
+	//8) 根据区块哈希查区块（包含读写集）
+	testGetBlockWithTxRWSetsByHash(sk3, &client, CHAIN1, hash)
 	//
-	//// 9) 根据TxId查区块
-	//testGetBlockByTxId(sk3, &client, txId, CHAIN1)
+	// 9) 根据TxId查区块
+	testGetBlockByTxId(sk3, &client, txId, CHAIN1)
 	//
 	//// 10) 查询最新配置块
 	//testGetLastConfigBlock(sk3, &client, CHAIN1)

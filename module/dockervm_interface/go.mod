@@ -1,4 +1,4 @@
-module chainmaker.org/chainmaker-go
+module chainmaker.org/chainmaker-go/dockervm_interface
 
 go 1.15
 

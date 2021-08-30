@@ -111,7 +111,7 @@ func (bc *Blockchain) startTxPool() error {
 }
 
 func (bc *Blockchain) startVm() error {
-	err := bc.vmMgr.Start()
+	err := bc.vmMgr.StartDockerVM()
 	if err != nil {
 		bc.log.Errorf("start vm manager failed, %s", err)
 		return err

@@ -6,6 +6,7 @@ require (
 	chainmaker.org/chainmaker-go/accesscontrol v0.0.0
 	chainmaker.org/chainmaker-go/chainconf v0.0.0
 	chainmaker.org/chainmaker-go/docker-go v0.0.0
+	chainmaker.org/chainmaker-go/dockervm_interface v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/evm v0.0.0
 	chainmaker.org/chainmaker-go/gasm v0.0.0
 	chainmaker.org/chainmaker-go/localconf v0.0.0
@@ -33,6 +34,7 @@ replace (
 	chainmaker.org/chainmaker-go/chainconf => ../conf/chainconf
 	chainmaker.org/chainmaker-go/docker-go => ./docker-go
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ./docker-go/dockercontainer
+	chainmaker.org/chainmaker-go/dockervm_interface => ../dockervm_interface
 	chainmaker.org/chainmaker-go/evm => ./evm
 	chainmaker.org/chainmaker-go/gasm => ./gasm
 	chainmaker.org/chainmaker-go/localconf => ../conf/localconf

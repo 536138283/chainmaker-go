@@ -152,7 +152,7 @@ func (bc *Blockchain) stopTxPool() error {
 
 func (bc *Blockchain) stopVm() error {
 	// stop tx pool
-	err := bc.vmMgr.Stop()
+	err := bc.vmMgr.StopDockerVM()
 	if err != nil {
 		bc.log.Errorf("stop vm manager failed, %s", err)
 

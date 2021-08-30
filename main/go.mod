@@ -43,4 +43,5 @@ replace (
 	github.com/libp2p/go-libp2p => ./../module/net/p2p/libp2p
 	github.com/libp2p/go-libp2p-core => ./../module/net/p2p/libp2pcore
 	github.com/libp2p/go-libp2p-pubsub => ./../module/net/p2p/libp2ppubsub
+	chainmaker.org/chainmaker-go/dockervm_interface => ../module/dockervm_interface
 )

@@ -9,6 +9,7 @@ SPDX-License-Identifier: Apache-2.0
 package blockchain
 
 import (
+	"chainmaker.org/chainmaker-go/dockervm_interface"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/net"
 	"chainmaker.org/chainmaker-go/subscriber"
@@ -63,7 +64,7 @@ type Blockchain struct {
 	coreEngine protocol.CoreEngine
 
 	// vm manager
-	vmMgr protocol.VmManager
+	vmMgr dockervm_interface.VmManager
 
 	// id management (idmgmt)
 	identity protocol.SigningMember

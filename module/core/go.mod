@@ -39,6 +39,7 @@ replace (
 	chainmaker.org/chainmaker-go/wasi => ../vm/wasi
 	chainmaker.org/chainmaker-go/wasmer => ../vm/wasmer
 	chainmaker.org/chainmaker-go/wxvm => ../vm/wxvm
+	chainmaker.org/chainmaker-go/dockervm_interface => ../dockervm_interface
 	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
 	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
 	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk

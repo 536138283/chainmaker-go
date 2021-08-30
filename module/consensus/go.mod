@@ -44,6 +44,6 @@ replace (
 	chainmaker.org/chainmaker-go/wasi => ../vm/wasi
 	chainmaker.org/chainmaker-go/wasmer => ../vm/wasmer
 	chainmaker.org/chainmaker-go/wxvm => ../vm/wxvm
-
+	chainmaker.org/chainmaker-go/dockervm_interface => ../dockervm_interface
 	github.com/libp2p/go-libp2p-core => ../net/p2p/libp2pcore
 )
