@@ -16,7 +16,6 @@ require (
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
-	github.com/kr/pretty v0.2.0 // indirect
 	github.com/prometheus/client_golang v1.9.0 // indirect
 	github.com/spf13/viper v1.7.1
 	github.com/stretchr/testify v1.7.0
@@ -25,12 +24,16 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0-beta.4
 	go.etcd.io/etcd/raft/v3 v3.5.0-beta.4
 	go.etcd.io/etcd/server/v3 v3.5.0-beta.4
-	go.uber.org/zap v1.16.1-0.20210329175301-c23abee72d19
+	go.uber.org/zap v1.18.1
 )
 
 replace (
+
+	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
 	chainmaker.org/chainmaker-go/chainconf => ../conf/chainconf
+	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
+	chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
 	chainmaker.org/chainmaker-go/evm => ../vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ../conf/localconf
@@ -43,8 +46,4 @@ replace (
 	chainmaker.org/chainmaker-go/wxvm => ../vm/wxvm
 
 	github.com/libp2p/go-libp2p-core => ../net/p2p/libp2pcore
-	chainmaker.org/chainmaker-go/docker-go => ../vm/docker-go
-    chainmaker.org/chainmaker-go/docker-go/dockercontainer => ../vm/docker-go/dockercontainer
-
-    chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 )

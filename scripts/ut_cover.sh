@@ -21,7 +21,7 @@ cm=$(pwd)/..
 set -e
 
 ut_cover "module/accesscontrol" 47
-ut_cover "module/blockchain" 2.2
+ut_cover "module/blockchain" 2.1
 ut_cover "module/conf/chainconf" 26
 ut_cover "module/conf/localconf" 11
 ut_cover "module/consensus" 11.4

@@ -13,15 +13,16 @@ require (
 	chainmaker.org/chainmaker-go/vm v0.0.0
 	chainmaker.org/chainmaker/common v0.0.0-20210812042900-40fd24729b4a
 	chainmaker.org/chainmaker/pb-go v0.0.0-20210825102713-0125b30c15d4
-	chainmaker.org/chainmaker/protocol v0.0.0-20210817020238-7ad0d408ae23
+	chainmaker.org/chainmaker/protocol v0.0.0-20210817092804-f396a326ba2a
 	github.com/gogo/protobuf v1.3.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/prometheus/client_golang v1.9.0
-	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
-	google.golang.org/grpc v1.37.0
+	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
+	google.golang.org/grpc v1.39.0
 )
 
 replace (
+	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 	chainmaker.org/chainmaker-go/accesscontrol => ../accesscontrol
 	chainmaker.org/chainmaker-go/blockchain => ../blockchain
 	chainmaker.org/chainmaker-go/chainconf => ./../conf/chainconf
@@ -50,6 +51,5 @@ replace (
 	github.com/libp2p/go-libp2p => ../net/p2p/libp2p
 	github.com/libp2p/go-libp2p-core => ../net/p2p/libp2pcore
 	github.com/libp2p/go-libp2p-pubsub => ../net/p2p/libp2ppubsub
-	chainmaker.org/chainmaker-contract-sdk-docker-go/pb_sdk => ../vm/docker-go/dockercontainer/pb_sdk
 
 )
