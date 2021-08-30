@@ -176,7 +176,7 @@
 1. 拉取镜像
 
    ```bash
-   $ docker pull chainmakerofficial/chainmaker-docker-go-contract:alpha
+   $ docker pull chainmakerofficial/chainmaker-docker-go-contract:2.0.0_dockervm_alpha
    ```
 
 
@@ -184,7 +184,7 @@
 2. 请指定你本机的工作目录$WORK_DIR，例如/data/workspace/contract，挂载到docker容器中以方便后续进行必要的一些文件拷贝
 
    ```bash
-   $ docker run -it --name chainmaker-docker-go-contract -v <WORK_DIR>:/home chainmakerofficial/chainmaker-docker-go-contract:alpha bash
+   $ docker run -it --name chainmaker-docker-go-contract -v <WORK_DIR>:/home chainmakerofficial/chainmaker-docker-go-contract:2.0.0_dockervm_alpha bash
    ```
 
 

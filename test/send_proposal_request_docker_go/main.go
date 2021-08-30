@@ -67,9 +67,9 @@ var (
 )
 
 func initDockerGoTest() {
-	DockerGoContractPath = "./docker-go/contract60.7z"
-	DockerGoContractUpgradePath = "./docker-go/contract_get_put_upgrade.7z"
-	contractName = "contract60"
+	DockerGoContractPath = "./docker-go/contract50.7z"
+	DockerGoContractUpgradePath = "./docker-go/contract_fact.7z"
+	contractName = "contract50"
 	runtimeType = commonPb.RuntimeType_DOCKER_GO
 	printConfig("docker-go")
 }
@@ -120,20 +120,19 @@ func runTest() {
 	time.Sleep(5 * time.Second)
 
 	// 2) 执行合约
-	//txId = testDockerInvoke(sk3, &client, CHAIN1, "10", "2")
-	//time.Sleep(5 * time.Second)
-
-	//4) query 测试
-	testDockerQuery(sk3, &client, CHAIN1, "1", "2")
+	txId = testDockerInvokeSave(sk3, &client, CHAIN1)
 	time.Sleep(5 * time.Second)
-	//
-	//for i := 0; i < 1000; i++ {
-	//	testDockerInvoke(sk3, &client, CHAIN1, "10", "2")
-	//}
 
-	//// 4) 根据TxId查交易
-	//testGetTxByTxId(sk3, &client, txId, CHAIN1)
-	//
+	// 3) 根据TxId查交易
+	testGetTxByTxId(sk3, &client, txId, CHAIN1)
+
+	//4)
+	txId = testDockerInvokeFInd(sk3, &client, CHAIN1)
+	time.Sleep(5 * time.Second)
+
+	// 3) 根据TxId查交易
+	testGetTxByTxId(sk3, &client, txId, CHAIN1)
+
 	//// 5) 根据区块高度查区块，若height为max，表示查当前区块
 	//hash := testGetBlockByHeight(sk3, &client, CHAIN1, math.MaxUint64)
 	////
@@ -201,23 +200,56 @@ func testKvIterator(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 	}
 }
 
-func testDockerInvoke(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, v1, v2 string) string {
+func testDockerInvokeSave(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string) string {
 	txId := utils.GetRandTxId()
 	fmt.Printf("\n============ invoke contract %s [%s] ============\n", contractName, txId)
 
 	// 构造Payload
 	pairs := []*commonPb.KeyValuePair{
 		{
-			Key:   "arg0",
-			Value: []byte("Logic"),
+			Key:   "method",
+			Value: []byte("save"),
 		},
 		{
-			Key:   "arg1",
-			Value: []byte(v1),
+			Key:   "file_hash",
+			Value: []byte(fileHash),
 		},
 		{
-			Key:   "arg2",
-			Value: []byte(v2),
+			Key:   "time",
+			Value: []byte("1615188470000"),
+		},
+		{
+			Key:   "file_name",
+			Value: []byte("长安链chainmaker"),
+		},
+	}
+
+	payload := &commonPb.Payload{
+		ContractName: contractName,
+		Method:       "invoke_contract",
+		Parameters:   pairs,
+	}
+
+	resp := common.ProposalRequest(sk3, client, commonPb.TxType_INVOKE_CONTRACT,
+		chainId, txId, payload, nil)
+
+	fmt.Printf(logTempSendTx, resp.Code, resp.Message, resp.ContractResult)
+	return txId
+}
+
+func testDockerInvokeFInd(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string) string {
+	txId := utils.GetRandTxId()
+	fmt.Printf("\n============ invoke contract %s [%s] ============\n", contractName, txId)
+
+	// 构造Payload
+	pairs := []*commonPb.KeyValuePair{
+		{
+			Key:   "method",
+			Value: []byte("findByFileHash"),
+		},
+		{
+			Key:   "file_hash",
+			Value: []byte(fileHash),
 		},
 	}
 
@@ -240,18 +272,19 @@ func testDockerQuery(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId
 	fmt.Printf("\n============ query contract %s[sum][%s] ============\n", contractName, txId)
 
 	// 构造Payload
+	// 构造Payload
 	pairs := []*commonPb.KeyValuePair{
 		{
-			Key:   "arg0",
-			Value: []byte("sum"),
+			Key:   "file_hash",
+			Value: []byte(fileHash),
 		},
 		{
-			Key:   "arg1",
-			Value: []byte(v1),
+			Key:   "time",
+			Value: []byte("1615188470000"),
 		},
 		{
-			Key:   "arg2",
-			Value: []byte(v2),
+			Key:   "file_name",
+			Value: []byte("长安链chainmaker"),
 		},
 	}
 
