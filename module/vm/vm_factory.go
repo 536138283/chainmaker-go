@@ -16,8 +16,7 @@ import (
 	"strconv"
 
 	"chainmaker.org/chainmaker-go/dockervm_interface"
-
-	"chainmaker.org/chainmaker/pb-go/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	docker_go "chainmaker.org/chainmaker-go/docker-go"
 	"chainmaker.org/chainmaker-go/docker-go/dockercontroller"
@@ -28,9 +27,9 @@ import (
 	"chainmaker.org/chainmaker-go/wasmer"
 	"chainmaker.org/chainmaker-go/wxvm"
 	"chainmaker.org/chainmaker-go/wxvm/xvm"
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 const WxvmCodeFolder = "wxvm"
