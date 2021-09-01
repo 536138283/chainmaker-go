@@ -48,7 +48,7 @@ var (
 )
 
 const (
-	DefaultTimeoutPropose      = 10 * time.Second // Timeout of waitting for a proposal before prevoting nil
+	DefaultTimeoutPropose      = 30 * time.Second // Timeout of waitting for a proposal before prevoting nil
 	DefaultTimeoutProposeDelta = 1 * time.Second  // Increased time delta of TimeoutPropose between rounds
 	DefaultBlocksPerProposer   = int64(1)         // The number of blocks each proposer can propose
 	TimeoutPrevote             = 1 * time.Second  // Timeout of waitting for >2/3 prevote
@@ -161,7 +161,7 @@ func New(config ConsensusTBFTImplConfig) (*ConsensusTBFTImpl, error) {
 	consensus.verifyResultC = make(chan *consensuspb.VerifyResult, defaultChanCap)
 	consensus.blockHeightC = make(chan int64, defaultChanCap)
 	consensus.externalMsgC = make(chan *tbftpb.TBFTMsg, defaultChanCap)
-	consensus.internalMsgC = make(chan *tbftpb.TBFTMsg, 10)
+	consensus.internalMsgC = make(chan *tbftpb.TBFTMsg, defaultChanCap)
 
 	validators, err := GetValidatorListFromConfig(consensus.chainConf.ChainConfig())
 	if err != nil {
@@ -189,7 +189,6 @@ func (consensus *ConsensusTBFTImpl) Start() error {
 
 	consensus.logger.Infof("start ConsensusTBFTImpl[%s]", consensus.Id)
 	consensus.timeScheduler.Start()
-	//go consensus.handleInternalMsgC()
 
 	err := consensus.replayWal()
 	if err != nil {
@@ -398,20 +397,6 @@ func (consensus *ConsensusTBFTImpl) handle() {
 		}
 	}
 }
-
-//func (consensus *ConsensusTBFTImpl) handleInternalMsgC() {
-//	consensus.logger.Infof("[%s] handle internalMsgC start", consensus.Id)
-//	defer consensus.logger.Infof("[%s] handle internalMsgC end", consensus.Id)
-//
-//	loop := true
-//	for loop {
-//		select {
-//		case msg := <-consensus.internalMsgC:
-//			consensus.logger.Debugf("[%s] receive from internalMsgC %s, size: %d", consensus.Id, msg.Type, proto.Size(msg))
-//			consensus.handleConsensusMsg(msg)
-//		}
-//	}
-//}
 
 func (consensus *ConsensusTBFTImpl) handleProposedBlock(proposedBlock *consensuspb.ProposalBlock) {
 	consensus.Lock()
