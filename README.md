@@ -328,8 +328,136 @@
    }
    
    ```
+## 调用示例
 
+调用Docker-Go的合约与之前保持一致，可以通过cmc或者Go SDK，通过发交易的方式进行合约的部署和调用。
+区别在于，调用合约的具体方法需要放入参数中，并且runtime-type为DOCKER_GO。以下示例的准备工作请按官网文档进行。
 
+1. 使用cmc工具
+    ``` bash
+   ## 创建合约
+   ./cmc client contract user create \
+    --contract-name=contract_fact \
+    --runtime-type=DOCKER_GO \
+    --byte-code-path=./testdata/docker-go-demo/contract_fact.7z \
+    --version=1.0 \
+    --sdk-conf-path=./testdata/sdk_config.yml \
+    --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.tls.key,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.tls.key,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.tls.key,./testdata/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.tls.key \
+    --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.tls.crt \
+    --sync-result=true \
+    --params="{}"
+   
+   ## 调用合约
+   ./cmc client contract user invoke \
+    --contract-name=contract_fact \
+    --method=invoke_contract \
+    --sdk-conf-path=./testdata/sdk_config.yml \
+    --params="{\"method\":\"save\",\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" \
+    --sync-result=true
+   
+   ## 查询合约
+   ./cmc client contract user get \
+    --contract-name=contract_fact \
+    --method=invoke_contract \
+    --sdk-conf-path=./testdata/sdk_config.yml \
+    --params="{\"method\":\"findByFileHash\",\"file_hash\":\"ab3456df5799b87c77e7f88\"}"
+    ```
+
+2. 使用Go SDK
+    ``` go
+   // 创建合约
+   func testUserContractCreate(client *sdk.ChainClient, withSyncResult bool, isIgnoreSameContract bool, usernames ...string) {
+
+        resp, err := createUserContract(client, factContractName, factVersion, factByteCodePath,
+            common.RuntimeType_DOCKER_GO, []*common.KeyValuePair{}, withSyncResult, usernames...)
+        if !isIgnoreSameContract {
+            if err != nil {
+                log.Fatalln(err)
+            }
+        }
+
+        fmt.Printf("CREATE claim contract resp: %+v\n", resp)
+    }
+   
+   func createUserContract(client *sdk.ChainClient, contractName, version, byteCodePath string, runtime common.RuntimeType, kvs []*common.KeyValuePair, withSyncResult bool, usernames ...string) (*common.TxResponse, error) {
+
+        payload, err := client.CreateContractCreatePayload(contractName, version, byteCodePath, runtime, kvs)
+        if err != nil {
+            return nil, err
+        }
+
+        endorsers, err := examples.GetEndorsers(payload, usernames...)
+        if err != nil {
+            return nil, err
+        }
+
+        resp, err := client.SendContractManageRequest(payload, endorsers, createContractTimeout, withSyncResult)
+        if err != nil {
+            return nil, err
+        }
+
+        err = examples.CheckProposalRequestResp(resp, true)
+        if err != nil {
+            return nil, err
+        }
+
+        return resp, nil
+    }
+   
+   // 调用合约
+   // 调用或者查询合约时，method参数请设置为 invoke_contract，此方法会调用合约的InvokeContract方法，再通过参数获得具体方法
+   func testUserContractInvoke(client *sdk.ChainClient, method string, withSyncResult bool) (string, error) {
+
+        curTime := strconv.FormatInt(time.Now().Unix(), 10)
+
+        fileHash := uuid.GetUUID()
+        kvs := []*common.KeyValuePair{
+            {
+                Key: "method",
+                Value: []byte("save"),
+            },
+            {
+                Key:   "time",
+                Value: []byte(curTime),
+            },
+            {
+                Key:   "file_hash",
+                Value: []byte(fileHash),
+            },
+            {
+                Key:   "file_name",
+                Value: []byte(fmt.Sprintf("file_%s", curTime)),
+            },
+        }
+
+        err := invokeUserContract(client, factContractName, method, "", kvs, withSyncResult)
+        if err != nil {
+            return "", err
+        }
+
+        return fileHash, nil
+    }
+   
+   func invokeUserContract(client *sdk.ChainClient, contractName, method, txId string, kvs []*common.KeyValuePair, withSyncResult bool) error {
+
+        resp, err := client.InvokeContract(contractName, method, txId, kvs, -1, withSyncResult)
+        if err != nil {
+            return err
+        }
+
+        if resp.Code != common.TxStatusCode_SUCCESS {
+            return fmt.Errorf("invoke contract failed, [code:%d]/[msg:%s]\n", resp.Code, resp.Message)
+        }
+
+        if !withSyncResult {
+            fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, resp.ContractResult.Result)
+        } else {
+            fmt.Printf("invoke contract success, resp: [code:%d]/[msg:%s]/[contractResult:%s]\n", resp.Code, resp.Message, resp.ContractResult)
+        }
+
+        return nil
+    }
+    ```
 
 ## 代码编写规则
 
