@@ -93,6 +93,7 @@ func (ts *timeScheduler) stopTimer() {
 
 // AddTimeoutInfo add a timeoutInfo event to timeScheduler
 func (ts *timeScheduler) AddTimeoutInfo(ti timeoutInfo) {
+	ts.logger.Debugf("length of bufferC %d", len(ts.bufferC))
 	ts.bufferC <- ti
 }
 

@@ -20,7 +20,7 @@ type timeoutInfo struct {
 
 func (ti timeoutInfo) string() string {
 
-	return fmt.Sprintf("{time.Duration:%s,Height:%d,Round:%d,Step:%d}", ti.String(), ti.Height, ti.Round, ti.Step)
+	return fmt.Sprintf("{time.Duration:%s,Height:%d,Round:%d,Step:%s}", ti.String(), ti.Height, ti.Round, ti.Step)
 
 }
 
@@ -127,7 +127,7 @@ func NewVote(typ tbftpb.VoteType, voter string, height int64, round int32, hash 
 
 func main() {
 
-	waldir := "/Users/sweet/go/src/chainmaker-go/build/release/chainmaker-V1.0.0-wx-org2.chainmaker.org/data/wx-org2.chainmaker.org/ledgerData1/chain1/tbftwal"
+	waldir := "/Users/sweet/go/src/chainmaker-go/build/release/chainmaker-V1.0.0-wx-org.chainmaker.org/data/wx-org.chainmaker.org/ledgerData1/chain1/tbftwal"
 
 	wal1, err := wal.Open(waldir, nil)
 	if err != nil {
@@ -138,19 +138,14 @@ func main() {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(lastIndex, waldir)
+	fmt.Printf("wal lastIndex:%d \n", lastIndex)
 
-	entry := &tbftpb.WalEntry{
-
-		HeightFirstIndex: 1,
-	}
-
-	for i := entry.HeightFirstIndex; i <= lastIndex; i++ {
+	for i := uint64(1); i <= lastIndex; i++ {
 		data, err := wal1.Read(i)
 		if err != nil {
 			fmt.Println(err)
 		}
-		entry = &tbftpb.WalEntry{}
+		entry := &tbftpb.WalEntry{}
 		mustUnmarshal(data, entry)
 
 		switch entry.Type {
@@ -159,21 +154,21 @@ func main() {
 			mustUnmarshal(entry.Data, timeoutInfoProto)
 
 			timeoutInfo := newTimeoutInfoFromProto(timeoutInfoProto)
-			fmt.Printf("walIndex:%d, height:%d, timeoutInfo:%+v\n", i, timeoutInfo.Height, timeoutInfo.string())
+			fmt.Printf("walIndex:%d, height:%d, heightFirstIndex:%d, timeoutInfo:%+v\n", i, timeoutInfo.Height, entry.HeightFirstIndex, timeoutInfo.string())
 
 		case tbftpb.WalEntryType_ProposalEntry:
 			proposalProto := new(tbftpb.Proposal)
 			mustUnmarshal(entry.Data, proposalProto)
 			proposal := NewProposalFromProto(proposalProto)
 
-			fmt.Printf("walIndex:%d, height:%d, proposal:%+v\n", i, proposal.Height, proposal)
+			fmt.Printf("walIndex:%d, height:%d, heightFirstIndex:%d, proposal:%+v\n", i, proposal.Height, entry.HeightFirstIndex, proposal)
 
 		case tbftpb.WalEntryType_VoteEntry:
 			voteProto := new(tbftpb.Vote)
 			mustUnmarshal(entry.Data, voteProto)
 			vote := NewVoteFromProto(voteProto)
 
-			fmt.Printf("walIndex:%d, height:%d, vote:%+v\n", i, vote.Height, vote)
+			fmt.Printf("walIndex:%d, height:%d, heightFirstIndex:%d, vote:%+v\n", i, vote.Height, entry.HeightFirstIndex, vote)
 		}
 	}
 }
