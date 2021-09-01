@@ -24,7 +24,7 @@ func NewBigInteger(value string) *BigInteger {
 			Value: newVal,
 		}
 	}
-	return nil
+	return NewZeroBigInteger()
 }
 
 func NewZeroBigInteger() *BigInteger {
