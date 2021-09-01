@@ -48,7 +48,7 @@ var (
 )
 
 const (
-	DefaultTimeoutPropose      = 30 * time.Second // Timeout of waitting for a proposal before prevoting nil
+	DefaultTimeoutPropose      = 10 * time.Second // Timeout of waitting for a proposal before prevoting nil
 	DefaultTimeoutProposeDelta = 1 * time.Second  // Increased time delta of TimeoutPropose between rounds
 	DefaultBlocksPerProposer   = int64(1)         // The number of blocks each proposer can propose
 	TimeoutPrevote             = 1 * time.Second  // Timeout of waitting for >2/3 prevote
@@ -78,21 +78,22 @@ func mustUnmarshal(b []byte, msg proto.Message) {
 // and it implements the ConsensusEngine interface.
 type ConsensusTBFTImpl struct {
 	sync.RWMutex
-	logger           *logger.CMLogger
-	chainID          string
-	Id               string
-	dpos             protocol.DPoS
-	singer           protocol.SigningMember
-	ac               protocol.AccessControlProvider
-	dbHandle         protocol.DBHandle
-	ledgerCache      protocol.LedgerCache
-	chainConf        protocol.ChainConf
-	netService       protocol.NetService
-	msgbus           msgbus.MessageBus
-	closeC           chan struct{}
-	waldir           string
-	wal              *wal.Log
-	heightFirstIndex uint64
+	logger             *logger.CMLogger
+	chainID            string
+	Id                 string
+	dpos               protocol.DPoS
+	singer             protocol.SigningMember
+	ac                 protocol.AccessControlProvider
+	dbHandle           protocol.DBHandle
+	ledgerCache        protocol.LedgerCache
+	chainConf          protocol.ChainConf
+	netService         protocol.NetService
+	msgbus             msgbus.MessageBus
+	closeC             chan struct{}
+	internalMsgCCloseC chan struct{}
+	waldir             string
+	wal                *wal.Log
+	heightFirstIndex   uint64
 
 	validatorSet *validatorSet
 
@@ -147,6 +148,7 @@ func New(config ConsensusTBFTImplConfig) (*ConsensusTBFTImpl, error) {
 	consensus.msgbus = config.MsgBus
 	consensus.dpos = config.Dpos
 	consensus.closeC = make(chan struct{})
+	consensus.internalMsgCCloseC = make(chan struct{})
 
 	consensus.waldir = path.Join(localconf.ChainMakerConfig.StorageConfig.StorePath, consensus.chainID, walDir)
 	consensus.wal, err = wal.Open(consensus.waldir, nil)
@@ -159,7 +161,7 @@ func New(config ConsensusTBFTImplConfig) (*ConsensusTBFTImpl, error) {
 	consensus.verifyResultC = make(chan *consensuspb.VerifyResult, defaultChanCap)
 	consensus.blockHeightC = make(chan int64, defaultChanCap)
 	consensus.externalMsgC = make(chan *tbftpb.TBFTMsg, defaultChanCap)
-	consensus.internalMsgC = make(chan *tbftpb.TBFTMsg, defaultChanCap)
+	consensus.internalMsgC = make(chan *tbftpb.TBFTMsg, 10)
 
 	validators, err := GetValidatorListFromConfig(consensus.chainConf.ChainConfig())
 	if err != nil {
@@ -186,12 +188,14 @@ func (consensus *ConsensusTBFTImpl) Start() error {
 	chainconf.RegisterVerifier(consensus.chainID, consensuspb.ConsensusType_TBFT, consensus)
 
 	consensus.logger.Infof("start ConsensusTBFTImpl[%s]", consensus.Id)
+	consensus.timeScheduler.Start()
+	//go consensus.handleInternalMsgC()
+
 	err := consensus.replayWal()
 	if err != nil {
 		return err
 	}
 
-	consensus.timeScheduler.Start()
 	consensus.gossip.start()
 	go consensus.handle()
 	return nil
@@ -394,6 +398,20 @@ func (consensus *ConsensusTBFTImpl) handle() {
 		}
 	}
 }
+
+//func (consensus *ConsensusTBFTImpl) handleInternalMsgC() {
+//	consensus.logger.Infof("[%s] handle internalMsgC start", consensus.Id)
+//	defer consensus.logger.Infof("[%s] handle internalMsgC end", consensus.Id)
+//
+//	loop := true
+//	for loop {
+//		select {
+//		case msg := <-consensus.internalMsgC:
+//			consensus.logger.Debugf("[%s] receive from internalMsgC %s, size: %d", consensus.Id, msg.Type, proto.Size(msg))
+//			consensus.handleConsensusMsg(msg)
+//		}
+//	}
+//}
 
 func (consensus *ConsensusTBFTImpl) handleProposedBlock(proposedBlock *consensuspb.ProposalBlock) {
 	consensus.Lock()
@@ -900,7 +918,7 @@ func (consensus *ConsensusTBFTImpl) enterNewHeight(height int64, replayMode bool
 		consensus.logger.Infof("consensus.Id:[%s] consensus.Height:%d walLastIndex:%d ",
 			consensus.Id, consensus.Height, lastIndex)
 
-		consensus.heightFirstIndex = lastIndex
+		consensus.heightFirstIndex = lastIndex + 1
 
 		err = consensus.deleteWalEntry(height, lastIndex)
 		if err != nil {
@@ -1039,6 +1057,7 @@ func (consensus *ConsensusTBFTImpl) enterPrevote(height int64, round int32) {
 	prevoteProto := createPrevoteMsg(prevote)
 
 	consensus.internalMsgC <- prevoteProto
+	consensus.logger.Debugf("len(internalMsgC): %d", len(consensus.internalMsgC))
 }
 
 // enterPrecommit enter `precommit` phase
@@ -1099,7 +1118,6 @@ func (consensus *ConsensusTBFTImpl) enterPrecommit(height int64, round int32) {
 			localconf.ChainMakerConfig.DebugConfig.IsPrecommitDelay)
 		time.Sleep(2 * time.Second)
 	}
-
 	consensus.internalMsgC <- precommitProto
 }
 
@@ -1433,33 +1451,37 @@ func (consensus *ConsensusTBFTImpl) saveWalEntry(entry interface{}) {
 
 // replayWal replays the wal when the node starting
 func (consensus *ConsensusTBFTImpl) replayWal() error {
+	//height of chain
 	currentHeight, err := consensus.ledgerCache.CurrentHeight()
 	if err != nil {
 		return err
 	}
-	consensus.logger.Infof("[%s] replayWal currentHeight: %d", consensus.Id, currentHeight)
 
 	lastIndex, err := consensus.wal.LastIndex()
 	if err != nil {
 		return err
 	}
-	data, err := consensus.wal.Read(lastIndex)
+
+	lastData, err := consensus.wal.Read(lastIndex)
 	if err == wal.ErrNotFound {
 		consensus.logger.Infof("[%s] replayWal can't found log entry in wal", consensus.Id)
-		consensus.enterNewHeight(currentHeight+1, true)
+		consensus.enterNewHeight(currentHeight+1, false)
 		return nil
 	}
 	if err != nil {
 		return err
 	}
 
-	entry := &tbftpb.WalEntry{}
-	mustUnmarshal(data, entry)
+	lastEntry := &tbftpb.WalEntry{}
+	mustUnmarshal(lastData, lastEntry)
 
-	consensus.heightFirstIndex = entry.HeightFirstIndex
-	consensus.logger.Infof("[%s] replayWal lastIndex of wal: %d and HeightFirstIndex of wal: %d", consensus.Id, lastIndex, entry.HeightFirstIndex)
+	consensus.heightFirstIndex = lastEntry.HeightFirstIndex
+	consensus.logger.Infof("[%s] replayWal lastIndex of wal: %d and HeightFirstIndex of wal: %d", consensus.Id, lastIndex, lastEntry.HeightFirstIndex)
 
-	height := entry.Height
+	//height of wal
+	height := lastEntry.Height
+	consensus.logger.Infof("[%s] replayWal chainHeight: %d and walHeight: %d", consensus.Id, currentHeight, height)
+
 	if currentHeight < height-1 {
 		consensus.logger.Fatalf("[%s] replay currentHeight: %v < height-1: %v, this should not happen",
 			consensus.Id, currentHeight, height-1)
@@ -1467,13 +1489,24 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 
 	if currentHeight >= height {
 		// consensus is slower than ledger
-		consensus.enterNewHeight(currentHeight+1, true)
+		consensus.enterNewHeight(currentHeight+1, false)
 		return nil
 	} else {
 		// replay wal log
+		// currentHeight+1 = height
+		go consensus.deleteInternalMsgC()
 		consensus.enterNewHeight(height, true)
-		for i := entry.HeightFirstIndex; i <= lastIndex; i++ {
-			consensus.logger.Debugf("[%s] replay entry type: %s, Data.len: %d", consensus.Id, entry.Type, len(entry.Data))
+		for i := lastEntry.HeightFirstIndex; i <= lastIndex; i++ {
+			data, err := consensus.wal.Read(i)
+			if err != nil {
+				return err
+			}
+			entry := &tbftpb.WalEntry{}
+			mustUnmarshal(data, entry)
+
+			consensus.logger.Debugf("[%s] replay entry index: %d, entry height：%d，HeightFirstIndex: %d，type: "+
+				"%s, Data.len: %d", consensus.Id, i, entry.Height, entry.HeightFirstIndex, entry.Type, len(entry.Data))
+
 			switch entry.Type {
 			case tbftpb.WalEntryType_TimeoutEntry:
 				timeoutInfoProto := new(tbftpb.TimeoutInfo)
@@ -1491,6 +1524,9 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 				}
 				consensus.handleVerifyResult(verifyResult, true)
 			case tbftpb.WalEntryType_VoteEntry:
+				if i == lastIndex {
+					close(consensus.internalMsgCCloseC)
+				}
 				voteProto := new(tbftpb.Vote)
 				mustUnmarshal(entry.Data, voteProto)
 				vote := NewVoteFromProto(voteProto)
@@ -1507,6 +1543,22 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 	}
 
 	return nil
+}
+
+func (consensus *ConsensusTBFTImpl) deleteInternalMsgC() {
+	consensus.logger.Infof("[%s] delete internalMsgC start", consensus.Id)
+	defer consensus.logger.Infof("[%s] delete internalMsgC end", consensus.Id)
+
+	loop := true
+	for loop {
+		select {
+		case msg := <-consensus.internalMsgC:
+			consensus.logger.Debugf("[%s] delete internalMsgC msg Type: %s, size: %d", consensus.Id, msg.Type, proto.Size(msg))
+
+		case <-consensus.internalMsgCCloseC:
+			loop = false
+		}
+	}
 }
 
 func (consensus *ConsensusTBFTImpl) deleteWalEntry(num int64, index uint64) error {
