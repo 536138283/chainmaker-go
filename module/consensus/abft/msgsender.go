@@ -58,7 +58,7 @@ func (m *msgSender) retry(msg *abftpb.ABFTMessageReq, seq uint64, times int) {
 
 	times += 1
 	interval := backOffDelay(times)
-	entry := m.timer.Add(interval, gtimer.JobFunc(func() {
+	entry := m.timer.AddOnce(interval, gtimer.JobFunc(func() {
 		m.retry(msg, seq, times)
 	}))
 	m.logger.Debugf("[%s] retry msg seq: %v, height: %v, to: %v, times: %v", m.id, seq, msg.Height, msg.To, times)
