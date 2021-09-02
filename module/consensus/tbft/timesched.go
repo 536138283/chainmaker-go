@@ -131,6 +131,9 @@ func (ts *timeScheduler) handle() {
 			ts.logger.Debugf("[%s] schedule %s", ts.id, ti)
 
 		case <-ts.timer.C: // timeout
+			if ti.Duration == 0 && ti.Height == 0 && ti.Round == 0 && ti.Step == tbftpb.Step_NewHeight {
+				continue
+			}
 			ts.logger.Debugf("[%s] %s timeout", ts.id, ti)
 			ts.timeoutC <- ti
 		case <-ts.stopC:
