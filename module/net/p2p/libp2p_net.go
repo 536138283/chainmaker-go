@@ -603,53 +603,6 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 		return
 	}
 
-	// re verify myself
-	removeSelf := false
-	myCertBytes, ok := peerIdTlsCertMap[ln.GetNodeUid()]
-	if ok {
-		if ln.libP2pHost.isGmTls {
-			chainTrustRoots := ln.libP2pHost.gmTlsChainTrustRoots
-			// tls cert exist, parse to cert
-			cert, err := cmx509.ParseCertificate(myCertBytes)
-			if err != nil {
-				logger.Errorf("[Net] [ReVerifyTrustRoots] parse tls cert failed. %s", err.Error())
-				return
-			}
-			// whether verify failed, if failed remove it
-			if !chainTrustRoots.VerifyCertOfChain(chainId, cert) {
-				removeSelf = true
-			}
-			delete(peerIdTlsCertMap, ln.GetNodeUid())
-		} else if ln.libP2pHost.isTls {
-			chainTrustRoots := ln.libP2pHost.tlsChainTrustRoots
-			// tls cert exist, parse to cert
-			cert, err := x509.ParseCertificate(myCertBytes)
-			if err != nil {
-				logger.Errorf("[Net] [ReVerifyTrustRoots] parse tls cert failed. %s", err.Error())
-				return
-			}
-			// whether verify failed, if failed remove it
-			if !chainTrustRoots.VerifyCertOfChain(chainId, cert) {
-				removeSelf = true
-			}
-			delete(peerIdTlsCertMap, ln.GetNodeUid())
-		}
-	}
-
-	if removeSelf {
-		logger.Infof("[Net] [ReVerifyTrustRoots] remove myself from chain, (pid: %s, chain id: %s)",
-			ln.GetNodeUid(), chainId)
-		existPeers := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
-		for _, existPeerId := range existPeers {
-			ln.libP2pHost.peerChainIdsRecorder.removePeerChainId(existPeerId, chainId)
-			if err := ln.removeChainPubSubWhiteList(chainId, existPeerId); err != nil {
-				logger.Warnf("[Net] [ReVerifyTrustRoots] remove chain pub-sub white list failed, %s",
-					err.Error())
-			}
-		}
-		return
-	}
-
 	// re verify exist peers
 	existPeers := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
 	for _, existPeerId := range existPeers {
