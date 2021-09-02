@@ -239,7 +239,7 @@ func constructKey(contractName string, key []byte) string {
 
 func (s *txQuerySimContextImpl) CallContract(contractId *commonPb.ContractId, method string, byteCode []byte,
 	parameter map[string]string, gasUsed uint64, refTxType commonPb.TxType) (
-	*commonPb.ContractResult, protocol.SpecialTxType, commonPb.TxStatusCode) {
+	*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 	s.gasUsed = gasUsed
 	s.currentDepth = s.currentDepth + 1
 	if s.currentDepth > protocol.CallContractDepth {
@@ -248,7 +248,7 @@ func (s *txQuerySimContextImpl) CallContract(contractId *commonPb.ContractId, me
 			Result:  nil,
 			Message: fmt.Sprintf("CallContract too depth %d", s.currentDepth),
 		}
-		return contractResult, protocol.SpecialTxTypeNormal, commonPb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
+		return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
 	}
 	if s.gasUsed > protocol.GasLimit {
 		contractResult := &commonPb.ContractResult{
@@ -256,7 +256,7 @@ func (s *txQuerySimContextImpl) CallContract(contractId *commonPb.ContractId, me
 			Result:  nil,
 			Message: fmt.Sprintf("There is not enough gas, gasUsed %d GasLimit %d ", gasUsed, int64(protocol.GasLimit)),
 		}
-		return contractResult, protocol.SpecialTxTypeNormal, commonPb.TxStatusCode_CONTRACT_FAIL
+		return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_CONTRACT_FAIL
 	}
 	r, specialTxType, code := s.vmManager.RunContract(contractId, method, byteCode, parameter, s, s.gasUsed, refTxType)
 

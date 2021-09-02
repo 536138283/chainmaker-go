@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -24,7 +25,7 @@ type RuntimeInstance struct {
 // Invoke contract by call vm, implement protocol.RuntimeInstance
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte,
 	parameters map[string]string, txContext protocol.TxSimContext, gasUsed uint64) (
-	contractResult *commonPb.ContractResult, specialTxType protocol.SpecialTxType) {
+	contractResult *commonPb.ContractResult, specialTxType protocol.ExecOrderTxType) {
 
 	logStr := fmt.Sprintf("wasmer runtime invoke[%s]: ", txContext.GetTx().GetHeader().GetTxId())
 	startTime := utils.CurrentTimeMillisSeconds()
@@ -35,7 +36,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Result:  nil,
 		Message: "",
 	}
-	specialTxType = protocol.SpecialTxTypeNormal
+	specialTxType = protocol.ExecOrderTxTypeNormal
 
 	var instanceInfo *wrappedInstance
 	defer func() {
@@ -49,7 +50,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			if instanceInfo != nil {
 				instanceInfo.errCount++
 			}
-			specialTxType = protocol.SpecialTxTypeNormal
+			specialTxType = protocol.ExecOrderTxTypeNormal
 		}
 	}()
 
@@ -77,7 +78,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	sc.ContractResult = contractResult
 	sc.parameters = parameters
 	sc.Instance = instance
-	sc.SpecialTxType = protocol.SpecialTxTypeNormal
+	sc.SpecialTxType = protocol.ExecOrderTxTypeNormal
 
 	err := sc.CallMethod(instance)
 	if err != nil {

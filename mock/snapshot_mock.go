@@ -87,7 +87,7 @@ func (m *MockSnapshot) EXPECT() *MockSnapshotMockRecorder {
 }
 
 // ApplyTxSimContext mocks base method.
-func (m *MockSnapshot) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.SpecialTxType,
+func (m *MockSnapshot) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, withSpecialTx bool) (bool, int) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "ApplyTxSimContext", txSimContext, runVmSuccess)
@@ -97,7 +97,7 @@ func (m *MockSnapshot) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 }
 
 // ApplyTxSimContext indicates an expected call of ApplyTxSimContext.
-func (mr *MockSnapshotMockRecorder) ApplyTxSimContext(arg0, specialTxType protocol.SpecialTxType,
+func (mr *MockSnapshotMockRecorder) ApplyTxSimContext(arg0, specialTxType protocol.ExecOrderTxType,
 	arg1 interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ApplyTxSimContext",

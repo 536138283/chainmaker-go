@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 
@@ -43,7 +44,7 @@ type Wacsi interface {
 	DeleteState(requestBody []byte, contractName string, txSimContext protocol.TxSimContext) error
 	// call other contract
 	CallContract(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte,
-		gasUsed uint64, isLen bool) ([]byte, error, uint64, protocol.SpecialTxType)
+		gasUsed uint64, isLen bool) ([]byte, error, uint64, protocol.ExecOrderTxType)
 	// result record
 	SuccessResult(contractResult *common.ContractResult, data []byte) int32
 	ErrorResult(contractResult *common.ContractResult, data []byte) int32
@@ -144,7 +145,7 @@ func (*WacsiImpl) DeleteState(requestBody []byte, contractName string, txSimCont
 
 // CallContract implement syscall for call contract, it is for gasm and wasmer
 func (*WacsiImpl) CallContract(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte,
-	data []byte, gasUsed uint64, isLen bool) ([]byte, error, uint64, protocol.SpecialTxType) {
+	data []byte, gasUsed uint64, isLen bool) ([]byte, error, uint64, protocol.ExecOrderTxType) {
 	ec := serialize.NewEasyCodecWithBytes(requestBody)
 	valuePtr, _ := ec.GetInt32("value_ptr")
 	contractName, _ := ec.GetString("contract_name")
@@ -157,37 +158,37 @@ func (*WacsiImpl) CallContract(requestBody []byte, txSimContext protocol.TxSimCo
 	if !isLen { // get value from cache
 		result := txSimContext.GetCurrentResult()
 		copy(memory[valuePtr:valuePtr+int32(len(result))], result)
-		return nil, nil, gasUsed, protocol.SpecialTxTypeNormal
+		return nil, nil, gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 
 	// check param
 	if len(contractName) == 0 {
-		return nil, fmt.Errorf("[call contract] contract_name is null"), gasUsed, protocol.SpecialTxTypeNormal
+		return nil, fmt.Errorf("[call contract] contract_name is null"), gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 	if len(method) == 0 {
-		return nil, fmt.Errorf("[call contract] method is null"), gasUsed, protocol.SpecialTxTypeNormal
+		return nil, fmt.Errorf("[call contract] method is null"), gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 	if len(paramItem) > protocol.ParametersKeyMaxCount {
 		return nil, fmt.Errorf("[call contract] expect less than %d parameters, but got %d",
-			protocol.ParametersKeyMaxCount, len(paramItem)), gasUsed, protocol.SpecialTxTypeNormal
+			protocol.ParametersKeyMaxCount, len(paramItem)), gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 	for _, item := range paramItem {
 		if len(item.Key) > protocol.DefaultStateLen {
 			return nil, fmt.Errorf("[call contract] param expect key length less than %d, but got %d",
-				protocol.DefaultStateLen, len(item.Key)), gasUsed, protocol.SpecialTxTypeNormal
+				protocol.DefaultStateLen, len(item.Key)), gasUsed, protocol.ExecOrderTxTypeNormal
 		}
 		match, err := regexp.MatchString(protocol.DefaultStateRegex, item.Key)
 		if err != nil || !match {
 			return nil, fmt.Errorf("[call contract] param expect key no special characters, but got %s. " +
-				"letter, number, dot and underline are allowed", item.Key), gasUsed, protocol.SpecialTxTypeNormal
+				"letter, number, dot and underline are allowed", item.Key), gasUsed, protocol.ExecOrderTxTypeNormal
 		}
 		if len(item.Value.(string)) > protocol.ParametersValueMaxLength {
 			return nil, fmt.Errorf("[call contract] expect value length less than %d, but got %d",
-				protocol.ParametersValueMaxLength, len(item.Value.(string))), gasUsed, protocol.SpecialTxTypeNormal
+				protocol.ParametersValueMaxLength, len(item.Value.(string))), gasUsed, protocol.ExecOrderTxTypeNormal
 		}
 	}
 	if err := protocol.CheckKeyFieldStr(contractName, method); err != nil {
-		return nil, err, gasUsed, protocol.SpecialTxTypeNormal
+		return nil, err, gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 
 	// call contract

@@ -36,7 +36,7 @@ type WaciInstance struct {
 	ChainId        string
 	Method         string
 	ContractEvent  []*commonPb.ContractEvent
-	SpecialTxType  protocol.SpecialTxType
+	SpecialTxType  protocol.ExecOrderTxType
 }
 
 // LogMessage print log to file
@@ -113,10 +113,10 @@ func (s *WaciInstance) SysCall(vm *wasm.VirtualMachine) reflect.Value {
 			return s.DeleteState()
 		//kv author:whang1234
 		case protocol.ContractMethodKvIterator:
-			s.SpecialTxType = protocol.SpecialTxTypeIterator
+			s.SpecialTxType = protocol.ExecOrderTxTypeIterator
 			return s.KvIterator()
 		case protocol.ContractMethodKvPreIterator:
-			s.SpecialTxType = protocol.SpecialTxTypeIterator
+			s.SpecialTxType = protocol.ExecOrderTxTypeIterator
 			return s.KvPreIterator()
 		case protocol.ContractMethodKvIteratorHasNext:
 			return s.KvIteratorHasNext()

@@ -28,7 +28,7 @@ import (
 
 const (
     ScheduleTimeout        = 10
-    ScheduleWithDagTimeout = 20
+    ScheduleWithDagTimeout = 10
 )
 
 // TxScheduler transaction scheduler structure
@@ -259,7 +259,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonpb.Block, snapshot protocol.
                     runningTxC <- tx
                 }
             case <-finishC:
-                ts.log.Debugf("schedule with dag finish")
+                ts.log.Debugf("block [%d] schedule with dag finish", block.Header.BlockHeight)
                 ts.scheduleFinishC <- true
                 return
             case <-timeoutC:
@@ -297,13 +297,13 @@ func (ts *TxScheduler) SimulateWithDag(block *commonpb.Block, snapshot protocol.
 }
 
 func (ts *TxScheduler)simulateTx(tx *commonpb.Transaction, snapshot protocol.Snapshot, block *commonpb.Block) (
-    protocol.TxSimContext, protocol.SpecialTxType, bool) {
-    ts.log.Debugf("run vm with dag for tx id %s", tx.Header.GetTxId())
+    protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
+    ts.log.Debugf("run vm with for tx id %s", tx.Header.GetTxId())
     txSimContext := NewTxSimContext(ts.VmManager, snapshot, tx, string(block.Header.BlockVersion))
     runVmSuccess := true
     var txResult *commonpb.Result
     var err error
-    var specialTxType protocol.SpecialTxType
+    var specialTxType protocol.ExecOrderTxType
     if txResult, specialTxType, err = ts.runVM(tx, txSimContext); err != nil {
         runVmSuccess = false
         ts.log.Errorf("failed to run vm for tx id:%s, tx result:%+v, error:%+v",
@@ -315,10 +315,17 @@ func (ts *TxScheduler)simulateTx(tx *commonpb.Transaction, snapshot protocol.Sna
 
 func (ts *TxScheduler)simulateSpecialTxs(dag *commonpb.DAG, snapshot protocol.Snapshot, block *commonpb.Block)  {
     specialTxs := snapshot.GetSpecialTxTable()
+    txsLen := len(specialTxs)
     var firstTx *commonpb.Transaction
-    runningTxC := make(chan *commonpb.Transaction, len(specialTxs))
+    runningTxC := make(chan *commonpb.Transaction, txsLen)
     scheduleFinishC := make(chan bool)
     timeoutC := time.After(ScheduleWithDagTimeout * time.Second)
+    go func() {
+        for _, tx := range specialTxs {
+            runningTxC <- tx
+        }
+    }()
+
     go func() {
         for {
             select {
@@ -327,37 +334,37 @@ func (ts *TxScheduler)simulateSpecialTxs(dag *commonpb.DAG, snapshot protocol.Sn
                 txSimContext, specialTxType, runVmSuccess := ts.simulateTx(tx, snapshot, block)
                 tx.Result = txSimContext.GetTxResult()
                 // apply tx
-                applyResult, _ := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
+                applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
                 if !applyResult {
                     ts.log.Debugf("failed to apply according to dag with tx %s ", tx.Header.TxId)
                     runningTxC <- tx
-                } else {
-                    if firstTx == nil {
-                        firstTx = tx
-                        dagNeighbors := &commonpb.DAG_Neighbor{
-                            Neighbors: make([]int32, 0, snapshot.GetSnapshotSize()),
-                        }
-                        for i := int32(0); i < int32(snapshot.GetSnapshotSize()); i++ {
-                            dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
-                        }
-                        dag.Vertexes = append(dag.Vertexes, dagNeighbors)
-                    } else {
-                        dagNeighbors := &commonpb.DAG_Neighbor{
-                            Neighbors: make([]int32, 0, 1),
-                        }
-                        dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, int32(snapshot.GetSnapshotSize()) - 1)
+                    continue
+                }
+                if firstTx == nil {
+                    firstTx = tx
+                    dagNeighbors := &commonpb.DAG_Neighbor{
+                        Neighbors: make([]int32, 0, snapshot.GetSnapshotSize() - 1),
                     }
+                    for i := int32(0); i < int32(snapshot.GetSnapshotSize() - 1); i++ {
+                        dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
+                    }
+                    dag.Vertexes = append(dag.Vertexes, dagNeighbors)
+                } else {
+                    dagNeighbors := &commonpb.DAG_Neighbor {
+                        Neighbors: make([]int32, 0, 1),
+                    }
+                    dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, int32(snapshot.GetSnapshotSize()) - 2)
+                }
+                if applySize >= txsLen {
+                    ts.log.Errorf("block [%d] schedule special txs finished", block.Header.BlockHeight)
+                    scheduleFinishC <- true
+                    return
                 }
             case <-timeoutC:
                 ts.log.Errorf("block [%d] schedule special txs timeout", block.Header.BlockHeight)
                 scheduleFinishC <- true
                 return
             }
-        }
-    }()
-    go func() {
-        for _, tx := range specialTxs {
-            runningTxC <- tx
         }
     }()
     <- scheduleFinishC
@@ -385,7 +392,7 @@ func (ts *TxScheduler) Halt() {
 }
 
 func (ts *TxScheduler) runVM(tx *commonpb.Transaction, txSimContext protocol.TxSimContext) (
-    *commonpb.Result, protocol.SpecialTxType, error) {
+    *commonpb.Result, protocol.ExecOrderTxType, error) {
     var contractId *commonpb.ContractId
     var contractName string
     var runtimeType commonpb.RuntimeType
@@ -523,11 +530,11 @@ func (ts *TxScheduler) runVM(tx *commonpb.Transaction, txSimContext protocol.TxS
     return result, specialTxType, errors.New(contractResultPayload.Message)
 }
 
-func errResult(result *commonpb.Result, err error) (*commonpb.Result, protocol.SpecialTxType, error) {
+func errResult(result *commonpb.Result, err error) (*commonpb.Result, protocol.ExecOrderTxType, error) {
     result.ContractResult.Message = err.Error()
     result.Code = commonpb.TxStatusCode_INVALID_PARAMETER
     result.ContractResult.Code = commonpb.ContractResultCode_FAIL
-    return result, protocol.SpecialTxTypeNormal, err
+    return result, protocol.ExecOrderTxTypeNormal, err
 }
 func (ts *TxScheduler) parseParameter(parameterPairs []*commonpb.KeyValuePair) map[string]string {
     parameters := make(map[string]string, 16)

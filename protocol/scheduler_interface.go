@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -43,7 +44,7 @@ type TxSimContext interface {
 	// Cross contract call, return (contract result, gas used)
 	CallContract(contractId *common.ContractId, method string, byteCode []byte,
 		parameter map[string]string, gasUsed uint64, refTxType common.TxType) (
-		*common.ContractResult, SpecialTxType, common.TxStatusCode)
+		*common.ContractResult, ExecOrderTxType, common.TxStatusCode)
 	// Get cross contract call result, cache for len
 	GetCurrentResult() []byte
 	// Get related transaction

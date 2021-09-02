@@ -9,6 +9,7 @@ package snapshot
 
 import (
 	"fmt"
+	"go.uber.org/atomic"
 	"strings"
 	"sync"
 
@@ -34,7 +35,7 @@ type SnapshotImpl struct {
 	blockchainStore protocol.BlockchainStore
 
 	// If the snapshot has been sealed, the results of subsequent vm execution will not be added to the snapshot
-	sealed bool
+	sealed *atomic.Bool
 
 	chainId        string
 	blockTimestamp int64
@@ -150,21 +151,25 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 
 // After the read-write set is generated, add TxSimContext to the snapshot
 // return if apply successfully or not, and current applied tx num
-func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.SpecialTxType,
+func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, applySpecialTx bool) (bool, int) {
-	if s.IsSealed() {
+	if !applySpecialTx && s.IsSealed() {
 		return false, s.GetSnapshotSize()
 	}
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	// it is necessary to check sealed secondly
+	if !applySpecialTx && s.IsSealed() {
+		return false, s.GetSnapshotSize()
+	}
 
 	tx := txSimContext.GetTx()
 	txExecSeq := txSimContext.GetTxExecSeq()
 	var txRWSet *commonPb.TxRWSet
 	var txResult *commonPb.Result
 
-	if !applySpecialTx && specialTxType == protocol.SpecialTxTypeIterator {
+	if !applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator {
 		s.specialTxTable = append(s.specialTxTable, tx)
 		return true, len(s.txTable) + len(s.specialTxTable)
 	}
@@ -173,7 +178,7 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
 	txResult = txSimContext.GetTxResult()
 
-	if specialTxType == protocol.SpecialTxTypeIterator || txExecSeq >= len(s.txTable) {
+	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.txTable) {
 		s.apply(tx, txRWSet, txResult)
 		return true, len(s.txTable)
 	}
@@ -226,9 +231,7 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 
 // check if snapshot is sealed
 func (s *SnapshotImpl) IsSealed() bool {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return s.sealed
+	return s.sealed.Load()
 }
 
 // get block height for current snapshot
@@ -243,9 +246,7 @@ func (s *SnapshotImpl) GetBlockProposer() []byte {
 
 // seal the snapshot
 func (s *SnapshotImpl) Seal() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.sealed = true
+	s.sealed.Store(true)
 }
 
 // Build txs' read bitmap and write bitmap, so we can use AND to simplify read/write set conflict detection process.

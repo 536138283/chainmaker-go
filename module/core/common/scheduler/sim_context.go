@@ -22,9 +22,12 @@ import (
 type txSimContextImpl struct {
     txExecSeq        int
     txResult         *commonpb.Result
+    // txRWSet is the all TxReads and TxWrites of the tx
     txRWSet          *commonpb.TxRWSet
     tx               *commonpb.Transaction
+    // txReadKeyMap mapped key with TxRead
     txReadKeyMap     map[string]*commonpb.TxRead
+    // txWriteKeyMap mapped key with TxWrite
     txWriteKeyMap    map[string]*commonpb.TxWrite
     txWriteKeySql    []*commonpb.TxWrite
     txWriteKeyDdlSql []*commonpb.TxWrite // record ddl vm run success or failure
@@ -92,10 +95,11 @@ func (s *txSimContextImpl) Del(contractName string, key []byte) error {
 }
 
 func (s *txSimContextImpl) Select(contractName string, startKey []byte, limit []byte) (protocol.StateIterator, error) {
-    // 1. get block's wset and filter wsets with startKey, limit
-    // 2. construct an iterator for wset
-    // 3. get store's iterator
-    // 4. construct an iterator which includes rwset iterator, store's iterator and cache for the two iterators
+    // 1. get wset of the block and filter wsets with startKey, limit
+    // 2. get wset of current tx and filter wsets with startKey, limit
+    // 3. construct an iterator for wset
+    // 4. get store's iterator
+    // 5. construct an iterator which includes wset iterator and store's iterator
     wsetsMap := make(map[string]interface{})
     txRWSets := s.snapshot.GetTxRWSetTable()
     for _, txRWSet := range txRWSets {
@@ -276,7 +280,7 @@ func (s *txSimContextImpl) SetTxResult(txResult *commonpb.Result) {
 // Cross contract call
 func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method string, byteCode []byte,
     parameter map[string]string, gasUsed uint64, refTxType commonpb.TxType) (
-    *commonpb.ContractResult, protocol.SpecialTxType, commonpb.TxStatusCode) {
+    *commonpb.ContractResult, protocol.ExecOrderTxType, commonpb.TxStatusCode) {
     s.gasUsed = gasUsed
     s.currentDepth = s.currentDepth + 1
     if s.currentDepth > protocol.CallContractDepth {
@@ -285,7 +289,7 @@ func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method 
             Result:  nil,
             Message: fmt.Sprintf("CallContract too depth %d", s.currentDepth),
         }
-        return contractResult, protocol.SpecialTxTypeNormal, commonpb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
+        return contractResult, protocol.ExecOrderTxTypeNormal, commonpb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
     }
     if s.gasUsed > protocol.GasLimit {
         contractResult := &commonpb.ContractResult{
@@ -293,7 +297,7 @@ func (s *txSimContextImpl) CallContract(contractId *commonpb.ContractId, method 
             Result:  nil,
             Message: fmt.Sprintf("There is not enough gas, gasUsed %d GasLimit %d ", gasUsed, int64(protocol.GasLimit)),
         }
-        return contractResult, protocol.SpecialTxTypeNormal, commonpb.TxStatusCode_CONTRACT_FAIL
+        return contractResult, protocol.ExecOrderTxTypeNormal, commonpb.TxStatusCode_CONTRACT_FAIL
     }
     r, specialTxType, code := s.vmManager.RunContract(contractId, method, byteCode, parameter, s, s.gasUsed, refTxType)
 

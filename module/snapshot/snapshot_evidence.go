@@ -85,7 +85,7 @@ func (s *SnapshotEvidence) GetKey(txExecSeq int, contractName string, key []byte
 
 // After the read-write set is generated, add TxSimContext to the snapshot
 // return if apply successfully or not, and current applied tx num
-func (s *SnapshotEvidence) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.SpecialTxType,
+func (s *SnapshotEvidence) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, withSpecialTx bool) (bool, int) {
 	if s.delegate == nil {
 		return false, -1
@@ -102,7 +102,7 @@ func (s *SnapshotEvidence) ApplyTxSimContext(txSimContext protocol.TxSimContext,
 	var txRWSet *commonPb.TxRWSet
 	var txResult *commonPb.Result
 
-	if !withSpecialTx && specialTxType == protocol.SpecialTxTypeIterator {
+	if !withSpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator {
 		s.delegate.specialTxTable = append(s.delegate.specialTxTable, tx)
 		return true, len(s.delegate.txTable) + len(s.delegate.specialTxTable)
 	}
@@ -111,7 +111,7 @@ func (s *SnapshotEvidence) ApplyTxSimContext(txSimContext protocol.TxSimContext,
 	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
 	txResult = txSimContext.GetTxResult()
 
-	if specialTxType == protocol.SpecialTxTypeIterator || txExecSeq >= len(s.delegate.txTable) {
+	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.delegate.txTable) {
 		s.apply(tx, txRWSet, txResult)
 		return true, len(s.delegate.txTable)
 	}

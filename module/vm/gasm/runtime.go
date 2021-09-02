@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -73,7 +74,7 @@ type RuntimeInstance struct {
 // Invoke contract by call vm, implement protocol.RuntimeInstance
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte,
 	parameters map[string]string, txContext protocol.TxSimContext, gasUsed uint64) (
-	contractResult *commonPb.ContractResult, specialTxType protocol.SpecialTxType) {
+	contractResult *commonPb.ContractResult, specialTxType protocol.ExecOrderTxType) {
 	tx := txContext.GetTx()
 
 	defer func() {
@@ -86,7 +87,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			} else if e, ok := err.(string); ok {
 				contractResult.Message = e
 			}
-			specialTxType = protocol.SpecialTxTypeNormal
+			specialTxType = protocol.ExecOrderTxTypeNormal
 			debug.PrintStack()
 		}
 	}()
@@ -97,7 +98,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Result:  nil,
 		Message: "",
 	}
-	specialTxType = protocol.SpecialTxTypeNormal
+	specialTxType = protocol.ExecOrderTxTypeNormal
 
 	var vm *wasm.VirtualMachine
 	var mod *wasm.Module
@@ -109,7 +110,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Log:            r.Log,
 		ChainId:        r.ChainId,
 		Method:         method,
-		SpecialTxType:  protocol.SpecialTxTypeNormal,
+		SpecialTxType:  protocol.ExecOrderTxTypeNormal,
 	}
 	wasiInstance := &wasi.WasiInstance{}
 	builder := newBuilder(wasiInstance, waciInstance)
@@ -195,7 +196,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		copy(vm.Memory[allocatePtr[0]:allocatePtr[0]+allocateSize], paramMarshalBytes)
 	}
 
-	// run invoke method may modify waciInstance's SpecialTxType
+	// run invoke method may modify waciInstance's ExecOrderTxType
 	if ret, retTypes, err := vm.ExecExportedFunction(method); err != nil {
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()

@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -35,7 +36,7 @@ type RuntimeInstance struct {
 // Invoke contract by call vm, implement protocol.RuntimeInstance
 func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte,
 	parameters map[string]string, txSimContext protocol.TxSimContext, gasUsed uint64) (
-	contractResult *commonPb.ContractResult, specialTxType protocol.SpecialTxType) {
+	contractResult *commonPb.ContractResult, specialTxType protocol.ExecOrderTxType) {
 	txId := txSimContext.GetTx().GetHeader().TxId
 
 	// contract response
@@ -44,7 +45,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Result:  nil,
 		Message: "",
 	}
-	specialTxType = protocol.SpecialTxTypeNormal
+	specialTxType = protocol.ExecOrderTxTypeNormal
 
 	defer func() {
 		if err := recover(); err != nil {
@@ -158,7 +159,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	contractResult.GasUsed = int64(gasLeft - result.GasLeft)
 	contractResult.Result = result.ResultData
 	contractResult.ContractEvent = r.ContractEvent
-	return contractResult, protocol.SpecialTxTypeNormal
+	return contractResult, protocol.ExecOrderTxTypeNormal
 }
 
 func (r *RuntimeInstance) callback(result evm_go.ExecuteResult, err error) {
@@ -225,14 +226,14 @@ func (r *RuntimeInstance) callback(result evm_go.ExecuteResult, err error) {
 }
 
 func (r *RuntimeInstance) errorResult(contractResult *commonPb.ContractResult, err error, errMsg string) (
-	*commonPb.ContractResult, protocol.SpecialTxType) {
+	*commonPb.ContractResult, protocol.ExecOrderTxType) {
 	contractResult.Code = commonPb.ContractResultCode_FAIL
 	if err != nil {
 		errMsg += ", " + err.Error()
 	}
 	contractResult.Message = errMsg
 	r.Log.Error(errMsg)
-	return contractResult, protocol.SpecialTxTypeNormal
+	return contractResult, protocol.ExecOrderTxTypeNormal
 }
 func (r *RuntimeInstance) emitContractEvent(result evm_go.ExecuteResult) error {
 	//parse log
