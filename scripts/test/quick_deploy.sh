@@ -7,6 +7,14 @@
 ## deploy ChainMaker and test
 
 alreadyBuild=$1
+if [ ! -d "../../tools/chainmaker-cryptogen" ]; then
+  echo "not found chainmaker-go/tools/chainmaker-cryptogen"
+  echo "  you can use "
+  echo "              cd chainmaker-go/tools"
+  echo "              ln -s ../../chainmaker-cryptogen ."
+  echo "              cd chainmaker-cryptogen && make"
+  exit 0
+fi
 
 # chainmaker-go/scripts
 # backups & build release & start ChainMaker
