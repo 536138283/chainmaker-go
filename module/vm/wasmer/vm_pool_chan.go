@@ -200,6 +200,7 @@ func (p *vmPool) RevertInstance(instance *wrappedInstance) {
 		go func() {
 			p.removeInstanceC <- struct{}{}
 			p.addInstanceC <- struct{}{}
+			p.CloseInstance(instance)
 		}()
 	} else {
 		p.instances <- instance
