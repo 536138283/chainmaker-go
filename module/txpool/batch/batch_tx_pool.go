@@ -479,6 +479,17 @@ func (p *BatchTxPool) removeTxBatch(txs []*commonPb.Transaction) {
 	}
 
 	batch := &txpoolPb.TxBatch{NodeId: p.nodeId, BatchId: batchId, Txs: txs, TxIdsMap: createTxIdsMap(txs), Size_: int32(len(txs))}
+	if p.pendingPool.GetBatch(batchId) != nil {
+		batch.Size_ = p.pendingPool.GetBatch(batchId).GetSize_()
+	} else if utils.IsConfigTx(txs[0]) {
+		if p.configBatchPool.GetBatch(batchId) != nil {
+			batch.Size_ = p.configBatchPool.GetBatch(batchId).GetSize_()
+		}
+	} else {
+		if p.commonBatchPool.GetBatch(batchId) != nil {
+			batch.Size_ = p.commonBatchPool.GetBatch(batchId).GetSize_()
+		}
+	}
 	if p.pendingPool.RemoveIfExist(batch) {
 		remove = true
 		p.log.Infof("remove txs[%d] from pending pool, current pool size [%d]", len(txs), atomic.LoadInt32(&p.currentTxCount)-int32(len(txs)))
