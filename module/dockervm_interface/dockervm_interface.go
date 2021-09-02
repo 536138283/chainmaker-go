@@ -1,6 +1,6 @@
 package dockervm_interface
 
-import "chainmaker.org/chainmaker/protocol"
+import "chainmaker.org/chainmaker/protocol/v2"
 
 type VmManager interface {
 	// VmManager vm manager

@@ -608,7 +608,8 @@ func (consensus *ConsensusRaftImpl) getPeersFromChainConf() []uint64 {
 	fmt.Fprintf(&builder, "[")
 
 	for _, org := range orgs {
-		for _, nodeId := range org.NodeId {
+		if len(org.NodeId) == 1 {
+			nodeId := org.NodeId[0]
 			id := computeRaftIdFromNodeId(nodeId)
 			idToNodeId[id] = nodeId
 			peers = append(peers, id)

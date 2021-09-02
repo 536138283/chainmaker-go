@@ -15,7 +15,7 @@ import (
 
 	"chainmaker.org/chainmaker-go/docker-go/dockercontainer/pb/protogo"
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker/common/random/uuid"
+	"chainmaker.org/chainmaker/common/v2/random/uuid"
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/viper"
 )

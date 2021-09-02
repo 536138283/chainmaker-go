@@ -11,7 +11,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"chainmaker.org/chainmaker-go/common/wal"
 	"chainmaker.org/chainmaker-go/consensus/chainedbft/liveness"
 	"chainmaker.org/chainmaker-go/consensus/chainedbft/message"
 	"chainmaker.org/chainmaker-go/logger"

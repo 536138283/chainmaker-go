@@ -16,6 +16,7 @@ import (
 	"strconv"
 
 	"chainmaker.org/chainmaker-go/dockervm_interface"
+
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	docker_go "chainmaker.org/chainmaker-go/docker-go"
