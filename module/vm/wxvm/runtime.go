@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -22,8 +23,9 @@ type RuntimeInstance struct {
 }
 
 // Invoke contract by call vm, implement protocol.RuntimeInstance
-func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
-	txContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
+func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte,
+	parameters map[string]string, txContext protocol.TxSimContext, gasUsed uint64) (
+	contractResult *commonPb.ContractResult, specialTxType protocol.ExecOrderTxType) {
 
 	tx := txContext.GetTx()
 
@@ -36,6 +38,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			} else if e, ok := err.(string); ok {
 				contractResult.Message = e
 			}
+			specialTxType = protocol.ExecOrderTxTypeNormal
 			debug.PrintStack()
 		}
 	}()
@@ -45,6 +48,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		Result:  nil,
 		Message: "",
 	}
+	specialTxType = protocol.ExecOrderTxTypeNormal
 
 	context := r.CtxService.MakeContext(contractId, txContext, contractResult, parameters)
 	execCode, err := r.CodeManager.GetExecCode(r.ChainId, contractId, byteCode, r.CtxService)

@@ -9,6 +9,7 @@ package snapshot
 
 import (
 	"fmt"
+	"go.uber.org/atomic"
 	"strings"
 	"sync"
 
@@ -34,7 +35,7 @@ type SnapshotImpl struct {
 	blockchainStore protocol.BlockchainStore
 
 	// If the snapshot has been sealed, the results of subsequent vm execution will not be added to the snapshot
-	sealed bool
+	sealed *atomic.Bool
 
 	chainId        string
 	blockTimestamp int64
@@ -44,11 +45,12 @@ type SnapshotImpl struct {
 
 	preSnapshot protocol.Snapshot
 
-	txRWSetTable []*commonPb.TxRWSet
-	txTable      []*commonPb.Transaction
-	txResultMap  map[string]*commonPb.Result
-	readTable    map[string]*sv
-	writeTable   map[string]*sv
+	txRWSetTable   []*commonPb.TxRWSet
+	txTable        []*commonPb.Transaction
+	specialTxTable []*commonPb.Transaction
+	txResultMap    map[string]*commonPb.Result
+	readTable      map[string]*sv
+	writeTable     map[string]*sv
 }
 
 func (s *SnapshotImpl) GetPreSnapshot() protocol.Snapshot {
@@ -71,6 +73,10 @@ func (s *SnapshotImpl) GetSnapshotSize() int {
 
 func (s *SnapshotImpl) GetTxTable() []*commonPb.Transaction {
 	return s.txTable
+}
+
+func (s *SnapshotImpl) GetSpecialTxTable() []*commonPb.Transaction {
+	return s.specialTxTable
 }
 
 // After the scheduling is completed, get the result from the current snapshot
@@ -145,24 +151,34 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 
 // After the read-write set is generated, add TxSimContext to the snapshot
 // return if apply successfully or not, and current applied tx num
-func (s *SnapshotImpl) ApplyTxSimContext(cache protocol.TxSimContext, runVmSuccess bool) (bool, int) {
-	if s.IsSealed() {
+func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
+	runVmSuccess bool, applySpecialTx bool) (bool, int) {
+	if !applySpecialTx && s.IsSealed() {
 		return false, s.GetSnapshotSize()
 	}
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
+	// it is necessary to check sealed secondly
+	if !applySpecialTx && s.IsSealed() {
+		return false, s.GetSnapshotSize()
+	}
 
-	tx := cache.GetTx()
-	txExecSeq := cache.GetTxExecSeq()
+	tx := txSimContext.GetTx()
+	txExecSeq := txSimContext.GetTxExecSeq()
 	var txRWSet *commonPb.TxRWSet
 	var txResult *commonPb.Result
 
-	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
-	txRWSet = cache.GetTxRWSet(runVmSuccess)
-	txResult = cache.GetTxResult()
+	if !applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator {
+		s.specialTxTable = append(s.specialTxTable, tx)
+		return true, len(s.txTable) + len(s.specialTxTable)
+	}
 
-	if txExecSeq >= len(s.txTable) {
+	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
+	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
+	txResult = txSimContext.GetTxResult()
+
+	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.txTable) {
 		s.apply(tx, txRWSet, txResult)
 		return true, len(s.txTable)
 	}
@@ -215,9 +231,7 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 
 // check if snapshot is sealed
 func (s *SnapshotImpl) IsSealed() bool {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	return s.sealed
+	return s.sealed.Load()
 }
 
 // get block height for current snapshot
@@ -232,9 +246,7 @@ func (s *SnapshotImpl) GetBlockProposer() []byte {
 
 // seal the snapshot
 func (s *SnapshotImpl) Seal() {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.sealed = true
+	s.sealed.Store(true)
 }
 
 // Build txs' read bitmap and write bitmap, so we can use AND to simplify read/write set conflict detection process.
@@ -348,9 +360,9 @@ func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
 			readBitmapForI := readBitmaps[i]
 			writeBitmapForI := writeBitmaps[i]
 
-			// directReach is used to build DAG
-			// reach is used to save reachability we have already known
+			// directReachFromI is used to build DAG, it's the direct neighbors of the ith tx
 			directReachFromI := &bitmap.Bitmap{}
+			// reachFromI is used to save reachability we have already known, it's the all neighbors of the ith tx
 			reachFromI := &bitmap.Bitmap{}
 			reachFromI.Set(i)
 

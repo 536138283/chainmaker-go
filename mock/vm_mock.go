@@ -64,12 +64,14 @@ func (mr *MockVmManagerMockRecorder) GetChainNodesInfoProvider() *gomock.Call {
 }
 
 // RunContract mocks base method.
-func (m *MockVmManager) RunContract(contractId *common.ContractId, method string, byteCode []byte, parameters map[string]string, txContext protocol.TxSimContext, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, common.TxStatusCode) {
+func (m *MockVmManager) RunContract(contractId *common.ContractId, method string, byteCode []byte,
+	parameters map[string]string, txContext protocol.TxSimContext, gasUsed uint64, refTxType common.TxType) (
+	*common.ContractResult, protocol.ExecOrderTxType, common.TxStatusCode) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "RunContract", contractId, method, byteCode, parameters, txContext, gasUsed, refTxType)
 	ret0, _ := ret[0].(*common.ContractResult)
 	ret1, _ := ret[1].(common.TxStatusCode)
-	return ret0, ret1
+	return ret0, protocol.ExecOrderTxTypeNormal, ret1
 }
 
 // RunContract indicates an expected call of RunContract.

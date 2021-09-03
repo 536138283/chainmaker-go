@@ -316,7 +316,7 @@ func (consensus *ConsensusRaftImpl) serve() {
 			consensus.Id, describeSnapshot(snapshot), consensus.appliedIndex)
 	})
 
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(localconf.ChainMakerConfig.ConsensusConfig.RaftConfig.Ticker * time.Second)
 	defer ticker.Stop()
 
 	for {

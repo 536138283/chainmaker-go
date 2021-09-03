@@ -242,7 +242,7 @@ func (p *BatchTxPool) createCommonTxBatch() {
 		Size_:    int32(len(txs)),
 	}
 	p.log.Infof("create txBatch size: %d, batchId: %d, txMapLen: %d, txsLen: %d, totalTxCount: %d",
-		batch.GetSize_(), batch.BatchId, len(batch.TxIdsMap), len(batch.Txs), atomic.LoadInt32(&p.currentTxCount)+int32(batch.GetSize_()))
+		batch.Size(), batch.BatchId, len(batch.TxIdsMap), len(batch.Txs), atomic.LoadInt32(&p.currentTxCount)+int32(batch.GetSize_()))
 
 	var (
 		err      error
@@ -490,7 +490,6 @@ func (p *BatchTxPool) removeTxBatch(txs []*commonPb.Transaction) {
 			batch.Size_ = p.commonBatchPool.GetBatch(batchId).GetSize_()
 		}
 	}
-
 	if p.pendingPool.RemoveIfExist(batch) {
 		remove = true
 		p.log.Infof("remove txs[%d] from pending pool, current pool size [%d]", len(txs), atomic.LoadInt32(&p.currentTxCount)-int32(len(txs)))

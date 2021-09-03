@@ -16,6 +16,8 @@ import (
 	"testing"
 	"time"
 
+	atomic2 "go.uber.org/atomic"
+
 	acPb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
@@ -45,7 +47,9 @@ func (s *MockSimContextImpl) GetBlockVersion() string {
 	return protocol.DefaultBlockVersion
 }
 
-func (s *MockSimContextImpl) CallContract(contractId *commonPb.ContractId, method string, byteCode []byte, parameter map[string]string, gasUsed uint64, refTxType commonPb.TxType) (*commonPb.ContractResult, commonPb.TxStatusCode) {
+func (s *MockSimContextImpl) CallContract(contractId *commonPb.ContractId, method string, byteCode []byte,
+	parameter map[string]string, gasUsed uint64, refTxType commonPb.TxType) (*commonPb.ContractResult,
+	protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 	panic(implement_me)
 }
 
@@ -107,6 +111,10 @@ func (s *MockSimContextImpl) Put(contractName string, key []byte, value []byte) 
 func (s *MockSimContextImpl) PutRecord(contractName string, value []byte, sqlType protocol.SqlType) {
 }
 
+func (mock *MockSimContextImpl) PutIntoReadSet(contractName string, key []byte, value []byte) {
+	panic("implement me")
+}
+
 // 删除合约账户状态
 func (s *MockSimContextImpl) Del(contractName string, key []byte) error {
 	return nil
@@ -166,7 +174,7 @@ func testSnapshot(t *testing.T, i int) {
 	snapshot := &SnapshotImpl{
 		lock:            sync.Mutex{},
 		blockchainStore: nil,
-		sealed:          false,
+		sealed:          atomic2.NewBool(false),
 		chainId:         "",
 		blockTimestamp:  0,
 		blockProposer:   nil,
@@ -203,14 +211,17 @@ func testSnapshot(t *testing.T, i int) {
 			txSimContext.txRwSet = genRwSet(readKey, writeKey)
 			txSimContext.txExecSeq = int32(rand.Intn(len(snapshot.txTable) + 1))
 
-			applyResult, _ := snapshot.ApplyTxSimContext(txSimContext, true)
+			applyResult, _ := snapshot.ApplyTxSimContext(txSimContext, protocol.ExecOrderTxTypeNormal,
+				true, false)
 			atomic.AddInt64(&count, 1)
 			if !applyResult {
 				fmt.Printf("!!!")
 				for {
 					txSimContext.txRwSet = genRwSet(readKey, writeKey)
-					txSimContext.txExecSeq = txSimContext.txExecSeq + int32(rand.Intn(len(snapshot.txTable)-int(txSimContext.txExecSeq)+1))
-					applyResult, _ = snapshot.ApplyTxSimContext(txSimContext, true)
+					txSimContext.txExecSeq = txSimContext.txExecSeq + int32(rand.Intn(
+						len(snapshot.txTable)-int(txSimContext.txExecSeq)+1))
+					applyResult, _ = snapshot.ApplyTxSimContext(txSimContext, protocol.ExecOrderTxTypeNormal,
+						true, false)
 
 					atomic.AddInt64(&count, 1)
 					if applyResult {
@@ -280,8 +291,9 @@ func genRwSet(readKeySet []string, writeKeySet []string) *commonPb.TxRWSet {
 	return txRwSet
 }
 
-func testApply(txSimContext protocol.TxSimContext, snapshot *SnapshotImpl, txExecSeq int, readKeySet []string, writeKeySet []string) (bool, int) {
-	return snapshot.ApplyTxSimContext(txSimContext, true)
+func testApply(txSimContext protocol.TxSimContext, snapshot *SnapshotImpl, txExecSeq int,
+	readKeySet []string, writeKeySet []string) (bool, int) {
+	return snapshot.ApplyTxSimContext(txSimContext, protocol.ExecOrderTxTypeNormal, true, false)
 }
 
 func dump(snapshot *SnapshotImpl) {
