@@ -88,7 +88,9 @@ func (ts *timeScheduler) Stop() {
 
 // stopTimer stop timer of timeScheduler
 func (ts *timeScheduler) stopTimer() {
-	ts.timer.Stop()
+	if !ts.timer.Stop() {
+		<-ts.timer.C
+	}
 }
 
 // AddTimeoutInfo add a timeoutInfo event to timeScheduler
