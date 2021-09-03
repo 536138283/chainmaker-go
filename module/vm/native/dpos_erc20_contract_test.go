@@ -8,6 +8,7 @@ package native
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"chainmaker.org/chainmaker-go/logger"
@@ -38,6 +39,15 @@ func TestDPoSRuntime_Owner(t *testing.T) {
 	result, err := dPoSRuntime.Owner(txSimContext, nil)
 	require.Nil(t, err)
 	require.Equal(t, string(result), Owner)
+}
+
+func TestSetBigInt(t *testing.T) {
+	amount := &big.Int{}
+	amount, ok := amount.SetString("", 10)
+	require.False(t, ok)
+
+	amount = big.NewInt(0)
+	require.EqualValues(t, 0, amount.Int64())
 }
 
 func TestDPoSRuntime_Decimals(t *testing.T) {
