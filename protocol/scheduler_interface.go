@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -34,13 +35,16 @@ type TxSimContext interface {
 	Put(name string, key []byte, value []byte) error
 	// PutRecord put sql state into cache
 	PutRecord(contractName string, value []byte, sqlType SqlType)
+	// PutIntoReadSet put kv to readset
+	PutIntoReadSet(contractName string, key []byte, value []byte)
 	// Delete key from cache
 	Del(name string, key []byte) error
 	// Select range query for key [start, limit)
 	Select(name string, startKey []byte, limit []byte) (StateIterator, error)
 	// Cross contract call, return (contract result, gas used)
 	CallContract(contractId *common.ContractId, method string, byteCode []byte,
-		parameter map[string]string, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, common.TxStatusCode)
+		parameter map[string]string, gasUsed uint64, refTxType common.TxType) (
+		*common.ContractResult, ExecOrderTxType, common.TxStatusCode)
 	// Get cross contract call result, cache for len
 	GetCurrentResult() []byte
 	// Get related transaction

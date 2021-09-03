@@ -128,8 +128,10 @@ func sysCall(context unsafe.Pointer, requestHeaderPtr int32, requestHeaderLen in
 	case protocol.ContractMethodDeleteState:
 		return s.DeleteState()
 	case protocol.ContractMethodKvIterator:
+		s.Sc.SpecialTxType = protocol.ExecOrderTxTypeIterator
 		return s.KvIterator()
 	case protocol.ContractMethodKvPreIterator:
+		s.Sc.SpecialTxType = protocol.ExecOrderTxTypeIterator
 		return s.KvPreIterator()
 	case protocol.ContractMethodKvIteratorHasNext:
 		return s.KvIteratorHasNext()
@@ -185,9 +187,11 @@ func (s *WaciInstance) CallContract() int32 {
 }
 
 func (s *WaciInstance) callContractCore(isLen bool) int32 {
-	data, err, gas := wacsi.CallContract(s.RequestBody, s.Sc.TxSimContext, s.Memory, s.Sc.GetStateCache, s.Sc.Instance.GetGasUsed(), isLen)
+	data, err, gas, specialTxType := wacsi.CallContract(s.RequestBody, s.Sc.TxSimContext, s.Memory, s.Sc.GetStateCache,
+		s.Sc.Instance.GetGasUsed(), isLen)
 	s.Sc.GetStateCache = data // reset data
 	s.Sc.Instance.SetGasUsed(gas)
+	s.Sc.SpecialTxType = specialTxType
 	if err != nil {
 		s.recordMsg(err.Error())
 		return protocol.ContractSdkSignalResultFail

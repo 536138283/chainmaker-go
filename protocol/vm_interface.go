@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -116,6 +117,13 @@ const (
 	BulletProofsVerify                      = "BulletproofsVerify"
 )
 
+type ExecOrderTxType int
+
+const (
+	ExecOrderTxTypeNormal ExecOrderTxType = iota
+	ExecOrderTxTypeIterator
+)
+
 type SqlType int8
 
 const (
@@ -132,7 +140,8 @@ type VmManager interface {
 	GetChainNodesInfoProvider() ChainNodesInfoProvider
 	// RunContract run native or user contract according ContractName in contractId, and call the specified function
 	RunContract(contractId *common.ContractId, method string, byteCode []byte, parameters map[string]string,
-		txContext TxSimContext, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, common.TxStatusCode)
+		txContext TxSimContext, gasUsed uint64, refTxType common.TxType) (
+		*common.ContractResult, ExecOrderTxType, common.TxStatusCode)
 }
 
 type ContractWacsiCommon interface {

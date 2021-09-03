@@ -63,6 +63,7 @@ func runInvokeContract(client *sdk.ChainClient, contractName, method string, par
 		fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]\n", resp.Code, resp.Message, resp.ContractResult)
 	}
 }
+
 func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, params map[string]string,
 	wg *sync.WaitGroup, txId string) {
 

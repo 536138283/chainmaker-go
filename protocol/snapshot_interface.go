@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -40,6 +41,9 @@ type Snapshot interface {
 	// After the scheduling is completed, obtain the transaction sequence table from the current snapshot
 	GetTxTable() []*common.Transaction
 
+	// GetSpecialTxTable return specialTxTable which will be exec sequencially
+	GetSpecialTxTable() []*common.Transaction
+
 	// Get previous snapshot
 	GetPreSnapshot() Snapshot
 
@@ -61,7 +65,7 @@ type Snapshot interface {
 	// 3 virtual machine runtime throws panic,
 	// 4 smart contract byte code actively throws panic
 	// The second bool parameter here indicates whether the above exception has occurred
-	ApplyTxSimContext(TxSimContext, bool) (bool, int)
+	ApplyTxSimContext(TxSimContext, ExecOrderTxType, bool, bool) (bool, int)
 
 	// Build a dag for all transactions that have resolved the read-write conflict dependencies
 	BuildDAG(isSql bool) *common.DAG

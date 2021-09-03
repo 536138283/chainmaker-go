@@ -221,7 +221,8 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		blockVersion:     protocol.DefaultBlockVersion,
 	}
 
-	txResult, txStatusCode := vmMgr.RunContract(&commonPb.ContractId{ContractName: payload.ContractName}, payload.Method, nil, s.kvPair2Map(payload.Parameters), ctx, 0, tx.Header.TxType)
+	txResult,_, txStatusCode := vmMgr.RunContract(&commonPb.ContractId{ContractName: payload.ContractName},
+		payload.Method, nil, s.kvPair2Map(payload.Parameters), ctx, 0, tx.Header.TxType)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != commonPb.ContractResultCode_FAIL {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()

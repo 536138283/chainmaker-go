@@ -395,6 +395,9 @@ func (m *MockTxSimContext) PutRecord(contractName string, value []byte, sqlType 
 	m.ctrl.Call(m, "PutRecord", contractName, value, sqlType)
 }
 
+func (mock *MockTxSimContext)  PutIntoReadSet(contractName string, key []byte, value []byte){
+	panic("implement me")
+}
 // PutRecord indicates an expected call of PutRecord.
 func (mr *MockTxSimContextMockRecorder) PutRecord(contractName, value, sqlType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()

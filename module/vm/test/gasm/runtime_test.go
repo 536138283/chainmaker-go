@@ -67,7 +67,7 @@ func invokeCallContractTestSave(method string, id int32, contractId *commonPb.Co
 	runtimeInstance := &gasm.RuntimeInstance{
 		Log: logger.GetLogger(logger.MODULE_VM),
 	}
-	r := runtimeInstance.Invoke(contractId, method, byteCode, parameters, txContext, 0)
+	r, _ := runtimeInstance.Invoke(contractId, method, byteCode, parameters, txContext, 0)
 	fmt.Printf("\n【result】 %+v \n\n\n", r)
 	return r
 }
@@ -123,7 +123,7 @@ func invokeFunctionalContract(method string, contractId *commonPb.ContractId, tx
 	runtimeInstance := &gasm.RuntimeInstance{
 		Log: logger.GetLogger(logger.MODULE_VM),
 	}
-	r := runtimeInstance.Invoke(contractId, method, byteCode, parameters, txContext, 0)
+	r, _ := runtimeInstance.Invoke(contractId, method, byteCode, parameters, txContext, 0)
 	fmt.Printf("\n【result】 %+v \n\n\n", r)
 	return r
 }
