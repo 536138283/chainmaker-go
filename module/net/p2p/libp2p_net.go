@@ -743,24 +743,25 @@ func (ln *LibP2pNet) addChainPubSubWhiteList(chainId, pidStr string) error {
 
 func (ln *LibP2pNet) reloadChainPubSubWhiteList(chainId string) {
 	if ln.startUp {
-		v, ok := ln.pubSubs.Load(chainId)
-		if ok {
-			ps := v.(*LibP2pPubSub)
-			for _, pidStr := range ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId) {
-				pid, err := peer.Decode(pidStr)
-				if err != nil {
-					logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
-					continue
+		go time.AfterFunc(10*time.Second, func() {
+			v, ok := ln.pubSubs.Load(chainId)
+			if ok {
+				ps := v.(*LibP2pPubSub)
+				for _, pidStr := range ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId) {
+					pid, err := peer.Decode(pidStr)
+					if err != nil {
+						logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
+						continue
+					}
+					err = ps.AddWhitelistPeer(pid)
+					if err != nil {
+						logger.Errorf("[Net] add pubsub white list failed. %s (pid: %s, chain id: %s)", err.Error(), pid, chainId)
+						continue
+					}
+					logger.Infof("[Net] add peer to chain pubsub white list, (pid: %s, chain id: %s)", pid, chainId)
 				}
-				err = ps.AddWhitelistPeer(pid)
-				if err != nil {
-					logger.Errorf("[Net] add pubsub white list failed. %s (pid: %s, chain id: %s)", err.Error(), pid, chainId)
-					continue
-				}
-				logger.Infof("[Net] add peer to chain pubsub white list, (pid: %s, chain id: %s)", pid, chainId)
 			}
-
-		}
+		})
 	}
 }
 
