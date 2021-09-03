@@ -48,7 +48,7 @@ var (
 )
 
 const (
-	DefaultTimeoutPropose      = 10 * time.Second // Timeout of waitting for a proposal before prevoting nil
+	DefaultTimeoutPropose      = 30 * time.Second // Timeout of waitting for a proposal before prevoting nil
 	DefaultTimeoutProposeDelta = 1 * time.Second  // Increased time delta of TimeoutPropose between rounds
 	DefaultBlocksPerProposer   = int64(1)         // The number of blocks each proposer can propose
 	TimeoutPrevote             = 1 * time.Second  // Timeout of waitting for >2/3 prevote
@@ -161,7 +161,7 @@ func New(config ConsensusTBFTImplConfig) (*ConsensusTBFTImpl, error) {
 	consensus.verifyResultC = make(chan *consensuspb.VerifyResult, defaultChanCap)
 	consensus.blockHeightC = make(chan int64, defaultChanCap)
 	consensus.externalMsgC = make(chan *tbftpb.TBFTMsg, defaultChanCap)
-	consensus.internalMsgC = make(chan *tbftpb.TBFTMsg, 10)
+	consensus.internalMsgC = make(chan *tbftpb.TBFTMsg, defaultChanCap)
 
 	validators, err := GetValidatorListFromConfig(consensus.chainConf.ChainConfig())
 	if err != nil {
