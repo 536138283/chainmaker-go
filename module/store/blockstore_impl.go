@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/common/wal"
 	"chainmaker.org/chainmaker-go/localconf"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
@@ -28,7 +29,6 @@ import (
 	"chainmaker.org/chainmaker-go/store/statedb"
 	"chainmaker.org/chainmaker-go/store/types"
 	"chainmaker.org/chainmaker-go/utils"
-	"github.com/tidwall/wal"
 	"golang.org/x/sync/semaphore"
 )
 
@@ -140,18 +140,22 @@ func (bs *BlockStoreImpl) InitGenesis(genesisBlock *storePb.BlockWithRWSet) erro
 		return err
 	}
 	//4. 初始化历史数据库
-	err = bs.historyDB.InitGenesis(blockWithSerializedInfo)
-	if err != nil {
-		bs.logger.Errorf("chain[%s] failed to write historyDB, block[%d]",
-			block.Header.ChainId, block.Header.BlockHeight)
-		return err
+	if !bs.storeConfig.DisableHistoryDB {
+		err = bs.historyDB.InitGenesis(blockWithSerializedInfo)
+		if err != nil {
+			bs.logger.Errorf("chain[%s] failed to write historyDB, block[%d]",
+				block.Header.ChainId, block.Header.BlockHeight)
+			return err
+		}
 	}
 	//5. 初始化Result数据库
-	err = bs.resultDB.InitGenesis(blockWithSerializedInfo)
-	if err != nil {
-		bs.logger.Errorf("chain[%s] failed to write resultDB, block[%d]",
-			block.Header.ChainId, block.Header.BlockHeight)
-		return err
+	if !bs.storeConfig.DisableResultDB {
+		err = bs.resultDB.InitGenesis(blockWithSerializedInfo)
+		if err != nil {
+			bs.logger.Errorf("chain[%s] failed to write resultDB, block[%d]",
+				block.Header.ChainId, block.Header.BlockHeight)
+			return err
+		}
 	}
 	//6. init contract event db
 	if !bs.storeConfig.DisableContractEventDB {
@@ -828,5 +832,6 @@ func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
 }
 
 func (bs *BlockStoreImpl) isSupportArchive() bool {
-	return bs.storeConfig.BlockDbConfig.IsKVDB() && bs.storeConfig.ResultDbConfig.IsKVDB()
+	return bs.storeConfig.BlockDbConfig.IsKVDB() &&
+		(bs.storeConfig.ResultDbConfig!=nil &&bs.storeConfig.ResultDbConfig.IsKVDB())
 }

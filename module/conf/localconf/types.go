@@ -216,9 +216,18 @@ func (config *StorageConfig) GetDefaultDBConfig() *DbConfig {
 		BloomFilterBits:      config.BloomFilterBits,
 		BlockWriteBufferSize: config.WriteBufferSize,
 	}
+
+	rconfig := &RocksDbConfig{
+		StorePath:       config.StorePath,
+		WriteBufferSize: config.WriteBufferSize,
+		BloomFilterBits: config.BloomFilterBits,
+		//BlockWriteBufferSize: config.BlockWriteBufferSize,
+	}
+
 	return &DbConfig{
 		Provider:      "leveldb",
 		LevelDbConfig: lconfig,
+		RocksDbConfig: rconfig,
 	}
 }
 
@@ -241,6 +250,7 @@ type DbConfig struct {
 	//leveldb,rocksdb,sql
 	Provider      string         `mapstructure:"provider"`
 	LevelDbConfig *LevelDbConfig `mapstructure:"leveldb_config"`
+	RocksDbConfig *RocksDbConfig `mapstructure:"rocksdb_config"`
 	SqlDbConfig   *SqlDbConfig   `mapstructure:"sqldb_config"`
 }
 
@@ -261,6 +271,20 @@ type LevelDbConfig struct {
 	BloomFilterBits      int    `mapstructure:"bloom_filter_bits"`
 	BlockWriteBufferSize int    `mapstructure:"block_write_buffer_size"`
 }
+
+type RocksDbConfig struct {
+	StorePath         string `mapstructure:"store_path"`
+	WriteBufferSize   int    `mapstructure:"write_buffer_size"`
+	DbWriteBufferSize int    `mapstructure:"db_write_buffer_size"`
+	BlockCache        int    `mapstructure:"block_cache_size"`
+	BloomFilterBits   int    `mapstructure:"bloom_filter_bits"`
+	//BlockWriteBufferSize     int    `mapstructure:"block_write_buffer_size"`
+	MaxWriteBufferNumber     int `mapstructure:"max_write_buffer_number"`
+	MaxBackgroundCompactions int `mapstructure:"max_background_compactions"`
+	MaxBackgroundFlushes     int `mapstructure:"max_background_flushes"`
+	MaxOpenFiles             int `mapstructure:"max_open_files"`
+}
+
 type SqlDbConfig struct {
 	//mysql, sqlite, postgres, sqlserver
 	SqlDbType       string `mapstructure:"sqldb_type"`
@@ -333,6 +357,15 @@ type redisConfig struct {
 	CacheTimeout int    `mapstructure:"cache_timeout"`
 }
 
+type raftConfig struct {
+	SnapCount    uint64 `mapstructure:"snap_count"`
+	AsyncWalSave bool   `mapstructure:"async_wal_save"`
+}
+
+type ConsensusConfig struct {
+	RaftConfig raftConfig `mapstructure:"raft"`
+}
+
 type clientConfig struct {
 	OrgId           string `mapstructure:"org_id"`
 	UserKeyFilePath string `mapstructure:"user_key_file_path"`
@@ -355,6 +388,8 @@ type CMConfig struct {
 	NodeConfig       nodeConfig         `mapstructure:"node"`
 	RpcConfig        rpcConfig          `mapstructure:"rpc"`
 	BlockChainConfig []blockchainConfig `mapstructure:"blockchain"`
+	ConsensusConfig  ConsensusConfig    `mapstructure:"consensus"`
+
 	StorageConfig    StorageConfig      `mapstructure:"storage"`
 	TxPoolConfig     txPoolConfig       `mapstructure:"txpool"`
 	SyncConfig       syncConfig         `mapstructure:"sync"`

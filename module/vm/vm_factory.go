@@ -9,12 +9,6 @@ SPDX-License-Identifier: Apache-2.0
 package vm
 
 import (
-	"encoding/hex"
-	"fmt"
-	"path/filepath"
-	"regexp"
-	"strconv"
-
 	"chainmaker.org/chainmaker-go/evm"
 	"chainmaker.org/chainmaker-go/gasm"
 	"chainmaker.org/chainmaker-go/logger"
@@ -25,7 +19,13 @@ import (
 	"chainmaker.org/chainmaker-go/wasmer"
 	"chainmaker.org/chainmaker-go/wxvm"
 	"chainmaker.org/chainmaker-go/wxvm/xvm"
+	"encoding/hex"
+	"fmt"
 	"github.com/gogo/protobuf/proto"
+	"path/filepath"
+	"regexp"
+	"strconv"
+	"strings"
 )
 
 const WxvmCodeFolder = "wxvm"
@@ -593,6 +593,9 @@ func txContextGet(txContext protocol.TxSimContext, contractName string, key stri
 	result, err := txContext.Get(commonPb.ContractName_SYSTEM_CONTRACT_STATE.String(), newKey)
 	if result == nil || err != nil {
 		result, err = txContext.Get(contractName, []byte(key))
+		if err != nil && strings.Contains(err.Error(), "sql query error") {
+			return nil, nil
+		}
 	}
 	return result, err
 }
@@ -601,6 +604,9 @@ func txContextGetVersionBytecode(txContext protocol.TxSimContext, contractName s
 	result, err := txContext.Get(commonPb.ContractName_SYSTEM_CONTRACT_STATE.String(), versionedByteCodeKey)
 	if result == nil || err != nil {
 		result, err = txContext.Get(contractName, []byte(protocol.ContractByteCode+version))
+		if err != nil && strings.Contains(err.Error(), "sql query error") {
+			return nil, nil
+		}
 	}
 	return result, err
 }

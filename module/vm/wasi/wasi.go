@@ -9,8 +9,6 @@ Wacsi WebAssembly chainmaker system interface
 package wasi
 
 import (
-	"chainmaker.org/chainmaker-go/common/crypto/bulletproofs"
-	"chainmaker.org/chainmaker-go/common/crypto/paillier"
 	"errors"
 	"fmt"
 	"math/big"
@@ -19,6 +17,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker-go/common/crypto/bulletproofs"
+	"chainmaker.org/chainmaker-go/common/crypto/paillier"
 	"chainmaker.org/chainmaker-go/common/serialize"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
@@ -523,7 +523,7 @@ func (*WacsiImpl) PaillierOperation(requestBody []byte, memory []byte, data []by
 	pubKeyBytes, _ := ec.GetBytes("pubKey")
 	valuePtr, _ := ec.GetInt32("value_ptr")
 
-	pubKey := paillier.Helper().NewPubKey()
+	pubKey := new(paillier.PubKey)
 	err := pubKey.Unmarshal(pubKeyBytes)
 	if err != nil {
 		return nil, err
@@ -558,9 +558,9 @@ func (*WacsiImpl) PaillierOperation(requestBody []byte, memory []byte, data []by
 	return resultBytes, nil
 }
 
-func addCiphertext(operandOne interface{}, operandTwo interface{}, pubKey paillier.Pub) ([]byte, error) {
-	ct1 := paillier.Helper().NewCiphertext()
-	ct2 := paillier.Helper().NewCiphertext()
+func addCiphertext(operandOne interface{}, operandTwo interface{}, pubKey *paillier.PubKey) ([]byte, error) {
+	ct1 := new(paillier.Ciphertext)
+	ct2 := new(paillier.Ciphertext)
 	err := ct1.Unmarshal(operandOne.([]byte))
 	if err != nil {
 		return nil, err
@@ -580,8 +580,8 @@ func addCiphertext(operandOne interface{}, operandTwo interface{}, pubKey pailli
 	return result.Marshal()
 }
 
-func addPlaintext(operandOne interface{}, operandTwo interface{}, pubKey paillier.Pub) ([]byte, error) {
-	ct := paillier.Helper().NewCiphertext()
+func addPlaintext(operandOne interface{}, operandTwo interface{}, pubKey *paillier.PubKey) ([]byte, error) {
+	ct := new(paillier.Ciphertext)
 	err := ct.Unmarshal(operandOne.([]byte))
 	if err != nil {
 		return nil, err
@@ -601,9 +601,9 @@ func addPlaintext(operandOne interface{}, operandTwo interface{}, pubKey paillie
 	return result.Marshal()
 }
 
-func subCiphertext(operandOne interface{}, operandTwo interface{}, pubKey paillier.Pub) ([]byte, error) {
-	ct1 := paillier.Helper().NewCiphertext()
-	ct2 := paillier.Helper().NewCiphertext()
+func subCiphertext(operandOne interface{}, operandTwo interface{}, pubKey *paillier.PubKey) ([]byte, error) {
+	ct1 := new(paillier.Ciphertext)
+	ct2 := new(paillier.Ciphertext)
 	err := ct1.Unmarshal(operandOne.([]byte))
 	if err != nil {
 		return nil, err
@@ -623,8 +623,8 @@ func subCiphertext(operandOne interface{}, operandTwo interface{}, pubKey pailli
 	return result.Marshal()
 }
 
-func subPlaintext(operandOne interface{}, operandTwo interface{}, pubKey paillier.Pub) ([]byte, error) {
-	ct := paillier.Helper().NewCiphertext()
+func subPlaintext(operandOne interface{}, operandTwo interface{}, pubKey *paillier.PubKey) ([]byte, error) {
+	ct := new(paillier.Ciphertext)
 	err := ct.Unmarshal(operandOne.([]byte))
 	if err != nil {
 		return nil, err
@@ -647,8 +647,8 @@ func subPlaintext(operandOne interface{}, operandTwo interface{}, pubKey paillie
 	return result.Marshal()
 }
 
-func numMul(operandOne interface{}, operandTwo interface{}, pubKey paillier.Pub) ([]byte, error) {
-	ct := paillier.Helper().NewCiphertext()
+func numMul(operandOne interface{}, operandTwo interface{}, pubKey *paillier.PubKey) ([]byte, error) {
+	ct := new(paillier.Ciphertext)
 	err := ct.Unmarshal(operandOne.([]byte))
 	if err != nil {
 		return nil, err
