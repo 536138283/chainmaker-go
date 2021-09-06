@@ -184,14 +184,15 @@ func (pcs *PeerStateService) sendStateChange() {
 }
 
 func (pcs *PeerStateService) sendStateOfRound() {
-	pcs.sendProposalOfRound()
+	pcs.sendProposalOfRound(pcs.Height, pcs.Round)
 	pcs.sendPrevoteOfRound(pcs.Round)
 	pcs.sendPrecommitOfRound(pcs.Round)
 }
 
-func (pcs *PeerStateService) sendProposalOfRound() {
-	// Send proposal
-	if pcs.tbftImpl.Proposal != nil &&
+func (pcs *PeerStateService) sendProposalOfRound(height int64, round int32) {
+	// Send proposal (only proposer can send proposal)
+	if pcs.tbftImpl.isProposer(height, round) &&
+		pcs.tbftImpl.Proposal != nil &&
 		pcs.VerifingProposal == nil &&
 		pcs.Step >= tbftpb.Step_Propose {
 		pcs.sendProposal(pcs.tbftImpl.Proposal)
@@ -308,8 +309,9 @@ func (pcs *PeerStateService) sendStateOfHeight(height int64) {
 }
 
 func (pcs *PeerStateService) sendProposalInState(state *ConsensusState) {
-	// Send Proposal
-	if state.Proposal != nil &&
+	// Send Proposal (only proposer can send proposal)
+	if pcs.tbftImpl.isProposer(state.Height, state.Round) &&
+		state.Proposal != nil &&
 		pcs.VerifingProposal == nil &&
 		pcs.Step >= tbftpb.Step_Propose {
 		pcs.sendProposal(state.Proposal)
