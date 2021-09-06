@@ -72,7 +72,7 @@ func (*TxContextMock) CallContract(contractId *commonPb.ContractId,
 	parameter map[string]string,
 	gasUsed uint64,
 	refTxType commonPb.TxType,
-) (*commonPb.ContractResult, commonPb.TxStatusCode) {
+) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 
 	panic("implement me")
 }

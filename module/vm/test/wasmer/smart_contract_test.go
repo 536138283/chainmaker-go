@@ -85,7 +85,7 @@ func invokeFact(method string, id int32, contractId *commonPb.ContractId, txCont
 
 	baseParam(parameters)
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
-	r := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
+	r, _ := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
 	fmt.Printf("\n【result】 %+v \n\n\n", r)
 	return r
 }
@@ -139,7 +139,7 @@ func invokeFactContract(method string, contractId *commonPb.ContractId, txContex
 	parameters["contract_name"] = test.ContractNameTest
 	baseParam(parameters)
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
-	r := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
+	r, _ := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
 	fmt.Printf("\n【result】 %+v \n\n\n", r)
 	return r
 }

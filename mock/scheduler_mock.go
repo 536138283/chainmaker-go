@@ -104,12 +104,14 @@ func (m *MockTxSimContext) EXPECT() *MockTxSimContextMockRecorder {
 }
 
 // CallContract mocks base method.
-func (m *MockTxSimContext) CallContract(contractId *common.ContractId, method string, byteCode []byte, parameter map[string]string, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, common.TxStatusCode) {
+func (m *MockTxSimContext) CallContract(contractId *common.ContractId, method string, byteCode []byte,
+	parameter map[string]string, gasUsed uint64, refTxType common.TxType) (*common.ContractResult,
+	protocol.ExecOrderTxType, common.TxStatusCode) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallContract", contractId, method, byteCode, parameter, gasUsed, refTxType)
 	ret0, _ := ret[0].(*common.ContractResult)
 	ret1, _ := ret[1].(common.TxStatusCode)
-	return ret0, ret1
+	return ret0, protocol.ExecOrderTxTypeNormal, ret1
 }
 
 // CallContract indicates an expected call of CallContract.
