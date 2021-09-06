@@ -70,6 +70,8 @@ func (server *ChainMakerServer) initNet() error {
 	switch strings.ToLower(provider) {
 	case "libp2p":
 		netType = protocol.Libp2p
+	case "liquid":
+		netType = protocol.Liquid
 	default:
 		return errors.New("unsupported net provider")
 	}
