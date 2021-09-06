@@ -8,45 +8,51 @@ package net
 
 import (
 	"errors"
-	"fmt"
 	"io/ioutil"
+	"strings"
 	"sync"
-
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
 
 	"chainmaker.org/chainmaker-go/localconf"
 	rootLog "chainmaker.org/chainmaker-go/logger"
+	"chainmaker.org/chainmaker/chainmaker-net-common/common/priorityblocker"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 )
 
-// ErrorChainMsgBusBeenBound
-var ErrorChainMsgBusBeenBound = errors.New("chain msg bus has been bound")
-
-// ErrorChainMsgBusNotBeenBound
-var ErrorChainMsgBusNotBeenBound = errors.New("chain msg bus has not been bound")
-
-// ErrorNetNotRunning
-var ErrorNetNotRunning = errors.New("net instance is not running")
+var (
+	ErrorChainMsgBusBeenBound = errors.New("chain msg bus has been bound")
+	ErrorNetNotRunning        = errors.New("net instance is not running")
+)
 
 const (
-	topicNameTemplate            = "topic_%s"
-	consensusTopicNameTemplate   = "consensus_topic_%s"
-	msgBusTopicTemplate          = "msgbus_topic_%s"
-	msgBusConsensusTopicTemplate = "msgbus_consensus_topic_%s"
-	msgBusMsgFlagTemplate        = "msgbus_%s"
+	topicNamePrefix            = "topic"
+	consensusTopicNamePrefix   = "consensus_topic"
+	msgBusTopicPrefix          = "msgbus_topic"
+	msgBusConsensusTopicPrefix = "msgbus_consensus_topic"
+	msgBusMsgFlagPrefix        = "msgbus"
+
+	topicSeparator = "::"
 )
+
+// CreateFlagWithPrefixAndMsgType will join prefix with msg type string.
+func CreateFlagWithPrefixAndMsgType(prefix string, msgType netPb.NetMsg_MsgType) string {
+	var builder strings.Builder
+	builder.WriteString(prefix)
+	builder.WriteString(topicSeparator)
+	builder.WriteString(msgType.String())
+	return builder.String()
+}
 
 var _ protocol.NetService = (*NetService)(nil)
 
 // NetService provide a net service for modules.
 type NetService struct {
 	chainId              string
-	localNet             Net
+	localNet             protocol.Net
 	msgBus               msgbus.MessageBus
 	logger               *rootLog.CMLogger
 	configWatcher        *ConfigWatcher
@@ -59,7 +65,7 @@ type NetService struct {
 }
 
 // NewNetService create a new net service instance.
-func NewNetService(chainId string, localNet Net, ac protocol.AccessControlProvider) *NetService {
+func NewNetService(chainId string, localNet protocol.Net, ac protocol.AccessControlProvider) *NetService {
 	logger := rootLog.GetLoggerByChain(rootLog.MODULE_NET, chainId)
 	ns := &NetService{chainId: chainId, localNet: localNet, consensusNodeIds: make(map[string]struct{}), ac: ac, logger: logger}
 	return ns
@@ -67,37 +73,36 @@ func NewNetService(chainId string, localNet Net, ac protocol.AccessControlProvid
 
 // BroadcastMsg broadcast a net msg to other nodes belongs to the same chain.
 func (ns *NetService) BroadcastMsg(msg []byte, msgType netPb.NetMsg_MsgType) error {
-	pbMsg := NewNetMsg(msg, msgType, "")
-	err := ns.broadcastMsg(pbMsg, fmt.Sprintf(topicNameTemplate, pbMsg.Type.String()))
+	err := ns.broadcastMsg(msg, CreateFlagWithPrefixAndMsgType(topicNamePrefix, msgType))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ns *NetService) broadcastMsg(pbMsg *netPb.NetMsg, topic string) error {
-	return ns.localNet.BroadcastWithChainId(ns.chainId, topic, pbMsg)
+func (ns *NetService) broadcastMsg(msg []byte, topic string) error {
+	return ns.localNet.BroadcastWithChainId(ns.chainId, topic, msg)
 }
 
 // Subscribe a pub-sub topic for receiving the msg that be broadcast by the other node.
 func (ns *NetService) Subscribe(msgType netPb.NetMsg_MsgType, handler protocol.MsgHandler) error {
-	err := ns.subscribe(handler, fmt.Sprintf(topicNameTemplate, msgType.String()))
+	err := ns.subscribe(handler, msgType, CreateFlagWithPrefixAndMsgType(topicNamePrefix, msgType))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ns *NetService) subscribe(handler protocol.MsgHandler, topic string) error {
-	h := func(publisher string, msg *netPb.NetMsg) error {
-		return handler(publisher, msg.GetPayload(), msg.GetType())
+func (ns *NetService) subscribe(handler protocol.MsgHandler, msgType netPb.NetMsg_MsgType, topic string) error {
+	h := func(publisher string, msg []byte) error {
+		return handler(publisher, msg, msgType)
 	}
 	return ns.localNet.SubscribeWithChainId(ns.chainId, topic, h)
 }
 
 // CancelSubscribe stop receiving the msg from the pub-sub topic subscribed.
 func (ns *NetService) CancelSubscribe(msgType netPb.NetMsg_MsgType) error {
-	return ns.localNet.CancelSubscribeWithChainId(ns.chainId, fmt.Sprintf(topicNameTemplate, msgType.String()))
+	return ns.localNet.CancelSubscribeWithChainId(ns.chainId, CreateFlagWithPrefixAndMsgType(topicNamePrefix, msgType))
 }
 
 func (ns *NetService) getConsensusNodeIdList() []string {
@@ -112,30 +117,39 @@ func (ns *NetService) getConsensusNodeIdList() []string {
 	return result
 }
 
-func (ns *NetService) consensusBroadcastMsg(pbMsg *netPb.NetMsg, topic string) error {
-	for _, to := range ns.getConsensusNodeIdList() {
+func (ns *NetService) consensusBroadcastMsg(msg []byte, topic string) error {
+	consensusNodeIdList := ns.getConsensusNodeIdList()
+	if len(consensusNodeIdList) == 0 {
+		return nil
+	}
+	var wg sync.WaitGroup
+	wg.Add(len(consensusNodeIdList))
+	for i := range consensusNodeIdList {
+		to := consensusNodeIdList[i]
 		if to == ns.localNet.GetNodeUid() {
+			wg.Done()
 			continue
 		}
-		msg := NewNetMsg(pbMsg.Payload, pbMsg.Type, to)
 		go func() {
-			if err := ns.sendMsg(msg, topic); err != nil {
+			defer wg.Done()
+			if err := ns.localNet.SendMsg(ns.chainId, to, topic, msg); err != nil {
 				ns.logger.Warnf("[NetService] send consensus broadcast msg failed, %s", err.Error())
 			}
 		}()
 	}
+	wg.Wait()
 	return nil
 }
 
 // ConsensusBroadcastMsg only broadcast a net msg to other consensus nodes belongs to the same chain.
 func (ns *NetService) ConsensusBroadcastMsg(msg []byte, msgType netPb.NetMsg_MsgType) error {
 	pbMsg := NewNetMsg(msg, msgType, "")
-	return ns.consensusBroadcastMsg(pbMsg, fmt.Sprintf(consensusTopicNameTemplate, pbMsg.Type.String()))
+	return ns.consensusBroadcastMsg(msg, CreateFlagWithPrefixAndMsgType(consensusTopicNamePrefix, pbMsg.Type))
 }
 
 // ConsensusSubscribe create a listener for receiving the msg which type is the given netPb.NetMsg_MsgType that be broadcast with ConsensusBroadcastMsg method by the other consensus node.
 func (ns *NetService) ConsensusSubscribe(msgType netPb.NetMsg_MsgType, handler protocol.MsgHandler) error {
-	err := ns.receiveMsg(handler, fmt.Sprintf(consensusTopicNameTemplate, msgType.String()))
+	err := ns.receiveMsg(handler, CreateFlagWithPrefixAndMsgType(consensusTopicNamePrefix, msgType), msgType)
 	if err != nil {
 		return err
 	}
@@ -144,7 +158,7 @@ func (ns *NetService) ConsensusSubscribe(msgType netPb.NetMsg_MsgType, handler p
 
 // CancelConsensusSubscribe stop receiving the msg which type is the given netPb.NetMsg_MsgType that be broadcast with ConsensusBroadcastMsg method by the other consensus node.
 func (ns *NetService) CancelConsensusSubscribe(msgType netPb.NetMsg_MsgType) error {
-	return ns.cancelReceiveMsg(fmt.Sprintf(consensusTopicNameTemplate, msgType.String()))
+	return ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(consensusTopicNamePrefix, msgType))
 }
 
 // SendMsg send a net msg to the nodes which node ids are the given strings.
@@ -154,36 +168,27 @@ func (ns *NetService) SendMsg(msg []byte, msgType netPb.NetMsg_MsgType, to ...st
 		if n == ns.localNet.GetNodeUid() {
 			continue
 		}
-		pbMsg := NewNetMsg(msg, msgType, n)
-		err := ns.sendMsg(pbMsg, msgFlag)
+		err := ns.localNet.SendMsg(ns.chainId, n, msgFlag, msg)
 		if err != nil {
+			ns.logger.Debugf("[NetService] send msg failed(to:%s, flag:%s), %s", n, msgFlag, err.Error())
 			return err
 		}
 	}
 	return nil
 }
 
-func (ns *NetService) sendMsg(pbMsg *netPb.NetMsg, flag string) error {
-	err := ns.localNet.SendMsg(ns.chainId, pbMsg.To, flag, pbMsg)
-	if err != nil {
-		ns.logger.Debugf("[NetService] send msg failed(to:%s, flag:%s), %s", pbMsg.To, flag, err.Error())
-		return err
-	}
-	return nil
-}
-
-// ReceiveMsg create a listener for receiving the msg which type is the given netPb.NetMsg_MsgType that be sended with ConsensusBroadcastMsg method by the other consensus node.
+// ReceiveMsg create a listener for receiving the msg which type is the given netPb.NetMsg_MsgType that be sent with ConsensusBroadcastMsg method by the other consensus node.
 func (ns *NetService) ReceiveMsg(msgType netPb.NetMsg_MsgType, handler protocol.MsgHandler) error {
 	msgFlag := msgType.String()
-	if err := ns.receiveMsg(handler, msgFlag); err != nil {
+	if err := ns.receiveMsg(handler, msgFlag, msgType); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (ns *NetService) receiveMsg(handler protocol.MsgHandler, flag string) error {
-	h := func(from string, netMsg *netPb.NetMsg) error {
-		err := handler(from, netMsg.GetPayload(), netMsg.GetType())
+func (ns *NetService) receiveMsg(handler protocol.MsgHandler, flag string, msgType netPb.NetMsg_MsgType) error {
+	h := func(from string, data []byte) error {
+		err := handler(from, data, msgType)
 		if err != nil {
 			return err
 		}
@@ -203,11 +208,11 @@ func (ns *NetService) cancelReceiveMsg(flag string) error {
 }
 
 // MsgForMsgBusHandler is a handler function that receive the msg from net than publish to msg-bus.
-type MsgForMsgBusHandler func(chainId string, from string, msg *netPb.NetMsg) error
+type MsgForMsgBusHandler func(chainId string, from string, msg []byte) error
 
 func (ns *NetService) receiveMsgForMsgBus(handler MsgForMsgBusHandler, flag string) error {
-	h := func(from string, netMsg *netPb.NetMsg) error {
-		err := handler(ns.chainId, from, netMsg)
+	h := func(from string, data []byte) error {
+		err := handler(ns.chainId, from, data)
 		if err != nil {
 			return err
 		}
@@ -220,8 +225,8 @@ func (ns *NetService) receiveMsgForMsgBus(handler MsgForMsgBusHandler, flag stri
 }
 
 func (ns *NetService) subscribeTopicForMsgBus(handler MsgForMsgBusHandler, topic string) error {
-	h := func(from string, netMsg *netPb.NetMsg) error {
-		err := handler(ns.chainId, from, netMsg)
+	h := func(from string, data []byte) error {
+		err := handler(ns.chainId, from, data)
 		if err != nil {
 			return err
 		}
@@ -258,14 +263,18 @@ func (ns *NetService) Start() error {
 	// add access control
 	ns.localNet.AddAC(ns.chainId, ns.ac)
 
-	// init pubsub
-	if err := ns.localNet.InitPubsub(ns.chainId, 0); err != nil {
+	// init pub-sub
+	if err := ns.localNet.InitPubSub(ns.chainId, 0); err != nil {
 		ns.logger.Errorf("[NetService] init pubsub failed, %s", err.Error())
 		return err
 	}
+
 	if err := ns.initBindMsgBus(); err != nil {
 		return err
 	}
+
+	ns.setFlagPriority()
+
 	ns.logger.Infof("[NetService] net service started.")
 	return nil
 }
@@ -393,12 +402,12 @@ func HandleMsgBusSubscriberOnMessage(netService *NetService, msgType netPb.NetMs
 
 func handleMsgBusSubscriberOnMessageBroadcast(netService *NetService, msgType netPb.NetMsg_MsgType, logMsgDescription string, netMsg *netPb.NetMsg) error {
 	if msgType == netPb.NetMsg_TX || msgType == netPb.NetMsg_CONSENSUS_MSG {
-		if err := netService.consensusBroadcastMsg(netMsg, fmt.Sprintf(msgBusConsensusTopicTemplate, msgType.String())); err != nil {
+		if err := netService.consensusBroadcastMsg(netMsg.GetPayload(), CreateFlagWithPrefixAndMsgType(msgBusConsensusTopicPrefix, msgType)); err != nil {
 			netService.logger.Debugf("[NetService/msg-bus %s subscriber] broadcast failed, %s", logMsgDescription, err.Error())
 			return err
 		}
 	} else {
-		if err := netService.broadcastMsg(netMsg, fmt.Sprintf(msgBusTopicTemplate, msgType.String())); err != nil {
+		if err := netService.broadcastMsg(netMsg.GetPayload(), CreateFlagWithPrefixAndMsgType(msgBusTopicPrefix, msgType)); err != nil {
 			netService.logger.Debugf("[NetService/msg-bus %s subscriber] broadcast failed, %s", logMsgDescription, err.Error())
 			return err
 		}
@@ -409,7 +418,7 @@ func handleMsgBusSubscriberOnMessageBroadcast(netService *NetService, msgType ne
 
 func handleMsgBusSubscriberOnMessageSend(netService *NetService, msgType netPb.NetMsg_MsgType, logMsgDescription string, netMsg *netPb.NetMsg) error {
 	go func() {
-		if err := netService.sendMsg(netMsg, fmt.Sprintf(msgBusMsgFlagTemplate, msgType.String())); err != nil {
+		if err := netService.localNet.SendMsg(netService.chainId, netMsg.To, CreateFlagWithPrefixAndMsgType(msgBusMsgFlagPrefix, msgType), netMsg.GetPayload()); err != nil {
 			netService.logger.Debugf("[NetService/msg-bus %s subscriber] send msg failed (size:%d) (reason:%s) (to:%s)", logMsgDescription, proto.Size(netMsg), err.Error(), netMsg.To)
 		} else {
 			netService.logger.Debugf("[NetService/msg-bus %s subscriber] send msg ok (size:%d) (to:%s)", logMsgDescription, proto.Size(netMsg), netMsg.To)
@@ -487,13 +496,14 @@ func (cms *SyncBlockMsgSubscriber) OnQuit() {
 	//panic("implement me")
 }
 
-func CreateMsgHandlerForMsgBus(netService *NetService, topic msgbus.Topic, logMsgDescription string) func(chainId string, node string, pbMsg *netPb.NetMsg) error {
-	return func(chainId string, node string, pbMsg *netPb.NetMsg) error {
-		netService.logger.Debugf("[NetService/%s handler for msg-bus] receive msg (size:%d) (from:%s)", logMsgDescription, proto.Size(pbMsg), node)
+func CreateMsgHandlerForMsgBus(netService *NetService, topic msgbus.Topic, logMsgDescription string, msgType netPb.NetMsg_MsgType) func(chainId string, node string, data []byte) error {
+	return func(chainId string, node string, data []byte) error {
+		netService.logger.Debugf("[NetService/%s handler for msg-bus] receive msg (size:%d) (from:%s)", logMsgDescription, len(data), node)
 		if netService.chainId != chainId {
 			netService.logger.Warnf("[NetService/%s handler for msg-bus] wrong chain-id(chain-id:%s), ignored.", logMsgDescription, chainId)
 			return nil
 		}
+		pbMsg := NewNetMsg(data, msgType, node)
 		netService.msgBus.Publish(topic, pbMsg)
 		return nil
 	}
@@ -519,11 +529,11 @@ func (ns *NetService) initBindMsgBus() error {
 
 	// for consensus module
 	// receive consensus msg from net then publish to msg-bus
-	consensusMsgHandler := CreateMsgHandlerForMsgBus(ns, msgbus.RecvConsensusMsg, "consensus msg")
-	if err := ns.receiveMsgForMsgBus(consensusMsgHandler, fmt.Sprintf(msgBusMsgFlagTemplate, netPb.NetMsg_CONSENSUS_MSG.String())); err != nil {
+	consensusMsgHandler := CreateMsgHandlerForMsgBus(ns, msgbus.RecvConsensusMsg, "consensus msg", netPb.NetMsg_CONSENSUS_MSG)
+	if err := ns.receiveMsgForMsgBus(consensusMsgHandler, CreateFlagWithPrefixAndMsgType(msgBusMsgFlagPrefix, netPb.NetMsg_CONSENSUS_MSG)); err != nil {
 		return err
 	}
-	if err := ns.receiveMsgForMsgBus(consensusMsgHandler, fmt.Sprintf(msgBusConsensusTopicTemplate, netPb.NetMsg_CONSENSUS_MSG.String())); err != nil {
+	if err := ns.receiveMsgForMsgBus(consensusMsgHandler, CreateFlagWithPrefixAndMsgType(msgBusConsensusTopicPrefix, netPb.NetMsg_CONSENSUS_MSG)); err != nil {
 		return err
 	}
 
@@ -537,15 +547,15 @@ func (ns *NetService) initBindMsgBus() error {
 
 	// for tx pool module
 	// receive tx msg from net then publish to msg-bus
-	txPoolMsgHandler := CreateMsgHandlerForMsgBus(ns, msgbus.RecvTxPoolMsg, "tx_pool msg")
-	if err := ns.receiveMsgForMsgBus(txPoolMsgHandler, fmt.Sprintf(msgBusMsgFlagTemplate, netPb.NetMsg_TX.String())); err != nil {
+	txPoolMsgHandler := CreateMsgHandlerForMsgBus(ns, msgbus.RecvTxPoolMsg, "tx_pool msg", netPb.NetMsg_TX)
+	if err := ns.receiveMsgForMsgBus(txPoolMsgHandler, CreateFlagWithPrefixAndMsgType(msgBusMsgFlagPrefix, netPb.NetMsg_TX)); err != nil {
 		return err
 	}
-	if err := ns.receiveMsgForMsgBus(txPoolMsgHandler, fmt.Sprintf(msgBusConsensusTopicTemplate, netPb.NetMsg_TX.String())); err != nil {
+	if err := ns.receiveMsgForMsgBus(txPoolMsgHandler, CreateFlagWithPrefixAndMsgType(msgBusConsensusTopicPrefix, netPb.NetMsg_TX)); err != nil {
 		return err
 	}
 	// subscribe the topic that ths spv node broadcast to
-	if err := ns.subscribeTopicForMsgBus(txPoolMsgHandler, fmt.Sprintf(topicNameTemplate, netPb.NetMsg_TX.String())); err != nil {
+	if err := ns.subscribeTopicForMsgBus(txPoolMsgHandler, CreateFlagWithPrefixAndMsgType(topicNamePrefix, netPb.NetMsg_TX)); err != nil {
 		return err
 	}
 
@@ -559,11 +569,11 @@ func (ns *NetService) initBindMsgBus() error {
 
 	// for sync module
 	// receive sync block msg from net then publish to msg-bus
-	sbmHandler := CreateMsgHandlerForMsgBus(ns, msgbus.RecvSyncBlockMsg, "sync block msg")
-	if err := ns.receiveMsgForMsgBus(sbmHandler, fmt.Sprintf(msgBusMsgFlagTemplate, netPb.NetMsg_SYNC_BLOCK_MSG.String())); err != nil {
+	sbmHandler := CreateMsgHandlerForMsgBus(ns, msgbus.RecvSyncBlockMsg, "sync block msg", netPb.NetMsg_SYNC_BLOCK_MSG)
+	if err := ns.receiveMsgForMsgBus(sbmHandler, CreateFlagWithPrefixAndMsgType(msgBusMsgFlagPrefix, netPb.NetMsg_SYNC_BLOCK_MSG)); err != nil {
 		return err
 	}
-	if err := ns.subscribeTopicForMsgBus(sbmHandler, fmt.Sprintf(msgBusTopicTemplate, netPb.NetMsg_SYNC_BLOCK_MSG.String())); err != nil {
+	if err := ns.subscribeTopicForMsgBus(sbmHandler, CreateFlagWithPrefixAndMsgType(msgBusTopicPrefix, netPb.NetMsg_SYNC_BLOCK_MSG)); err != nil {
 		return err
 	}
 	// subscribe a sync block msg subscriber for receiving sync block msg from msg-bus then broadcast the msg to consensus nodes.
@@ -573,4 +583,21 @@ func (ns *NetService) initBindMsgBus() error {
 	ns.msgBus.Register(msgbus.SendSyncBlockMsg, sbmSubscriber)
 	ns.logger.Infof("[NetService] init bind msg-bus ok")
 	return nil
+}
+
+func (ns *NetService) setFlagPriority() {
+	ns.localNet.SetMsgPriority(netPb.NetMsg_CONSENSUS_MSG.String(), uint8(priorityblocker.PriorityLevel9))
+	ns.localNet.SetMsgPriority(netPb.NetMsg_BLOCK.String(), uint8(priorityblocker.PriorityLevel8))
+	ns.localNet.SetMsgPriority(netPb.NetMsg_BLOCKS.String(), uint8(priorityblocker.PriorityLevel8))
+	ns.localNet.SetMsgPriority(netPb.NetMsg_TX.String(), uint8(priorityblocker.PriorityLevel7))
+	ns.localNet.SetMsgPriority(netPb.NetMsg_TXS.String(), uint8(priorityblocker.PriorityLevel7))
+	ns.localNet.SetMsgPriority(netPb.NetMsg_SYNC_BLOCK_MSG.String(), uint8(priorityblocker.PriorityLevel5))
+
+	ns.localNet.SetMsgPriority(CreateFlagWithPrefixAndMsgType(msgBusMsgFlagPrefix, netPb.NetMsg_CONSENSUS_MSG), uint8(priorityblocker.PriorityLevel9))
+	ns.localNet.SetMsgPriority(CreateFlagWithPrefixAndMsgType(msgBusConsensusTopicPrefix, netPb.NetMsg_CONSENSUS_MSG), uint8(priorityblocker.PriorityLevel9))
+	ns.localNet.SetMsgPriority(CreateFlagWithPrefixAndMsgType(msgBusMsgFlagPrefix, netPb.NetMsg_TX), uint8(priorityblocker.PriorityLevel7))
+	ns.localNet.SetMsgPriority(CreateFlagWithPrefixAndMsgType(msgBusConsensusTopicPrefix, netPb.NetMsg_TX), uint8(priorityblocker.PriorityLevel7))
+	ns.localNet.SetMsgPriority(CreateFlagWithPrefixAndMsgType(topicNamePrefix, netPb.NetMsg_TX), uint8(priorityblocker.PriorityLevel7))
+	ns.localNet.SetMsgPriority(CreateFlagWithPrefixAndMsgType(msgBusMsgFlagPrefix, netPb.NetMsg_SYNC_BLOCK_MSG), uint8(priorityblocker.PriorityLevel5))
+	ns.localNet.SetMsgPriority(CreateFlagWithPrefixAndMsgType(msgBusTopicPrefix, netPb.NetMsg_SYNC_BLOCK_MSG), uint8(priorityblocker.PriorityLevel5))
 }

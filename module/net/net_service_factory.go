@@ -15,7 +15,7 @@ type NetServiceFactory struct {
 }
 
 // NewNetService create a new net service instance.
-func (nsf *NetServiceFactory) NewNetService(net Net, chainId string, ac protocol.AccessControlProvider, chainConf protocol.ChainConf, opts ...NetServiceOption) (protocol.NetService, error) {
+func (nsf *NetServiceFactory) NewNetService(net protocol.Net, chainId string, ac protocol.AccessControlProvider, chainConf protocol.ChainConf, opts ...NetServiceOption) (protocol.NetService, error) {
 	//初始化工厂实例
 	ns := NewNetService(chainId, net, ac)
 	if err := ns.Apply(opts...); err != nil {

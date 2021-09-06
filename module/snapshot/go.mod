@@ -6,9 +6,9 @@ require (
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/logger v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
-	chainmaker.org/chainmaker/common/v2 v2.0.0
+	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210906085649-78f6202d8d60
 	chainmaker.org/chainmaker/pb-go/v2 v2.0.0
-	chainmaker.org/chainmaker/protocol/v2 v2.0.0
+	chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20210906092203-47d66f4908f7
 	github.com/stretchr/testify v1.7.0
 )
 

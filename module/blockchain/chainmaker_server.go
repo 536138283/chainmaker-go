@@ -34,7 +34,7 @@ const chainIdNotFoundErrorTemplate = "chain id %s not found"
 // ChainMakerServer manage all blockchains
 type ChainMakerServer struct {
 	// net shared by all chains
-	net net.Net
+	net protocol.Net
 
 	// blockchains known by this node
 	blockchains sync.Map // map[string]*Blockchain
@@ -97,7 +97,7 @@ func (server *ChainMakerServer) initNet() error {
 		net.WithListenAddr(localconf.ChainMakerConfig.NetConfig.ListenAddr),
 		net.WithCrypto(keyPath, certPath),
 		net.WithPeerStreamPoolSize(localconf.ChainMakerConfig.NetConfig.PeerStreamPoolSize),
-		net.WithMaxPeerCountAllow(localconf.ChainMakerConfig.NetConfig.MaxPeerCountAllow),
+		net.WithMaxPeerCountAllowed(localconf.ChainMakerConfig.NetConfig.MaxPeerCountAllow),
 		net.WithPeerEliminationStrategy(localconf.ChainMakerConfig.NetConfig.PeerEliminationStrategy),
 		net.WithSeeds(localconf.ChainMakerConfig.NetConfig.Seeds...),
 		net.WithBlackAddresses(localconf.ChainMakerConfig.NetConfig.BlackList.Addresses...),
@@ -122,7 +122,14 @@ func (server *ChainMakerServer) initNet() error {
 	// load custom chain trust roots
 	for _, chainTrustRoots := range localconf.ChainMakerConfig.NetConfig.CustomChainTrustRoots {
 		for _, roots := range chainTrustRoots.TrustRoots {
-			rootBytes, err := ioutil.ReadFile(roots.Root)
+			rootCertPath := roots.Root
+			if !filepath.IsAbs(rootCertPath) {
+				rootCertPath, err = filepath.Abs(rootCertPath)
+				if err != nil {
+					return err
+				}
+			}
+			rootBytes, err := ioutil.ReadFile(rootCertPath)
 			if err != nil {
 				log.Errorf("load custom chain trust roots failed, %s", err.Error())
 				return err
