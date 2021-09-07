@@ -66,12 +66,14 @@ func NewTimeSheduler(logger *logger.CMLogger, id string) *timeScheduler {
 	ts := &timeScheduler{
 		logger:   logger,
 		id:       id,
-		timer:    time.NewTimer(DefaultTimeoutPropose),
+		timer:    time.NewTimer(0),
 		bufferC:  make(chan timeoutInfo, defaultTimeSchedulerBufferSize),
 		timeoutC: make(chan timeoutInfo, defaultTimeSchedulerBufferSize),
 		stopC:    make(chan struct{}),
 	}
-	ts.stopTimer()
+	if !ts.timer.Stop() {
+		<-ts.timer.C
+	}
 
 	return ts
 }
@@ -88,9 +90,7 @@ func (ts *timeScheduler) Stop() {
 
 // stopTimer stop timer of timeScheduler
 func (ts *timeScheduler) stopTimer() {
-	if !ts.timer.Stop() {
-		<-ts.timer.C
-	}
+	ts.timer.Stop()
 }
 
 // AddTimeoutInfo add a timeoutInfo event to timeScheduler
