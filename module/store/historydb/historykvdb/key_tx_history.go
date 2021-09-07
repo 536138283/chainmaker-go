@@ -18,18 +18,18 @@ import (
 
 //k+ContractName+StateKey+BlockHeight+TxId
 func constructKey(contractName string, key []byte, blockHeight uint64, txId string) []byte {
-	dbkey := fmt.Sprintf(keyHistoryPrefix+"%s_%s_%d_%s", contractName, key, blockHeight, txId)
+	dbkey := fmt.Sprintf(keyHistoryPrefix+"%s#%s#%d#%s", contractName, key, blockHeight, txId)
 	return []byte(dbkey)
 }
 func constructKeyPrefix(contractName string, key []byte) []byte {
-	dbkey := fmt.Sprintf(keyHistoryPrefix+"%s_%s_", contractName, key)
+	dbkey := fmt.Sprintf(keyHistoryPrefix+"%s#%s#", contractName, key)
 	return []byte(dbkey)
 }
 func splitKey(dbKey []byte) (contractName string, key []byte, blockHeight uint64, txId string, err error) {
 	if len(dbKey) == 0 {
 		return "", nil, 0, "", errors.New("empty dbKey")
 	}
-	array := strings.Split(string(dbKey[1:]), "_")
+	array := strings.Split(string(dbKey[1:]), "#")
 	if len(array) != 4 {
 		return "", nil, 0, "", errors.New("invalid dbKey format")
 	}
