@@ -153,7 +153,10 @@ function generate_config() {
     mkdir -p ${BUILD_PATH}/config
     cd ${BUILD_PATH}/config
 
-    for ((i = 1; i < $NODE_CNT + 1; i = i + 1)); do
+    node_count=$(ls -l $BUILD_CRYPTO_CONFIG_PATH|grep "^d"| wc -l)
+    echo "config node total $node_count"
+    for ((i = 1; i < $node_count + 1; i = i + 1)); do
+#    for ((i = 1; i < $NODE_CNT + 1; i = i + 1)); do
         echo "begin generate node$i config..."
         mkdir -p ${BUILD_PATH}/config/node$i
         mkdir -p ${BUILD_PATH}/config/node$i/chainconfig
@@ -236,6 +239,11 @@ function generate_config() {
                xsed "s%{epochValidatorNum}%$NODE_CNT%g" node$i/chainconfig/bc$j.yml
             fi
 
+            if  [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
+              xsed '121,134d' node$i/chainconfig/bc$j.yml
+            fi
+            echo "begin node$i cert config..."
+
             c=0
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
             do
@@ -254,13 +262,20 @@ function generate_config() {
                 if  [ $j -eq 1 ]; then
                     xsed "s%{org${c}_peerid}%$peerId%g" node$i/chainmaker.yml
                 fi
-
-                for ((k = 1; k < $NODE_CNT + 1; k = k + 1)); do
-                    mkdir -p $BUILD_CONFIG_PATH/node$k/certs/ca/$file
-                    cp $BUILD_CRYPTO_CONFIG_PATH/$file/ca/ca.crt $BUILD_CONFIG_PATH/node$k/certs/ca/$file
-                done
+                # cp ca
+                mkdir -p $BUILD_CONFIG_PATH/node$i/certs/ca/$file
+                cp $BUILD_CRYPTO_CONFIG_PATH/$file/ca/ca.crt $BUILD_CONFIG_PATH/node$i/certs/ca/$file
 
                 if  [ $c -eq $i ]; then
+                    if [ $c -gt $NODE_CNT ]; then
+                      xsed "s%{node_cert_path}%node\/common1\/common1.sign%g" node$i/chainmaker.yml
+                      xsed "s%{net_cert_path}%node\/common1\/common1.tls%g" node$i/chainmaker.yml
+                      xsed "s%{rpc_cert_path}%node\/common1\/common1.tls%g" node$i/chainmaker.yml
+                    else
+                      xsed "s%{node_cert_path}%node\/consensus1\/consensus1.sign%g" node$i/chainmaker.yml
+                      xsed "s%{net_cert_path}%node\/consensus1\/consensus1.tls%g" node$i/chainmaker.yml
+                      xsed "s%{rpc_cert_path}%node\/consensus1\/consensus1.tls%g" node$i/chainmaker.yml
+                    fi
                     xsed "s%{org_path}%$file%g" node$i/chainconfig/bc$j.yml
                     xsed "s%{node_cert_path}%node\/consensus1\/consensus1.sign%g" node$i/chainmaker.yml
                     xsed "s%{net_cert_path}%node\/consensus1\/consensus1.tls%g" node$i/chainmaker.yml
@@ -275,6 +290,22 @@ function generate_config() {
 
             done
         done
+
+        echo "begin node$i trust config..."
+        if  [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
+          # 120 insert
+          c2=$NODE_CNT
+          for ((k = 1; k < $CHAIN_CNT + 1; k = k + 1)); do
+            for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
+            do
+              c2=$(($c2+1))
+              org_id_tmp=" - org_id: \"${file}\""
+              org_root_tmp="   root: \"../config/wx-org${i}.chainmaker.org/certs/ca/${file}/ca.crt\""
+              xsed -i "121i\ ${org_root_tmp}" node$i/chainconfig/bc$k.yml
+              xsed -i "121i\ ${org_id_tmp}"   node$i/chainconfig/bc$k.yml
+            done
+          done
+        fi
     done
 }
 
