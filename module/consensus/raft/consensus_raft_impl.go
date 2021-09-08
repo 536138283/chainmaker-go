@@ -315,8 +315,11 @@ func (consensus *ConsensusRaftImpl) serve() {
 		return fmt.Sprintf("[%x] begin serve with snap: %v, appliedIndex: %v",
 			consensus.Id, describeSnapshot(snapshot), consensus.appliedIndex)
 	})
-
-	ticker := time.NewTicker(localconf.ChainMakerConfig.ConsensusConfig.RaftConfig.Ticker * time.Second)
+	tickTime := localconf.ChainMakerConfig.ConsensusConfig.RaftConfig.Ticker
+	if tickTime == 0 {
+		tickTime = time.Nanosecond
+	}
+	ticker := time.NewTicker(tickTime * time.Second)
 	defer ticker.Stop()
 
 	for {
