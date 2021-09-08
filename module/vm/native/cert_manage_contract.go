@@ -11,8 +11,10 @@ import (
 	bcx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/hex"
@@ -22,6 +24,7 @@ import (
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"strings"
+	"time"
 )
 
 const (
@@ -189,9 +192,14 @@ func (r *CertManageRuntime) Freeze(txSimContext protocol.TxSimContext, params ma
 		return nil, err
 	}
 
-	certs := strings.Split(certsStr, ",")
+	config, _ := getChainConfig(txSimContext, make(map[string]string))
 
+	certs := strings.Split(certsStr, ",")
 	for _, cert := range certs {
+		if msg := r.checkCert(cert, config.TrustRoots); msg != nil {
+			r.log.Warnf("checkCert failed, err: %s", msg)
+			return nil, msg
+		}
 		certHash, err := utils.GetCertificateIdHex([]byte(cert), hashType)
 		if err != nil {
 			r.log.Errorf("utils.GetCertificateIdHex failed, err: %s", err.Error())
@@ -271,8 +279,16 @@ func (r *CertManageRuntime) Unfreeze(txSimContext protocol.TxSimContext, params 
 		return nil, err
 	}
 
+	config, _ := getChainConfig(txSimContext, make(map[string]string))
+
 	certs := strings.Split(certsStr, ",")
 	for _, cert := range certs {
+		if len(cert) == 0 {
+			continue
+		}
+		if msg := r.checkCert(cert, config.TrustRoots); msg != nil {
+			return nil, msg
+		}
 		if len(cert) == 0 {
 			continue
 		}
@@ -487,4 +503,40 @@ func (r *CertManageRuntime) recoverFrozenCert(txSimContext protocol.TxSimContext
 		}
 	}
 	return freezeKeyArray, changed
+}
+
+func (r *CertManageRuntime) checkCert(cert string, trustRoots []*configPb.TrustRootConfig) error {
+	c, err := utils.ParseCert([]byte(cert))
+	if err != nil {
+		return err
+	}
+	if c.IsCA {
+		return errors.New("can not freeze/unfreeze root certificate")
+	}
+
+	// 判断是否是该ca签发的证书
+	caPool := bcx509.NewCertPool()
+	for _, root := range trustRoots {
+		pemBlock, rest := pem.Decode([]byte(root.Root))
+		for pemBlock != nil {
+			cert, _ := bcx509.ParseCertificate(pemBlock.Bytes)
+			caPool.AddCert(cert)
+			pemBlock, rest = pem.Decode(rest)
+		}
+	}
+	certChain, err := c.Verify(bcx509.VerifyOptions{
+		Intermediates:             caPool,
+		Roots:                     caPool,
+		CurrentTime:               time.Time{},
+		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
+		MaxConstraintComparisions: 0,
+	})
+	if err != nil {
+		r.log.Warn(err)
+		return err
+	}
+	if len(certChain) > 0 && len(certChain[0]) > 0 {
+		return nil
+	}
+	return errors.New("the cert is not in trust root")
 }
