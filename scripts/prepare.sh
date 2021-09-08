@@ -122,17 +122,13 @@ function generate_config() {
     PPROF_PORT=24321
     TRUSTED_PORT=13301
 
-    if  [ $NODE_CNT -eq 1 ]; then
-        CONSENSUS_TYPE=0
-    else
-        read -p "input consensus type (0-SOLO,1-TBFT(default),3-HOTSTUFF,4-RAFT,5-DPOS): " tmp
-        if  [ ! -z "$tmp" ] ;then
-          if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] || [ $tmp -eq 5 ] ;then
-              CONSENSUS_TYPE=$tmp
-          else
-            echo "unknown consensus type [" $tmp "], so use default"
-          fi
-        fi
+    read -p "input consensus type (0-SOLO,1-TBFT(default),3-HOTSTUFF,4-RAFT,5-DPOS): " tmp
+    if  [ ! -z "$tmp" ] ;then
+      if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] || [ $tmp -eq 5 ] ;then
+          CONSENSUS_TYPE=$tmp
+      else
+        echo "unknown consensus type [" $tmp "], so use default"
+      fi
     fi
 
     read -p "input log level (DEBUG|INFO(default)|WARN|ERROR): " tmp
@@ -202,8 +198,13 @@ function generate_config() {
             xsed "s%#\(.*\)genesis: ../config/{org_path$j}/chainconfig/bc${j}.yml%\1genesis: ../config/{org_path$j}/chainconfig/bc${j}.yml%g" node$i/chainmaker.yml
 
             if  [ $NODE_CNT -eq 1 ]; then
-                cp $CONFIG_TPL_PATH/chainconfig/bc_solo.tpl node$i/chainconfig/bc$j.yml
-                xsed "s%{consensus_type}%0%g" node$i/chainconfig/bc$j.yml
+                if [ $CONSENSUS_TYPE -eq 0 ]; then
+                    cp $CONFIG_TPL_PATH/chainconfig/bc_solo.tpl node$i/chainconfig/bc$j.yml
+                    xsed "s%{consensus_type}%0%g" node$i/chainconfig/bc$j.yml
+                else
+                    cp $CONFIG_TPL_PATH/chainconfig/bc_1.tpl node$i/chainconfig/bc$j.yml
+                    xsed "s%{consensus_type}%$CONSENSUS_TYPE%g" node$i/chainconfig/bc$j.yml
+                fi
             elif [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
                 cp $CONFIG_TPL_PATH/chainconfig/bc_4_7.tpl node$i/chainconfig/bc$j.yml
                 xsed "s%{consensus_type}%$CONSENSUS_TYPE%g" node$i/chainconfig/bc$j.yml
@@ -239,7 +240,7 @@ function generate_config() {
                xsed "s%{epochValidatorNum}%$NODE_CNT%g" node$i/chainconfig/bc$j.yml
             fi
 
-            if  [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
+            if [ $NODE_CNT -eq 1 ] && [ ! $CONSENSUS_TYPE -eq 0 ] || [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
               xsed '121,134d' node$i/chainconfig/bc$j.yml
             fi
             echo "begin node$i cert config..."
@@ -292,7 +293,7 @@ function generate_config() {
         done
 
         echo "begin node$i trust config..."
-        if  [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
+        if  [ $NODE_CNT -eq 1 ] && [ ! $CONSENSUS_TYPE -eq 0 ] || [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
           # 120 insert
           c2=$NODE_CNT
           for ((k = 1; k < $CHAIN_CNT + 1; k = k + 1)); do
@@ -300,7 +301,11 @@ function generate_config() {
             do
               c2=$(($c2+1))
               org_id_tmp=" - org_id: \"${file}\""
-              org_root_tmp="   root: \"../config/wx-org${i}.chainmaker.org/certs/ca/${file}/ca.crt\""
+              if  [ $NODE_CNT -eq 1 ]; then
+                  org_root_tmp="   root: \"../config/wx-org.chainmaker.org/certs/ca/${file}/ca.crt\""
+              else
+                  org_root_tmp="   root: \"../config/wx-org${i}.chainmaker.org/certs/ca/${file}/ca.crt\""
+              fi
               xsed -i "121i\ ${org_root_tmp}" node$i/chainconfig/bc$k.yml
               xsed -i "121i\ ${org_id_tmp}"   node$i/chainconfig/bc$k.yml
             done
