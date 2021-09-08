@@ -319,6 +319,7 @@ func (consensus *ConsensusRaftImpl) serve() {
 	if tickTime == 0 {
 		tickTime = time.Nanosecond
 	}
+
 	ticker := time.NewTicker(tickTime * time.Second)
 	defer ticker.Stop()
 
