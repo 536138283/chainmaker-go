@@ -50,6 +50,7 @@ var (
 	walDir                  = "raftwal"
 	snapDir                 = "snap"
 	snapshotCatchUpEntriesN = uint64(5)
+	defaultSnapCount        = uint64(10)
 )
 
 // mustMarshal marshals protobuf message to byte slice or panic
@@ -131,6 +132,9 @@ func New(config ConsensusRaftImplConfig) (*ConsensusRaftImpl, error) {
 	consensus.closeC = make(chan struct{})
 	consensus.Id = computeRaftIdFromNodeId(config.NodeId)
 	consensus.snapCount = localconf.ChainMakerConfig.ConsensusConfig.RaftConfig.SnapCount
+	if consensus.snapCount == 0 {
+		consensus.snapCount = defaultSnapCount
+	}
 	consensus.asyncWalSave = localconf.ChainMakerConfig.ConsensusConfig.RaftConfig.AsyncWalSave
 	consensus.waldir = path.Join(localconf.ChainMakerConfig.StorageConfig.StorePath, consensus.chainID, walDir)
 	consensus.snapdir = path.Join(localconf.ChainMakerConfig.StorageConfig.StorePath, consensus.chainID, snapDir)
