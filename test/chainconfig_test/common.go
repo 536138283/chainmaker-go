@@ -448,6 +448,12 @@ func UpdateSysRequest(sk3 crypto.PrivateKey, sender *acPb.SerializedMember, msg 
 		Sequence:     5,
 	}
 
+	entries, err := aclSign(payload)
+	if err != nil {
+		panic(err)
+	}
+	payload.Endorsement = entries
+
 	payloadBytes, err := proto.Marshal(payload)
 	if err != nil {
 		log.Fatalf(marshalErr, err.Error())
