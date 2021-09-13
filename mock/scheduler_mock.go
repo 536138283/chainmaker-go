@@ -104,14 +104,13 @@ func (m *MockTxSimContext) EXPECT() *MockTxSimContextMockRecorder {
 }
 
 // CallContract mocks base method.
-func (m *MockTxSimContext) CallContract(contractId *common.ContractId, method string, byteCode []byte,
-	parameter map[string]string, gasUsed uint64, refTxType common.TxType) (*common.ContractResult,
-	protocol.ExecOrderTxType, common.TxStatusCode) {
+func (m *MockTxSimContext) CallContract(contractId *common.ContractId, method string, byteCode []byte, parameter map[string]string, gasUsed uint64, refTxType common.TxType) (*common.ContractResult, protocol.ExecOrderTxType, common.TxStatusCode) {
 	m.ctrl.T.Helper()
 	ret := m.ctrl.Call(m, "CallContract", contractId, method, byteCode, parameter, gasUsed, refTxType)
 	ret0, _ := ret[0].(*common.ContractResult)
-	ret1, _ := ret[1].(common.TxStatusCode)
-	return ret0, protocol.ExecOrderTxTypeNormal, ret1
+	ret1, _ := ret[1].(protocol.ExecOrderTxType)
+	ret2, _ := ret[2].(common.TxStatusCode)
+	return ret0, ret1, ret2
 }
 
 // CallContract indicates an expected call of CallContract.
@@ -391,15 +390,24 @@ func (mr *MockTxSimContextMockRecorder) Put(name, key, value interface{}) *gomoc
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Put", reflect.TypeOf((*MockTxSimContext)(nil).Put), name, key, value)
 }
 
+// PutIntoReadSet mocks base method.
+func (m *MockTxSimContext) PutIntoReadSet(contractName string, key, value []byte) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PutIntoReadSet", contractName, key, value)
+}
+
+// PutIntoReadSet indicates an expected call of PutIntoReadSet.
+func (mr *MockTxSimContextMockRecorder) PutIntoReadSet(contractName, key, value interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutIntoReadSet", reflect.TypeOf((*MockTxSimContext)(nil).PutIntoReadSet), contractName, key, value)
+}
+
 // PutRecord mocks base method.
 func (m *MockTxSimContext) PutRecord(contractName string, value []byte, sqlType protocol.SqlType) {
 	m.ctrl.T.Helper()
 	m.ctrl.Call(m, "PutRecord", contractName, value, sqlType)
 }
 
-func (mock *MockTxSimContext)  PutIntoReadSet(contractName string, key []byte, value []byte){
-	panic("implement me")
-}
 // PutRecord indicates an expected call of PutRecord.
 func (mr *MockTxSimContextMockRecorder) PutRecord(contractName, value, sqlType interface{}) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
