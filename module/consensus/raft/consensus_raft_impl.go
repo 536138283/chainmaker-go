@@ -166,7 +166,7 @@ func (consensus *ConsensusRaftImpl) Start() error {
 	walExist := wal.Exist(consensus.waldir)
 	consensus.wal = consensus.replayWAL()
 
-	consensus.peers = consensus.getPeersFromChainConf()
+	consensus.peers, consensus.idToNodeId = consensus.getPeersFromChainConf()
 	c := &etcdraft.Config{
 		ID:              consensus.Id,
 		ElectionTick:    10,
@@ -447,6 +447,7 @@ func (consensus *ConsensusRaftImpl) entriesToApply(ents []raftpb.Entry) (nents [
 	if firstIdx > consensus.appliedIndex+1 {
 		consensus.logger.Fatalf("first index of committed entry[%d] should <= progress.appliedIndex[%d]+1", firstIdx, consensus.appliedIndex)
 	}
+	consensus.logger.Debugf("appliedIndex: %d, firstIndex: %d, entry num: %d", consensus.appliedIndex, firstIdx, len(ents))
 	if consensus.appliedIndex-firstIdx+1 < uint64(len(ents)) {
 		nents = ents[consensus.appliedIndex-firstIdx+1:]
 	}
@@ -478,16 +479,15 @@ func (consensus *ConsensusRaftImpl) publishEntries(ents []raftpb.Entry) (ok bool
 			var cc raftpb.ConfChange
 			cc.Unmarshal(ents[i].Data)
 			consensus.confState = *consensus.node.ApplyConfChange(cc)
-			consensus.peers = consensus.getPeersFromChainConf()
-
+			//consensus.peers = consensus.getPeersFromChainConf()
 			switch cc.Type {
+			// todo. may be check the delete node logic
 			case raftpb.ConfChangeRemoveNode:
 				if cc.NodeID == consensus.Id {
 					return false, configChanged
 				}
 			}
 		}
-
 		consensus.appliedIndex = ents[i].Index
 	}
 	return true, configChanged
@@ -525,11 +525,9 @@ func (consensus *ConsensusRaftImpl) getSnapshot() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	snapshotData := SnapshotHeight{
+	data, err := json.Marshal(SnapshotHeight{
 		Height: height,
-	}
-
-	data, err := json.Marshal(snapshotData)
+	})
 	consensus.logger.Infof("getSnapshot data: %s", data)
 	return data, err
 }
@@ -593,6 +591,17 @@ func (consensus *ConsensusRaftImpl) sendMessages(msgs []raftpb.Message) {
 				To:      netId,
 			}
 			consensus.msgbus.Publish(msgbus.SendConsensusMsg, netMsg)
+		}
+	}
+	consensus.updatePeersByConsensusMsg(msgs)
+}
+
+func (consensus *ConsensusRaftImpl) updatePeersByConsensusMsg(msgs []raftpb.Message) {
+	for _, m := range msgs {
+		for _, entry := range m.Entries {
+			if entry.Type == raftpb.EntryConfChange {
+				consensus.peers, consensus.idToNodeId = consensus.getPeersFromChainConf()
+			}
 		}
 	}
 }
@@ -684,14 +693,15 @@ func (consensus *ConsensusRaftImpl) Verify(consensusType consensuspb.ConsensusTy
 	return nil
 }
 
-func (consensus *ConsensusRaftImpl) getPeersFromChainConf() []uint64 {
-	orgs := consensus.chainConf.ChainConfig().Consensus.Nodes
-	peers := []uint64{}
-	idToNodeId := make(map[uint64]string)
-	var builder strings.Builder
-	fmt.Fprintf(&builder, "[")
+func (consensus *ConsensusRaftImpl) getPeersFromChainConf() ([]uint64, map[uint64]string) {
+	var (
+		peers      []uint64
+		idToNodeId = make(map[uint64]string)
+		builder    strings.Builder
+	)
 
-	for _, org := range orgs {
+	fmt.Fprintf(&builder, "[")
+	for _, org := range consensus.chainConf.ChainConfig().Consensus.Nodes {
 		for _, nodeId := range org.NodeId {
 			id := computeRaftIdFromNodeId(nodeId)
 			idToNodeId[id] = nodeId
@@ -704,15 +714,14 @@ func (consensus *ConsensusRaftImpl) getPeersFromChainConf() []uint64 {
 	consensus.logger.InfoDynamic(func() string {
 		return fmt.Sprintf("[%x] getPeersFromChainConf peers: %v", consensus.Id, builder.String())
 	})
-	consensus.idToNodeId = idToNodeId
 	sort.Slice(peers, func(i, j int) bool {
 		return peers[i] < peers[j]
 	})
-	return peers
+	return peers, idToNodeId
 }
 
 func (consensus *ConsensusRaftImpl) processConfigChange() {
-	peers := consensus.getPeersFromChainConf()
+	peers, _ := consensus.getPeersFromChainConf()
 	removed, added := computeUpdatedNodes(consensus.peers, peers)
 	consensus.logger.Debugf("[%x] processConfigChange removed: %v, added: %v", consensus.Id, removed, added)
 
