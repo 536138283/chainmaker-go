@@ -188,7 +188,7 @@ func TestOpenAtIndex(t *testing.T) {
 	}
 	f.Close()
 
-	w, err := Open(zap.NewExample(), dir, walpb.Snapshot{})
+	w, err := Open(zap.NewExample(), dir, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatalf("err = %v, want nil", err)
 	}
@@ -207,7 +207,7 @@ func TestOpenAtIndex(t *testing.T) {
 	}
 	f.Close()
 
-	w, err = Open(zap.NewExample(), dir, walpb.Snapshot{Index: 5})
+	w, err = Open(zap.NewExample(), dir, walpb.Snapshot{Index: 5}, 0)
 	if err != nil {
 		t.Fatalf("err = %v, want nil", err)
 	}
@@ -224,7 +224,7 @@ func TestOpenAtIndex(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer os.RemoveAll(emptydir)
-	if _, err = Open(zap.NewExample(), emptydir, walpb.Snapshot{}); err != ErrFileNotFound {
+	if _, err = Open(zap.NewExample(), emptydir, walpb.Snapshot{}, 0); err != ErrFileNotFound {
 		t.Errorf("err = %v, want %v", err, ErrFileNotFound)
 	}
 }
@@ -261,7 +261,7 @@ func TestVerify(t *testing.T) {
 	assert.NoError(t, w.Save(hs, nil))
 
 	// to verify the WAL is not corrupted at this point
-	hardstate, err := Verify(lg, walDir, walpb.Snapshot{})
+	hardstate, err := Verify(lg, walDir, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Errorf("expected a nil error, got %v", err)
 	}
@@ -278,7 +278,7 @@ func TestVerify(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, err = Verify(lg, walDir, walpb.Snapshot{})
+	_, err = Verify(lg, walDir, walpb.Snapshot{}, 0)
 	if err == nil {
 		t.Error("expected a non-nil error, got nil")
 	}
@@ -335,7 +335,7 @@ func TestCut(t *testing.T) {
 	}
 	defer f.Close()
 	nw := &WAL{
-		decoder: newDecoder(f),
+		decoder: newDecoder(0, f),
 		start:   snap,
 	}
 	_, gst, _, err := nw.ReadAll()
@@ -382,7 +382,7 @@ func TestSaveWithCut(t *testing.T) {
 
 	w.Close()
 
-	neww, err := Open(zap.NewExample(), p, walpb.Snapshot{})
+	neww, err := Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatalf("err = %v, want nil", err)
 	}
@@ -436,7 +436,7 @@ func TestRecover(t *testing.T) {
 	}
 	w.Close()
 
-	if w, err = Open(zap.NewExample(), p, walpb.Snapshot{}); err != nil {
+	if w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0); err != nil {
 		t.Fatal(err)
 	}
 	metadata, state, entries, err := w.ReadAll()
@@ -555,7 +555,7 @@ func TestRecoverAfterCut(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		w, err := Open(zap.NewExample(), p, walpb.Snapshot{Index: uint64(i), Term: 1})
+		w, err := Open(zap.NewExample(), p, walpb.Snapshot{Index: uint64(i), Term: 1}, 0)
 		if err != nil {
 			if i <= 4 {
 				if err != ErrFileNotFound {
@@ -602,7 +602,7 @@ func TestOpenAtUncommittedIndex(t *testing.T) {
 	}
 	w.Close()
 
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -644,7 +644,7 @@ func TestOpenForRead(t *testing.T) {
 	w.ReleaseLockTo(unlockIndex)
 
 	// All are available for read
-	w2, err := OpenForRead(zap.NewExample(), p, walpb.Snapshot{})
+	w2, err := OpenForRead(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -677,7 +677,7 @@ func TestOpenWithMaxIndex(t *testing.T) {
 	}
 	w.Close()
 
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -803,7 +803,7 @@ func TestTailWriteNoSlackSpace(t *testing.T) {
 	w.Close()
 
 	// open, write more
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -824,7 +824,7 @@ func TestTailWriteNoSlackSpace(t *testing.T) {
 	w.Close()
 
 	// confirm all writes
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -864,7 +864,7 @@ func TestRestartCreateWal(t *testing.T) {
 		t.Fatalf("got %q exists, expected it to not exist", tmpdir)
 	}
 
-	if w, err = OpenForRead(zap.NewExample(), p, walpb.Snapshot{}); err != nil {
+	if w, err = OpenForRead(zap.NewExample(), p, walpb.Snapshot{}, 0); err != nil {
 		t.Fatal(err)
 	}
 	defer w.Close()
@@ -927,7 +927,7 @@ func TestOpenOnTornWrite(t *testing.T) {
 	}
 	f.Close()
 
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -948,7 +948,7 @@ func TestOpenOnTornWrite(t *testing.T) {
 	w.Close()
 
 	// read back the entries, confirm number of entries matches expectation
-	w, err = OpenForRead(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = OpenForRead(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1056,7 +1056,7 @@ func TestValidSnapshotEntries(t *testing.T) {
 			t.Fatal(err)
 		}
 	}()
-	walSnaps, err := ValidSnapshotEntries(zap.NewExample(), p)
+	walSnaps, err := ValidSnapshotEntries(zap.NewExample(), p, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1117,7 +1117,7 @@ func TestValidSnapshotEntriesAfterPurgeWal(t *testing.T) {
 		t.Fatal(err)
 	}
 	os.Remove(p + "/" + files[0])
-	_, err = ValidSnapshotEntries(zap.NewExample(), p)
+	_, err = ValidSnapshotEntries(zap.NewExample(), p, 0)
 	if err != nil {
 		t.Fatal(err)
 	}

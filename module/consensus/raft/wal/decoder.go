@@ -37,11 +37,12 @@ type decoder struct {
 	brs []*bufio.Reader
 
 	// lastValidOff file offset following the last valid decoded record
-	lastValidOff int64
-	crc          hash.Hash32
+	lastValidOff         int64
+	crc                  hash.Hash32
+	maxWALEntrySizeLimit uint32
 }
 
-func newDecoder(r ...io.Reader) *decoder {
+func newDecoder(limit uint32, r ...io.Reader) *decoder {
 	readers := make([]*bufio.Reader, len(r))
 	for i := range r {
 		readers[i] = bufio.NewReader(r[i])
@@ -49,6 +50,7 @@ func newDecoder(r ...io.Reader) *decoder {
 	return &decoder{
 		brs: readers,
 		crc: crc.New(0, crcTable),
+		maxWALEntrySizeLimit: limit,
 	}
 }
 
@@ -62,7 +64,7 @@ func (d *decoder) decode(rec *walpb.Record) error {
 // raft max message size is set to 1 MB in etcd server
 // assume projects set reasonable message size limit,
 // thus entry size should never exceed 10 MB
-const maxWALEntrySizeLimit = int64(10 * 1024 * 1024)
+//const maxWALEntrySizeLimit = int64(10 * 1024 * 1024)
 
 func (d *decoder) decodeRecord(rec *walpb.Record) error {
 	if len(d.brs) == 0 {
@@ -84,7 +86,7 @@ func (d *decoder) decodeRecord(rec *walpb.Record) error {
 	}
 
 	recBytes, padBytes := decodeFrameSize(l)
-	if recBytes >= maxWALEntrySizeLimit-padBytes {
+	if d.maxWALEntrySizeLimit > 0 && recBytes >= int64(d.maxWALEntrySizeLimit)-padBytes {
 		return ErrMaxWALEntrySizeLimitExceeded
 	}
 	data := make([]byte, recBytes+padBytes)

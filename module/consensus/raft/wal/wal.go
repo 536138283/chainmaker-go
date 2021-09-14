@@ -163,9 +163,6 @@ func Create(lg *zap.Logger, dirpath string, metadata []byte) (*WAL, error) {
 	if err != nil {
 		return nil, err
 	}
-//	if w.encoder != nil {
-//		fmt.Printf("xudan w.encoder is not nil\n")
-//	}
 	w.locks = append(w.locks, f)
 	if err = w.saveCrc(0); err != nil {
 		return nil, err
@@ -294,7 +291,7 @@ func (w *WAL) renameWALUnlock(tmpdirpath string) (*WAL, error) {
 	}
 
 	// reopen and relock
-	newWAL, oerr := Open(w.lg, w.dir, walpb.Snapshot{})
+	newWAL, oerr := Open(w.lg, w.dir, walpb.Snapshot{}, 0)
 	if oerr != nil {
 		return nil, oerr
 	}
@@ -311,8 +308,8 @@ func (w *WAL) renameWALUnlock(tmpdirpath string) (*WAL, error) {
 // The returned WAL is ready to read and the first record will be the one after
 // the given snap. The WAL cannot be appended to before reading out all of its
 // previous records.
-func Open(lg *zap.Logger, dirpath string, snap walpb.Snapshot) (*WAL, error) {
-	w, err := openAtIndex(lg, dirpath, snap, true)
+func Open(lg *zap.Logger, dirpath string, snap walpb.Snapshot, limit uint32) (*WAL, error) {
+	w, err := openAtIndex(lg, dirpath, snap, true, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -324,11 +321,11 @@ func Open(lg *zap.Logger, dirpath string, snap walpb.Snapshot) (*WAL, error) {
 
 // OpenForRead only opens the wal files for read.
 // Write on a read only wal panics.
-func OpenForRead(lg *zap.Logger, dirpath string, snap walpb.Snapshot) (*WAL, error) {
-	return openAtIndex(lg, dirpath, snap, false)
+func OpenForRead(lg *zap.Logger, dirpath string, snap walpb.Snapshot, limit uint32) (*WAL, error) {
+	return openAtIndex(lg, dirpath, snap, false, limit)
 }
 
-func openAtIndex(lg *zap.Logger, dirpath string, snap walpb.Snapshot, write bool) (*WAL, error) {
+func openAtIndex(lg *zap.Logger, dirpath string, snap walpb.Snapshot, write bool, limit uint32) (*WAL, error) {
 	if lg == nil {
 		lg = zap.NewNop()
 	}
@@ -347,7 +344,7 @@ func openAtIndex(lg *zap.Logger, dirpath string, snap walpb.Snapshot, write bool
 		lg:        lg,
 		dir:       dirpath,
 		start:     snap,
-		decoder:   newDecoder(rs...),
+		decoder:   newDecoder(limit, rs...),
 		readClose: closer,
 		locks:     ls,
 	}
@@ -441,17 +438,7 @@ func (w *WAL) ReadAll() (metadata []byte, state raftpb.HardState, ents []raftpb.
 	decoder := w.decoder
 
 	var match bool
-	//i := 0
 	for err = decoder.decode(rec); err == nil; err = decoder.decode(rec) {
-	//for err = decoder.decode(rec); ; err = decoder.decode(rec) {
-		//i++
-		//if i > 10 {
-		//	return
-		//}
-		//if err != nil {
-		//	fmt.Printf("xd decoder err:%+v\n", err)
-		//	continue
-		//}
 		switch rec.Type {
 		case entryType:
 			e := mustUnmarshalEntry(rec.Data)
@@ -465,9 +452,6 @@ func (w *WAL) ReadAll() (metadata []byte, state raftpb.HardState, ents []raftpb.
 				}
 				// The line below is potentially overriding some 'uncommitted' entries.
 				ents = append(ents[:up], e)
-				//fmt.Printf("xd 3333\n")
-				//ents = append(ents, e)
-				//fmt.Printf("xd len(ents):%+d\n", len(ents))
 			}
 			w.enti = e.Index
 
@@ -560,13 +544,12 @@ func (w *WAL) ReadAll() (metadata []byte, state raftpb.HardState, ents []raftpb.
 	}
 	w.decoder = nil
 
-	fmt.Printf("xd return len(ents):%+d\n", len(ents))
 	return metadata, state, ents, err
 }
 
 // ValidSnapshotEntries returns all the valid snapshot entries in the wal logs in the given directory.
 // Snapshot entries are valid if their index is less than or equal to the most recent committed hardstate.
-func ValidSnapshotEntries(lg *zap.Logger, walDir string) ([]walpb.Snapshot, error) {
+func ValidSnapshotEntries(lg *zap.Logger, walDir string, limit uint32) ([]walpb.Snapshot, error) {
 	var snaps []walpb.Snapshot
 	var state raftpb.HardState
 	var err error
@@ -590,7 +573,7 @@ func ValidSnapshotEntries(lg *zap.Logger, walDir string) ([]walpb.Snapshot, erro
 	}()
 
 	// create a new decoder from the readers on the WAL files
-	decoder := newDecoder(rs...)
+	decoder := newDecoder(limit, rs...)
 
 	for err = decoder.decode(rec); err == nil; err = decoder.decode(rec) {
 		switch rec.Type {
@@ -635,7 +618,7 @@ func ValidSnapshotEntries(lg *zap.Logger, walDir string) ([]walpb.Snapshot, erro
 // If it cannot read out the expected snap, it will return ErrSnapshotNotFound.
 // If the loaded snap doesn't match with the expected one, it will
 // return error ErrSnapshotMismatch.
-func Verify(lg *zap.Logger, walDir string, snap walpb.Snapshot) (*raftpb.HardState, error) {
+func Verify(lg *zap.Logger, walDir string, snap walpb.Snapshot, limit uint32) (*raftpb.HardState, error) {
 	var metadata []byte
 	var err error
 	var match bool
@@ -664,7 +647,7 @@ func Verify(lg *zap.Logger, walDir string, snap walpb.Snapshot) (*raftpb.HardSta
 	}()
 
 	// create a new decoder from the readers on the WAL files
-	decoder := newDecoder(rs...)
+	decoder := newDecoder(limit, rs...)
 
 	for err = decoder.decode(rec); err == nil; err = decoder.decode(rec) {
 		switch rec.Type {
@@ -909,7 +892,6 @@ func (w *WAL) saveEntry(e *raftpb.Entry) error {
 	// TODO: add MustMarshalTo to reduce one allocation.
 	b := pbutil.MustMarshal(e)
 	rec := &walpb.Record{Type: entryType, Data: b}
-//	fmt.Printf("saveEntry xudan w:%+v\n", w)
 	if err := w.encoder.encode(rec); err != nil {
 		return err
 	}
@@ -936,12 +918,10 @@ func (w *WAL) Save(st raftpb.HardState, ents []raftpb.Entry) error {
 		return nil
 	}
 
-//	fmt.Printf("Save xudan w 11:%+v\n", w)
 	mustSync := raft.MustSync(st, w.state, len(ents))
 
 	// TODO(xiangli): no more reference operator
 	for i := range ents {
-//		fmt.Printf("Save xudan w:%+v\n", w)
 		if err := w.saveEntry(&ents[i]); err != nil {
 			return err
 		}

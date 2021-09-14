@@ -630,7 +630,8 @@ func (consensus *ConsensusRaftImpl) replayWAL() *wal.WAL {
 		walsnap.Index, walsnap.Term = snapshot.Metadata.Index, snapshot.Metadata.Term
 	}
 
-	w, err := wal.Open(consensus.logger.Logger().Desugar(), consensus.waldir, walsnap)
+	w, err := wal.Open(consensus.logger.Logger().Desugar(), consensus.waldir, walsnap,
+		consensus.chainConf.ChainConfig().Block.BlockSize * 1024 * 1024)
 	if err != nil {
 		consensus.logger.Fatalf("open wal error: %v", err)
 	}

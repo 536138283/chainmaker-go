@@ -79,7 +79,7 @@ func testRepair(t *testing.T, ents [][]raftpb.Entry, corrupt corruptFunc, expect
 	}
 
 	// verify we broke the wal
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,7 +95,7 @@ func testRepair(t *testing.T, ents [][]raftpb.Entry, corrupt corruptFunc, expect
 	}
 
 	// read it back
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -117,7 +117,7 @@ func testRepair(t *testing.T, ents [][]raftpb.Entry, corrupt corruptFunc, expect
 	w.Close()
 
 	// read back entries following repair, ensure it's all there
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +221,7 @@ func TestRepairFailDeleteDir(t *testing.T) {
 	}
 	f.Close()
 
-	w, err = Open(zap.NewExample(), p, walpb.Snapshot{})
+	w, err = Open(zap.NewExample(), p, walpb.Snapshot{}, 0)
 	if err != nil {
 		t.Fatal(err)
 	}
