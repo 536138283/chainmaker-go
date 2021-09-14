@@ -10,7 +10,21 @@ endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
 VERSION=v1.2.5
 
+AARCH64="aarch64"
+CPU=$(shell uname -m)
+
 chainmaker:
+ifeq ("$(CPU)",$(AARCH64))
+ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.aarch64),)
+	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.x86_64
+	mv module/vm/wasmer/wasmer-go/libwasmer.so.aarch64 module/vm/wasmer/wasmer-go/libwasmer.so
+endif
+else
+ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.x86_64),)
+	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.aarch64
+	mv module/vm/wasmer/wasmer-go/libwasmer.so.x86_64 module/vm/wasmer/wasmer-go/libwasmer.so
+endif
+endif
 	@cd main && go build -mod=mod -o ../bin/chainmaker
 
 package:
