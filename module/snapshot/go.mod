@@ -12,6 +12,7 @@ require (
 	github.com/pingcap/parser v0.0.0-20200623164729-3a18f1e5dceb // indirect
 	github.com/spf13/cobra v1.1.1 // indirect
 	github.com/stretchr/testify v1.7.0
+	go.uber.org/atomic v1.6.0 // indirect
 )
 
 replace (
