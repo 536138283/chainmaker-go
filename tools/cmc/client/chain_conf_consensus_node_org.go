@@ -126,8 +126,8 @@ func configConsensusNodeOrg(op int) error {
 	}
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
-	if err != nil && !strings.Contains(err.Error(), "user cert havenot on chain yet, and try again") {
-		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err)
+	if err != nil {
+		return err
 	}
 	defer client.Stop()
 

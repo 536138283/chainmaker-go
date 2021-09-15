@@ -127,7 +127,7 @@ func configTrustRoot(op int) error {
 	}
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath, userSignCrtFilePath, userSignKeyFilePath)
-	if err != nil && !strings.Contains(err.Error(), "user cert havenot on chain yet, and try again") {
+	if err != nil {
 		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err)
 	}
 	defer client.Stop()

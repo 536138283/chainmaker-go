@@ -9,7 +9,6 @@ package wasmertest
 import (
 	"fmt"
 	"gotest.tools/assert"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -68,9 +67,9 @@ func TestCallFact(t *testing.T) {
 	println("end 【spend】", end-start)
 	time.Sleep(time.Second * 2)
 	println("reset vm pool")
-	pool.ResetAllPool()
+	//pool.ResetAllPool()
 	//time.Sleep(time.Second * 500)
-	runtime.GC()
+	//runtime.GC()
 }
 
 func invokeFact(method string, id int32, contractId *commonPb.ContractId, txContext protocol.TxSimContext, pool *wasmer.VmPoolManager, byteCode []byte) *commonPb.ContractResult {
