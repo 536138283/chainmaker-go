@@ -9,9 +9,9 @@ package privatecompute
 import (
 	"sync"
 
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 type dataStore map[string][]byte
@@ -19,6 +19,14 @@ type dataStore map[string][]byte
 type TxContextMock struct {
 	lock     *sync.Mutex
 	cacheMap dataStore
+}
+
+func (mock *TxContextMock) GetContractByName(name string) (*commonPb.Contract, error) {
+	panic("implement me")
+}
+
+func (mock *TxContextMock) GetContractBytecode(name string) ([]byte, error) {
+	panic("implement me")
 }
 
 func newTxContextMock(cache dataStore) *TxContextMock {

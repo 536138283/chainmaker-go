@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"sync"
 
-	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
+	abftpb "chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
 	"github.com/thoas/go-funk"
 )
 

@@ -16,9 +16,9 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/db/mysql"
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/pb-go/store"
-	sdk "chainmaker.org/chainmaker/sdk-go"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/store"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
 const (
@@ -87,8 +87,8 @@ func runRestoreCMD() error {
 	})
 	progress.Start()
 	defer progress.Stop()
-	for height := archivedBlkHeightOnChain; height >= restoreStartBlockHeight; height-- {
-		if err := restoreBlock(cc, db, height); err != nil {
+	for height := int64(archivedBlkHeightOnChain); height >= int64(restoreStartBlockHeight); height-- {
+		if err := restoreBlock(cc, db, uint64(height)); err != nil {
 			return err
 		}
 

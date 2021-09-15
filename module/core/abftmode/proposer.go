@@ -7,19 +7,20 @@ SPDX-License-Identifier: Apache-2.0
 package abftmode
 
 import (
+	"context"
+	"encoding/hex"
+	"sync"
+	"time"
+
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker-go/utils"
-	"chainmaker.org/chainmaker/common/msgbus"
-	commonpb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/pb-go/consensus/abft"
-	"chainmaker.org/chainmaker/protocol"
-	"context"
-	"encoding/hex"
-	"sync"
-	"time"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 const DEFAULT_WAIT_TXS_TIMEOUT = time.Second * 2

@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 var _ protocol.TxSimContext = (*MockSimContextImpl)(nil)
@@ -30,6 +30,14 @@ type MockSimContextImpl struct {
 	txRwSet      *commonPb.TxRWSet
 	currentDepth int
 	txResult     *commonPb.Result
+}
+
+func (s *MockSimContextImpl) GetContractByName(name string) (*commonPb.Contract, error) {
+	panic("implement me")
+}
+
+func (s *MockSimContextImpl) GetContractBytecode(name string) ([]byte, error) {
+	panic("implement me")
 }
 
 const implement_me = "implement me"

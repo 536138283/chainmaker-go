@@ -11,25 +11,26 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
-	"chainmaker.org/chainmaker-go/blockchain"
-	"chainmaker.org/chainmaker/common/ca"
-	"chainmaker.org/chainmaker/common/crypto"
-	"chainmaker.org/chainmaker/common/crypto/hash"
-	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/monitor"
-	apiPb "chainmaker.org/chainmaker/pb-go/api"
 	"context"
 	"encoding/hex"
 	"errors"
 	"fmt"
-	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
-	"github.com/prometheus/client_golang/prometheus"
-	"google.golang.org/grpc"
 	"net"
 	"sort"
 	"strings"
 	"time"
+
+	"chainmaker.org/chainmaker-go/blockchain"
+	"chainmaker.org/chainmaker-go/localconf"
+	"chainmaker.org/chainmaker-go/logger"
+	"chainmaker.org/chainmaker-go/monitor"
+	"chainmaker.org/chainmaker/common/v2/ca"
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/hash"
+	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/prometheus/client_golang/prometheus"
+	"google.golang.org/grpc"
 )
 
 // RPCServer struct define
@@ -187,8 +188,10 @@ func (s *RPCServer) getCurChainConfTrustRootsHash() (string, error) {
 
 	var caCerts []string
 	for _, chainConf := range chainConfs {
-		for _, trustRoot := range chainConf.ChainConfig().TrustRoots {
-			caCerts = append(caCerts, trustRoot.Root)
+		for _, orgRoot := range chainConf.ChainConfig().TrustRoots {
+			for _, trustRoot := range orgRoot.Root {
+				caCerts = append(caCerts, trustRoot)
+			}
 		}
 	}
 
@@ -284,8 +287,10 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 
 		var caCerts []string
 		for _, chainConf := range chainConfs {
-			for _, trustRoot := range chainConf.ChainConfig().TrustRoots {
-				caCerts = append(caCerts, trustRoot.Root)
+			for _, orgRoot := range chainConf.ChainConfig().TrustRoots {
+				for _, trustRoot := range orgRoot.Root {
+					caCerts = append(caCerts, trustRoot)
+				}
 			}
 		}
 

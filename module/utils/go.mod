@@ -3,9 +3,9 @@ module chainmaker.org/chainmaker-go/utils
 go 1.15
 
 require (
-	chainmaker.org/chainmaker/common v0.0.0-20210803125737-39d843e4c85e
-	chainmaker.org/chainmaker/pb-go v0.0.0-20210727051745-8312e6b09f15
-	chainmaker.org/chainmaker/protocol v0.0.0-20210727101110-59285b10f1ef
+	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210915075633-90ea007220a9
+	chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210915083256-3cba3b585dd4
+	chainmaker.org/chainmaker/protocol/v2 v2.0.0
 	github.com/gogo/protobuf v1.3.2
 	github.com/mr-tron/base58 v1.2.0
 	github.com/pingcap/parser v0.0.0-20200623164729-3a18f1e5dceb

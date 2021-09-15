@@ -12,11 +12,11 @@ import (
 	"time"
 
 	chainUtils "chainmaker.org/chainmaker-go/utils"
-	pbac "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/pb-go/consensus"
-	chainedbftpb "chainmaker.org/chainmaker/pb-go/consensus/chainedbft"
-	"chainmaker.org/chainmaker/protocol"
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	chainedbftpb "chainmaker.org/chainmaker/pb-go/v2/consensus/chainedbft"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -182,7 +182,7 @@ func GetUidFromProtoSigner(signerpb *pbac.Member, netservice protocol.NetService
 	if signerpb == nil {
 		return "", fmt.Errorf("signer is nil")
 	}
-	member, err := ac.NewMemberFromProto(signerpb)
+	member, err := ac.NewMember(signerpb)
 	if err != nil {
 		return "", fmt.Errorf("new member from proto failed, err: %v", err)
 	}

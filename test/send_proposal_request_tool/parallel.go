@@ -18,16 +18,16 @@ import (
 	"sync/atomic"
 	"time"
 
-	"chainmaker.org/chainmaker/pb-go/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	apiPb "chainmaker.org/chainmaker/pb-go/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 
 	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker/common/ca"
-	"chainmaker.org/chainmaker/common/crypto"
-	"chainmaker.org/chainmaker/common/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/ca"
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 
 	"chainmaker.org/chainmaker-go/utils"
 	"github.com/spf13/cobra"
@@ -47,6 +47,7 @@ var (
 	climbTime   int
 	checkResult bool
 	recordLog   bool
+	showKey     bool
 
 	hostsString        string
 	userCrtPathsString string
@@ -143,6 +144,7 @@ func ParallelCMD() *cobra.Command {
 	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
 	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
 	flags.BoolVarP(&outputResult, "output-result", "", false, "output rpc result, eg: txid")
+	flags.BoolVarP(&showKey, "showKey", "", false, "bool")
 
 	cmd.AddCommand(invokeCMD())
 	cmd.AddCommand(queryCMD())
@@ -582,17 +584,17 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	// 构造Payload
 	pairs := []*commonPb.KeyValuePair{}
 	for _, p := range ps {
+		key := p.Key
+		val := []byte(p.Value)
 		if p.Unique {
-			pairs = append(pairs, &commonPb.KeyValuePair{
-				//Key:   fmt.Sprintf("%s_%d_%d_%d", p.Key, h.threadId, loopId, time.Now().UnixNano()),
-				Key:   p.Key,
-				Value: []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano())),
-			})
-		} else {
-			pairs = append(pairs, &commonPb.KeyValuePair{
-				Key:   p.Key,
-				Value: []byte(p.Value),
-			})
+			val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
+		}
+		pairs = append(pairs, &commonPb.KeyValuePair{
+			Key:   key,
+			Value: val,
+		})
+		if showKey {
+			fmt.Printf("key:%s val:%s\n", key, val)
 		}
 	}
 
@@ -645,17 +647,17 @@ func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey,
 	//}
 	pairs := []*commonPb.KeyValuePair{}
 	for _, p := range ps {
+		key := p.Key
+		val := []byte(p.Value)
 		if p.Unique {
-			pairs = append(pairs, &commonPb.KeyValuePair{
-				//Key:   fmt.Sprintf("%s_%d_%d_%d", p.Key, h.threadId, loopId, time.Now().UnixNano()),
-				Key:   p.Key,
-				Value: []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano())),
-			})
-		} else {
-			pairs = append(pairs, &commonPb.KeyValuePair{
-				Key:   p.Key,
-				Value: []byte(p.Value),
-			})
+			val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
+		}
+		pairs = append(pairs, &commonPb.KeyValuePair{
+			Key:   key,
+			Value: val,
+		})
+		if showKey {
+			fmt.Printf("key:%s val:%s\n", key, val)
 		}
 	}
 
@@ -844,7 +846,7 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 	if err != nil {
 		return nil, err
 	}
-	signBytes, err := signer.Sign("SM3", rawTxBytes)
+	signBytes, err := signer.Sign("SHA256", rawTxBytes)
 	if err != nil {
 		return nil, err
 	}

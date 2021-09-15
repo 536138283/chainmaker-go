@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"chainmaker.org/chainmaker-go/core/cache"
-	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
 var (

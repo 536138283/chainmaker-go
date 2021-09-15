@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
+	abftpb "chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
 )
 
 type bvalDelayedMsg struct {

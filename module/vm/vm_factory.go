@@ -15,9 +15,7 @@ import (
 	"regexp"
 	"strconv"
 
-	"chainmaker.org/chainmaker/pb-go/syscontract"
-
-	"chainmaker.org/chainmaker-go/utils"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	"chainmaker.org/chainmaker-go/evm"
 	"chainmaker.org/chainmaker-go/gasm"
@@ -26,9 +24,9 @@ import (
 	"chainmaker.org/chainmaker-go/wasmer"
 	"chainmaker.org/chainmaker-go/wxvm"
 	"chainmaker.org/chainmaker-go/wxvm/xvm"
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 const WxvmCodeFolder = "wxvm"
@@ -109,7 +107,7 @@ func (m *VmManagerImpl) RunContract(contract *commonPb.Contract, method string, 
 
 	if len(contract.Version) == 0 {
 		var err error
-		contract, err = utils.GetContractByName(txContext.Get, contractName)
+		contract, err = txContext.GetContractByName(contractName)
 		if err != nil {
 			contractResult.Message = fmt.Sprintf("query contract[%s] error", contractName)
 			return contractResult, commonPb.TxStatusCode_INVALID_CONTRACT_PARAMETER_CONTRACT_NAME
@@ -252,7 +250,7 @@ func (v *verifyType) commonVerify(txContext protocol.TxSimContext, contractId *c
 	var byteCode []byte
 	if v.requireByteCode {
 		//versionedByteCodeKey := append([]byte(protocol.ContractByteCode+contractName), []byte(resultVersion)...)
-		if byteCodeInContext, err := utils.GetContractBytecode(txContext.Get, contractName); err != nil {
+		if byteCodeInContext, err := txContext.GetContractBytecode(contractName); err != nil {
 			contractResult.Message = fmt.Sprintf("%s failed to check byte code in tx context for contract[%s], %s", msgPre, contractName, err.Error())
 			return v.errorResult(contractResult, commonPb.TxStatusCode_GET_FROM_TX_CONTEXT_FAILED, resultVersion)
 		} else if len(byteCodeInContext) == 0 {
@@ -291,6 +289,10 @@ func (m *VmManagerImpl) invokeUserContractByRuntime(contract *commonPb.Contract,
 	txId := txContext.GetTx().Payload.TxId
 	txType := txContext.GetTx().Payload.TxType
 	runtimeType := contract.RuntimeType
+	m.Log.InfoDynamic(func() string {
+		return fmt.Sprintf("invoke user contract[%s], runtime:%s,method:%s",
+			contract.Name, contract.RuntimeType.String(), method)
+	})
 	var runtimeInstance RuntimeInstance
 	var err error
 	switch runtimeType {
@@ -345,23 +347,23 @@ func (m *VmManagerImpl) invokeUserContractByRuntime(contract *commonPb.Contract,
 	}
 
 	// Get three items in the certificate: orgid PK role
-	if senderMember, err := m.AccessControl.NewMemberFromProto(sender); err != nil {
+	if senderMember, err := m.AccessControl.NewMember(sender); err != nil {
 		contractResult.Message = fmt.Sprintf("failed to unmarshal sender %q", runtimeType)
 		return contractResult, commonPb.TxStatusCode_UNMARSHAL_SENDER_FAILED
 	} else {
 		parameters[protocol.ContractSenderOrgIdParam] = []byte(senderMember.GetOrgId())
-		parameters[protocol.ContractSenderRoleParam] = []byte(senderMember.GetRole()[0])
-		parameters[protocol.ContractSenderPkParam] = []byte(hex.EncodeToString(senderMember.GetSKI()))
+		parameters[protocol.ContractSenderRoleParam] = []byte(senderMember.GetRole())
+		parameters[protocol.ContractSenderPkParam] = []byte(senderMember.GetUid())
 	}
 
 	// Get three items in the certificate: orgid PK role
-	if creatorMember, err := m.AccessControl.NewMemberFromProto(creator); err != nil {
+	if creatorMember, err := m.AccessControl.NewMember(creator); err != nil {
 		contractResult.Message = fmt.Sprintf("failed to unmarshal creator %q", creator)
 		return contractResult, commonPb.TxStatusCode_UNMARSHAL_CREATOR_FAILED
 	} else {
 		parameters[protocol.ContractCreatorOrgIdParam] = []byte(creator.OrgId)
-		parameters[protocol.ContractCreatorRoleParam] = []byte(creatorMember.GetRole()[0])
-		parameters[protocol.ContractCreatorPkParam] = []byte(hex.EncodeToString(creatorMember.GetSKI()))
+		parameters[protocol.ContractCreatorRoleParam] = []byte(creatorMember.GetRole())
+		parameters[protocol.ContractCreatorPkParam] = []byte(creatorMember.GetUid())
 	}
 
 	parameters[protocol.ContractTxIdParam] = []byte(txId)

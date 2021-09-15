@@ -5,9 +5,9 @@ go 1.15
 require (
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
-	chainmaker.org/chainmaker/common v0.0.0-20210803125737-39d843e4c85e
-	chainmaker.org/chainmaker/pb-go v0.0.0-20210727051745-8312e6b09f15
-	chainmaker.org/chainmaker/protocol v0.0.0-20210727101110-59285b10f1ef
+	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210915075633-90ea007220a9
+	chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210915083256-3cba3b585dd4
+	chainmaker.org/chainmaker/protocol/v2 v2.0.0
 	github.com/emirpasic/gods v1.12.0
 	github.com/facebookgo/ensure v0.0.0-20200202191622-63f1cf65ac4c // indirect
 	github.com/facebookgo/stack v0.0.0-20160209184415-751773369052 // indirect
@@ -20,7 +20,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20200815110645-5c35d600f0ca
 	github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c
-	github.com/tidwall/wal v0.1.4
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	gorm.io/driver/mysql v1.0.3

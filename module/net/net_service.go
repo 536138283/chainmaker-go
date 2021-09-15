@@ -12,15 +12,15 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"chainmaker.org/chainmaker/pb-go/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
-	configPb "chainmaker.org/chainmaker/pb-go/config"
-	netPb "chainmaker.org/chainmaker/pb-go/net"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
 
 	"chainmaker.org/chainmaker-go/localconf"
 	rootLog "chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker/common/msgbus"
-	"chainmaker.org/chainmaker/protocol"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -313,8 +313,10 @@ func (cw *ConfigWatcher) Watch(chainConfig *configPb.ChainConfig) error {
 	// 2.refresh trust roots
 	// 2.1 get all new roots
 	newCerts := make([][]byte, 0)
-	for _, root := range chainConfig.TrustRoots {
-		newCerts = append(newCerts, []byte(root.Root))
+	for _, orgRoot := range chainConfig.TrustRoots {
+		for _, root := range orgRoot.Root {
+			newCerts = append(newCerts, []byte(root))
+		}
 	}
 	// load custom chain trust roots
 	for _, chainTrustRoots := range localconf.ChainMakerConfig.NetConfig.CustomChainTrustRoots {

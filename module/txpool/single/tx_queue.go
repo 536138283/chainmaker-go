@@ -7,14 +7,15 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
-	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
 	"fmt"
 	"math"
 	"sync"
 
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+
 	"chainmaker.org/chainmaker-go/utils"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 type txValidateFunc func(tx *commonPb.Transaction, source protocol.TxSource) error

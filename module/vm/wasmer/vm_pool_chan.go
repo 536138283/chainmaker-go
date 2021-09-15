@@ -7,15 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package wasmer
 
 import (
-	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/utils"
-	wasm "chainmaker.org/chainmaker-go/wasmer/wasmer-go"
-	"chainmaker.org/chainmaker/common/random/uuid"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"crypto/md5"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"chainmaker.org/chainmaker-go/logger"
+	"chainmaker.org/chainmaker-go/utils"
+	wasm "chainmaker.org/chainmaker-go/wasmer/wasmer-go"
+	"chainmaker.org/chainmaker/common/v2/random/uuid"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
 const (
@@ -96,7 +98,7 @@ func NewVmPoolManager(chainId string) *VmPoolManager {
 func (m *VmPoolManager) NewRuntimeInstance(contractId *commonPb.Contract, byteCode []byte) (*RuntimeInstance, error) {
 	var err error
 	if contractId == nil || contractId.Name == "" || contractId.Version == "" {
-		err = fmt.Errorf("contract id is nil")
+		err = fmt.Errorf("contract is nil")
 		m.log.Warn(err)
 		return nil, err
 	}
@@ -200,6 +202,7 @@ func (p *vmPool) RevertInstance(instance *wrappedInstance) {
 		go func() {
 			p.removeInstanceC <- struct{}{}
 			p.addInstanceC <- struct{}{}
+			p.CloseInstance(instance)
 		}()
 	} else {
 		p.instances <- instance
@@ -207,13 +210,22 @@ func (p *vmPool) RevertInstance(instance *wrappedInstance) {
 }
 
 func newVmPool(contractId *commonPb.Contract, byteCode []byte, log *logger.CMLogger) (*vmPool, error) {
+	{ // for debug
+		md5Hex := fmt.Sprintf("%x", md5.Sum(byteCode))
+		log.Infof("byteCodeMd5:%s", md5Hex)
+	}
+
 	if ok := wasm.Validate(byteCode); !ok {
-		return nil, fmt.Errorf("[%s_%s], byte code validation failed", contractId.Name, contractId.Version)
+		err := fmt.Errorf("[%s_%s], wasmer byte code validation failed, byteCodeLen[%d]", contractId.Name, contractId.Version, len(byteCode))
+		log.Warn(err)
+		return nil, err
 	}
 
 	module, err := wasm.Compile(byteCode)
 	if err != nil {
-		return nil, fmt.Errorf("[%s_%s], byte code compile failed", contractId.Name, contractId.Version)
+		msg := fmt.Errorf("[%s_%s], wasmer byte code compile failed, byteCodeLen[%d], error:%s", contractId.Name, contractId.Version, len(byteCode), err)
+		log.Warn(msg)
+		return nil, err
 	}
 
 	vmPool := &vmPool{
@@ -235,7 +247,9 @@ func newVmPool(contractId *commonPb.Contract, byteCode []byte, log *logger.CMLog
 
 	instance, err := vmPool.newInstanceFromModule()
 	if err != nil {
-		return nil, fmt.Errorf("[%s_%s], byte code compile failed, %s", contractId.Name, contractId.Version, err.Error())
+		msg := fmt.Errorf("[%s_%s], wasmer byte code compile failed, byteCodeLen[%d], error: %s", contractId.Name, contractId.Version, len(byteCode), err)
+		log.Warn(msg)
+		return nil, msg
 	}
 
 	instance.wasmInstance.Close()

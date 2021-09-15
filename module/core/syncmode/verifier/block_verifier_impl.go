@@ -18,11 +18,11 @@ import (
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/monitor"
 	"chainmaker.org/chainmaker-go/utils"
-	commonErrors "chainmaker.org/chainmaker/common/errors"
-	"chainmaker.org/chainmaker/common/msgbus"
-	commonpb "chainmaker.org/chainmaker/pb-go/common"
-	consensuspb "chainmaker.org/chainmaker/pb-go/consensus"
-	"chainmaker.org/chainmaker/protocol"
+	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -94,6 +94,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		BlockchainStore: config.BlockchainStore,
 		ProposalCache:   config.ProposedCache,
 		StoreHelper:     config.StoreHelper,
+		TxScheduler:     config.TxScheduler,
 	}
 	v.verifierBlock = common.NewVerifierBlock(conf)
 
@@ -133,7 +134,6 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		isSqlDb := v.chainConf.ChainConfig().Contract.EnableSqlSupport
 		notSolo := consensuspb.ConsensusType_SOLO != v.chainConf.ChainConfig().Consensus.Type
 		if notSolo || isSqlDb {
-			// the block has verified befo
 			// the block has verified before
 			v.log.Infof("verify success repeat [%d](%x)", block.Header.BlockHeight, block.Header.BlockHash)
 			isValid = true

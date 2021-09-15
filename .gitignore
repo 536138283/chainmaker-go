@@ -28,7 +28,6 @@ build
 pkg
 tools
 tools/cmc/cmc
-tools/cmc/testdata
 !tools/
 /data/
 /log/
@@ -37,3 +36,4 @@ tools/cmc/testdata
 nohup.out
 main/chainmaker
 vendor
+cover.out

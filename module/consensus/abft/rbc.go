@@ -13,8 +13,8 @@ import (
 	"sort"
 	"sync"
 
-	"chainmaker.org/chainmaker/pb-go/consensus/abft"
-	abftpb "chainmaker.org/chainmaker/pb-go/consensus/abft"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
+	abftpb "chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
 	"github.com/NebulousLabs/merkletree"
 	"github.com/klauspost/reedsolomon"
 )

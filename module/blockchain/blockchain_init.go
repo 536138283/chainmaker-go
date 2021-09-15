@@ -30,9 +30,9 @@ import (
 	"chainmaker.org/chainmaker-go/txpool"
 	"chainmaker.org/chainmaker-go/utils"
 	"chainmaker.org/chainmaker-go/vm"
-	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
-	storePb "chainmaker.org/chainmaker/pb-go/store"
-	"chainmaker.org/chainmaker/protocol"
+	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 // Init all the modules.
@@ -277,13 +277,25 @@ func (bc *Blockchain) initAC() (err error) {
 		}
 	}
 	acLog := logger.GetLoggerByChain(logger.MODULE_ACCESS, bc.chainId)
-	bc.ac, err = accesscontrol.NewAccessControlWithChainConfig(skFile, nodeConfig.PrivKeyPassword, certFile, bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	//bc.ac, err = accesscontrol.NewAccessControlWithChainConfig(bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	//if err != nil {
+	//	bc.log.Errorf("get organization information failed, %s", err.Error())
+	//	return
+	//}
+	acFactory := accesscontrol.ACFactory()
+	bc.ac, err = acFactory.NewACProvider("CERT", bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
 	if err != nil {
 		bc.log.Errorf("get organization information failed, %s", err.Error())
 		return
 	}
 
-	bc.identity = bc.ac.GetLocalSigningMember()
+	bc.identity, err = accesscontrol.InitCertSigningMember(bc.chainConf.ChainConfig(), nodeConfig.OrgId,
+		nodeConfig.PrivKeyFile, nodeConfig.PrivKeyPassword, nodeConfig.CertFile)
+	if err != nil {
+		bc.log.Errorf("initialize identity failed, %s", err.Error())
+		return
+	}
+
 	bc.initModules[moduleNameAccessControl] = struct{}{}
 	return
 }

@@ -8,15 +8,21 @@ SPDX-License-Identifier: Apache-2.0
 package client
 
 import (
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"strings"
 
-	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/common"
-	sdk "chainmaker.org/chainmaker/sdk-go"
+	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
+	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
+
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
 const CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT = "checkProposalRequestResp failed, %s"
@@ -93,7 +99,7 @@ func invokeUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
-		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult,
+		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -115,7 +121,7 @@ func invokeContractTimesCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -269,14 +275,30 @@ func createUserContract() error {
 		return fmt.Errorf("unknown runtime type [%s]", runtimeType)
 	}
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+
+	if runtimeType != "EVM" {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
+	} else {
+		byteCode, err := ioutil.ReadFile(byteCodePath)
 		if err != nil {
 			return err
 		}
+		byteCodePath = string(byteCode)
+
+		if !ethcmn.IsHexAddress(contractName) {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
 	}
-	kvs := util.ConvertParameters(pairs)
+
 	payload, err := client.CreateContractCreatePayload(contractName, version, byteCodePath, common.RuntimeType(rt), kvs)
 	if err != nil {
 		return err
@@ -311,17 +333,57 @@ func invokeUserContract() error {
 	}
 	defer client.Stop()
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+	var evmMethod *ethabi.Method
+
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
+
+		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		m, exist := contractAbi.Methods[method]
+		if !exist {
+			return fmt.Errorf("method '%s' not found", method)
+		}
+		evmMethod = &m
+
+		inputData, err := util.Pack(evmMethod, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+		method = inputDataHexStr[0:8]
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+
+		if !ethcmn.IsHexAddress(contractName) {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
+	} else {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
 	}
 
-	Dispatch(client, contractName, method, pairs)
-
-	client.Stop()
+	Dispatch(client, contractName, method, kvs, evmMethod)
 	return nil
 }
 
@@ -332,17 +394,57 @@ func invokeContractTimes() error {
 	}
 	defer client.Stop()
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+	var evmMethod *ethabi.Method
+
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
+
+		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		m, exist := contractAbi.Methods[method]
+		if !exist {
+			return fmt.Errorf("method '%s' not found", method)
+		}
+		evmMethod = &m
+
+		inputData, err := util.Pack(evmMethod, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+		method = inputDataHexStr[0:8]
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+
+		if !ethcmn.IsHexAddress(contractName) {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
+	} else {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
 	}
 
-	DispatchTimes(client, contractName, method, pairs)
-
-	client.Stop()
+	DispatchTimes(client, contractName, method, kvs, evmMethod)
 	return nil
 }
 
@@ -368,7 +470,6 @@ func getUserContract() error {
 
 	fmt.Printf("QUERY contract resp: %+v\n", resp)
 
-	client.Stop()
 	return nil
 }
 

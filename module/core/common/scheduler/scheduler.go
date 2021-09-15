@@ -17,11 +17,10 @@ import (
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 
 	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/utils"
-	//	acpb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	commonpb "chainmaker.org/chainmaker/pb-go/common"
-	//	"chainmaker.org/chainmaker/pb-go/syscontract"
-	"chainmaker.org/chainmaker/protocol"
+	//	acpb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	//	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/panjf2000/ants/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -445,13 +444,13 @@ func (ts *TxScheduler) runVM(tx *commonpb.Transaction, txSimContext protocol.TxS
 		return errResult(result, fmt.Errorf("parse tx[%s] contract[%s] parameters error:%s", payload.TxId, contractName, err.Error()))
 	}
 
-	contract, err := utils.GetContractByName(txSimContext.Get, contractName)
+	contract, err := txSimContext.GetContractByName(contractName)
 	if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 		return nil, err
 	}
 	if contract.RuntimeType != commonpb.RuntimeType_NATIVE {
-		byteCode, err = utils.GetContractBytecode(txSimContext.Get, contractName)
+		byteCode, err = txSimContext.GetContractBytecode(contractName)
 		if err != nil {
 			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contractName, err)
 			return nil, err

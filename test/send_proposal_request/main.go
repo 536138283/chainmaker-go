@@ -21,24 +21,24 @@ import (
 	"strings"
 	"time"
 
-	"chainmaker.org/chainmaker/pb-go/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	"github.com/mr-tron/base58/base58"
 
 	"chainmaker.org/chainmaker-go/test/common"
-	configPb "chainmaker.org/chainmaker/pb-go/config"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 
 	"chainmaker.org/chainmaker-go/accesscontrol"
 	native "chainmaker.org/chainmaker-go/test/chainconfig_test"
 	"chainmaker.org/chainmaker-go/utils"
-	"chainmaker.org/chainmaker/common/ca"
-	"chainmaker.org/chainmaker/common/crypto"
-	"chainmaker.org/chainmaker/common/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/ca"
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	apiPb "chainmaker.org/chainmaker/pb-go/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -50,8 +50,8 @@ const (
 	certPathPrefix   = "../../build/crypto-config"
 	certWasmPath     = "../wasm/rust-fact-2.0.0.wasm"
 	addWasmPath      = "../wasm/rust-counter-2.0.0.wasm"
-	userKeyPath      = certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.tls.key"
-	userCrtPath      = certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.tls.crt"
+	userKeyPath      = certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.sign.key"
+	userCrtPath      = certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.sign.crt"
 	orgId            = "wx-org1.chainmaker.org"
 	certContractName = "ex_fact"
 	addContractName  = "add"
@@ -60,8 +60,8 @@ const (
 	OrgIdFormat = "wx-org%d.chainmaker.org"
 	tps         = 10000 //
 
-	userKeyPathFormat  = certPathPrefix + "/wx-org%d.chainmaker.org/user/client1/client1.tls.key"
-	userCertPathFormat = certPathPrefix + "/wx-org%d.chainmaker.org/user/client1/client1.tls.crt"
+	userKeyPathFormat  = certPathPrefix + "/wx-org%d.chainmaker.org/user/client1/client1.sign.key"
+	userCertPathFormat = certPathPrefix + "/wx-org%d.chainmaker.org/user/client1/client1.sign.crt"
 )
 
 var (
@@ -75,22 +75,22 @@ var (
 		{certPathPrefix + "/wx-org7.chainmaker.org/ca"},
 	}
 	userKeyPaths = []string{
-		certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.tls.key",
-		certPathPrefix + "/wx-org2.chainmaker.org/user/client1/client1.tls.key",
-		certPathPrefix + "/wx-org3.chainmaker.org/user/client1/client1.tls.key",
-		certPathPrefix + "/wx-org4.chainmaker.org/user/client1/client1.tls.key",
-		certPathPrefix + "/wx-org5.chainmaker.org/user/client1/client1.tls.key",
-		certPathPrefix + "/wx-org6.chainmaker.org/user/client1/client1.tls.key",
-		certPathPrefix + "/wx-org7.chainmaker.org/user/client1/client1.tls.key",
+		certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.sign.key",
+		certPathPrefix + "/wx-org2.chainmaker.org/user/client1/client1.sign.key",
+		certPathPrefix + "/wx-org3.chainmaker.org/user/client1/client1.sign.key",
+		certPathPrefix + "/wx-org4.chainmaker.org/user/client1/client1.sign.key",
+		certPathPrefix + "/wx-org5.chainmaker.org/user/client1/client1.sign.key",
+		certPathPrefix + "/wx-org6.chainmaker.org/user/client1/client1.sign.key",
+		certPathPrefix + "/wx-org7.chainmaker.org/user/client1/client1.sign.key",
 	}
 	userCrtPaths = []string{
-		certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.tls.crt",
-		certPathPrefix + "/wx-org2.chainmaker.org/user/client1/client1.tls.crt",
-		certPathPrefix + "/wx-org3.chainmaker.org/user/client1/client1.tls.crt",
-		certPathPrefix + "/wx-org4.chainmaker.org/user/client1/client1.tls.crt",
-		certPathPrefix + "/wx-org5.chainmaker.org/user/client1/client1.tls.crt",
-		certPathPrefix + "/wx-org6.chainmaker.org/user/client1/client1.tls.crt",
-		certPathPrefix + "/wx-org7.chainmaker.org/user/client1/client1.tls.crt",
+		certPathPrefix + "/wx-org1.chainmaker.org/user/client1/client1.sign.crt",
+		certPathPrefix + "/wx-org2.chainmaker.org/user/client1/client1.sign.crt",
+		certPathPrefix + "/wx-org3.chainmaker.org/user/client1/client1.sign.crt",
+		certPathPrefix + "/wx-org4.chainmaker.org/user/client1/client1.sign.crt",
+		certPathPrefix + "/wx-org5.chainmaker.org/user/client1/client1.sign.crt",
+		certPathPrefix + "/wx-org6.chainmaker.org/user/client1/client1.sign.crt",
+		certPathPrefix + "/wx-org7.chainmaker.org/user/client1/client1.sign.crt",
 	}
 	orgIds = []string{
 		"wx-org1.chainmaker.org",
@@ -424,11 +424,7 @@ func getSigner(sk3 crypto.PrivateKey, sender *acPb.Member) protocol.SigningMembe
 	if err != nil {
 		log.Fatalf("get sk PEM failed, %s", err.Error())
 	}
-	m, err := accesscontrol.MockAccessControl().NewMemberFromCertPem(sender.OrgId, string(sender.MemberInfo))
-	if err != nil {
-		panic(err)
-	}
-	signer, err := accesscontrol.MockAccessControl().NewSigningMember(m, skPEM, "")
+	signer, err := accesscontrol.NewCertSigningMember("", sender, skPEM, "")
 	if err != nil {
 		panic(err)
 	}
@@ -729,7 +725,7 @@ func configUpdateRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg 
 		return nil, "", err
 	}
 	signer := getSigner(sk3, senderFull)
-	signBytes, err := signer.Sign("SM3", rawTxBytes)
+	signBytes, err := signer.Sign("SHA256", rawTxBytes)
 	if err != nil {
 		log.Fatalf("sign msg failed")
 	}

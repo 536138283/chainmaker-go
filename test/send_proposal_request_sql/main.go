@@ -18,19 +18,19 @@ import (
 	"strings"
 	"time"
 
-	"chainmaker.org/chainmaker/pb-go/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	"chainmaker.org/chainmaker-go/test/common"
 
 	"chainmaker.org/chainmaker-go/accesscontrol"
 	"chainmaker.org/chainmaker-go/utils"
-	"chainmaker.org/chainmaker/common/ca"
-	"chainmaker.org/chainmaker/common/crypto"
-	"chainmaker.org/chainmaker/common/crypto/asym"
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	apiPb "chainmaker.org/chainmaker/pb-go/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
+	"chainmaker.org/chainmaker/common/v2/ca"
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -47,8 +47,8 @@ const (
 	IP             = "localhost"
 	Port           = 12351
 	certPathPrefix = "../../config"
-	userKeyPath    = certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key"
-	userCrtPath    = certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt"
+	userKeyPath    = certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key"
+	userCrtPath    = certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt"
 	orgId          = "wx-org1.chainmaker.org"
 	prePathFmt     = certPathPrefix + "/crypto-config/wx-org%s.chainmaker.org/user/admin1/"
 )
@@ -105,7 +105,7 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 		txId   string
 		id     string
 		result string
-		rs     = make(map[string]string, 0)
+		rs     = make(map[string][]byte, 0)
 	)
 
 	fmt.Println("//1) 合约创建")
@@ -128,7 +128,7 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 	_, result = testQuerySqlById(sk3, client, CHAIN1, id)
 	json.Unmarshal([]byte(result), &rs)
 	fmt.Println("testInvokeSqlUpdate query", rs)
-	if rs["id"] != id {
+	if string(rs["id"]) != id {
 		fmt.Println("result", rs)
 		panic("query by id error, id err")
 	} else {
@@ -145,7 +145,7 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 	_, result = testQuerySqlById(sk3, client, CHAIN1, id)
 	json.Unmarshal([]byte(result), &rs)
 	fmt.Println("testInvokeSqlUpdate query", rs)
-	if rs["name"] != "长安链chainmaker_update" {
+	if string(rs["name"]) != "长安链chainmaker_update" {
 		fmt.Println("result", rs)
 		panic("query update result error")
 	} else {
@@ -186,12 +186,12 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 
 		fmt.Println("// 11 再次查询age=2000的这条数据，如果name被更新了，那么说明savepoint Rollback失败了")
 		_, result = testQuerySqlById(sk3, client, CHAIN1, id)
-		rs = make(map[string]string, 0)
+		rs = make(map[string][]byte, 0)
 		json.Unmarshal([]byte(result), &rs)
 		fmt.Println("testInvokeSqlUpdateRollbackDbSavePoint query", rs)
-		if rs["name"] == "chainmaker_save_point" {
+		if string(rs["name"]) == "chainmaker_save_point" {
 			panic("testInvokeSqlUpdateRollbackDbSavePoint test 【fail】 query by id error, age err")
-		} else if rs["name"] == "长安链chainmaker" {
+		} else if string(rs["name"]) == "长安链chainmaker" {
 			fmt.Println("  【testInvokeSqlUpdateRollbackDbSavePoint】 pass")
 		} else {
 			panic("error result")
@@ -208,10 +208,10 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 	time.Sleep(2 * time.Second)
 	testWaitTx(sk3, client, CHAIN1, txId)
 	_, result = testQuerySqlById(sk3, client, CHAIN1, txId)
-	rs = make(map[string]string, 0)
+	rs = make(map[string][]byte, 0)
 	json.Unmarshal([]byte(result), &rs)
 	fmt.Println("testInvokeSqlInsert query", rs)
-	if rs["age"] != "100000" {
+	if string(rs["age"]) != "100000" {
 		panic("query by id error, age err")
 	} else {
 		fmt.Println("  【testUpgrade】 pass")
@@ -865,12 +865,7 @@ func getSigner(sk3 crypto.PrivateKey, sender *acPb.Member) protocol.SigningMembe
 	}
 	//fmt.Printf("skPEM: %s\n", skPEM)
 
-	m, err := accesscontrol.MockAccessControl().NewMemberFromCertPem(sender.OrgId, string(sender.MemberInfo))
-	if err != nil {
-		panic(err)
-	}
-
-	signer, err := accesscontrol.MockAccessControl().NewSigningMember(m, skPEM, "")
+	signer, err := accesscontrol.NewCertSigningMember("", sender, skPEM, "")
 	if err != nil {
 		panic(err)
 	}

@@ -7,18 +7,19 @@ SPDX-License-Identifier: Apache-2.0
 package single
 
 import (
-	consensusPb "chainmaker.org/chainmaker/pb-go/consensus"
 	"fmt"
 	"sync"
 	"testing"
 
-	"chainmaker.org/chainmaker/pb-go/syscontract"
+	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/utils"
-	"chainmaker.org/chainmaker/protocol"
+	"chainmaker.org/chainmaker/protocol/v2"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

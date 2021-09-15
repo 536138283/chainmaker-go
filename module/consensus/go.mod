@@ -10,9 +10,9 @@ require (
 	chainmaker.org/chainmaker-go/store v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
 	chainmaker.org/chainmaker-go/vm v0.0.0
-	chainmaker.org/chainmaker/common v0.0.0-20210803125737-39d843e4c85e
-	chainmaker.org/chainmaker/pb-go v0.0.0-20210727051745-8312e6b09f15
-	chainmaker.org/chainmaker/protocol v0.0.0-20210727101110-59285b10f1ef
+	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210915075633-90ea007220a9
+	chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210915083256-3cba3b585dd4
+	chainmaker.org/chainmaker/protocol/v2 v2.0.0
 	github.com/NebulousLabs/errors v0.0.0-20181203160057-9f787ce8f69e // indirect
 	github.com/NebulousLabs/fastrand v0.0.0-20181203155948-6fb6489aac4e // indirect
 	github.com/NebulousLabs/merkletree v0.0.0-20181203152040-08d5d54b07f5
@@ -27,7 +27,6 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/thoas/go-funk v0.8.0
-	github.com/tidwall/wal v0.1.4
 	go.etcd.io/etcd/client/pkg/v3 v3.5.0-beta.4
 	go.etcd.io/etcd/raft/v3 v3.5.0-beta.4
 	go.etcd.io/etcd/server/v3 v3.5.0-beta.4

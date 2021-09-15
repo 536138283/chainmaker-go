@@ -7,21 +7,22 @@ SPDX-License-Identifier: Apache-2.0
 package abftmode
 
 import (
+	"encoding/hex"
+	"fmt"
+	"sort"
+	"sync"
+
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/monitor"
 	"chainmaker.org/chainmaker-go/utils"
-	"chainmaker.org/chainmaker/pb-go/accesscontrol"
-	commonpb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/pb-go/consensus/abft"
-	"chainmaker.org/chainmaker/protocol"
-	"encoding/hex"
-	"fmt"
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/prometheus/client_golang/prometheus"
-	"sort"
-	"sync"
 )
 
 type Committer struct {

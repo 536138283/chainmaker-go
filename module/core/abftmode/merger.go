@@ -7,11 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package abftmode
 
 import (
-	"chainmaker.org/chainmaker/common/bitmap"
-	commonpb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol"
 	"encoding/hex"
 	"sync"
+
+	"chainmaker.org/chainmaker/common/bitmap"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol"
 )
 
 type Merger struct {

@@ -9,6 +9,7 @@ package certmgr
 
 import (
 	"bytes"
+	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/hex"
@@ -18,12 +19,14 @@ import (
 	"fmt"
 	"strings"
 
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+
 	"chainmaker.org/chainmaker-go/utils"
 	"chainmaker.org/chainmaker-go/vm/native/common"
-	bcx509 "chainmaker.org/chainmaker/common/crypto/x509"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/pb-go/syscontract"
-	"chainmaker.org/chainmaker/protocol"
+	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -334,16 +337,20 @@ func (r *CertManageRuntime) Revoke(txSimContext protocol.TxSimContext, params ma
 		r.log.Errorf("certManage txSimContext.GetOrganization failed, err: ", err.Error())
 		return nil, err
 	}
-	crlList, err := ac.ValidateCRL([]byte(crlStr))
+	_, err = ac.VerifyRelatedMaterial(pbac.VerifyType_CRL, []byte(crlStr))
 	if err != nil {
 		r.log.Errorf("certManage validate crl failed err: ", err.Error())
 		return nil, err
 	}
 
-	if crlList == nil || len(crlList) == 0 {
-		r.log.Errorf("certManage crlList is empty")
-		return nil, errors.New("certManage crlList is empty")
+	var crls []*pkix.CertificateList
+
+	crl, err := x509.ParseCRL([]byte(crlStr))
+	if err != nil {
+		r.log.Errorf("certManage parse crl failed err: ", err.Error())
+		return nil, err
 	}
+	crls = append(crls, crl)
 
 	crlBytes, err := txSimContext.Get(syscontract.SystemContract_CERT_MANAGE.String(), []byte(protocol.CertRevokeKey))
 	if err != nil {
@@ -361,7 +368,7 @@ func (r *CertManageRuntime) Revoke(txSimContext protocol.TxSimContext, params ma
 	}
 
 	var crlResult bytes.Buffer
-	for _, crtList := range crlList {
+	for _, crtList := range crls {
 		aki, err := getAKI(crtList)
 		if err != nil {
 			r.log.Errorf("certManage getAKI err: ", err.Error())

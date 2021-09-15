@@ -12,16 +12,15 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
-	"chainmaker.org/chainmaker/common/helper"
-	"chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/pb-go/config"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/utils"
-	"chainmaker.org/chainmaker/common/json"
-	"chainmaker.org/chainmaker/protocol"
+	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/protocol/v2"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/groupcache/lru"
@@ -101,19 +100,44 @@ func Genesis(genesisFile string) (*config.ChainConfig, error) {
 	// load the trust root certs than set the bytes as value
 	// need verify org and root certs
 	for _, root := range chainConfig.TrustRoots {
-		filePath := root.Root
+		for i := 0; i < len(root.Root); i++ {
+			filePath := root.Root[i]
+			if !filepath.IsAbs(filePath) {
+				filePath, err = filepath.Abs(filePath)
+				if err != nil {
+					return nil, err
+				}
+			}
+			log.Infof("load trust root file path: %s", filePath)
+			entry, err := ioutil.ReadFile(filePath)
+			if err != nil {
+				return nil, fmt.Errorf("fail to read whiltlist file [%s]: %v", filePath, err)
+			}
+			root.Root[i] = string(entry)
+		}
+	}
+
+	// load the trust member certs than set the bytes as value
+	// need verify org
+	trustMemberInfoMap := make(map[string]bool, len(chainConfig.TrustMembers))
+	for _, member := range chainConfig.TrustMembers {
+		filePath := member.MemberInfo
 		if !filepath.IsAbs(filePath) {
 			filePath, err = filepath.Abs(filePath)
 			if err != nil {
 				return nil, err
 			}
 		}
-		log.Infof("load trust root file path: %s", filePath)
+		log.Infof("load trust member file path: %s", filePath)
 		entry, err := ioutil.ReadFile(filePath)
 		if err != nil {
-			return nil, fmt.Errorf("fail to read whiltlist file [%s]: %v", filePath, err)
+			return nil, fmt.Errorf("fail to read trust memberInfo file [%s]: %v", filePath, err)
 		}
-		root.Root = string(entry)
+		if _, ok := trustMemberInfoMap[string(entry)]; ok {
+			return nil, fmt.Errorf("the trust member info is exist, member info: %s", string(entry))
+		}
+		member.MemberInfo = string(entry)
+		trustMemberInfoMap[string(entry)] = true
 	}
 
 	// verify
@@ -130,42 +154,6 @@ func (c *ChainConf) Init() error {
 	return c.latestChainConfig()
 }
 
-// HandleCompatibility will make new version to be compatible with old version
-func HandleCompatibility(chainConfig *config.ChainConfig) error {
-	// For v1.1 to be compatible with v1.0, check consensus config
-	for _, orgConfig := range chainConfig.Consensus.Nodes {
-		if orgConfig.NodeId == nil {
-			orgConfig.NodeId = make([]string, 0)
-		}
-		if len(orgConfig.NodeId) == 0 {
-			for _, addr := range orgConfig.Address {
-				nid, err := helper.GetNodeUidFromAddr(addr)
-				if err != nil {
-					return err
-				}
-				orgConfig.NodeId = append(orgConfig.NodeId, nid)
-			}
-			orgConfig.Address = nil
-		}
-	}
-	/*
-		// For v1.1 to be compatible with v1.0, check resource policies
-		for _, rp := range chainConfig.ResourcePolicies {
-			switch rp.ResourceName {
-			case syscontract.ChainConfigFunction_NODE_ID_ADD.String():
-				rp.ResourceName = syscontract.ChainConfigFunction_NODE_ID_ADD.String()
-			case syscontract.ChainConfigFunction_NODE_ID_UPDATE.String():
-				rp.ResourceName = syscontract.ChainConfigFunction_NODE_ID_UPDATE.String()
-			case syscontract.ChainConfigFunction_NODE_ID_DELETE.String():
-				rp.ResourceName = syscontract.ChainConfigFunction_NODE_ID_DELETE.String()
-			default:
-				continue
-			}
-		}
-	*/
-	return nil
-}
-
 // latestChainConfig load latest chainConfig
 func (c *ChainConf) latestChainConfig() error {
 	// load chain config from store
@@ -178,11 +166,6 @@ func (c *ChainConf) latestChainConfig() error {
 	}
 	var chainConfig config.ChainConfig
 	err = proto.Unmarshal(bytes, &chainConfig)
-	if err != nil {
-		return err
-	}
-
-	err = HandleCompatibility(&chainConfig)
 	if err != nil {
 		return err
 	}
@@ -261,10 +244,6 @@ func GetChainConfigAt(log protocol.Logger, lru *lru.Cache, configLru *lru.Cache,
 		return nil, err
 	}
 
-	err = HandleCompatibility(chainConfig)
-	if err != nil {
-		return nil, err
-	}
 	return chainConfig, nil
 }
 

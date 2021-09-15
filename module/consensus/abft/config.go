@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package abft
 
 import (
-	"chainmaker.org/chainmaker/protocol"
 	"fmt"
 	"sync"
+
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 type Config struct {

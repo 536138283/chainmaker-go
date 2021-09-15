@@ -10,8 +10,9 @@ import (
 	"encoding/hex"
 	"errors"
 	"sync"
+
 	"chainmaker.org/chainmaker-go/utils"
-	commonpb "chainmaker.org/chainmaker/pb-go/common"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
 //Abft tx batch structure
@@ -19,7 +20,7 @@ type VerifiedTxBatchCache struct {
 	txBatch      *commonpb.Block
 	verifyResult bool
 	rwSetMap     map[string]*commonpb.TxRWSet
-	rwMu                    sync.RWMutex
+	rwMu         sync.RWMutex
 }
 
 //After propose txbatch cache

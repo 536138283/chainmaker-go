@@ -14,14 +14,14 @@ import (
 	"strconv"
 	"testing"
 
-	storePb "chainmaker.org/chainmaker/pb-go/store"
+	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
 
 	"chainmaker.org/chainmaker-go/store/cache"
 	"chainmaker.org/chainmaker-go/store/dbprovider/leveldbprovider"
 	"chainmaker.org/chainmaker-go/store/serialization"
-	acPb "chainmaker.org/chainmaker/pb-go/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/common"
-	"chainmaker.org/chainmaker/protocol/test"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2/test"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sync/semaphore"
 )
@@ -91,4 +91,13 @@ func generateBlockHash(chainId string, height uint64) []byte {
 func generateTxId(chainId string, height uint64, index int) string {
 	txIdBytes := sha256.Sum256([]byte(fmt.Sprintf("%s-%d-%d", chainId, height, index)))
 	return hex.EncodeToString(txIdBytes[:32])
+}
+func TestBlockKvDB_parseTxIdBlockInfo(t *testing.T) {
+	value := constructTxIDBlockInfo(1, []byte("hash1"), 2)
+	a, b, c, e := parseTxIdBlockInfo(value)
+	assert.Nil(t, e)
+	t.Log(a, b, c)
+	a, b, c, e = parseTxIdBlockInfo([]byte("bad data"))
+	assert.NotNil(t, e)
+	t.Log(a, b, c, e)
 }
