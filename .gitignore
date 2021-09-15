@@ -34,4 +34,4 @@ tools
 /module/vm/test/*/tmp/
 nohup.out
 main/chainmaker
-)
+tools/cmc/cmc
