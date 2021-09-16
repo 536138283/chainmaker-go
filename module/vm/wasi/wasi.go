@@ -179,7 +179,7 @@ func (*WacsiImpl) CallContract(requestBody []byte, txSimContext protocol.TxSimCo
 		}
 		match, err := regexp.MatchString(protocol.DefaultStateRegex, item.Key)
 		if err != nil || !match {
-			return nil, fmt.Errorf("[call contract] param expect key no special characters, but got %s. " +
+			return nil, fmt.Errorf("[call contract] param expect key no special characters, but got %s. "+
 				"letter, number, dot and underline are allowed", item.Key), gasUsed, protocol.ExecOrderTxTypeNormal
 		}
 		if len(item.Value.(string)) > protocol.ParametersValueMaxLength {
@@ -195,7 +195,7 @@ func (*WacsiImpl) CallContract(requestBody []byte, txSimContext protocol.TxSimCo
 	gasUsed += protocol.CallContractGasOnce
 	paramMap := ecData.ToMap()
 	result, specialTxType, code := txSimContext.CallContract(&common.ContractId{ContractName: contractName}, method,
-	nil, paramMap, gasUsed, common.TxType_INVOKE_USER_CONTRACT)
+		nil, paramMap, gasUsed, common.TxType_INVOKE_USER_CONTRACT)
 	gasUsed += uint64(result.GasUsed)
 	if code != common.TxStatusCode_SUCCESS {
 		return nil, fmt.Errorf("[call contract] execute error code: %s, msg: %s",
@@ -461,14 +461,14 @@ func pedersenAddNum(commitment, num interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenAddNum(c, x)
+	return bulletproofs.PedersenAddNum(c, x)
 }
 
 func pedersenAddCommitment(commitment1, commitment2 interface{}) ([]byte, error) {
 	commitmentX := commitment1.([]byte)
 	commitmentY := commitment2.([]byte)
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenAddCommitment(commitmentX, commitmentY)
+	return bulletproofs.PedersenAddCommitment(commitmentX, commitmentY)
 }
 
 func pedersenSubNum(commitment, num interface{}) ([]byte, error) {
@@ -478,13 +478,13 @@ func pedersenSubNum(commitment, num interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenSubNum(c, x)
+	return bulletproofs.PedersenSubNum(c, x)
 }
 
 func pedersenSubCommitment(commitment1, commitment2 interface{}) ([]byte, error) {
 	commitmentX := commitment1.([]byte)
 	commitmentY := commitment2.([]byte)
-	return bulletproofs.Helper().NewBulletproofs().PedersenSubCommitment(commitmentX, commitmentY)
+	return bulletproofs.PedersenSubCommitment(commitmentX, commitmentY)
 
 }
 
@@ -495,13 +495,13 @@ func pedersenMulNum(commitment, num interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenMulNum(c, x)
+	return bulletproofs.PedersenMulNum(c, x)
 }
 
 func bulletproofsVerify(proof, commitment interface{}) ([]byte, error) {
 	p := proof.([]byte)
 	c := commitment.([]byte)
-	ok, err := bulletproofs.Helper().NewBulletproofs().Verify(p, c)
+	ok, err := bulletproofs.Verify(p, c)
 	if err != nil {
 		return nil, err
 	}
