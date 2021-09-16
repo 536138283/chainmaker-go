@@ -8,7 +8,6 @@ require (
 	chainmaker.org/chainmaker-go/consensus v0.0.0
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/logger v0.0.0
-	chainmaker.org/chainmaker-go/mock v0.0.0 // indirect
 	chainmaker.org/chainmaker-go/monitor v0.0.0
 	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
 	chainmaker.org/chainmaker-go/protocol v0.0.0

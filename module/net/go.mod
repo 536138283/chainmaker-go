@@ -19,7 +19,6 @@ require (
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/stretchr/testify v1.7.0
 	github.com/tjfoc/gmsm v1.3.2
-	github.com/tjfoc/gmtls v1.2.1
 )
 
 replace (
