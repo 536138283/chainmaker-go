@@ -7,3 +7,6 @@
 [submodule "pb/proto"]
 	path = pb/proto
 	url = git@git.code.tencent.com:ChainMaker/chainmaker-pb.git
+[submodule "module/consensus/raft/raftwal"]
+	path = module/consensus/raft/raftwal
+	url = git@git.code.tencent.com:ChainMaker/raftwal.git
