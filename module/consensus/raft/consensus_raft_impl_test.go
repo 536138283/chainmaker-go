@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package raft
 
 import (
-	"chainmaker.org/chainmaker-go/logger"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -16,15 +15,16 @@ import (
 	"reflect"
 	"testing"
 
+	"chainmaker.org/chainmaker-go/logger"
+
 	"chainmaker.org/chainmaker-go/mock"
 	configpb "chainmaker.org/chainmaker-go/pb/protogo/config"
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"github.com/golang/mock/gomock"
 	"github.com/jfcg/sorty"
 
-	"go.etcd.io/etcd/raft/v3"
 	"go.etcd.io/etcd/client/pkg/v3/fileutil"
-
+	"go.etcd.io/etcd/raft/v3"
 )
 
 func Test_computeUpdatedNodes(t *testing.T) {
@@ -164,13 +164,14 @@ func TestConsensusRaftImpl_getPeersFromChainConf(t *testing.T) {
 				logger:    logger,
 				chainConf: chainConf,
 			}
-			if got := consensus.getPeersFromChainConf(); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := consensus.getPeersFromChainConf(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("ConsensusRaftImpl.getPeersFromChainConf() = %v, want %v", got, tt.want)
 			}
 
 		})
 	}
 }
+
 /**
  * 测试Purge File前，需要在PurgeFile方法return前添加代码 	time.Sleep(time.Millisecond * 200)
  * 否则，测试完成后，协程未来得及删除测试文件。

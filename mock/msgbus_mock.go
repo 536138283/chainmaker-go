@@ -82,6 +82,18 @@ func (mr *MockMessageBusMockRecorder) Register(topic, sub interface{}) *gomock.C
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "Register", reflect.TypeOf((*MockMessageBus)(nil).Register), topic, sub)
 }
 
+// UnRegister mocks base method.
+func (m *MockMessageBus) UnRegister(topic msgbus.Topic, sub msgbus.Subscriber) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "UnRegister", topic, sub)
+}
+
+// UnRegister indicates an expected call of UnRegister.
+func (mr *MockMessageBusMockRecorder) UnRegister(topic, sub interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UnRegister", reflect.TypeOf((*MockMessageBus)(nil).UnRegister), topic, sub)
+}
+
 // MockSubscriber is a mock of Subscriber interface.
 type MockSubscriber struct {
 	ctrl     *gomock.Controller
