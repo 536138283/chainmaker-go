@@ -39,6 +39,7 @@ replace (
 	chainmaker.org/chainmaker-go/net => ../net
 	chainmaker.org/chainmaker-go/pb/protogo => ../../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ../../protocol
+	chainmaker.org/chainmaker-go/raftwal => ../consensus/raft/raftwal
 	chainmaker.org/chainmaker-go/snapshot => ../snapshot
 	chainmaker.org/chainmaker-go/store => ../store
 	chainmaker.org/chainmaker-go/subscriber => ../subscriber

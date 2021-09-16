@@ -29,7 +29,7 @@ import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/consensus/raft/wal"
+	"chainmaker.org/chainmaker-go/raftwal/wal"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
