@@ -33,6 +33,7 @@ replace (
 	chainmaker.org/chainmaker-go/pb/protogo => ./../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ./../protocol
 	chainmaker.org/chainmaker-go/provider => ../module/provider
+	chainmaker.org/chainmaker-go/raftwal => ../module/consensus/raft/raftwal
 	chainmaker.org/chainmaker-go/rpcserver => ./../module/rpcserver
 	chainmaker.org/chainmaker-go/snapshot => ./../module/snapshot
 	chainmaker.org/chainmaker-go/spv => ./../module/spv
@@ -44,7 +45,6 @@ replace (
 	chainmaker.org/chainmaker-go/utils => ./../module/utils
 	chainmaker.org/chainmaker-go/vm => ./../module/vm
 	chainmaker.org/chainmaker-go/wasi => ../module/vm/wasi
-	chainmaker.org/chainmaker-go/raftwal => ../module/consensus/raft/raftwal
 	chainmaker.org/chainmaker-go/wasmer => ../module/vm/wasmer
 	chainmaker.org/chainmaker-go/wxvm => ../module/vm/wxvm
 	github.com/libp2p/go-libp2p => ./../module/net/p2p/libp2p
