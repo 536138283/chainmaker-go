@@ -7,11 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package cmd
 
 import (
-	"chainmaker.org/chainmaker-go/localconf"
 	"fmt"
+	"os"
+
+	"chainmaker.org/chainmaker-go/localconf"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-	"os"
 )
 
 const (
