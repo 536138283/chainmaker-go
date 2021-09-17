@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package tbft
 
 import (
-	"chainmaker.org/chainmaker-go/pb/protogo/common"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	netpb "chainmaker.org/chainmaker-go/pb/protogo/net"
 	"fmt"
 	"sync"
 	"testing"
 	"time"
+
+	"chainmaker.org/chainmaker-go/pb/protogo/common"
+	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
+	netpb "chainmaker.org/chainmaker-go/pb/protogo/net"
 
 	"chainmaker.org/chainmaker-go/common/msgbus"
 )
@@ -147,7 +148,7 @@ func (ce *mockCoreEngine) OnMessage(msg *msgbus.Message) {
 		clog.Infof("mockCoreEngine %s, topic: %s, blockHeight: %d", ce.ToStringWithoutLock(), msg.Topic, block.Header.BlockHeight)
 		ce.commitedBlocks = append(ce.commitedBlocks, block)
 		ce.reachingConsensus = false
-		ce.height += 1
+		ce.height++
 		ce.commitEventC <- block.Header.BlockHeight
 	default:
 		ce.t.Errorf("error msg topic: %d", msg.Topic)

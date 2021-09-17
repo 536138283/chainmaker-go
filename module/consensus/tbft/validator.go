@@ -106,7 +106,8 @@ func (valSet *validatorSet) GetProposer(height int64, round int32) (validator st
 	return valSet.getByIndex(proposerIndex)
 }
 
-func (valSet *validatorSet) updateValidators(validators []string) (addedValidators []string, removedValidators []string, err error) {
+func (valSet *validatorSet) updateValidators(validators []string) (addedValidators []string, removedValidators []string,
+	err error) {
 	valSet.Lock()
 	defer valSet.Unlock()
 

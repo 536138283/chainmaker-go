@@ -40,9 +40,9 @@ import (
 var clog *zap.SugaredLogger = zap.S()
 
 var (
-	defaultChanCap                 = 1000
-	nilHash                        = []byte("NilHash")
-	consensusStateKey              = []byte("ConsensusStateKey")
+	defaultChanCap = 1000
+	nilHash        = []byte("NilHash")
+	//consensusStateKey              = []byte("ConsensusStateKey")
 	walDir                         = "tbftwal"
 	defaultConsensusStateCacheSize = int64(10)
 )
@@ -102,7 +102,7 @@ type ConsensusTBFTImpl struct {
 
 	gossip        *gossipService
 	timeScheduler *timeScheduler
-	verifingBlock *common.Block // verifing block
+	//verifingBlock *common.Block // verifing block
 
 	proposedBlockC chan *consensuspb.ProposalBlock
 	verifyResultC  chan *consensuspb.VerifyResult
@@ -170,7 +170,7 @@ func New(config ConsensusTBFTImplConfig) (*ConsensusTBFTImpl, error) {
 	consensus.validatorSet = newValidatorSet(consensus.logger, validators, DefaultBlocksPerProposer)
 	consensus.ConsensusState = NewConsensusState(consensus.logger, consensus.Id)
 	consensus.consensusStateCache = newConsensusStateCache(defaultConsensusStateCacheSize)
-	consensus.timeScheduler = NewTimeSheduler(consensus.logger, config.Id)
+	consensus.timeScheduler = newTimeSheduler(consensus.logger, config.Id)
 	consensus.gossip = newGossipService(consensus.logger, consensus)
 
 	return consensus, nil
@@ -185,7 +185,9 @@ func (consensus *ConsensusTBFTImpl) Start() error {
 	consensus.msgbus.Register(msgbus.VerifyResult, consensus)
 	consensus.msgbus.Register(msgbus.RecvConsensusMsg, consensus)
 	consensus.msgbus.Register(msgbus.BlockInfo, consensus)
-	chainconf.RegisterVerifier(consensus.chainID, consensuspb.ConsensusType_TBFT, consensus)
+	if err := chainconf.RegisterVerifier(consensus.chainID, consensuspb.ConsensusType_TBFT, consensus); err != nil {
+		return err
+	}
 
 	consensus.logger.Infof("start ConsensusTBFTImpl[%s]", consensus.Id)
 	consensus.timeScheduler.Start()
@@ -212,7 +214,9 @@ func (consensus *ConsensusTBFTImpl) Stop() error {
 	defer consensus.Unlock()
 
 	consensus.logger.Infof("[%s](%d/%d/%s) stopped", consensus.Id, consensus.Height, consensus.Round, consensus.Step)
-	consensus.wal.Sync()
+	if err := consensus.wal.Sync(); err != nil {
+		return err
+	}
 	consensus.gossip.stop()
 	close(consensus.closeC)
 	return nil
@@ -269,7 +273,8 @@ func (consensus *ConsensusTBFTImpl) OnQuit() {
 // Verify implements interface of struct Verifier,
 // This interface is used to verify the validity of parameters,
 // it executes before consensus.
-func (consensus *ConsensusTBFTImpl) Verify(consensusType consensuspb.ConsensusType, chainConfig *config.ChainConfig) error {
+func (consensus *ConsensusTBFTImpl) Verify(consensusType consensuspb.ConsensusType,
+	chainConfig *config.ChainConfig) error {
 	consensus.logger.Infof("[%s](%d/%d/%v) verify chain config",
 		consensus.Id, consensus.Height, consensus.Round, consensus.Step)
 	if consensusType != consensuspb.ConsensusType_TBFT {
@@ -281,7 +286,8 @@ func (consensus *ConsensusTBFTImpl) Verify(consensusType consensuspb.ConsensusTy
 	return err
 }
 
-func (consensus *ConsensusTBFTImpl) updateChainConfig() (addedValidators []string, removedValidators []string, err error) {
+func (consensus *ConsensusTBFTImpl) updateChainConfig() (addedValidators []string, removedValidators []string,
+	err error) {
 	consensus.logger.Infof("[%s](%d/%d/%v) update chain config",
 		consensus.Id, consensus.Height, consensus.Round, consensus.Step)
 
@@ -291,8 +297,8 @@ func (consensus *ConsensusTBFTImpl) updateChainConfig() (addedValidators []strin
 		return nil, nil, err
 	}
 
-	consensus.logger.Infof("[%s](%d/%d/%v) update chain config, config: %v, TimeoutPropose: %v, TimeoutProposeDelta: %v, validators: %v",
-		consensus.Id, consensus.Height, consensus.Round, consensus.Step, config,
+	consensus.logger.Infof("[%s](%d/%d/%v) update chain config, config: %v, TimeoutPropose: %v, "+
+		"TimeoutProposeDelta: %v, validators: %v", consensus.Id, consensus.Height, consensus.Round, consensus.Step, config,
 		consensus.TimeoutPropose, consensus.TimeoutProposeDelta, validators)
 
 	consensus.TimeoutPropose = timeoutPropose
@@ -304,12 +310,15 @@ func (consensus *ConsensusTBFTImpl) updateChainConfig() (addedValidators []strin
 		}
 	} else {
 		consensus.logger.Debugf("enter tbft to get proposers ...")
-		consensus.validatorSet.updateBlocksPerProposer(tbftBlocksPerProposer)
+		if err := consensus.validatorSet.updateBlocksPerProposer(tbftBlocksPerProposer); err != nil {
+			return nil, nil, err
+		}
 	}
 	return consensus.validatorSet.updateValidators(validators)
 }
 
-func (consensus *ConsensusTBFTImpl) extractConsensusConfig(config *config.ConsensusConfig) (validators []string, timeoutPropose time.Duration, timeoutProposeDelta time.Duration, tbftBlocksPerProposer int64, err error) {
+func (consensus *ConsensusTBFTImpl) extractConsensusConfig(config *config.ConsensusConfig) (validators []string,
+	timeoutPropose time.Duration, timeoutProposeDelta time.Duration, tbftBlocksPerProposer int64, err error) {
 	timeoutPropose = DefaultTimeoutPropose
 	timeoutProposeDelta = DefaultTimeoutProposeDelta
 	tbftBlocksPerProposer = int64(1)
@@ -341,17 +350,18 @@ func (consensus *ConsensusTBFTImpl) extractConsensusConfig(config *config.Consen
 
 func (consensus *ConsensusTBFTImpl) extractProposeTimeout(value string) (timeoutPropose time.Duration, err error) {
 	if timeoutPropose, err = time.ParseDuration(value); err != nil {
-		consensus.logger.Infof("[%s](%d/%d/%v) update chain config, TimeoutPropose: %v, TimeoutProposeDelta: %v, parse TimeoutPropose error: %v",
-			consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+		consensus.logger.Infof("[%s](%d/%d/%v) update chain config, TimeoutPropose: %v, TimeoutProposeDelta: %v,"+
+			" parse TimeoutPropose error: %v", consensus.Id, consensus.Height, consensus.Round, consensus.Step,
 			consensus.TimeoutPropose, consensus.TimeoutProposeDelta, err)
 	}
 	return
 }
 
-func (consensus *ConsensusTBFTImpl) extractProposeTimeoutDelta(value string) (timeoutProposeDelta time.Duration, err error) {
+func (consensus *ConsensusTBFTImpl) extractProposeTimeoutDelta(value string) (timeoutProposeDelta time.Duration,
+	err error) {
 	if timeoutProposeDelta, err = time.ParseDuration(value); err != nil {
-		consensus.logger.Infof("[%s](%d/%d/%v) update chain config, TimeoutPropose: %v, TimeoutProposeDelta: %v, parse TimeoutProposeDelta error: %v",
-			consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+		consensus.logger.Infof("[%s](%d/%d/%v) update chain config, TimeoutPropose: %v, TimeoutProposeDelta: %v,"+
+			" parse TimeoutProposeDelta error: %v", consensus.Id, consensus.Height, consensus.Round, consensus.Step,
 			consensus.TimeoutPropose, consensus.TimeoutProposeDelta, err)
 	}
 	return
@@ -364,7 +374,8 @@ func (consensus *ConsensusTBFTImpl) extractBlocksPerProposer(value string) (tbft
 		return
 	}
 	if tbftBlocksPerProposer <= 0 {
-		err = errors.New(fmt.Sprintf("invalid TBFT_blocks_per_proposer: %d", tbftBlocksPerProposer))
+		//err = errors.New(fmt.Sprintf("invalid TBFT_blocks_per_proposer: %d", tbftBlocksPerProposer))
+		err = fmt.Errorf("invalid TBFT_blocks_per_proposer: %d", tbftBlocksPerProposer)
 		return
 	}
 	return
@@ -378,7 +389,7 @@ func (consensus *ConsensusTBFTImpl) handle() {
 	for loop {
 		select {
 		case proposedBlock := <-consensus.proposedBlockC:
-			consensus.handleProposedBlock(proposedBlock)
+			consensus.handleProposedBlock(proposedBlock, false)
 		case result := <-consensus.verifyResultC:
 			consensus.handleVerifyResult(result, false)
 		case height := <-consensus.blockHeightC:
@@ -393,19 +404,19 @@ func (consensus *ConsensusTBFTImpl) handle() {
 			consensus.handleTimeout(ti, false)
 		case <-consensus.closeC:
 			loop = false
-			break
 		}
 	}
 }
 
-func (consensus *ConsensusTBFTImpl) handleProposedBlock(proposedBlock *consensuspb.ProposalBlock) {
+func (consensus *ConsensusTBFTImpl) handleProposedBlock(proposedBlock *consensuspb.ProposalBlock, replayMode bool) {
 	consensus.Lock()
 	defer consensus.Unlock()
 
 	block := proposedBlock.Block
 	consensus.logger.Debugf("[%s](%d/%d/%s) receive proposal from core engine (%d/%x/%d), isProposer: %v",
 		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
-		block.Header.BlockHeight, block.Header.BlockHash, proto.Size(block), consensus.isProposer(consensus.Height, consensus.Round),
+		block.Header.BlockHeight, block.Header.BlockHash, proto.Size(block),
+		consensus.isProposer(consensus.Height, consensus.Round),
 	)
 
 	if block.Header.BlockHeight != consensus.Height {
@@ -451,8 +462,15 @@ func (consensus *ConsensusTBFTImpl) handleProposedBlock(proposedBlock *consensus
 
 	// Add proposal
 	proposal := NewProposal(consensus.Id, consensus.Height, consensus.Round, -1, block)
-	consensus.signProposal(proposal)
+	if err := consensus.signProposal(proposal); err != nil {
+		consensus.logger.Errorf("sign proposal error: %v", err)
+		return
+	}
 	consensus.Proposal = proposal
+
+	if !replayMode {
+		consensus.saveWalEntry(consensus.Proposal)
+	}
 
 	// prevote
 	consensus.enterPrevote(consensus.Height, consensus.Round)
@@ -494,7 +512,7 @@ func (consensus *ConsensusTBFTImpl) handleVerifyResult(verifyResult *consensuspb
 		if consensus.heightRoundVoteSet != nil && consensus.heightRoundVoteSet.precommits(consensus.Round) != nil {
 			voteSet := consensus.heightRoundVoteSet.precommits(consensus.Round)
 			quorumHash, ok := voteSet.twoThirdsMajority()
-			if ok && bytes.Compare(quorumHash, consensus.VerifingProposal.Block.Header.BlockHash) == 0 {
+			if ok && bytes.Equal(quorumHash, consensus.VerifingProposal.Block.Header.BlockHash) {
 				consensus.Proposal = consensus.VerifingProposal
 				if !replayMode {
 					consensus.saveWalEntry(consensus.Proposal)
@@ -627,7 +645,8 @@ func (consensus *ConsensusTBFTImpl) procPropose(msg *tbftpb.TBFTMsg) {
 	}
 
 	consensus.logger.Debugf("[%s](%d/%d/%s) send for verifying block: (%d-%x)",
-		consensus.Id, consensus.Height, consensus.Round, consensus.Step, proposal.Block.Header.BlockHeight, proposal.Block.Header.BlockHash)
+		consensus.Id, consensus.Height, consensus.Round, consensus.Step, proposal.Block.Header.BlockHeight,
+		proposal.Block.Header.BlockHash)
 	consensus.VerifingProposal = proposal
 	consensus.msgbus.PublishSafe(msgbus.VerifyBlock, proposal.Block)
 }
@@ -857,7 +876,8 @@ func (consensus *ConsensusTBFTImpl) addPrevoteVote(vote *Vote) {
 	// Upon >2/3 prevotes, Step into StepPrecommit
 	if consensus.Proposal != nil {
 		if !bytes.Equal(hash, consensus.Proposal.Block.Header.BlockHash) {
-			consensus.logger.Warnf("[%s](%d/%d/%s) block matched failed, receive valid block: %x, but unmatched with proposal: %x",
+			consensus.logger.Warnf("[%s](%d/%d/%s) block matched failed, receive valid block: %x, "+
+				"but unmatched with proposal: %x",
 				consensus.Id, consensus.Height, consensus.Round, consensus.Step, hash, consensus.Proposal.Block.Header.BlockHash)
 		}
 		consensus.enterPrecommit(consensus.Height, consensus.Round)
@@ -896,7 +916,8 @@ func (consensus *ConsensusTBFTImpl) addPrecommitVote(vote *Vote) {
 		if isNilHash(hash) || bytes.Equal(hash, consensus.Proposal.Block.Header.BlockHash) {
 			consensus.enterCommit(consensus.Height, consensus.Round)
 		} else {
-			consensus.logger.Errorf("[%s](%d/%d/%s) block matched failed, receive valid block: %x, but unmatched with proposal: %x",
+			consensus.logger.Errorf("[%s](%d/%d/%s) block matched failed, receive valid block: %x, "+
+				"but unmatched with proposal: %x",
 				consensus.Id, consensus.Height, consensus.Round, consensus.Step, hash, consensus.Proposal.Block.Header.BlockHash)
 		}
 	} else {
@@ -943,8 +964,14 @@ func (consensus *ConsensusTBFTImpl) enterNewHeight(height int64, replayMode bool
 
 	}
 
-	consensus.gossip.addValidators(addedValidators)
-	consensus.gossip.removeValidators(removedValidators)
+	if err := consensus.gossip.addValidators(addedValidators); err != nil {
+		consensus.logger.Errorf("[%s](%d/%d/%s) failed to add Validators %v",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step, err)
+	}
+	if err := consensus.gossip.removeValidators(removedValidators); err != nil {
+		consensus.logger.Errorf("[%s](%d/%d/%s) failed to remove Validators %v",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step, err)
+	}
 	consensus.consensusStateCache.addConsensusState(consensus.ConsensusState)
 	consensus.ConsensusState = NewConsensusState(consensus.logger, consensus.Id)
 	consensus.Height = height
@@ -952,7 +979,7 @@ func (consensus *ConsensusTBFTImpl) enterNewHeight(height int64, replayMode bool
 	consensus.Step = tbftpb.Step_NewHeight
 	consensus.heightRoundVoteSet = newHeightRoundVoteSet(
 		consensus.logger, consensus.Height, consensus.Round, consensus.validatorSet)
-	consensus.metrics = NewHeightMetrics(consensus.Height)
+	consensus.metrics = newHeightMetrics(consensus.Height)
 	consensus.metrics.SetEnterNewHeightTime()
 	consensus.enterNewRound(height, 0)
 }
@@ -1035,7 +1062,7 @@ func (consensus *ConsensusTBFTImpl) enterPrevote(height int64, round int32) {
 	// Disable propose
 	consensus.sendProposeState(false)
 
-	var hash []byte = nilHash
+	var hash = nilHash
 	if consensus.Proposal != nil {
 		hash = consensus.Proposal.Block.Header.BlockHash
 	}
@@ -1065,7 +1092,10 @@ func (consensus *ConsensusTBFTImpl) enterPrevote(height int64, round int32) {
 			localconf.ChainMakerConfig.DebugConfig.IsPrevoteOldHeight, consensus.Height-1)
 		prevote = NewVote(tbftpb.VoteType_VotePrevote, consensus.Id, consensus.Height-1, consensus.Round, hash)
 	}
-	consensus.signVote(prevote)
+	if err := consensus.signVote(prevote); err != nil {
+		consensus.logger.Errorf("[%s](%d/%d/%s) failed to sign Vote prevote %v",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step, err)
+	}
 	prevoteProto := createPrevoteMsg(prevote)
 
 	consensus.internalMsgC <- prevoteProto
@@ -1117,7 +1147,11 @@ func (consensus *ConsensusTBFTImpl) enterPrecommit(height int64, round int32) {
 			localconf.ChainMakerConfig.DebugConfig.IsPrecommitOldHeight, consensus.Height-1)
 		precommit = NewVote(tbftpb.VoteType_VotePrecommit, consensus.Id, consensus.Height-1, consensus.Round, hash)
 	}
-	consensus.signVote(precommit)
+
+	if err := consensus.signVote(precommit); err != nil {
+		consensus.logger.Errorf("[%s](%d/%d/%s) failed to sign Vote prevote %v",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step, err)
+	}
 	precommitProto := createPrecommitMsg(precommit)
 
 	//Simulate a node which delay when Precommit
@@ -1160,7 +1194,7 @@ func (consensus *ConsensusTBFTImpl) enterCommit(height int64, round int32) {
 		consensus.enterNewRound(consensus.Height, round+1)
 	} else {
 		// Proposal block hash must be match with precommited block hash
-		if bytes.Compare(hash, consensus.Proposal.Block.Header.BlockHash) != 0 {
+		if !bytes.Equal(hash, consensus.Proposal.Block.Header.BlockHash) {
 			// This should not happen
 			panic(fmt.Errorf("[%s] block match failed, unmatch precommit hash: %x with proposal hash: %x",
 				consensus.Id, hash, consensus.Proposal.Block.Header.BlockHash))
@@ -1180,18 +1214,14 @@ func (consensus *ConsensusTBFTImpl) enterCommit(height int64, round int32) {
 }
 
 func isNilHash(hash []byte) bool {
-	return hash == nil || len(hash) == 0 || bytes.Equal(hash, nilHash)
+	return len(hash) == 0 || bytes.Equal(hash, nilHash)
 }
 
 // isProposer returns true if this node is proposer at `height` and `round`,
 // and returns false otherwise
 func (consensus *ConsensusTBFTImpl) isProposer(height int64, round int32) bool {
 	proposer, _ := consensus.validatorSet.GetProposer(height, round)
-
-	if proposer == consensus.Id {
-		return true
-	}
-	return false
+	return proposer == consensus.Id
 }
 
 func (consensus *ConsensusTBFTImpl) ToProto() *tbftpb.ConsensusState {
@@ -1309,7 +1339,11 @@ func (consensus *ConsensusTBFTImpl) verifyProposal(proposal *tbftpb.Proposal) er
 
 func (consensus *ConsensusTBFTImpl) verifyVote(voteProto *tbftpb.Vote) error {
 	voteProtoCopy := proto.Clone(voteProto)
-	vote := voteProtoCopy.(*tbftpb.Vote)
+	vote, ok := voteProtoCopy.(*tbftpb.Vote)
+	if !ok {
+		consensus.logger.Errorf("[%s](%d/%d/%s) transfer vote type failed",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step)
+	}
 	vote.Endorsement = nil
 	message := mustMarshal(vote)
 
@@ -1362,52 +1396,52 @@ func (consensus *ConsensusTBFTImpl) verifyVote(voteProto *tbftpb.Vote) error {
 	return nil
 }
 
-func (consensus *ConsensusTBFTImpl) verifyBlockSignatures(block *common.Block) error {
-	consensus.logger.Debugf("[%s](%d/%d/%s) VerifyBlockSignatures block (%d-%x)",
-		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
-		block.Header.BlockHeight, block.Header.BlockHash)
+//func (consensus *ConsensusTBFTImpl) verifyBlockSignatures(block *common.Block) error {
+//	consensus.logger.Debugf("[%s](%d/%d/%s) VerifyBlockSignatures block (%d-%x)",
+//		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+//		block.Header.BlockHeight, block.Header.BlockHash)
+//
+//	blockVoteSet, ok := block.AdditionalData.ExtraData[protocol.TBFTAddtionalDataKey]
+//	if !ok {
+//		return fmt.Errorf("verify block signature failed, block.AdditionalData.ExtraData[TBFTAddtionalDataKey] not exist")
+//	}
+//
+//	voteSetProto := new(tbftpb.VoteSet)
+//	if err := proto.Unmarshal(blockVoteSet, voteSetProto); err != nil {
+//		return err
+//	}
+//
+//	voteSet := NewVoteSetFromProto(consensus.logger, voteSetProto, consensus.validatorSet)
+//	hash, ok := voteSet.twoThirdsMajority()
+//	if !ok {
+//		// This should not happen
+//		return fmt.Errorf("voteSet without majority")
+//	}
+//
+//	if !bytes.Equal(hash, block.Header.BlockHash) {
+//		return fmt.Errorf("hash match failed, unmatch QC: %x to block hash: %v", hash, block.Header.BlockHash)
+//	}
+//
+//	consensus.logger.Debugf("[%s](%d/%d/%s) VerifyBlockSignatures block (%d-%x) success",
+//		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+//		block.Header.BlockHeight, block.Header.BlockHash)
+//	return nil
+//}
 
-	blockVoteSet, ok := block.AdditionalData.ExtraData[protocol.TBFTAddtionalDataKey]
-	if !ok {
-		return fmt.Errorf("verify block signature failed, block.AdditionalData.ExtraData[TBFTAddtionalDataKey] not exist")
-	}
-
-	voteSetProto := new(tbftpb.VoteSet)
-	if err := proto.Unmarshal(blockVoteSet, voteSetProto); err != nil {
-		return err
-	}
-
-	voteSet := NewVoteSetFromProto(consensus.logger, voteSetProto, consensus.validatorSet)
-	hash, ok := voteSet.twoThirdsMajority()
-	if !ok {
-		// This should not happen
-		return fmt.Errorf("voteSet without majority")
-	}
-
-	if !bytes.Equal(hash, block.Header.BlockHash) {
-		return fmt.Errorf("hash match failed, unmatch QC: %x to block hash: %v", hash, block.Header.BlockHash)
-	}
-
-	consensus.logger.Debugf("[%s](%d/%d/%s) VerifyBlockSignatures block (%d-%x) success",
-		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
-		block.Header.BlockHeight, block.Header.BlockHash)
-	return nil
-}
-
-func (consensus *ConsensusTBFTImpl) persistState() {
-	begin := time.Now()
-	consensusStateProto := consensus.toProto()
-	consensusStateBytes := mustMarshal(consensusStateProto)
-	consensus.logger.Debugf("[%s](%d/%d/%s) persist state length: %v",
-		consensus.Id, consensus.Height, consensus.Round, consensus.Step, len(consensusStateBytes))
-	err := consensus.dbHandle.Put(consensusStateKey, consensusStateBytes)
-	if err != nil {
-		consensus.logger.Errorf("[%s](%d/%d/%s) persist failed, persist to db error: %v",
-			consensus.Id, consensus.Height, consensus.Round, consensus.Step, err)
-	}
-	d := time.Since(begin)
-	consensus.metrics.AppendPersistStateDuration(consensus.Round, consensus.Step.String(), d)
-}
+//func (consensus *ConsensusTBFTImpl) persistState() {
+//	begin := time.Now()
+//	consensusStateProto := consensus.toProto()
+//	consensusStateBytes := mustMarshal(consensusStateProto)
+//	consensus.logger.Debugf("[%s](%d/%d/%s) persist state length: %v",
+//		consensus.Id, consensus.Height, consensus.Round, consensus.Step, len(consensusStateBytes))
+//	err := consensus.dbHandle.Put(consensusStateKey, consensusStateBytes)
+//	if err != nil {
+//		consensus.logger.Errorf("[%s](%d/%d/%s) persist failed, persist to db error: %v",
+//			consensus.Id, consensus.Height, consensus.Round, consensus.Step, err)
+//	}
+//	d := time.Since(begin)
+//	consensus.metrics.AppendPersistStateDuration(consensus.Round, consensus.Step.String(), d)
+//}
 
 func (consensus *ConsensusTBFTImpl) getValidatorSet() *validatorSet {
 	consensus.Lock()
@@ -1485,7 +1519,8 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 	mustUnmarshal(lastData, lastEntry)
 
 	consensus.heightFirstIndex = lastEntry.HeightFirstIndex
-	consensus.logger.Infof("[%s] replayWal lastIndex of wal: %d and HeightFirstIndex of wal: %d", consensus.Id, lastIndex, lastEntry.HeightFirstIndex)
+	consensus.logger.Infof("[%s] replayWal lastIndex of wal: %d and HeightFirstIndex of wal: %d", consensus.Id,
+		lastIndex, lastEntry.HeightFirstIndex)
 
 	//height of wal
 	height := lastEntry.Height
@@ -1500,53 +1535,60 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 		// consensus is slower than ledger
 		consensus.enterNewHeight(currentHeight+1, false)
 		return nil
-	} else {
-		// replay wal log
-		// currentHeight+1 = height
-		go consensus.deleteInternalMsgC()
-		consensus.enterNewHeight(height, true)
-		for i := lastEntry.HeightFirstIndex; i <= lastIndex; i++ {
-			data, err := consensus.wal.Read(i)
-			if err != nil {
-				return err
-			}
-			entry := &tbftpb.WalEntry{}
-			mustUnmarshal(data, entry)
+	}
+	// replay wal log
+	// currentHeight+1 = height
+	go consensus.deleteInternalMsgC()
+	consensus.enterNewHeight(height, true)
+	for i := lastEntry.HeightFirstIndex; i <= lastIndex; i++ {
+		data, err := consensus.wal.Read(i)
+		if err != nil {
+			return err
+		}
+		entry := &tbftpb.WalEntry{}
+		mustUnmarshal(data, entry)
 
-			consensus.logger.Debugf("[%s] replay entry index: %d, entry height：%d，HeightFirstIndex: %d，type: "+
-				"%s, Data.len: %d", consensus.Id, i, entry.Height, entry.HeightFirstIndex, entry.Type, len(entry.Data))
+		consensus.logger.Debugf("[%s] replay entry index: %d, entry height：%d，HeightFirstIndex: %d，type: "+
+			"%s, Data.len: %d", consensus.Id, i, entry.Height, entry.HeightFirstIndex, entry.Type, len(entry.Data))
 
-			switch entry.Type {
-			case tbftpb.WalEntryType_TimeoutEntry:
-				timeoutInfoProto := new(tbftpb.TimeoutInfo)
-				mustUnmarshal(entry.Data, timeoutInfoProto)
-				timeoutInfo := newTimeoutInfoFromProto(timeoutInfoProto)
-				consensus.handleTimeout(timeoutInfo, true)
-			case tbftpb.WalEntryType_ProposalEntry:
-				proposalProto := new(tbftpb.Proposal)
-				mustUnmarshal(entry.Data, proposalProto)
-				proposal := NewProposalFromProto(proposalProto)
+		switch entry.Type {
+		case tbftpb.WalEntryType_TimeoutEntry:
+			timeoutInfoProto := new(tbftpb.TimeoutInfo)
+			mustUnmarshal(entry.Data, timeoutInfoProto)
+			timeout := newTimeoutInfoFromProto(timeoutInfoProto)
+			consensus.handleTimeout(timeout, true)
+		case tbftpb.WalEntryType_ProposalEntry:
+			proposalProto := new(tbftpb.Proposal)
+			mustUnmarshal(entry.Data, proposalProto)
+			proposal := NewProposalFromProto(proposalProto)
+
+			if consensus.isProposer(consensus.Height, consensus.Round) {
+				proposedBlock := &consensuspb.ProposalBlock{
+					Block: proposal.Block,
+				}
+				consensus.handleProposedBlock(proposedBlock, true)
+			} else {
 				consensus.VerifingProposal = proposal
 				verifyResult := &consensuspb.VerifyResult{
 					VerifiedBlock: proposal.Block,
 					Code:          consensuspb.VerifyResult_SUCCESS,
 				}
 				consensus.handleVerifyResult(verifyResult, true)
-			case tbftpb.WalEntryType_VoteEntry:
-				if i == lastIndex {
-					close(consensus.internalMsgCCloseC)
-				}
-				voteProto := new(tbftpb.Vote)
-				mustUnmarshal(entry.Data, voteProto)
-				vote := NewVoteFromProto(voteProto)
-				err := consensus.addVote(vote, true)
-				if err != nil {
-					errMsg := fmt.Sprintf("[%s](%d/%d/%s) addVote %s(%d/%d) failed, %v",
-						consensus.Id, consensus.Height, consensus.Round, consensus.Step,
-						vote.Voter, vote.Height, vote.Round, err)
-					consensus.logger.Errorf(errMsg)
-					return errors.New(errMsg)
-				}
+			}
+		case tbftpb.WalEntryType_VoteEntry:
+			if i == lastIndex {
+				close(consensus.internalMsgCCloseC)
+			}
+			voteProto := new(tbftpb.Vote)
+			mustUnmarshal(entry.Data, voteProto)
+			vote := NewVoteFromProto(voteProto)
+			err := consensus.addVote(vote, true)
+			if err != nil {
+				errMsg := fmt.Sprintf("[%s](%d/%d/%s) addVote %s(%d/%d) failed, %v",
+					consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+					vote.Voter, vote.Height, vote.Round, err)
+				consensus.logger.Errorf(errMsg)
+				return errors.New(errMsg)
 			}
 		}
 	}
@@ -1572,7 +1614,8 @@ func (consensus *ConsensusTBFTImpl) deleteInternalMsgC() {
 
 func (consensus *ConsensusTBFTImpl) deleteWalEntry(num int64, index uint64) error {
 
-	//Block height is begin from zero,Delete the block data every 10 blocks. If the block height is 10, there are 11 blocks in total and delete the consensus state data of the first 10 blocks
+	//Block height is begin from zero,Delete the block data every 10 blocks. If the block height is 10,
+	//there are 11 blocks in total and delete the consensus state data of the first 10 blocks
 	i := num % 10
 	if i != 0 {
 		return nil
