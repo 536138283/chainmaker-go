@@ -1544,8 +1544,8 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 					errMsg := fmt.Sprintf("[%s](%d/%d/%s) addVote %s(%d/%d) failed, %v",
 						consensus.Id, consensus.Height, consensus.Round, consensus.Step,
 						vote.Voter, vote.Height, vote.Round, err)
-					consensus.logger.Errorf(errMsg)
-					return errors.New(errMsg)
+					consensus.logger.Warnf(errMsg)
+					//return errors.New(errMsg)
 				}
 			}
 		}
