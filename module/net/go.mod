@@ -5,9 +5,9 @@ go 1.15
 require (
 	chainmaker.org/chainmaker-go/localconf v0.0.0
 	chainmaker.org/chainmaker-go/logger v0.0.0
-	chainmaker.org/chainmaker/chainmaker-net-common v0.0.5-0.20210906094918-bc30c12a8ff9
-	chainmaker.org/chainmaker/chainmaker-net-libp2p v0.0.10-0.20210906104859-01678aa80176
-	chainmaker.org/chainmaker/chainmaker-net-liquid v0.0.7-0.20210922062742-d18191df8248
+	chainmaker.org/chainmaker/chainmaker-net-common v0.0.5
+	chainmaker.org/chainmaker/chainmaker-net-libp2p v0.0.10
+	chainmaker.org/chainmaker/chainmaker-net-liquid v0.0.7
 	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210906085649-78f6202d8d60
 	chainmaker.org/chainmaker/pb-go/v2 v2.0.0
 	chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20210906092203-47d66f4908f7
