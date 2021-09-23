@@ -71,7 +71,9 @@ func NewTimeSheduler(logger *logger.CMLogger, id string) *timeScheduler {
 		timeoutC: make(chan timeoutInfo, defaultTimeSchedulerBufferSize),
 		stopC:    make(chan struct{}),
 	}
-	ts.stopTimer()
+	if !ts.timer.Stop() {
+		<-ts.timer.C
+	}
 
 	return ts
 }
@@ -93,6 +95,7 @@ func (ts *timeScheduler) stopTimer() {
 
 // AddTimeoutInfo add a timeoutInfo event to timeScheduler
 func (ts *timeScheduler) AddTimeoutInfo(ti timeoutInfo) {
+	ts.logger.Debugf("length of bufferC %d", len(ts.bufferC))
 	ts.bufferC <- ti
 }
 

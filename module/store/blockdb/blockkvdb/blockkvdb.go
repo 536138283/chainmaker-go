@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"sync"
 
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	storePb "chainmaker.org/chainmaker-go/pb/protogo/store"
@@ -50,7 +51,7 @@ type BlockKvDB struct {
 	WorkersSemaphore *semaphore.Weighted
 	Cache            *cache.StoreCacheMgr
 	archivedPivot    uint64
-
+	sync.Mutex
 	Logger protocol.Logger
 }
 
@@ -136,7 +137,6 @@ func (b *BlockKvDB) GetArchivedPivot() (uint64, error) {
 
 	return b.archivedPivot, nil
 }
-
 
 // ShrinkBlocks remove ranged txid--SerializedTx from kvdb
 func (b *BlockKvDB) ShrinkBlocks(startHeight uint64, endHeight uint64) (map[uint64][]string, error) {
@@ -471,6 +471,8 @@ func (b *BlockKvDB) GetTxConfirmedTime(txId string) (int64, error) {
 
 // Close is used to close database
 func (b *BlockKvDB) Close() {
+	b.Lock()
+	defer b.Unlock()
 	b.Logger.Info("close block kv db")
 	b.DbHandle.Close()
 }
@@ -532,6 +534,8 @@ func (b *BlockKvDB) writeBatch(blockHeight int64, batch protocol.StoreBatcher) e
 	//update cache
 	b.Cache.AddBlock(blockHeight, batch)
 	go func() {
+		b.Lock()
+		defer b.Unlock()
 		startWriteBatchTime := utils.CurrentTimeMillisSeconds()
 		err := b.DbHandle.WriteBatch(batch, false)
 		endWriteBatchTime := utils.CurrentTimeMillisSeconds()

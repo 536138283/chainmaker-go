@@ -12,14 +12,13 @@ import (
 	"strings"
 	"sync"
 
-	"go.uber.org/zap/zapcore"
-
 	"chainmaker.org/chainmaker-go/common/log"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
+// Log module
 const (
-	// output system.log
 	MODULE_BLOCKCHAIN = "[Blockchain]"
 	MODULE_NET        = "[Net]"
 	MODULE_STORAGE    = "[Storage]"
@@ -29,18 +28,15 @@ const (
 	MODULE_CORE       = "[Core]"
 	MODULE_VM         = "[Vm]"
 	MODULE_RPC        = "[Rpc]"
-	MODULE_LEDGER     = "[Ledger]"
+	MODULE_LEDGER     = "[Ledger]" //nolint:golint,unused
 	MODULE_CLI        = "[Cli]"
 	MODULE_CHAINCONF  = "[ChainConf]"
 	MODULE_ACCESS     = "[Access]"
-	MODULE_SPV        = "[Spv]"
 	MODULE_MONITOR    = "[Monitor]"
 	MODULE_SYNC       = "[Sync]"
 	MODULE_DPOS       = "[DPoS]"
-	// output brief.log
-	MODULE_BRIEF = "[Brief]"
+	MODULE_BRIEF      = "[Brief]"
 
-	// output to event.log
 	MODULE_EVENT = "[Event]"
 )
 
@@ -56,7 +52,7 @@ var (
 
 // CMLogger is an implementation of chainmaker logger.
 type CMLogger struct {
-	*zap.SugaredLogger
+	zlog     *zap.SugaredLogger
 	name     string
 	chainId  string
 	lock     sync.RWMutex
@@ -66,18 +62,73 @@ type CMLogger struct {
 func (l *CMLogger) Logger() *zap.SugaredLogger {
 	l.lock.RLock()
 	defer l.lock.RUnlock()
-	return l.SugaredLogger
+	return l.zlog
+}
+
+func (l *CMLogger) Debug(args ...interface{}) {
+	l.zlog.Debug(args...)
+}
+func (l *CMLogger) Debugf(format string, args ...interface{}) {
+	l.zlog.Debugf(format, args...)
+}
+func (l *CMLogger) Debugw(msg string, keysAndValues ...interface{}) {
+	l.zlog.Debugw(msg, keysAndValues...)
+}
+func (l *CMLogger) Error(args ...interface{}) {
+	l.zlog.Error(args...)
+}
+func (l *CMLogger) Errorf(format string, args ...interface{}) {
+	l.zlog.Errorf(format, args...)
+}
+func (l *CMLogger) Errorw(msg string, keysAndValues ...interface{}) {
+	l.zlog.Errorw(msg, keysAndValues...)
+}
+func (l *CMLogger) Fatal(args ...interface{}) {
+	l.zlog.Fatal(args...)
+}
+func (l *CMLogger) Fatalf(format string, args ...interface{}) {
+	l.zlog.Fatalf(format, args...)
+}
+func (l *CMLogger) Fatalw(msg string, keysAndValues ...interface{}) {
+	l.zlog.Fatalw(msg, keysAndValues...)
+}
+func (l *CMLogger) Info(args ...interface{}) {
+	l.zlog.Info(args...)
+}
+func (l *CMLogger) Infof(format string, args ...interface{}) {
+	l.zlog.Infof(format, args...)
+}
+func (l *CMLogger) Infow(msg string, keysAndValues ...interface{}) {
+	l.zlog.Infow(msg, keysAndValues...)
+}
+func (l *CMLogger) Panic(args ...interface{}) {
+	l.zlog.Panic(args...)
+}
+func (l *CMLogger) Panicf(format string, args ...interface{}) {
+	l.zlog.Panicf(format, args...)
+}
+func (l *CMLogger) Panicw(msg string, keysAndValues ...interface{}) {
+	l.zlog.Panicw(msg, keysAndValues...)
+}
+func (l *CMLogger) Warn(args ...interface{}) {
+	l.zlog.Warn(args...)
+}
+func (l *CMLogger) Warnf(format string, args ...interface{}) {
+	l.zlog.Warnf(format, args...)
+}
+func (l *CMLogger) Warnw(msg string, keysAndValues ...interface{}) {
+	l.zlog.Warnw(msg, keysAndValues...)
 }
 
 func (l *CMLogger) DebugDynamic(getStr func() string) {
 	if l.logLevel == log.LEVEL_DEBUG {
 		str := getStr()
-		l.Debug(str)
+		l.zlog.Debug(str)
 	}
 }
 func (l *CMLogger) InfoDynamic(getStr func() string) {
 	if l.logLevel == log.LEVEL_DEBUG || l.logLevel == log.LEVEL_INFO {
-		l.Info(getStr())
+		l.zlog.Info(getStr())
 	}
 }
 
@@ -85,12 +136,12 @@ func (l *CMLogger) InfoDynamic(getStr func() string) {
 func (l *CMLogger) SetLogger(logger *zap.SugaredLogger) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
-	l.SugaredLogger = logger
+	l.zlog = logger
 }
 
 // newCMLogger create a new CMLogger.
 func newCMLogger(name string, chainId string, logger *zap.SugaredLogger, logLevel log.LOG_LEVEL) *CMLogger {
-	return &CMLogger{name: name, chainId: chainId, SugaredLogger: logger, logLevel: logLevel}
+	return &CMLogger{name: name, chainId: chainId, zlog: logger, logLevel: logLevel}
 }
 
 // SetLogConfig set the config of logger module, called in initialization of config module
@@ -105,7 +156,8 @@ func GetLogger(name string) *CMLogger {
 	return GetLoggerByChain(name, "")
 }
 
-// GetLoggerByChain find the CMLogger object with module name and chainId, usually called in initialization of all module.
+// GetLoggerByChain find the CMLogger object with module name and chainId,
+// usually called in initialization of all module.
 // One module can get a logger for each chain, then logger can be use forever until the program terminate.
 func GetLoggerByChain(name, chainId string) *CMLogger {
 	logHeader := name + chainId
@@ -114,16 +166,16 @@ func GetLoggerByChain(name, chainId string) *CMLogger {
 	if ok {
 		logger, _ = loggerVal.(*CMLogger)
 		return logger
-	} else {
-		zapLogger, logLevel := createLoggerByChain(name, chainId)
-
-		logger = newCMLogger(name, chainId, zapLogger, logLevel)
-		loggerVal, ok = cmLoggers.LoadOrStore(logHeader, logger)
-		if ok {
-			logger, _ = loggerVal.(*CMLogger)
-		}
-		return logger
 	}
+	zapLogger, logLevel := createLoggerByChain(name, chainId)
+
+	logger = newCMLogger(name, chainId, zapLogger, logLevel)
+	loggerVal, ok = cmLoggers.LoadOrStore(logHeader, logger)
+	if ok {
+		logger, _ = loggerVal.(*CMLogger)
+	}
+	return logger
+
 }
 
 func createLoggerByChain(name, chainId string) (*zap.SugaredLogger, log.LOG_LEVEL) {

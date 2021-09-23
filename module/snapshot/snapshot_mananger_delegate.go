@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
+	"go.uber.org/atomic"
 	"sync"
 
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
@@ -38,7 +39,7 @@ func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block, blockHeight in
 	txCount := len(block.Txs) // as map init size
 	snapshotImpl := &SnapshotImpl{
 		blockchainStore: m.blockchainStore,
-		sealed:          false,
+		sealed:          atomic.NewBool(false),
 		preSnapshot:     nil,
 
 		txResultMap: make(map[string]*commonPb.Result, txCount),

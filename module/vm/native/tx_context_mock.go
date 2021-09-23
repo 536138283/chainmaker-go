@@ -25,7 +25,7 @@ func newTxContextMock(cache dataStore) *TxContextMock {
 		cacheMap: cache,
 	}
 }
-func (mock *TxContextMock)GetBlockVersion() string{
+func (mock *TxContextMock) GetBlockVersion() string {
 	return protocol.DefaultBlockVersion
 }
 func (mock *TxContextMock) Get(name string, key []byte) ([]byte, error) {
@@ -72,7 +72,7 @@ func (*TxContextMock) CallContract(contractId *commonPb.ContractId,
 	parameter map[string]string,
 	gasUsed uint64,
 	refTxType commonPb.TxType,
-) (*commonPb.ContractResult, commonPb.TxStatusCode) {
+) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 
 	panic("implement me")
 }
@@ -140,7 +140,9 @@ func (mock *TxContextMock) GetBlockProposer() []byte {
 func (mock *TxContextMock) PutRecord(contractName string, value []byte, sqlType protocol.SqlType) {
 	panic("implement me")
 }
-
+func (mock *TxContextMock) PutIntoReadSet(contractName string, key []byte, value []byte) {
+	panic("implement me")
+}
 func (mock *TxContextMock) Select(name string, startKey []byte, limit []byte) (protocol.StateIterator, error) {
 	panic("implement me")
 }

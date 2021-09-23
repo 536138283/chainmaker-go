@@ -8,14 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"chainmaker.org/chainmaker-go/common/crypto"
-	localhibe "chainmaker.org/chainmaker-go/common/crypto/hibe"
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"encoding/json"
 	"fmt"
-	"github.com/samkumar/hibe"
-	"github.com/spf13/cobra"
 	"io/ioutil"
+
+	"chainmaker.org/chainmaker-go/common/crypto"
+	"chainmaker.org/chainmaker-go/common/crypto/hibe"
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	"github.com/spf13/cobra"
 )
 
 func HibeDecryptCMD() *cobra.Command {
@@ -75,7 +75,7 @@ func decryptHibeMessageExec() (string, commonPb.TxStatusCode, string) {
 		return result_output, 1, fmt.Sprintf("invalid symKeyType, %s", symKeyType)
 	}
 
-	message, err := localhibe.DecryptHibeMsg(localId, localParams, prvKey, hibeMsgMap, keyType)
+	message, err := hibe.DecryptHibeMsg(localId, localParams, prvKey, hibeMsgMap, keyType)
 	if err != nil {
 		return result_output, 1, fmt.Sprintf("DecryptHibeMsg failure, err: %s", err)
 	}

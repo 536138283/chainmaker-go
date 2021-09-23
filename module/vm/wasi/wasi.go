@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 
@@ -38,15 +39,18 @@ const boolFalse Bool = 0
 type Wacsi interface {
 	// state operation
 	PutState(requestBody []byte, contractName string, txSimContext protocol.TxSimContext) error
-	GetState(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte, data []byte, isLen bool) ([]byte, error)
+	GetState(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte,
+		data []byte, isLen bool) ([]byte, error)
 	DeleteState(requestBody []byte, contractName string, txSimContext protocol.TxSimContext) error
 	// call other contract
-	CallContract(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte, gasUsed uint64, isLen bool) ([]byte, error, uint64)
+	CallContract(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte,
+		gasUsed uint64, isLen bool) ([]byte, error, uint64, protocol.ExecOrderTxType)
 	// result record
 	SuccessResult(contractResult *common.ContractResult, data []byte) int32
 	ErrorResult(contractResult *common.ContractResult, data []byte) int32
 	// emit event
-	EmitEvent(requestBody []byte, txSimContext protocol.TxSimContext, contractId *common.ContractId, log *logger.CMLogger) (*common.ContractEvent, error)
+	EmitEvent(requestBody []byte, txSimContext protocol.TxSimContext, contractId *common.ContractId,
+		log *logger.CMLogger) (*common.ContractEvent, error)
 	// paillier
 	PaillierOperation(requestBody []byte, memory []byte, data []byte, isLen bool) ([]byte, error)
 	// bulletproofs
@@ -56,16 +60,22 @@ type Wacsi interface {
 	KvIterator(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte) error
 	KvPreIterator(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte) error
 	KvIteratorHasNext(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte) error
-	KvIteratorNext(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte, contractName string, isLen bool) ([]byte, error)
+	KvIteratorNext(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte,
+		contractName string, isLen bool) ([]byte, error)
 	KvIteratorClose(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte) error
 
 	// sql operation
-	ExecuteQuery(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte, chainId string) error
-	ExecuteQueryOne(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte, data []byte, chainId string, isLen bool) ([]byte, error)
-	ExecuteUpdate(requestBody []byte, contractName string, method string, txSimContext protocol.TxSimContext, memory []byte, chainId string) error
-	ExecuteDDL(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte, method string) error
+	ExecuteQuery(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte,
+		chainId string) error
+	ExecuteQueryOne(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte,
+		data []byte, chainId string, isLen bool) ([]byte, error)
+	ExecuteUpdate(requestBody []byte, contractName string, method string, txSimContext protocol.TxSimContext,
+		memory []byte, chainId string) error
+	ExecuteDDL(requestBody []byte, contractName string, txSimContext protocol.TxSimContext, memory []byte,
+		method string) error
 	RSHasNext(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte) error
-	RSNext(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte, isLen bool) ([]byte, error)
+	RSNext(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte,
+		isLen bool) ([]byte, error)
 	RSClose(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte) error
 }
 
@@ -132,7 +142,10 @@ func (*WacsiImpl) DeleteState(requestBody []byte, contractName string, txSimCont
 	}
 	return nil
 }
-func (*WacsiImpl) CallContract(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte, data []byte, gasUsed uint64, isLen bool) ([]byte, error, uint64) {
+
+// CallContract implement syscall for call contract, it is for gasm and wasmer
+func (*WacsiImpl) CallContract(requestBody []byte, txSimContext protocol.TxSimContext, memory []byte,
+	data []byte, gasUsed uint64, isLen bool) ([]byte, error, uint64, protocol.ExecOrderTxType) {
 	ec := serialize.NewEasyCodecWithBytes(requestBody)
 	valuePtr, _ := ec.GetInt32("value_ptr")
 	contractName, _ := ec.GetString("contract_name")
@@ -145,50 +158,56 @@ func (*WacsiImpl) CallContract(requestBody []byte, txSimContext protocol.TxSimCo
 	if !isLen { // get value from cache
 		result := txSimContext.GetCurrentResult()
 		copy(memory[valuePtr:valuePtr+int32(len(result))], result)
-		return nil, nil, gasUsed
+		return nil, nil, gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 
 	// check param
 	if len(contractName) == 0 {
-		return nil, fmt.Errorf("[call contract] contract_name is null"), gasUsed
+		return nil, fmt.Errorf("[call contract] contract_name is null"), gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 	if len(method) == 0 {
-		return nil, fmt.Errorf("[call contract] method is null"), gasUsed
+		return nil, fmt.Errorf("[call contract] method is null"), gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 	if len(paramItem) > protocol.ParametersKeyMaxCount {
-		return nil, fmt.Errorf("[call contract] expect less than %d parameters, but got %d", protocol.ParametersKeyMaxCount, len(paramItem)), gasUsed
+		return nil, fmt.Errorf("[call contract] expect less than %d parameters, but got %d",
+			protocol.ParametersKeyMaxCount, len(paramItem)), gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 	for _, item := range paramItem {
 		if len(item.Key) > protocol.DefaultStateLen {
-			return nil, fmt.Errorf("[call contract] param expect key length less than %d, but got %d", protocol.DefaultStateLen, len(item.Key)), gasUsed
+			return nil, fmt.Errorf("[call contract] param expect key length less than %d, but got %d",
+				protocol.DefaultStateLen, len(item.Key)), gasUsed, protocol.ExecOrderTxTypeNormal
 		}
 		match, err := regexp.MatchString(protocol.DefaultStateRegex, item.Key)
 		if err != nil || !match {
-			return nil, fmt.Errorf("[call contract] param expect key no special characters, but got %s. letter, number, dot and underline are allowed", item.Key), gasUsed
+			return nil, fmt.Errorf("[call contract] param expect key no special characters, but got %s. "+
+				"letter, number, dot and underline are allowed", item.Key), gasUsed, protocol.ExecOrderTxTypeNormal
 		}
 		if len(item.Value.(string)) > protocol.ParametersValueMaxLength {
-			return nil, fmt.Errorf("[call contract] expect value length less than %d, but got %d", protocol.ParametersValueMaxLength, len(item.Value.(string))), gasUsed
+			return nil, fmt.Errorf("[call contract] expect value length less than %d, but got %d",
+				protocol.ParametersValueMaxLength, len(item.Value.(string))), gasUsed, protocol.ExecOrderTxTypeNormal
 		}
 	}
 	if err := protocol.CheckKeyFieldStr(contractName, method); err != nil {
-		return nil, err, gasUsed
+		return nil, err, gasUsed, protocol.ExecOrderTxTypeNormal
 	}
 
 	// call contract
 	gasUsed += protocol.CallContractGasOnce
 	paramMap := ecData.ToMap()
-	result, code := txSimContext.CallContract(&common.ContractId{ContractName: contractName}, method, nil, paramMap, gasUsed, common.TxType_INVOKE_USER_CONTRACT)
+	result, specialTxType, code := txSimContext.CallContract(&common.ContractId{ContractName: contractName}, method,
+		nil, paramMap, gasUsed, common.TxType_INVOKE_USER_CONTRACT)
 	gasUsed += uint64(result.GasUsed)
 	if code != common.TxStatusCode_SUCCESS {
-		return nil, fmt.Errorf("[call contract] execute error code: %s, msg: %s", code.String(), result.Message), gasUsed
+		return nil, fmt.Errorf("[call contract] execute error code: %s, msg: %s",
+			code.String(), result.Message), gasUsed, specialTxType
 	}
 	// set value length to memory
 	l := utils.IntToBytes(int32(len(result.Result)))
 	copy(memory[valuePtr:valuePtr+4], l)
 	if len(result.Result) == 0 {
-		return nil, nil, gasUsed
+		return nil, nil, gasUsed, specialTxType
 	}
-	return result.Result, nil, gasUsed
+	return result.Result, nil, gasUsed, specialTxType
 }
 
 func (*WacsiImpl) SuccessResult(contractResult *common.ContractResult, data []byte) int32 {
@@ -442,14 +461,14 @@ func pedersenAddNum(commitment, num interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenAddNum(c, x)
+	return bulletproofs.PedersenAddNum(c, x)
 }
 
 func pedersenAddCommitment(commitment1, commitment2 interface{}) ([]byte, error) {
 	commitmentX := commitment1.([]byte)
 	commitmentY := commitment2.([]byte)
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenAddCommitment(commitmentX, commitmentY)
+	return bulletproofs.PedersenAddCommitment(commitmentX, commitmentY)
 }
 
 func pedersenSubNum(commitment, num interface{}) ([]byte, error) {
@@ -459,13 +478,13 @@ func pedersenSubNum(commitment, num interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenSubNum(c, x)
+	return bulletproofs.PedersenSubNum(c, x)
 }
 
 func pedersenSubCommitment(commitment1, commitment2 interface{}) ([]byte, error) {
 	commitmentX := commitment1.([]byte)
 	commitmentY := commitment2.([]byte)
-	return bulletproofs.Helper().NewBulletproofs().PedersenSubCommitment(commitmentX, commitmentY)
+	return bulletproofs.PedersenSubCommitment(commitmentX, commitmentY)
 
 }
 
@@ -476,13 +495,13 @@ func pedersenMulNum(commitment, num interface{}) ([]byte, error) {
 		return nil, err
 	}
 
-	return bulletproofs.Helper().NewBulletproofs().PedersenMulNum(c, x)
+	return bulletproofs.PedersenMulNum(c, x)
 }
 
 func bulletproofsVerify(proof, commitment interface{}) ([]byte, error) {
 	p := proof.([]byte)
 	c := commitment.([]byte)
-	ok, err := bulletproofs.Helper().NewBulletproofs().Verify(p, c)
+	ok, err := bulletproofs.Verify(p, c)
 	if err != nil {
 		return nil, err
 	}

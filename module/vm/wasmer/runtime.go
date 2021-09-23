@@ -1,5 +1,6 @@
 /*
 Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -22,18 +23,21 @@ type RuntimeInstance struct {
 }
 
 // Invoke contract by call vm, implement protocol.RuntimeInstance
-func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte, parameters map[string]string,
-	txContext protocol.TxSimContext, gasUsed uint64) (contractResult *commonPb.ContractResult) {
+func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string, byteCode []byte,
+	parameters map[string]string, txContext protocol.TxSimContext, gasUsed uint64) (
+	contractResult *commonPb.ContractResult, specialTxType protocol.ExecOrderTxType) {
 
 	logStr := fmt.Sprintf("wasmer runtime invoke[%s]: ", txContext.GetTx().GetHeader().GetTxId())
 	startTime := utils.CurrentTimeMillisSeconds()
 
-	// contract response
+	// set default return value
 	contractResult = &commonPb.ContractResult{
 		Code:    commonPb.ContractResultCode_OK,
 		Result:  nil,
 		Message: "",
 	}
+	specialTxType = protocol.ExecOrderTxTypeNormal
+
 	var instanceInfo *wrappedInstance
 	defer func() {
 		endTime := utils.CurrentTimeMillisSeconds()
@@ -46,6 +50,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 			if instanceInfo != nil {
 				instanceInfo.errCount++
 			}
+			specialTxType = protocol.ExecOrderTxTypeNormal
 		}
 	}()
 
@@ -73,11 +78,13 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	sc.ContractResult = contractResult
 	sc.parameters = parameters
 	sc.Instance = instance
+	sc.SpecialTxType = protocol.ExecOrderTxTypeNormal
 
 	err := sc.CallMethod(instance)
 	if err != nil {
 		r.log.Errorw("contract invoke failed, ", err.Error())
 	}
+	specialTxType = sc.SpecialTxType
 
 	// gas Log
 	gas := instance.GetGasUsed()
@@ -93,9 +100,9 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		r.log.Errorf(msg)
 		contractResult.Message = msg
 		instanceInfo.errCount++
-		return contractResult
+		return
 	}
 	contractResult.ContractEvent = sc.ContractEvent
 	contractResult.GasUsed = int64(gas)
-	return contractResult
+	return
 }

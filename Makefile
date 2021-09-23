@@ -8,9 +8,23 @@ else
   endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=V1.2.0
+VERSION=v1.2.5
+
+AARCH64="aarch64"
+CPU=$(shell uname -m)
 
 chainmaker:
+ifeq ("$(CPU)",$(AARCH64))
+ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.aarch64),)
+	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.x86_64
+	mv module/vm/wasmer/wasmer-go/libwasmer.so.aarch64 module/vm/wasmer/wasmer-go/libwasmer.so
+endif
+else
+ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.x86_64),)
+	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.aarch64
+	mv module/vm/wasmer/wasmer-go/libwasmer.so.x86_64 module/vm/wasmer/wasmer-go/libwasmer.so
+endif
+endif
 	@cd main && go build -mod=mod -o ../bin/chainmaker
 
 package:
@@ -96,11 +110,11 @@ mockgen-dep:
 
 docker-build:
 	docker build -t chainmaker -f ./DOCKER/Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.0
+	docker tag chainmaker chainmaker:v1.2.5
 
 docker-build-dev: chainmaker
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.0
+	docker tag chainmaker chainmaker:v1.2.5
 
 docker-compose-start: docker-compose-stop
 	docker-compose up -d
@@ -152,3 +166,10 @@ lint:
 	#cd tools/cmc && golangci-lint run ./...
 #	cd tools/scanner && golangci-lint run ./...
 #	cd tools/sdk && golangci-lint run ./...
+
+qta:
+	cd test/send_proposal_request_ci && ./build.sh
+	cd test/send_proposal_request_ci && ./start_solo.sh
+	cd test/send_proposal_request_ci && go run main.go
+	cd test/send_proposal_request_ci && ./stop_solo.sh
+	cd test/send_proposal_request_ci && ./clean_data_log.sh

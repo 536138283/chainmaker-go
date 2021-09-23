@@ -101,9 +101,9 @@ func startPerf() {
 				defer wg.Done()
 				var result *commonPb.ContractResult
 				if vmTypeInt == 0 {
-					result = invokeContractOfGasm("increase", contractId, txContext, byteCode)
+					result, _ = invokeContractOfGasm("increase", contractId, txContext, byteCode)
 				} else {
-					result = invokeContractOfWasmer("increase", contractId, txContext, pool, byteCode)
+					result, _ = invokeContractOfWasmer("increase", contractId, txContext, pool, byteCode)
 				}
 
 				//end := time.Now().UnixNano() / 1e6
@@ -186,7 +186,7 @@ func startPerf() {
 }
 
 func invokeContractOfGasm(method string, contractId *commonPb.ContractId, txContext protocol.TxSimContext,
-	byteCode []byte) (contractResult *commonPb.ContractResult) {
+	byteCode []byte) (contractResult *commonPb.ContractResult, txType protocol.ExecOrderTxType) {
 	parameters := make(map[string]string)
 	test.BaseParam(parameters)
 	//parameters["contract_name"] = test.ContractNameTest
@@ -200,7 +200,8 @@ func invokeContractOfGasm(method string, contractId *commonPb.ContractId, txCont
 }
 
 func invokeContractOfWasmer(method string, contractId *commonPb.ContractId, txContext protocol.TxSimContext,
-	pool *wasmer.VmPoolManager, byteCode []byte) (contractResult *commonPb.ContractResult) {
+	pool *wasmer.VmPoolManager, byteCode []byte) (contractResult *commonPb.ContractResult,
+	ctx protocol.ExecOrderTxType) {
 	parameters := make(map[string]string)
 	test.BaseParam(parameters)
 	//parameters["key"] = "key"

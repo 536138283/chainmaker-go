@@ -8,6 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package localconf
 
 import (
+	"time"
+
 	"chainmaker.org/chainmaker-go/logger"
 )
 
@@ -357,6 +359,16 @@ type redisConfig struct {
 	CacheTimeout int    `mapstructure:"cache_timeout"`
 }
 
+type raftConfig struct {
+	SnapCount    uint64        `mapstructure:"snap_count"`
+	AsyncWalSave bool          `mapstructure:"async_wal_save"`
+	Ticker       time.Duration `mapstructure:"ticker"`
+}
+
+type ConsensusConfig struct {
+	RaftConfig raftConfig `mapstructure:"raft"`
+}
+
 type clientConfig struct {
 	OrgId           string `mapstructure:"org_id"`
 	UserKeyFilePath string `mapstructure:"user_key_file_path"`
@@ -379,6 +391,8 @@ type CMConfig struct {
 	NodeConfig       nodeConfig         `mapstructure:"node"`
 	RpcConfig        rpcConfig          `mapstructure:"rpc"`
 	BlockChainConfig []blockchainConfig `mapstructure:"blockchain"`
+	ConsensusConfig  ConsensusConfig    `mapstructure:"consensus"`
+
 	StorageConfig    StorageConfig      `mapstructure:"storage"`
 	TxPoolConfig     txPoolConfig       `mapstructure:"txpool"`
 	SyncConfig       syncConfig         `mapstructure:"sync"`

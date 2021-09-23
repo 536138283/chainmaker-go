@@ -28,7 +28,7 @@ func genOpeningCMD() *cobra.Command {
 }
 
 func genOpening() error {
-	opening, err := bulletproofs.Helper().NewBulletproofs().PedersenRNG()
+	opening, err := bulletproofs.PedersenRNG()
 	if err != nil {
 		return err
 	}

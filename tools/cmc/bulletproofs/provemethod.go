@@ -73,7 +73,7 @@ func proveHandFunc() error {
 }
 
 func proveAfterAddNum(commitmentX, openingX []byte) error {
-	proof, commitment, err := bulletproofs.Helper().NewBulletproofs().ProveAfterAddNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
+	proof, commitment, err := bulletproofs.ProveAfterAddNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
 	if err != nil {
 		return err
 	}
@@ -100,7 +100,7 @@ func proveAfterAddCommitment(commitmentX, openingX []byte) error {
 		return err
 	}
 
-	proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveAfterAddCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
+	proof, commitment, opening, err := bulletproofs.ProveAfterAddCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func proveAfterAddCommitment(commitmentX, openingX []byte) error {
 }
 
 func proveAfterSubNum(commitmentX, openingX []byte) error {
-	proof, commitment, err := bulletproofs.Helper().NewBulletproofs().ProveAfterSubNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
+	proof, commitment, err := bulletproofs.ProveAfterSubNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func proveAfterSubCommitment(commitmentX, openingX []byte) error {
 		return err
 	}
 
-	proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveAfterSubCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
+	proof, commitment, opening, err := bulletproofs.ProveAfterSubCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func proveAfterSubCommitment(commitmentX, openingX []byte) error {
 }
 
 func proveAfterMulNum(commitmentX, openingX []byte) error {
-	proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveAfterMulNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
+	proof, commitment, opening, err := bulletproofs.ProveAfterMulNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
 	if err != nil {
 		return err
 	}

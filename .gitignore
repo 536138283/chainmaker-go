@@ -33,3 +33,5 @@ tools
 .DS_Store
 /module/vm/test/*/tmp/
 nohup.out
+main/chainmaker
+tools/cmc/cmc

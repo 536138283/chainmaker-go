@@ -146,10 +146,14 @@ type TxContextMockTest struct {
 	db         *leveldb.DB
 	kvRowCache map[int32]protocol.StateIterator
 }
-func (s *TxContextMockTest) GetBlockVersion() string{
+
+func (s *TxContextMockTest) GetBlockVersion() string {
 	return protocol.DefaultBlockVersion
 }
 func (s *TxContextMockTest) PutRecord(contractName string, value []byte, sqlType protocol.SqlType) {
+	panic("implement me")
+}
+func (s *TxContextMockTest) PutIntoReadSet(contractName string, key []byte, value []byte) {
 	panic("implement me")
 }
 func (s *TxContextMockTest) SetStateKvHandle(index int32, rows protocol.StateIterator) {
@@ -240,7 +244,8 @@ func (s *TxContextMockTest) Del(name string, key []byte) error {
 }
 
 func (s *TxContextMockTest) CallContract(contractId *commonPb.ContractId, method string, byteCode []byte,
-	parameter map[string]string, gasUsed uint64, refTxType commonPb.TxType) (*commonPb.ContractResult, commonPb.TxStatusCode) {
+	parameter map[string]string, gasUsed uint64, refTxType commonPb.TxType) (*commonPb.ContractResult,
+	protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 	s.gasUsed = gasUsed
 	s.currentDepth = s.currentDepth + 1
 	if s.currentDepth > protocol.CallContractDepth {
@@ -249,7 +254,7 @@ func (s *TxContextMockTest) CallContract(contractId *commonPb.ContractId, method
 			Result:  nil,
 			Message: fmt.Sprintf("CallContract too deep %d", s.currentDepth),
 		}
-		return contractResult, commonPb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
+		return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_CONTRACT_TOO_DEEP_FAILED
 	}
 	if s.gasUsed > protocol.GasLimit {
 		contractResult := &commonPb.ContractResult{
@@ -257,9 +262,9 @@ func (s *TxContextMockTest) CallContract(contractId *commonPb.ContractId, method
 			Result:  nil,
 			Message: fmt.Sprintf("There is not enough gas, gasUsed %d GasLimit %d ", gasUsed, int64(protocol.GasLimit)),
 		}
-		return contractResult, commonPb.TxStatusCode_CONTRACT_FAIL
+		return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_CONTRACT_FAIL
 	}
-	r, code := s.vmManager.RunContract(contractId, method, byteCode, parameter, s, s.gasUsed, refTxType)
+	r, execOrderType, code := s.vmManager.RunContract(contractId, method, byteCode, parameter, s, s.gasUsed, refTxType)
 
 	result := callContractResult{
 		deep:         s.currentDepth,
@@ -272,7 +277,7 @@ func (s *TxContextMockTest) CallContract(contractId *commonPb.ContractId, method
 	s.hisResult = append(s.hisResult, &result)
 	s.currentResult = r.Result
 	s.currentDepth = s.currentDepth - 1
-	return r, code
+	return r, execOrderType, code
 }
 
 func (s *TxContextMockTest) GetCurrentResult() []byte {

@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+
 	"github.com/spf13/cobra"
 
 	"chainmaker.org/chainmaker-go/common/crypto/bulletproofs"
@@ -67,7 +68,7 @@ func genOpeningCMD() *cobra.Command {
 
 func genOpening() error {
 
-	opening, err := bulletproofs.Helper().NewBulletproofs().PedersenRNG()
+	opening, err := bulletproofs.PedersenRNG()
 	if err != nil {
 		return err
 	}
@@ -102,7 +103,7 @@ func prove() error {
 	commitmentStr := ""
 	proofStr := ""
 	if openingStr == "" {
-		proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveRandomOpening(uint64(valueX))
+		proof, commitment, opening, err := bulletproofs.ProveRandomOpening(uint64(valueX))
 		if err != nil {
 			return err
 		}
@@ -114,7 +115,7 @@ func prove() error {
 		if err != nil {
 			return err
 		}
-		proof, commitment, err := bulletproofs.Helper().NewBulletproofs().ProveSpecificOpening(uint64(valueX), opening)
+		proof, commitment, err := bulletproofs.ProveSpecificOpening(uint64(valueX), opening)
 		if err != nil {
 			return err
 		}
@@ -188,7 +189,7 @@ func proveHandFunc() error {
 }
 
 func proveAfterAddNum(commitmentX, openingX []byte) error {
-	proof, commitment, err := bulletproofs.Helper().NewBulletproofs().ProveAfterAddNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
+	proof, commitment, err := bulletproofs.ProveAfterAddNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
 	if err != nil {
 		return err
 	}
@@ -215,7 +216,7 @@ func proveAfterAddCommitment(commitmentX, openingX []byte) error {
 		return err
 	}
 
-	proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveAfterAddCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
+	proof, commitment, opening, err := bulletproofs.ProveAfterAddCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
 	if err != nil {
 		return err
 	}
@@ -228,7 +229,7 @@ func proveAfterAddCommitment(commitmentX, openingX []byte) error {
 }
 
 func proveAfterSubNum(commitmentX, openingX []byte) error {
-	proof, commitment, err := bulletproofs.Helper().NewBulletproofs().ProveAfterSubNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
+	proof, commitment, err := bulletproofs.ProveAfterSubNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
 	if err != nil {
 		return err
 	}
@@ -255,7 +256,7 @@ func proveAfterSubCommitment(commitmentX, openingX []byte) error {
 		return err
 	}
 
-	proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveAfterSubCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
+	proof, commitment, opening, err := bulletproofs.ProveAfterSubCommitment(uint64(valueX), uint64(valueY), openingX, openingY, commitmentX, commitmentY)
 	if err != nil {
 		return err
 	}
@@ -268,7 +269,7 @@ func proveAfterSubCommitment(commitmentX, openingX []byte) error {
 }
 
 func proveAfterMulNum(commitmentX, openingX []byte) error {
-	proof, commitment, opening, err := bulletproofs.Helper().NewBulletproofs().ProveAfterMulNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
+	proof, commitment, opening, err := bulletproofs.ProveAfterMulNum(uint64(valueX), uint64(valueY), openingX, commitmentX)
 	if err != nil {
 		return err
 	}
@@ -316,7 +317,7 @@ func pedersenVerify() error {
 		return err
 	}
 
-	ok, err := bulletproofs.Helper().NewBulletproofs().PedersenVerify(commitment, opening, uint64(valueX))
+	ok, err := bulletproofs.PedersenVerify(commitment, opening, uint64(valueX))
 	if err != nil {
 		return err
 	}
@@ -358,7 +359,7 @@ func pedersenNeg() error {
 			return err
 		}
 
-		neg, err := bulletproofs.Helper().NewBulletproofs().PedersenNeg(commitment)
+		neg, err := bulletproofs.PedersenNeg(commitment)
 		if err != nil {
 			return err
 		}
@@ -374,7 +375,7 @@ func pedersenNeg() error {
 			return err
 		}
 
-		neg, err := bulletproofs.Helper().NewBulletproofs().PedersenNegOpening(opening)
+		neg, err := bulletproofs.PedersenNegOpening(opening)
 		if err != nil {
 			return err
 		}

@@ -9,7 +9,6 @@ package wasmertest
 import (
 	"fmt"
 	"gotest.tools/assert"
-	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -68,9 +67,9 @@ func TestCallFact(t *testing.T) {
 	println("end 【spend】", end-start)
 	time.Sleep(time.Second * 2)
 	println("reset vm pool")
-	pool.ResetAllPool()
+	//pool.ResetAllPool()
 	//time.Sleep(time.Second * 500)
-	runtime.GC()
+	//runtime.GC()
 }
 
 func invokeFact(method string, id int32, contractId *commonPb.ContractId, txContext protocol.TxSimContext, pool *wasmer.VmPoolManager, byteCode []byte) *commonPb.ContractResult {
@@ -85,7 +84,7 @@ func invokeFact(method string, id int32, contractId *commonPb.ContractId, txCont
 
 	baseParam(parameters)
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
-	r := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
+	r, _ := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
 	fmt.Printf("\n【result】 %+v \n\n\n", r)
 	return r
 }
@@ -139,7 +138,7 @@ func invokeFactContract(method string, contractId *commonPb.ContractId, txContex
 	parameters["contract_name"] = test.ContractNameTest
 	baseParam(parameters)
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
-	r := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
+	r, _ := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
 	fmt.Printf("\n【result】 %+v \n\n\n", r)
 	return r
 }
