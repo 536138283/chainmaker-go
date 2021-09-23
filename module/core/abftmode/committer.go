@@ -121,7 +121,7 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
 	// new block
 	lastBlock := c.ledgerCache.GetLastCommittedBlock()
-	block, err := common.InitNewBlock(lastBlock, c.identity, c.chainID, c.chainConf)
+	block, err := common.InitNewBlock_ABFT(lastBlock, c.identity, c.chainID, c.chainConf)
 	if err != nil {
 		c.log.Error("init new block fail,err: %s,height: (%d)", err.Error(), blockHeight)
 		return err

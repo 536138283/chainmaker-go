@@ -91,7 +91,7 @@ func (p *Proposer) Propose(proposedSignal *abft.PackagedSignal) error {
 
 	//start propose
 	lastBlock := p.ledgerCache.GetLastCommittedBlock()
-	blockBatch, err := common.InitNewBlock(lastBlock, p.identity, p.chainId, p.chainConf)
+	blockBatch, err := common.InitNewBlock_ABFT(lastBlock, p.identity, p.chainId, p.chainConf)
 	if err != nil {
 		return err
 	}

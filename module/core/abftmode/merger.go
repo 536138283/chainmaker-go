@@ -7,12 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package abftmode
 
 import (
+	"chainmaker.org/chainmaker-go/utils"
 	"encoding/hex"
 	"sync"
 
 	"chainmaker.org/chainmaker/common/bitmap"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 type Merger struct {
@@ -38,6 +39,9 @@ func NewMerger() *Merger {
 }
 
 func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
+
+	var isConfigBlock bool
+
 	baseTxBatch := m.txBatchInfo[m.baseTxBatchID].txBatch
 	baseRWSetMap := m.txBatchInfo[m.baseTxBatchID].rwSetMap
 	// init baseRWSetMap if empty
@@ -58,6 +62,12 @@ func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
 		txBatch := m.txBatchInfo[txBatchID].txBatch
 		rwSetMap := m.txBatchInfo[txBatchID].rwSetMap
 
+		if len(txBatch.Txs) == 1 && utils.IsConfigTx(txBatch.Txs[0]) {
+			m.handleConfigTx(baseTxBatch, txBatch, baseRWSetMap, rwSetMap)
+			isConfigBlock = true
+			break
+		}
+
 		// merge txBatch(Txs and RWSetMap)
 		m.doMerge(
 			baseTxBatch,
@@ -71,6 +81,9 @@ func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
 	}
 
 	// edit block
+	if isConfigBlock {
+		block.Header.BlockType = commonpb.BlockType_CONFIG_BLOCK
+	}
 	block.Txs = baseTxBatch.Txs
 	block.Dag = baseTxBatch.Dag
 
@@ -78,6 +91,26 @@ func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
 	m.rwSetMap = baseRWSetMap
 
 	return nil
+}
+
+// only one transaction in a block when it has config tx
+func (m *Merger) handleConfigTx(
+	baseTxBatch,
+	txBatch *commonpb.Block,
+	baseRWSetMap,
+	rwSetMap map[string]*commonpb.TxRWSet) {
+
+	txId := txBatch.Txs[0].Payload.TxId
+	// merge RWSetMap
+	baseRWSetMap[txId] = rwSetMap[txId]
+
+	// merge Tx
+	baseTxBatch.Txs = append(baseTxBatch.Txs, txBatch.Txs[0])
+
+	// update allTxsMap
+	m.allTxsMap[txId] = txBatch.Txs[0]
+
+	baseTxBatch.Dag = m.buildDAG(baseTxBatch, baseRWSetMap)
 }
 
 func (m *Merger) doMerge(

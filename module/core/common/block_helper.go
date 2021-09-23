@@ -216,6 +216,15 @@ func initNewBlock(
 	return block, nil
 }
 
+func InitNewBlock_ABFT(
+	lastBlock *commonpb.Block,
+	identity protocol.SigningMember,
+	chainId string,
+	chainConf protocol.ChainConf) (*commonpb.Block, error) {
+
+	return initNewBlock(lastBlock, identity, chainId, chainConf, false)
+}
+
 func FinalizeBlock(
 	block *commonpb.Block,
 	txRWSetMap map[string]*commonpb.TxRWSet,
