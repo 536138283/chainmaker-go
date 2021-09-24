@@ -77,7 +77,7 @@ func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) ([]*common
 					}
 				}
 			}
-			break
+			continue
 		}
 
 		if len(txBatch.Txs) == 1 && utils.IsConfigTx(txBatch.Txs[0]) {
