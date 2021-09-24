@@ -133,17 +133,18 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	baseTxBatchInfo := c.merger.txBatchInfo[c.merger.baseTxBatchID].txBatch
 	block.Header.BlockTimestamp = baseTxBatchInfo.Header.BlockTimestamp
 
+	retryTxs := make([]*commonpb.Transaction, 0)
 	if !c.isEmptyBlock() {
 		// get the new RWSetMap after conflict detection
-		if err = c.merger.Merge(block, c.txBatchIDList); err != nil {
+		retryTxs, err = c.merger.Merge(block, c.txBatchIDList)
+		if err != nil {
 			c.log.Error("merge txBatch fail,err: %s, height: (%d)", err.Error(), blockHeight)
 			return err
 		}
 
 		rwSetMap = c.merger.rwSetMap
 		var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
-		err = common.FinalizeBlock(block, rwSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash, c.log)
-		if err != nil {
+		if err = common.FinalizeBlock(block, rwSetMap, aclFailTxs, c.chainConf.ChainConfig().Crypto.Hash, c.log); err != nil {
 			c.log.Error("finalize block fail,err: %s, height: (%d)", err.Error(), blockHeight)
 			return err
 		}
@@ -167,6 +168,9 @@ func (c *Committer) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	c.handleABAFailTxs()
 
 	//sync txpool(put retryList back txpool & delete blocked tx)
+	if len(retryTxs) != 0 {
+		c.retryList = append(c.retryList, retryTxs...)
+	}
 	c.txPool.RetryAndRemoveTxs(c.retryList, block.Txs)
 
 	//clear abft catche

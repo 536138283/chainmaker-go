@@ -38,7 +38,7 @@ func NewMerger() *Merger {
 	}
 }
 
-func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
+func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) ([]*commonpb.Transaction, error) {
 
 	var isConfigBlock bool
 
@@ -55,17 +55,35 @@ func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
 		m.allTxsMap[tx.Payload.TxId] = tx
 	}
 
+	// if base batch has config Tx
+	if len(baseTxBatch.Txs) == 1 && utils.IsConfigTx(baseTxBatch.Txs[0]) {
+		isConfigBlock = true
+	}
+
+	retryTxs := make([]*commonpb.Transaction, 0)
+	retryMap := make(map[string]struct{})
 	// merge Tx start with the second txBatch
 	for i := 1; i < len(txBatchIDList); i++ {
 		// get txBatch 's info
 		txBatchID := txBatchIDList[i]
 		txBatch := m.txBatchInfo[txBatchID].txBatch
 		rwSetMap := m.txBatchInfo[txBatchID].rwSetMap
+		if isConfigBlock {
+			for _, tx := range txBatch.Txs {
+				if _, ok := m.allTxsMap[tx.Payload.TxId]; !ok {
+					if _, ok2 := retryMap[tx.Payload.TxId]; !ok2 {
+						retryMap[tx.Payload.TxId] = struct{}{}
+						retryTxs = append(retryTxs, tx)
+					}
+				}
+			}
+			break
+		}
 
 		if len(txBatch.Txs) == 1 && utils.IsConfigTx(txBatch.Txs[0]) {
 			m.handleConfigTx(baseTxBatch, txBatch, baseRWSetMap, rwSetMap)
 			isConfigBlock = true
-			break
+			continue
 		}
 
 		// merge txBatch(Txs and RWSetMap)
@@ -90,7 +108,7 @@ func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) error {
 	// set rwSetMap
 	m.rwSetMap = baseRWSetMap
 
-	return nil
+	return retryTxs, nil
 }
 
 // only one transaction in a block when it has config tx
