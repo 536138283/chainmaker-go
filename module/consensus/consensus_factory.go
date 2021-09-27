@@ -9,15 +9,14 @@ package consensus
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/consensus/chainedbft"
-
-	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-
 	"chainmaker.org/chainmaker-go/common/msgbus"
+	"chainmaker.org/chainmaker-go/consensus/chainedbft"
+	"chainmaker.org/chainmaker-go/consensus/dpos"
 	"chainmaker.org/chainmaker-go/consensus/raft"
 	"chainmaker.org/chainmaker-go/consensus/solo"
 	"chainmaker.org/chainmaker-go/consensus/tbft"
+	commonpb "chainmaker.org/chainmaker-go/pb/protogo/common"
+	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 )
 
@@ -43,8 +42,7 @@ func (f Factory) NewConsensusEngine(
 	msgBus msgbus.MessageBus,
 	chainConf protocol.ChainConf,
 	store protocol.BlockchainStore,
-	helper protocol.HotStuffHelper,
-	dpos protocol.DPoS) (protocol.ConsensusEngine, error) {
+	helper protocol.HotStuffHelper) (protocol.ConsensusEngine, error) {
 	switch consensusType {
 	case consensuspb.ConsensusType_TBFT, consensuspb.ConsensusType_DPOS:
 		config := tbft.ConsensusTBFTImplConfig{
@@ -57,7 +55,7 @@ func (f Factory) NewConsensusEngine(
 			ChainConf:   chainConf,
 			NetService:  netService,
 			MsgBus:      msgBus,
-			Dpos:        dpos,
+			Dpos:        dpos.NewDPoSImpl(chainConf, store),
 		}
 		return tbft.New(config)
 	case consensuspb.ConsensusType_SOLO:
