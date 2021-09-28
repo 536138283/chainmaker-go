@@ -189,6 +189,7 @@ func verifyChainConfigConsensusNodesIds(mConfig *chainConfig, node *config.OrgCo
 		for _, nid := range node.NodeId {
 			// check node id
 			if !helper.P2pAddressFormatVerify("/p2p/" + nid) {
+				log.Errorf("wrong node id set: %s", nid)
 				return errors.New("wrong node id set")
 			}
 			// node id can not be repeated
