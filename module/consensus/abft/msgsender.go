@@ -94,6 +94,7 @@ func (m *msgSender) ack(msg *abftpb.ABFTMessageRsp) {
 
 	entry.Close()
 	delete(seqEntry, msg.Seq)
+	m.logger.Infof("[%s] close and delete msg entry, seq: %v, height: %v ", m.id, msg.Seq, msg.Height)
 }
 
 func (m *msgSender) cleanHeight(height uint64) {
