@@ -14,7 +14,6 @@ import (
 
 	"chainmaker.org/chainmaker-go/core/cache"
 	"chainmaker.org/chainmaker-go/core/common"
-	"chainmaker.org/chainmaker-go/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker-go/utils"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
