@@ -12,7 +12,7 @@ require (
 	chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20210914063622-6f007edc3a98
 	chainmaker.org/chainmaker/raftwal/v2 v2.0.3
 	chainmaker.org/chainmaker/utils/v2 v2.0.0-20210907033606-84c6c841cbdb
-	chainmaker.org/chainmaker/vm-native v0.0.0-20210928075012-229134254907
+	chainmaker.org/chainmaker/vm-native v0.0.0-20210929070934-55aa37a221f6
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
 	github.com/kr/pretty v0.2.0 // indirect
