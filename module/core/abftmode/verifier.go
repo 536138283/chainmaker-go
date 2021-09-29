@@ -42,7 +42,7 @@ type Verifier struct {
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
 }
 
-func NewVerifier(ceConfig *conf.CoreEngineConfig) (*Verifier, error) {
+func NewVerifier(ceConfig *conf.CoreEngineConfig, txScheduler protocol.TxScheduler) (*Verifier, error) {
 	verifier := &Verifier{
 		chainId:       ceConfig.ChainId,
 		wg:            sync.WaitGroup{},
@@ -63,6 +63,7 @@ func NewVerifier(ceConfig *conf.CoreEngineConfig) (*Verifier, error) {
 		TxPool:          ceConfig.TxPool,
 		BlockchainStore: ceConfig.BlockchainStore,
 		StoreHelper:     ceConfig.StoreHelper,
+		TxScheduler:     txScheduler,
 	}
 	verifier.verifierBlock = common.NewVerifierBlock(conf)
 	var err error

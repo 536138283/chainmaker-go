@@ -43,8 +43,7 @@ type Proposer struct {
 	txScheduler     protocol.TxScheduler
 }
 
-func NewProposer(ceConfig *conf.CoreEngineConfig) *Proposer {
-	var schedulerFactory scheduler.TxSchedulerFactory
+func NewProposer(ceConfig *conf.CoreEngineConfig, txScheduler protocol.TxScheduler) *Proposer {
 	return &Proposer{
 		lock:            sync.Mutex{},
 		chainId:         ceConfig.ChainId,
@@ -59,7 +58,7 @@ func NewProposer(ceConfig *conf.CoreEngineConfig) *Proposer {
 		abftCache:       ceConfig.ABFTCache,
 		getTxBatchC:     make(chan struct{}),
 		retryInterval:   100,
-		txScheduler:     schedulerFactory.NewTxScheduler(ceConfig.VmMgr, ceConfig.ChainConf, ceConfig.StoreHelper),
+		txScheduler:     txScheduler,
 	}
 }
 

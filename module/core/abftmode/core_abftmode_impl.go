@@ -8,6 +8,7 @@ package abftmode
 
 import (
 	"chainmaker.org/chainmaker-go/core/cache"
+	"chainmaker.org/chainmaker-go/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -49,9 +50,13 @@ func NewCoreEngine(ceConfig *conf.CoreEngineConfig) (*CoreEngine, error) {
 		log:             ceConfig.Log,
 		vmMgr:           ceConfig.VmMgr,
 	}
+
+	var schedulerFactory scheduler.TxSchedulerFactory
+	txScheduler := schedulerFactory.NewTxScheduler(ceConfig.VmMgr, ceConfig.ChainConf, ceConfig.StoreHelper)
+
 	var err error
-	ce.Proposer = NewProposer(ceConfig)
-	ce.Verifier, err = NewVerifier(ceConfig)
+	ce.Proposer = NewProposer(ceConfig, txScheduler)
+	ce.Verifier, err = NewVerifier(ceConfig, txScheduler)
 	if err != nil {
 		return nil, err
 	}
