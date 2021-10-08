@@ -29,13 +29,13 @@ import (
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
-	"chainmaker.org/chainmaker-go/raftwal/wal"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
 	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	netpb "chainmaker.org/chainmaker-go/pb/protogo/net"
 	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/raftwal/wal"
 	"chainmaker.org/chainmaker-go/utils"
 	"github.com/gogo/protobuf/proto"
 	"go.etcd.io/etcd/client/pkg/v3/fileutil"
@@ -560,23 +560,24 @@ func (consensus *ConsensusRaftImpl) maybeTriggerSnapshot(configChanged bool) {
 		consensus.logger.Fatalf("save snapshot error: %v", err)
 	}
 
-	compactIndex := uint64(1)
-	if consensus.appliedIndex > snapshotCatchUpEntriesN {
-		compactIndex = consensus.appliedIndex - snapshotCatchUpEntriesN
-		if first, _ := consensus.raftStorage.FirstIndex(); first > compactIndex {
-			compactIndex = first + 1
-		}
+	consensus.logger.Infof("trigger snapshot appliedIndex: %v, data: %v, snapshotIndex: %v",
+		consensus.appliedIndex, string(data), consensus.snapshotIndex)
+	consensus.snapshotIndex = consensus.appliedIndex
+
+	if consensus.appliedIndex < snapshotCatchUpEntriesN+1 {
+		return
 	}
 
+	compactIndex := consensus.appliedIndex - snapshotCatchUpEntriesN
+	first, _ := consensus.raftStorage.FirstIndex()
+	if compactIndex <= first {
+		return
+	}
 	if err := consensus.raftStorage.Compact(compactIndex); err != nil {
 		last, _ := consensus.raftStorage.LastIndex()
-		first, _ := consensus.raftStorage.FirstIndex()
 		consensus.logger.Fatalf("compact snapshot error: %v, compact index: %d, first: %d, last: %d", err, compactIndex, first, last)
 	}
-
-	consensus.snapshotIndex = consensus.appliedIndex
-	consensus.logger.Infof("trigger snapshot appliedIndex: %v, data: %v, compactIndex: %v, snapshotIndex: %v",
-		consensus.appliedIndex, string(data), compactIndex, consensus.snapshotIndex)
+	consensus.logger.Infof("compact entries compactIndex:%d", compactIndex)
 }
 
 func (consensus *ConsensusRaftImpl) sendMessages(msgs []raftpb.Message) bool {
@@ -656,7 +657,7 @@ func (consensus *ConsensusRaftImpl) replayWAL() *wal.WAL {
 	}
 
 	w, err := wal.Open(consensus.logger.Logger().Desugar(), consensus.waldir, walsnap,
-		consensus.chainConf.ChainConfig().Block.BlockSize * 1024 * 1024)
+		consensus.chainConf.ChainConfig().Block.BlockSize*1024*1024)
 	if err != nil {
 		consensus.logger.Fatalf("open wal error: %v", err)
 	}
