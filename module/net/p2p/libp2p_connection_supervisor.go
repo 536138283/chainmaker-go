@@ -61,7 +61,7 @@ func (cs *ConnSupervisor) refreshPeerAddrInfos(peerAddrInfos []peer.AddrInfo) {
 }
 
 // startSupervising start a goroutine to supervise connections.
-func (cs *ConnSupervisor) startSupervising() {
+func (cs *ConnSupervisor) startSupervising(readySignal chan struct{}) {
 	if cs.startUp {
 		return
 	}
@@ -73,7 +73,11 @@ func (cs *ConnSupervisor) startSupervising() {
 			}
 		}()
 		cs.startUp = true
-		time.Sleep(5 * time.Second)
+		timer := time.NewTimer(10 * time.Second)
+		select {
+		case <-readySignal:
+		case <-timer.C:
+		}
 		for cs.getSignal() {
 			//if cs.host.connManager.ConnCount() < len(cs.getPeerAddrInfos()) {
 			cs.try()
