@@ -15,26 +15,21 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker-go/chainconf"
+	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/common/wal"
+	"chainmaker.org/chainmaker-go/localconf"
+	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
 	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
+	tbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/tbft"
 	netpb "chainmaker.org/chainmaker-go/pb/protogo/net"
-
-	"chainmaker.org/chainmaker-go/chainconf"
-
-	"chainmaker.org/chainmaker-go/localconf"
-
 	"chainmaker.org/chainmaker-go/protocol"
-	"go.uber.org/zap"
-
+	"chainmaker.org/chainmaker-go/utils"
 	"github.com/gogo/protobuf/proto"
 
-	"chainmaker.org/chainmaker-go/common/msgbus"
-	"chainmaker.org/chainmaker-go/utils"
-
-	"chainmaker.org/chainmaker-go/logger"
-	tbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/tbft"
+	"go.uber.org/zap"
 )
 
 var clog *zap.SugaredLogger = zap.S()
@@ -146,10 +141,11 @@ func New(config ConsensusTBFTImplConfig) (*ConsensusTBFTImpl, error) {
 	consensus.chainConf = config.ChainConf
 	consensus.netService = config.NetService
 	consensus.msgbus = config.MsgBus
-	consensus.dpos = config.Dpos
 	consensus.closeC = make(chan struct{})
 	consensus.internalMsgCCloseC = make(chan struct{})
-
+	if config.ChainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_DPOS {
+		consensus.dpos = config.Dpos
+	}
 	consensus.waldir = path.Join(localconf.ChainMakerConfig.StorageConfig.StorePath, consensus.chainID, walDir)
 	consensus.wal, err = wal.Open(consensus.waldir, nil)
 	if err != nil {

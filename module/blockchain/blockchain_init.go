@@ -19,7 +19,6 @@ import (
 	"chainmaker.org/chainmaker-go/core"
 	"chainmaker.org/chainmaker-go/core/cache"
 	providerConf "chainmaker.org/chainmaker-go/core/provider/conf"
-	"chainmaker.org/chainmaker-go/dpos"
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/net"
@@ -78,8 +77,6 @@ func (bc *Blockchain) Init() (err error) {
 			{moduleNameNetService: bc.initNetService},
 			// init vm instances and module
 			{moduleNameVM: bc.initVM},
-			// init dpos service
-			{moduleNameDpos: bc.initDpos},
 
 			// init transaction pool
 			{moduleNameTxPool: bc.initTxPool},
@@ -126,17 +123,6 @@ func (bc *Blockchain) initExtModules(extModules []map[string]func() error) (err 
 			bc.log.Infof("MODULE INIT STEP (%d/%d) => init module[%s] success :)", idx+1, moduleNum, name)
 		}
 	}
-	return
-}
-
-func (bc *Blockchain) initDpos() (err error) {
-	_, ok := bc.initModules[moduleNameDpos]
-	if ok {
-		bc.log.Infof("dpos service module existed, ignore.")
-		return
-	}
-	bc.dpos = dpos.NewDPoSImpl(bc.chainConf, bc.store)
-	bc.initModules[moduleNameNetService] = struct{}{}
 	return
 }
 
@@ -422,7 +408,7 @@ func (bc *Blockchain) initConsensus() (err error) {
 		bc.chainConf,
 		bc.store,
 		bc.coreEngine.GetHotStuffHelper(),
-		bc.dpos)
+	)
 	if err != nil {
 		bc.log.Errorf("new consensus engine failed, %s", err)
 		return err

@@ -27,7 +27,6 @@ replace (
 	chainmaker.org/chainmaker-go/chainconf => ./../conf/chainconf
 	chainmaker.org/chainmaker-go/common => ../../common
 	chainmaker.org/chainmaker-go/consensus => ../consensus
-	chainmaker.org/chainmaker-go/dpos => ../dpos
 	chainmaker.org/chainmaker-go/evm => ./../../module/vm/evm
 	chainmaker.org/chainmaker-go/gasm => ./../../module/vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../conf/localconf
