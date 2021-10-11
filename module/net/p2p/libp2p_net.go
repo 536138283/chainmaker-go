@@ -931,6 +931,7 @@ func (ln *LibP2pNet) Start() error {
 	// set elimination strategy for conn manager
 	ln.libP2pHost.connManager.SetStrategy(ln.prepare.peerEliminationStrategy)
 	// start libP2pHost
+	readyC = ln.prepare.readySignalC
 	if err := ln.libP2pHost.Start(); err != nil {
 		return err
 	}
@@ -962,7 +963,7 @@ func (ln *LibP2pNet) Start() error {
 	for bp := range ln.prepare.bootstrapsPeers {
 		adis = append(adis, bp)
 	}
-	if err := SetupDiscovery(ln.libP2pHost, true, adis); err != nil {
+	if err := SetupDiscovery(ln.libP2pHost, ln.prepare.readySignalC, true, adis); err != nil {
 		return err
 	}
 	return nil

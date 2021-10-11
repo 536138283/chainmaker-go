@@ -12,7 +12,7 @@ import (
 )
 
 // SetupDiscovery setup a discovery service.
-func SetupDiscovery(host *LibP2pHost, enableDHTBootstrapProvider bool, bootstraps []string) error {
+func SetupDiscovery(host *LibP2pHost, readySignalC chan struct{}, enableDHTBootstrapProvider bool, bootstraps []string) error {
 	logger.Info("[Discovery] discovery setting...")
 	bootstrapAddrInfos, err := ParseAddrInfo(bootstraps)
 	if err != nil {
@@ -50,7 +50,7 @@ func SetupDiscovery(host *LibP2pHost, enableDHTBootstrapProvider bool, bootstrap
 	// new ConnSupervisor
 	host.connSupervisor = newConnSupervisor(host, bootstrapAddrInfos)
 	// start supervising.
-	host.connSupervisor.startSupervising()
+	host.connSupervisor.startSupervising(readySignalC)
 	// announce self
 	logger.Info("[Discovery] announcing ourselves...")
 	routingDiscovery := discovery.NewRoutingDiscovery(kademliaDHT)
