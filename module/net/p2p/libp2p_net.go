@@ -77,6 +77,8 @@ type LibP2pNet struct {
 	subscribedTopics map[string]*topicSubscription // subscribedTopics mapping the chainId to a map which mapping the topic name to the Subscription.
 	subscribeLock    sync.Mutex
 
+	reloadChainPubSubWhiteListSignalChanMap sync.Map // map[chainId]chan struct{}
+
 	prepare *LibP2pNetPrepare // prepare contains the base info for the net starting.
 }
 
@@ -97,13 +99,14 @@ func NewLibP2pNet() (*LibP2pNet, error) {
 	ctx := context.Background()
 	host := NewLibP2pHost(ctx)
 	net := &LibP2pNet{
-		startUp:                   false,
-		netType:                   api.Libp2p,
-		ctx:                       ctx,
-		libP2pHost:                host,
-		messageHandlerDistributor: newMessageHandlerDistributor(),
-		pubSubs:                   sync.Map{},
-		subscribedTopics:          make(map[string]*topicSubscription),
+		startUp:                                 false,
+		netType:                                 api.Libp2p,
+		ctx:                                     ctx,
+		libP2pHost:                              host,
+		messageHandlerDistributor:               newMessageHandlerDistributor(),
+		pubSubs:                                 sync.Map{},
+		subscribedTopics:                        make(map[string]*topicSubscription),
+		reloadChainPubSubWhiteListSignalChanMap: sync.Map{},
 
 		prepare: &LibP2pNetPrepare{
 			listenAddr:               DefaultLibp2pListenAddress,
@@ -150,6 +153,9 @@ func (ln *LibP2pNet) getPubsub(chainId string) (*LibP2pPubSub, bool) {
 
 // InitPubsub will create new LibP2pPubSub instance for LibP2pNet with setting pubsub uid to the given chainId .
 func (ln *LibP2pNet) InitPubsub(chainId string, maxMessageSize int) error {
+	if !ln.startUp {
+		return errors.New("start net first pls")
+	}
 	_, ok := ln.getPubsub(chainId)
 	if ok {
 		return ErrorPubSubExisted
@@ -163,12 +169,11 @@ func (ln *LibP2pNet) InitPubsub(chainId string, maxMessageSize int) error {
 		return err
 	}
 	ln.pubSubs.Store(chainId, ps)
-	if ln.startUp {
-		if err = ps.Start(); err != nil {
-			return err
-		}
-		ln.reloadChainPubSubWhiteList(chainId)
+	if err = ps.Start(); err != nil {
+		return err
 	}
+	go ln.reloadChainPubSubWhiteListLoop(chainId, ps)
+	ln.reloadChainPubSubWhiteList(chainId)
 	return nil
 }
 
@@ -234,6 +239,8 @@ func (ln *LibP2pNet) SubscribeWithChainId(chainId string, topic string, handler 
 		}()
 		ln.topicSubLoop(chainId, topicSub, topic, handler)
 	}()
+	// reload chain pub-sub whitelist
+	ln.reloadChainPubSubWhiteList(chainId)
 	return nil
 }
 
@@ -685,10 +692,10 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 			// whether verify success, if success add it
 			if chainTrustRoots.VerifyCertOfChain(chainId, cert) {
 				ln.libP2pHost.peerChainIdsRecorder.addPeerChainId(pid, chainId)
-				if err = ln.addChainPubSubWhiteList(chainId, pid); err != nil {
-					logger.Warnf("[Net] [ReVerifyTrustRoots] add chain pub-sub white list failed, %s",
-						err.Error())
-				}
+				//if err = ln.addChainPubSubWhiteList(chainId, pid); err != nil {
+				//	logger.Warnf("[Net] [ReVerifyTrustRoots] add chain pub-sub white list failed, %s",
+				//		err.Error())
+				//}
 				logger.Infof("[Net] [ReVerifyTrustRoots] add peer to chain, (pid: %s, chain id: %s)",
 					pid, chainId)
 			}
@@ -707,6 +714,8 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 			time.Sleep(time.Second)
 		}
 	}
+
+	ln.reloadChainPubSubWhiteList(chainId)
 }
 
 func (ln *LibP2pNet) removeChainPubSubWhiteList(chainId, pidStr string) error {
@@ -743,10 +752,25 @@ func (ln *LibP2pNet) addChainPubSubWhiteList(chainId, pidStr string) error {
 
 func (ln *LibP2pNet) reloadChainPubSubWhiteList(chainId string) {
 	if ln.startUp {
-		go time.AfterFunc(10*time.Second, func() {
-			v, ok := ln.pubSubs.Load(chainId)
-			if ok {
-				ps := v.(*LibP2pPubSub)
+		v, ok := ln.reloadChainPubSubWhiteListSignalChanMap.Load(chainId)
+		if !ok {
+			return
+		}
+		c := v.(chan struct{})
+		select {
+		case c <- struct{}{}:
+		default:
+		}
+	}
+}
+
+func (ln *LibP2pNet) reloadChainPubSubWhiteListLoop(chainId string, ps *LibP2pPubSub) {
+	if ln.startUp {
+		v, _ := ln.reloadChainPubSubWhiteListSignalChanMap.LoadOrStore(chainId, make(chan struct{}, 1))
+		c := v.(chan struct{})
+		for {
+			select {
+			case <-c:
 				for _, pidStr := range ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId) {
 					pid, err := peer.Decode(pidStr)
 					if err != nil {
@@ -755,13 +779,17 @@ func (ln *LibP2pNet) reloadChainPubSubWhiteList(chainId string) {
 					}
 					err = ps.AddWhitelistPeer(pid)
 					if err != nil {
-						logger.Errorf("[Net] add pubsub white list failed. %s (pid: %s, chain id: %s)", err.Error(), pid, chainId)
+						logger.Errorf("[Net] add pub-sub white list failed. %s (pid: %s, chain id: %s)",
+							err.Error(), pid, chainId)
 						continue
 					}
-					logger.Infof("[Net] add peer to chain pubsub white list, (pid: %s, chain id: %s)", pid, chainId)
+					logger.Infof("[Net] add peer to chain pub-sub white list, (pid: %s, chain id: %s)",
+						pid, chainId)
 				}
+			case <-ln.ctx.Done():
+				return
 			}
-		})
+		}
 	}
 }
 
@@ -944,19 +972,6 @@ func (ln *LibP2pNet) Start() error {
 	// start handling NewTlsPeerChainIdsNotifyC
 	if ln.libP2pHost.isTls && ln.libP2pHost.peerChainIdsRecorder != nil {
 		ln.handlePubSubWhiteList()
-	}
-	// start pubsub
-	var psErr error = nil
-	ln.pubSubs.Range(func(_, value interface{}) bool {
-		pubsub := value.(*LibP2pPubSub)
-		if err := pubsub.Start(); err != nil {
-			psErr = err
-			return false
-		}
-		return true
-	})
-	if psErr != nil {
-		return psErr
 	}
 	// setup discovery
 	adis := make([]string, 0)

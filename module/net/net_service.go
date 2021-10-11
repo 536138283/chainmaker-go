@@ -274,7 +274,7 @@ func (ns *NetService) Stop() error {
 	return nil
 }
 
-// ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.
+// ConfigWatcher return an implementation of protocol.Watcher. It is used for refreshing the config.
 func (ns *NetService) ConfigWatcher() protocol.Watcher {
 	if ns.configWatcher == nil {
 		ns.configWatcher = &ConfigWatcher{ns: ns}
