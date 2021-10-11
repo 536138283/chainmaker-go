@@ -262,6 +262,10 @@ func (ns *NetService) Start() error {
 		ns.logger.Errorf("[NetService] init pubsub failed, %s", err.Error())
 		return err
 	}
+
+	// re verify peers
+	ns.localNet.ReVerifyTrustRoots(ns.chainId)
+
 	if err := ns.initBindMsgBus(); err != nil {
 		return err
 	}
@@ -343,7 +347,7 @@ func (cw *ConfigWatcher) Watch(chainConfig *configPb.ChainConfig) error {
 	return nil
 }
 
-// VmWatcher return a implementation of protocol.VmWatcher. It is used for refreshing revoked peer which use revoked tls cert.
+// VmWatcher return an implementation of protocol.VmWatcher. It is used for refreshing revoked peer which use revoked tls cert.
 func (ns *NetService) VmWatcher() protocol.VmWatcher {
 	if ns.vmWatcher == nil {
 		ns.vmWatcher = &VmWatcher{ns: ns}
