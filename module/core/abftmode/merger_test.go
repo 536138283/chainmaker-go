@@ -1,4 +1,10 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
 package abftmode
+
 //
 //import (
 //	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
