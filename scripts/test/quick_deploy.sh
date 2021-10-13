@@ -21,7 +21,7 @@ fi
 cd ..
 ./cluster_quick_stop.sh clean
 sleep 1
-mv ../build ../build-bak
+rm -rf ../build
 echo -e "\nINFO\n" | ./prepare.sh 4 1
 ./build_release.sh
 ./cluster_quick_start.sh normal
@@ -32,14 +32,12 @@ ps -ef|grep chainmaker
 # chainmaker-go/build
 # backups *.gz
 cd ../build
-mkdir bak
-mv release/*.gz bak/
 
 # chainmaker-go/bin
 # prepare sdk config & crypto config
 cd ../bin
 rm -rf testdata
-mkdir testdata
+mkdir -p testdata
 cp ../../chainmaker-sdk-go/testdata/sdk_config.yml testdata/
 cp -r ../build/crypto-config/ testdata/
 cd ..
