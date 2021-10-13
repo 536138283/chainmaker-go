@@ -6,14 +6,14 @@ require (
 	chainmaker.org/chainmaker-go/blockchain v0.0.0
 	chainmaker.org/chainmaker-go/monitor v0.0.0
 	chainmaker.org/chainmaker-go/subscriber v0.0.0
-	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210928074728-46fb495501b8
+	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20211013080046-91ad24ce4d14
 	chainmaker.org/chainmaker/localconf/v2 v2.0.0-20210924065026-b084e62e6efc
 	chainmaker.org/chainmaker/logger/v2 v2.0.0-20210907134457-53647922a89d
-	chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210927115837-e6f345e447ec
+	chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20211011124513-b828aaef61ff
 	chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20210914063622-6f007edc3a98
 	chainmaker.org/chainmaker/store/v2 v2.0.0-20210922083030-e886493a2be9
 	chainmaker.org/chainmaker/utils/v2 v2.0.0-20210916084713-abd13154c26b
-	chainmaker.org/chainmaker/vm-native v0.0.0-20210929060110-5db126be6de3
+	chainmaker.org/chainmaker/vm-native v0.0.0-20211013081635-f03baf843561
 	github.com/gogo/protobuf v1.3.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/prometheus/client_golang v1.11.0
