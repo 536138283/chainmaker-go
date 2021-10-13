@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const consensusType = consensusPb.ConsensusType_DPOS
+const consensusType = consensusPb.ConsensusType_ABFT
 
 func mockValidate(txList *txList, blockChainStore protocol.BlockchainStore) txValidateFunc {
 	return func(tx *commonPb.Transaction, source protocol.TxSource) error {

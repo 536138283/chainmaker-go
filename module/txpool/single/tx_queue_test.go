@@ -292,7 +292,9 @@ func TestFetchInQueue(t *testing.T) {
 	// 1. put txs to queue and check appendTxsToPendingCache
 	queue.addTxsToCommonQueue(rpcTxs)
 	fetchTxs := queue.fetch(100, 99, nil, consensusType)
-	if consensusType != consensusPb.ConsensusType_ABFT {
+	if consensusType == consensusPb.ConsensusType_ABFT {
+		require.Len(t, fetchTxs, 10)
+	} else {
 		require.EqualValues(t, rpcTxs.txs, fetchTxs)
 		//require.EqualValues(t, len(rpcTxs.txs), queue.configTxQueue.pendingCache.Size())
 	}
@@ -310,13 +312,31 @@ func TestFetchInQueue(t *testing.T) {
 
 	// 4. fetch config tx
 	fetchTxs = queue.fetch(100, 100, nil, consensusType)
-	if consensusType != consensusPb.ConsensusType_ABFT {
+
+	if consensusType == consensusPb.ConsensusType_ABFT {
+		var b1 bool
+		for i := 0; i < len(p2pTxs.txs); i++ {
+			if p2pTxs.txs[i].Payload.TxId == fetchTxs[0].Payload.TxId {
+				b1 = true
+			}
+		}
+		require.True(t, b1)
+	} else {
 		require.EqualValues(t, p2pTxs.txs[:1], fetchTxs)
 		//require.EqualValues(t, 11, queue.configTxQueue.pendingCache.Size())
 	}
+
 	// 5. next fetch
 	fetchTxs = queue.fetch(100, 101, nil, consensusType)
-	if consensusType != consensusPb.ConsensusType_ABFT {
+	if consensusType == consensusPb.ConsensusType_ABFT {
+		var b2 bool
+		for i := 0; i < len(p2pTxs.txs); i++ {
+			if p2pTxs.txs[i].Payload.TxId == fetchTxs[0].Payload.TxId {
+				b2 = true
+			}
+		}
+		require.True(t, b2)
+	} else {
 		require.EqualValues(t, p2pTxs.txs[1:2], fetchTxs)
 		//require.EqualValues(t, 12, queue.configTxQueue.pendingCache.Size())
 	}
