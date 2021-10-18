@@ -284,7 +284,7 @@ func (consensus *ConsensusTBFTImpl) Verify(consensusType consensuspb.ConsensusTy
 
 func (consensus *ConsensusTBFTImpl) updateChainConfig() (addedValidators []string, removedValidators []string,
 	err error) {
-	consensus.logger.Infof("[%s](%d/%d/%v) update chain config",
+	consensus.logger.Debugf("[%s](%d/%d/%v) update chain config",
 		consensus.Id, consensus.Height, consensus.Round, consensus.Step)
 
 	config := consensus.chainConf.ChainConfig().Consensus
@@ -293,7 +293,7 @@ func (consensus *ConsensusTBFTImpl) updateChainConfig() (addedValidators []strin
 		return nil, nil, err
 	}
 
-	consensus.logger.Infof("[%s](%d/%d/%v) update chain config, config: %v, TimeoutPropose: %v, "+
+	consensus.logger.Debugf("[%s](%d/%d/%v) update chain config, config: %v, TimeoutPropose: %v, "+
 		"TimeoutProposeDelta: %v, validators: %v", consensus.Id, consensus.Height, consensus.Round, consensus.Step, config,
 		consensus.TimeoutPropose, consensus.TimeoutProposeDelta, validators)
 
