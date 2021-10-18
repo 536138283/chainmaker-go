@@ -1395,53 +1395,6 @@ func (consensus *ConsensusTBFTImpl) verifyVote(voteProto *tbftpb.Vote) error {
 	return nil
 }
 
-//func (consensus *ConsensusTBFTImpl) verifyBlockSignatures(block *common.Block) error {
-//	consensus.logger.Debugf("[%s](%d/%d/%s) VerifyBlockSignatures block (%d-%x)",
-//		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
-//		block.Header.BlockHeight, block.Header.BlockHash)
-//
-//	blockVoteSet, ok := block.AdditionalData.ExtraData[protocol.TBFTAddtionalDataKey]
-//	if !ok {
-//		return fmt.Errorf("verify block signature failed, block.AdditionalData.ExtraData[TBFTAddtionalDataKey] not exist")
-//	}
-//
-//	voteSetProto := new(tbftpb.VoteSet)
-//	if err := proto.Unmarshal(blockVoteSet, voteSetProto); err != nil {
-//		return err
-//	}
-//
-//	voteSet := NewVoteSetFromProto(consensus.logger, voteSetProto, consensus.validatorSet)
-//	hash, ok := voteSet.twoThirdsMajority()
-//	if !ok {
-//		// This should not happen
-//		return fmt.Errorf("voteSet without majority")
-//	}
-//
-//	if !bytes.Equal(hash, block.Header.BlockHash) {
-//		return fmt.Errorf("hash match failed, unmatch QC: %x to block hash: %v", hash, block.Header.BlockHash)
-//	}
-//
-//	consensus.logger.Debugf("[%s](%d/%d/%s) VerifyBlockSignatures block (%d-%x) success",
-//		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
-//		block.Header.BlockHeight, block.Header.BlockHash)
-//	return nil
-//}
-
-//func (consensus *ConsensusTBFTImpl) persistState() {
-//	begin := time.Now()
-//	consensusStateProto := consensus.toProto()
-//	consensusStateBytes := mustMarshal(consensusStateProto)
-//	consensus.logger.Debugf("[%s](%d/%d/%s) persist state length: %v",
-//		consensus.Id, consensus.Height, consensus.Round, consensus.Step, len(consensusStateBytes))
-//	err := consensus.dbHandle.Put(consensusStateKey, consensusStateBytes)
-//	if err != nil {
-//		consensus.logger.Errorf("[%s](%d/%d/%s) persist failed, persist to db error: %v",
-//			consensus.Id, consensus.Height, consensus.Round, consensus.Step, err)
-//	}
-//	d := time.Since(begin)
-//	consensus.metrics.AppendPersistStateDuration(consensus.Round, consensus.Step.String(), d)
-//}
-
 func (consensus *ConsensusTBFTImpl) getValidatorSet() *validatorSet {
 	consensus.Lock()
 	defer consensus.Unlock()
