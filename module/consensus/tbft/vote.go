@@ -20,10 +20,6 @@ import (
 	tbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/tbft"
 )
 
-//const (
-//	nilVoteStr = "nil vote"
-//)
-
 var (
 	ErrVoteNil              = errors.New("nil vote")
 	ErrUnexceptedStep       = errors.New("unexpected step")
@@ -462,18 +458,6 @@ func newHeightRoundVoteSet(logger *logger.CMLogger, height int64, round int32,
 	return hvs
 }
 
-//func newHeightRoundVoteSetFromProto(logger *logger.CMLogger, hvsProto *tbftpb.HeightRoundVoteSet,
-//	validators *validatorSet) *heightRoundVoteSet {
-//	hvs := newHeightRoundVoteSet(logger, hvsProto.Height, hvsProto.Round, validators)
-//
-//	for k, v := range hvsProto.RoundVoteSets {
-//		rvs := NewRoundVoteSetFromProto(logger, v, validators)
-//		hvs.RoundVoteSets[k] = rvs
-//	}
-//
-//	return hvs
-//}
-
 func (hvs *heightRoundVoteSet) ToProto() *tbftpb.HeightRoundVoteSet {
 	if hvs == nil {
 		return nil
@@ -582,14 +566,3 @@ func createPrecommitMsg(precommit *Vote) *tbftpb.TBFTMsg {
 
 	return tbftMsg
 }
-
-//func createStateMsg(state *tbftpb.ConsensusState) *tbftpb.TBFTMsg {
-//	data := mustMarshal(state)
-//
-//	tbftMsg := &tbftpb.TBFTMsg{
-//		Type: tbftpb.TBFTMsgType_state,
-//		Msg:  data,
-//	}
-//
-//	return tbftMsg
-//}
