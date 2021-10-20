@@ -173,3 +173,7 @@ qta:
 	cd test/send_proposal_request_ci && go run main.go
 	cd test/send_proposal_request_ci && ./stop_solo.sh
 	cd test/send_proposal_request_ci && ./clean_data_log.sh
+
+pre-crypto-tool:
+	ln -s ../../chainmaker-cryptogen ./tools/chainmaker-cryptogen
+	cd ./tools/chainmaker-cryptogen && make

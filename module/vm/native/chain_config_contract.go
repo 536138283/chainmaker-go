@@ -363,6 +363,14 @@ func (r *ChainTrustRootsRuntime) TrustRootUpdate(txSimContext protocol.TxSimCont
 		return nil, err
 	}
 
+	// verify has consensus nodes
+	for _, node := range chainConfig.Consensus.Nodes {
+		if orgId == node.OrgId {
+			err = fmt.Errorf("update trust root cert failed, you must delete all consensus nodes under the organization first")
+			r.log.Error(err)
+			return nil, err
+		}
+	}
 	trustRoots := chainConfig.TrustRoots
 	for i, root := range trustRoots {
 		if orgId == root.OrgId {
@@ -416,14 +424,16 @@ func (r *ChainTrustRootsRuntime) TrustRootDelete(txSimContext protocol.TxSimCont
 		return nil, err
 	}
 
-	trustRoots = append(trustRoots[:index], trustRoots[index+1:]...)
-	nodes := chainConfig.Consensus.Nodes
-	for i := len(nodes) - 1; i >= 0; i-- {
-		if orgId == nodes[i].OrgId {
-			nodes = append(nodes[:i], nodes[i+1:]...)
+	// verify has consensus nodes
+	for _, node := range chainConfig.Consensus.Nodes {
+		if orgId == node.OrgId {
+			err = fmt.Errorf("update trust root cert failed, you must delete all consensus nodes under the organization first")
+			r.log.Error(err)
+			return nil, err
 		}
 	}
-	chainConfig.Consensus.Nodes = nodes
+
+	trustRoots = append(trustRoots[:index], trustRoots[index+1:]...)
 	chainConfig.TrustRoots = trustRoots
 	result, err = setChainConfig(txSimContext, chainConfig)
 	if err != nil {
