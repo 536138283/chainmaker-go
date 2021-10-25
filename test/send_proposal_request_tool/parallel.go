@@ -61,7 +61,7 @@ var (
 	fileCache FileCacheReader     = NewFileCacheReader()
 	certCache CertFileCacheReader = NewCertFileCacheReader()
 
-	abiCache  FileCacheReader     = NewFileCacheReader()
+	abiCache     FileCacheReader = NewFileCacheReader()
 	outputResult bool
 )
 
@@ -544,7 +544,7 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, erro
 
 	if useTLS {
 		tlsClient := ca.CAClient{
-			ServerName: "chainmaker.org",
+			ServerName: serverName,
 			CaPaths:    []string{caPaths[index]},
 			CertFile:   userCrtPaths[index],
 			KeyFile:    userKeyPaths[index],
@@ -571,7 +571,7 @@ type invokeHandler struct {
 var (
 	respStr     = "proposalRequest error, resp: %+v"
 	templateStr = "%s_%d_%d_%d"
-	resultStr     = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
+	resultStr   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
 )
 
 func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int, ps []*KeyValuePair) error {
@@ -599,7 +599,7 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	var abiData *[]byte
 	if abiPath != "" {
 		abiData = abiCache.Read(abiPath)
-		runTime = 5  //evm
+		runTime = 5 //evm
 	}
 
 	method1, pairs1, err := makePairs(method, abiPath, pairs, commonPb.RuntimeType(runTime), abiData)
