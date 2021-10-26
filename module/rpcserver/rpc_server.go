@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
 	"sort"
 	"strings"
 	"time"
@@ -40,6 +41,9 @@ type RPCServer struct {
 	cancel                     context.CancelFunc
 	curChainConfTrustRootsHash string
 	isShutdown                 bool
+
+	// FIXME: add for restful
+	httpServer                 *http.Server
 }
 
 // prom monitor define
@@ -68,9 +72,14 @@ const (
 // NewRPCServer - new RPCServer object
 func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, error) {
 
-	server, err := newGrpc(chainMakerServer)
+	grpcServer, err := newGrpc(chainMakerServer)
 	if err != nil {
 		return nil, fmt.Errorf("new grpc server failed, %s", err.Error())
+	}
+
+	httpServer, err := newServer(grpcServer)
+	if err != nil {
+		return nil, fmt.Errorf("new http grpc server failed, %s", err.Error())
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
@@ -84,7 +93,9 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 	}
 
 	return &RPCServer{
-		grpcServer:       server,
+		grpcServer:       grpcServer,
+		// FIXME: add for restful
+		httpServer:       httpServer,
 		chainMakerServer: chainMakerServer,
 		log:              logger.GetLogger(logger.MODULE_RPC),
 	}, nil
@@ -115,6 +126,18 @@ func (s *RPCServer) Start() error {
 		return fmt.Errorf("register handler failed, %s", err.Error())
 	}
 
+	// FIXME: add for restful
+	caCerts, err := getCACerts(s.chainMakerServer)
+	if err != nil {
+		return err
+	}
+	tlsConfig, err := ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+		localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts)
+	if err != nil {
+		log.Errorf("GetTLSConfig, failed, %s", err.Error())
+		return err
+	}
+
 	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
 	conn, err := net.Listen("tcp", endPoint)
 	if err != nil {
@@ -122,7 +145,12 @@ func (s *RPCServer) Start() error {
 	}
 
 	go func() {
-		err = s.grpcServer.Serve(conn)
+		//err = s.grpcServer.Serve(conn)
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_DISABLE {
+			err = s.httpServer.Serve(conn)
+		} else {
+			err = s.httpServer.Serve(ca.NewTLSListener(conn, tlsConfig))
+		}
 		if err != nil {
 			s.log.Errorf("grpc Serve failed, %s", err.Error())
 		}
@@ -292,17 +320,9 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 
 	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 
-		chainConfs, err := chainMakerServer.GetAllChainConf()
+		caCerts, err := getCACerts(chainMakerServer)
 		if err != nil {
-			return nil, fmt.Errorf("get all chain conf failed, %s", err)
-		}
-
-		var caCerts []string
-		for _, chainConf := range chainConfs {
-			for _, orgRoot := range chainConf.ChainConfig().TrustRoots {
-				caCerts = append(caCerts, orgRoot.Root...)
-			}
-
+			return nil, err
 		}
 
 		tlsRPCServer := ca.CAServer{
@@ -347,4 +367,39 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 	server := grpc.NewServer(opts...)
 
 	return server, nil
+}
+
+func newServer(grpcServer *grpc.Server) (*http.Server, error) {
+	//gwmux, err := this.newGateway()
+	//if err != nil {
+	//	seelog.Error(err)
+	//	return nil, err
+	//}
+
+	//mux := http.NewServeMux()
+	//mux.Handle("/", gwmux)
+
+	return &http.Server{
+		//Addr:      this.endPoint,
+		Handler:   GrpcHandlerFunc(grpcServer, nil),
+		//Handler:   grpcServer,
+		//TLSConfig: this.tlsConfig,
+	}, nil
+}
+
+func getCACerts(chainMakerServer *blockchain.ChainMakerServer) ([]string, error) {
+	chainConfs, err := chainMakerServer.GetAllChainConf()
+	if err != nil {
+		return nil, fmt.Errorf("get all chain conf failed, %s", err)
+	}
+
+	var caCerts []string
+	for _, chainConf := range chainConfs {
+		for _, orgRoot := range chainConf.ChainConfig().TrustRoots {
+			caCerts = append(caCerts, orgRoot.Root...)
+		}
+
+	}
+
+	return caCerts, nil
 }

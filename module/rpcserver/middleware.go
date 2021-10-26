@@ -10,7 +10,10 @@ package rpcserver
 import (
 	"context"
 	"fmt"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"net"
+	"net/http"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -226,4 +229,26 @@ func splitMethodName(fullMethodName string) (string, string) {
 		return fullMethodName[:i], fullMethodName[i+1:]
 	}
 	return UNKNOWN, UNKNOWN
+}
+
+func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	if otherHandler == nil {
+		//return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		//	grpcServer.ServeHTTP(w, r)
+		//})
+
+		return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			grpcServer.ServeHTTP(w, r)
+		}), &http2.Server{})
+	}
+
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
+			log.Infof("################ GRPC server ")
+			grpcServer.ServeHTTP(w, r)
+		} else {
+			log.Infof("################ OTHER server")
+			otherHandler.ServeHTTP(w, r)
+		}
+	})
 }
