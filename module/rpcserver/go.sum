@@ -6,8 +6,6 @@ chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210909033927-2a4cfc146579/go.mod 
 chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210916080817-79b5a4160dae/go.mod h1:5PBx3EAorpJ+2PMtC15DHGUDLjLfXiEFp6LX67xxCAo=
 chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210924090707-3cfec86e5534 h1:8NBaZ96jP/7OmY+qLp5jShVMlkyEDkU7t54VmuuMBz4=
 chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210924090707-3cfec86e5534/go.mod h1:zmhmvLiYlRduHQKrQtRHljn/xem1ipl+2zajpmibzOg=
-chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210928074728-46fb495501b8 h1:1Vv9clNB0kEVqarItnca2ywunNRc6/Ap3lS2BCWi7zY=
-chainmaker.org/chainmaker/common/v2 v2.0.1-0.20210928074728-46fb495501b8/go.mod h1:6IBpLH48T9gcb1sfwGJ4qPrDGj2VmB1ocXFVYv9iSuk=
 chainmaker.org/chainmaker/common/v2 v2.0.1-0.20211013080046-91ad24ce4d14 h1:tPgJHS1S9sQmnRTYVn7Rzsff0aC49XjlS60S3rVgqDk=
 chainmaker.org/chainmaker/common/v2 v2.0.1-0.20211013080046-91ad24ce4d14/go.mod h1:efmjrWLyQctsftWcmYkS2zu+wLjQITvDWKuCiufHyhc=
 chainmaker.org/chainmaker/localconf/v2 v2.0.0-20210913154622-9f9774ed7d1b/go.mod h1:SPqpohsoeMrRFhPHnDQMRiWylLr5PfMQIlxbrPppzhI=
@@ -20,8 +18,6 @@ chainmaker.org/chainmaker/logger/v2 v2.0.0-20210907134457-53647922a89d/go.mod h1
 chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210901132412-435b75070bf2/go.mod h1:gDZodc1Kp6snzGXugS/REqfCqNNizhniQmjeOKUVf64=
 chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210916064951-47123db73430 h1:aLE6xU7FcVMlxiktoZvnNlERfGA7TaDk5BF4FCD1qFA=
 chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210916064951-47123db73430/go.mod h1:gDZodc1Kp6snzGXugS/REqfCqNNizhniQmjeOKUVf64=
-chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210927115837-e6f345e447ec h1:x1dnxfKJPugfpOGCtjdg3WQqQBhkF6OlbGfN2szUfPM=
-chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20210927115837-e6f345e447ec/go.mod h1:gDZodc1Kp6snzGXugS/REqfCqNNizhniQmjeOKUVf64=
 chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20211011124513-b828aaef61ff h1:Qw7bU367mLAfHKTzcEbTknD1ACkVWwCPAryh0ZZsqRs=
 chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20211011124513-b828aaef61ff/go.mod h1:gDZodc1Kp6snzGXugS/REqfCqNNizhniQmjeOKUVf64=
 chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20210901134008-4b83cf573272/go.mod h1:JW18QbTxfZLnyhZ847hltgQ/qiOeEhkpS0X5lJKcUiA=
@@ -55,15 +51,6 @@ chainmaker.org/chainmaker/vm-gasm v0.0.0-20210918095814-3f0ddfe29968/go.mod h1:o
 chainmaker.org/chainmaker/vm-native v0.0.0-20210914085018-758536c4dc0b/go.mod h1:1QFUhOB+PXwjToeic/pwyBzhDK5yJcVBeAshzYjXsDs=
 chainmaker.org/chainmaker/vm-native v0.0.0-20210917091516-85e8d7855fe5 h1:to+l+ZqSiQklzkpYFVonFL+r9HezVCgnFJkR1IvUq1k=
 chainmaker.org/chainmaker/vm-native v0.0.0-20210917091516-85e8d7855fe5/go.mod h1:dB9/cPxPrdxGTuj3Vq2koGlGKynosfK//aBJQAGG32k=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210928075012-229134254907/go.mod h1:S2JB2bHTAF/H7RQ90xn018RMXarGPWOiK7IAkkvSxX8=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210928112551-45e3f6afefd6 h1:6a+NPUfzboO4Ea1E0e08ObPywJ5b4FlEUUzeBNO33Pw=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210928112551-45e3f6afefd6/go.mod h1:S2JB2bHTAF/H7RQ90xn018RMXarGPWOiK7IAkkvSxX8=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210929060110-5db126be6de3 h1:eaM9hmSrCoUixbVCl/YvEAUbfD2xFPuXQwiwre0tTKg=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210929060110-5db126be6de3/go.mod h1:wjlI5dXDviXw2doWaiAcOKfWvRcsWcmUxiZDFnYjMA4=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210929085305-6e93431f9e7b h1:qofqafDfdBHkZfDt9hSiygm2lcLMB/XBRavCW82rLmY=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210929085305-6e93431f9e7b/go.mod h1:S2JB2bHTAF/H7RQ90xn018RMXarGPWOiK7IAkkvSxX8=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210929091642-5137cf53af6a h1:PvszlBZY5OtYDcL90Tg/YqMUqYrCY/60siPQiL3NRYo=
-chainmaker.org/chainmaker/vm-native v0.0.0-20210929091642-5137cf53af6a/go.mod h1:S2JB2bHTAF/H7RQ90xn018RMXarGPWOiK7IAkkvSxX8=
 chainmaker.org/chainmaker/vm-native v0.0.0-20211013081635-f03baf843561 h1:sw5gR4kUDYBYtd8jeiU5hxHkTrcwcAF3ZutKSZkOWc4=
 chainmaker.org/chainmaker/vm-native v0.0.0-20211013081635-f03baf843561/go.mod h1:gp8uHb8TQVbZcwQX77vSSEb8wUAIAMy+hoDILAyZVgQ=
 chainmaker.org/chainmaker/vm-wasmer v0.0.0-20210918173526-7cd16f1a1d3a h1:RnZ5wvldjI6XZqJfNX3RSNGEMfCHXSe0k7KfMXmWork=
