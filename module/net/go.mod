@@ -18,7 +18,7 @@ require (
 	github.com/libp2p/go-libp2p-pubsub v0.3.5
 	github.com/multiformats/go-multiaddr v0.3.1
 	github.com/stretchr/testify v1.7.0
-	github.com/tjfoc/gmsm v1.3.2
+	github.com/tjfoc/gmsm v1.4.1
 )
 
 replace (
