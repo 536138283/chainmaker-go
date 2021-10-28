@@ -22,6 +22,7 @@ import (
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/sec"
 	"github.com/tjfoc/gmsm/sm2"
+	tjx509 "github.com/tjfoc/gmsm/x509"
 	"net"
 )
 
@@ -265,7 +266,7 @@ func parsePublicKeyToPubKey(publicKey gocrypto.PublicKey) (crypto.PubKey, error)
 			if err != nil {
 				return nil, err
 			}
-			pub, err := sm2.ParseSm2PublicKey(b)
+			pub, err := tjx509.ParseSm2PublicKey(b)
 			if err != nil {
 				return nil, err
 			}
