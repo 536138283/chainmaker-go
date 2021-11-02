@@ -43,9 +43,7 @@ type RPCServer struct {
 	cancel                     context.CancelFunc
 	curChainConfTrustRootsHash string
 	isShutdown                 bool
-
-	// FIXME: add for restful
-	httpServer                 *http.Server
+	mixServer                 *http.Server
 }
 
 // prom monitor define
@@ -79,7 +77,7 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 		return nil, fmt.Errorf("new grpc server failed, %s", err.Error())
 	}
 
-	httpServer, err := newServer(grpcServer, chainMakerServer)
+	mixServer, err := newMixServer(grpcServer, chainMakerServer)
 	if err != nil {
 		return nil, fmt.Errorf("new http grpc server failed, %s", err.Error())
 	}
@@ -96,8 +94,7 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 
 	return &RPCServer{
 		grpcServer:       grpcServer,
-		// FIXME: add for restful
-		httpServer:       httpServer,
+		mixServer:        mixServer,
 		chainMakerServer: chainMakerServer,
 		log:              logger.GetLogger(logger.MODULE_RPC),
 	}, nil
@@ -128,7 +125,6 @@ func (s *RPCServer) Start() error {
 		return fmt.Errorf("register handler failed, %s", err.Error())
 	}
 
-	// FIXME: add for restful
 	caCerts, err := getCACerts(s.chainMakerServer)
 	if err != nil {
 		return err
@@ -147,11 +143,10 @@ func (s *RPCServer) Start() error {
 	}
 
 	go func() {
-		//err = s.grpcServer.Serve(conn)
 		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_DISABLE {
-			err = s.httpServer.Serve(conn)
+			err = s.mixServer.Serve(conn)
 		} else {
-			err = s.httpServer.Serve(ca.NewTLSListener(conn, tlsConfig))
+			err = s.mixServer.Serve(ca.NewTLSListener(conn, tlsConfig))
 		}
 		if err != nil {
 			s.log.Errorf("grpc Serve failed, %s", err.Error())
@@ -365,7 +360,7 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 	return server, nil
 }
 
-func newServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMakerServer) (*http.Server, error) {
+func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMakerServer) (*http.Server, error) {
 	gwmux, err := newGateway(chainMakerServer)
 	if err != nil {
 		log.Error(err)
@@ -376,10 +371,7 @@ func newServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMakerS
 	mux.Handle("/", gwmux)
 
 	return &http.Server{
-		//Addr:      this.endPoint,
 		Handler:   wsproxy.WebsocketProxy(GrpcHandlerFunc(grpcServer, mux)),
-		//Handler:   grpcServer,
-		//TLSConfig: this.tlsConfig,
 	}, nil
 }
 
@@ -394,8 +386,6 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 		}
 
 		tlsClient := ca.CAClient{
-			// FIXME: only test, 需要改成通过证书读取
-			ServerName: "chainmaker.org",
 			CaCerts:     caCerts,
 			CertFile:   localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
 			KeyFile:    localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
