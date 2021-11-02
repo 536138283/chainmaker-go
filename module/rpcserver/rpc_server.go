@@ -12,6 +12,8 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 	"net"
 	"net/http"
 	"sort"
@@ -77,7 +79,7 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 		return nil, fmt.Errorf("new grpc server failed, %s", err.Error())
 	}
 
-	httpServer, err := newServer(grpcServer)
+	httpServer, err := newServer(grpcServer, chainMakerServer)
 	if err != nil {
 		return nil, fmt.Errorf("new http grpc server failed, %s", err.Error())
 	}
@@ -358,33 +360,67 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 		opts = append(opts, grpc.Creds(*c))
 	}
 
-	//params := grpc.KeepaliveParams(keepalive.ServerParameters{
-	//	Time:    10 * time.Second,
-	//	Timeout: 10 * time.Second,
-	//})
-	//opts = append(opts, params)
-
 	server := grpc.NewServer(opts...)
 
 	return server, nil
 }
 
-func newServer(grpcServer *grpc.Server) (*http.Server, error) {
-	//gwmux, err := this.newGateway()
-	//if err != nil {
-	//	seelog.Error(err)
-	//	return nil, err
-	//}
+func newServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMakerServer) (*http.Server, error) {
+	gwmux, err := newGateway(chainMakerServer)
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
 
-	//mux := http.NewServeMux()
-	//mux.Handle("/", gwmux)
+	mux := http.NewServeMux()
+	mux.Handle("/", gwmux)
 
 	return &http.Server{
 		//Addr:      this.endPoint,
-		Handler:   GrpcHandlerFunc(grpcServer, nil),
+		Handler:   wsproxy.WebsocketProxy(GrpcHandlerFunc(grpcServer, mux)),
 		//Handler:   grpcServer,
 		//TLSConfig: this.tlsConfig,
 	}, nil
+}
+
+func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, error) {
+	ctx := context.Background()
+
+	dopts := []grpc.DialOption{}
+	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+		caCerts, err := getCACerts(chainMakerServer)
+		if err != nil {
+			return nil, err
+		}
+
+		tlsClient := ca.CAClient{
+			// FIXME: only test, 需要改成通过证书读取
+			ServerName: "chainmaker.org",
+			CaCerts:     caCerts,
+			CertFile:   localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+			KeyFile:    localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
+		}
+
+		c, err := tlsClient.GetCredentialsByCA()
+		if err != nil {
+			log.Errorf("new gateway failed, GetTLSCredentialsByCA err: %v", err)
+			return nil, err
+		}
+
+		dopts = append(dopts, grpc.WithTransportCredentials(*c))
+	} else {
+		dopts = append(dopts, grpc.WithInsecure())
+	}
+
+	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
+
+	gwmux := runtime.NewServeMux()
+	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, "localhost"+ endPoint, dopts); err != nil {
+		log.Errorf("new gateway failed, RegisterRpcNodeHandlerFromEndpoint err: %v", err)
+		return nil, err
+	}
+
+	return gwmux, nil
 }
 
 func getCACerts(chainMakerServer *blockchain.ChainMakerServer) ([]string, error) {
@@ -398,7 +434,6 @@ func getCACerts(chainMakerServer *blockchain.ChainMakerServer) ([]string, error)
 		for _, orgRoot := range chainConf.ChainConfig().TrustRoots {
 			caCerts = append(caCerts, orgRoot.Root...)
 		}
-
 	}
 
 	return caCerts, nil

@@ -233,22 +233,16 @@ func splitMethodName(fullMethodName string) (string, string) {
 
 func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
 	if otherHandler == nil {
-		//return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		//	grpcServer.ServeHTTP(w, r)
-		//})
-
 		return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			grpcServer.ServeHTTP(w, r)
 		}), &http2.Server{})
 	}
 
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.ProtoMajor == 2 && strings.Contains(r.Header.Get("Content-Type"), "application/grpc") {
-			log.Infof("################ GRPC server ")
 			grpcServer.ServeHTTP(w, r)
 		} else {
-			log.Infof("################ OTHER server")
 			otherHandler.ServeHTTP(w, r)
 		}
-	})
+	}), &http2.Server{})
 }
