@@ -8,7 +8,7 @@ else
   endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=v1.2.5
+VERSION=v1.2.6
 
 AARCH64="aarch64"
 CPU=$(shell uname -m)
@@ -110,11 +110,11 @@ mockgen-dep:
 
 docker-build:
 	docker build -t chainmaker -f ./DOCKER/Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.5
+	docker tag chainmaker chainmaker:v1.2.6
 
 docker-build-dev: chainmaker
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.5
+	docker tag chainmaker chainmaker:v1.2.6
 
 docker-compose-start: docker-compose-stop
 	docker-compose up -d
