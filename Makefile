@@ -110,11 +110,11 @@ mockgen-dep:
 
 docker-build:
 	docker build -t chainmaker -f ./DOCKER/Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.6
+	docker tag chainmaker chainmakerofficial/chainmaker:$(VERSION)
 
 docker-build-dev: chainmaker
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.6
+	docker tag chainmaker chainmakerofficial/chainmaker:$(VERSION)
 
 docker-compose-start: docker-compose-stop
 	docker-compose up -d

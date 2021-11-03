@@ -12,6 +12,8 @@ services:
       - "12301:12301"
     volumes:
       - ./config/solo/wx-org1.chainmaker.org:/chainmaker-go/config/wx-org1.chainmaker.org
+      - ./data_solo:/chainmaker-go/data
+      - ./log_solo:/chainmaker-go/log
     networks:
       cm:
         ipv4_address: 172.33.2.2
