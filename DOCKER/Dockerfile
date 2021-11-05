@@ -1,9 +1,4 @@
-FROM golang:1.16.2 as builder
-ENV GOPROXY=https://goproxy.cn,direct
-COPY . /chainmaker-go
-RUN cd /chainmaker-go && make chainmaker 
-
-# the second stage
+# the first stage
 FROM ubuntu:20.04
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
 RUN apt-get update && apt-get install -y vim net-tools tree gcc g++ curl wget
@@ -20,6 +15,12 @@ RUN echo deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main >> /etc/ap
 RUN echo deb-src http://apt.llvm.org/xenial/ llvm-toolchain-xenial-8 main >> /etc/apt/sources.list.d/llvm.list
 RUN wget -q -O - http://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add -
 RUN apt-get install llvm-8 libllvm8
+
+# the second stage
+FROM golang:1.16.2 as builder
+ENV GOPROXY=https://goproxy.cn,direct
+COPY . /chainmaker-go
+RUN cd /chainmaker-go && make chainmaker
 
 COPY --from=builder /chainmaker-go/main/libwasmer_runtime_c_api.so /usr/lib/libwasmer.so
 COPY --from=builder /chainmaker-go/main/prebuilt/linux/wxdec /usr/bin
