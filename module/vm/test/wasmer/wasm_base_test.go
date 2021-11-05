@@ -7,15 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package wasmertest
 
 import (
-	// pprof 的init函数会将pprof里的一些handler注册到http.DefaultServeMux上
-	// 当不使用http.DefaultServeMux来提供http api时，可以查阅其init函数，自己注册handler
+	"chainmaker.org/chainmaker-go/protocol"
 	_ "net/http/pprof"
 )
 
 // Module 序列化后实例wasm
 // 经测试证明 序列化反序列化方式Instantiate慢200倍
 //func TestSerializationModuleSpendTest(t *testing.T) {
-//	byteCode, _ := wasm.ReadBytes("D:/develop/workspace/chainMaker/chainmaker-contract-sdk-rust/target/wasm32-unknown-unknown/release/chainmaker_contract.wasm")
+//	byteCode, _ := wasm.ReadBytes("../../../../test/wasm/rust-counter-1.2.0.wasm")
 //	module1, _ := wasm.Compile(byteCode)
 //
 //	serialization, _ := module1.Serialize()
@@ -35,7 +34,7 @@ import (
 
 // Module 直接实例wasm
 //func TestModuleSpendTest(t *testing.T) {
-//	byteCode, _ := wasm.ReadBytes("D:/develop/workspace/chainMaker/chainmaker-contract-sdk-rust/target/wasm32-unknown-unknown/release/chainmaker_contract.wasm")
+//	byteCode, _ := wasm.ReadBytes("../../../../test/wasm/rust-counter-1.2.0.wasm")
 //	module1, _ := wasm.Compile(byteCode)
 //
 //	start := time.Now().UnixNano() / 1e6
@@ -47,3 +46,14 @@ import (
 //	end := time.Now().UnixNano() / 1e6
 //	println("【spend】", end-start)
 //}
+
+func baseParam(parameters map[string]string) {
+	parameters[protocol.ContractTxIdParam] = "TX_ID"
+	parameters[protocol.ContractCreatorOrgIdParam] = "CREATOR_ORG_ID"
+	parameters[protocol.ContractCreatorRoleParam] = "CREATOR_ROLE"
+	parameters[protocol.ContractCreatorPkParam] = "CREATOR_PK"
+	parameters[protocol.ContractSenderOrgIdParam] = "SENDER_ORG_ID"
+	parameters[protocol.ContractSenderRoleParam] = "SENDER_ROLE"
+	parameters[protocol.ContractSenderPkParam] = "SENDER_PK"
+	parameters[protocol.ContractBlockHeightParam] = "111"
+}

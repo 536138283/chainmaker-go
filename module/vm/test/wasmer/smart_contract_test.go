@@ -7,20 +7,17 @@ SPDX-License-Identifier: Apache-2.0
 package wasmertest
 
 import (
-	"fmt"
-	"gotest.tools/assert"
-	"strings"
-	"sync"
-	"testing"
-	"time"
-
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"chainmaker.org/chainmaker-go/vm/test"
 	"chainmaker.org/chainmaker-go/wasmer"
-	wasm "chainmaker.org/chainmaker-go/wasmer/wasmer-go"
+	"fmt"
+	"gotest.tools/assert"
+	"sync"
+	"testing"
+	"time"
 
 	// pprof 的init函数会将pprof里的一些handler注册到http.DefaultServeMux上
 	// 当不使用http.DefaultServeMux来提供http api时，可以查阅其init函数，自己注册handler
@@ -31,10 +28,12 @@ var log = logger.GetLoggerByChain(logger.MODULE_VM, test.ChainIdTest)
 
 // 存证合约 单例需要大于65536次，因为内存是64K
 func TestCallFact(t *testing.T) {
-	//test.WasmFile = "../../../../test/wasm/rust-fact-1.2.0.wasm"
-	test.WasmFile = "../../../../test/wasm/rust-func-verify-1.2.0.wasm"
-	//test.WasmFile = "D:\\develop\\workspace\\chainMaker\\chainmaker-contract-sdk-rust\\target\\wasm32-unknown-unknown\\release\\chainmaker_contract.wasm"
-	contractId, txContext, bytes := test.InitContextTest(commonPb.RuntimeType_WASMER)
+	fmt.Println("\n\n\n =========== FuncVerify Test 1 ================")
+	contractName := "ContractFuncVerify"
+	contractVersion := "1.0.0"
+	wasmFile := "../../../../test/wasm/rust-func-verify-1.2.5.wasm"
+
+	contractId, txContext, bytes := test.InitContextTest(contractName, contractVersion, wasmFile, commonPb.RuntimeType_WASMER)
 	println("bytes len", len(bytes))
 
 	pool := test.GetVmPoolManager()
@@ -65,7 +64,7 @@ func TestCallFact(t *testing.T) {
 
 	end := time.Now().UnixNano() / 1e6
 	println("end 【spend】", end-start)
-	time.Sleep(time.Second * 2)
+	//time.Sleep(time.Second * 2)
 	println("reset vm pool")
 	//pool.ResetAllPool()
 	//time.Sleep(time.Second * 500)
@@ -80,7 +79,7 @@ func invokeFact(method string, id int32, contractId *commonPb.ContractId, txCont
 	parameters["file_name"] = txId
 	parameters["tx_id"] = txId
 	parameters["forever"] = "true"
-	parameters["contract_name"] = test.ContractNameTest
+	parameters["contract_name"] = contractId.ContractName
 
 	baseParam(parameters)
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
@@ -90,9 +89,13 @@ func invokeFact(method string, id int32, contractId *commonPb.ContractId, txCont
 }
 
 func TestFunctionalContract(t *testing.T) {
-	test.WasmFile = "../../../../test/wasm/rust-func-verify-1.2.0.wasm"
-	contractId, txContext, bytes := test.InitContextTest(commonPb.RuntimeType_WASMER)
-	pool := wasmer.NewVmPoolManager("chain001")
+	fmt.Println("\n\n\n =========== FuncVerify Test 2 ================")
+	contractName := "ContractFuncVerify"
+	contractVersion := "1.0.0"
+	wasmFile := "../../../../test/wasm/rust-func-verify-1.2.5.wasm"
+
+	contractId, txContext, bytes := test.InitContextTest(contractName, contractVersion, wasmFile, commonPb.RuntimeType_WASMER)
+	pool := wasmer.NewVmPoolManager("chain01")
 
 	invokeFactContract("init_contract", contractId, txContext, pool, bytes)
 	invokeFactContract("upgrade", contractId, txContext, pool, bytes)
@@ -135,7 +138,7 @@ func invokeFactContract(method string, contractId *commonPb.ContractId, txContex
 	parameters["time"] = "1314520"
 	parameters["file_hash"] = "file_hash"
 	parameters["file_name"] = "file_name"
-	parameters["contract_name"] = test.ContractNameTest
+	parameters["contract_name"] = contractId.ContractName
 	baseParam(parameters)
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
 	r, _ := runtime.Invoke(contractId, method, byteCode, parameters, txContext, 0)
@@ -144,74 +147,63 @@ func invokeFactContract(method string, contractId *commonPb.ContractId, txContex
 }
 
 // 使用原始调用智能合约
-func TestCallHelloWorldUseOrigin(t *testing.T) {
-	_, _, byteCode := test.InitContextTest(commonPb.RuntimeType_WASMER)
-	if byteCode == nil {
-		panic("byteCode is nil")
-	}
-	vb := wasmer.GetVmBridgeManager()
-	instance, _ := wasm.NewInstanceWithImports(byteCode, vb.GetImports())
-	defer instance.Close()
-
-	// Set the subject to greet.
-	subject := "Wasmer 🐹"
-	for i := 0; i < 1000; i++ {
-		subject += "Wasmer 🐹"
-	}
-	lengthOfSubject := len(subject)
-
-	// Allocate memory for the subject, and get a pointer to it.
-	allocateResult, _ := instance.Exports["allocate"](lengthOfSubject)
-	inputPointer := allocateResult.ToI32()
-
-	// Write the subject into the memory.
-	memory := instance.Memory.Data()[inputPointer:]
-
-	for nth := 0; nth < lengthOfSubject; nth++ {
-		memory[nth] = subject[nth]
-	}
-
-	// C-string terminates by NULL.
-	memory[lengthOfSubject] = 0
-
-	// Run the `greet` function. Given the pointer to the subject.
-	greetResult, _ := instance.Exports["increase"](inputPointer, lengthOfSubject)
-	outputPointer := greetResult.ToI32()
-
-	// Read the result of the `greet` function.
-	memory = instance.Memory.Data()[outputPointer:]
-	nth := 0
-	var output strings.Builder
-
-	for {
-		if memory[nth] == 0 {
-			break
-		}
-
-		output.WriteByte(memory[nth])
-		nth++
-	}
-
-	lengthOfOutput := nth
-
-	fmt.Println("out ", output.String())
-
-	// Deallocate the subject, and the output.
-	deallocate := instance.Exports["deallocate"]
-	deallocate(inputPointer, lengthOfSubject)
-	deallocate(outputPointer, lengthOfOutput)
-
-	fmt.Println("end ")
-	time.Sleep(time.Second * 2)
-}
-
-func baseParam(parameters map[string]string) {
-	parameters[protocol.ContractTxIdParam] = "TX_ID"
-	parameters[protocol.ContractCreatorOrgIdParam] = "CREATOR_ORG_ID"
-	parameters[protocol.ContractCreatorRoleParam] = "CREATOR_ROLE"
-	parameters[protocol.ContractCreatorPkParam] = "CREATOR_PK"
-	parameters[protocol.ContractSenderOrgIdParam] = "SENDER_ORG_ID"
-	parameters[protocol.ContractSenderRoleParam] = "SENDER_ROLE"
-	parameters[protocol.ContractSenderPkParam] = "SENDER_PK"
-	parameters[protocol.ContractBlockHeightParam] = "111"
-}
+//func TestCallHelloWorldUseOrigin(t *testing.T) {
+//	_, _, byteCode := test.InitContextTest(commonPb.RuntimeType_WASMER)
+//	if byteCode == nil {
+//		panic("byteCode is nil")
+//	}
+//	vb := wasmer.GetVmBridgeManager()
+//	instance, _ := wasm.NewInstanceWithImports(byteCode, vb.GetImports())
+//	defer instance.Close()
+//
+//	// Set the subject to greet.
+//	subject := "Wasmer 🐹"
+//	for i := 0; i < 1000; i++ {
+//		subject += "Wasmer 🐹"
+//	}
+//	lengthOfSubject := len(subject)
+//
+//	// Allocate memory for the subject, and get a pointer to it.
+//	allocateResult, _ := instance.Exports["allocate"](lengthOfSubject)
+//	inputPointer := allocateResult.ToI32()
+//
+//	// Write the subject into the memory.
+//	memory := instance.Memory.Data()[inputPointer:]
+//
+//	for nth := 0; nth < lengthOfSubject; nth++ {
+//		memory[nth] = subject[nth]
+//	}
+//
+//	// C-string terminates by NULL.
+//	memory[lengthOfSubject] = 0
+//
+//	// Run the `greet` function. Given the pointer to the subject.
+//	greetResult, _ := instance.Exports["increase"](inputPointer, lengthOfSubject)
+//	outputPointer := greetResult.ToI32()
+//
+//	// Read the result of the `greet` function.
+//	memory = instance.Memory.Data()[outputPointer:]
+//	nth := 0
+//	var output strings.Builder
+//
+//	for {
+//		if memory[nth] == 0 {
+//			break
+//		}
+//
+//		output.WriteByte(memory[nth])
+//		nth++
+//	}
+//
+//	lengthOfOutput := nth
+//
+//	fmt.Println("out ", output.String())
+//
+//	// Deallocate the subject, and the output.
+//	deallocate := instance.Exports["deallocate"]
+//	deallocate(inputPointer, lengthOfSubject)
+//	deallocate(outputPointer, lengthOfOutput)
+//
+//	fmt.Println("end ")
+//	time.Sleep(time.Second * 2)
+//}
