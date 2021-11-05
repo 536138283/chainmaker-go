@@ -38,13 +38,13 @@ const (
 )
 
 var (
-	totalCallTimes int64
-	vmGoroutineNum int64
-	vmType         string
-	wasmFilePath   string
-	certFilePath   string
-	reportFilePath string
-	contractName 	string
+	totalCallTimes 	int64
+	vmGoroutineNum 	int64
+	vmType         	string
+	wasmFilePath   	string
+	certFilePath   	string
+	reportFilePath 	string
+	contractName  	string
 	contractVersion	string
 )
 
