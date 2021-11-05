@@ -20,10 +20,11 @@ import (
 )
 
 func TestContract_Fact(t *testing.T) {
-	//test.WasmFile = "../../../../test/wasm/go-fact-1.2.0.wasm"
-	test.WasmFile = "../../../../test/wasm/go-func-verify-1.2.0.wasm"
-	//test.WasmFile = "D:/develop/workspace/chainMaker/chainmaker-go/module/vm/sdk/go/fact-go.wasm"
-	contractId, txContext, byteCode := test.InitContextTest(commonPb.RuntimeType_GASM)
+	contractName := "ContractFact"
+	contractVersion := "1.0.0"
+	wasmFile := "../../../../test/wasm/go-func-verify-1.2.0.wasm"
+
+	contractId, txContext, byteCode := test.InitContextTest(contractName, contractVersion, wasmFile, commonPb.RuntimeType_GASM)
 
 	if len(byteCode) == 0 {
 		panic("error byteCode==0")
@@ -60,7 +61,7 @@ func invokeCallContractTestSave(method string, id int32, contractId *commonPb.Co
 	parameters["app_id"] = "app_id"
 	parameters["file_hash"] = "staticVal2"
 	parameters["file_name"] = "staticVal3"
-	parameters["contract_name"] = test.ContractNameTest
+	parameters["contract_name"] = contractId.ContractName
 	//parameters["method"] = "save"
 	parameters["time"] = "12"
 
@@ -73,8 +74,11 @@ func invokeCallContractTestSave(method string, id int32, contractId *commonPb.Co
 }
 
 func TestFunctionalContract(t *testing.T) {
-	test.WasmFile = "../../../../test/wasm/go-func-verify-1.2.0.wasm"
-	contractId, txContext, bytes := test.InitContextTest(commonPb.RuntimeType_GASM)
+	contractName := "ContractFuncVerify"
+	contractVersion := "1.0.0"
+	wasmFile := "../../../../test/wasm/go-func-verify-1.2.0.wasm"
+
+	contractId, txContext, bytes := test.InitContextTest(contractName, contractVersion, wasmFile, commonPb.RuntimeType_GASM)
 
 	invokeFunctionalContract("init_contract", contractId, txContext, bytes)
 	invokeFunctionalContract("upgrade", contractId, txContext, bytes)
@@ -117,7 +121,7 @@ func invokeFunctionalContract(method string, contractId *commonPb.ContractId, tx
 	parameters["time"] = "1314520"
 	parameters["file_hash"] = "file_hash"
 	parameters["file_name"] = "file_name"
-	parameters["contract_name"] = test.ContractNameTest
+	parameters["contract_name"] = contractId.ContractName
 	test.BaseParam(parameters)
 
 	runtimeInstance := &gasm.RuntimeInstance{
