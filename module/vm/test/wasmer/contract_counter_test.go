@@ -22,7 +22,7 @@ import (
 
 // 功能测试，边界测试
 func TestCallCounterFunc(t *testing.T) {
-	fmt.Println("\n\n\n =========== Counter Test 1 ====================")
+	fmt.Println("\n\n\n =========== Counter Test 1 ===================")
 	contractName := "ContractCounter"
 	contractVersion := "1.0.0"
 	wasmFile := "../../../../test/wasm/rust-counter-1.2.0.wasm"
