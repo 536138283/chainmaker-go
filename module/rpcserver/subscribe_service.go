@@ -781,9 +781,15 @@ func (s *ApiService) doSendContractEvent(tx *commonPb.Transaction, db protocol.B
 		return s.sendNewContractEvent(db, tx, server, startBlock, endBlock, contractName, topic, -1)
 	}
 
-	if alreadySendHistoryBlockHeight, err = s.doSendHistoryContractEvent(db, server, startBlock, endBlock,
-		contractName, topic); err != nil {
-		return err
+	if startBlock != -1 {
+		if alreadySendHistoryBlockHeight, err = s.doSendHistoryContractEvent(db, server, startBlock, endBlock,
+			contractName, topic); err != nil {
+			return err
+		}
+	}
+
+	if startBlock == -1 {
+		alreadySendHistoryBlockHeight = -1
 	}
 
 	if alreadySendHistoryBlockHeight == 0 {
