@@ -32,6 +32,7 @@ tools
 /log/
 .DS_Store
 /module/vm/test/*/tmp/
+/module/vm/test/wasmer/*log*
 nohup.out
 main/chainmaker
 tools/cmc/cmc

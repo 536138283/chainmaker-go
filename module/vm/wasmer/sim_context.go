@@ -112,6 +112,7 @@ func (sc *SimContext) callContract(instance *wasm.Instance, methodName string, b
 
 // CallDeallocate deallocate vm memory before closing the instance
 func CallDeallocate(instance *wasm.Instance) error {
+	instance.SetGasLimit(protocol.GasLimit)
 	_, err := instance.Exports[protocol.ContractDeallocateMethod](0)
 	return err
 }

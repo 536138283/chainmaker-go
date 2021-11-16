@@ -33,15 +33,19 @@ const (
 	flagWasmFilePath   = "wasm-file-path"
 	flagCertFilePath   = "cert-file-path"
 	flagReportFilePath = "report-file-path"
+	flagContractName   = "contract-name"
+	flagContractVersion = "version"
 )
 
 var (
-	totalCallTimes int64
-	vmGoroutineNum int64
-	vmType         string
-	wasmFilePath   string
-	certFilePath   string
-	reportFilePath string
+	totalCallTimes 	int64
+	vmGoroutineNum 	int64
+	vmType         	string
+	wasmFilePath   	string
+	certFilePath   	string
+	reportFilePath 	string
+	contractName  	string
+	contractVersion	string
 )
 
 func main() {
@@ -62,7 +66,6 @@ func main() {
 }
 
 func startPerf() {
-	test.WasmFile = wasmFilePath
 	test.CertFilePath = certFilePath
 	var contractId *commonPb.ContractId
 	var txContext protocol.TxSimContext
@@ -70,10 +73,10 @@ func startPerf() {
 	var vmTypeInt int
 	if strings.ToLower(vmType) == "gasm" {
 		vmTypeInt = 0
-		contractId, txContext, byteCode = test.InitContextTest(commonPb.RuntimeType_GASM)
+		contractId, txContext, byteCode = test.InitContextTest(contractName, contractVersion, wasmFilePath, commonPb.RuntimeType_GASM)
 	} else if strings.ToLower(vmType) == "wasmer" {
 		vmTypeInt = 1
-		contractId, txContext, byteCode = test.InitContextTest(commonPb.RuntimeType_WASMER)
+		contractId, txContext, byteCode = test.InitContextTest(contractName, contractVersion, wasmFilePath, commonPb.RuntimeType_WASMER)
 	} else {
 		log.Fatal("unknown vm type: ", vmType, ", only support gasm or wasmer")
 	}
@@ -233,6 +236,8 @@ func initFlagSet() *pflag.FlagSet {
 	flags.StringVar(&wasmFilePath, flagWasmFilePath, "./counter-go.wasm", "specify the wasm file path")
 	flags.StringVar(&certFilePath, flagCertFilePath, "./client1.sign.crt", "specify user's cert file")
 	flags.StringVar(&reportFilePath, flagReportFilePath, "./Vm Performance Report.html", "specify the report file")
+	flags.StringVar(&contractName, flagContractName, "contract-counter-go", "specify the contract name")
+	flags.StringVar(&contractVersion, flagContractVersion, "1.0.0", "specify the contract version 'x.x.x'")
 	return flags
 }
 

@@ -23,7 +23,7 @@ const (
 	defaultMaxSize        = 100                   // the max pool size for every contract
 	defaultMinSize        = 10                    // the min pool size
 	defaultChangeSize     = 10                    // grow pool size
-	defaultDelayTolerance = time.Millisecond * 10 // if get instance avg time greater than this value, should grow pool
+	defaultDelayTolerance = 10 					  // if get instance avg time greater than this value, should grow pool
 	defaultApplyThreshold = 100                   // if apply times greater than this value, should grow pool
 	defaultDiscardCount   = 10                    // if wasmer instance invoke error more than N times, should close and discard this instance
 )

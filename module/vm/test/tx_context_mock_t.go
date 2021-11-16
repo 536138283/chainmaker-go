@@ -40,8 +40,8 @@ var txType = commonPb.TxType_INVOKE_USER_CONTRACT
 var pool *wasmer.VmPoolManager
 
 const (
-	ContractNameTest    = "contract01"
-	ContractVersionTest = "v1.0.0"
+	//ContractNameTest    = "contract01"
+	//ContractVersionTest = "v1.0.0"
 	ChainIdTest         = "chain01"
 )
 
@@ -52,19 +52,17 @@ func GetVmPoolManager() *wasmer.VmPoolManager {
 	return pool
 }
 
-var bytes []byte
 var file []byte
 
 // 初始化上下文和wasm字节码
-func InitContextTest(runtimeType commonPb.RuntimeType) (*commonPb.ContractId, protocol.TxSimContext, []byte) {
-	if bytes == nil {
-		bytes, _ = wasm.ReadBytes(WasmFile)
-		fmt.Printf("Wasm file size=%d\n", len(bytes))
-	}
+func InitContextTest(contractName string, contractVersion string, wasmFile string, runtimeType commonPb.RuntimeType) (*commonPb.ContractId, protocol.TxSimContext, []byte) {
+
+	bytes, _ := wasm.ReadBytes(wasmFile)
+	fmt.Printf("Wasm file size=%d\n", len(bytes))
 
 	contractId := commonPb.ContractId{
-		ContractName:    ContractNameTest,
-		ContractVersion: ContractVersionTest,
+		ContractName:    contractName,
+		ContractVersion: contractVersion,
 		RuntimeType:     runtimeType,
 	}
 
@@ -115,9 +113,9 @@ func InitContextTest(runtimeType commonPb.RuntimeType) (*commonPb.ContractId, pr
 		kvRowCache: make(map[int32]protocol.StateIterator),
 	}
 
-	versionKey := []byte(protocol.ContractVersion + ContractNameTest)
-	runtimeTypeKey := []byte(protocol.ContractRuntimeType + ContractNameTest)
-	versionedByteCodeKey := append([]byte(protocol.ContractByteCode+ContractNameTest), []byte(contractId.ContractVersion)...)
+	versionKey := []byte(protocol.ContractVersion + contractName)
+	runtimeTypeKey := []byte(protocol.ContractRuntimeType + contractName)
+	versionedByteCodeKey := append([]byte(protocol.ContractByteCode+contractName), []byte(contractId.ContractVersion)...)
 
 	txContext.Put(commonPb.ContractName_SYSTEM_CONTRACT_STATE.String(), versionedByteCodeKey, bytes)
 	txContext.Put(commonPb.ContractName_SYSTEM_CONTRACT_STATE.String(), versionKey, []byte(contractId.ContractVersion))
@@ -200,7 +198,10 @@ func (s *TxContextMockTest) Get(name string, key []byte) ([]byte, error) {
 	k := string(key)
 	val, err := s.db.Get([]byte(k), nil)
 	if err != nil {
-		fmt.Println("get", err)
+		if err == leveldb.ErrNotFound {
+			return nil, nil
+		}
+		return nil, err
 	}
 	return val, nil
 }
