@@ -167,6 +167,8 @@ lint:
 #	cd tools/scanner && golangci-lint run ./...
 #	cd tools/sdk && golangci-lint run ./...
 
+sql-qta:
+	echo "enabled in v2.X, ignore it"
 qta:
 	cd test/send_proposal_request_ci && ./build.sh
 	cd test/send_proposal_request_ci && ./start_solo.sh
