@@ -989,8 +989,8 @@ func (consensus *ConsensusTBFTImpl) enterNewRound(height int64, round int32) {
 	consensus.Height = height
 	consensus.Round = round
 	consensus.Step = tbftpb.Step_NewRound
-	consensus.TriggeredTimeoutPrevote = false
-	consensus.TriggeredTimeoutPrecommit = false
+	consensus.TriggeredTimeoutPrevote = false   // reset triggered flag  for prevoteTimeout
+	consensus.TriggeredTimeoutPrecommit = false // reset triggered flag  for precommitTimeout
 	consensus.Proposal = nil
 	consensus.VerifingProposal = nil
 	consensus.metrics.SetEnterNewRoundTime(consensus.Round)
