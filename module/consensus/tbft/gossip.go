@@ -18,7 +18,8 @@ import (
 )
 
 const (
-	defaultSleepTime = 500 * time.Millisecond
+	defaultSleepTime  = 500 * time.Millisecond
+	disconnectMaxTime = 10 * time.Minute
 )
 
 // gossipService if for gossipService consensus state between validators
