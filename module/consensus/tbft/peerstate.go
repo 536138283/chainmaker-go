@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strings"
 	"sync"
+	"time"
 
 	netpb "chainmaker.org/chainmaker-go/pb/protogo/net"
 
@@ -37,19 +38,118 @@ type PeerStateService struct {
 	ValidProposal    *Proposal // valid proposal
 	RoundVoteSet     *roundVoteSet
 
+	*PeerSendState
 	stateC   chan *tbftpb.GossipState
 	tbftImpl *ConsensusTBFTImpl
 	msgbus   msgbus.MessageBus
 	closeC   chan struct{}
 }
 
+type PeerSendState struct {
+	logger       *logger.CMLogger
+	fibs         [100]int64
+	Height       int64
+	Round        int64
+	beatTime     int64
+	TriggerTime  int64 // The timestamp of sending proposals at the same height
+	TriggerCount int64 // The count of sending proposals at the same height
+}
+
+// NewPeerSendState create a PeerSendState instance
+func NewPeerSendState(logger *logger.CMLogger) *PeerSendState {
+	pss := &PeerSendState{
+		logger: logger,
+		Height: -1, // The height starts at 0
+		Round:  -1, // The height starts at 0
+	}
+	return pss
+}
+
+func (pss *PeerSendState) isSendTime(height, round int64) bool {
+
+	triggerTimeDate := time.Unix(pss.TriggerTime/1000000000, 0).Format("2006-01-02 15:04:05")
+	pss.logger.Debugf("PeerSendState params ([%d/%d],[%d/%s]) isSendTime to (%d/%d)",
+		pss.Height, pss.Round, pss.TriggerCount, triggerTimeDate, height, round)
+
+	//12点
+	nowTime := time.Now().UnixNano()
+	nowTimeDate := time.Unix(nowTime/1000000000, 0).Format("2006-01-02 15:04:05")
+	if pss.beatTime == 0 {
+		//12点
+		pss.beatTime = nowTime
+	}
+	// determine the duration of node disconnection
+	//12：10  > 12
+	if pss.beatTime+int64(disconnectMaxTime) < nowTime {
+		beatTimeDate := time.Unix(pss.beatTime/1000000000, 0).Format("2006-01-02 15:04:05")
+		pss.logger.Debugf("PeerSendState ([%d/%d], [%s,%s]) ,no need to send msg to a disconnected node",
+			pss.Height, pss.Round, beatTimeDate, nowTimeDate)
+		return false
+	}
+	if pss.Height != height || pss.Round != round {
+		pss.Height = height
+		pss.Round = round
+		//12点
+		pss.TriggerTime = nowTime
+		pss.TriggerCount = 1
+		triggerTimeDate = time.Unix(pss.TriggerTime/1000000000, 0).Format("2006-01-02 15:04:05")
+		pss.logger.Debugf("([%d/%d],[%d/%s]) isSendTime true to (%d/%d)",
+			pss.Height, pss.Round, pss.TriggerCount, triggerTimeDate, height, round)
+		return true
+	}
+
+	//500ms
+	interval := pss.fibonacci(pss.TriggerCount) * int64(defaultSleepTime)
+	pss.logger.Debugf("PeerSendState fibonacci ([%d/%d,],[%d/%s]) => (%d/%d),%d ms,%s",
+		pss.Height, pss.Round, pss.TriggerCount, triggerTimeDate, height, round, interval/1000000, nowTimeDate)
+	//12点+500ms  > 12点
+	if pss.TriggerTime+interval < nowTime {
+		pss.Height = height
+		pss.Round = round
+		pss.TriggerTime = nowTime
+		pss.TriggerCount++
+		triggerTimeDate = time.Unix(pss.TriggerTime/1000000000, 0).Format("2006-01-02 15:04:05")
+		pss.logger.Debugf("([%d/%d,],[%d/%s]) isSendTime true to (%d/%d)",
+			pss.Height, pss.Round, pss.TriggerCount, triggerTimeDate, height, round)
+		return true
+	}
+
+	pss.logger.Debugf("([%d/%d],[%d/%s]) isSendTime false to (%d/%d)",
+		pss.Height, pss.Round, pss.TriggerCount, triggerTimeDate, height, round)
+	return false
+}
+
+func (pss *PeerSendState) fibonacci(n int64) (res int64) {
+	// reduce unnecessary frequent calculations
+	// cache: check if fibonacci(n) is already known in array
+	if pss.fibs[n] != 0 {
+		res = pss.fibs[n]
+		return
+	}
+	if n <= 1 {
+		res = 1
+	} else {
+		var pre, cur int64 = 1, 1
+		var sum, i int64 = 0, 2
+		for ; i <= n; i++ {
+			sum = pre + cur
+			pre = cur
+			cur = sum
+		}
+		res = sum
+	}
+	pss.fibs[n] = res
+	return
+}
+
 // NewPeerStateService create a PeerStateService instance
 func NewPeerStateService(logger *logger.CMLogger, id string, tbftImpl *ConsensusTBFTImpl) *PeerStateService {
 	pcs := &PeerStateService{
-		logger:   logger,
-		Id:       id,
-		tbftImpl: tbftImpl,
-		msgbus:   tbftImpl.msgbus,
+		logger:        logger,
+		Id:            id,
+		tbftImpl:      tbftImpl,
+		PeerSendState: NewPeerSendState(logger),
+		msgbus:        tbftImpl.msgbus,
 	}
 	pcs.stateC = make(chan *tbftpb.GossipState, defaultChanCap)
 	pcs.closeC = make(chan struct{})
@@ -91,6 +191,7 @@ func (pcs *PeerStateService) updateWithProto(pcsProto *tbftpb.GossipState) {
 	pcs.Step = pcsProto.Step
 	pcs.Proposal = pcsProto.Proposal
 	pcs.VerifingProposal = pcsProto.VerifingProposal
+	pcs.beatTime = time.Now().UnixNano()
 	validatorSet := pcs.tbftImpl.getValidatorSet()
 	pcs.RoundVoteSet = newRoundVoteSetFromProto(pcs.logger, pcsProto.RoundVoteSet, validatorSet)
 	// fetch votes from this node state
@@ -193,6 +294,8 @@ func (pcs *PeerStateService) sendStateChange() {
 	if pcs.tbftImpl.Height < pcs.Height {
 		return
 	} else if pcs.tbftImpl.Height == pcs.Height {
+		pcs.logger.Debugf("[%s](%d) sendStateOfRound to [%s](%d/%d/%s)",
+			pcs.tbftImpl.Id, pcs.tbftImpl.Height, pcs.Id, pcs.Height, pcs.Round, pcs.Step)
 		pcs.sendStateOfRound()
 	} else {
 		pcs.logger.Debugf("[%s](%d) sendStateOfHeight to [%s](%d/%d/%s)",
@@ -213,6 +316,14 @@ func (pcs *PeerStateService) sendProposalOfRound(height int64, round int32) {
 		pcs.tbftImpl.Proposal != nil &&
 		pcs.VerifingProposal == nil &&
 		pcs.Step >= tbftpb.Step_Propose {
+		// appropriate send time
+		if !pcs.PeerSendState.isSendTime(pcs.Height, int64(pcs.Round)) {
+			pcs.logger.Infof("[%s](%d/%d/%s) sendStateChange to [%s](%d/%d/%s) is not send time",
+				pcs.tbftImpl.Id, pcs.tbftImpl.Height, pcs.tbftImpl.Round, pcs.tbftImpl.Step,
+				pcs.Id, pcs.Height, pcs.Round, pcs.Step,
+			)
+			return
+		}
 		pcs.sendProposal(pcs.tbftImpl.Proposal)
 	}
 }
@@ -332,6 +443,14 @@ func (pcs *PeerStateService) sendProposalInState(state *ConsensusState) {
 		state.Proposal != nil &&
 		pcs.VerifingProposal == nil &&
 		pcs.Step >= tbftpb.Step_Propose {
+		// appropriate send time
+		if !pcs.PeerSendState.isSendTime(pcs.Height, int64(pcs.Round)) {
+			pcs.logger.Infof("[%s](%d/%d/%s) sendStateChange to [%s](%d/%d/%s) is not send time",
+				pcs.tbftImpl.Id, pcs.tbftImpl.Height, pcs.tbftImpl.Round, pcs.tbftImpl.Step,
+				pcs.Id, pcs.Height, pcs.Round, pcs.Step,
+			)
+			return
+		}
 		pcs.sendProposal(state.Proposal)
 	}
 }
