@@ -176,8 +176,10 @@ func initProvider() protocol.DBHandle {
 	path := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()))
 	conf.StorePath = path
 
-	lvlConfig := &localconf.LevelDbConfig{
-		StorePath: path,
+	lvlConfig := &localconf.DbConfig{
+		LevelDbConfig: &localconf.LevelDbConfig{
+			StorePath: path,
+		},
 	}
 	p := leveldbprovider.NewLevelDBHandle(testChainId, "test", lvlConfig, log)
 	return p

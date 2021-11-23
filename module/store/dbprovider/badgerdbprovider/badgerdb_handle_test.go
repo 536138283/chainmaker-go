@@ -78,8 +78,7 @@ func TestDBHandle_NewIteratorWithRange(t *testing.T) {
 	err := dbHandle.WriteBatch(batch, true)
 	assert.Nil(t, err)
 
-	iter, err := dbHandle.NewIteratorWithRange(key1, []byte("key3"))
-	assert.Nil(t, err)
+	iter := dbHandle.NewIteratorWithRange(key1, []byte("key3"))
 	defer iter.Release()
 	var count int
 	for iter.Next() {
@@ -111,8 +110,7 @@ func TestDBHandle_NewIteratorWithPrefix(t *testing.T) {
 	err := dbHandle.WriteBatch(batch, true)
 	assert.Equal(t, nil, err)
 
-	iter, err := dbHandle.NewIteratorWithPrefix([]byte("key"))
-	assert.Nil(t, err)
+	iter := dbHandle.NewIteratorWithPrefix([]byte("key"))
 	defer iter.Release()
 	var count int
 	for iter.Next() {
