@@ -39,22 +39,22 @@ type LevelDBHandle struct {
 	logger protocol.Logger
 }
 
-func NewLevelDBHandle(chainId string, dbFolder string, dbconfig *localconf.LevelDbConfig,
+func NewLevelDBHandle(chainId string, dbFolder string, dbconfig *localconf.DbConfig,
 	logger protocol.Logger) *LevelDBHandle {
 	dbOpts := &opt.Options{}
-	writeBufferSize := dbconfig.BlockWriteBufferSize
+	writeBufferSize := dbconfig.LevelDbConfig.BlockWriteBufferSize
 	if writeBufferSize <= 0 {
 		//default value 4MB
 		dbOpts.WriteBuffer = 4 * opt.MiB
 	} else {
 		dbOpts.WriteBuffer = writeBufferSize * opt.MiB
 	}
-	bloomFilterBits := dbconfig.BloomFilterBits
+	bloomFilterBits := dbconfig.LevelDbConfig.BloomFilterBits
 	if bloomFilterBits <= 0 {
 		bloomFilterBits = defaultBloomFilterBits
 	}
 	dbOpts.Filter = filter.NewBloomFilter(bloomFilterBits)
-	dbPath := filepath.Join(dbconfig.StorePath, chainId, dbFolder)
+	dbPath := filepath.Join(dbconfig.LevelDbConfig.StorePath, chainId, dbFolder)
 	err := createDirIfNotExist(dbPath)
 	if err != nil {
 		panic(fmt.Sprintf("Error create dir %s by leveldbprovider: %s", dbPath, err))
