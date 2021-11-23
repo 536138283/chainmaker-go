@@ -22,6 +22,8 @@ const (
 	MySQL EngineType = 3
 	//Sqlite Sqlite
 	Sqlite EngineType = 4
+	//BadgerDB BadgerDB
+	BadgerDb  EngineType = 6
 )
 
 func (t EngineType) String() string {
@@ -32,6 +34,8 @@ func (t EngineType) String() string {
 		return "LevelDb"
 	case RocksDb:
 		return "RocksDb"
+	case BadgerDb:
+		return "BadgerDb"
 	case MySQL:
 		return "MySQL"
 	case Sqlite:
