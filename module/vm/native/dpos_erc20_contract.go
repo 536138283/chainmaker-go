@@ -7,10 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package native
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"strings"
+
+	"chainmaker.org/chainmaker-go/common/crypto"
+	hashAlo "chainmaker.org/chainmaker-go/common/crypto/hash"
+	bcx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
 
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
@@ -568,9 +571,13 @@ func parseUserAddress(member []byte) (string, error) {
 		msg := fmt.Errorf("load public key from cert failed, name[%s] err: %+v", dposErc20ContractName, err)
 		return "", msg
 	}
-	// 转换为SHA-256
-	addressBytes := sha256.Sum256(pubKeyBytes)
-	return base58.Encode(addressBytes[:]), nil
+	var hashBz []byte
+	if certificate.SignatureAlgorithm == bcx509.SM3WithSM2 {
+		hashBz, err = hashAlo.GetByStrType(crypto.CRYPTO_ALGO_SM3, pubKeyBytes)
+	} else {
+		hashBz, err = hashAlo.GetByStrType(crypto.CRYPTO_ALGO_SHA256, pubKeyBytes)
+	}
+	return base58.Encode(hashBz[:]), nil
 }
 
 func getWholeCertInfo(txSimContext protocol.TxSimContext, certHash string) (*commonPb.CertInfo, error) {
