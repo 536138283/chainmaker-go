@@ -1513,6 +1513,9 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 	go consensus.deleteInternalMsgC()
 	consensus.enterNewHeight(height, true)
 	for i := lastEntry.HeightFirstIndex; i <= lastIndex; i++ {
+		if i == lastIndex {
+			close(consensus.internalMsgCCloseC)
+		}
 		data, err := consensus.wal.Read(i)
 		if err != nil {
 			return err
@@ -1548,9 +1551,6 @@ func (consensus *ConsensusTBFTImpl) replayWal() error {
 				consensus.handleVerifyResult(verifyResult, true)
 			}
 		case tbftpb.WalEntryType_VoteEntry:
-			if i == lastIndex {
-				close(consensus.internalMsgCCloseC)
-			}
 			voteProto := new(tbftpb.Vote)
 			mustUnmarshal(entry.Data, voteProto)
 			vote := NewVoteFromProto(voteProto)
