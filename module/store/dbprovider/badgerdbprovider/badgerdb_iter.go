@@ -2,8 +2,7 @@ package badgerdbprovider
 
 import (
 	"bytes"
-
-	"github.com/dgraph-io/badger/v3"
+	"github.com/yiyanwannian/badger/v3"
 )
 
 type Iterator struct {
