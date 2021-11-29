@@ -9,7 +9,6 @@ require (
 	chainmaker.org/chainmaker-go/pb/protogo v0.0.0
 	chainmaker.org/chainmaker-go/protocol v0.0.0
 	chainmaker.org/chainmaker-go/utils v0.0.0
-	github.com/dgraph-io/badger/v3 v3.2103.2
 	github.com/emirpasic/gods v1.12.0
 	github.com/go-sql-driver/mysql v1.5.0
 	github.com/gogo/protobuf v1.3.2
@@ -18,6 +17,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20200815110645-5c35d600f0ca
+	github.com/yiyanwannian/badger/v3 v3.2111.29
 	github.com/yiyanwannian/gorocksdb v0.0.0-20210414112040-54bce342c6b6
 	go.uber.org/atomic v1.7.0 // indirect
 	golang.org/x/sync v0.0.0-20201020160332-67f06af15bc9

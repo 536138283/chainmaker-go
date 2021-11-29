@@ -9,7 +9,6 @@ SPDX-License-Identifier: Apache-2.0
 package store
 
 import (
-	"chainmaker.org/chainmaker-go/store/dbprovider/badgerdbprovider"
 	"errors"
 	"runtime"
 	"strings"
@@ -23,6 +22,7 @@ import (
 	"chainmaker.org/chainmaker-go/store/cache"
 	"chainmaker.org/chainmaker-go/store/contracteventdb"
 	"chainmaker.org/chainmaker-go/store/contracteventdb/eventsqldb"
+	"chainmaker.org/chainmaker-go/store/dbprovider/badgerdbprovider"
 	"chainmaker.org/chainmaker-go/store/dbprovider/leveldbprovider"
 	"chainmaker.org/chainmaker-go/store/historydb"
 	"chainmaker.org/chainmaker-go/store/historydb/historykvdb"

@@ -14,16 +14,16 @@ import (
 
 	"chainmaker.org/chainmaker-go/localconf"
 	"chainmaker.org/chainmaker-go/protocol"
-	"github.com/dgraph-io/badger/v3"
-	"github.com/dgraph-io/badger/v3/options"
 	"github.com/pkg/errors"
+	"github.com/yiyanwannian/badger/v3"
+	"github.com/yiyanwannian/badger/v3/options"
 )
 
 const (
 	defaultCompression    = 0
 	defaultValueThreshold = 1024 * 10
 	defaultWriteBatchSize = 128
-	defaultBlockCacheSize = 0
+	defaultBlockCacheSize = 256 << 20
 	defaultIndexCacheSize = 0
 )
 

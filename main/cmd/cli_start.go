@@ -50,6 +50,10 @@ func mainStart() {
 		traceMemoryUsage()
 	}
 
+	if localconf.ChainMakerConfig.PProfConfig.Enabled {
+		startPProf()
+	}
+
 	// init chainmaker server
 	chainMakerServer := blockchain.NewChainMakerServer()
 	if err := chainMakerServer.Init(); err != nil {
@@ -90,10 +94,6 @@ func mainStart() {
 	// start monitor server and listen in another go routine
 	if err := monitorServer.Start(); err != nil {
 		errorC <- err
-	}
-
-	if localconf.ChainMakerConfig.PProfConfig.Enabled {
-		startPProf()
 	}
 
 	printLogo()
