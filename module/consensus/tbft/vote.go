@@ -540,6 +540,24 @@ func (hvs *heightRoundVoteSet) addVote(vote *Vote) (added bool, err error) {
 	return
 }
 
+func (hvs *heightRoundVoteSet) isRequired(round int32, vote *Vote) bool {
+	if vote == nil {
+		return false
+	}
+	voteSet := hvs.getVoteSet(round, vote.Type)
+	if voteSet == nil || voteSet.Votes == nil {
+		return true
+	}
+
+	// votes that are not validators are not required
+	if !voteSet.validators.HasValidator(vote.Voter) {
+		return false
+	}
+	// is exist
+	_, ok := voteSet.Votes[vote.Voter]
+	return !ok
+}
+
 func createProposalMsg(proposal *Proposal) *tbftpb.TBFTMsg {
 	proposalProto := proposal.ToProto()
 	data := mustMarshal(proposalProto)

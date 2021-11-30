@@ -209,14 +209,16 @@ func (pcs *PeerStateService) updateVoteWithProto(voteSet *roundVoteSet) {
 		pcs.logger.Debugf("%s updateVoteWithProto : %v,%v", voter, voteSet.Prevotes, voteSet.Precommits)
 		// prevote Vote
 		vote := voteSet.Prevotes.Votes[voter]
-		if vote != nil && pcs.tbftImpl.Step < tbftpb.Step_Precommit {
+		if vote != nil && pcs.tbftImpl.Step < tbftpb.Step_Precommit &&
+			pcs.tbftImpl.heightRoundVoteSet.isRequired(pcs.Round, vote) {
 			pcs.logger.Debugf("updateVoteWithProto prevote : %s", voter)
 			tbftMsg := createPrevoteMsg(vote)
 			pcs.tbftImpl.internalMsgC <- tbftMsg
 		}
 		// precommit Vote
 		vote = voteSet.Precommits.Votes[voter]
-		if vote != nil && pcs.tbftImpl.Step < tbftpb.Step_Commit {
+		if vote != nil && pcs.tbftImpl.Step < tbftpb.Step_Commit &&
+			pcs.tbftImpl.heightRoundVoteSet.isRequired(pcs.Round, vote) {
 			pcs.logger.Debugf("updateVoteWithProto precommit : %s", voter)
 			tbftMsg := createPrevoteMsg(vote)
 			pcs.tbftImpl.internalMsgC <- tbftMsg
