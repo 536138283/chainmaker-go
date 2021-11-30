@@ -11,7 +11,7 @@ set -e
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
 RELEASE_PATH=${PROJECT_PATH}/build/release
-VERSION=V1.0.0
+VERSION=v1.2.6
 START=$1
 END=$2
 
