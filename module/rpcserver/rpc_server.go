@@ -12,13 +12,14 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 	"net"
 	"net/http"
 	"sort"
 	"strings"
 	"time"
+
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
+	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 
 	"chainmaker.org/chainmaker-go/blockchain"
 	"chainmaker.org/chainmaker/common/v2/ca"
@@ -43,7 +44,7 @@ type RPCServer struct {
 	cancel                     context.CancelFunc
 	curChainConfTrustRootsHash string
 	isShutdown                 bool
-	mixServer                 *http.Server
+	mixServer                  *http.Server
 }
 
 // prom monitor define
@@ -326,6 +327,7 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 			CaCerts:  caCerts,
 			CertFile: localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
 			KeyFile:  localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
+			Logger:   log,
 		}
 
 		checkClientAuth := false
@@ -371,7 +373,7 @@ func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMak
 	mux.Handle("/", gwmux)
 
 	return &http.Server{
-		Handler:   wsproxy.WebsocketProxy(GrpcHandlerFunc(grpcServer, mux)),
+		Handler: wsproxy.WebsocketProxy(GrpcHandlerFunc(grpcServer, mux)),
 	}, nil
 }
 
@@ -386,9 +388,10 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 		}
 
 		tlsClient := ca.CAClient{
-			CaCerts:     caCerts,
-			CertFile:   localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
-			KeyFile:    localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
+			CaCerts:  caCerts,
+			CertFile: localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+			KeyFile:  localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
+			Logger:   log,
 		}
 
 		c, err := tlsClient.GetCredentialsByCA()
@@ -405,7 +408,7 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
 
 	gwmux := runtime.NewServeMux()
-	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, "localhost"+ endPoint, dopts); err != nil {
+	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, "localhost"+endPoint, dopts); err != nil {
 		log.Errorf("new gateway failed, RegisterRpcNodeHandlerFromEndpoint err: %v", err)
 		return nil, err
 	}
