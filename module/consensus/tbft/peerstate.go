@@ -205,7 +205,10 @@ func (pcs *PeerStateService) updateWithProto(pcsProto *tbftpb.GossipState) {
 
 // get the votes for tbft Engine based on the peer node state
 func (pcs *PeerStateService) updateVoteWithProto(voteSet *roundVoteSet) {
-	for _, voter := range pcs.tbftImpl.getValidatorSet().Validators {
+	Validators := pcs.tbftImpl.getValidatorSet().Validators
+	pcs.tbftImpl.RLock()
+	defer pcs.tbftImpl.RUnlock()
+	for _, voter := range Validators {
 		pcs.logger.Debugf("%s updateVoteWithProto : %v,%v", voter, voteSet.Prevotes, voteSet.Precommits)
 		// prevote Vote
 		vote := voteSet.Prevotes.Votes[voter]
