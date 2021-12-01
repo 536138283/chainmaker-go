@@ -168,7 +168,15 @@ lint:
 #	cd tools/sdk && golangci-lint run ./...
 
 sql-qta:
-	echo "enabled in v2.X, ignore it"
+	echo "clear environment"
+	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
+	cd test/send_proposal_request_ci && ./clean_sql_log.sh
+	echo "start new sql-qta test"
+	cd test/send_proposal_request_ci && ./build.sh
+	cd test/send_proposal_request_ci && ./start_sql_tbft_4.sh
+	cd test/send_proposal_request_sql && go run main.go
+	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
+	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 
 qta:
 	cd test/send_proposal_request_ci && ./build.sh
