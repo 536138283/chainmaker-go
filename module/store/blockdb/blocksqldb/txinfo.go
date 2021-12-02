@@ -41,7 +41,7 @@ func (t *TxInfo) GetCreateTableSql(dbType string) string {
 block_height bigint unsigned,block_hash varbinary(128),offset int unsigned,timestamp bigint DEFAULT 0,
 expiration_time bigint DEFAULT 0,request_payload longblob,request_signature blob,code int,
 contract_result longblob,rw_set_hash varbinary(128),PRIMARY KEY (tx_id),
-INDEX idx_height_offset (block_height,offset)) default character set utf8`
+INDEX idx_height_offset (block_height,offset)) default character set utf8mb4`
 	}
 	if dbType == localconf.SqlDbConfig_SqlDbType_Sqlite {
 		return `CREATE TABLE tx_infos (
