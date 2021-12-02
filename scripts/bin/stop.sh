@@ -7,6 +7,6 @@
 
 pid=`ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep |  awk  '{print $2}'`
 if [ ! -z ${pid} ];then
-    kill -9 $pid
+    kill $pid
 fi
 echo "chainmaker is stopped"

@@ -10,7 +10,7 @@ export PATH=$(dirname $PWD)/lib:$PATH
 export WASMER_BACKTRACE=1
 pid=`ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep | awk  '{print $2}'`
 if [ ! -z ${pid} ];then
-    kill -9 $pid
+    kill $pid
 fi
 sleep 2
 #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > /dev/null 2>&1 &
