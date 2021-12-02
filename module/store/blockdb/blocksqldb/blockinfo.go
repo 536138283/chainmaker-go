@@ -57,7 +57,7 @@ signature blob,dag blob,tx_ids longtext,
 additional_data longblob,
 PRIMARY KEY (block_height),
 INDEX idx_hash (block_hash)) 
-default character set utf8`
+default character set utf8mb4`
 	} else if dbType == localconf.SqlDbConfig_SqlDbType_Sqlite {
 		return `CREATE TABLE block_infos (
     chain_id text,block_height integer,pre_block_hash blob,block_hash blob,

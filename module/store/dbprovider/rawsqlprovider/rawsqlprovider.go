@@ -159,7 +159,7 @@ func (p *SqlDBHandle) createDatabase(dsn string, dbName string) error {
 		return errConnection
 	}
 	defer db.Close()
-	sqlStr := "create database " + dbName
+	sqlStr := buildCreateDatabaseSql(dbName)
 	_, err = db.Exec(sqlStr)
 	p.log.Debug("Exec sql:", sqlStr)
 	if err != nil {
@@ -168,7 +168,9 @@ func (p *SqlDBHandle) createDatabase(dsn string, dbName string) error {
 	}
 	return nil
 }
-
+func buildCreateDatabaseSql(dbName string) string {
+	return "CREATE DATABASE " + dbName + " DEFAULT CHARACTER SET utf8mb4 DEFAULT COLLATE utf8mb4_general_ci"
+}
 func (p *SqlDBHandle) createDirIfNotExist(path string) error {
 	_, err := os.Stat(path)
 	if err == nil {
@@ -198,12 +200,13 @@ func (p *SqlDBHandle) CreateDatabaseIfNotExist(dbName string) error {
 	_, err := p.db.Exec("use " + dbName)
 	if err != nil { //切换失败，没有这个数据库，则创建
 		p.log.Debugf("try to run 'use %s' get an error, it means database not exist, create it!", dbName)
-		_, err = p.db.Exec("create database " + dbName)
+		createDbSql := buildCreateDatabaseSql(dbName)
+		_, err = p.db.Exec(createDbSql)
 		if err != nil {
 			p.log.Error(err)
 			return errDatabase //创建失败
 		}
-		p.log.Debugf("create database %s", dbName)
+		p.log.Debugf("Exec sql:%s", createDbSql)
 		//创建成功，再次切换数据库
 		_, err = p.db.Exec("use " + dbName)
 		if err != nil {
