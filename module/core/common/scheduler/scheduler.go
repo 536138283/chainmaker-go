@@ -8,13 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker-go/core/provider/conf"
 	"encoding/hex"
 	"errors"
 	"fmt"
 	"regexp"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker-go/core/provider/conf"
 
 	"chainmaker.org/chainmaker-go/localconf"
 	acpb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
@@ -357,6 +358,7 @@ func (ts *TxScheduler) simulateSpecialTxs(dag *commonpb.DAG, snapshot protocol.S
 						Neighbors: make([]int32, 0, 1),
 					}
 					dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, int32(snapshot.GetSnapshotSize())-2)
+					dag.Vertexes = append(dag.Vertexes, dagNeighbors)
 				}
 				if applySize >= len(block.Txs) {
 					ts.log.Errorf("block [%d] schedule special txs finished", block.Header.BlockHeight)
