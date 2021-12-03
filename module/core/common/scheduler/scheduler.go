@@ -155,7 +155,7 @@ func (ts *TxScheduler) Schedule(block *commonpb.Block, txBatch []*commonpb.Trans
 
 	// Execute special tx sequentially, and add to dag
 	if len(snapshot.GetSpecialTxTable()) > 0 {
-		ts.simulateSpecialTxs(block.Dag, snapshot, block)
+		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
 	timeCostB := time.Since(startTime)
@@ -316,7 +316,8 @@ func (ts *TxScheduler) simulateTx(tx *commonpb.Transaction, snapshot protocol.Sn
 	return txSimContext, specialTxType, runVmSuccess
 }
 
-func (ts *TxScheduler) simulateSpecialTxs(dag *commonpb.DAG, snapshot protocol.Snapshot, block *commonpb.Block) {
+func (ts *TxScheduler) simulateSpecialTxs(dag *commonpb.DAG, snapshot protocol.Snapshot, block *commonpb.Block,
+	txBatchSize int) {
 	specialTxs := snapshot.GetSpecialTxTable()
 	txsLen := len(specialTxs)
 	var firstTx *commonpb.Transaction
@@ -358,8 +359,8 @@ func (ts *TxScheduler) simulateSpecialTxs(dag *commonpb.DAG, snapshot protocol.S
 					}
 					dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, int32(snapshot.GetSnapshotSize())-2)
 				}
-				if applySize >= len(block.Txs) {
-					ts.log.Errorf("block [%d] schedule special txs finished", block.Header.BlockHeight)
+				if applySize >= txBatchSize {
+					ts.log.Debugf("block [%d] schedule special txs finished", block.Header.BlockHeight)
 					scheduleFinishC <- true
 					return
 				}
