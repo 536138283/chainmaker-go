@@ -18,6 +18,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/rs/cors"
+
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 
@@ -291,6 +293,7 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 			),
 			grpc_middleware.WithStreamServerChain(
 				BlackListStreamInterceptor(),
+				StreamRecoveryInterceptor(),
 			),
 		}
 	} else {
@@ -303,6 +306,7 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 			),
 			grpc_middleware.WithStreamServerChain(
 				BlackListStreamInterceptor(),
+				StreamRecoveryInterceptor(),
 			),
 		}
 	}
@@ -372,8 +376,13 @@ func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMak
 	mux := http.NewServeMux()
 	mux.Handle("/", gwmux)
 
+	handler := cors.New(cors.Options{
+		//AllowedOrigins: config.AllowedOrigins,
+		AllowedOrigins: []string{"*"},
+	}).Handler(GrpcHandlerFunc(grpcServer, mux))
+
 	return &http.Server{
-		Handler: wsproxy.WebsocketProxy(GrpcHandlerFunc(grpcServer, mux)),
+		Handler: wsproxy.WebsocketProxy(handler),
 	}, nil
 }
 
@@ -407,7 +416,12 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 
 	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
 
-	gwmux := runtime.NewServeMux()
+	gwmux := runtime.NewServeMux(
+		runtime.WithMarshalerOption(runtime.MIMEWildcard,
+			&runtime.JSONPb{OrigName: true, EmitDefaults: false, EnumsAsInts: true},
+		),
+	)
+
 	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, "localhost"+endPoint, dopts); err != nil {
 		log.Errorf("new gateway failed, RegisterRpcNodeHandlerFromEndpoint err: %v", err)
 		return nil, err

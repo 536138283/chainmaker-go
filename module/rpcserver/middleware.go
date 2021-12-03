@@ -10,15 +10,15 @@ package rpcserver
 import (
 	"context"
 	"fmt"
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
 	"net"
 	"net/http"
-	"os"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
@@ -85,7 +85,7 @@ func RecoveryInterceptor(ctx context.Context, req interface{},
 	defer func() {
 		if e := recover(); e != nil {
 			stack := debug.Stack()
-			os.Stderr.Write(stack)
+			//os.Stderr.Write(stack)
 			log.Errorf("panic stack: %s", string(stack))
 			err = status.Errorf(codes.Internal, "Panic err: %v", e)
 		}
@@ -245,4 +245,20 @@ func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 			otherHandler.ServeHTTP(w, r)
 		}
 	}), &http2.Server{})
+}
+
+// StreamRecoveryInterceptor - set stream recovery interceptor
+func StreamRecoveryInterceptor() grpc.StreamServerInterceptor {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+		defer func() {
+			if e := recover(); e != nil {
+				stack := debug.Stack()
+				//os.Stderr.Write(stack)
+				log.Errorf("panic stack: %s", string(stack))
+				err = status.Errorf(codes.Internal, "Panic err: %v", e)
+			}
+		}()
+
+		return handler(srv, ss)
+	}
 }

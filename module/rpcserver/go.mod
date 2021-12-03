@@ -8,14 +8,18 @@ require (
 	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20211026092004-6d89530bfb28
 	chainmaker.org/chainmaker/localconf/v2 v2.0.0-20211014134424-9431ffcc5bbc
 	chainmaker.org/chainmaker/logger/v2 v2.0.1-0.20211015125919-8e5199930ac9
-	chainmaker.org/chainmaker/pb-go/v2 v2.0.1-0.20211102032401-6cb1cc3525eb
+	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20211203041221-db1d979a8804
 	chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20211014144951-97323532a236
 	chainmaker.org/chainmaker/store/v2 v2.0.1-0.20211021170501-189c26c2d357
 	chainmaker.org/chainmaker/utils/v2 v2.0.0-20211020061817-1e64a279af4f
 	chainmaker.org/chainmaker/vm-native v0.0.0-20211022083838-dc47692c7060
 	github.com/gogo/protobuf v1.3.2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/prometheus/client_golang v1.11.0
+	github.com/rs/cors v1.7.0
+	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
+	golang.org/x/net v0.0.0-20211011170408-caeb26a5c8c0
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/grpc v1.41.0
 )
