@@ -362,10 +362,12 @@ func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height int64) (*commonPb.BlockH
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetBlock(height int64) (*commonPb.Block, error) {
-	if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
-		bs.logger.Warnf("can not load block data from wal err:%v", err)
-	} else if bsi != nil {
-		return bsi.Block, nil
+	if bs.canBlockLoadFromWAL(height) {
+		if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
+			bs.logger.Warnf("can not load block data from wal err:%v", err)
+		} else if bsi != nil {
+			return bsi.Block, nil
+		}
 	}
 
 	return bs.blockDB.GetBlock(height)
@@ -500,10 +502,12 @@ func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet
 // GetBlockWithRWSets returns the block and all the rwsets corresponding to the block,
 // or returns nil if zhe block does not exist
 func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRWSet, error) {
-	if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
-		bs.logger.Warnf("can not load block data from wal err:%v", err)
-	} else if bsi != nil {
-		return bsi, nil
+	if bs.canBlockLoadFromWAL(height) {
+		if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
+			bs.logger.Warnf("can not load block data from wal err:%v", err)
+		} else if bsi != nil {
+			return bsi, nil
+		}
 	}
 
 	block, err := bs.GetBlock(height)
@@ -863,4 +867,17 @@ func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
 func (bs *BlockStoreImpl) isSupportArchive() bool {
 	return bs.storeConfig.BlockDbConfig.IsKVDB() &&
 		(bs.storeConfig.ResultDbConfig != nil && bs.storeConfig.ResultDbConfig.IsKVDB())
+}
+
+func (bs *BlockStoreImpl) canBlockLoadFromWAL(height int64) bool {
+	if !bs.isSupportArchive() {
+		return true
+	}
+
+	archivePivot, _ := bs.ArchiveMgr.GetArchivedPivot()
+	if archivePivot >= uint64(height) {
+		return false
+	}
+
+	return true
 }
