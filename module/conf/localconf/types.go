@@ -149,6 +149,7 @@ type StorageConfig struct {
 	DisableResultDB        bool      `mapstructure:"disable_resultdb"`
 	DisableContractEventDB bool      `mapstructure:"disable_contract_eventdb"`
 	LogDBWriteAsync        bool      `mapstructure:"logdb_write_async"`
+	LogDBSegmentSize       int       `mapstructure:"logdb_segment_size"`
 	BlockDbConfig          *DbConfig `mapstructure:"blockdb_config"`
 	StateDbConfig          *DbConfig `mapstructure:"statedb_config"`
 	HistoryDbConfig        *DbConfig `mapstructure:"historydb_config"`

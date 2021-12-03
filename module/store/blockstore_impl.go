@@ -69,6 +69,9 @@ func NewBlockStoreImpl(chainId string,
 	walOpt := &wal.Options{
 		NoSync: writeAsync,
 	}
+	if storeConfig.LogDBSegmentSize > 0 { // LogDBSegmentSize default is 20MB
+		walOpt.SegmentSize = storeConfig.LogDBSegmentSize * 1024 * 1024
+	}
 	if binLog == nil {
 		writeLog, err := wal.Open(walPath, walOpt)
 		if err != nil {
@@ -271,13 +274,13 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 	elapsedCommitBlock := utils.CurrentTimeMillisSeconds() - startCommitBlock
 
 	//7. clean wal, delete block and rwset after commit
-	go func() {
-		err := bs.deleteBlockFromLog(uint64(block.Header.BlockHeight))
-		if err != nil {
-			bs.logger.Warnf("chain[%s]: failed to clean log, block[%d], err:%s",
-				block.Header.ChainId, block.Header.BlockHeight, err)
-		}
-	}()
+	//go func() {
+	//	err := bs.deleteBlockFromLog(uint64(block.Header.BlockHeight))
+	//	if err != nil {
+	//		bs.logger.Warnf("chain[%s]: failed to clean log, block[%d], err:%s",
+	//			block.Header.ChainId, block.Header.BlockHeight, err)
+	//	}
+	//}()
 	bs.logger.Infof("chain[%s]: put block[%d] (txs:%d bytes:%d), "+
 		"time used (mashal:%d, log:%d, commit:%d, total:%d)",
 		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs), len(blockBytes),
@@ -359,6 +362,12 @@ func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height int64) (*commonPb.BlockH
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetBlock(height int64) (*commonPb.Block, error) {
+	 if bsi, err := bs.getBlockFromLog(uint64(height)); err != nil {
+		 bs.logger.Warnf("can not load block data from wal err:%v", err)
+	 } else if bsi != nil {
+		 return bsi.Block, nil
+	 }
+
 	return bs.blockDB.GetBlock(height)
 }
 
