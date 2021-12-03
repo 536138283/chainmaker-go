@@ -362,11 +362,11 @@ func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height int64) (*commonPb.BlockH
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetBlock(height int64) (*commonPb.Block, error) {
-	 if bsi, err := bs.getBlockFromLog(uint64(height)); err != nil {
-		 bs.logger.Warnf("can not load block data from wal err:%v", err)
-	 } else if bsi != nil {
-		 return bsi.Block, nil
-	 }
+	if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
+		bs.logger.Warnf("can not load block data from wal err:%v", err)
+	} else if bsi != nil {
+		return bsi.Block, nil
+	}
 
 	return bs.blockDB.GetBlock(height)
 }
@@ -500,6 +500,12 @@ func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet
 // GetBlockWithRWSets returns the block and all the rwsets corresponding to the block,
 // or returns nil if zhe block does not exist
 func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRWSet, error) {
+	if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
+		bs.logger.Warnf("can not load block data from wal err:%v", err)
+	} else if bsi != nil {
+		return bsi, nil
+	}
+
 	block, err := bs.GetBlock(height)
 	if err != nil {
 		return nil, err
@@ -741,6 +747,20 @@ func (bs *BlockStoreImpl) getLastSavepoint() (uint64, error) {
 	return lastIndex - 1, nil
 }
 
+func (bs *BlockStoreImpl) getBlockWithRWSetsFromLog(num uint64) (*storePb.BlockWithRWSet, error) {
+	index := num + 1
+	bytes, err := bs.wal.Read(index)
+	if err != nil {
+		bs.logger.Errorf("read log failed, err:%s", err)
+		return nil, err
+	}
+	blockWithRWSet, err := serialization.DeserializeBlock(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return blockWithRWSet, err
+}
+
 func (bs *BlockStoreImpl) getBlockFromLog(num uint64) (*serialization.BlockWithSerializedInfo, error) {
 	index := num + 1
 	bytes, err := bs.wal.Read(index)
@@ -842,5 +862,5 @@ func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
 
 func (bs *BlockStoreImpl) isSupportArchive() bool {
 	return bs.storeConfig.BlockDbConfig.IsKVDB() &&
-		(bs.storeConfig.ResultDbConfig!=nil &&bs.storeConfig.ResultDbConfig.IsKVDB())
+		(bs.storeConfig.ResultDbConfig != nil && bs.storeConfig.ResultDbConfig.IsKVDB())
 }
