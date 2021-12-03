@@ -48,11 +48,14 @@ func (db *StateSqlDB) initContractDb(contractName string) error {
 	}
 	db.logger.Debugf("try to create state db table: state_infos for contract[%s]", contractName)
 	dbHandle := db.getContractDbHandle(contractName)
-	err = dbHandle.CreateTableIfNotExist(&StateInfo{})
+	err = createStateInfoTable(dbHandle)
 	if err != nil {
 		db.logger.Panic("init state sql db table fail:" + err.Error())
 	}
 	return nil
+}
+func createStateInfoTable(dbHandle protocol.SqlDBHandle) error {
+	return dbHandle.CreateTableIfNotExist(&StateInfo{})
 }
 func (db *StateSqlDB) initSystemStateDb(dbName string) error {
 	db.logger.Debugf("try to create state db %s", dbName)
@@ -398,6 +401,10 @@ func (s *StateSqlDB) getContractDbHandle(contractName string) protocol.SqlDBHand
 	}
 	dbName := getContractDbName(s.dbConfig, s.chainId, contractName)
 	db := rawsqlprovider.NewSqlDBHandle(dbName, s.dbConfig, s.logger)
+	if err := createStateInfoTable(db); err != nil {
+		s.logger.Error(err)
+	}
+
 	s.contractDbs[contractName] = db
 	s.logger.Infof("create new sql db handle[%p] database[%s] for contract[%s]", db, dbName, contractName)
 	return db
