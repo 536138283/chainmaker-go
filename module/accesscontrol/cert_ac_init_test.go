@@ -14,16 +14,16 @@ import (
 	"testing"
 	"time"
 
-	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2/test"
 	"github.com/stretchr/testify/require"
 )
 
 const (
 	testChainId      = "chain1"
 	testVersion      = "v1.0.0"
-	testCertAuthType = "permissionedWithCert"
+	testCertAuthType = "permissionedwithcert"
 	testHashType     = "SM3"
 	testPKHashType   = "SHA256"
 
@@ -717,7 +717,7 @@ func initOrgMember(t *testing.T, info *orgMemberInfo) *orgMember {
 	td, cleanFunc, err := createTempDirWithCleanFunc()
 	require.Nil(t, err)
 	defer cleanFunc()
-	logger := logger.GetLogger(logger.MODULE_ACCESS)
+	logger := &test.GoLogger{}
 	certProvider, err := newCertACProvider(testChainConfig, info.orgId, nil, logger)
 	require.Nil(t, err)
 	require.NotNil(t, certProvider)

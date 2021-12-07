@@ -16,15 +16,15 @@ import (
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker-go/net"
-	"chainmaker.org/chainmaker-go/subscriber"
+	"chainmaker.org/chainmaker-go/module/net"
+	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/helper"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/logger/v2"
+	localconf "chainmaker.org/chainmaker/localconf/v2"
+	logger "chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	protocol "chainmaker.org/chainmaker/protocol/v2"
 )
 
 var log = logger.GetLogger(logger.MODULE_BLOCKCHAIN)
@@ -261,7 +261,7 @@ func (server *ChainMakerServer) Stop() {
 			defer wg.Done()
 			chain.Stop()
 		}(chain)
-		return false
+		return true
 	})
 	wg.Wait()
 	log.Info("ChainMaker server is stopped!")
@@ -373,5 +373,5 @@ func (server *ChainMakerServer) GetAllAC() ([]protocol.AccessControlProvider, er
 
 // Version of chainmaker.
 func (server *ChainMakerServer) Version() string {
-	return fmt.Sprintf("%d", protocol.DefaultBlockVersion)
+	return CurrentVersion
 }

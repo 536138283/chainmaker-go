@@ -13,35 +13,35 @@ import (
 	"fmt"
 	"strings"
 
-	"chainmaker.org/chainmaker/store/v2"
-
-	componentVm "chainmaker.org/chainmaker-go/vm"
-
-	"chainmaker.org/chainmaker-go/accesscontrol"
-	"chainmaker.org/chainmaker-go/consensus"
-	"chainmaker.org/chainmaker-go/core"
-	"chainmaker.org/chainmaker-go/core/cache"
-	providerConf "chainmaker.org/chainmaker-go/core/provider/conf"
-	"chainmaker.org/chainmaker-go/net"
-	"chainmaker.org/chainmaker-go/snapshot"
-	"chainmaker.org/chainmaker-go/subscriber"
-	blockSync "chainmaker.org/chainmaker-go/sync"
-	"chainmaker.org/chainmaker-go/txpool"
+	"chainmaker.org/chainmaker-go/module/accesscontrol"
+	"chainmaker.org/chainmaker-go/module/consensus"
+	"chainmaker.org/chainmaker-go/module/core"
+	"chainmaker.org/chainmaker-go/module/core/cache"
+	providerConf "chainmaker.org/chainmaker-go/module/core/provider/conf"
+	"chainmaker.org/chainmaker-go/module/net"
+	"chainmaker.org/chainmaker-go/module/snapshot"
+	"chainmaker.org/chainmaker-go/module/subscriber"
+	blockSync "chainmaker.org/chainmaker-go/module/sync"
+	"chainmaker.org/chainmaker-go/module/txpool"
+	componentVm "chainmaker.org/chainmaker-go/module/vm"
 	"chainmaker.org/chainmaker/chainconf/v2"
 	"chainmaker.org/chainmaker/common/v2/container"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/logger/v2"
+	consensusUtils "chainmaker.org/chainmaker/consensus-utils/v2"
+	localconf "chainmaker.org/chainmaker/localconf/v2"
+	logger "chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/store/v2"
 	"chainmaker.org/chainmaker/store/v2/conf"
 	"chainmaker.org/chainmaker/utils/v2"
-	"chainmaker.org/chainmaker/vm"
+	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
 const (
+	//PREFIX_dpos_stake_nodeId the nodeId prefix in the dpos config in the chainconf
 	PREFIX_dpos_stake_nodeId string = "stake.nodeID"
 )
 
@@ -556,12 +556,13 @@ func (bc *Blockchain) initCore() (err error) {
 		bc.log.Infof("core engine module existed, ignore.")
 		return
 	}
+	var log = logger.GetLogger(logger.MODULE_SNAPSHOT)
 	// create snapshot manager
 	var snapshotFactory snapshot.Factory
 	if bc.chainConf.ChainConfig().Snapshot != nil && bc.chainConf.ChainConfig().Snapshot.EnableEvidence {
-		bc.snapshotManager = snapshotFactory.NewSnapshotEvidenceMgr(bc.store)
+		bc.snapshotManager = snapshotFactory.NewSnapshotEvidenceMgr(bc.store, log)
 	} else {
-		bc.snapshotManager = snapshotFactory.NewSnapshotManager(bc.store)
+		bc.snapshotManager = snapshotFactory.NewSnapshotManager(bc.store, log)
 	}
 
 	// init coreEngine module
@@ -593,29 +594,16 @@ func (bc *Blockchain) initCore() (err error) {
 
 func (bc *Blockchain) initConsensus() (err error) {
 	// init consensus module
-	var consensusFactory consensus.Factory
+	//var consensusFactory consensus.Factory
 	id := localconf.ChainMakerConfig.NodeConfig.NodeId
-	var nodeIds []string
+	nodes := bc.chainConf.ChainConfig().Consensus.Nodes
+	nodeIds := make([]string, len(nodes))
 	isConsensusNode := false
-	if bc.getConsensusType() == consensusPb.ConsensusType_DPOS {
-		dposConfigs := bc.chainConf.ChainConfig().Consensus.DposConfig
-		for _, dposConfig := range dposConfigs {
-			if strings.HasPrefix(dposConfig.Key, PREFIX_dpos_stake_nodeId) {
-				nodeIds = append(nodeIds, string(dposConfig.Value))
-				if string(dposConfig.Value) == id {
-					isConsensusNode = true
-				}
-			}
-		}
-	} else {
-		nodes := bc.chainConf.ChainConfig().Consensus.Nodes
-		nodeIds = make([]string, len(nodes))
-		for i, node := range nodes {
-			for _, nid := range node.NodeId {
-				nodeIds[i] = nid
-				if nid == id {
-					isConsensusNode = true
-				}
+	for i, node := range nodes {
+		for _, nid := range node.NodeId {
+			nodeIds[i] = nid
+			if nid == id {
+				isConsensusNode = true
 			}
 		}
 	}
@@ -629,25 +617,22 @@ func (bc *Blockchain) initConsensus() (err error) {
 		bc.log.Infof("consensus module existed, ignore.")
 		return
 	}
-	dbHandle := bc.store.GetDBHandle(protocol.ConsensusDBName)
-	bc.consensus, err = consensusFactory.NewConsensusEngine(
-		bc.getConsensusType(),
-		bc.chainId,
-		id,
-		nodeIds,
-		bc.identity,
-		bc.ac,
-		dbHandle,
-		bc.ledgerCache,
-		bc.proposalCache,
-		bc.coreEngine.GetBlockVerifier(),
-		bc.coreEngine.GetBlockCommitter(),
-		bc.netService,
-		bc.msgBus,
-		bc.chainConf,
-		bc.store,
-		bc.coreEngine.GetHotStuffHelper(),
-	)
+
+	config := &consensusUtils.ConsensusImplConfig{
+		ChainId:       bc.chainId,
+		NodeId:        id,
+		Ac:            bc.ac,
+		Core:          bc.coreEngine,
+		ChainConf:     bc.chainConf,
+		NetService:    bc.netService,
+		Signer:        bc.identity,
+		Store:         bc.store,
+		LedgerCache:   bc.ledgerCache,
+		ProposalCache: bc.proposalCache,
+		MsgBus:        bc.msgBus,
+	}
+	provider := consensus.GetConsensusProvider(bc.chainConf.ChainConfig().Consensus.Type)
+	bc.consensus, err = provider(config)
 	if err != nil {
 		bc.log.Errorf("new consensus engine failed, %s", err)
 		return err
@@ -662,6 +647,7 @@ func (bc *Blockchain) initSync() (err error) {
 		bc.log.Infof("sync module existed, ignore.")
 		return
 	}
+
 	// init sync service module
 	bc.syncServer = blockSync.NewBlockChainSyncServer(
 		bc.chainId,
@@ -671,6 +657,7 @@ func (bc *Blockchain) initSync() (err error) {
 		bc.ledgerCache,
 		bc.coreEngine.GetBlockVerifier(),
 		bc.coreEngine.GetBlockCommitter(),
+		logger.GetLoggerByChain(logger.MODULE_SYNC, bc.chainId),
 	)
 	bc.initModules[moduleNameSync] = struct{}{}
 	return
