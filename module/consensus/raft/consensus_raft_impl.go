@@ -553,6 +553,9 @@ func (consensus *ConsensusRaftImpl) publishSnapshot(snapshot raftpb.Snapshot) {
 	consensus.logger.Infof("publishSnapshot metadata: %v", snapshot.Metadata)
 	consensus.confState = snapshot.Metadata.ConfState
 	consensus.snapshotIndex = snapshot.Metadata.Index
+	if snapshot.Metadata.Index > consensus.appliedIndex {
+		consensus.appliedIndex = snapshot.Metadata.Index
+	}
 
 	snapshotData := &SnapshotHeight{}
 	json.Unmarshal(snapshot.Data, snapshotData)
@@ -576,7 +579,8 @@ func (consensus *ConsensusRaftImpl) getSnapshot(height int64) ([]byte, error) {
 }
 
 func (consensus *ConsensusRaftImpl) maybeTriggerSnapshot(snapArgs *SnapshotArgs) {
-	if snapArgs.Index-consensus.snapshotIndex <= consensus.snapCount && !snapArgs.ConfChange {
+	if snapArgs.Index <= consensus.snapshotIndex ||
+		snapArgs.Index-consensus.snapshotIndex <= consensus.snapCount && !snapArgs.ConfChange {
 		return
 	}
 
