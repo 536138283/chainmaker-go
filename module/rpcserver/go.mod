@@ -5,8 +5,8 @@ go 1.15
 require (
 	chainmaker.org/chainmaker-go/blockchain v0.0.0-00010101000000-000000000000
 	chainmaker.org/chainmaker-go/subscriber v0.0.0
-	chainmaker.org/chainmaker/common/v2 v2.0.1-0.20211026092004-6d89530bfb28
-	chainmaker.org/chainmaker/localconf/v2 v2.0.0-20211014134424-9431ffcc5bbc
+	chainmaker.org/chainmaker/common/v2 v2.1.1-0.20211207034235-778aaf0c48e6
+	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20211207040252-37610fa523e5
 	chainmaker.org/chainmaker/logger/v2 v2.0.1-0.20211015125919-8e5199930ac9
 	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20211203041221-db1d979a8804
 	chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20211014144951-97323532a236
@@ -17,7 +17,6 @@ require (
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/prometheus/client_golang v1.11.0
-	github.com/rs/cors v1.7.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
 	golang.org/x/net v0.0.0-20211011170408-caeb26a5c8c0
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba

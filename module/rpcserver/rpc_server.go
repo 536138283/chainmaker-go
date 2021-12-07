@@ -130,6 +130,7 @@ func (s *RPCServer) Start() error {
 	if err != nil {
 		return err
 	}
+
 	tlsConfig, err := ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
 		localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts)
 	if err != nil {
@@ -365,19 +366,25 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 }
 
 func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMakerServer) (*http.Server, error) {
-	gwmux, err := newGateway(chainMakerServer)
-	if err != nil {
-		log.Error(err)
-		return nil, err
-	}
 
 	mux := http.NewServeMux()
-	mux.Handle("/", gwmux)
+	if localconf.ChainMakerConfig.RpcConfig.GatewayConfig.Enabled {
+		gwmux, err := newGateway(chainMakerServer)
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+
+		mux.Handle("/", gwmux)
+	} else {
+		mux = nil
+	}
 
 	handler := GrpcHandlerFunc(grpcServer, mux)
 
 	return &http.Server{
-		Handler: wsproxy.WebsocketProxy(handler, wsproxy.WithMaxRespBodyBufferSize(16*1024*1024)),
+		Handler: wsproxy.WebsocketProxy(handler, wsproxy.WithMaxRespBodyBufferSize(
+			localconf.ChainMakerConfig.RpcConfig.GatewayConfig.MaxRespBodySize*1024*1024)),
 	}, nil
 }
 
