@@ -13,6 +13,7 @@ import (
 	acPb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
+	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"errors"
@@ -520,7 +521,11 @@ func (r *ChainConsensusRuntime) NodeIdUpdate(txSimContext protocol.TxSimContext,
 		r.log.Error(err)
 		return nil, err
 	}
-
+	if isRaftConsensus(chainConfig) {
+		err = fmt.Errorf("update node id failed, raft consensus does not support update node id, please use delete and add operation")
+		r.log.Error(err)
+		return nil, err
+	}
 	// verify params
 	orgId := params[paramNameOrgId]
 	nodeId := params[paramNameNodeId]       // origin node id
@@ -685,6 +690,12 @@ func (r *ChainConsensusRuntime) NodeOrgUpdate(txSimContext protocol.TxSimContext
 	// [start]
 	chainConfig, err := getChainConfig(txSimContext, params)
 	if err != nil {
+		r.log.Error(err)
+		return nil, err
+	}
+
+	if isRaftConsensus(chainConfig) {
+		err = fmt.Errorf("update org node failed, raft consensus does not support update node id, please use delete and add operation")
 		r.log.Error(err)
 		return nil, err
 	}
@@ -1193,4 +1204,8 @@ func (r *ChainConsensusRuntime) ResourcePolicyDelete(txSimContext protocol.TxSim
 		r.log.Infof("resource policy delete success. params %+v", params)
 	}
 	return result, err
+}
+
+func isRaftConsensus(chainConfig *configPb.ChainConfig) bool {
+	return chainConfig.Consensus.Type == consensusPb.ConsensusType_RAFT
 }
