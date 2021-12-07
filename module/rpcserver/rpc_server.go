@@ -18,8 +18,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rs/cors"
-
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 
@@ -376,13 +374,10 @@ func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMak
 	mux := http.NewServeMux()
 	mux.Handle("/", gwmux)
 
-	handler := cors.New(cors.Options{
-		//AllowedOrigins: config.AllowedOrigins,
-		AllowedOrigins: []string{"*"},
-	}).Handler(GrpcHandlerFunc(grpcServer, mux))
+	handler := GrpcHandlerFunc(grpcServer, mux)
 
 	return &http.Server{
-		Handler: wsproxy.WebsocketProxy(handler),
+		Handler: wsproxy.WebsocketProxy(handler, wsproxy.WithMaxRespBodyBufferSize(16*1024*1024)),
 	}, nil
 }
 
