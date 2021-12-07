@@ -120,6 +120,12 @@ type ConsensusRaftImplConfig struct {
 	MsgBus         msgbus.MessageBus
 }
 
+type SnapshotArgs struct {
+	Index       uint64
+	BlockHeight int64
+	ConfChange  bool
+}
+
 // New creates a raft consensus instance
 func New(config ConsensusRaftImplConfig) (*ConsensusRaftImpl, error) {
 	consensus := &ConsensusRaftImpl{}
@@ -368,19 +374,28 @@ func (consensus *ConsensusRaftImpl) NodeReady(ready etcdraft.Ready) (exit bool) 
 	}
 
 	ok, configChanged := consensus.publishEntries(consensus.entriesToApply(ready.CommittedEntries))
+	height, err := consensus.ledgerCache.CurrentHeight()
+	if err != nil {
+		consensus.logger.Panic("get ledgerCache.CurrentHeight() error:%+v", err)
+	}
+	snapArgs := &SnapshotArgs{
+		Index:       consensus.appliedIndex,
+		BlockHeight: height,
+		ConfChange:  configChanged,
+	}
 	if !ok {
 		for len(consensus.walSaveC) != 0 {
 			time.Sleep(500 * time.Millisecond)
 		}
 		close(consensus.closeC)
-		consensus.maybeTriggerSnapshot(configChanged)
+		consensus.maybeTriggerSnapshot(snapArgs)
 		consensus.logger.Infof("[%x] is deleted from consensus nodes", consensus.Id)
 		return true
 	}
 	if consensus.asyncWalSave {
-		consensus.walSaveC <- configChanged
+		consensus.walSaveC <- snapArgs
 	} else {
-		consensus.maybeTriggerSnapshot(configChanged)
+		consensus.maybeTriggerSnapshot(snapArgs)
 	}
 	if ready.SoftState != nil {
 		consensus.isLeader = atomic.LoadUint64(&ready.SoftState.Lead) == consensus.Id
@@ -453,8 +468,10 @@ func (consensus *ConsensusRaftImpl) AsyncWalSave() {
 		case item := <-consensus.walSaveC:
 			if ready, ok := item.(etcdraft.Ready); ok {
 				consensus.processWalAndSnap(ready)
-			} else if configChanged, ok := item.(bool); ok {
-				consensus.maybeTriggerSnapshot(configChanged)
+			} else if snapArgs, ok := item.(*SnapshotArgs); ok {
+				consensus.maybeTriggerSnapshot(snapArgs)
+			} else if confState, ok := item.(raftpb.ConfState); ok {
+				consensus.confState = confState
 			} else {
 				consensus.logger.Panicf("[%x] AsyncWalSave got an invalid item: %v", item)
 			}
@@ -503,7 +520,12 @@ func (consensus *ConsensusRaftImpl) publishEntries(ents []raftpb.Entry) (ok bool
 			configChanged = true
 			var cc raftpb.ConfChange
 			cc.Unmarshal(ents[i].Data)
-			consensus.confState = *consensus.node.ApplyConfChange(cc)
+			confState := *consensus.node.ApplyConfChange(cc)
+			if consensus.asyncWalSave {
+				consensus.walSaveC <- confState
+			} else {
+				consensus.confState = confState
+			}
 			var idToNodes map[uint64]string
 			consensus.peers, idToNodes = consensus.getPeersFromChainConf()
 			for id, node := range idToNodes {
@@ -548,11 +570,7 @@ func (consensus *ConsensusRaftImpl) publishSnapshot(snapshot raftpb.Snapshot) {
 	}
 }
 
-func (consensus *ConsensusRaftImpl) getSnapshot() ([]byte, error) {
-	height, err := consensus.ledgerCache.CurrentHeight()
-	if err != nil {
-		return nil, err
-	}
+func (consensus *ConsensusRaftImpl) getSnapshot(height int64) ([]byte, error) {
 	data, err := json.Marshal(SnapshotHeight{
 		Height: height,
 	})
@@ -560,17 +578,18 @@ func (consensus *ConsensusRaftImpl) getSnapshot() ([]byte, error) {
 	return data, err
 }
 
-func (consensus *ConsensusRaftImpl) maybeTriggerSnapshot(configChanged bool) {
-	if consensus.appliedIndex-consensus.snapshotIndex <= consensus.snapCount && !configChanged {
+func (consensus *ConsensusRaftImpl) maybeTriggerSnapshot(snapArgs *SnapshotArgs) {
+	if snapArgs.Index <= consensus.snapshotIndex ||
+		snapArgs.Index-consensus.snapshotIndex <= consensus.snapCount && !snapArgs.ConfChange {
 		return
 	}
 
-	data, err := consensus.getSnapshot()
+	data, err := consensus.getSnapshot(snapArgs.BlockHeight)
 	if err != nil {
 		consensus.logger.Fatalf("get snapshot error: %v", err)
 	}
 
-	snap, err := consensus.raftStorage.CreateSnapshot(consensus.appliedIndex, &consensus.confState, data)
+	snap, err := consensus.raftStorage.CreateSnapshot(snapArgs.Index, &consensus.confState, data)
 	if err != nil {
 		consensus.logger.Fatalf("create snapshot error: %v", err)
 	}
@@ -579,8 +598,8 @@ func (consensus *ConsensusRaftImpl) maybeTriggerSnapshot(configChanged bool) {
 		consensus.logger.Fatalf("save snapshot error: %v", err)
 	}
 
-	consensus.logger.Infof("trigger snapshot appliedIndex: %v, data: %v, snapshotIndex: %v",
-		consensus.appliedIndex, string(data), consensus.snapshotIndex)
+	consensus.logger.Infof("trigger snapshot Index: %v, data: %v, snapshotIndex: %v",
+		snapArgs.Index, string(data), consensus.snapshotIndex)
 	//consensus.snapshotIndex = consensus.appliedIndex
 	consensus.snapshotIndex = snap.Metadata.Index
 
