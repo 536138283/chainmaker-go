@@ -87,7 +87,11 @@ func NewRocksDBHandle(chainId string, dbFolder string, dbconfig *localconf.Rocks
 		dbOpts.maxOpenFiles = dbconfig.MaxOpenFiles
 	}
 
-	dbconfig.StorePath = filepath.Join(localconf.ChainMakerConfig.StorageConfig.StorePath, chainId, dbFolder)
+	path := dbconfig.StorePath
+	if len(dbconfig.StorePath) == 0 {
+		path = localconf.ChainMakerConfig.StorageConfig.StorePath
+	}
+	dbconfig.StorePath = filepath.Join(path, chainId, dbFolder)
 	rocksdbOpts := dbOpts.ToOptions()
 
 	err := createDirIfNotExist(dbconfig.StorePath)
@@ -268,8 +272,8 @@ func (h *RocksDBHandle) WriteBatch(batch protocol.StoreBatcher, sync bool) error
 	elapsedWriteDBTime := utils.CurrentTimeMillisSeconds() - startTime
 
 	h.logger.Debugf("rocksdb write batch time used: newWriteBatchTime: %d, batchTime: %d, writeOptionsTime: %d, writeDBTime: %d, total: %d",
-		elapsedWriteBatchTime, elapsedBatchTime - elapsedWriteBatchTime, elapsedWriteOptionsTime - elapsedBatchTime,
-		elapsedWriteDBTime - elapsedWriteOptionsTime, utils.CurrentTimeMillisSeconds() - startTime)
+		elapsedWriteBatchTime, elapsedBatchTime-elapsedWriteBatchTime, elapsedWriteOptionsTime-elapsedBatchTime,
+		elapsedWriteDBTime-elapsedWriteOptionsTime, utils.CurrentTimeMillisSeconds()-startTime)
 
 	return nil
 }
