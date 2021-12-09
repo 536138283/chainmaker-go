@@ -2,6 +2,7 @@ package badgerdbprovider
 
 import (
 	"bytes"
+
 	"github.com/yiyanwannian/badger/v3"
 )
 
@@ -63,10 +64,10 @@ func (iter *Iterator) Next() bool {
 
 	if iter.first {
 		iter.first = false
-		return true
+	} else {
+		iter.biter.Next()
 	}
 
-	iter.biter.Next()
 	if iter.isRangeIter() {
 		// if start and end are both not nil, this is a range iter
 		if iter.biter.Valid() {
