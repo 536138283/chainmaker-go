@@ -10,16 +10,15 @@ import (
 	"reflect"
 	"testing"
 
-	"chainmaker.org/chainmaker-go/localconf"
-	"chainmaker.org/chainmaker-go/mock"
-	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
-	"github.com/golang/mock/gomock"
-
 	"chainmaker.org/chainmaker-go/common/msgbus"
 	"chainmaker.org/chainmaker-go/consensus/tbft"
-	"chainmaker.org/chainmaker-go/dpos"
+	"chainmaker.org/chainmaker-go/localconf"
+	"chainmaker.org/chainmaker-go/mock"
 	configpb "chainmaker.org/chainmaker-go/pb/protogo/config"
+	consensuspb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
+
+	"github.com/golang/mock/gomock"
 )
 
 const (
@@ -104,7 +103,6 @@ func TestNewConsensusEngine(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var factory Factory
-			dposImpl := dpos.NewDPoSImpl(tt.args.chainConf, tt.args.store)
 			got, err := factory.NewConsensusEngine(
 				tt.args.consensusType,
 				tt.args.chainID,
@@ -122,7 +120,6 @@ func TestNewConsensusEngine(t *testing.T) {
 				tt.args.chainConf,
 				tt.args.store,
 				nil,
-				dposImpl,
 			)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("NewConsensusEngine() error = %v, wantErr %v", err, tt.wantErr)

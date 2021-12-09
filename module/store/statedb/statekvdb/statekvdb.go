@@ -125,10 +125,12 @@ func (i *kvi) Value() (*storePb.KV, error) {
 	if err != nil {
 		return nil, err
 	}
+	var key []byte
+	var value []byte
 	return &storePb.KV{
 		ContractName: i.contractName,
-		Key:          parseStateKey(i.iter.Key(), i.contractName),
-		Value:        i.iter.Value(),
+		Key:          parseStateKey(append(key, i.iter.Key()...), i.contractName),
+		Value:        append(value, i.iter.Value()...),
 	}, nil
 }
 

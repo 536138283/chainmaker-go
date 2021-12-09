@@ -16,55 +16,47 @@ import (
 	"github.com/libp2p/go-libp2p-core/network"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"sync"
-	"time"
 )
+
+var readyC chan struct{}
+
+type connNotifyUnit struct {
+	c      network.Conn
+	action bool // true: connected, false: disconnected
+}
 
 // networkNotify is an implementation of network.Notifiee.
 var networkNotify = func(host *LibP2pHost) network.Notifiee {
 	return &network.NotifyBundle{
 		ConnectedF: func(_ network.Network, c network.Conn) {
-			times := 10
-			for (host.peerStreamManager == nil || host.connManager == nil) && times > 0 {
-				times--
-				time.Sleep(time.Second)
-			}
-			if times == 0 {
-				logger.Errorf("[Host][BUG] nil peer stream manager or nil connection manager err")
+			select {
+			case <-host.ctx.Done():
 				return
-			}
-			host.peerStreamManager.initPeerStream(c.RemotePeer())
-			pid := c.RemotePeer()
-			host.connManager.AddConn(pid, c)
-			logger.Infof("[Host] new connection connected(remote peer-id:%s, remote multi-addr:%s)", c.RemotePeer().Pretty(), c.RemoteMultiaddr().String())
+			case <-readyC:
 
+			}
+			host.connHandleOnce.Do(func() {
+				go host.connHandleLoop()
+			})
+			host.connHandleC <- &connNotifyUnit{
+				c:      c,
+				action: true,
+			}
 		},
 		DisconnectedF: func(_ network.Network, c network.Conn) {
-			times := 10
-			for (host.peerStreamManager == nil || host.connManager == nil) && times > 0 {
-				times--
-				time.Sleep(time.Second)
-			}
-			if times == 0 {
-				logger.Errorf("[Host][BUG] nil peer stream manager or nil connection manager err")
+			select {
+			case <-host.ctx.Done():
 				return
+			case <-readyC:
+
 			}
-			conn := host.connManager.GetConn(c.RemotePeer())
-			if conn != nil && conn.RemoteMultiaddr().String() != c.RemoteMultiaddr().String() {
-				return
+			host.connHandleOnce.Do(func() {
+				go host.connHandleLoop()
+			})
+			host.connHandleC <- &connNotifyUnit{
+				c:      c,
+				action: false,
 			}
-			logger.Infof("[Host] connection disconnected(remote peer-id:%s, remote multi-addr:%s)", c.RemotePeer().Pretty(), c.RemoteMultiaddr().String())
-			host.connManager.RemoveConn(c.RemotePeer())
-			pid := c.RemotePeer().Pretty()
-			if host.removeTlsPeerNotifyC != nil {
-				host.removeTlsPeerNotifyC <- pid
-			}
-			if host.removeTlsCertIdPeerIdNotifyC != nil {
-				host.removeTlsCertIdPeerIdNotifyC <- pid
-			}
-			if host.removePeerIdTlsCertNotifyC != nil {
-				host.removePeerIdTlsCertNotifyC <- pid
-			}
-			host.peerStreamManager.cleanPeerStream(c.RemotePeer())
 		},
 	}
 }
@@ -94,6 +86,9 @@ type LibP2pHost struct {
 	tlsChainTrustRoots           *libp2ptls.ChainTrustRoots
 	gmTlsChainTrustRoots         *libp2pgmtls.ChainTrustRoots
 	opts                         []libp2p.Option
+
+	connHandleOnce sync.Once
+	connHandleC    chan *connNotifyUnit
 }
 
 func (lh *LibP2pHost) initTlsCsAndSubassemblies() {
@@ -106,6 +101,44 @@ func (lh *LibP2pHost) initTlsCsAndSubassemblies() {
 	lh.peerChainIdsRecorder = newPeerIdChainIdsRecorder(lh.newTlsPeerChainIdsNotifyC, lh.removeTlsPeerNotifyC)
 	lh.certPeerIdMapper = newCertIdPeerIdMapper(lh.newTlsCertIdPeerIdNotifyC, lh.removeTlsCertIdPeerIdNotifyC)
 	lh.peerIdTlsCertStore = newPeerIdTlsCertStore(lh.addPeerIdTlsCertNotifyC, lh.removePeerIdTlsCertNotifyC)
+}
+
+func (lh *LibP2pHost) connHandleLoop() {
+	for {
+		select {
+		case <-lh.ctx.Done():
+			return
+		case u := <-lh.connHandleC:
+			if u.action {
+				// connected notify
+				lh.peerStreamManager.initPeerStream(u.c.RemotePeer())
+				pid := u.c.RemotePeer()
+				lh.connManager.AddConn(pid, u.c)
+				logger.Infof("[Host] new connection connected(remote peer-id:%s, remote multi-addr:%s)",
+					u.c.RemotePeer().Pretty(), u.c.RemoteMultiaddr().String())
+				continue
+			}
+			// disconnected notify
+			conn := lh.connManager.GetConn(u.c.RemotePeer())
+			if conn != nil && conn.RemoteMultiaddr().String() != u.c.RemoteMultiaddr().String() {
+				return
+			}
+			logger.Infof("[Host] connection disconnected(remote peer-id:%s, remote multi-addr:%s)",
+				u.c.RemotePeer().Pretty(), u.c.RemoteMultiaddr().String())
+			lh.connManager.RemoveConn(u.c.RemotePeer())
+			pid := u.c.RemotePeer().Pretty()
+			if lh.removeTlsPeerNotifyC != nil {
+				lh.removeTlsPeerNotifyC <- pid
+			}
+			if lh.removeTlsCertIdPeerIdNotifyC != nil {
+				lh.removeTlsCertIdPeerIdNotifyC <- pid
+			}
+			if lh.removePeerIdTlsCertNotifyC != nil {
+				lh.removePeerIdTlsCertNotifyC <- pid
+			}
+			lh.peerStreamManager.cleanPeerStream(u.c.RemotePeer())
+		}
+	}
 }
 
 // PeerStreamManager
@@ -142,6 +175,8 @@ func NewLibP2pHost(ctx context.Context) *LibP2pHost {
 		blackList:        NewBlackList(),
 		revokedValidator: revoke.NewRevokedValidator(),
 		opts:             make([]libp2p.Option, 0),
+		connHandleOnce:   sync.Once{},
+		connHandleC:      make(chan *connNotifyUnit, 10),
 	}
 }
 

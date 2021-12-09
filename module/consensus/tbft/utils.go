@@ -11,35 +11,31 @@ import (
 	"encoding/base64"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/dpos"
-
-	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
-
+	"chainmaker.org/chainmaker-go/consensus/dpos"
+	"chainmaker.org/chainmaker-go/logger"
 	"chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/pb/protogo/config"
-
-	"chainmaker.org/chainmaker-go/logger"
-
+	"chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	tbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/tbft"
 	"chainmaker.org/chainmaker-go/protocol"
+
 	"github.com/gogo/protobuf/proto"
 )
 
-func GetValidatorList(chainConfig *config.ChainConfig, store protocol.BlockchainStore) (validators []string, err error) {
+func GetValidatorList(chainConfig *config.ChainConfig, store protocol.BlockchainStore) (validators []string,
+	err error) {
 	if chainConfig.Consensus.Type == consensus.ConsensusType_TBFT {
 		return GetValidatorListFromConfig(chainConfig)
 	} else if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
 		return GetValidatorListFromLedger(store)
 	}
-	return nil, fmt.Errorf("unkonwn consensus type: %s", chainConfig.Consensus.Type)
+	return nil, fmt.Errorf("unknown consensus type: %s", chainConfig.Consensus.Type)
 }
 
 func GetValidatorListFromConfig(chainConfig *config.ChainConfig) (validators []string, err error) {
 	nodes := chainConfig.Consensus.Nodes
 	for _, node := range nodes {
-		for _, nid := range node.NodeId {
-			validators = append(validators, nid)
-		}
+		validators = append(validators, node.NodeId...)
 	}
 	return validators, nil
 }
@@ -106,7 +102,10 @@ func VerifyBlockSignatures(chainConf protocol.ChainConf,
 	for _, v := range blockVotes.Votes {
 		voteProto := v.ToProto()
 		voteProtoCopy := proto.Clone(voteProto)
-		vote := voteProtoCopy.(*tbftpb.Vote)
+		vote, ok := voteProtoCopy.(*tbftpb.Vote)
+		if !ok {
+			clog.Errorf("Transfer vote type failed")
+		}
 		vote.Endorsement = nil
 		message := mustMarshal(vote)
 

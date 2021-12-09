@@ -22,13 +22,15 @@ type ConsensusState struct {
 	Round  int32
 	Step   tbftpb.Step
 
-	Proposal           *Proposal // proposal
-	VerifingProposal   *Proposal // verifing proposal
-	LockedRound        int32
-	LockedProposal     *Proposal // locked proposal
-	ValidRound         int32
-	ValidProposal      *Proposal // valid proposal
-	heightRoundVoteSet *heightRoundVoteSet
+	Proposal                  *Proposal // proposal
+	VerifingProposal          *Proposal // verifing proposal
+	LockedRound               int32
+	LockedProposal            *Proposal // locked proposal
+	ValidRound                int32
+	ValidProposal             *Proposal // valid proposal
+	heightRoundVoteSet        *heightRoundVoteSet
+	TriggeredTimeoutPrecommit bool // flag that triggers a precommit timeout
+	TriggeredTimeoutPrevote   bool // flag that triggers a prevote timeout
 }
 
 // NewConsensusState creates a new ConsensusState instance
@@ -38,15 +40,6 @@ func NewConsensusState(logger *logger.CMLogger, id string) *ConsensusState {
 		Id:     id,
 	}
 	return cs
-}
-
-func (cs *ConsensusState) resetFromProto(csProto *tbftpb.ConsensusState, validatorSet *validatorSet) {
-	cs.Height = csProto.Height
-	cs.Round = csProto.Round
-	cs.Step = csProto.Step
-	cs.Proposal = NewProposalFromProto(csProto.Proposal)
-	cs.VerifingProposal = NewProposalFromProto(csProto.VerifingProposal)
-	cs.heightRoundVoteSet = newHeightRoundVoteSetFromProto(cs.logger, csProto.HeightRoundVoteSet, validatorSet)
 }
 
 // toProto serializes the ConsensusState instance

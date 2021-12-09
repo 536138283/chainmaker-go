@@ -22,6 +22,7 @@ import (
 	"chainmaker.org/chainmaker-go/store/cache"
 	"chainmaker.org/chainmaker-go/store/contracteventdb"
 	"chainmaker.org/chainmaker-go/store/contracteventdb/eventsqldb"
+	"chainmaker.org/chainmaker-go/store/dbprovider/badgerdbprovider"
 	"chainmaker.org/chainmaker-go/store/dbprovider/leveldbprovider"
 	"chainmaker.org/chainmaker-go/store/historydb"
 	"chainmaker.org/chainmaker-go/store/historydb/historykvdb"
@@ -57,7 +58,7 @@ func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig,
 	blocDBConfig := storeConfig.GetBlockDbConfig()
 	if blocDBConfig.IsKVDB() {
 		blockDB, err = m.NewBlockKvDB(chainId, parseEngineType(blocDBConfig.Provider),
-			blocDBConfig.LevelDbConfig, logger)
+			blocDBConfig, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -71,7 +72,7 @@ func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig,
 	stateDBConfig := storeConfig.GetStateDbConfig()
 	if stateDBConfig.IsKVDB() {
 		stateDB, err = m.NewStateKvDB(chainId, parseEngineType(stateDBConfig.Provider),
-			stateDBConfig.LevelDbConfig, logger)
+			stateDBConfig, logger)
 		if err != nil {
 			return nil, err
 		}
@@ -86,7 +87,7 @@ func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig,
 	if !storeConfig.DisableHistoryDB {
 		if historyDBConfig.IsKVDB() {
 			historyDB, err = m.NewHistoryKvDB(chainId, parseEngineType(historyDBConfig.Provider),
-				historyDBConfig.LevelDbConfig, logger)
+				historyDBConfig, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -102,7 +103,7 @@ func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig,
 	if !storeConfig.DisableResultDB {
 		if resultDBConfig.IsKVDB() {
 			resultDB, err = m.NewResultKvDB(chainId, parseEngineType(resultDBConfig.Provider),
-				resultDBConfig.LevelDbConfig, logger)
+				resultDBConfig, logger)
 			if err != nil {
 				return nil, err
 			}
@@ -132,7 +133,7 @@ func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig,
 }
 
 func getLocalCommonDB(chainId string, config *localconf.StorageConfig, log protocol.Logger) protocol.DBHandle {
-	return leveldbprovider.NewLevelDBHandle(chainId, "localdb", config.GetDefaultDBConfig().LevelDbConfig, log)
+	return leveldbprovider.NewLevelDBHandle(chainId, "localdb", config.GetDefaultDBConfig(), log)
 }
 
 func parseEngineType(dbType string) types.EngineType {
@@ -140,6 +141,8 @@ func parseEngineType(dbType string) types.EngineType {
 	switch strings.ToLower(dbType) {
 	case "leveldb":
 		storeType = types.LevelDb
+	case "badgerdb":
+		storeType = types.BadgerDb
 	case "rocksdb":
 		storeType = types.RocksDb
 	case "mysql":
@@ -153,7 +156,7 @@ func parseEngineType(dbType string) types.EngineType {
 }
 
 // NewBlockKvDB constructs new `BlockDB`
-func (m *Factory) NewBlockKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+func (m *Factory) NewBlockKvDB(chainId string, engineType types.EngineType, config *localconf.DbConfig,
 	logger protocol.Logger) (blockdb.BlockDB, error) {
 	nWorkers := runtime.NumCPU()
 	blockDB := &blockkvdb.BlockKvDB{
@@ -166,6 +169,9 @@ func (m *Factory) NewBlockKvDB(chainId string, engineType types.EngineType, conf
 		blockDB.DbHandle = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreBlockDBDir, config, logger)
 	case types.RocksDb:
 		blockDB.DbHandle = newRocksdbHandle(chainId, "blockdb", logger)
+	case types.BadgerDb:
+		blockDB.DbHandle = badgerdbprovider.NewBadgerDBHandle(chainId,
+			badgerdbprovider.StoreBlockDBDir, config.BadgerDbConfig, logger)
 	default:
 		return nil, nil
 	}
@@ -179,7 +185,7 @@ func (m *Factory) NewBlockKvDB(chainId string, engineType types.EngineType, conf
 }
 
 // NewStateKvDB constructs new `StabeKvDB`
-func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, config *localconf.DbConfig,
 	logger protocol.Logger) (statedb.StateDB, error) {
 	stateDB := &statekvdb.StateKvDB{
 		Logger: logger,
@@ -190,6 +196,9 @@ func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, conf
 		stateDB.DbHandle = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreStateDBDir, config, logger)
 	case types.RocksDb:
 		stateDB.DbHandle = newRocksdbHandle(chainId, "statedb", logger)
+	case types.BadgerDb:
+		stateDB.DbHandle = badgerdbprovider.NewBadgerDBHandle(chainId,
+			badgerdbprovider.StoreStateDBDir, config.BadgerDbConfig, logger)
 
 	default:
 		return nil, nil
@@ -198,7 +207,7 @@ func (m *Factory) NewStateKvDB(chainId string, engineType types.EngineType, conf
 }
 
 // NewHistoryKvDB constructs new `HistoryKvDB`
-func (m *Factory) NewHistoryKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+func (m *Factory) NewHistoryKvDB(chainId string, engineType types.EngineType, config *localconf.DbConfig,
 	logger protocol.Logger) (*historykvdb.HistoryKvDB, error) {
 	var db protocol.DBHandle
 	switch engineType {
@@ -206,13 +215,16 @@ func (m *Factory) NewHistoryKvDB(chainId string, engineType types.EngineType, co
 		db = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreHistoryDBDir, config, logger)
 	case types.RocksDb:
 		db = newRocksdbHandle(chainId, "historydb", logger)
+	case types.BadgerDb:
+		db = badgerdbprovider.NewBadgerDBHandle(chainId,
+			badgerdbprovider.StoreHistoryDBDir, config.BadgerDbConfig, logger)
 	default:
 		return nil, errors.New("invalid db type")
 	}
 	historyDB := historykvdb.NewHistoryKvDB(db, cache.NewStoreCacheMgr(chainId, logger), logger)
 	return historyDB, nil
 }
-func (m *Factory) NewResultKvDB(chainId string, engineType types.EngineType, config *localconf.LevelDbConfig,
+func (m *Factory) NewResultKvDB(chainId string, engineType types.EngineType, config *localconf.DbConfig,
 	logger protocol.Logger) (*resultkvdb.ResultKvDB, error) {
 	var db protocol.DBHandle
 	switch engineType {
@@ -220,6 +232,9 @@ func (m *Factory) NewResultKvDB(chainId string, engineType types.EngineType, con
 		db = leveldbprovider.NewLevelDBHandle(chainId, leveldbprovider.StoreResultDBDir, config, logger)
 	case types.RocksDb:
 		db = newRocksdbHandle(chainId, "resultdb", logger)
+	case types.BadgerDb:
+		db = badgerdbprovider.NewBadgerDBHandle(chainId,
+			badgerdbprovider.StoreResultDBDir, config.BadgerDbConfig, logger)
 	default:
 		return nil, errors.New("invalid db type")
 	}

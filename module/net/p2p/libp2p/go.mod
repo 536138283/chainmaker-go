@@ -42,7 +42,9 @@ require (
 	github.com/onsi/ginkgo v1.12.1 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/whyrusleeping/mdns v0.0.0-20190826153040-b9b60ed33aa9
-	google.golang.org/protobuf v1.25.0 // indirect
 )
 
-replace github.com/libp2p/go-libp2p-core => ../libp2pcore
+replace (
+	chainmaker.org/chainmaker-go/common => ../../../../common
+	github.com/libp2p/go-libp2p-core => ../libp2pcore
+)

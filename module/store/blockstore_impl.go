@@ -69,6 +69,9 @@ func NewBlockStoreImpl(chainId string,
 	walOpt := &wal.Options{
 		NoSync: writeAsync,
 	}
+	if storeConfig.LogDBSegmentSize > 0 { // LogDBSegmentSize default is 20MB
+		walOpt.SegmentSize = storeConfig.LogDBSegmentSize * 1024 * 1024
+	}
 	if binLog == nil {
 		writeLog, err := wal.Open(walPath, walOpt)
 		if err != nil {
@@ -271,13 +274,13 @@ func (bs *BlockStoreImpl) PutBlock(block *commonPb.Block, txRWSets []*commonPb.T
 	elapsedCommitBlock := utils.CurrentTimeMillisSeconds() - startCommitBlock
 
 	//7. clean wal, delete block and rwset after commit
-	go func() {
-		err := bs.deleteBlockFromLog(uint64(block.Header.BlockHeight))
-		if err != nil {
-			bs.logger.Warnf("chain[%s]: failed to clean log, block[%d], err:%s",
-				block.Header.ChainId, block.Header.BlockHeight, err)
-		}
-	}()
+	//go func() {
+	//	err := bs.deleteBlockFromLog(uint64(block.Header.BlockHeight))
+	//	if err != nil {
+	//		bs.logger.Warnf("chain[%s]: failed to clean log, block[%d], err:%s",
+	//			block.Header.ChainId, block.Header.BlockHeight, err)
+	//	}
+	//}()
 	bs.logger.Infof("chain[%s]: put block[%d] (txs:%d bytes:%d), "+
 		"time used (mashal:%d, log:%d, commit:%d, total:%d)",
 		block.Header.ChainId, block.Header.BlockHeight, len(block.Txs), len(blockBytes),
@@ -359,6 +362,14 @@ func (bs *BlockStoreImpl) GetBlockHeaderByHeight(height int64) (*commonPb.BlockH
 
 // GetBlock returns a block given it's block height, or returns nil if none exists.
 func (bs *BlockStoreImpl) GetBlock(height int64) (*commonPb.Block, error) {
+	if bs.canBlockLoadFromWAL(height) {
+		if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
+			bs.logger.Warnf("can not load block data from wal err:%v", err)
+		} else if bsi != nil {
+			return bsi.Block, nil
+		}
+	}
+
 	return bs.blockDB.GetBlock(height)
 }
 
@@ -491,6 +502,14 @@ func (bs *BlockStoreImpl) GetTxRWSetsByHeight(height int64) ([]*commonPb.TxRWSet
 // GetBlockWithRWSets returns the block and all the rwsets corresponding to the block,
 // or returns nil if zhe block does not exist
 func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRWSet, error) {
+	if bs.canBlockLoadFromWAL(height) {
+		if bsi, err := bs.getBlockWithRWSetsFromLog(uint64(height)); err != nil {
+			bs.logger.Warnf("can not load block data from wal err:%v", err)
+		} else if bsi != nil {
+			return bsi, nil
+		}
+	}
+
 	block, err := bs.GetBlock(height)
 	if err != nil {
 		return nil, err
@@ -732,6 +751,20 @@ func (bs *BlockStoreImpl) getLastSavepoint() (uint64, error) {
 	return lastIndex - 1, nil
 }
 
+func (bs *BlockStoreImpl) getBlockWithRWSetsFromLog(num uint64) (*storePb.BlockWithRWSet, error) {
+	index := num + 1
+	bytes, err := bs.wal.Read(index)
+	if err != nil {
+		bs.logger.Errorf("read log failed, err:%s", err)
+		return nil, err
+	}
+	blockWithRWSet, err := serialization.DeserializeBlock(bytes)
+	if err != nil {
+		return nil, err
+	}
+	return blockWithRWSet, err
+}
+
 func (bs *BlockStoreImpl) getBlockFromLog(num uint64) (*serialization.BlockWithSerializedInfo, error) {
 	index := num + 1
 	bytes, err := bs.wal.Read(index)
@@ -833,5 +866,18 @@ func (bs *BlockStoreImpl) InitArchiveMgr(chainId string) error {
 
 func (bs *BlockStoreImpl) isSupportArchive() bool {
 	return bs.storeConfig.BlockDbConfig.IsKVDB() &&
-		(bs.storeConfig.ResultDbConfig!=nil &&bs.storeConfig.ResultDbConfig.IsKVDB())
+		(bs.storeConfig.ResultDbConfig != nil && bs.storeConfig.ResultDbConfig.IsKVDB())
+}
+
+func (bs *BlockStoreImpl) canBlockLoadFromWAL(height int64) bool {
+	if !bs.isSupportArchive() {
+		return true
+	}
+
+	archivePivot, _ := bs.ArchiveMgr.GetArchivedPivot()
+	if archivePivot >= uint64(height) {
+		return false
+	}
+
+	return true
 }

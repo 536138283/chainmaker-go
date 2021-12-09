@@ -20,10 +20,6 @@ import (
 	tbftpb "chainmaker.org/chainmaker-go/pb/protogo/consensus/tbft"
 )
 
-const (
-	nilVoteStr = "nil vote"
-)
-
 var (
 	ErrVoteNil              = errors.New("nil vote")
 	ErrUnexceptedStep       = errors.New("unexpected step")
@@ -183,7 +179,7 @@ func (bv *BlockVotes) ToProto() *tbftpb.BlockVotes {
 
 func (bv *BlockVotes) addVote(vote *Vote) {
 	bv.Votes[vote.Voter] = vote
-	bv.Sum += 1
+	bv.Sum++
 }
 
 // VoteSet wraps tbftpb.VoteSet and validatorSet
@@ -200,7 +196,8 @@ type VoteSet struct {
 }
 
 // NewVoteSet creates a new VoteSet instance
-func NewVoteSet(logger *logger.CMLogger, voteType tbftpb.VoteType, height int64, round int32, validators *validatorSet) *VoteSet {
+func NewVoteSet(logger *logger.CMLogger, voteType tbftpb.VoteType, height int64, round int32,
+	validators *validatorSet) *VoteSet {
 	return &VoteSet{
 		logger:       logger,
 		Type:         voteType,
@@ -318,7 +315,7 @@ func (vs *VoteSet) AddVote(vote *Vote) (added bool, err error) {
 	}
 
 	vs.Votes[vote.Voter] = vote
-	vs.Sum += 1
+	vs.Sum++
 
 	hashStr := base64.StdEncoding.EncodeToString(vote.Hash)
 	votesByBlock, ok := vs.VotesByBlock[hashStr]
@@ -391,6 +388,15 @@ func (vs *VoteSet) hasTwoThirdsAny() bool {
 	return ret
 }
 
+// 2f+1 any votes received
+func (vs *VoteSet) hasTwoThirdsNoMajority() bool {
+	if vs == nil {
+		return false
+	}
+
+	return vs.Sum >= int64(vs.validators.Size()*2/3+1)
+}
+
 type roundVoteSet struct {
 	Height     int64
 	Round      int32
@@ -407,7 +413,8 @@ func newRoundVoteSet(height int64, round int32, prevotes *VoteSet, precommits *V
 	}
 }
 
-func NewRoundVoteSetFromProto(logger *logger.CMLogger, rvs *tbftpb.RoundVoteSet, validators *validatorSet) *roundVoteSet {
+func newRoundVoteSetFromProto(logger *logger.CMLogger, rvs *tbftpb.RoundVoteSet,
+	validators *validatorSet) *roundVoteSet {
 	if rvs == nil {
 		return nil
 	}
@@ -447,7 +454,8 @@ type heightRoundVoteSet struct {
 	validators *validatorSet
 }
 
-func newHeightRoundVoteSet(logger *logger.CMLogger, height int64, round int32, validators *validatorSet) *heightRoundVoteSet {
+func newHeightRoundVoteSet(logger *logger.CMLogger, height int64, round int32,
+	validators *validatorSet) *heightRoundVoteSet {
 	hvs := &heightRoundVoteSet{
 		logger:        logger,
 		Height:        height,
@@ -456,17 +464,6 @@ func newHeightRoundVoteSet(logger *logger.CMLogger, height int64, round int32, v
 
 		validators: validators,
 	}
-	return hvs
-}
-
-func newHeightRoundVoteSetFromProto(logger *logger.CMLogger, hvsProto *tbftpb.HeightRoundVoteSet, validators *validatorSet) *heightRoundVoteSet {
-	hvs := newHeightRoundVoteSet(logger, hvsProto.Height, hvsProto.Round, validators)
-
-	for k, v := range hvsProto.RoundVoteSets {
-		rvs := NewRoundVoteSetFromProto(logger, v, validators)
-		hvs.RoundVoteSets[k] = rvs
-	}
-
 	return hvs
 }
 
@@ -543,6 +540,24 @@ func (hvs *heightRoundVoteSet) addVote(vote *Vote) (added bool, err error) {
 	return
 }
 
+func (hvs *heightRoundVoteSet) isRequired(round int32, vote *Vote) bool {
+	if vote == nil {
+		return false
+	}
+	voteSet := hvs.getVoteSet(round, vote.Type)
+	if voteSet == nil || voteSet.Votes == nil {
+		return true
+	}
+
+	// votes that are not validators are not required
+	if !voteSet.validators.HasValidator(vote.Voter) {
+		return false
+	}
+	// is exist
+	_, ok := voteSet.Votes[vote.Voter]
+	return !ok
+}
+
 func createProposalMsg(proposal *Proposal) *tbftpb.TBFTMsg {
 	proposalProto := proposal.ToProto()
 	data := mustMarshal(proposalProto)
@@ -573,17 +588,6 @@ func createPrecommitMsg(precommit *Vote) *tbftpb.TBFTMsg {
 
 	tbftMsg := &tbftpb.TBFTMsg{
 		Type: tbftpb.TBFTMsgType_precommit,
-		Msg:  data,
-	}
-
-	return tbftMsg
-}
-
-func createStateMsg(state *tbftpb.ConsensusState) *tbftpb.TBFTMsg {
-	data := mustMarshal(state)
-
-	tbftMsg := &tbftpb.TBFTMsg{
-		Type: tbftpb.TBFTMsgType_state,
 		Msg:  data,
 	}
 

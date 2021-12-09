@@ -13,6 +13,7 @@ import (
 	acPb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	configPb "chainmaker.org/chainmaker-go/pb/protogo/config"
+	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/utils"
 	"errors"
@@ -363,6 +364,14 @@ func (r *ChainTrustRootsRuntime) TrustRootUpdate(txSimContext protocol.TxSimCont
 		return nil, err
 	}
 
+	// verify has consensus nodes
+	for _, node := range chainConfig.Consensus.Nodes {
+		if orgId == node.OrgId {
+			err = fmt.Errorf("update trust root cert failed, you must delete all consensus nodes under the organization first")
+			r.log.Error(err)
+			return nil, err
+		}
+	}
 	trustRoots := chainConfig.TrustRoots
 	for i, root := range trustRoots {
 		if orgId == root.OrgId {
@@ -416,14 +425,16 @@ func (r *ChainTrustRootsRuntime) TrustRootDelete(txSimContext protocol.TxSimCont
 		return nil, err
 	}
 
-	trustRoots = append(trustRoots[:index], trustRoots[index+1:]...)
-	nodes := chainConfig.Consensus.Nodes
-	for i := len(nodes) - 1; i >= 0; i-- {
-		if orgId == nodes[i].OrgId {
-			nodes = append(nodes[:i], nodes[i+1:]...)
+	// verify has consensus nodes
+	for _, node := range chainConfig.Consensus.Nodes {
+		if orgId == node.OrgId {
+			err = fmt.Errorf("update trust root cert failed, you must delete all consensus nodes under the organization first")
+			r.log.Error(err)
+			return nil, err
 		}
 	}
-	chainConfig.Consensus.Nodes = nodes
+
+	trustRoots = append(trustRoots[:index], trustRoots[index+1:]...)
 	chainConfig.TrustRoots = trustRoots
 	result, err = setChainConfig(txSimContext, chainConfig)
 	if err != nil {
@@ -510,7 +521,11 @@ func (r *ChainConsensusRuntime) NodeIdUpdate(txSimContext protocol.TxSimContext,
 		r.log.Error(err)
 		return nil, err
 	}
-
+	if isRaftConsensus(chainConfig) {
+		err = fmt.Errorf("update node id failed, raft consensus does not support update node id, please use delete and add operation")
+		r.log.Error(err)
+		return nil, err
+	}
 	// verify params
 	orgId := params[paramNameOrgId]
 	nodeId := params[paramNameNodeId]       // origin node id
@@ -675,6 +690,12 @@ func (r *ChainConsensusRuntime) NodeOrgUpdate(txSimContext protocol.TxSimContext
 	// [start]
 	chainConfig, err := getChainConfig(txSimContext, params)
 	if err != nil {
+		r.log.Error(err)
+		return nil, err
+	}
+
+	if isRaftConsensus(chainConfig) {
+		err = fmt.Errorf("update org node failed, raft consensus does not support update node id, please use delete and add operation")
 		r.log.Error(err)
 		return nil, err
 	}
@@ -1183,4 +1204,8 @@ func (r *ChainConsensusRuntime) ResourcePolicyDelete(txSimContext protocol.TxSim
 		r.log.Infof("resource policy delete success. params %+v", params)
 	}
 	return result, err
+}
+
+func isRaftConsensus(chainConfig *configPb.ChainConfig) bool {
+	return chainConfig.Consensus.Type == consensusPb.ConsensusType_RAFT
 }

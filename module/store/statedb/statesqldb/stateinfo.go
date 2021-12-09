@@ -41,7 +41,7 @@ func (b *StateInfo) GetCreateTableSql(dbType string) string {
     updated_at datetime(3) NULL DEFAULT null,
     PRIMARY KEY (contract_name,object_key),
     INDEX idx_height (block_height)
-    ) default character set utf8`
+    ) default character set utf8mb4`
 	} else if dbType == localconf.SqlDbConfig_SqlDbType_Sqlite {
 		return `CREATE TABLE state_infos (
     contract_name text,object_key blob DEFAULT '',

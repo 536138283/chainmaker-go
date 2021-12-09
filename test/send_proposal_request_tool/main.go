@@ -37,6 +37,7 @@ import (
 var (
 	ip             string
 	port           int
+	serverName     string
 	chainId        string
 	orgId          string
 	caPaths        []string
@@ -138,6 +139,7 @@ func main() {
 	mainFlags := mainCmd.PersistentFlags()
 	mainFlags.StringVarP(&ip, "ip", "i", "localhost", "specify ip")
 	mainFlags.IntVarP(&port, "port", "p", 12301, "specify port")
+	mainFlags.StringVarP(&serverName, "server-name", "", "chainmaker.org", "cn/dsn default chainmaker.org")
 	mainFlags.StringVarP(&userKeyPath, "user-key", "k", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key", "specify user key path")
 	mainFlags.StringVarP(&userCrtPath, "user-crt", "c", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt", "specify user crt path")
 	mainFlags.StringVarP(&caPathsString, "ca-path", "P", "../../config/crypto-config/wx-org1.chainmaker.org/ca,../../config/crypto-config/wx-org2.chainmaker.org/ca", "specify ca path")

@@ -31,7 +31,6 @@ const (
 	moduleNameConsensus     = "Consensus"
 	moduleNameSync          = "Sync"
 	moduleNameSpv           = "Spv"
-	moduleNameDpos          = "DPoS"
 )
 
 // Blockchain is a block chain service. It manage all the modules of the chain.
@@ -80,9 +79,6 @@ type Blockchain struct {
 	proposalCache protocol.ProposalCache
 
 	snapshotManager protocol.SnapshotManager
-
-	// dpos feature
-	dpos protocol.DPoS
 
 	lastBlock *common.Block
 

@@ -8,7 +8,7 @@ else
   endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=v1.2.5
+VERSION=v1.2.6
 
 AARCH64="aarch64"
 CPU=$(shell uname -m)
@@ -110,11 +110,11 @@ mockgen-dep:
 
 docker-build:
 	docker build -t chainmaker -f ./DOCKER/Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.5
+	docker tag chainmaker chainmaker:$(VERSION)
 
 docker-build-dev: chainmaker
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
-	docker tag chainmaker chainmaker:v1.2.5
+	docker tag chainmaker chainmaker:$(VERSION)
 
 docker-compose-start: docker-compose-stop
 	docker-compose up -d
@@ -167,9 +167,24 @@ lint:
 #	cd tools/scanner && golangci-lint run ./...
 #	cd tools/sdk && golangci-lint run ./...
 
+sql-qta:
+	echo "clear environment"
+	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
+	cd test/send_proposal_request_ci && ./clean_sql_log.sh
+	echo "start new sql-qta test"
+	cd test/send_proposal_request_ci && ./build.sh
+	cd test/send_proposal_request_ci && ./start_sql_tbft_4.sh
+	cd test/send_proposal_request_sql && go run main.go
+	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
+	cd test/send_proposal_request_ci && ./clean_sql_log.sh
+
 qta:
 	cd test/send_proposal_request_ci && ./build.sh
 	cd test/send_proposal_request_ci && ./start_solo.sh
 	cd test/send_proposal_request_ci && go run main.go
 	cd test/send_proposal_request_ci && ./stop_solo.sh
 	cd test/send_proposal_request_ci && ./clean_data_log.sh
+
+pre-crypto-tool:
+	ln -s ../../chainmaker-cryptogen ./tools/chainmaker-cryptogen
+	cd ./tools/chainmaker-cryptogen && make

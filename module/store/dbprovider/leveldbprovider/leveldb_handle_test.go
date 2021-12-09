@@ -21,8 +21,10 @@ import (
 
 var dbPath = filepath.Join(os.TempDir(), fmt.Sprintf("%d_unit_test_db", time.Now().UnixNano()))
 var log = &test.GoLogger{}
-var dbConfig = &localconf.LevelDbConfig{
-	StorePath: dbPath,
+var dbConfig = &localconf.DbConfig{
+	LevelDbConfig: &localconf.LevelDbConfig{
+		StorePath: dbPath,
+	},
 }
 
 func TestDBHandle_Put(t *testing.T) {

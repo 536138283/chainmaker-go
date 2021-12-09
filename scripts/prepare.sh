@@ -23,6 +23,9 @@ CRYPTOGEN_TOOL_PATH=${PROJECT_PATH}/tools/chainmaker-cryptogen
 CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/crypto_config_template.yml
 
+BC_YML_TRUST_ROOT_LINE=121
+BC_YML_TRUST_ROOT_LINE_END=134
+
 function show_help() {
     echo "Usage:  "
     echo "  prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4) p2p_port(default:11301) rpc_port(default:12301)"
@@ -240,8 +243,8 @@ function generate_config() {
                xsed "s%{epochValidatorNum}%$NODE_CNT%g" node$i/chainconfig/bc$j.yml
             fi
 
-            if [ $NODE_CNT -eq 1 ] && [ ! $CONSENSUS_TYPE -eq 0 ] || [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
-              xsed '121,134d' node$i/chainconfig/bc$j.yml
+            if [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
+              xsed "${BC_YML_TRUST_ROOT_LINE},${BC_YML_TRUST_ROOT_LINE_END}d" node$i/chainconfig/bc$j.yml
             fi
             echo "begin node$i cert config..."
 
@@ -293,21 +296,24 @@ function generate_config() {
         done
 
         echo "begin node$i trust config..."
-        if  [ $NODE_CNT -eq 1 ] && [ ! $CONSENSUS_TYPE -eq 0 ] || [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
-          # 120 insert
-          c2=$NODE_CNT
+
+        if  [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
           for ((k = 1; k < $CHAIN_CNT + 1; k = k + 1)); do
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
             do
-              c2=$(($c2+1))
-              org_id_tmp=" - org_id: \"${file}\""
-              if  [ $NODE_CNT -eq 1 ]; then
-                  org_root_tmp="   root: \"../config/wx-org.chainmaker.org/certs/ca/${file}/ca.crt\""
-              else
-                  org_root_tmp="   root: \"../config/wx-org${i}.chainmaker.org/certs/ca/${file}/ca.crt\""
-              fi
-              xsed -i "121i\ ${org_root_tmp}" node$i/chainconfig/bc$k.yml
-              xsed -i "121i\ ${org_id_tmp}"   node$i/chainconfig/bc$k.yml
+                org_id_tmp=" - org_id: \"${file}\""
+                org_root_tmp="   root: \"../config/wx-org${i}.chainmaker.org/certs/ca/${file}/ca.crt\""
+                if [ "${system}" = "Linux" ]; then
+                  xsed "${BC_YML_TRUST_ROOT_LINE}i\ ${org_root_tmp}" node$i/chainconfig/bc$k.yml
+                  xsed "${BC_YML_TRUST_ROOT_LINE}i\ ${org_id_tmp}"   node$i/chainconfig/bc$k.yml
+                else
+                  xsed "${BC_YML_TRUST_ROOT_LINE}i\\
+ ${org_root_tmp}\\
+" node$i/chainconfig/bc$k.yml
+                  xsed "${BC_YML_TRUST_ROOT_LINE}i\\
+ ${org_id_tmp}\\
+"    node$i/chainconfig/bc$k.yml
+                fi
             done
           done
         fi

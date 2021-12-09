@@ -41,6 +41,12 @@ type LibP2pNetPrepare struct {
 	isInsecurity bool
 
 	lock sync.Mutex
+
+	readySignalC chan struct{}
+}
+
+func (l *LibP2pNetPrepare) SetReadySignalC(readySignalC chan struct{}) {
+	l.readySignalC = readySignalC
 }
 
 func (l *LibP2pNetPrepare) SetIsInsecurity(isInsecurity bool) {

@@ -22,7 +22,6 @@ replace (
 	chainmaker.org/chainmaker-go/common => ./../common
 	chainmaker.org/chainmaker-go/consensus => ./../module/consensus
 	chainmaker.org/chainmaker-go/core => ./../module/core
-	chainmaker.org/chainmaker-go/dpos => ../module/dpos
 	chainmaker.org/chainmaker-go/evm => ../module/vm/evm
 	chainmaker.org/chainmaker-go/gasm => ../module/vm/gasm
 	chainmaker.org/chainmaker-go/localconf => ./../module/conf/localconf
@@ -33,6 +32,7 @@ replace (
 	chainmaker.org/chainmaker-go/pb/protogo => ./../pb/protogo
 	chainmaker.org/chainmaker-go/protocol => ./../protocol
 	chainmaker.org/chainmaker-go/provider => ../module/provider
+	chainmaker.org/chainmaker-go/raftwal => ../module/consensus/raft/raftwal
 	chainmaker.org/chainmaker-go/rpcserver => ./../module/rpcserver
 	chainmaker.org/chainmaker-go/snapshot => ./../module/snapshot
 	chainmaker.org/chainmaker-go/spv => ./../module/spv

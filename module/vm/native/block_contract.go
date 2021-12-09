@@ -125,11 +125,6 @@ func (r *BlockRuntime) GetChainInfo(txSimContext protocol.TxSimContext, paramete
 		return nil, errStoreIsNil
 	}
 
-	provider, err := txSimContext.GetChainNodesInfoProvider()
-	if err != nil {
-		return nil, fmt.Errorf("get ChainNodesInfoProvider error: %s", err)
-	}
-
 	var block *commonPb.Block
 	var nodes []*discoveryPb.Node
 
@@ -137,8 +132,14 @@ func (r *BlockRuntime) GetChainInfo(txSimContext protocol.TxSimContext, paramete
 		return nil, err
 	}
 
-	if nodes, err = r.getChainNodeInfo(provider, chainId); err != nil {
-		return nil, err
+	provider, err := txSimContext.GetChainNodesInfoProvider()
+	if err != nil {
+		r.log.Warn(err)
+	}
+	if provider != nil {
+		if nodes, err = r.getChainNodeInfo(provider, chainId); err != nil {
+			return nil, err
+		}
 	}
 
 	chainInfo := &discoveryPb.ChainInfo{

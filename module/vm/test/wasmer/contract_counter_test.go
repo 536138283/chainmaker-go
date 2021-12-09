@@ -11,53 +11,65 @@ import (
 	"chainmaker.org/chainmaker-go/protocol"
 	"chainmaker.org/chainmaker-go/vm/test"
 	"chainmaker.org/chainmaker-go/wasmer"
+	"fmt"
+	"testing"
+	"time"
+
 	// pprof 的init函数会将pprof里的一些handler注册到http.DefaultServeMux上
 	// 当不使用http.DefaultServeMux来提供http api时，可以查阅其init函数，自己注册handler
 	_ "net/http/pprof"
 )
 
 // 功能测试，边界测试
-//func TestCallCounterFunc(t *testing.T) {
-//	test.WasmFile = "../../../../test/wasm/counter-rust-0.7.2.wasm"
-//	contractId, txContext, bytes := test.InitContextTest(commonPb.RuntimeType_WASMER)
-//	//bytes, _ = wasm.ReadBytes("../../../../test/wasm/counter-rust-0.6.2.wasm")
-//	println("bytes len", len(bytes))
-//
-//	pool := test.GetVmPoolManager()
-//	println("start")
-//	start := time.Now().UnixNano() / 1e6
-//
-//	//invokeCounterCallContractIncreaseSelf(contractId, txContext, pool, bytes)
-//	//invokeCounterCallContractIncreaseForever(contractId, txContext, pool, bytes)
-//	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
-//	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
-//	invokeCounterCallContractQuery(contractId, txContext, pool, bytes)
-//	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
-//	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
-//	invokeCounterCallContractQuery(contractId, txContext, pool, bytes)
-//
-//	invokeCounterQuery(contractId, txContext, pool, bytes)
-//	invokeCounterIncrease(contractId, txContext, pool, bytes)
-//	invokeCounterQuery(contractId, txContext, pool, bytes)
-//	invokeCounterDeleteStore(contractId, txContext, pool, bytes)
-//	invokeCounterGetStore(contractId, txContext, pool, bytes)
-//	invokeCounterSetStore(contractId, txContext, pool, bytes)
-//	invokeCounterGetStore(contractId, txContext, pool, bytes)
-//	invokeCounterDeleteStore(contractId, txContext, pool, bytes)
-//	invokeCounterGetStore(contractId, txContext, pool, bytes)
-//	invokeCounterCallSelf(contractId, txContext, pool, bytes)
-//	invokeCounterGetCalc(contractId, txContext, pool, bytes)
-//	invokeCounterCalcJson(contractId, txContext, pool, bytes)
-//
-//	end := time.Now().UnixNano() / 1e6
-//	println("end 【spend】", end-start)
-//	time.Sleep(time.Second * 5)
-//}
-//func TestCallCounterPanic(t *testing.T) {
-//	contractId, txContext, bytes := test.InitContextTest(commonPb.RuntimeType_WASMER)
-//	pool := wasmer.NewVmPoolManager("chain001")
-//	invokeCounterPanic(contractId, txContext, pool, bytes)
-//}
+func TestCallCounterFunc(t *testing.T) {
+	fmt.Println("\n\n\n =========== Counter Test 1 ===================")
+	contractName := "ContractCounter"
+	contractVersion := "1.0.0"
+	wasmFile := "../../../../test/wasm/rust-counter-1.2.0.wasm"
+
+	contractId, txContext, bytes := test.InitContextTest(contractName, contractVersion, wasmFile, commonPb.RuntimeType_WASMER)
+	println("bytes len", len(bytes))
+
+	pool := test.GetVmPoolManager()
+	println("start")
+	start := time.Now().UnixNano() / 1e6
+
+	//invokeCounterCallContractIncreaseSelf(contractId, txContext, pool, bytes)
+	//invokeCounterCallContractIncreaseForever(contractId, txContext, pool, bytes)
+	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
+	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
+	invokeCounterCallContractQuery(contractId, txContext, pool, bytes)
+	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
+	invokeCounterCallContractIncrease(contractId, txContext, pool, bytes)
+	invokeCounterCallContractQuery(contractId, txContext, pool, bytes)
+
+	invokeCounterQuery(contractId, txContext, pool, bytes)
+	invokeCounterIncrease(contractId, txContext, pool, bytes)
+	invokeCounterQuery(contractId, txContext, pool, bytes)
+	invokeCounterDeleteStore(contractId, txContext, pool, bytes)
+	invokeCounterGetStore(contractId, txContext, pool, bytes)
+	invokeCounterSetStore(contractId, txContext, pool, bytes)
+	invokeCounterGetStore(contractId, txContext, pool, bytes)
+	invokeCounterDeleteStore(contractId, txContext, pool, bytes)
+	invokeCounterGetStore(contractId, txContext, pool, bytes)
+	invokeCounterCallSelf(contractId, txContext, pool, bytes)
+	invokeCounterGetCalc(contractId, txContext, pool, bytes)
+	invokeCounterCalcJson(contractId, txContext, pool, bytes)
+
+	end := time.Now().UnixNano() / 1e6
+	println("end 【spend】", end-start)
+	//time.Sleep(time.Second * 5)
+}
+func TestCallCounterPanic(t *testing.T) {
+	fmt.Println("\n\n\n =========== Counter Test 2 ================")
+	contractName := "ContractCounter"
+	contractVersion := "1.0.0"
+	wasmFile := "../../../../test/wasm/rust-counter-1.2.0.wasm"
+
+	contractId, txContext, bytes := test.InitContextTest(contractName, contractVersion, wasmFile, commonPb.RuntimeType_WASMER)
+	pool := wasmer.NewVmPoolManager("chain001")
+	invokeCounterPanic(contractId, txContext, pool, bytes)
+}
 
 func invokeCounterQuery(contractId *commonPb.ContractId, txContext protocol.TxSimContext, pool *wasmer.VmPoolManager, byteCode []byte) {
 	method := "query"
@@ -196,7 +208,7 @@ func invokeCounterCallContractIncrease(contractId *commonPb.ContractId, txContex
 	method := "call_contract_test"
 	parameters := make(map[string]string)
 	baseParam(parameters)
-	parameters["contractName"] = test.ContractNameTest
+	parameters["contractName"] = contractId.ContractName
 	parameters["method"] = "increase"
 
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
@@ -206,7 +218,7 @@ func invokeCounterCallContractIncreaseForever(contractId *commonPb.ContractId, t
 	method := "call_contract_test"
 	parameters := make(map[string]string)
 	baseParam(parameters)
-	parameters["contractName"] = test.ContractNameTest
+	parameters["contractName"] = contractId.ContractName
 	parameters["method"] = "increase"
 	parameters["count"] = "2"
 
@@ -217,7 +229,7 @@ func invokeCounterCallContractIncreaseSelf(contractId *commonPb.ContractId, txCo
 	method := "call_contract_self"
 	parameters := make(map[string]string)
 	baseParam(parameters)
-	parameters["contractName"] = test.ContractNameTest
+	parameters["contractName"] = contractId.ContractName
 	parameters["method"] = "call_contract_self"
 
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)
@@ -228,7 +240,7 @@ func invokeCounterCallContractQuery(contractId *commonPb.ContractId, txContext p
 	method := "call_contract_test"
 	parameters := make(map[string]string)
 	baseParam(parameters)
-	parameters["contractName"] = test.ContractNameTest
+	parameters["contractName"] = contractId.ContractName
 	parameters["method"] = "query"
 
 	runtime, _ := pool.NewRuntimeInstance(contractId, byteCode)

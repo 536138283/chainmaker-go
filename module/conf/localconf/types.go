@@ -149,6 +149,7 @@ type StorageConfig struct {
 	DisableResultDB        bool      `mapstructure:"disable_resultdb"`
 	DisableContractEventDB bool      `mapstructure:"disable_contract_eventdb"`
 	LogDBWriteAsync        bool      `mapstructure:"logdb_write_async"`
+	LogDBSegmentSize       int       `mapstructure:"logdb_segment_size"`
 	BlockDbConfig          *DbConfig `mapstructure:"blockdb_config"`
 	StateDbConfig          *DbConfig `mapstructure:"statedb_config"`
 	HistoryDbConfig        *DbConfig `mapstructure:"historydb_config"`
@@ -226,10 +227,15 @@ func (config *StorageConfig) GetDefaultDBConfig() *DbConfig {
 		//BlockWriteBufferSize: config.BlockWriteBufferSize,
 	}
 
+	bconfig := &BadgerDbConfig{
+		StorePath: config.StorePath,
+	}
+
 	return &DbConfig{
-		Provider:      "leveldb",
-		LevelDbConfig: lconfig,
-		RocksDbConfig: rconfig,
+		Provider:       "leveldb",
+		LevelDbConfig:  lconfig,
+		BadgerDbConfig: bconfig,
+		RocksDbConfig:  rconfig,
 	}
 }
 
@@ -250,18 +256,21 @@ func (config *StorageConfig) GetActiveDBCount() int {
 
 type DbConfig struct {
 	//leveldb,rocksdb,sql
-	Provider      string         `mapstructure:"provider"`
-	LevelDbConfig *LevelDbConfig `mapstructure:"leveldb_config"`
-	RocksDbConfig *RocksDbConfig `mapstructure:"rocksdb_config"`
-	SqlDbConfig   *SqlDbConfig   `mapstructure:"sqldb_config"`
+	Provider       string          `mapstructure:"provider"`
+	LevelDbConfig  *LevelDbConfig  `mapstructure:"leveldb_config"`
+	RocksDbConfig  *RocksDbConfig  `mapstructure:"rocksdb_config"`
+	SqlDbConfig    *SqlDbConfig    `mapstructure:"sqldb_config"`
+	BadgerDbConfig *BadgerDbConfig `mapstructure:"badgerdb_config"`
 }
 
 const DbConfig_Provider_Sql = "sql"
 const DbConfig_Provider_LevelDb = "leveldb"
 const DbConfig_Provider_RocksDb = "rocksdb"
+const DbConfig_Provider_BadgerDb = "badgerdb"
 
 func (dbc *DbConfig) IsKVDB() bool {
-	return dbc.Provider == DbConfig_Provider_LevelDb || dbc.Provider == DbConfig_Provider_RocksDb
+	return dbc.Provider == DbConfig_Provider_LevelDb || dbc.Provider == DbConfig_Provider_RocksDb ||
+		dbc.Provider == DbConfig_Provider_BadgerDb
 }
 func (dbc *DbConfig) IsSqlDB() bool {
 	return dbc.Provider == DbConfig_Provider_Sql || dbc.Provider == "mysql" || dbc.Provider == "rdbms" //兼容其他配置情况
@@ -285,6 +294,15 @@ type RocksDbConfig struct {
 	MaxBackgroundCompactions int `mapstructure:"max_background_compactions"`
 	MaxBackgroundFlushes     int `mapstructure:"max_background_flushes"`
 	MaxOpenFiles             int `mapstructure:"max_open_files"`
+}
+
+type BadgerDbConfig struct {
+	StorePath      string `mapstructure:"store_path"`
+	Compression    uint8  `mapstructure:"compression"`
+	ValueThreshold int64  `mapstructure:"value_threshold"`
+	WriteBatchSize uint64 `mapstructure:"write_batch_size"`
+	BlockCacheSize uint64 `mapstructure:"block_cache_size"`
+	IndexCacheSize uint64 `mapstructure:"index_cache_size"`
 }
 
 type SqlDbConfig struct {
@@ -393,10 +411,10 @@ type CMConfig struct {
 	BlockChainConfig []blockchainConfig `mapstructure:"blockchain"`
 	ConsensusConfig  ConsensusConfig    `mapstructure:"consensus"`
 
-	StorageConfig    StorageConfig      `mapstructure:"storage"`
-	TxPoolConfig     txPoolConfig       `mapstructure:"txpool"`
-	SyncConfig       syncConfig         `mapstructure:"sync"`
-	SpvConfig        spvConfig          `mapstructure:"spv"`
+	StorageConfig StorageConfig `mapstructure:"storage"`
+	TxPoolConfig  txPoolConfig  `mapstructure:"txpool"`
+	SyncConfig    syncConfig    `mapstructure:"sync"`
+	SpvConfig     spvConfig     `mapstructure:"spv"`
 
 	// 开发调试使用
 	DebugConfig     debugConfig     `mapstructure:"debug"`

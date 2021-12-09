@@ -65,7 +65,7 @@ func initGRPCConnect(useTLS bool) (*grpc.ClientConn, error) {
 
 	if useTLS {
 		tlsClient := ca.CAClient{
-			ServerName: "chainmaker.org",
+			ServerName: serverName,
 			CaPaths:    caPaths,
 			CertFile:   userCrtPath,
 			KeyFile:    userKeyPath,

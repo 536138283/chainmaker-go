@@ -55,13 +55,14 @@ func TestNet(t *testing.T) {
 	caBytes7777, err := ioutil.ReadFile(filepath.Join(td, "7777.ca.crt"))
 	require.Nil(t, err)
 
+	readyC := make(chan struct{})
 	// start node A
 	var nf NetFactory
 
 	a, err := nf.NewNet(
 		protocol.Libp2p,
+		WithReadySignalC(readyC),
 		WithListenAddr("/ip4/127.0.0.1/tcp/6666"),
-
 		WithCrypto(filepath.Join(td, "6666.key"), filepath.Join(td, "6666.crt")),
 	)
 	require.Nil(t, err)
@@ -70,23 +71,23 @@ func TestNet(t *testing.T) {
 	require.Nil(t, err)
 	err = a.AddTrustRoot(chainId1, caBytes7777)
 	require.Nil(t, err)
-	err = a.InitPubsub(chainId1, 0)
-	require.Nil(t, err)
 	err = a.AddTrustRoot(chainId2, caBytes6666)
 	require.Nil(t, err)
 	err = a.AddTrustRoot(chainId2, caBytes7777)
 	require.Nil(t, err)
-	err = a.InitPubsub(chainId2, 0)
-	require.Nil(t, err)
 	err = a.Start()
+	require.Nil(t, err)
+	err = a.InitPubsub(chainId1, 0)
+	require.Nil(t, err)
+	err = a.InitPubsub(chainId2, 0)
 	require.Nil(t, err)
 	fmt.Println("node A is running...")
 
 	// start node B
 	b, err := nf.NewNet(
 		protocol.Libp2p,
+		WithReadySignalC(readyC),
 		WithListenAddr("/ip4/127.0.0.1/tcp/7777"),
-
 		WithCrypto(filepath.Join(td, "7777.key"), filepath.Join(td, "7777.crt")),
 	)
 	require.Nil(t, err)
@@ -96,17 +97,19 @@ func TestNet(t *testing.T) {
 	require.Nil(t, err)
 	err = b.AddTrustRoot(chainId1, caBytes7777)
 	require.Nil(t, err)
-	err = b.InitPubsub(chainId1, 0)
-	require.Nil(t, err)
 	err = b.AddTrustRoot(chainId2, caBytes6666)
 	require.Nil(t, err)
 	err = b.AddTrustRoot(chainId2, caBytes7777)
 	require.Nil(t, err)
-	err = b.InitPubsub(chainId2, 0)
-	require.Nil(t, err)
 	err = b.Start()
 	require.Nil(t, err)
+	err = b.InitPubsub(chainId1, 0)
+	require.Nil(t, err)
+	err = b.InitPubsub(chainId2, 0)
+	require.Nil(t, err)
 	fmt.Println("node B is running...")
+
+	close(readyC)
 
 	// test A send msg to B
 	data := []byte("hello")
