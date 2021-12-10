@@ -25,7 +25,7 @@ ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.x86_64),)
 	mv module/vm/wasmer/wasmer-go/libwasmer.so.x86_64 module/vm/wasmer/wasmer-go/libwasmer.so
 endif
 endif
-	@cd main && go build -mod=mod -o ../bin/chainmaker
+	@cd main && go mod tidy && go build -mod=mod -o ../bin/chainmaker
 
 package:
 	@cd main && GOPATH=${GOPATH} go build -mod=mod -o ../bin/chainmaker
