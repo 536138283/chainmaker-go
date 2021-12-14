@@ -4,7 +4,7 @@ go 1.15
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.1.1-0.20211129064036-3ae6487c7770
-	chainmaker.org/chainmaker/common/v2 v2.1.1-0.20211117131805-630800bfd361
+	chainmaker.org/chainmaker/common/v2 v2.1.1-0.20211207034235-778aaf0c48e6
 	chainmaker.org/chainmaker/consensus-chainedbft/v2 v2.0.0-20211123115807-5d8e35647df4
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20211119100858-b806ddbb6d35
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20211119100947-ce17472c410c
@@ -12,12 +12,12 @@ require (
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.0.0-20211119101400-96829b485267
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.0.0-20211115084213-42e840e1efee
 	chainmaker.org/chainmaker/consensus/v2 v2.0.0-20211123121814-dd9c430b5a7b
-	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20211110030026-ce2a7f3760cd
+	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20211207040252-37610fa523e5
 	chainmaker.org/chainmaker/logger/v2 v2.1.1-0.20211109074349-f79af5e1892d
 	chainmaker.org/chainmaker/net-common v0.0.7-0.20211109085844-739f0f904b96
 	chainmaker.org/chainmaker/net-libp2p v1.0.1-0.20211109090515-4889a63c74af
 	chainmaker.org/chainmaker/net-liquid v1.0.1-0.20211122114338-22ed0765724f
-	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20211117140137-9095a7ab7a69
+	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20211203073526-db41d6f5a80c
 	chainmaker.org/chainmaker/protocol/v2 v2.1.1-0.20211119081550-ff85fecc318d
 	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20211122084724-d9ebcd942459
 	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20211202031657-09bc7ab7fac5
@@ -42,6 +42,7 @@ require (
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/gosuri/uiprogress v0.0.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/grpc-ecosystem/grpc-gateway v1.16.0
 	github.com/hokaccha/go-prettyjson v0.0.0-20201222001619-a42f9ac2ec8e
 	github.com/hpcloud/tail v1.0.0
 	github.com/mitchellh/mapstructure v1.1.2
@@ -55,8 +56,10 @@ require (
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tidwall/pretty v1.0.2
+	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/net v0.0.0-20210503060351-7fd8e65b6420
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba
 	google.golang.org/grpc v1.41.0
 	gorm.io/driver/mysql v1.2.0
