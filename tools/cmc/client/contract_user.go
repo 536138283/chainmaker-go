@@ -77,7 +77,7 @@ func createUserContractCMD() *cobra.Command {
 		flagUserTlsKeyFilePath, flagUserTlsCrtFilePath, flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
-		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -103,6 +103,7 @@ func invokeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
+		flagGasLimit,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -171,7 +172,7 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -330,6 +331,11 @@ func createUserContract() error {
 		return err
 	}
 
+	if gasLimit > 0 {
+		var limit = &common.Limit{GasLimit: gasLimit}
+		payload = client.AttachGasLimit(payload, limit)
+	}
+
 	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
 	for i := range adminKeys {
 		var e *common.EndorsementEntry
@@ -427,7 +433,12 @@ func invokeUserContract() error {
 		}
 	}
 
-	Dispatch(client, contractName, method, kvs, evmMethod)
+	var limit *common.Limit
+	if gasLimit > 0 {
+		limit = &common.Limit{GasLimit: gasLimit}
+	}
+
+	Dispatch(client, contractName, method, kvs, evmMethod, limit)
 	return nil
 }
 
@@ -578,6 +589,11 @@ func upgradeUserContract() error {
 		pairsKv)
 	if err != nil {
 		return err
+	}
+
+	if gasLimit > 0 {
+		var limit = &common.Limit{GasLimit: gasLimit}
+		payload = client.AttachGasLimit(payload, limit)
 	}
 
 	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
