@@ -7,7 +7,10 @@
 #
 
 set -x
-BRANCH=develop
+BRANCH=$1
+if [[ ! -n $BRANCH ]]; then
+  BRANCH="develop"
+fi
 cd ..
 
 go get chainmaker.org/chainmaker/chainconf/v2@${BRANCH}
