@@ -382,9 +382,12 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 
 func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMakerServer) (*http.Server, error) {
 
-	var handler http.Handler
+	var (
+		mux        *http.ServeMux
+		httpServer *http.Server
+	)
 	if localconf.ChainMakerConfig.RpcConfig.GatewayConfig.Enabled {
-		mux := http.NewServeMux()
+		mux = http.NewServeMux()
 		gwmux, err := newGateway(chainMakerServer)
 		if err != nil {
 			log.Error(err)
@@ -392,15 +395,19 @@ func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMak
 		}
 
 		mux.Handle("/", gwmux)
-		handler = GrpcHandlerFunc(grpcServer, mux)
-	} else {
-		handler = GrpcHandlerFunc(grpcServer, nil)
 	}
 
-	return &http.Server{
-		Handler: wsproxy.WebsocketProxy(handler, wsproxy.WithMaxRespBodyBufferSize(
-			localconf.ChainMakerConfig.RpcConfig.GatewayConfig.MaxRespBodySize*1024*1024)),
-	}, nil
+	handler := GrpcHandlerFunc(grpcServer, mux)
+
+	if localconf.ChainMakerConfig.RpcConfig.GatewayConfig.Enabled {
+		httpServer = &http.Server{Handler: handler}
+	} else {
+		httpServer = &http.Server{
+			Handler: wsproxy.WebsocketProxy(handler, wsproxy.WithMaxRespBodyBufferSize(
+				localconf.ChainMakerConfig.RpcConfig.GatewayConfig.MaxRespBodySize*1024*1024))}
+	}
+
+	return httpServer, nil
 }
 
 func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, error) {

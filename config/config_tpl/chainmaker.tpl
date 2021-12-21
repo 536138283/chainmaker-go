@@ -165,7 +165,7 @@ rpc:
   # restful api gateway
   gateway:
     # enable restful api
-    enabled: true
+    enabled: false
     # max resp body buffer size, unit: M
     max_resp_body_size: 16
 
