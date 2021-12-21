@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
+
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -26,8 +28,22 @@ const (
 	TRUE = "true"
 )
 
+func (s *ApiService) SubscribeWS(rawTxReq *commonPb.RawTxRequest, server apiPb.RpcNode_SubscribeWSServer) error {
+	var req commonPb.TxRequest
+
+	err := proto.Unmarshal(rawTxReq.RawTx, &req)
+	if err != nil {
+		err = fmt.Errorf("unmarshal subscribe websocket raw tx failed, %s", err)
+		s.log.Error(err.Error())
+		return status.Error(codes.Internal, err.Error())
+	}
+
+	return s.Subscribe(&req, server)
+}
+
 // Subscribe - deal block/tx/contracEvent subscribe request
 func (s *ApiService) Subscribe(req *commonPb.TxRequest, server apiPb.RpcNode_SubscribeServer) error {
+
 	var (
 		errCode commonErr.ErrCode
 		errMsg  string
