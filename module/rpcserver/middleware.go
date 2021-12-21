@@ -250,7 +250,8 @@ func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 
 // StreamRecoveryInterceptor - set stream recovery interceptor
 func StreamRecoveryInterceptor() grpc.StreamServerInterceptor {
-	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
+	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo,
+		handler grpc.StreamHandler) (err error) {
 		defer func() {
 			if e := recover(); e != nil {
 				stack := debug.Stack()
