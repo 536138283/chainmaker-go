@@ -61,6 +61,9 @@ const (
 	// subscriber ratelimit config
 	subscriberRateLimitDefaultTokenPerSecond  = 1000
 	subscriberRateLimitDefaultTokenBucketSize = 1000
+
+	maxRecvMessageSize = 10 * 1024 * 1024 // 10 MiB
+	maxSendMessageSize = 10 * 1024 * 1024 // 10 MiB
 )
 
 // TLS Mode
@@ -362,6 +365,15 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 
 		opts = append(opts, grpc.Creds(*c))
 	}
+
+	opts = append(opts, grpc.MaxSendMsgSize(maxSendMessageSize))
+	opts = append(opts, grpc.MaxRecvMsgSize(maxRecvMessageSize))
+
+	//params := grpc.KeepaliveParams(keepalive.ServerParameters{
+	//	Time:    10 * time.Second,
+	//	Timeout: 10 * time.Second,
+	//})
+	//opts = append(opts, params)
 
 	server := grpc.NewServer(opts...)
 

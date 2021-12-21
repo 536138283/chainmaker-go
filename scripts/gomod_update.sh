@@ -7,13 +7,15 @@
 #
 
 set -x
-BRANCH=develop
+BRANCH=$1
+if [[ ! -n $BRANCH ]]; then
+  BRANCH="develop"
+fi
 cd ..
 
 go get chainmaker.org/chainmaker/chainconf/v2@${BRANCH}
 go get chainmaker.org/chainmaker/common/v2@${BRANCH}
-go get chainmaker.org/chainmaker/consensus/v2@${BRANCH}
-go get chainmaker.org/chainmaker/consensus-chainedbft/v2@${BRANCH}
+go get chainmaker.org/chainmaker/consensus-maxbft/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-dpos/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-raft/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-solo/v2@${BRANCH}
@@ -31,16 +33,15 @@ go get chainmaker.org/chainmaker/store/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-batch/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-single/v2@${BRANCH}
 go get chainmaker.org/chainmaker/utils/v2@${BRANCH}
-go get chainmaker.org/chainmaker/vm/v2@${BRANCH}
+go get chainmaker.org/chainmaker/vm-docker-go@${BRANCH}
 go get chainmaker.org/chainmaker/vm-evm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-gasm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-native/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-wasmer/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-wxvm/v2@${BRANCH}
+go get chainmaker.org/chainmaker/vm/v2@${BRANCH}
 
 go mod tidy
 
-cd main
-go build -o chainmaker
-cd ../tools/cmc
-go build -o cmc
+make
+make cmc

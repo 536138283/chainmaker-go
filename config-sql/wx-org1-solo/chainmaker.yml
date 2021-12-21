@@ -8,6 +8,8 @@
 log:
   config_file: ../config-sql/wx-org1-solo/log.yml          # config file of logger configuration.
 
+crypto_engine: tjfoc #crypto engine config setting, support gmssl, tencentsm and tjfoc
+
 blockchain:
   - chainId: chain1
     genesis: ../config-sql/wx-org1-solo/chainconfig/bc1.yml
@@ -49,7 +51,7 @@ txpool:
 
 rpc:
   provider: grpc
-  port: 12351
+  port: 12301
   tls:
     # TLS模式:
     #   disable - 不启用TLS

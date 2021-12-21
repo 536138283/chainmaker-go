@@ -20,6 +20,9 @@ log:
   # Logger configuration file path.
   config_file: ../config/{org_path}/log.yml
 
+# Crypto engine config
+crypto_engine: tjfoc #support gmssl, tencentsm and tjfoc
+
 # Chains the node currently joined in
 blockchain:
   # chain id and its genesis block file path.
@@ -40,6 +43,14 @@ node:
   # Certificate cache size, used to speed up member identity verification.
   # By default the cache size is 1000.
   cert_cache_size:   1000
+
+  # fast sync settings
+  fast_sync:
+    # Enable it or not
+    enabled: false  # [*]
+
+    # The number of blocks that did not perform fast synchronization at the end
+    min_full_blocks: 10
 
   # PKCS#11 crypto settings
   pkcs11:
@@ -236,7 +247,18 @@ storage:
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
-
+  write_block_type: 0  # 0普通写模式，1快速写模式
+  # Whether to disable blockFileDb
+  disable_block_file_db: false
+  state_cache_config:
+    life_window: 3000000000000   #key/value ttl 时间，单位 ns
+    clean_window: 1000000000
+    max_entry_size: 500
+    hard_max_cache_size: 10240   #缓存大小，单位MB
+  txexistdb_config:
+    provider: leveldb
+    leveldb_config:
+      store_path: ../data/{org_id}/txexist
   # Block db config
   blockdb_config:
     # Databases type support leveldb, sql, badgerdb
@@ -300,3 +322,26 @@ storage:
       sqldb_type: mysql
       # Mysql connection info, such as:  root:admin@tcp(127.0.0.1:3306)/
       dsn: root:password@tcp(127.0.0.1:3306)/
+
+# Docker go virtual machine configuration
+vm:
+  # Enable docker go virtual machine
+  enable_dockervm: {enable_dockervm}
+  # Docker go virtual machine container name
+  dockervm_container_name: {dockervm_container_name}
+  # Mount point in chain maker
+  dockervm_mount_path: ../data/{org_id}/docker-go
+  # Specify log file path
+  dockervm_log_path: ../log/{org_id}/docker-go
+  # Whether to print log at terminal
+  log_in_console: false
+  # Log level
+  log_level: INFO
+  # Unix domain socket open, used for chainmaker and docker manager communication
+  uds_open: true
+  # The size of the channel where transactions are stored in docker manager
+  tx_size: 1000
+  # Number of user Ids
+  user_num: 100
+  # Timeout per transaction, Unit: second
+  time_limit: 2

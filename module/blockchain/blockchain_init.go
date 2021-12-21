@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker/common/v2/crypto/engine"
+
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core"
@@ -27,8 +29,8 @@ import (
 	"chainmaker.org/chainmaker/chainconf/v2"
 	"chainmaker.org/chainmaker/common/v2/container"
 	consensusUtils "chainmaker.org/chainmaker/consensus-utils/v2"
-	localconf "chainmaker.org/chainmaker/localconf/v2"
-	logger "chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
@@ -105,6 +107,60 @@ func (bc *Blockchain) Init() (err error) {
 	return bc.initExtModules(extModules)
 }
 
+// Init all the modules.
+func (bc *Blockchain) InitForRebuildDbs() (err error) {
+	baseModules := []map[string]func() error{
+		// init Subscriber
+		{moduleNameSubscriber: bc.initSubscriber},
+		// init store module
+		{moduleNameStore: bc.initStore},
+		// init old store module
+		{moduleNameStore: bc.initOldStore},
+		// init ledger module
+		{moduleNameLedger: bc.initCache},
+		// init chain config , must latter than store module
+		{moduleNameChainConf: bc.initChainConf},
+	}
+	if err := bc.initBaseModules(baseModules); err != nil {
+		return err
+	}
+	var extModules []map[string]func() error
+	if bc.getConsensusType() == consensusPb.ConsensusType_SOLO {
+		// solo
+		extModules = []map[string]func() error{
+			// init access control
+			{moduleNameAccessControl: bc.initAC},
+			// init vm instances and module
+			{moduleNameVM: bc.initVM},
+			// init transaction pool
+			{moduleNameTxPool: bc.initTxPool},
+			// init core engine
+			{moduleNameCore: bc.initCore},
+			// init consensus module
+			{moduleNameConsensus: bc.initConsensus},
+		}
+	} else {
+		// not solo
+		extModules = []map[string]func() error{
+			// init access control
+			{moduleNameAccessControl: bc.initAC},
+			// init net service
+			//{moduleNameNetService: bc.initNetService},
+			// init vm instances and module
+			{moduleNameVM: bc.initVM},
+			// init transaction pool
+			{moduleNameTxPool: bc.initTxPool},
+			// init core engine
+			{moduleNameCore: bc.initCore},
+			// init consensus module
+			{moduleNameConsensus: bc.initConsensus},
+			// init sync service module
+			//{moduleNameSync: bc.initSync},
+		}
+	}
+	bc.log.Debug("start to init blockchain ...")
+	return bc.initExtModules(extModules)
+}
 func (bc *Blockchain) initBaseModules(baseModules []map[string]func() error) (err error) {
 	moduleNum := len(baseModules)
 	for idx, baseModule := range baseModules {
@@ -189,6 +245,54 @@ func (bc *Blockchain) initStore() (err error) {
 	return
 }
 
+func (bc *Blockchain) initOldStore() (err error) {
+	_, ok := bc.initModules[moduleNameOldStore]
+	if ok {
+		bc.log.Infof("store module existed, ignore.")
+		return
+	}
+	var storeFactory store.Factory // nolint: typecheck
+	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+	err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("oldStore"))
+	if err != nil {
+		return err
+	}
+	config := &conf.StorageConfig{}
+	err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
+	config.StorePath = config.StorePath + "-old"
+	config.BlockDbConfig.LevelDbConfig["store_path"] =
+		config.BlockDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+	config.StateDbConfig.LevelDbConfig["store_path"] =
+		config.StateDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+	config.ResultDbConfig.LevelDbConfig["store_path"] =
+		config.ResultDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+	config.HistoryDbConfig.LevelDbConfig["store_path"] =
+		config.HistoryDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+	config.TxExistDbConfig.LevelDbConfig["store_path"] =
+		config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+	if err != nil {
+		return err
+	}
+	//p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
+	err = container.Register(localconf.ChainMakerConfig.GetP11Handle)
+	if err != nil {
+		return err
+	}
+	err = container.Register(storeFactory.NewStore,
+		container.Parameters(map[int]interface{}{0: bc.chainId, 1: config}),
+		container.DependsOn(map[int]string{2: "oldStore"}),
+		container.Name(bc.chainId))
+	if err != nil {
+		return err
+	}
+	err = container.Resolve(&bc.oldStore, container.ResolveName(bc.chainId))
+	if err != nil {
+		bc.log.Errorf("new store failed, %s", err.Error())
+		return err
+	}
+	bc.initModules[moduleNameOldStore] = struct{}{}
+	return
+}
 func (bc *Blockchain) initChainConf() (err error) {
 	_, ok := bc.initModules[moduleNameChainConf]
 	if ok {
@@ -360,6 +464,8 @@ func (bc *Blockchain) initAC() (err error) {
 		bc.log.Errorf("new ac provider failed, %s", err.Error())
 		return
 	}
+	//init crypto engine for ac
+	engine.InitCryptoEngine(localconf.ChainMakerConfig.CryptoEngine, false)
 
 	switch bc.chainConf.ChainConfig().AuthType {
 	case protocol.PermissionedWithCert, protocol.Identity:
@@ -463,19 +569,14 @@ func (bc *Blockchain) initVM() (err error) {
 			)
 		*/
 
-		chainConfig, err := chainconf.Genesis(bc.genesis)
-		if err != nil {
-			bc.log.Errorf("invoke chain config genesis failed, %s", err)
-			return err
-		}
-
+		chainConfig := bc.chainConf.ChainConfig()
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
-			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId)
+			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, localconf.ChainMakerConfig.VMConfig)
 			if err != nil {
-				bc.log.Errorf("")
+				bc.log.Errorf("create instance manager failed, %v", err)
 			}
 			supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
 		}
@@ -515,19 +616,14 @@ func (bc *Blockchain) initVM() (err error) {
 			)
 		*/
 
-		chainConfig, err := chainconf.Genesis(bc.genesis)
-		if err != nil {
-			bc.log.Errorf("invoke chain config genesis failed, %s", err)
-			return err
-		}
-
+		chainConfig := bc.chainConf.ChainConfig()
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
-			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId)
+			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, localconf.ChainMakerConfig.VMConfig)
 			if err != nil {
-				bc.log.Errorf("")
+				bc.log.Errorf("create instance manager failed, %v", err)
 			}
 			supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
 		}
