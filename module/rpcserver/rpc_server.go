@@ -142,7 +142,8 @@ func (s *RPCServer) Start() error {
 
 		} else if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
 
-			caCerts, err := getCACerts(s.chainMakerServer)
+			var caCerts []string
+			caCerts, err = getCACerts(s.chainMakerServer)
 			if err != nil {
 				return err
 			}
