@@ -9,6 +9,7 @@ package rpcserver
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -132,16 +133,28 @@ func (s *RPCServer) Start() error {
 		return fmt.Errorf("register handler failed, %s", err.Error())
 	}
 
-	caCerts, err := getCACerts(s.chainMakerServer)
-	if err != nil {
-		return err
-	}
+	var tlsConfig *tls.Config
+	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_ONEWAY {
 
-	tlsConfig, err := ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
-		localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts)
-	if err != nil {
-		log.Errorf("GetTLSConfig, failed, %s", err.Error())
-		return err
+			tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, []string{})
+
+		} else if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+
+			caCerts, err := getCACerts(s.chainMakerServer)
+			if err != nil {
+				return err
+			}
+
+			tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts)
+		}
+
+		if err != nil {
+			log.Errorf("GetTLSConfig, failed, %s", err.Error())
+			return err
+		}
 	}
 
 	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
@@ -254,7 +267,8 @@ func (s *RPCServer) tryReloadChainConfTrustRootsChange() {
 }
 
 func (s *RPCServer) sleep() {
-	checkChainConfTrustRootsChangeInterval := localconf.ChainMakerConfig.RpcConfig.CheckChainConfTrustRootsChangeInterval
+	checkChainConfTrustRootsChangeInterval :=
+		localconf.ChainMakerConfig.RpcConfig.CheckChainConfTrustRootsChangeInterval
 	if checkChainConfTrustRootsChangeInterval < 10 {
 		checkChainConfTrustRootsChangeInterval = 10
 	}
@@ -368,12 +382,6 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 
 	opts = append(opts, grpc.MaxSendMsgSize(maxSendMessageSize))
 	opts = append(opts, grpc.MaxRecvMsgSize(maxRecvMessageSize))
-
-	//params := grpc.KeepaliveParams(keepalive.ServerParameters{
-	//	Time:    10 * time.Second,
-	//	Timeout: 10 * time.Second,
-	//})
-	//opts = append(opts, params)
 
 	server := grpc.NewServer(opts...)
 
