@@ -924,9 +924,6 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	// put consensus qc into block
 	lastProposed.AdditionalData = block.AdditionalData
 
-	// put consensus qc into block
-	lastProposed.AdditionalData = block.AdditionalData
-
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, blockInfo, err := chain.commonCommit.CommitBlock(
 		lastProposed, rwSetMap, conEventMap)
