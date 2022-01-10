@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package p2p
 
 import (
-	discovery "github.com/libp2p/go-libp2p-discovery"
 	dht "github.com/libp2p/go-libp2p-kad-dht"
 )
 
@@ -51,19 +50,19 @@ func SetupDiscovery(host *LibP2pHost, readySignalC chan struct{}, enableDHTBoots
 	host.connSupervisor = newConnSupervisor(host, bootstrapAddrInfos)
 	// start supervising.
 	host.connSupervisor.startSupervising(readySignalC)
-	// announce self
-	logger.Info("[Discovery] announcing ourselves...")
-	routingDiscovery := discovery.NewRoutingDiscovery(kademliaDHT)
-	discovery.Advertise(ctx, routingDiscovery, DefaultLibp2pServiceTag)
-	logger.Info("[Discovery] successfully announced!")
-	// start to find other peers
-	logger.Info("[Discovery] searching for other peers...")
-	peerChan, err := routingDiscovery.FindPeers(ctx, DefaultLibp2pServiceTag)
-	if err != nil {
-		return err
-	}
-	// find new peer and make connection
-	host.connSupervisor.handleChanNewPeerFound(peerChan)
+	//// announce self
+	//logger.Info("[Discovery] announcing ourselves...")
+	//routingDiscovery := discovery.NewRoutingDiscovery(kademliaDHT)
+	//discovery.Advertise(ctx, routingDiscovery, DefaultLibp2pServiceTag)
+	//logger.Info("[Discovery] successfully announced!")
+	//// start to find other peers
+	//logger.Info("[Discovery] searching for other peers...")
+	//peerChan, err := routingDiscovery.FindPeers(ctx, DefaultLibp2pServiceTag)
+	//if err != nil {
+	//	return err
+	//}
+	//// find new peer and make connection
+	//host.connSupervisor.handleChanNewPeerFound(peerChan)
 	logger.Info("[Discovery] discovery set up.")
 	return nil
 }

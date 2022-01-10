@@ -829,10 +829,18 @@ func (ln *LibP2pNet) ChainNodesInfo(chainId string) ([]*api.ChainNodeInfo, error
 	result := make([]*api.ChainNodeInfo, 0)
 	if ln.libP2pHost.isTls {
 		// 1.find all peerIds of chain
-		peerIds := make([]string, 0)
-		peerIds = append(peerIds, ln.libP2pHost.host.ID().Pretty())
-		peerIds = append(peerIds, ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)...)
-		for _, peerId := range peerIds {
+		peerIds := make(map[string]struct{})
+		if _, ok := peerIds[ln.libP2pHost.host.ID().Pretty()]; !ok {
+			peerIds[ln.libP2pHost.host.ID().Pretty()] = struct{}{}
+		}
+		ids := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
+		for _, id := range ids {
+			if _, ok := peerIds[id]; !ok {
+				peerIds[id] = struct{}{}
+			}
+		}
+
+		for peerId := range peerIds {
 			// 2.find addr
 			pid, _ := peer.Decode(peerId)
 			addrs := make([]string, 0)
@@ -841,11 +849,13 @@ func (ln *LibP2pNet) ChainNodesInfo(chainId string) ([]*api.ChainNodeInfo, error
 					addrs = append(addrs, multiaddr.String())
 				}
 			} else {
-				conn := ln.libP2pHost.connManager.GetConn(pid)
-				if conn == nil || conn.RemoteMultiaddr() == nil {
-					continue
+				conns := ln.libP2pHost.connManager.GetConns(pid)
+				for _, c := range conns {
+					if c == nil || c.RemoteMultiaddr() == nil {
+						continue
+					}
+					addrs = append(addrs, c.RemoteMultiaddr().String())
 				}
-				addrs = append(addrs, conn.RemoteMultiaddr().String())
 			}
 
 			// 3.find cert
@@ -1092,8 +1102,10 @@ func (ln *LibP2pNet) closeRevokedPeerConnection(revokedPeerIds []string) error {
 		}
 		ln.libP2pHost.revokedValidator.AddPeerId(pid)
 		if ln.libP2pHost.connManager.IsConnected(peerId) {
-			conn := ln.libP2pHost.connManager.GetConn(peerId)
-			_ = conn.Close()
+			conns := ln.libP2pHost.connManager.GetConns(peerId)
+			for _, c := range conns {
+				_ = c.Close()
+			}
 			logger.Infof("[Net] closing revoked peer connection(pid: %s)", pid)
 		}
 	}
