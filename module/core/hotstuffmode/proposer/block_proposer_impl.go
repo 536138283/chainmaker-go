@@ -220,8 +220,18 @@ func (bp *BlockProposerImpl) proposeBlock() {
 		}
 	}()
 	lastBlock := bp.ledgerCache.GetLastCommittedBlock()
+	if lastBlock == nil {
+		bp.log.Errorf("no committed block found")
+		return
+	}
+
 	proposingHeight := lastBlock.Header.BlockHeight + 1
-	if !bp.shouldProposeByBFT(proposingHeight) {
+	//if !bp.shouldProposeByBFT(proposingHeight) {
+	//	return
+	//}
+	if !bp.isIdle() {
+		// concurrent control, proposer is proposing now
+		bp.log.Debugf("proposer is busy, not propose [%d] ", proposingHeight)
 		return
 	}
 	if !bp.setNotIdle() {
