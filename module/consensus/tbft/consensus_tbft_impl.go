@@ -742,7 +742,10 @@ func (consensus *ConsensusTBFTImpl) procPrecommit(msg *tbftpb.TBFTMsg) {
 }
 
 // fetch QC, quickly reach higher round
-func (consensus *ConsensusTBFTImpl) procRoundQC(roundQC *tbftpb.RoundQC) {
+func (consensus *ConsensusTBFTImpl) procRoundQC(msg *tbftpb.TBFTMsg) {
+	roundQC := new(tbftpb.RoundQC)
+	mustUnmarshal(msg.Msg, roundQC)
+
 	consensus.logger.Infof("[%s](%d/%d/%s) receive round qc from [%s](%d/%d)",
 		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
 		roundQC.Id, roundQC.Height, roundQC.Round)
@@ -779,11 +782,11 @@ func (consensus *ConsensusTBFTImpl) handleConsensusMsg(msg *tbftpb.TBFTMsg) {
 	case tbftpb.TBFTMsgType_state:
 		// Async is ok
 		go consensus.gossip.onRecvState(msg)
-	case tbftpb.TBFTMsgType_MSG_FETCH_ROUNDQC:
+	case tbftpb.TBFTMsgType_fetch_roundqc:
 		// Async is ok
-		go consensus.gossip.onRecvFetchQC(msg.Msg.(*tbftpb.FetchRoundQC))
-	case tbftpb.TBFTMsgType_MSG_SEND_ROUND_QC:
-		consensus.procRoundQC(msg.Msg.(*tbftpb.RoundQC))
+		go consensus.gossip.onRecvFetchQC(msg)
+	case tbftpb.TBFTMsgType_send_roundqc:
+		consensus.procRoundQC(msg)
 	}
 }
 

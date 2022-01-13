@@ -33,8 +33,8 @@ type gossipService struct {
 	tbftImpl *ConsensusTBFTImpl
 
 	peerStates   map[string]*PeerStateService
-	recvStateC   chan *tbftpb.GossipState
-	recvFetchQCC chan *tbftpb.FetchRoundQC
+	recvStateC   chan *tbftpb.TBFTMsg
+	recvFetchQCC chan *tbftpb.TBFTMsg
 	eventC       chan struct{}
 	closeC       chan struct{}
 }
@@ -46,8 +46,8 @@ func newGossipService(logger *logger.CMLogger, tbftImpl *ConsensusTBFTImpl) *gos
 		msgbus:       tbftImpl.msgbus,
 		tbftImpl:     tbftImpl,
 		peerStates:   make(map[string]*PeerStateService),
-		recvStateC:   make(chan *tbftpb.GossipState, defaultChanCap),
-		recvFetchQCC: make(chan *tbftpb.FetchRoundQC, defaultChanCap),
+		recvStateC:   make(chan *tbftpb.TBFTMsg, defaultChanCap),
+		recvFetchQCC: make(chan *tbftpb.TBFTMsg, defaultChanCap),
 		eventC:       make(chan struct{}, defaultChanCap),
 		closeC:       make(chan struct{}),
 	}
@@ -203,7 +203,7 @@ func (g *gossipService) onRecvState(msg *tbftpb.TBFTMsg) {
 	g.recvStateC <- msg
 }
 
-func (g *gossipService) onRecvFetchQC(fetchQC *tbftpb.FetchRoundQC) {
+func (g *gossipService) onRecvFetchQC(fetchQC *tbftpb.TBFTMsg) {
 	g.recvFetchQCC <- fetchQC
 }
 
@@ -216,6 +216,8 @@ func (g *gossipService) recvStateRoutine() {
 		select {
 		case msg := <-g.recvStateC:
 			go g.procRecvState(msg)
+		case fetchQC := <-g.recvFetchQCC:
+			go g.procRecvFetchQC(fetchQC)
 		case <-g.closeC:
 			loop = false
 		}
@@ -240,7 +242,8 @@ func (g *gossipService) procRecvState(msg *tbftpb.TBFTMsg) {
 	peer.GetStateC() <- state
 }
 
-func (g *gossipService) procRecvFetchQC(fetcthQC *tbftpb.FetchRoundQC) {
+func (g *gossipService) procRecvFetchQC(msg *tbftpb.TBFTMsg) {
+	fetcthQC := new(tbftpb.FetchRoundQC)
 	g.logger.Infof("[%s] receive fetcthQC %s(%d/%d)", g.id, fetcthQC.Id, fetcthQC.Height, fetcthQC.Round)
 
 	g.Lock()
