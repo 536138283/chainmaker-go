@@ -741,6 +741,30 @@ func (consensus *ConsensusTBFTImpl) procPrecommit(msg *tbftpb.TBFTMsg) {
 	}
 }
 
+// fetch QC, quickly reach higher round
+func (consensus *ConsensusTBFTImpl) procRoundQC(roundQC *tbftpb.RoundQC) {
+	consensus.logger.Infof("[%s](%d/%d/%s) receive round qc from [%s](%d/%d)",
+		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+		roundQC.Id, roundQC.Height, roundQC.Round)
+	// receive invalid round qc
+	if roundQC.Height != consensus.Height || roundQC.Round < consensus.Round {
+		consensus.logger.Infof("[%s](%d/%d/%s) receive invalid round qc from [%s](%d/%d)",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+			roundQC.Id, roundQC.Height, roundQC.Round)
+		return
+	}
+	// verify qc
+	if roundQC.Precommits == nil && VerifyRoundQc(consensus.logger, consensus.ac,
+		consensus.validatorSet, roundQC) == nil {
+		consensus.logger.Infof("[%s](%d/%d/%s) verify round qc failed. from [%s](%d/%d)",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+			roundQC.Id, roundQC.Height, roundQC.Round)
+	}
+	// this is equivalent to completing the consensus process of roundQC.Round
+	// enter new round base on roundQC.Round+1
+	consensus.enterNewRound(consensus.Height, roundQC.Round+1)
+}
+
 func (consensus *ConsensusTBFTImpl) handleConsensusMsg(msg *tbftpb.TBFTMsg) {
 	consensus.Lock()
 	defer consensus.Unlock()
@@ -755,6 +779,11 @@ func (consensus *ConsensusTBFTImpl) handleConsensusMsg(msg *tbftpb.TBFTMsg) {
 	case tbftpb.TBFTMsgType_state:
 		// Async is ok
 		go consensus.gossip.onRecvState(msg)
+	case tbftpb.TBFTMsgType_MSG_FETCH_ROUNDQC:
+		// Async is ok
+		go consensus.gossip.onRecvFetchQC(msg.Msg.(*tbftpb.FetchRoundQC))
+	case tbftpb.TBFTMsgType_MSG_SEND_ROUND_QC:
+		consensus.procRoundQC(msg.Msg.(*tbftpb.RoundQC))
 	}
 }
 

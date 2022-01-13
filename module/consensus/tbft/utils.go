@@ -138,3 +138,57 @@ func VerifyBlockSignatures(chainConf protocol.ChainConf,
 		block.Header.BlockHeight, block.Header.BlockHash)
 	return nil
 }
+
+// VerifyRoundQc verifies whether the signatures in roundQC
+// verify that the Qc is nil hash and the maj32 of the voteSet
+// error when verify successfully, and return corresponding error
+// when failed.
+func VerifyRoundQc(logger *logger.CMLogger, ac protocol.AccessControlProvider,
+	validators *validatorSet, roundQC *tbftpb.RoundQC) error {
+	if roundQC == nil && roundQC.Precommits == nil {
+		return fmt.Errorf("invalid roundQC")
+	}
+
+	precommits := NewVoteSetFromProto(logger, roundQC.Precommits, validators)
+	hash, ok := precommits.twoThirdsMajority()
+	// we need a QC with nil hash
+	if !ok || !isNilHash(hash) {
+		return fmt.Errorf("precommits without majority or is not a nil hash, ok = %v, hash = %x", ok, hash)
+	}
+
+	hashStr := base64.StdEncoding.EncodeToString(nilHash)
+	blockVotes := precommits.VotesByBlock[hashStr]
+	//
+	for _, v := range blockVotes.Votes {
+		vote, ok := proto.Clone(v.ToProto()).(*tbftpb.Vote)
+		if !ok {
+			return fmt.Errorf("interface transfer to *tbftpb.Vote failed")
+		}
+		vote.Endorsement = nil
+		message := mustMarshal(vote)
+
+		principal, err := ac.CreatePrincipal(
+			protocol.ResourceNameConsensusNode,
+			[]*common.EndorsementEntry{v.Endorsement},
+			message,
+		)
+		if err != nil {
+			clog.Infof("verify round qc signatures vote(%s) error: %v", v.Voter, err)
+			return err
+		}
+
+		result, err := ac.VerifyPrincipal(principal)
+		if err != nil {
+			clog.Infof("verify round qc signatures vote(%s) error: %v", v.Voter, err)
+			return err
+		}
+
+		if !result {
+			clog.Infof("verify round qc signatures vote(%s) because result: %v", v.Voter, result)
+			return fmt.Errorf("verifyVote result: %v", result)
+		}
+	}
+
+	clog.Debugf("verify round qc signatures success")
+	return nil
+}

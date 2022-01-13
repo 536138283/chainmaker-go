@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package tbft
 
 import (
+	"crypto/rand"
+	"math/big"
 	"sync"
 	"time"
 
@@ -30,22 +32,24 @@ type gossipService struct {
 	msgbus   msgbus.MessageBus
 	tbftImpl *ConsensusTBFTImpl
 
-	peerStates map[string]*PeerStateService
-	recvStateC chan *tbftpb.TBFTMsg
-	eventC     chan struct{}
-	closeC     chan struct{}
+	peerStates   map[string]*PeerStateService
+	recvStateC   chan *tbftpb.GossipState
+	recvFetchQCC chan *tbftpb.FetchRoundQC
+	eventC       chan struct{}
+	closeC       chan struct{}
 }
 
 func newGossipService(logger *logger.CMLogger, tbftImpl *ConsensusTBFTImpl) *gossipService {
 	g := &gossipService{
-		logger:     logger,
-		id:         tbftImpl.Id,
-		msgbus:     tbftImpl.msgbus,
-		tbftImpl:   tbftImpl,
-		peerStates: make(map[string]*PeerStateService),
-		recvStateC: make(chan *tbftpb.TBFTMsg, defaultChanCap),
-		eventC:     make(chan struct{}, defaultChanCap),
-		closeC:     make(chan struct{}),
+		logger:       logger,
+		id:           tbftImpl.Id,
+		msgbus:       tbftImpl.msgbus,
+		tbftImpl:     tbftImpl,
+		peerStates:   make(map[string]*PeerStateService),
+		recvStateC:   make(chan *tbftpb.GossipState, defaultChanCap),
+		recvFetchQCC: make(chan *tbftpb.FetchRoundQC, defaultChanCap),
+		eventC:       make(chan struct{}, defaultChanCap),
+		closeC:       make(chan struct{}),
 	}
 
 	for _, id := range g.tbftImpl.validatorSet.Validators {
@@ -119,6 +123,27 @@ func (g *gossipService) removeValidators(validators []string) error {
 	return nil
 }
 
+// select a random node to get qc
+func (g *gossipService) selectPeers() string {
+	var peers []string
+	for _, p := range g.peerStates {
+		// equal height and more than 1 rounds
+		if p.Height == g.tbftImpl.Height && p.Round-1 > g.tbftImpl.Round {
+			peers = append(peers, p.Id)
+		}
+	}
+	if len(peers) == 0 {
+		return ""
+	}
+
+	// select a random node
+	n, err := rand.Int(rand.Reader, big.NewInt(int64(len(peers))))
+	if err != nil {
+		n = big.NewInt(0)
+	}
+	return peers[n.Int64()]
+}
+
 func (g *gossipService) triggerEvent() {
 	g.logger.Infof("eventC len: %d", len(g.eventC))
 	g.eventC <- struct{}{}
@@ -134,13 +159,31 @@ func (g *gossipService) gossipStateRoutine() {
 		case <-g.eventC:
 			g.logger.Debugf("gossip because event")
 			go g.gossipState()
+			go g.fetchRoundQC()
 		case <-time.After(defaultSleepTime):
 			g.logger.Debugf("gossip because timeout")
 			go g.gossipState()
+			go g.fetchRoundQC()
 		case <-g.closeC:
 			loop = false
 		}
 	}
+}
+
+func (g *gossipService) fetchRoundQC() {
+	g.Lock()
+	defer g.Unlock()
+
+	id := g.selectPeers()
+	if id == "" {
+		return
+	}
+	peer, ok := g.peerStates[id]
+	if !ok {
+		return
+	}
+
+	go peer.gossipFetchRoundQC()
 }
 
 func (g *gossipService) gossipState() {
@@ -158,6 +201,10 @@ func (g *gossipService) gossipState() {
 
 func (g *gossipService) onRecvState(msg *tbftpb.TBFTMsg) {
 	g.recvStateC <- msg
+}
+
+func (g *gossipService) onRecvFetchQC(fetchQC *tbftpb.FetchRoundQC) {
+	g.recvFetchQCC <- fetchQC
 }
 
 func (g *gossipService) recvStateRoutine() {
@@ -182,7 +229,7 @@ func (g *gossipService) procRecvState(msg *tbftpb.TBFTMsg) {
 		return
 	}
 
-	g.logger.Debugf("[%s] receive state %s(%d/%d/%s)", g.id, state.Id, state.Height, state.Round, state.Step)
+	g.logger.Infof("[%s] receive state %s(%d/%d/%s)", g.id, state.Id, state.Height, state.Round, state.Step)
 
 	g.Lock()
 	peer, ok := g.peerStates[state.Id]
@@ -191,4 +238,16 @@ func (g *gossipService) procRecvState(msg *tbftpb.TBFTMsg) {
 		return
 	}
 	peer.GetStateC() <- state
+}
+
+func (g *gossipService) procRecvFetchQC(fetcthQC *tbftpb.FetchRoundQC) {
+	g.logger.Infof("[%s] receive fetcthQC %s(%d/%d)", g.id, fetcthQC.Id, fetcthQC.Height, fetcthQC.Round)
+
+	g.Lock()
+	peer, ok := g.peerStates[fetcthQC.Id]
+	g.Unlock()
+	if !ok {
+		return
+	}
+	peer.GetFetchQCC() <- fetcthQC
 }
