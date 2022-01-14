@@ -244,6 +244,10 @@ func (g *gossipService) procRecvState(msg *tbftpb.TBFTMsg) {
 
 func (g *gossipService) procRecvFetchQC(msg *tbftpb.TBFTMsg) {
 	fetcthQC := new(tbftpb.FetchRoundQC)
+	if err := proto.Unmarshal(msg.Msg, fetcthQC); err != nil {
+		g.logger.Errorf("[%s] receive fetcthQC unmarshal failed, %v", g.id, err)
+		return
+	}
 	g.logger.Infof("[%s] receive fetcthQC %s(%d/%d)", g.id, fetcthQC.Id, fetcthQC.Height, fetcthQC.Round)
 
 	g.Lock()
