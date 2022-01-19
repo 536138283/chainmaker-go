@@ -40,6 +40,7 @@ type PeerStateService struct {
 
 	*PeerSendState
 	stateC   chan *tbftpb.GossipState
+	fetchQC  chan *tbftpb.FetchRoundQC
 	tbftImpl *ConsensusTBFTImpl
 	msgbus   msgbus.MessageBus
 	closeC   chan struct{}
@@ -152,6 +153,7 @@ func NewPeerStateService(logger *logger.CMLogger, id string, tbftImpl *Consensus
 		msgbus:        tbftImpl.msgbus,
 	}
 	pcs.stateC = make(chan *tbftpb.GossipState, defaultChanCap)
+	pcs.fetchQC = make(chan *tbftpb.FetchRoundQC, defaultChanCap)
 	pcs.closeC = make(chan struct{})
 	return pcs
 }
@@ -233,6 +235,11 @@ func (pcs *PeerStateService) start() {
 	go pcs.procStateChange()
 }
 
+// GetFetchQCC return the fetchQC channel
+func (pcs *PeerStateService) GetFetchQCC() chan<- *tbftpb.FetchRoundQC {
+	return pcs.fetchQC
+}
+
 func (pcs *PeerStateService) stop() {
 	pcs.logger.Infof("[%s] stop PeerStateService", pcs.Id)
 	close(pcs.closeC)
@@ -254,10 +261,35 @@ func (pcs *PeerStateService) procStateChange() {
 			pcs.updateWithProto(stateProto)
 
 			pcs.sendStateChange()
+		case fetchQCProto := <-pcs.fetchQC:
+			pcs.sendRoundQC(fetchQCProto)
 		case <-pcs.closeC:
 			loop = false
 		}
 	}
+}
+
+// fetch the RoundQC
+func (pcs *PeerStateService) gossipFetchRoundQC() {
+	fetchRoundQC := &tbftpb.FetchRoundQC{
+		Id:     pcs.tbftImpl.Id,
+		Height: pcs.tbftImpl.Height,
+		Round:  pcs.tbftImpl.Round,
+	}
+
+	tbftMsg := &tbftpb.TBFTMsg{
+		Type: tbftpb.TBFTMsgType_fetch_roundqc,
+		Msg:  mustMarshal(fetchRoundQC),
+	}
+
+	netMsg := &netpb.NetMsg{
+		Payload: mustMarshal(tbftMsg),
+		Type:    netpb.NetMsg_CONSENSUS_MSG,
+		To:      pcs.Id,
+	}
+	pcs.logger.Infof("%s fetch round qc (%d/%d) to %s", pcs.tbftImpl.Id, pcs.Height, pcs.Round, pcs.Id)
+	pcs.publishToMsgbus(netMsg)
+
 }
 
 func (pcs *PeerStateService) gossipState(state *tbftpb.GossipState) {
@@ -283,6 +315,65 @@ func (pcs *PeerStateService) gossipState(state *tbftpb.GossipState) {
 	pcs.publishToMsgbus(netMsg)
 
 	go pcs.sendStateChange()
+}
+
+// send qc to the requesting node
+func (pcs *PeerStateService) sendRoundQC(fetchQCProto *tbftpb.FetchRoundQC) {
+	pcs.Lock()
+	defer pcs.Unlock()
+
+	if fetchQCProto.Height != pcs.tbftImpl.Height || fetchQCProto.Round >= pcs.tbftImpl.Round-1 {
+		pcs.logger.Infof("[%s](%d/%d/%s) receive invalid fetch qc request from [%s](%d/%d)",
+			pcs.tbftImpl.Id, pcs.tbftImpl.Height, pcs.tbftImpl.Round, pcs.tbftImpl.Step,
+			pcs.Id, pcs.Height, pcs.Round)
+		return
+	}
+
+	// tbftImpl.RLock()
+	// need to protect the tbftImpl.heightRoundVoteSet
+	pcs.tbftImpl.RLock()
+	defer pcs.tbftImpl.RUnlock()
+
+	var precommits *VoteSet
+	// get the highest round of QC
+	for round := pcs.tbftImpl.Round - 1; round > fetchQCProto.Round; round-- {
+		roundVoteSet := pcs.tbftImpl.heightRoundVoteSet.getRoundVoteSet(round)
+		if roundVoteSet == nil || roundVoteSet.Precommits == nil {
+			continue
+		}
+		hash, ok := roundVoteSet.Precommits.twoThirdsMajority()
+		// we need a QC with nil hash
+		if ok && isNilHash(hash) {
+			precommits = roundVoteSet.Precommits
+			break
+		}
+	}
+	if precommits == nil {
+		pcs.logger.Infof("[%s](%d/%d/%s) do not have qc request send to [%s](%d/%d)",
+			pcs.tbftImpl.Id, pcs.tbftImpl.Height, pcs.tbftImpl.Round, pcs.tbftImpl.Step,
+			pcs.Id, pcs.Height, pcs.Round)
+		return
+	}
+
+	roundQC := &tbftpb.RoundQC{
+		Id:         pcs.tbftImpl.Id,
+		Height:     pcs.tbftImpl.Height,
+		Round:      pcs.tbftImpl.Round,
+		Precommits: precommits.ToProto(),
+	}
+
+	tbftMsg := &tbftpb.TBFTMsg{
+		Type: tbftpb.TBFTMsgType_send_roundqc,
+		Msg:  mustMarshal(roundQC),
+	}
+	netMsg := &netpb.NetMsg{
+		Payload: mustMarshal(tbftMsg),
+		Type:    netpb.NetMsg_CONSENSUS_MSG,
+		To:      pcs.Id,
+	}
+
+	pcs.logger.Infof("%s send round qc (%d/%d) to %s", pcs.tbftImpl.Id, pcs.tbftImpl.Height, pcs.tbftImpl.Round, pcs.Id)
+	pcs.publishToMsgbus(netMsg)
 }
 
 func (pcs *PeerStateService) sendStateChange() {
