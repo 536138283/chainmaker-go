@@ -288,7 +288,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	bp.log.Debugf("begin proposing block[%d], fetch tx num[%d]", height, len(fetchBatch))
 
 	startDupTick := utils.CurrentTimeMillisSeconds()
-	checkedBatch := bp.txDuplicateCheck(fetchBatch)
+	checkedBatch, duplicates := bp.txDuplicateCheck(fetchBatch)
 	dupLasts := utils.CurrentTimeMillisSeconds() - startDupTick
 	if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(checkedBatch) == 0 {
 		// can not propose empty block and tx batch is empty, then yield proposing.
@@ -296,7 +296,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
 		return nil
 	}
-
+	if len(duplicates) != 0 {
+		// Duplicate transactions put back into the txPool
+		bp.log.Debugf("Remove duplicate transactions count: %d", len(duplicates))
+		bp.txPool.RetryAndRemoveTxs(nil, duplicates)
+	}
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(checkedBatch) > txCapacity {
 		// check if checkedBatch > txCapacity, if so, strict block tx count according to  config,
@@ -355,11 +359,14 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 }
 
 // txDuplicateCheck, to check if transactions that are about to proposing are double spenting.
-func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) []*commonpb.Transaction {
+func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) (checked []*commonpb.Transaction,
+	duplicates []*commonpb.Transaction) {
 	if len(batch) == 0 {
-		return nil
+		return nil, nil
 	}
-	checked := make([]*commonpb.Transaction, 0, len(batch))
+	checked = make([]*commonpb.Transaction, 0, len(batch))
+	duplicates = make([]*commonpb.Transaction, 0, len(batch))
+
 	verifyBatches := utils.DispatchTxVerifyTask(batch)
 	workerCount := len(verifyBatches)
 	results := make([][]*commonpb.Transaction, workerCount)
@@ -373,6 +380,9 @@ func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) []*
 				exist, err := bp.blockchainStore.TxExists(tx.Payload.TxId)
 				if err == nil && !exist {
 					result = append(result, tx)
+				} else {
+					// Abnormal or existing transactions
+					duplicates = append(duplicates, tx)
 				}
 			}
 			results[index] = result
@@ -382,7 +392,7 @@ func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) []*
 	for _, result := range results {
 		checked = append(checked, result...)
 	}
-	return checked
+	return checked, duplicates
 }
 
 // OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
