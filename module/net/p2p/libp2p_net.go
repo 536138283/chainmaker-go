@@ -708,14 +708,54 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 		if err != nil {
 			continue
 		}
-		for c := ln.libP2pHost.connManager.GetConn(pid); c != nil; c = ln.libP2pHost.connManager.GetConn(pid) {
-			_ = c.Close()
-			logger.Infof("[Net] [ReVerifyTrustRoots] close connection of peer %s", s)
-			time.Sleep(time.Second)
+		conns := ln.libP2pHost.connManager.GetConns(pid)
+		for _, c := range conns {
+			// 由于底层的swarm_conn close只做了一次(once.Do)操作，所以反复调用没用。
+			//TODO 什么情况关闭失败，会不会有内存泄露？
+			err := c.Close()
+			if err != nil {
+				// 即使关闭出问题了，也先把上层状态删掉
+				ln.libP2pHost.connManager.RemoveConn(pid, c)
+				logger.Warnf("[Net][ReVerifyPeers] close connection failed, peer[%s], err:[%v], remove this conn, remote multi-addr:[%s]",
+					s, err, c.RemoteMultiaddr().String())
+			} else {
+				logger.Infof("[Net][ReVerifyPeers] close connection of peer %s", s)
+			}
 		}
+
+		// 关闭连接失败不能回调host移除上层其他状态,故检测
+		go ln.checkThePeerConns(s, pid)
 	}
 
 	ln.reloadChainPubSubWhiteList(chainId)
+}
+
+func (ln *LibP2pNet) checkThePeerConns(peerId string, pid peer.ID) {
+
+	// 延迟两秒，再检测，留出关闭时间
+	time.Sleep(time.Second * 2)
+	conns := ln.libP2pHost.connManager.GetConns(pid)
+	if len(conns) == 0 {
+
+		if ln.libP2pHost.removeTlsPeerNotifyC != nil {
+			ln.libP2pHost.removeTlsPeerNotifyC <- peerId
+		}
+
+		if ln.libP2pHost.removeTlsCertIdPeerIdNotifyC != nil {
+			ln.libP2pHost.removeTlsCertIdPeerIdNotifyC <- peerId
+		}
+
+		if ln.libP2pHost.removePeerIdTlsCertNotifyC != nil {
+			ln.libP2pHost.removePeerIdTlsCertNotifyC <- peerId
+		}
+
+		ln.libP2pHost.peerStreamManager.cleanPeerStream(pid)
+
+		logger.Infof("[Net][ReVerifyPeers] there is no connection available, remove all peer infos. peer[%s]",
+			peerId)
+	}
+	logger.Infof("[Net][ReVerifyPeers] there are available connections, peer[%s],conn num:[%d]",
+		peerId, len(conns))
 }
 
 func (ln *LibP2pNet) removeChainPubSubWhiteList(chainId, pidStr string) error {
