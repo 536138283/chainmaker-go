@@ -44,8 +44,9 @@ type PubSub struct {
 	// pubsubUid is the unique id of pubsub
 	pubsubUid string
 	// whitelist is a peer whitelist of pubsub
-	whitelist     Whitelist
-	whitelistLock sync.Mutex
+	whitelist           Whitelist
+	whitelistLock       sync.Mutex
+	removeWhitelistPeer chan peer.ID
 
 	// Customize part end
 
@@ -218,8 +219,9 @@ func NewPubSub(ctx context.Context, h host.Host, rt PubSubRouter, opts ...Option
 	ps := &PubSub{
 		// Customize part start
 
-		pubsubUid: "default",
-		whitelist: NewMapWhitelist(),
+		pubsubUid:           "default",
+		whitelist:           NewMapWhitelist(),
+		removeWhitelistPeer: make(chan peer.ID),
 
 		// Customize part end
 
@@ -338,7 +340,7 @@ func (p *PubSub) RemoveWhitelistPeer(pid peer.ID) {
 	p.whitelistLock.Lock()
 	defer p.whitelistLock.Unlock()
 	p.whitelist.Remove(pid)
-	p.rt.RemovePeer(pid)
+	p.removeWhitelistPeer <- pid
 }
 
 // Customize part end
@@ -580,6 +582,17 @@ func (p *PubSub) processLoop(ctx context.Context) {
 				continue
 			}
 
+			// Customize part start
+
+			if p.whitelist.Size() > 0 && !p.whitelist.Contains(pid) {
+				log.Warn("closing stream for unwhitelisted peer: ", pid)
+				close(ch)
+				s.Reset()
+				continue
+			}
+
+			// Customize part end
+
 			p.rt.AddPeer(pid, s.Protocol())
 
 		case pid := <-p.newPeerError:
@@ -684,6 +697,24 @@ func (p *PubSub) processLoop(ctx context.Context) {
 				}
 				p.rt.RemovePeer(pid)
 			}
+
+		// Customize part start
+		case pid := <-p.removeWhitelistPeer:
+			log.Infof("leave whitelist peer %s", pid)
+
+			_, ok := p.peers[pid]
+			if ok {
+				//close(ch)
+				delete(p.peers, pid)
+				for t, tmap := range p.topics {
+					if _, ok := tmap[pid]; ok {
+						delete(tmap, pid)
+						p.notifyLeave(t, pid)
+					}
+				}
+				p.rt.RemovePeer(pid)
+			}
+		// Customize part end
 
 		case <-ctx.Done():
 			log.Info("libp2ppubsub processloop shutting down")
