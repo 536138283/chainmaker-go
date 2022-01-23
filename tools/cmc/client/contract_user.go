@@ -99,7 +99,7 @@ func invokeUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
-		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult,
+		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagTxId,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -337,6 +337,7 @@ func invokeUserContract() error {
 	if err != nil {
 		return fmt.Errorf(CREATE_USER_CLIENT_FAILED_FORMAT, err.Error())
 	}
+	defer client.Stop()
 
 	pairs := make(map[string]string)
 	if params != "" {
@@ -346,9 +347,12 @@ func invokeUserContract() error {
 		}
 	}
 
-	Dispatch(client, contractName, method, pairs)
+	if txId != "" {
+		invokeContract(client, contractName, method, txId, pairs)
+	} else {
+		Dispatch(client, contractName, method, pairs)
+	}
 
-	client.Stop()
 	return nil
 }
 
