@@ -43,7 +43,8 @@ func AttachAndRequiredFlags(cmd *cobra.Command, flags *pflag.FlagSet, names []st
 	cmdFlags := cmd.Flags()
 	for _, name := range names {
 		if flag := flags.Lookup(name); flag != nil {
-			cmdFlags.AddFlag(flag)
+			flagCopied := *flag
+			cmdFlags.AddFlag(&flagCopied)
 		}
 		cmd.MarkFlagRequired(name)
 	}
@@ -53,7 +54,8 @@ func AttachFlags(cmd *cobra.Command, flags *pflag.FlagSet, names []string) {
 	cmdFlags := cmd.Flags()
 	for _, name := range names {
 		if flag := flags.Lookup(name); flag != nil {
-			cmdFlags.AddFlag(flag)
+			flagCopied := *flag
+			cmdFlags.AddFlag(&flagCopied)
 		}
 	}
 }

@@ -96,18 +96,19 @@ func invokeUserContractCMD() *cobra.Command {
 		},
 	}
 
-	attachFlags(cmd, []string{
+	util.AttachFlags(cmd, flags, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
-		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
-		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagTxId,
+		flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId, flagSendTimes, flagEnableCertHash,
+		flagParams, flagTimeout, flagSyncResult, flagTxId,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-	cmd.MarkFlagRequired(flagContractName)
-	cmd.MarkFlagRequired(flagMethod)
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath, flagContractName, flagMethod,
+	})
 
 	return cmd
 }
+
 func invokeContractTimesCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "invoke-times",
