@@ -1208,7 +1208,7 @@ func (consensus *ConsensusTBFTImpl) enterCommit(height int64, round int32) {
 		panic(fmt.Errorf("[%s]-%x, enter commit failed, without majority", consensus.Id, hash))
 	}
 
-	if isNilHash(hash) {
+	if isNilHash(hash) || consensus.Proposal == nil {
 		// consensus.AddTimeout(consensus.CommitTimeout(round), consensus.Height, round+1, tbftpb.Step_NewRound)
 		consensus.enterNewRound(consensus.Height, round+1)
 	} else {
