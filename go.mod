@@ -11,7 +11,7 @@ require (
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20220129082508-3ed277948aeb
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.0.0-20220129082948-e2988c87e5e0
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.0.0-20220129030546-2a2892b25e58
-	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220128023600-a087fd4ca956
+	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220129103344-6ec43cc786d6
 	chainmaker.org/chainmaker/logger/v2 v2.1.1-0.20220128022235-c984177a37cc
 	chainmaker.org/chainmaker/net-common v1.0.2-0.20220120084355-9be05b200365
 	chainmaker.org/chainmaker/net-libp2p v1.0.2-0.20220125065325-34de4d8e90b6
@@ -23,7 +23,7 @@ require (
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220128062951-d5758846d3bd
 	chainmaker.org/chainmaker/txpool-single/v2 v2.1.1-0.20220128061857-855bf0e3e65b
 	chainmaker.org/chainmaker/utils/v2 v2.1.1-0.20220128023017-5bf8279342f1
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.1.0
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.1.1-0.20220129024947-88192498b431
 	chainmaker.org/chainmaker/vm-evm/v2 v2.1.1-0.20220129021120-8f8d5490deba
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220128100259-9ef774d53506
 	chainmaker.org/chainmaker/vm-native/v2 v2.1.2-0.20220128071131-d9aa2c021f61
@@ -38,6 +38,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/gosuri/uiprogress v0.0.1

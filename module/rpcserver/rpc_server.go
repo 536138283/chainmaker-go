@@ -9,7 +9,6 @@ package rpcserver
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -19,20 +18,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/grpc-ecosystem/grpc-gateway/runtime"
-	"github.com/tmc/grpc-websocket-proxy/wsproxy"
-
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
+	cmtls "chainmaker.org/chainmaker/common/v2/crypto/tls"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	localconf "chainmaker.org/chainmaker/localconf/v2"
 	logger "chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	protocol "chainmaker.org/chainmaker/protocol/v2"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
+	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 	"google.golang.org/grpc"
 )
 
@@ -106,7 +105,7 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 func (s *RPCServer) Start() error {
 	var (
 		err       error
-		tlsConfig *tls.Config
+		tlsConfig *cmtls.Config
 		caCerts   []string
 	)
 
