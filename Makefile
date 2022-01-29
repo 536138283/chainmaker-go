@@ -15,7 +15,7 @@ GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
 AARCH64="aarch64"
 CPU=$(shell uname -m)
 
-LOCALCONF_HOME=chainmaker.org/chainmaker-go/blockchain
+LOCALCONF_HOME=chainmaker.org/chainmaker-go/module/blockchain
 GOLDFLAGS += -X "${LOCALCONF_HOME}.CurrentVersion=${VERSION}"
 GOLDFLAGS += -X "${LOCALCONF_HOME}.BuildDateTime=${DATETIME}"
 GOLDFLAGS += -X "${LOCALCONF_HOME}.GitBranch=${GIT_BRANCH}"
@@ -110,7 +110,7 @@ test-deploy:
 
 sql-qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
+	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
 	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 	echo "start new sql-qta test"
 	cd test/send_proposal_request_ci && ./build.sh
@@ -120,7 +120,7 @@ sql-qta:
 	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
+	cd test/send_proposal_request_ci && ./stop_solo.sh
 	cd test/send_proposal_request_ci && ./clean_data_log.sh
 	echo "start new qta test"
 	cd test/send_proposal_request_ci && ./build.sh

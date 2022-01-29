@@ -136,7 +136,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	var isValid bool
 	var contractEventMap map[string][]*commonpb.ContractEvent
 	// to check if the block has verified before
-	b, txRwSet, eventMap := v.proposalCache.GetProposedBlock(block)
+	b, txRwSet, _ := v.proposalCache.GetProposedBlock(block)
 	// contractEventMap = eventMap
 
 	notSolo := consensuspb.ConsensusType_SOLO != v.chainConf.ChainConfig().Consensus.Type
@@ -170,12 +170,8 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 				)
 				v.cutBlocks(cutBlocks, lastBlock)
 			}
-			err = v.proposalCache.SetProposedBlock(
-				block, txRwSet,
-				eventMap,
-				v.proposalCache.IsProposedAt(block.Header.BlockHeight),
-			)
-			return err
+
+			return nil
 		}
 	}
 
@@ -233,8 +229,11 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap))
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	v.log.Infof("verify success [%d,%x](%v,pool: %d,consensusCheckUsed: %d, total: %d)", newBlock.Header.BlockHeight,
-		newBlock.Header.BlockHash, timeLasts, lastPool, consensusCheckUsed, elapsed)
+	v.log.Infof("verify success [%d,%x]"+
+		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
+		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[0], timeLasts[1],
+		timeLasts[2], timeLasts[3], lastPool, consensusCheckUsed, elapsed)
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
@@ -333,8 +332,11 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	timeLasts = append(timeLasts, elapsed)
-	v.log.Infof("verify success [%d,%x](%v,pool: %d,consensusCheckUsed: %d, total: %d)", newBlock.Header.BlockHeight,
-		newBlock.Header.BlockHash, timeLasts, lastPool, consensusCheckUsed, elapsed)
+	v.log.Infof("verify success [%d,%x]"+
+		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
+		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[0], timeLasts[1],
+		timeLasts[2], timeLasts[3], lastPool, consensusCheckUsed, elapsed)
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}

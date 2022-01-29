@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 
+	"chainmaker.org/chainmaker/common/v2/crypto/engine"
+
 	"chainmaker.org/chainmaker-go/module/net"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -89,6 +91,7 @@ func (server *ChainMakerServer) initNet() error {
 	switch strings.ToLower(provider) {
 	case "libp2p":
 		netType = protocol.Libp2p
+
 	case "liquid":
 		netType = protocol.Liquid
 	default:
@@ -182,12 +185,17 @@ func (server *ChainMakerServer) initNet() error {
 
 func (server *ChainMakerServer) initBlockchains() error {
 	server.blockchains = sync.Map{}
+	ok := false
 	for _, chain := range localconf.ChainMakerConfig.GetBlockChains() {
 		chainId := chain.ChainId
 		if err := server.initBlockchain(chainId, chain.Genesis); err != nil {
 			log.Error(err.Error())
 			continue
 		}
+		ok = true
+	}
+	if !ok {
+		return fmt.Errorf("init all blockchains fail")
 	}
 	go server.newBlockchainTaskListener()
 	return nil
@@ -195,16 +203,22 @@ func (server *ChainMakerServer) initBlockchains() error {
 
 func (server *ChainMakerServer) initBlockchainsForRebuildDbs() error {
 	server.blockchains = sync.Map{}
+	ok := false
 	for _, chain := range localconf.ChainMakerConfig.GetBlockChains() {
 		chainId := chain.ChainId
 		if err := server.initBlockchainForRebuildDbs(chainId, chain.Genesis); err != nil {
 			log.Error(err.Error())
 			continue
 		}
+		ok = true
+	}
+	if !ok {
+		return fmt.Errorf("init all blockchains fail")
 	}
 	go server.newBlockchainTaskListener()
 	return nil
 }
+
 func (server *ChainMakerServer) newBlockchainTaskListener() {
 	for newChainId := range localconf.FindNewBlockChainNotifyC {
 		_, ok := server.blockchains.Load(newChainId)
@@ -291,6 +305,9 @@ func (server *ChainMakerServer) Start() error {
 		return err
 	}
 	log.Infof("[Net] start success!")
+
+	//init crypto engine for ac
+	engine.InitCryptoEngine(localconf.ChainMakerConfig.CryptoEngine, false)
 
 	// 2) start blockchains
 	server.blockchains.Range(func(_, value interface{}) bool {

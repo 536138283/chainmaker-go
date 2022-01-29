@@ -38,8 +38,8 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 	snapshotImpl := m.delegate.makeSnapshotImpl(block, blockHeight)
 
 	// 计算前序指纹, 和当前指纹
-	prevFingerPrint := utils.CalcBlockFingerPrint(prevBlock)
-	fingerPrint := utils.CalcBlockFingerPrint(block)
+	prevFingerPrint := utils.CalcBlockFingerPrintWithoutTx(prevBlock)
+	fingerPrint := utils.CalcBlockFingerPrintWithoutTx(block)
 	m.storeAndLinkSnapshotImpl(snapshotImpl, &prevFingerPrint, &fingerPrint)
 
 	m.log.Infof(
@@ -59,14 +59,14 @@ func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 	m.log.Infof("commit snapshot@%s at height %d", block.Header.ChainId, block.Header.BlockHeight)
 
 	// 计算刚落块的区块指纹
-	deleteFp := utils.CalcBlockFingerPrint(block)
+	deleteFp := utils.CalcBlockFingerPrintWithoutTx(block)
 	deleteFpEx := calcNotConsensusFingerPrint(block)
 	// 如果有snapshot对应的前序snapshot的指纹, 等于刚落块的区块指纹
 	for _, snapshot := range m.snapshots {
 		if snapshot == nil || snapshot.GetPreSnapshot() == nil {
 			continue
 		}
-		prevFp := m.delegate.calcSnapshotFingerPrint(snapshot.GetPreSnapshot().(*SnapshotImpl))
+		prevFp := m.delegate.calcSnapshotFingerPrintWithoutTx(snapshot.GetPreSnapshot().(*SnapshotImpl))
 		if deleteFp == prevFp {
 			snapshot.SetPreSnapshot(nil)
 		}
@@ -84,8 +84,10 @@ func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 			block.Header.ChainId, deleteFp, block.Header.BlockHeight)
 	}
 
+	snapshotCount := 0
 	// in case of switch-fork, gc too old snapshot
 	for finger, snapshot := range m.snapshots {
+		snapshotCount++
 		if snapshot == nil {
 			continue
 		}
@@ -96,6 +98,7 @@ func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 			snapshot.SetPreSnapshot(nil)
 		}
 	}
+	m.log.Debugf("current snapshot count:%d", snapshotCount)
 	return nil
 }
 
@@ -114,5 +117,5 @@ func calcNotConsensusFingerPrint(block *commonPb.Block) utils.BlockFingerPrint {
 		},
 	}
 
-	return utils.CalcBlockFingerPrint(newBlock)
+	return utils.CalcBlockFingerPrintWithoutTx(newBlock)
 }

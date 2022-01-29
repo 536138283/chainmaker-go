@@ -18,8 +18,11 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker-go/module/core/provider/conf"
+	"github.com/hokaccha/go-prettyjson"
+
 	"chainmaker.org/chainmaker/localconf/v2"
+
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
@@ -33,7 +36,7 @@ import (
 
 const (
 	ScheduleTimeout        = 10
-	ScheduleWithDagTimeout = 10
+	ScheduleWithDagTimeout = 20
 )
 
 // TxScheduler transaction scheduler structure
@@ -59,10 +62,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 	txBatchSize := len(txBatch)
-	if txBatchSize == 0 {
-		ts.log.Error("there are no txs to schedule")
-		return nil, nil, fmt.Errorf("there are no txs to schedule")
-	}
 	ts.log.Infof("schedule tx batch start, size %d", txBatchSize)
 
 	var goRoutinePool *ants.Pool
@@ -90,8 +89,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		}()
 	} else {
 		go func() {
-			for _, tx := range txBatch {
-				runningTxC <- tx
+			if len(txBatch) > 0 {
+				for _, tx := range txBatch {
+					runningTxC <- tx
+				}
+			} else {
+				finishC <- true
 			}
 		}()
 	}
@@ -253,7 +256,8 @@ func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *common
 	}
 	//ts.dumpDAG(block.Dag, block.Txs)
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
-		ts.log.Debugf("rwset %v", txRWSetMap)
+		result, _ := prettyjson.Marshal(txRWSetMap)
+		ts.log.Infof("schedule rwset :%s", result)
 	}
 	return txRWSetMap
 }
@@ -304,8 +308,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	var goRoutinePool *ants.Pool
 	var err error
-	poolCapacity := ts.StoreHelper.GetPoolCapacity()
-	if goRoutinePool, err = ants.NewPool(poolCapacity, ants.WithPreAlloc(true)); err != nil {
+	if goRoutinePool, err = ants.NewPool(len(block.Txs), ants.WithPreAlloc(true)); err != nil {
 		return nil, nil, err
 	}
 	defer goRoutinePool.Release()
@@ -350,17 +353,17 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 				}
 			case doneTxIndex := <-doneTxC:
 				txIndexBatchAfterShrink := ts.shrinkDag(doneTxIndex, dagRemain, reverseDagRemain)
-				ts.log.Debugf("block [%d] schedule with dag, pop next tx index batch size:%d, dagRemain size:%d",
+				ts.log.Debugf("block [%d] simulate with dag, pop next tx index batch size:%d, dagRemain size:%d",
 					block.Header.BlockHeight, len(txIndexBatchAfterShrink), len(dagRemain))
 				for _, tx := range txIndexBatchAfterShrink {
 					runningTxC <- tx
 				}
 			case <-finishC:
-				ts.log.Debugf("block [%d] schedule with dag finish", block.Header.BlockHeight)
+				ts.log.Debugf("block [%d] simulate with dag finish", block.Header.BlockHeight)
 				ts.scheduleFinishC <- true
 				return
 			case <-timeoutC:
-				ts.log.Errorf("block [%d] schedule with dag timeout", block.Header.BlockHeight)
+				ts.log.Errorf("block [%d] simulate with dag timeout", block.Header.BlockHeight)
 				ts.scheduleFinishC <- true
 				return
 			}
@@ -380,7 +383,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		}
 	}
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
-		ts.log.Debugf("rwset %v", txRWSetMap)
+		result, _ := prettyjson.Marshal(txRWSetMap)
+		ts.log.Infof("simulate with dag rwset :%s", result)
 	}
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
@@ -418,7 +422,7 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 func (ts *TxScheduler) executeTx(tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
 	ts.log.Debugf("run vm start for tx:%s", tx.Payload.GetTxId())
-	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion)
+	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("new tx simulate context finished for tx id:%s", tx.Payload.GetTxId())
 	runVmSuccess := true
 	var txResult *commonPb.Result
@@ -597,11 +601,6 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxS
 		contractResultPayload)
 	if err != nil {
 		ts.log.Errorf("refund gas err is %v", err)
-		result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		result.Message = err.Error()
-		result.ContractResult.Code = uint32(1)
-		result.ContractResult.Message = err.Error()
-		return result, specialTxType, err
 	}
 
 	if txStatusCode == commonPb.TxStatusCode_SUCCESS {

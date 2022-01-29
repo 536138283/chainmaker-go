@@ -11,6 +11,7 @@ BRANCH=$1
 if [[ ! -n $BRANCH ]]; then
   BRANCH="develop"
 fi
+QC="v2.2.0_alpha_qc"
 cd ..
 
 go get chainmaker.org/chainmaker/chainconf/v2@${BRANCH}
@@ -33,7 +34,7 @@ go get chainmaker.org/chainmaker/store/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-batch/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-single/v2@${BRANCH}
 go get chainmaker.org/chainmaker/utils/v2@${BRANCH}
-go get chainmaker.org/chainmaker/vm-docker-go@${BRANCH}
+go get chainmaker.org/chainmaker/vm-docker-go/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-evm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-gasm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-native/v2@${BRANCH}

@@ -24,6 +24,7 @@ if [ ${enable_dockervm} == "true" ];then
   done
 fi
 
+
 sleep 2
 #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > /dev/null 2>&1 &
 nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > panic.log 2>&1 &

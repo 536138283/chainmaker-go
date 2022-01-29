@@ -14,7 +14,7 @@ import (
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 // Storage interface for smart contracts, implement TxSimContext
@@ -86,6 +86,10 @@ func (s *txQuerySimContextImpl) Get(contractName string, key []byte) ([]byte, er
 	return value, nil
 }
 
+func (s *txQuerySimContextImpl) GetNoRecord(contractName string, key []byte) ([]byte, error) {
+	return s.Get(contractName, key)
+}
+
 func (s *txQuerySimContextImpl) Put(contractName string, key []byte, value []byte) error {
 	s.putIntoWriteSet(contractName, key, value)
 	return nil
@@ -127,9 +131,15 @@ func (s *txQuerySimContextImpl) GetHistoryIterForKey(contractName string,
 func (s *txQuerySimContextImpl) GetCreator(contractName string) *acPb.Member {
 	contract, err := s.GetContractByName(contractName)
 	if err != nil {
+		//TODO log
+		fmt.Println(err)
 		return nil
 	}
-	return contract.Creator
+	return &acPb.Member{
+		OrgId:      contract.Creator.OrgId,
+		MemberType: contract.Creator.MemberType,
+		MemberInfo: contract.Creator.MemberInfo,
+	}
 }
 
 func (s *txQuerySimContextImpl) GetSender() *acPb.Member {

@@ -21,5 +21,4 @@ if [ ${enable_dockervm} == "true" ];then
   done
 fi
 
-
 echo "chainmaker is stopped"

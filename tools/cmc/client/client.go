@@ -41,6 +41,7 @@ var (
 	enableCertHash bool
 	blockHeight    uint64
 	withRWSet      bool
+	isAgree        bool
 	txId           string
 
 	adminKeyFilePaths string
@@ -76,57 +77,71 @@ var (
 	trustMemberRole     string
 	trustMemberNodeId   string
 
-	gasLimit uint64
+	gasLimit  uint64
+	gasEnable bool
+
+	addressType                      int32
+	permissionResourceName           string
+	permissionResourcePolicyRule     string
+	permissionResourcePolicyOrgList  []string
+	permissionResourcePolicyRoleList []string
 )
 
 const (
-	flagConcurrency            = "concurrency"
-	flagTotalCountPerGoroutine = "total-count-per-goroutine"
-	flagSdkConfPath            = "sdk-conf-path"
-	flagAbiFilePath            = "abi-file-path"
-	flagContractName           = "contract-name"
-	flagVersion                = "version"
-	flagMethod                 = "method"
-	flagParams                 = "params"
-	flagOrgId                  = "org-id"
-	flagSyncResult             = "sync-result"
-	flagEnableCertHash         = "enable-cert-hash"
-	flagBlockHeight            = "block-height"
-	flagWithRWSet              = "with-rw-set"
-	flagTxId                   = "tx-id"
-	flagByteCodePath           = "byte-code-path"
-	flagRuntimeType            = "runtime-type"
-	flagChainId                = "chain-id"
-	flagSendTimes              = "send-times"
-	flagAdminKeyFilePaths      = "admin-key-file-paths"
-	flagAdminCrtFilePaths      = "admin-crt-file-paths"
-	flagAdminOrgIds            = "admin-org-ids"
-	flagUserTlsKeyFilePath     = "user-tlskey-file-path"
-	flagUserTlsCrtFilePath     = "user-tlscrt-file-path"
-	flagUserSignKeyFilePath    = "user-signkey-file-path"
-	flagUserSignCrtFilePath    = "user-signcrt-file-path"
-	flagTimeout                = "timeout"
-	flagBlockInterval          = "block-interval"
-	flagNodeOrgId              = "node-org-id"
-	flagNodeIdOld              = "node-id-old"
-	flagNodeId                 = "node-id"
-	flagNodeIds                = "node-ids"
-	flagTrustRootOrgId         = "trust-root-org-id"
-	flagTrustRootCrtPath       = "trust-root-path"
-	flagTrustMemberOrgId       = "trust-member-org-id"
-	flagTrustMemberCrtPath     = "trust-member-path"
-	flagTrustMemberRole        = "trust-member-role"
-	flagTrustMemberNodeId      = "trust-member-node-id"
-	flagCertFilePaths          = "cert-file-paths"
-	flagCertCrlPath            = "cert-crl-path"
-	flagAddress                = "address"
-	flagAmount                 = "amount"
-	flagDelegator              = "delegator"
-	flagValidator              = "validator"
-	flagEpochID                = "epoch-id"
-	flagGrantContractList      = "grant-contract-list"
-	flagRevokeContractList     = "revoke-contract-list"
-	flagGasLimit               = "gas-limit"
+	flagConcurrency                      = "concurrency"
+	flagTotalCountPerGoroutine           = "total-count-per-goroutine"
+	flagSdkConfPath                      = "sdk-conf-path"
+	flagAbiFilePath                      = "abi-file-path"
+	flagContractName                     = "contract-name"
+	flagVersion                          = "version"
+	flagMethod                           = "method"
+	flagParams                           = "params"
+	flagOrgId                            = "org-id"
+	flagSyncResult                       = "sync-result"
+	flagEnableCertHash                   = "enable-cert-hash"
+	flagBlockHeight                      = "block-height"
+	flagWithRWSet                        = "with-rw-set"
+	flagIsAgree                          = "is-agree"
+	flagTxId                             = "tx-id"
+	flagByteCodePath                     = "byte-code-path"
+	flagRuntimeType                      = "runtime-type"
+	flagChainId                          = "chain-id"
+	flagSendTimes                        = "send-times"
+	flagAdminKeyFilePaths                = "admin-key-file-paths"
+	flagAdminCrtFilePaths                = "admin-crt-file-paths"
+	flagAdminOrgIds                      = "admin-org-ids"
+	flagUserTlsKeyFilePath               = "user-tlskey-file-path"
+	flagUserTlsCrtFilePath               = "user-tlscrt-file-path"
+	flagUserSignKeyFilePath              = "user-signkey-file-path"
+	flagUserSignCrtFilePath              = "user-signcrt-file-path"
+	flagTimeout                          = "timeout"
+	flagBlockInterval                    = "block-interval"
+	flagNodeOrgId                        = "node-org-id"
+	flagNodeIdOld                        = "node-id-old"
+	flagNodeId                           = "node-id"
+	flagNodeIds                          = "node-ids"
+	flagTrustRootOrgId                   = "trust-root-org-id"
+	flagTrustRootCrtPath                 = "trust-root-path"
+	flagTrustMemberOrgId                 = "trust-member-org-id"
+	flagTrustMemberCrtPath               = "trust-member-path"
+	flagTrustMemberRole                  = "trust-member-role"
+	flagTrustMemberNodeId                = "trust-member-node-id"
+	flagCertFilePaths                    = "cert-file-paths"
+	flagCertCrlPath                      = "cert-crl-path"
+	flagAddress                          = "address"
+	flagAmount                           = "amount"
+	flagDelegator                        = "delegator"
+	flagValidator                        = "validator"
+	flagEpochID                          = "epoch-id"
+	flagGrantContractList                = "grant-contract-list"
+	flagRevokeContractList               = "revoke-contract-list"
+	flagGasLimit                         = "gas-limit"
+	flagGasEnable                        = "gas-enable"
+	flagAddressType                      = "address-type"
+	flagPermissionResourceName           = "permission-resource-name"
+	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
+	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
+	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
 )
 
 func ClientCMD() *cobra.Command {
@@ -141,6 +156,7 @@ func ClientCMD() *cobra.Command {
 	clientCmd.AddCommand(getChainMakerServerVersionCMD())
 	clientCmd.AddCommand(certManageCMD())
 	clientCmd.AddCommand(blockChainsCMD())
+	clientCmd.AddCommand(enableOrDisableGasCMD())
 
 	return clientCmd
 }
@@ -176,6 +192,7 @@ func init() {
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet, default true")
 	flags.Uint64Var(&blockHeight, flagBlockHeight, 0, "specify block height, default 0")
 	flags.StringVar(&txId, flagTxId, "", "specify tx id")
+	flags.BoolVar(&isAgree, flagIsAgree, true, "specify multi sign vote choice")
 
 	// Admin秘钥和证书列表
 	//    - 使用逗号','分割
@@ -222,7 +239,17 @@ func init() {
 	flags.StringSliceVar(&revokeContractList, flagRevokeContractList, nil, "specify revoke list")
 
 	// gas limit
-	flags.Uint64Var(&gasLimit, flagGasLimit, 0, "gas limit in uint64 type, default value is 0, unlimited")
+	flags.Uint64Var(&gasLimit, flagGasLimit, 0, "gas limit in uint64 type")
+	flags.BoolVar(&gasEnable, flagGasEnable, false, "enable or disable gas feature")
+
+	flags.Int32Var(&addressType, flagAddressType, 0, "address type, eg. ChainMaker:0, ZXL:1")
+	flags.StringVar(&permissionResourceName, flagPermissionResourceName, "", "chain config permission resource name")
+	flags.StringVar(&permissionResourcePolicyRule, flagPermissionResourcePolicyRule, "",
+		"chain config permission resource policy rule")
+	flags.StringSliceVar(&permissionResourcePolicyOrgList, flagPermissionResourcePolicyOrgList, []string{},
+		"chain config permission resource policy org list")
+	flags.StringSliceVar(&permissionResourcePolicyRoleList, flagPermissionResourcePolicyRoleList, []string{},
+		"chain config permission resource policy role list")
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {

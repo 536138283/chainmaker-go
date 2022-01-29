@@ -13,8 +13,6 @@ import (
 	"fmt"
 	"strings"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/engine"
-
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core"
@@ -166,7 +164,7 @@ func (bc *Blockchain) initBaseModules(baseModules []map[string]func() error) (er
 	for idx, baseModule := range baseModules {
 		for name, initFunc := range baseModule {
 			if err := initFunc(); err != nil {
-				bc.log.Errorf("init module[%s] failed, %s", name, err)
+				bc.log.Errorf("init base module[%s] failed, %s", name, err)
 				return err
 			}
 			bc.log.Infof("BASE INIT STEP (%d/%d) => init base[%s] success :)", idx+1, moduleNum, name)
@@ -180,10 +178,10 @@ func (bc *Blockchain) initExtModules(extModules []map[string]func() error) (err 
 	for idx, initModule := range extModules {
 		for name, initFunc := range initModule {
 			if err := initFunc(); err != nil {
-				bc.log.Errorf("init module[%s] failed, %s", name, err)
+				bc.log.Errorf("init ext module[%s] failed, %s", name, err)
 				return err
 			}
-			bc.log.Infof("MODULE INIT STEP (%d/%d) => init module[%s] success :)", idx+1, moduleNum, name)
+			bc.log.Infof("MODULE INIT STEP (%d/%d) => init ext module[%s] success :)", idx+1, moduleNum, name)
 		}
 	}
 	return
@@ -217,8 +215,8 @@ func (bc *Blockchain) initStore() (err error) {
 	if err != nil {
 		return err
 	}
-	config := &conf.StorageConfig{}
-	err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
+	config, err := conf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+	//err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
 	if err != nil {
 		return err
 	}
@@ -253,23 +251,25 @@ func (bc *Blockchain) initOldStore() (err error) {
 	}
 	var storeFactory store.Factory // nolint: typecheck
 	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
-	err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("oldStore"))
+	err = container.Register(func() protocol.Logger { return storeLogger },
+		container.Name("oldStore"))
 	if err != nil {
 		return err
 	}
 	config := &conf.StorageConfig{}
 	err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
-	config.StorePath = config.StorePath + "-old"
+	timeS, _ := localconf.ChainMakerConfig.StorageConfig["back_path"].(string)
+	config.StorePath = config.StorePath + "-" + timeS
 	config.BlockDbConfig.LevelDbConfig["store_path"] =
-		config.BlockDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+		config.BlockDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	config.StateDbConfig.LevelDbConfig["store_path"] =
-		config.StateDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+		config.StateDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	config.ResultDbConfig.LevelDbConfig["store_path"] =
-		config.ResultDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+		config.ResultDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	config.HistoryDbConfig.LevelDbConfig["store_path"] =
-		config.HistoryDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+		config.HistoryDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	config.TxExistDbConfig.LevelDbConfig["store_path"] =
-		config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-old"
+		config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	if err != nil {
 		return err
 	}
@@ -464,8 +464,6 @@ func (bc *Blockchain) initAC() (err error) {
 		bc.log.Errorf("new ac provider failed, %s", err.Error())
 		return
 	}
-	//init crypto engine for ac
-	engine.InitCryptoEngine(localconf.ChainMakerConfig.CryptoEngine, false)
 
 	switch bc.chainConf.ChainConfig().AuthType {
 	case protocol.PermissionedWithCert, protocol.Identity:
@@ -476,7 +474,7 @@ func (bc *Blockchain) initAC() (err error) {
 			return
 		}
 	case protocol.PermissionedWithKey, protocol.Public:
-		bc.identity, err = accesscontrol.InitPKSigningMember(bc.ac, nodeConfig.OrgId,
+		bc.identity, err = accesscontrol.InitPKSigningMember(bc.ac.GetHashAlg(), nodeConfig.OrgId,
 			nodeConfig.PrivKeyFile, nodeConfig.PrivKeyPassword)
 		if err != nil {
 			bc.log.Errorf("initialize identity failed, %s", err.Error())

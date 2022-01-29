@@ -30,6 +30,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+var (
+	//proposeRepeatTimer *time.Timer //timer controls the propose repeat interval
+	ProposeRepeatTimerMap = make(map[string]*time.Timer)
+)
+
 const (
 	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
 )
@@ -623,7 +628,7 @@ func (vb *VerifierBlock) ValidateBlock(
 func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	block, lastBlock *commonPb.Block, hashType string, timeLasts []int64, txRWSetMap map[string]*commonPb.TxRWSet) (
 	map[string][]*commonPb.ContractEvent, []int64, error) {
-
+	// 1.block verify
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
 		return nil, timeLasts, err
 	}
@@ -690,7 +695,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, errTxs, err := verifiertx.verifierTxs(block)
-	vb.log.Warnf("verifierTxs txhashes %d, block.txs %d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
+	vb.log.Warnf("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts = append(timeLasts, txLasts)
 	if err != nil {
@@ -941,6 +946,9 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	chain.proposalCache.ClearProposedBlockAt(height)
 
+	// clear propose repeat map before send
+	ProposeRepeatTimerMap = make(map[string]*time.Timer)
+
 	// synchronize new block height to consensus and sync module
 	chain.msgBus.PublishSafe(msgbus.BlockInfo, blockInfo)
 
@@ -1056,5 +1064,11 @@ func RecoverBlock(
 		return newBlock, nil
 	}
 
-	return block, nil
+	// new a block to avoid use the same pointer with consensus.
+	return &commonPb.Block{
+		Header:         block.Header,
+		Dag:            block.Dag,
+		Txs:            block.Txs,
+		AdditionalData: block.AdditionalData,
+	}, nil
 }

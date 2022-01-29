@@ -192,6 +192,10 @@ rpc:
     addresses:
       # - "127.0.0.1"
 
+  # RPC server max send/receive message size in MB
+  max_send_msg_size: 10
+  max_recv_msg_size: 10
+
 # Monitor related settings
 monitor:
   # Monitor service switch, default is false.
@@ -229,10 +233,10 @@ scheduler:
 # Storage config settings
 # Contains blockDb, stateDb, historyDb, resultDb, contractEventDb
 #
-# blockDb: block transaction data,                          support leveldb, mysql, badgerdb
-# stateDb: world state data,                                support leveldb, mysql, badgerdb
-# historyDb: world state change history of transactions,    support leveldb, mysql, badgerdb
-# resultDb: transaction execution results data,             support leveldb, mysql, badgerdb
+# blockDb: block transaction data,                          support leveldb, mysql, badgerdb, tikvdb
+# stateDb: world state data,                                support leveldb, mysql, badgerdb, tikvdb
+# historyDb: world state change history of transactions,    support leveldb, mysql, badgerdb, tikvdb
+# resultDb: transaction execution results data,             support leveldb, mysql, badgerdb, tikvdb
 # contractEventDb: contract emit event data,                support mysql
 #
 # provider, sqldb_type cannot be changed after startup.
@@ -250,6 +254,15 @@ storage:
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
+  # Disable block file db, default: false
+  disable_block_file_db: false
+
+  # async write block in file block db to disk, default: false, so default is sync write disk
+  logdb_segment_async: false
+
+  # file size of .fdb, MB, default: 20
+  logdb_segment_size: 128
+
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
@@ -261,13 +274,10 @@ storage:
     clean_window: 1000000000
     max_entry_size: 500
     hard_max_cache_size: 10240   #缓存大小，单位MB
-  txexistdb_config:
-    provider: leveldb
-    leveldb_config:
-      store_path: ../data/{org_id}/txexist
+
   # Block db config
   blockdb_config:
-    # Databases type support leveldb, sql, badgerdb
+    # Databases type support leveldb, sql, badgerdb, tikvdb
     provider: leveldb # [*]
     # If provider is leveldb, leveldb_config should not be null.
     leveldb_config:
@@ -275,7 +285,7 @@ storage:
       store_path: ../data/{org_id}/block
 
     # Example for sql provider
-    # Databases type support leveldb, sql, badgerdb
+    # Databases type support leveldb, sql, badgerdb,tikvdb
     # provider: sql # [*]
     # If provider is sql, sqldb_config should not be null.
     # sqldb_config:
@@ -285,7 +295,7 @@ storage:
       # dsn: root:password@tcp(127.0.0.1:3306)/
 
     # Example for badgerdb provider
-    # Databases type support leveldb, sql, badgerdb
+    # Databases type support leveldb, sql, badgerdb, tikvdb
     # provider: badgerdb
     # If provider is badgerdb, badgerdb_config should not be null.
     # badgerdb_config:
@@ -298,6 +308,17 @@ storage:
       # Number of key value pairs written in batch. default is 128
       # write_batch_size: 1024
 
+    # Example for tikv provider
+    # provider: tikvdb
+    # If provider is tikvdb, tikvdb_config should not be null.
+    # tikvdb_config:
+      # db_prefix: "node1_" #default is ""
+      # endpoints: "127.0.0.1:2379" # tikv pd server url，support multi url, example :"192.168.1.2:2379,192.168.1.3:2379"
+      # max_batch_count: 128  # max tikv commit batch size, default: 128
+      # grpc_connection_count: 16 # chainmaker and tikv connect count, default: 4
+      # grpc_keep_alive_time: 10 # keep connnet alive count, default: 10
+      # grpc_keep_alive_timeout: 3  # keep connnect alive time, default: 3
+      # write_batch_size: 128 # commit tikv bacth size each time, default: 128
   # State db config
   statedb_config:
     provider: leveldb
@@ -345,9 +366,9 @@ vm:
   log_level: INFO
   # Unix domain socket open, used for chainmaker and docker manager communication
   uds_open: true
-  # The size of the channel where transactions are stored in docker manager
-  tx_size: 1000
   # Number of user Ids
   user_num: 100
   # Timeout per transaction, Unit: second
-  time_limit: 2
+  time_limit: 8
+  # Max process for contract
+  max_concurrency: 50

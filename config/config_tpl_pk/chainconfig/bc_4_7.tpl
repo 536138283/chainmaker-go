@@ -74,6 +74,12 @@ core:
   # [0, 60]
   tx_scheduler_validate_timeout: 10
 
+  # Used for handling txs with sender conflicts efficiently
+  enable_sender_group: false
+
+  # Used for dynamic tuning the capacity of tx execution goroutine pool
+  enable_conflicts_bit_window: true
+
   # Consensus message compression related settings
   # consensus_turbo_config:
     # If consensus message compression is enabled or not.
@@ -87,17 +93,17 @@ core:
 
 # gas account config
 account_config:
-  enable_gas: true
+  enable_gas: false
   gas_count: 0
   gas_admin_address: "ZXff78ca3b84e3f5f91ff18b45fc1ecfda2d5990db"
   default_gas: 0
 
 # Consensus settings
 consensus:
-  # Consensus type 1-TBFT,5-DPOS
+  # Consensus type: 1-TBFT,5-DPOS
   type: {consensus_type}
 
-  # Consensus node list
+  # Consensus node list start
   nodes:
     - org_id: "{public_org_id}"
       node_id:
@@ -108,7 +114,8 @@ consensus:
 #        - "{org5_peerid}"
 #        - "{org6_peerid}"
 #        - "{org7_peerid}"
-
+  # Consensus node list end
+  # DPOS config start
   dpos_config: # DPoS
     # ERC20 contract config
     - key: erc20.total
@@ -156,6 +163,7 @@ consensus:
 #      value: "{org6_peerid}"
 #    - key: stake.nodeID:{org7_peeraddr}
 #      value: "{org7_peerid}"
+  # DPOS config end
 
   # We can specify other consensus config here in key-value format.
   ext_config:
