@@ -135,7 +135,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	//chainConf :=
 
 	storeHelper := mock.NewMockStoreHelper(ctl)
-	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4)
+	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
 	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
 	contractId := &commonpb.Contract{

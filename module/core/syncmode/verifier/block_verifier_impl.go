@@ -26,8 +26,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var ModuleNameCore = "Core"
-
 // BlockVerifierImpl implements BlockVerifier interface.
 // Verify block and transactions.
 //nolint: structcheck,unused

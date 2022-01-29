@@ -196,7 +196,7 @@ func TestShouldPropose(t *testing.T) {
 	require.False(t, blockProposer.shouldProposeByBFT(b3.Header.BlockHeight))
 }
 
-func TestShouldProposeChainedBFT(t *testing.T) {
+func TestShouldProposeByMaxBFT(t *testing.T) {
 	ctl := gomock.NewController(t)
 	txPool := mock.NewMockTxPool(ctl)
 	snapshotMgr := mock.NewMockSnapshotManager(ctl)
@@ -227,9 +227,9 @@ func TestShouldProposeChainedBFT(t *testing.T) {
 
 	b0 := createNewTestBlock(0)
 	ledgerCache.SetLastCommittedBlock(b0)
-	require.True(t, blockProposer.shouldProposeByChainedBFT(b0.Header.BlockHeight+1, b0.Header.BlockHash))
-	require.False(t, blockProposer.shouldProposeByChainedBFT(b0.Header.BlockHeight+1, []byte("xyz")))
-	require.False(t, blockProposer.shouldProposeByChainedBFT(b0.Header.BlockHeight, b0.Header.PreBlockHash))
+	require.True(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight+1, b0.Header.BlockHash))
+	require.False(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight+1, []byte("xyz")))
+	require.False(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight, b0.Header.PreBlockHash))
 
 	b := createNewTestBlock(1)
 	proposedCache.SetProposedBlock(b, nil, nil, false)
@@ -241,7 +241,7 @@ func TestShouldProposeChainedBFT(t *testing.T) {
 	b2.Header.BlockHash = nil
 	proposedCache.SetProposedBlock(b2, nil, nil, true)
 	require.NotNil(t, proposedCache.GetSelfProposedBlockAt(1))
-	require.True(t, blockProposer.shouldProposeByChainedBFT(b2.Header.BlockHeight, b0.Header.BlockHash))
+	require.True(t, blockProposer.shouldProposeByMaxBFT(b2.Header.BlockHeight, b0.Header.BlockHash))
 
 	b3, _, _ := proposedCache.GetProposedBlock(b2)
 	require.NotNil(t, b3)
