@@ -61,6 +61,7 @@ func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 	// 计算刚落块的区块指纹
 	deleteFp := utils.CalcBlockFingerPrintWithoutTx(block)
 	deleteFpEx := calcNotConsensusFingerPrint(block)
+	deleteFpEx := calcNotConsensusFingerPrint(block)
 	// 如果有snapshot对应的前序snapshot的指纹, 等于刚落块的区块指纹
 	for _, snapshot := range m.snapshots {
 		if snapshot == nil || snapshot.GetPreSnapshot() == nil {

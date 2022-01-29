@@ -162,6 +162,13 @@ rpc:
   # The minium value is 10.
   check_chain_conf_trust_roots_change_interval: 60
 
+  # restful api gateway
+  gateway:
+    # enable restful api
+    enabled: false
+    # max resp body buffer size, unit: M
+    max_resp_body_size: 16
+
   # Rate limit related settings
   # Here we use token bucket to limit rate.
   ratelimit:
@@ -277,6 +284,8 @@ storage:
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0 common write，1 quick write
+  # Whether to disable blockFileDb
+  disable_block_file_db: false
   state_cache_config:
     life_window: 3000000000000   #key/value ttl time, ns
     clean_window: 1000000000

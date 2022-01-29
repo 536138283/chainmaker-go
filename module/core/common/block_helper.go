@@ -926,7 +926,6 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		// recover the block for proposer when enable the conensus message turbo function.
 		lastProposed.Header = block.Header
 	}
-
 	// put consensus qc into block
 	lastProposed.AdditionalData = block.AdditionalData
 

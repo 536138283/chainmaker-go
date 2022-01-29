@@ -156,6 +156,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				}
 				return
 			}
+			ts.log.Debugf("test...")
 		}
 	}()
 

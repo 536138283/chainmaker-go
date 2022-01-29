@@ -45,11 +45,11 @@ else
   #ut_cover "module/consensus/raft" 0
 #  ut_cover "module/consensus/solo" 0
   #ut_cover "module/consensus/tbft" 10
-  ut_cover "module/core" 2.3
-  ut_cover "module/net" 29
+  ut_cover "module/core" 40
+  ut_cover "module/net" 31
 #  ut_cover "module/rpcserver" 0
-  ut_cover "module/snapshot" 25
-  ut_cover "module/sync" 61
+  ut_cover "module/snapshot" 40
+  ut_cover "module/sync" 55
 #  ut_cover "module/txpool" 0
   ut_cover "tools/cmc" 10
 fi
