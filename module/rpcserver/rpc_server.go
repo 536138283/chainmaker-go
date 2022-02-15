@@ -140,7 +140,9 @@ func (s *RPCServer) Start() error {
 		}
 
 		tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
-			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts)
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts,
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertEncFile,
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivEncKeyFile)
 
 		if err != nil {
 			log.Errorf("GetTLSConfig, failed, %s", err.Error())

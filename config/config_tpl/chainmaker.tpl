@@ -119,6 +119,12 @@ net:
     # TLS Certificate file path.
     cert_file: ../config/{org_path}/certs/{net_cert_path}.crt
 
+    # TLS enc private key file path. (only for gmtls1.1)
+    priv_enc_key_file: ../config/{org_path}/certs/{net_cert_path}.enc.key
+
+    # TLS enc Certificate file path.
+    cert_enc_file: ../config/{org_path}/certs/{net_cert_path}.enc.crt
+
   # The blacklist is automatically block the listed seed to connect.
   # blacklist:
       # The addresses in blacklist.
@@ -203,6 +209,12 @@ rpc:
 
     # RPC TLS public key file path
     cert_file:      ../config/{org_path}/certs/{rpc_cert_path}.crt
+
+    # RPC enc TLS private key file path (only for gmtls1.1)
+    priv_enc_key_file:  ../config/{org_path}/certs/{rpc_cert_path}.enc.key
+
+    # RPC enc TLS public key file path
+    cert_enc_file:      ../config/{org_path}/certs/{rpc_cert_path}.enc.crt
 
   # RPC blacklisted ip addresses
   blacklist:
