@@ -107,6 +107,7 @@ type ConsensusRaftImpl struct {
 	walSaveC       chan interface{}
 	blockVerifier  protocol.BlockVerifier
 	blockCommitter protocol.BlockCommitter
+	raftKey        string
 }
 
 // ConsensusRaftImplConfig contains initialization config for ConsensusRaftImpl
@@ -132,12 +133,14 @@ type SnapshotArgs struct {
 func New(config ConsensusRaftImplConfig) (*ConsensusRaftImpl, error) {
 	consensus := &ConsensusRaftImpl{}
 	lg := logger.GetLoggerByChain(logger.MODULE_CONSENSUS, config.ChainID)
-	if started, ok := isStarted.Load(consensus.Id); ok && started.(bool) {
-		if ins, ok := instances.Load(consensus.Id); ok && ins.(*ConsensusRaftImpl) != nil {
-			lg.Infof("ConsensusRaftImpl[%x] is already exist, need to do nothing", consensus.Id)
+	consensus.raftKey = fmt.Sprintf("%s_%s", config.NodeId, config.ChainID)
+	if started, ok := isStarted.Load(consensus.raftKey); ok && started.(bool) {
+		if ins, ok := instances.Load(consensus.raftKey); ok && ins.(*ConsensusRaftImpl) != nil {
+			lg.Infof("ConsensusRaftImpl[%x] is already exist, need to do nothing. raftKey: %s",
+				consensus.Id, consensus.raftKey)
 			return ins.(*ConsensusRaftImpl), nil
 		}
-		isStarted.Delete(consensus.Id)
+		isStarted.Delete(consensus.raftKey)
 	}
 	consensus.logger = lg
 	consensus.chainID = config.ChainID
@@ -165,14 +168,15 @@ func New(config ConsensusRaftImplConfig) (*ConsensusRaftImpl, error) {
 	consensus.blockCommitter = config.BlockCommitter
 
 	consensus.logger.Infof("New ConsensusRaftImpl[%x]", consensus.Id)
-	instances.Store(consensus.Id, consensus)
+	instances.Store(consensus.raftKey, consensus)
 	return consensus, nil
 }
 
 // Start starts the raft instance
 func (consensus *ConsensusRaftImpl) Start() error {
-	if started, ok := isStarted.Load(consensus.Id); ok && started.(bool) {
-		consensus.logger.Infof("ConsensusRaftImpl[%x] is already started, need to do nothing", consensus.Id)
+	if started, ok := isStarted.Load(consensus.raftKey); ok && started.(bool) {
+		consensus.logger.Infof("ConsensusRaftImpl[%x] is already started, need to do nothing. raftKey: %s",
+			consensus.Id, consensus.raftKey)
 		return nil
 	}
 	consensus.logger.Infof("ConsensusRaftImpl[%x] starting", consensus.Id)
@@ -223,7 +227,7 @@ func (consensus *ConsensusRaftImpl) Start() error {
 	consensus.msgbus.Register(msgbus.ProposedBlock, consensus)
 	consensus.msgbus.Register(msgbus.RecvConsensusMsg, consensus)
 	chainconf.RegisterVerifier(consensus.chainID, consensuspb.ConsensusType_RAFT, consensus)
-	isStarted.Store(consensus.Id, true)
+	isStarted.Store(consensus.raftKey, true)
 
 	return nil
 }
@@ -346,8 +350,8 @@ func (consensus *ConsensusRaftImpl) serve() {
 		consensus.node.Stop()
 		consensus.msgbus.UnRegister(msgbus.ProposedBlock, consensus)
 		consensus.msgbus.UnRegister(msgbus.RecvConsensusMsg, consensus)
-		isStarted.Delete(consensus.Id)
-		instances.Delete(consensus.Id)
+		isStarted.Delete(consensus.raftKey)
+		instances.Delete(consensus.raftKey)
 	}()
 
 	for {
