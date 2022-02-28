@@ -14,8 +14,7 @@ import (
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -85,10 +84,13 @@ func removeTrustMemberCMD() *cobra.Command {
 }
 
 func configTrustMember(op int) error {
-	adminKeys := strings.Split(adminKeyFilePaths, ",")
-	adminCrts := strings.Split(adminCrtFilePaths, ",")
-	if len(adminKeys) == 0 || len(adminCrts) == 0 {
-		return errAdminOrgIdKeyCertIsEmpty
+	var adminKeys, adminCrts []string
+
+	if adminKeyFilePaths != "" {
+		adminKeys = strings.Split(adminKeyFilePaths, ",")
+	}
+	if adminCrtFilePaths != "" {
+		adminCrts = strings.Split(adminCrtFilePaths, ",")
 	}
 	if len(adminKeys) != len(adminCrts) {
 		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
@@ -128,7 +130,7 @@ func configTrustMember(op int) error {
 	}
 	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
 	for i := range adminKeys {
-		e, err := sdk.SignPayloadWithPath(adminKeys[i], adminCrts[i], payload)
+		e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
 		if err != nil {
 			return err
 		}

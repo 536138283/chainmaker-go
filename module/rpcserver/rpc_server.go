@@ -17,14 +17,15 @@ import (
 	"strings"
 	"time"
 
-	"chainmaker.org/chainmaker-go/blockchain"
-	"chainmaker.org/chainmaker-go/monitor"
+	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/common/v2/monitor"
+	localconf "chainmaker.org/chainmaker/localconf/v2"
+	logger "chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
+	protocol "chainmaker.org/chainmaker/protocol/v2"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
@@ -99,15 +100,18 @@ func (s *RPCServer) Start() error {
 
 	s.isShutdown = false
 
-	if s.curChainConfTrustRootsHash == "" {
-		s.curChainConfTrustRootsHash, err = s.getCurChainConfTrustRootsHash()
-		if err != nil {
-			return err
+	// check chainconf trust roots change if TLS is twoway or oneway
+	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+		if s.curChainConfTrustRootsHash == "" {
+			s.curChainConfTrustRootsHash, err = s.getCurChainConfTrustRootsHash()
+			if err != nil {
+				return err
+			}
+
+			s.tryReloadChainConfTrustRootsChange()
+
+			s.log.Debugf("[START] current chain config trust roots hash: %s", s.curChainConfTrustRootsHash)
 		}
-
-		s.tryReloadChainConfTrustRootsChange()
-
-		s.log.Debugf("[START] current chain config trust roots hash: %s", s.curChainConfTrustRootsHash)
 	}
 
 	if err = s.RegisterHandler(); err != nil {
@@ -280,6 +284,15 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 		}
 	}
 
+	if strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.PermissionedWithKey ||
+		strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.Public {
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode = TLS_MODE_DISABLE
+			log.Infof("the tls mode has been automatically set to [disable] according to the authType:[%s]",
+				localconf.ChainMakerConfig.AuthType)
+		}
+	}
+
 	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 
 		chainConfs, err := chainMakerServer.GetAllChainConf()
@@ -299,6 +312,7 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 			CaCerts:  caCerts,
 			CertFile: localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
 			KeyFile:  localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
+			Logger:   log,
 		}
 
 		checkClientAuth := false
@@ -327,6 +341,15 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 
 		opts = append(opts, grpc.Creds(*c))
 	}
+
+	opts = append(opts, grpc.MaxSendMsgSize(localconf.ChainMakerConfig.RpcConfig.MaxSendMsgSize))
+	opts = append(opts, grpc.MaxRecvMsgSize(localconf.ChainMakerConfig.RpcConfig.MaxRecvMsgSize))
+
+	//params := grpc.KeepaliveParams(keepalive.ServerParameters{
+	//	Time:    10 * time.Second,
+	//	Timeout: 10 * time.Second,
+	//})
+	//opts = append(opts, params)
 
 	server := grpc.NewServer(opts...)
 

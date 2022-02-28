@@ -9,18 +9,18 @@ SPDX-License-Identifier: Apache-2.0
 package blockchain
 
 import (
-	"chainmaker.org/chainmaker-go/net"
-	"chainmaker.org/chainmaker-go/subscriber"
+	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/logger/v2"
+	logger "chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	protocol "chainmaker.org/chainmaker/protocol/v2"
 )
 
 const (
 	moduleNameSubscriber    = "Subscriber"
 	moduleNameStore         = "Store"
+	moduleNameOldStore      = "OldStore"
 	moduleNameLedger        = "Ledger"
 	moduleNameChainConf     = "ChainConf"
 	moduleNameAccessControl = "AccessControl"
@@ -30,7 +30,6 @@ const (
 	moduleNameCore          = "Core"
 	moduleNameConsensus     = "Consensus"
 	moduleNameSync          = "Sync"
-	moduleNameDpos          = "DPoS"
 )
 
 // Blockchain is a block chain service. It manage all the modules of the chain.
@@ -45,13 +44,15 @@ type Blockchain struct {
 	msgBus msgbus.MessageBus
 
 	// net, shared with other blockchains
-	net net.Net
+	net protocol.Net
 
 	// netService
 	netService protocol.NetService
 
 	// store
 	store protocol.BlockchainStore
+	// oldStore
+	oldStore protocol.BlockchainStore
 
 	// consensus
 	consensus protocol.ConsensusEngine
@@ -80,9 +81,6 @@ type Blockchain struct {
 
 	snapshotManager protocol.SnapshotManager
 
-	// dpos feature
-	dpos protocol.DPoS
-
 	lastBlock *common.Block
 
 	chainConf protocol.ChainConf
@@ -97,7 +95,7 @@ type Blockchain struct {
 }
 
 // NewBlockchain create a new Blockchain instance.
-func NewBlockchain(genesis string, chainId string, msgBus msgbus.MessageBus, net net.Net) *Blockchain {
+func NewBlockchain(genesis string, chainId string, msgBus msgbus.MessageBus, net protocol.Net) *Blockchain {
 	return &Blockchain{
 		log:          logger.GetLoggerByChain(logger.MODULE_BLOCKCHAIN, chainId),
 		genesis:      genesis,

@@ -8,7 +8,6 @@ package common
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker/chainconf/v2"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -19,30 +18,34 @@ import (
 )
 
 type CommitBlock struct {
-	store                 protocol.BlockchainStore
-	log                   protocol.Logger
-	snapshotManager       protocol.SnapshotManager
-	ledgerCache           protocol.LedgerCache
-	chainConf             protocol.ChainConf
-	msgBus                msgbus.MessageBus
-	metricBlockSize       *prometheus.HistogramVec // metric block size
-	metricBlockCounter    *prometheus.CounterVec   // metric block counter
-	metricTxCounter       *prometheus.CounterVec   // metric transaction counter
-	metricBlockCommitTime *prometheus.HistogramVec // metric block commit time
+	store                   protocol.BlockchainStore
+	log                     protocol.Logger
+	snapshotManager         protocol.SnapshotManager
+	ledgerCache             protocol.LedgerCache
+	chainConf               protocol.ChainConf
+	msgBus                  msgbus.MessageBus
+	metricBlockSize         *prometheus.HistogramVec // metric block size
+	metricBlockCounter      *prometheus.CounterVec   // metric block counter
+	metricTxCounter         *prometheus.CounterVec   // metric transaction counter
+	metricTpsGauge          *prometheus.GaugeVec     // metric real-time transaction per second (TPS)
+	metricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
+	metricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
 }
 
 type CommitBlockConf struct {
-	Store                 protocol.BlockchainStore
-	Log                   protocol.Logger
-	SnapshotManager       protocol.SnapshotManager
-	TxPool                protocol.TxPool
-	LedgerCache           protocol.LedgerCache
-	ChainConf             protocol.ChainConf
-	MsgBus                msgbus.MessageBus
-	MetricBlockSize       *prometheus.HistogramVec // metric block size
-	MetricBlockCounter    *prometheus.CounterVec   // metric block counter
-	MetricTxCounter       *prometheus.CounterVec   // metric transaction counter
-	MetricBlockCommitTime *prometheus.HistogramVec // metric block commit time
+	Store                   protocol.BlockchainStore
+	Log                     protocol.Logger
+	SnapshotManager         protocol.SnapshotManager
+	TxPool                  protocol.TxPool
+	LedgerCache             protocol.LedgerCache
+	ChainConf               protocol.ChainConf
+	MsgBus                  msgbus.MessageBus
+	MetricBlockSize         *prometheus.HistogramVec // metric block size
+	MetricBlockCounter      *prometheus.CounterVec   // metric block counter
+	MetricTxCounter         *prometheus.CounterVec   // metric transaction counter
+	MetricTpsGauge          *prometheus.GaugeVec     // metric real-time transaction per second (TPS)
+	MetricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
+	MetricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
 }
 
 func NewCommitBlock(cbConf *CommitBlockConf) *CommitBlock {
@@ -59,6 +62,8 @@ func NewCommitBlock(cbConf *CommitBlockConf) *CommitBlock {
 		commitBlock.metricBlockCounter = cbConf.MetricBlockCounter
 		commitBlock.metricTxCounter = cbConf.MetricTxCounter
 		commitBlock.metricBlockCommitTime = cbConf.MetricBlockCommitTime
+		commitBlock.metricBlockIntervalTime = cbConf.MetricBlockIntervalTime
+		commitBlock.metricTpsGauge = cbConf.MetricTpsGauge
 	}
 	return commitBlock
 }
@@ -68,7 +73,7 @@ func (cb *CommitBlock) CommitBlock(
 	block *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
 	conEventMap map[string][]*commonpb.ContractEvent) (
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent int64, err error) {
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent int64, blockInfo *commonpb.BlockInfo, err error) {
 	// record block
 	rwSet := RearrangeRWSet(block, rwSetMap)
 	// record contract event
@@ -88,16 +93,17 @@ func (cb *CommitBlock) CommitBlock(
 		err = fmt.Errorf("notify snapshot error [%d](hash:%x)",
 			block.Header.BlockHeight, block.Header.BlockHash)
 		cb.log.Error(err)
-		return 0, 0, 0, 0, 0, err
+		return 0, 0, 0, 0, 0, nil, err
 	}
 	snapshotLasts = utils.CurrentTimeMillisSeconds() - startSnapshotTick
 
 	// notify chainConf to update config when config block committed
 	startConfTick := utils.CurrentTimeMillisSeconds()
-	cb.ledgerCache.SetLastCommittedBlock(block)
 	if err = NotifyChainConf(block, cb.chainConf); err != nil {
-		return 0, 0, 0, 0, 0, err
+		return 0, 0, 0, 0, 0, nil, err
 	}
+
+	cb.ledgerCache.SetLastCommittedBlock(block)
 	confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
 
 	// publish contract event
@@ -126,14 +132,13 @@ func (cb *CommitBlock) CommitBlock(
 		pubEvent = utils.CurrentTimeMillisSeconds() - startPublishContractEventTick
 	}
 	startOtherTick := utils.CurrentTimeMillisSeconds()
-	bi := &commonpb.BlockInfo{
+	blockInfo = &commonpb.BlockInfo{
 		Block:     block,
 		RwsetList: rwSet,
 	}
-	// synchronize new block height to consensus and sync module
-	cb.msgBus.PublishSafe(msgbus.BlockInfo, bi)
-	if err = cb.MonitorCommit(bi); err != nil {
-		return 0, 0, 0, 0, 0, err
+
+	if err = cb.MonitorCommit(blockInfo); err != nil {
+		return 0, 0, 0, 0, 0, nil, err
 	}
 	otherLasts = utils.CurrentTimeMillisSeconds() - startOtherTick
 
@@ -157,8 +162,7 @@ func (cb *CommitBlock) MonitorCommit(bi *commonpb.BlockInfo) error {
 
 func NotifyChainConf(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
 	if block != nil && block.GetTxs() != nil && len(block.GetTxs()) > 0 {
-		tx := block.GetTxs()[0]
-		if _, ok := chainconf.IsNativeTx(tx); ok {
+		if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); ok || utils.HasDPosTxWritesInHeader(block, chainConf) {
 			if err = chainConf.CompleteBlock(block); err != nil {
 				return fmt.Errorf("chainconf block complete, %s", err)
 			}

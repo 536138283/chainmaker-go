@@ -9,7 +9,9 @@ package cmd
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+
+	"chainmaker.org/chainmaker-go/module/blockchain"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/spf13/cobra"
 )
@@ -31,16 +33,18 @@ func logo() string {
 	s := fig.String()
 	fragment := "================================================================================="
 	//versionInfo := "::ChainMaker::  version(" + protocol.DefaultBlockVersion + ")"
-	versionInfo := fmt.Sprintf("ChainMaker Version: %s\n", localconf.CurrentVersion)
+	versionInfo := fmt.Sprintf("ChainMaker Version: %s\n", blockchain.CurrentVersion)
 
-	if localconf.BuildDateTime != "" {
-		versionInfo += fmt.Sprintf("Build Time:%9s%s\n", " ", localconf.BuildDateTime)
+	versionInfo += fmt.Sprintf("Block Version:%6s%d\n", " ", protocol.DefaultBlockVersion)
+
+	if blockchain.BuildDateTime != "" {
+		versionInfo += fmt.Sprintf("Build Time:%9s%s\n", " ", blockchain.BuildDateTime)
 	}
 
-	if localconf.GitBranch != "" {
-		versionInfo += fmt.Sprintf("Git Commit:%9s%s", " ", localconf.GitBranch)
-		if localconf.GitCommit != "" {
-			versionInfo += fmt.Sprintf("(%s)", localconf.GitCommit)
+	if blockchain.GitBranch != "" {
+		versionInfo += fmt.Sprintf("Git Commit:%9s%s", " ", blockchain.GitBranch)
+		if blockchain.GitCommit != "" {
+			versionInfo += fmt.Sprintf("(%s)", blockchain.GitCommit)
 		}
 	}
 	return fmt.Sprintf("\n%s\n%s%s\n%s\n", fragment, s, fragment, versionInfo)

@@ -10,11 +10,12 @@ package rpcserver
 import (
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/blockchain"
-	"chainmaker.org/chainmaker-go/monitor"
+	"chainmaker.org/chainmaker-go/module/blockchain"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
+	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
@@ -23,12 +24,13 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2/archive"
 	"chainmaker.org/chainmaker/utils/v2"
-	native "chainmaker.org/chainmaker/vm-native"
+	native "chainmaker.org/chainmaker/vm-native/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/time/rate"
 )
 
 const (
+	//SYSTEM_CHAIN the system chain name
 	SYSTEM_CHAIN = "system_chain"
 )
 
@@ -38,6 +40,7 @@ var _ apiPb.RpcNodeServer = (*ApiService)(nil)
 type ApiService struct {
 	chainMakerServer      *blockchain.ChainMakerServer
 	log                   *logger.CMLogger
+	logBrief              *logger.CMLogger
 	subscriberRateLimiter *rate.Limiter
 	metricQueryCounter    *prometheus.CounterVec
 	metricInvokeCounter   *prometheus.CounterVec
@@ -47,6 +50,7 @@ type ApiService struct {
 // NewApiService - new ApiService object
 func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerServer) *ApiService {
 	log := logger.GetLogger(logger.MODULE_RPC)
+	logBrief := logger.GetLogger(logger.MODULE_BRIEF)
 
 	tokenBucketSize := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenBucketSize
 	tokenPerSecond := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenPerSecond
@@ -67,6 +71,7 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 	apiService := ApiService{
 		chainMakerServer:      chainMakerServer,
 		log:                   log,
+		logBrief:              logBrief,
 		subscriberRateLimiter: subscriberRateLimiter,
 		ctx:                   ctx,
 	}
@@ -87,11 +92,19 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 		return fmt.Sprintf("SendRequest[%s],payload:%#v,\n----signer:%v\n----endorsers:%+v",
 			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
 	})
-	return s.invoke(&commonPb.Transaction{
+
+	resp := s.invoke(&commonPb.Transaction{
 		Payload:   req.Payload,
 		Sender:    req.Sender,
 		Endorsers: req.Endorsers,
-		Result:    nil}, protocol.RPC), nil
+		Result:    nil}, protocol.RPC)
+
+	// audit log format: ip:port|orgId|chainId|TxType|TxId|Timestamp|ContractName|Method|retCode|retCodeMsg|retMsg
+	s.logBrief.Infof("|%s|%s|%s|%s|%s|%d|%s|%s|%d|%s|%s", GetClientAddr(ctx), req.Sender.Signer.OrgId,
+		req.Payload.ChainId, req.Payload.TxType, req.Payload.TxId, req.Payload.Timestamp, req.Payload.ContractName,
+		req.Payload.Method, resp.Code, resp.Code, resp.Message)
+
+	return resp, nil
 }
 
 // validate tx
@@ -208,8 +221,7 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		txWriteKeyMap:    map[string]*commonPb.TxWrite{},
 		txWriteKeySql:    make([]*commonPb.TxWrite, 0),
 		txWriteKeyDdlSql: make([]*commonPb.TxWrite, 0),
-		sqlRowCache:      make(map[int32]protocol.SqlRows),
-		kvRowCache:       make(map[int32]protocol.StateIterator),
+		rowCache:         make(map[int32]interface{}),
 		blockchainStore:  store,
 		vmManager:        vmMgr,
 		blockVersion:     protocol.DefaultBlockVersion,
@@ -223,6 +235,7 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		resp.TxId = tx.Payload.TxId
 		return resp
 	}
+
 	var bytecode []byte
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE {
 		bytecode, err = store.GetContractBytecode(tx.Payload.ContractName)
@@ -234,12 +247,13 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 			return resp
 		}
 	}
-	txResult, txStatusCode := vmMgr.RunContract(contract, tx.Payload.Method,
+	txResult, _, txStatusCode := vmMgr.RunContract(contract, tx.Payload.Method,
 		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
 	s.log.DebugDynamic(func() string {
-		return fmt.Sprintf("vmMgr.RunContract: txStatusCode:%d, resultCode:%d, contractName[%s], "+
+		contractJson, _ := json.Marshal(contract)
+		return fmt.Sprintf("vmMgr.RunContract: txStatusCode:%d, resultCode:%d, contractName[%s](%s), "+
 			"method[%s], txType[%s], message[%s],result len: %d",
-			txStatusCode, txResult.Code, tx.Payload.ContractName, tx.Payload.Method,
+			txStatusCode, txResult.Code, tx.Payload.ContractName, string(contractJson), tx.Payload.Method,
 			tx.Payload.TxType, txResult.Message, len(txResult.Result))
 	})
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
@@ -296,13 +310,16 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 		txWriteKeyMap:    map[string]*commonPb.TxWrite{},
 		txWriteKeySql:    make([]*commonPb.TxWrite, 0),
 		txWriteKeyDdlSql: make([]*commonPb.TxWrite, 0),
-		sqlRowCache:      make(map[int32]protocol.SqlRows),
-		kvRowCache:       make(map[int32]protocol.StateIterator),
+		rowCache:         make(map[int32]interface{}),
 		vmManager:        vmMgr,
 		blockVersion:     protocol.DefaultBlockVersion,
 	}
-
-	runtimeInstance := native.GetRuntimeInstance(chainId)
+	defaultGas := uint64(0)
+	chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)
+	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
+		defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
+	}
+	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas)
 	txResult := runtimeInstance.Invoke(&commonPb.Contract{
 		Name: tx.Payload.ContractName,
 	},
@@ -365,7 +382,6 @@ func (s *ApiService) dealTransact(tx *commonPb.Transaction, source protocol.TxSo
 
 		errCode = commonErr.ERR_CODE_TX_ADD_FAILED
 		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 		resp.Message = errMsg
 		resp.TxId = tx.Payload.TxId

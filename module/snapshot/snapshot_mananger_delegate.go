@@ -10,6 +10,8 @@ package snapshot
 import (
 	"sync"
 
+	"go.uber.org/atomic"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -18,6 +20,7 @@ import (
 type ManagerDelegate struct {
 	lock            sync.Mutex
 	blockchainStore protocol.BlockchainStore
+	log             protocol.Logger
 }
 
 func (m *ManagerDelegate) calcSnapshotFingerPrint(snapshot *SnapshotImpl) utils.BlockFingerPrint {
@@ -30,18 +33,31 @@ func (m *ManagerDelegate) calcSnapshotFingerPrint(snapshot *SnapshotImpl) utils.
 	blockProposer := snapshot.blockProposer
 	preBlockHash := snapshot.preBlockHash
 	blockProposerBytes, _ := blockProposer.Marshal()
-	return utils.CalcFingerPrint(chainId, blockHeight, blockTimestamp, blockProposerBytes, preBlockHash)
+	return utils.CalcFingerPrint(chainId, blockHeight, blockTimestamp, blockProposerBytes, preBlockHash,
+		snapshot.txRoot, snapshot.dagHash, snapshot.rwSetHash)
 }
-
+func (m *ManagerDelegate) calcSnapshotFingerPrintWithoutTx(snapshot *SnapshotImpl) utils.BlockFingerPrint {
+	if snapshot == nil {
+		return ""
+	}
+	chainId := snapshot.chainId
+	blockHeight := snapshot.blockHeight
+	blockTimestamp := snapshot.blockTimestamp
+	blockProposer := snapshot.blockProposer
+	preBlockHash := snapshot.preBlockHash
+	blockProposerBytes, _ := blockProposer.Marshal()
+	return utils.CalcFingerPrint(chainId, blockHeight, blockTimestamp, blockProposerBytes, preBlockHash,
+		nil, nil, nil)
+}
 func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block, blockHeight uint64) *SnapshotImpl {
 	// If the corresponding Snapshot does not exist, create one
 	txCount := len(block.Txs) // as map init size
 	snapshotImpl := &SnapshotImpl{
 		blockchainStore: m.blockchainStore,
-		sealed:          false,
+		sealed:          atomic.NewBool(false),
 		preSnapshot:     nil,
-
-		txResultMap: make(map[string]*commonPb.Result, txCount),
+		log:             m.log,
+		txResultMap:     make(map[string]*commonPb.Result, txCount),
 
 		chainId:        block.Header.ChainId,
 		blockHeight:    block.Header.BlockHeight,
@@ -52,6 +68,10 @@ func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block, blockHeight ui
 		txTable:    nil,
 		readTable:  make(map[string]*sv, txCount),
 		writeTable: make(map[string]*sv, txCount),
+
+		txRoot:    block.Header.TxRoot,
+		dagHash:   block.Header.DagHash,
+		rwSetHash: block.Header.RwSetRoot,
 	}
 	return snapshotImpl
 }

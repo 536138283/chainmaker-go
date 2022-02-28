@@ -5,10 +5,10 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-chain_id: chain1        # 链标识
-version: v1.0.0         # 链版本
-sequence: 0             # 配置版本
-auth_type: "identity"   # 认证类型
+chain_id: chain1                    # 链标识
+version: v2.2.0                     # 链版本
+sequence: 0                         # 配置版本
+auth_type: "permissionedWithCert"   # 认证类型
 
 crypto:
   hash: SHA256
@@ -17,22 +17,45 @@ crypto:
 contract:
   enable_sql_support: false
 
+# 虚拟机配置
+vm:
+  addr_type: 1 #0:chainmaker, 1:zxl, 2:ethereum(预留值，当前尚未支持)
+  # 虚拟机支持列表
+  support_list:
+    - "wasmer"
+    - "gasm"
+    - "evm"
+    - "dockergo"
+
 # 交易、区块相关配置
 block:
   tx_timestamp_verify: true # 是否需要开启交易时间戳校验
   tx_timeout: 600  # 交易时间戳的过期时间(秒)
   block_tx_capacity: 100  # 区块中最大交易数
   block_size: 10  # 区块最大限制，单位MB
-  block_interval: 2000 # 出块间隔，单位:ms
+  block_interval: 200 # 出块间隔，单位:ms
 
 # core模块
 core:
   tx_scheduler_timeout: 10 #  [0, 60] 交易调度器从交易池拿到交易后, 进行调度的时间
   tx_scheduler_validate_timeout: 10 # [0, 60] 交易调度器从区块中拿到交易后, 进行验证的超时时间
+  enable_sender_group: false # 用于高效处理交易发送者冲突的情况（如发送者扣除gas）
+  enable_conflicts_bit_window: true # 用于在运行时根据冲突率动态调整协程池大小
+  consensus_turbo_config:
+    consensus_message_turbo: true # 是否开启共识报文压缩
+    retry_time: 500 # 根据交易ID列表从交易池获取交易的重试次数
+    retry_interval: 20 # 重试间隔，单位:ms
+
+# gas account config
+account_config:
+  enable_gas: false
+  gas_count: 0
+  gas_admin_address: ""
+  default_gas: 1234567
 
 #共识配置
 consensus:
-  # 共识类型(0-SOLO,1-TBFT,2-MBFT,3-HOTSTUFF,4-RAFT,10-POW)
+  # 共识类型(0-SOLO,1-TBFT,2-MBFT,3-MAXBFT,4-RAFT,10-POW)
   type: 0
   # 共识节点列表，组织必须出现在trust_roots的org_id中，每个组织可配置多个共识节点，节点地址采用libp2p格式
   nodes:
@@ -66,24 +89,24 @@ trust_roots:
   - org_id: "wx-org1.chainmaker.org"
     root:
       - "../config/wx-org1-solo/certs/ca/wx-org1.chainmaker.org/ca.crt"
-  - org_id: "wx-org2.chainmaker.org"
-    root:
-      - "../config/wx-org2/certs/ca/wx-org2.chainmaker.org/ca.crt"
-  - org_id: "wx-org3.chainmaker.org"
-    root:
-      - "../config/wx-org3/certs/ca/wx-org3.chainmaker.org/ca.crt"
-  - org_id: "wx-org4.chainmaker.org"
-    root:
-      - "../config/wx-org4/certs/ca/wx-org4.chainmaker.org/ca.crt"
-  - org_id: "wx-org5.chainmaker.org"
-    root:
-      - "../config/wx-org5/certs/ca/wx-org5.chainmaker.org/ca.crt"
-  - org_id: "wx-org6.chainmaker.org"
-    root:
-      - "../config/wx-org6/certs/ca/wx-org6.chainmaker.org/ca.crt"
-  - org_id: "wx-org7.chainmaker.org"
-    root:
-      - "../config/wx-org7/certs/ca/wx-org7.chainmaker.org/ca.crt"
+#  - org_id: "wx-org2.chainmaker.org"
+#    root:
+#      - "../config/wx-org2/certs/ca/wx-org2.chainmaker.org/ca.crt"
+#  - org_id: "wx-org3.chainmaker.org"
+#    root:
+#      - "../config/wx-org3/certs/ca/wx-org3.chainmaker.org/ca.crt"
+#  - org_id: "wx-org4.chainmaker.org"
+#    root:
+#      - "../config/wx-org4/certs/ca/wx-org4.chainmaker.org/ca.crt"
+#  - org_id: "wx-org5.chainmaker.org"
+#    root:
+#      - "../config/wx-org5/certs/ca/wx-org5.chainmaker.org/ca.crt"
+#  - org_id: "wx-org6.chainmaker.org"
+#    root:
+#      - "../config/wx-org6/certs/ca/wx-org6.chainmaker.org/ca.crt"
+#  - org_id: "wx-org7.chainmaker.org"
+#    root:
+#      - "../config/wx-org7/certs/ca/wx-org7.chainmaker.org/ca.crt"
 
 # 权限配置（只能整体添加、修改、删除）
 resource_policies:
@@ -107,4 +130,4 @@ resource_policies:
         - admin
 
 disabled_native_contract:
-  - CONTRACT_NAME
+# - CONTRACT_NAME  # 通过指定系统合约名字来禁用系统合约

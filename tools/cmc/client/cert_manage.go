@@ -13,13 +13,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-
-	"github.com/spf13/cobra"
-
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
+	"github.com/hokaccha/go-prettyjson"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -115,6 +113,18 @@ func revokeCertCMD() *cobra.Command {
 }
 
 func freezeOrUnfreezeCert(which int) error {
+	var adminKeys, adminCrts []string
+
+	if adminKeyFilePaths != "" {
+		adminKeys = strings.Split(adminKeyFilePaths, ",")
+	}
+	if adminCrtFilePaths != "" {
+		adminCrts = strings.Split(adminCrtFilePaths, ",")
+	}
+	if len(adminKeys) != len(adminCrts) {
+		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
+	}
+
 	certFiles := strings.Split(certFilePaths, ",")
 	for idx := range certFiles {
 		path := certFiles[idx]
@@ -126,17 +136,13 @@ func freezeOrUnfreezeCert(which int) error {
 		certStr := string(certBytes)
 		certFiles[idx] = certStr
 	}
+
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
 		return fmt.Errorf("create user client failed, %s", err.Error())
 	}
 	defer client.Stop()
-	adminClient, err := createAdminWithConfig(adminKeyFilePaths, adminCrtFilePaths)
-	if err != nil {
-		return fmt.Errorf("create admin client failed, %s", err.Error())
-	}
-	defer adminClient.Stop()
 
 	var payload *commonpb.Payload
 	var whichOperation string
@@ -153,11 +159,18 @@ func freezeOrUnfreezeCert(which int) error {
 	if err != nil {
 		return fmt.Errorf("create cert manage %s payload failed, %s", whichOperation, err.Error())
 	}
-	signedPayload, err := adminClient.SignCertManagePayload(payload)
-	if err != nil {
-		return fmt.Errorf("sign cert manage payload failed, %s", err.Error())
+
+	endorsementEntrys := make([]*commonpb.EndorsementEntry, len(adminKeys))
+	for i := range adminKeys {
+		e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+		if err != nil {
+			return fmt.Errorf("sign cert manage payload failed, %s", err.Error())
+		}
+
+		endorsementEntrys[i] = e
 	}
-	resp, err := client.SendCertManageRequest(payload, []*commonpb.EndorsementEntry{signedPayload}, -1, syncResult)
+
+	resp, err := client.SendCertManageRequest(payload, endorsementEntrys, -1, syncResult)
 	if err != nil {
 		return fmt.Errorf("send cert manage request failed, %s", err.Error())
 	}
@@ -166,14 +179,22 @@ func freezeOrUnfreezeCert(which int) error {
 		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
 	}
 
+	output, err := prettyjson.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(output))
 	return nil
 }
 
 func revokeCert() error {
-	adminKeys := strings.Split(adminKeyFilePaths, ",")
-	adminCrts := strings.Split(adminCrtFilePaths, ",")
-	if len(adminKeys) == 0 || len(adminCrts) == 0 {
-		return errAdminOrgIdKeyCertIsEmpty
+	var adminKeys, adminCrts []string
+
+	if adminKeyFilePaths != "" {
+		adminKeys = strings.Split(adminKeyFilePaths, ",")
+	}
+	if adminCrtFilePaths != "" {
+		adminCrts = strings.Split(adminCrtFilePaths, ",")
 	}
 	if len(adminKeys) != len(adminCrts) {
 		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
@@ -194,7 +215,7 @@ func revokeCert() error {
 
 	endorsementEntrys := make([]*commonpb.EndorsementEntry, len(adminKeys))
 	for i := range adminKeys {
-		e, err := sdk.SignPayloadWithPath(adminKeys[i], adminCrts[i], payload)
+		e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
 		if err != nil {
 			return fmt.Errorf("sign cert manage payload failed, %s", err.Error())
 		}
@@ -213,7 +234,10 @@ func revokeCert() error {
 		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
 	}
 
-	fmt.Printf("%+v", resp)
-
+	output, err := prettyjson.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(output))
 	return nil
 }

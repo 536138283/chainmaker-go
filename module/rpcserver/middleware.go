@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/logger/v2"
+	localconf "chainmaker.org/chainmaker/localconf/v2"
+	logger "chainmaker.org/chainmaker/logger/v2"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,6 +29,7 @@ import (
 var log = logger.GetLogger(logger.MODULE_RPC)
 
 const (
+	//UNKNOWN unknown string
 	UNKNOWN = "unknown"
 )
 
@@ -36,36 +37,31 @@ const (
 	rateLimitTypeGlobal = 0
 )
 
-func getClientAddr(ctx context.Context) (string, error) {
+func GetClientAddr(ctx context.Context) string {
 	pr, ok := peer.FromContext(ctx)
 	if !ok {
-		return UNKNOWN, fmt.Errorf("getClientAddr FromContext failed")
+		log.Errorf("getClientAddr FromContext failed")
+		return UNKNOWN
 	}
 
 	if pr.Addr == net.Addr(nil) {
-		return UNKNOWN, fmt.Errorf("getClientAddr failed, peer.Addr is nil")
+		log.Errorf("getClientAddr failed, peer.Addr is nil")
+		return UNKNOWN
 	}
 
-	return pr.Addr.String(), nil
+	return pr.Addr.String()
 }
 
 func getClientIp(ctx context.Context) string {
-	addr, err := getClientAddr(ctx)
-	if err == nil {
-		addr = strings.Split(addr, ":")[0]
-	}
-
-	return addr
+	addr := GetClientAddr(ctx)
+	return strings.Split(addr, ":")[0]
 }
 
 // LoggingInterceptor - set logging interceptor
 func LoggingInterceptor(ctx context.Context, req interface{},
 	info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 
-	addr, err := getClientAddr(ctx)
-	if err != nil {
-		log.Warn(err)
-	}
+	addr := GetClientAddr(ctx)
 
 	log.Debugf("[%s] call gRPC method: %s", addr, info.FullMethod)
 	log.DebugDynamic(func() string {
