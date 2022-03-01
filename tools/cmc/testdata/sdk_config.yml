@@ -38,6 +38,7 @@ chain_client:
     max_send_message_size: 16 # grpc客户端发送消息时，允许单条message大小的最大值(MB)
   pkcs11:
     enabled: false # pkcs11 is not used by default
+    type: pkcs11 #support pkcs11 and sdf
     library: /usr/local/lib64/pkcs11/libupkcs11.so # path to the .so file of pkcs11 interface
     label: HSM # label for the slot to be used
     password: 11111111 # password to logon the HSM(Hardware security module)

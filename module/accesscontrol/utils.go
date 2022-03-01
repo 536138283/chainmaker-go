@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 
@@ -19,31 +20,38 @@ import (
 	bccrypto "chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/crypto/pkcs11"
+	"chainmaker.org/chainmaker/common/v2/crypto/sdf"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/mr-tron/base58"
 )
 
-func getP11HandleId() string {
+func getHSMHandleId() string {
 	p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
 	return p11Config.Library + p11Config.Label
 }
 
-func getP11Handle() (*pkcs11.P11Handle, error) {
+func getHSMHandle() (interface{}, error) {
 	var err error
-	p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
-	p11Key := getP11HandleId()
-	p11Handle, ok := p11HandleMap[p11Key]
+	cfg := localconf.ChainMakerConfig.NodeConfig.P11Config
+	hsmKey := getHSMHandleId()
+	handle, ok := hsmHandleMap[hsmKey]
 	if !ok {
-		p11Handle, err = pkcs11.New(p11Config.Library, p11Config.Label, p11Config.Password, p11Config.SessionCacheSize,
-			p11Config.Hash)
+		if strings.EqualFold(cfg.Type, "pkcs11") {
+			handle, err = pkcs11.New(cfg.Library, cfg.Label, cfg.Password, cfg.SessionCacheSize,
+				cfg.Hash)
+		} else if strings.EqualFold(cfg.Type, "sdf") {
+			handle, err = sdf.New(cfg.Library, cfg.SessionCacheSize)
+		} else {
+			err = fmt.Errorf("invalid hsm type, want pkcs11 | sdf, got %s", cfg.Type)
+		}
 		if err != nil {
 			return nil, fmt.Errorf("fail to initialize organization with HSM: [%v]", err)
 		}
-		p11HandleMap[p11Key] = p11Handle
+		hsmHandleMap[hsmKey] = handle
 	}
-	return p11Handle, nil
+	return handle, nil
 }
 
 func pubkeyHash(pubkey []byte) string {
@@ -94,15 +102,13 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 		}
 
 		var sk bccrypto.PrivateKey
-		p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
-		if p11Config.Enabled {
-			var p11Handle *pkcs11.P11Handle
-			p11Handle, err = getP11Handle()
+		cfg := localconf.ChainMakerConfig.NodeConfig.P11Config
+		if cfg.Enabled {
+			handle, err := getHSMHandle()
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
 			}
-
-			sk, err = cert.ParseP11PrivKey(p11Handle, skPEM)
+			sk, err = cert.ParseP11PrivKey(handle, skPEM)
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
 			}
@@ -133,13 +139,11 @@ func InitPKSigningMember(hashType,
 		var sk bccrypto.PrivateKey
 		p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
 		if p11Config.Enabled {
-			var p11Handle *pkcs11.P11Handle
-			p11Handle, err = getP11Handle()
+			handle, err := getHSMHandle()
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
-
-			sk, err = cert.ParseP11PrivKey(p11Handle, []byte(skPEM))
+			sk, err = cert.ParseP11PrivKey(handle, skPEM)
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}

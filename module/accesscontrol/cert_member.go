@@ -17,7 +17,6 @@ import (
 	"chainmaker.org/chainmaker/common/v2/cert"
 	bccrypto "chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/crypto/pkcs11"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -246,13 +245,12 @@ func NewCertSigningMember(hashType string, member *pbac.Member, privateKeyPem,
 	var sk bccrypto.PrivateKey
 	nodeConfig := localconf.ChainMakerConfig.NodeConfig
 	if nodeConfig.P11Config.Enabled {
-		var p11Handle *pkcs11.P11Handle
-		p11Handle, err = getP11Handle()
+		handle, err := getHSMHandle()
 		if err != nil {
 			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 		}
 
-		sk, err = cert.ParseP11PrivKey(p11Handle, []byte(privateKeyPem))
+		sk, err = cert.ParseP11PrivKey(handle, []byte(privateKeyPem))
 		if err != nil {
 			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 		}

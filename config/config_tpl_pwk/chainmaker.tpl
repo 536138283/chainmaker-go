@@ -62,6 +62,9 @@ node:
     # Enable it or not
     enabled: false  # [*]
 
+    # Type only support pkcs11 and sdf
+    type: pkcs11
+
     # Path for the pkcs11 interface file(.so)
     library: /usr/local/lib64/pkcs11/libupkcs11.so
 

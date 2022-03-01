@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
-	"chainmaker.org/chainmaker/common/v2/crypto/pkcs11"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -35,7 +34,7 @@ const (
 
 var notEnoughParticipantsSupportError = "authentication fail: not enough participants support this action"
 
-var p11HandleMap = map[string]*pkcs11.P11Handle{}
+var hsmHandleMap = map[string]interface{}{}
 
 // List of access principals which should not be customized
 var restrainedResourceList = map[string]bool{
