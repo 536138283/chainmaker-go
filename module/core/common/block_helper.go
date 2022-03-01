@@ -136,7 +136,7 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 	ssLasts := beginDbTick - ssStartTick
 	dbLasts := vmStartTick - beginDbTick
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
-	timeLasts = append(timeLasts, ssLasts, dbLasts, vmLasts)
+	timeLasts = append(timeLasts, dbLasts, ssLasts, vmLasts)
 
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("schedule block(%d,%x) error %s",
