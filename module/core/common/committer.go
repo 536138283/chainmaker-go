@@ -7,6 +7,7 @@ package common
 
 import (
 	"fmt"
+	"strconv"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -67,18 +68,27 @@ func (cb *CommitBlock) CommitBlock(
 	block *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
 	conEventMap map[string][]*commonpb.ContractEvent) (
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent int64, blockInfo *commonpb.BlockInfo, err error) {
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEventLasts int64, blockInfo *commonpb.BlockInfo, err error) {
 	// record block
 	rwSet := RearrangeRWSet(block, rwSetMap)
 	// record contract event
 	events := rearrangeContractEvent(block, conEventMap)
 
+	// notify chainConf to update config before put block
+	startConfTick := utils.CurrentTimeMillisSeconds()
+	if err = cb.NotifyMessage(block, cb.chainConf); err != nil {
+		return 0, 0, 0, 0, 0, nil, err
+	}
+	confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
+
+	// put block
 	startDBTick := utils.CurrentTimeMillisSeconds()
 	if err = cb.store.PutBlock(block, rwSet); err != nil {
 		// if put db error, then panic
 		cb.log.Error(err)
 		panic(err)
 	}
+	cb.ledgerCache.SetLastCommittedBlock(block)
 	dbLasts = utils.CurrentTimeMillisSeconds() - startDBTick
 
 	// clear snapshot
@@ -91,52 +101,50 @@ func (cb *CommitBlock) CommitBlock(
 	}
 	snapshotLasts = utils.CurrentTimeMillisSeconds() - startSnapshotTick
 
-	// notify chainConf to update config when config block committed
-	startConfTick := utils.CurrentTimeMillisSeconds()
-	if err = NotifyChainConf(block, cb.chainConf); err != nil {
-		return 0, 0, 0, 0, 0, nil, err
-	}
+	// contract event
+	pubEventLasts = cb.publishContractEvent(block, events)
 
-	cb.ledgerCache.SetLastCommittedBlock(block)
-	confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
-
-	// publish contract event
-	var startPublishContractEventTick int64
-	if len(events) > 0 {
-		startPublishContractEventTick = utils.CurrentTimeMillisSeconds()
-		cb.log.Infof(
-			"start publish contractEventsInfo: block[%d] ,time[%d]",
-			block.Header.BlockHeight,
-			startPublishContractEventTick,
-		)
-		var eventsInfo []*commonpb.ContractEventInfo
-		for _, t := range events {
-			eventInfo := &commonpb.ContractEventInfo{
-				BlockHeight:     block.Header.BlockHeight,
-				ChainId:         block.Header.GetChainId(),
-				Topic:           t.Topic,
-				TxId:            t.TxId,
-				ContractName:    t.ContractName,
-				ContractVersion: t.ContractVersion,
-				EventData:       t.EventData,
-			}
-			eventsInfo = append(eventsInfo, eventInfo)
-		}
-		cb.msgBus.Publish(msgbus.ContractEventInfo, &commonpb.ContractEventInfoList{ContractEvents: eventsInfo})
-		pubEvent = utils.CurrentTimeMillisSeconds() - startPublishContractEventTick
-	}
+	// monitor
 	startOtherTick := utils.CurrentTimeMillisSeconds()
 	blockInfo = &commonpb.BlockInfo{
 		Block:     block,
 		RwsetList: rwSet,
 	}
-
 	if err = cb.MonitorCommit(blockInfo); err != nil {
 		return 0, 0, 0, 0, 0, nil, err
 	}
 	otherLasts = utils.CurrentTimeMillisSeconds() - startOtherTick
 
 	return
+}
+
+// publishContractEvent publish contract event, return time used
+func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*commonpb.ContractEvent) int64 {
+	if len(events) == 0 {
+		return 0
+	}
+
+	startPublishContractEventTick := utils.CurrentTimeMillisSeconds()
+	cb.log.Infof(
+		"start publish contractEventsInfo: block[%d] ,time[%d]",
+		block.Header.BlockHeight,
+		startPublishContractEventTick,
+	)
+	var eventsInfo []*commonpb.ContractEventInfo
+	for _, t := range events {
+		eventInfo := &commonpb.ContractEventInfo{
+			BlockHeight:     block.Header.BlockHeight,
+			ChainId:         block.Header.GetChainId(),
+			Topic:           t.Topic,
+			TxId:            t.TxId,
+			ContractName:    t.ContractName,
+			ContractVersion: t.ContractVersion,
+			EventData:       t.EventData,
+		}
+		eventsInfo = append(eventsInfo, eventInfo)
+	}
+	cb.msgBus.Publish(msgbus.ContractEventInfo, &commonpb.ContractEventInfoList{ContractEvents: eventsInfo})
+	return utils.CurrentTimeMillisSeconds() - startPublishContractEventTick
 }
 
 func (cb *CommitBlock) MonitorCommit(bi *commonpb.BlockInfo) error {
@@ -154,17 +162,6 @@ func (cb *CommitBlock) MonitorCommit(bi *commonpb.BlockInfo) error {
 	return nil
 }
 
-func NotifyChainConf(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
-	if block != nil && block.GetTxs() != nil && len(block.GetTxs()) > 0 {
-		if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); ok || utils.HasDPosTxWritesInHeader(block, chainConf) {
-			if err = chainConf.CompleteBlock(block); err != nil {
-				return fmt.Errorf("chainconf block complete, %s", err)
-			}
-		}
-	}
-	return nil
-}
-
 func rearrangeContractEvent(block *commonpb.Block,
 	conEventMap map[string][]*commonpb.ContractEvent) []*commonpb.ContractEvent {
 	conEvent := make([]*commonpb.ContractEvent, 0)
@@ -177,4 +174,32 @@ func rearrangeContractEvent(block *commonpb.Block,
 		}
 	}
 	return conEvent
+}
+
+func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
+	if block == nil || len(block.GetTxs()) == 0 {
+		return nil
+	}
+
+	//if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); !ok && utils.HasDPosTxWritesInHeader(block, chainConf) {
+	//	return
+	//}
+
+	for _, tx := range block.Txs { // one by one
+		for _, event := range tx.Result.ContractResult.ContractEvent {
+			data := event.EventData
+			if len(data) == 0 {
+				continue
+			}
+			topicEnum, err := strconv.Atoi(event.Topic)
+			if err != nil {
+				continue
+			}
+			topic := msgbus.Topic(topicEnum)
+			for _, payload := range data {
+				cb.msgBus.PublishSync(topic, payload) // data is a string, base64(proto.Marshal(struct))
+			}
+		}
+	}
+	return nil
 }
