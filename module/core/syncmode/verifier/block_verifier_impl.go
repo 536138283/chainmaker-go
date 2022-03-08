@@ -349,7 +349,10 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
-		dataStr := msg.Payload.(string)
+		dataStr, ok := msg.Payload.(string)
+		if !ok {
+			return
+		}
 		dataBytes, err := hex.DecodeString(dataStr)
 		if err != nil {
 			v.log.Warn(err)

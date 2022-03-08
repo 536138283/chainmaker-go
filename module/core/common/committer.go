@@ -186,6 +186,9 @@ func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.C
 	//}
 
 	for _, tx := range block.Txs { // one by one
+		if tx.Result == nil || tx.Result.ContractResult == nil {
+			continue
+		}
 		for _, event := range tx.Result.ContractResult.ContractEvent {
 			data := event.EventData
 			if len(data) == 0 {
