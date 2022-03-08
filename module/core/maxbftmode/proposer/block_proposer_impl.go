@@ -258,23 +258,15 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 	if selfProposedBlock != nil {
-		if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
-			// Repeat propose block if node has proposed before at the same height
-			bp.proposalCache.SetProposedAt(height)
-			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
-			bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: selfProposedBlock, TxsRwSet: txsRwSet})
-			bp.log.Infof("proposer success repeat [%d](txs:%d,hash:%x)",
-				selfProposedBlock.Header.BlockHeight, selfProposedBlock.Header.TxCount, selfProposedBlock.Header.BlockHash)
-			return nil
+		if !bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
+			bp.proposalCache.ClearTheBlock(selfProposedBlock)
+			// Note: It is not possible to re-add the transactions in the deleted block to txpool; because some transactions may
+			// be included in other blocks to be confirmed, and it is impossible to quickly exclude these pending transactions
+			// that have been entered into the block. Comprehensive considerations, directly discard this block is the optimal
+			// choice. This processing method may only cause partial transaction loss at the current node, but it can be solved
+			// by rebroadcasting on the client side.
+			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
 		}
-		bp.proposalCache.ClearTheBlock(selfProposedBlock)
-		// Note: It is not possible to re-add the transactions in the deleted block to txpool; because some transactions may
-		// be included in other blocks to be confirmed, and it is impossible to quickly exclude these pending transactions
-		// that have been entered into the block. Comprehensive considerations, directly discard this block is the optimal
-		// choice. This processing method may only cause partial transaction loss at the current node, but it can be solved
-		// by rebroadcasting on the client side.
-		bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
-
 	}
 
 	// retrieve tx batch from tx pool
