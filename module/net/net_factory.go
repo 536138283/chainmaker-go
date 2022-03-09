@@ -59,8 +59,8 @@ func WithListenAddr(addr string) NetOption {
 func WithCrypto(pkMode bool, keyFile, certFile string, encKeyFile, encCertFile string) NetOption {
 	return func(nf *NetFactory) error {
 		var (
-			err                 error
-			keyBytes, certBytes []byte
+			err                       error
+			keyBytes, certBytes       []byte
 			encKeyBytes, encCertBytes []byte
 		)
 		//try to read
@@ -84,18 +84,18 @@ func WithCrypto(pkMode bool, keyFile, certFile string, encKeyFile, encCertFile s
 			n.Prepare().SetKey(keyBytes)
 			if !pkMode {
 				n.Prepare().SetCert(certBytes)
+				n.Prepare().SetEncKey(encKeyBytes)
+				n.Prepare().SetEncCert(encCertBytes)
 			}
-			n.Prepare().SetEncKey(encKeyBytes)
-			n.Prepare().SetEncCert(encCertBytes)
 		case protocol.Liquid:
 			n, _ := nf.n.(*liquid.LiquidNet)
 			n.CryptoConfig().PubKeyMode = pkMode
 			n.CryptoConfig().KeyBytes = keyBytes
 			if !pkMode {
 				n.CryptoConfig().CertBytes = certBytes
+				n.CryptoConfig().EncCertBytes = encCertBytes
+				n.CryptoConfig().EncKeyBytes = encKeyBytes
 			}
-			n.CryptoConfig().EncCertBytes = encCertBytes
-			n.CryptoConfig().EncKeyBytes = encKeyBytes
 		}
 		return nil
 	}
