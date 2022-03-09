@@ -162,6 +162,17 @@ func (cb *CommitBlock) MonitorCommit(bi *commonpb.BlockInfo) error {
 	return nil
 }
 
+func NotifyChainConf(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
+	if block != nil && block.GetTxs() != nil && len(block.GetTxs()) > 0 {
+		if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); ok || utils.HasDPosTxWritesInHeader(block, chainConf) {
+			if err = chainConf.CompleteBlock(block); err != nil {
+				return fmt.Errorf("chainconf block complete, %s", err)
+			}
+		}
+	}
+	return nil
+}
+
 func rearrangeContractEvent(block *commonpb.Block,
 	conEventMap map[string][]*commonpb.ContractEvent) []*commonpb.ContractEvent {
 	conEvent := make([]*commonpb.ContractEvent, 0)
@@ -199,9 +210,7 @@ func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.C
 				continue
 			}
 			topic := msgbus.Topic(topicEnum)
-			for _, payload := range data {
-				cb.msgBus.PublishSync(topic, payload) // data is a string, base64(proto.Marshal(struct))
-			}
+			cb.msgBus.PublishSync(topic, data) // data is a []string, hexToString(proto.Marshal(data))
 		}
 	}
 	return nil

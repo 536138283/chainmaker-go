@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package net
 
 import (
+	"encoding/hex"
 	"errors"
 	"strings"
 	"sync"
@@ -51,13 +52,14 @@ var _ protocol.NetService = (*NetService)(nil)
 
 // NetService provide a net service for modules.
 type NetService struct {
-	chainId              string
-	localNet             protocol.Net
-	msgBus               msgbus.MessageBus
-	logger               *rootLog.CMLogger
-	configWatcher        *ConfigWatcher
-	consensusNodeIds     map[string]struct{}
-	consensusNodeIdsLock sync.RWMutex
+	chainId                   string
+	localNet                  protocol.Net
+	msgBus                    msgbus.MessageBus
+	logger                    *rootLog.CMLogger
+	configWatcher             *ConfigWatcher
+	netContractEventSubscribe *NetContractEventSubscribe
+	consensusNodeIds          map[string]struct{}
+	consensusNodeIdsLock      sync.RWMutex
 
 	ac            protocol.AccessControlProvider
 	revokeNodeIds sync.Map // nolint: structcheck,unused // node id of node cert revoked , map[string]struct{}
@@ -292,6 +294,71 @@ func (ns *NetService) Start() error {
 // Stop the net-service.
 func (ns *NetService) Stop() error {
 	return nil
+}
+
+// ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.
+func (ns *NetService) NetConfigSubscribe() msgbus.Subscriber {
+	if ns.netContractEventSubscribe == nil {
+		ns.netContractEventSubscribe = &NetContractEventSubscribe{ns: ns}
+	}
+	return ns.netContractEventSubscribe
+}
+
+var _ msgbus.Subscriber = (*NetContractEventSubscribe)(nil)
+
+// NetContractEventSubscribe is a implementation of protocol.Watcher.
+type NetContractEventSubscribe struct {
+	ns *NetService
+}
+
+func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
+	// TODO  implement
+	switch msg.Topic {
+	case msgbus.ChainConfig:
+		n.onMessageChainConfig(msg)
+	case msgbus.CertManageCertsRevoke,
+		msgbus.CertManageCertsFreeze,
+		msgbus.CertManageCertsUnfreeze:
+		n.ns.localNet.ReVerifyPeers(n.ns.chainId)
+	case msgbus.PubkeyManageAdd, msgbus.PubkeyManageDelete:
+		n.ns.localNet.ReVerifyPeers(n.ns.chainId)
+	}
+
+}
+
+func (n *NetContractEventSubscribe) OnQuit() {
+
+}
+
+func (n *NetContractEventSubscribe) onMessageChainConfig(msg *msgbus.Message) {
+	dataStr := msg.Payload.(string)
+	dataBytes, err := hex.DecodeString(dataStr)
+	if err != nil {
+		n.ns.logger.Error(err)
+		return
+	}
+	chainConfig := &configPb.ChainConfig{}
+	proto.Unmarshal(dataBytes, chainConfig)
+
+	// refresh chainConfig
+	n.ns.logger.Infof("[NetService] refreshing chain config...")
+	// 1.refresh consensus nodeIds
+	// 1.1 get all new nodeIds
+	newConsensusNodeIds := make(map[string]struct{})
+	for _, node := range chainConfig.Consensus.Nodes {
+		for _, nodeId := range node.NodeId {
+			newConsensusNodeIds[nodeId] = struct{}{}
+		}
+	}
+	// 1.2 refresh consensus nodeIds
+	n.ns.consensusNodeIdsLock.Lock()
+	n.ns.consensusNodeIds = newConsensusNodeIds
+	n.ns.consensusNodeIdsLock.Unlock()
+	n.ns.logger.Infof("[NetService] refresh ids of consensus nodes ok ")
+	// 2.re-verify peers
+	n.ns.localNet.ReVerifyPeers(n.ns.chainId)
+	n.ns.logger.Infof("[NetService] re-verify peers ok")
+	n.ns.logger.Infof("[NetService] refresh chain config ok")
 }
 
 // ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.

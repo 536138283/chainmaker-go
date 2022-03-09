@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package net
 
 import (
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -30,10 +31,13 @@ func (nsf *NetServiceFactory) NewNetService(
 		if err := nsf.setAllConsensusNodeIds(ns, chainConf); err != nil {
 			return nil, err
 		}
+		// set contract event subscribe
+		ns.msgBus.Register(msgbus.ChainConfig, ns.NetConfigSubscribe())
+
 		// set config watcher
-		chainConf.AddWatch(ns.ConfigWatcher())
+		//chainConf.AddWatch(ns.ConfigWatcher())
 		// set vm watcher
-		chainConf.AddVmWatch(ns.VmWatcher())
+		//chainConf.AddVmWatch(ns.VmWatcher())
 	}
 	return ns, nil
 }

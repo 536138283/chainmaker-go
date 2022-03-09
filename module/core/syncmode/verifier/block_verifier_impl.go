@@ -345,15 +345,17 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	return nil
 }
 
-// 实现msgbus 消息订阅接口，接收事件
+var _ msgbus.Subscriber = (*BlockVerifierImpl)(nil)
+
+// OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
 func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
-		dataStr, ok := msg.Payload.(string)
+		dataStr, ok := msg.Payload.([]string)
 		if !ok {
 			return
 		}
-		dataBytes, err := hex.DecodeString(dataStr)
+		dataBytes, err := hex.DecodeString(dataStr[0])
 		if err != nil {
 			v.log.Warn(err)
 			return
@@ -373,6 +375,18 @@ func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 
 func (v *BlockVerifierImpl) OnQuit() {
 	// nothing, implement Subscriber interface
+}
+
+var _ protocol.Watcher = (*BlockVerifierImpl)(nil)
+
+func (v *BlockVerifierImpl) Module() string {
+	return ModuleNameCore
+}
+
+func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) error {
+	v.chainConf.ChainConfig().Block = chainConfig.Block
+	v.log.Infof("update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
+	return nil
 }
 
 func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (

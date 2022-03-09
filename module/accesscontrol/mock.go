@@ -10,6 +10,8 @@ package accesscontrol
 import (
 	"sync"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/logger/v2"
@@ -86,15 +88,19 @@ func MockSignWithMultipleNodes(msg []byte, signers []protocol.SigningMember, has
 }
 
 func NewAccessControlWithChainConfig(chainConfig protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
 	protocol.AccessControlProvider, error) {
 	conf := chainConfig.ChainConfig()
 	acp, err := newCertACProvider(conf, localOrgId, store, log)
 	if err != nil {
 		return nil, err
 	}
-	chainConfig.AddWatch(acp)
-	chainConfig.AddVmWatch(acp)
+	msgBus.Register(msgbus.ChainConfig, acp)
+	msgBus.Register(msgbus.CertManageCertsRevoke, acp)
+	msgBus.Register(msgbus.CertManageCertsUnfreeze, acp)
+	msgBus.Register(msgbus.CertManageCertsFreeze, acp)
+	//chainConfig.AddWatch(acp)
+	//chainConfig.AddVmWatch(acp)
 	//InitCertSigningMember(testChainConfig, localOrgId, localPrivKeyFile, localPrivKeyPwd, localCertFile)
 	return acp, err
 }

@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -105,12 +107,14 @@ type publicAdminMemberModel struct {
 }
 
 func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
 	pkAcProvider, err := newPkACProvider(chainConf.ChainConfig(), store, log)
 	if err != nil {
 		return nil, err
 	}
-	chainConf.AddWatch(pkAcProvider)
+
+	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
+	//chainConf.AddWatch(pkAcProvider)
 	return pkAcProvider, nil
 }
 

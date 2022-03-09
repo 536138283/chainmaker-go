@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"encoding/hex"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
@@ -56,13 +58,14 @@ type consensusMemberModel struct {
 }
 
 func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
 	pPkACProvider, err := newPermissionedPkACProvider(chainConf.ChainConfig(), localOrgId, store, log)
 	if err != nil {
 		return nil, err
 	}
-	chainConf.AddWatch(pPkACProvider)
-	chainConf.AddVmWatch(pPkACProvider)
+	msgBus.Register(msgbus.ChainConfig, pPkACProvider)
+	//chainConf.AddWatch(pPkACProvider)
+	//chainConf.AddVmWatch(pPkACProvider)
 	return pPkACProvider, nil
 }
 

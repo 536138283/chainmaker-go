@@ -19,6 +19,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/common/v2/json"
@@ -62,13 +64,20 @@ var _ protocol.AccessControlProvider = (*certACProvider)(nil)
 var NilCertACProvider ACProvider = (*certACProvider)(nil)
 
 func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
 	certACProvider, err := newCertACProvider(chainConf.ChainConfig(), localOrgId, store, log)
 	if err != nil {
 		return nil, err
 	}
-	chainConf.AddWatch(certACProvider)
-	chainConf.AddVmWatch(certACProvider)
+
+	msgBus.Register(msgbus.ChainConfig, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsRevoke, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsUnfreeze, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsFreeze, certACProvider)
+	// TODO  cert delete, alias  delete update
+	//
+	//chainConf.AddWatch(certACProvider)
+	//chainConf.AddVmWatch(certACProvider)
 	return certACProvider, nil
 }
 

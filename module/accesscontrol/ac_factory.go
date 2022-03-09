@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -28,7 +30,7 @@ func ACFactory() *AcFactory {
 }
 
 func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
 
 	chainConf.ChainConfig().AuthType = strings.ToLower(chainConf.ChainConfig().AuthType)
 
@@ -63,5 +65,5 @@ func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId stri
 	}
 
 	p := NewACProviderByMemberType(chainConf.ChainConfig().AuthType)
-	return p.NewACProvider(chainConf, localOrgId, store, log)
+	return p.NewACProvider(chainConf, localOrgId, store, log, msgBus)
 }
