@@ -19,7 +19,7 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20220128100409-ce390cb69a32
 	chainmaker.org/chainmaker/protocol/v2 v2.1.2-0.20220128021940-8fd70a8c2c75
 	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20220129084708-75eef4494978
-	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220128070304-a958ce8c7661
+	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220310101708-acb5c8bad110
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220128062951-d5758846d3bd
 	chainmaker.org/chainmaker/txpool-single/v2 v2.1.1-0.20220128061857-855bf0e3e65b
 	chainmaker.org/chainmaker/utils/v2 v2.1.1-0.20220128023017-5bf8279342f1
@@ -57,7 +57,7 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
-	github.com/tidwall/pretty v1.0.2
+	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.7.0
