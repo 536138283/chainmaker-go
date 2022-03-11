@@ -11,7 +11,7 @@ BRANCH=$1
 if [[ ! -n $BRANCH ]]; then
   BRANCH="develop"
 fi
-QC="v2.2.0_alpha_qc"
+QC="develop"
 cd ..
 
 go get chainmaker.org/chainmaker/chainconf/v2@${BRANCH}

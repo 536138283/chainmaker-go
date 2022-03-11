@@ -24,10 +24,10 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
 	cmtls "chainmaker.org/chainmaker/common/v2/crypto/tls"
 	"chainmaker.org/chainmaker/common/v2/monitor"
-	localconf "chainmaker.org/chainmaker/localconf/v2"
-	logger "chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/prometheus/client_golang/prometheus"
@@ -140,7 +140,9 @@ func (s *RPCServer) Start() error {
 		}
 
 		tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
-			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts)
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts,
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile, //默认加密证书和签名证书是同一个
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile)
 
 		if err != nil {
 			log.Errorf("GetTLSConfig, failed, %s", err.Error())

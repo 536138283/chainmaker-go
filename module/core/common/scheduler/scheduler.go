@@ -641,7 +641,7 @@ func (ts *TxScheduler) parseParameter(parameterPairs []*commonPb.KeyValuePair) (
 				key,
 			)
 		}
-		if len(value) > protocol.ParametersValueMaxLength {
+		if len(value) > int(protocol.ParametersValueMaxLength) {
 			return nil, fmt.Errorf(
 				"expect value length less than %d, but got %d",
 				protocol.ParametersValueMaxLength,
