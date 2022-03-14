@@ -197,3 +197,174 @@ func newBlock() *commonpb.Block {
 	block.Txs = txs
 	return block
 }
+
+func TestIfExitInSameBranch(t *testing.T) {
+
+	tx1 := createNewTestTx("123456")
+	tx2 := createNewTestTx("1234567")
+	tx3 := createNewTestTx("1234568")
+	tx4 := createNewTestTx("1234569")
+	tx5 := createNewTestTx("12345610")
+
+	b0 := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  9,
+			BlockHash:    []byte("012345"),
+			PreBlockHash: []byte("012345"),
+		},
+		Txs: nil,
+	}
+
+	b1 := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  10,
+			BlockHash:    []byte("0123456"),
+			PreBlockHash: []byte("012345"),
+		},
+		Txs: []*commonpb.Transaction{tx1, tx2},
+	}
+
+	b2 := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  11,
+			BlockHash:    []byte("123"),
+			PreBlockHash: []byte("0123456"),
+		},
+		Txs: []*commonpb.Transaction{tx3},
+	}
+
+	b2a := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  11,
+			BlockHash:    []byte("123a"),
+			PreBlockHash: []byte("0123456"),
+		},
+		Txs: []*commonpb.Transaction{tx2},
+	}
+
+	b3 := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  12,
+			BlockHash:    []byte("1234"),
+			PreBlockHash: []byte("123"),
+		},
+		Txs: []*commonpb.Transaction{tx4},
+	}
+
+	b3a := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  12,
+			BlockHash:    []byte("1234a"),
+			PreBlockHash: []byte("123"),
+		},
+		Txs: []*commonpb.Transaction{tx2},
+	}
+
+	b3b := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  12,
+			BlockHash:    []byte("1234b"),
+			PreBlockHash: []byte("123"),
+		},
+		Txs: []*commonpb.Transaction{tx5, tx3},
+	}
+
+	b4 := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  13,
+			BlockHash:    []byte("12345"),
+			PreBlockHash: []byte("1234"),
+		},
+		Txs: []*commonpb.Transaction{tx1},
+	}
+
+	b4a := commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockHeight:  13,
+			BlockHash:    []byte("12345"),
+			PreBlockHash: []byte("1234"),
+		},
+		Txs: []*commonpb.Transaction{tx5},
+	}
+
+	ctl := gomock.NewController(t)
+	proposalCache := mock.NewMockProposalCache(ctl)
+	proposalCache.EXPECT().GetProposedBlockByHashAndHeight(b0.Header.BlockHash, b0.Header.BlockHeight).Return(nil, nil).AnyTimes()
+	cases := []struct {
+		b0       *commonpb.Block
+		b1       *commonpb.Block
+		preBlock *commonpb.Block
+		block    *commonpb.Block
+		doc      string
+		expected bool // expected result
+	}{
+		/**
+								-> b3a
+		 						-> b3b
+
+						 -> b2
+
+								-> b3  ->   b4
+									   ->	b4a
+				b0 -> b1
+						 -> b2a
+
+		*/
+		{nil, nil, &b1, &b2, "区块b2里的交易与前面的区块的交易不重复", false},
+		{nil, nil, &b1, &b2a, "区块b2a里的交易与b1的区块的交易重复", true},
+		{nil, &b1, &b2, &b3a, "区块b3a里的交易与b1的区块的交易重复", true},
+		{nil, &b1, &b2, &b3b, "区块b3b里的交易与b2的区块的交易重复", true},
+		{nil, &b1, &b2, &b3, "区块b3里的交易与前面的区块的交易不重复", false},
+		//
+		{&b1, &b2, &b3, &b4, "区块b4里的交易与b1的区块的交易重复", true},
+		{&b1, &b2, &b3, &b4a, "区块b4a里的交易与b3b的区块的交易重复", false},
+	}
+
+	for i, v := range cases {
+		proposalCachePrepare(proposalCache, v.b0, v.b1, v.preBlock)
+
+		var finalResult bool
+		for _, tx := range v.block.Txs {
+			result := ifExitInSameBranch(
+				v.block.Header.BlockHeight,
+				tx.Payload.TxId,
+				proposalCache,
+				v.block.Header.PreBlockHash)
+
+			if result {
+				finalResult = true
+			}
+		}
+
+		if finalResult != v.expected {
+			fmt.Printf("Case:%d fail \n", i)
+			require.Equal(t, v.expected, finalResult)
+		} else {
+			fmt.Printf("Case:%d pass \n", i)
+		}
+
+	}
+
+}
+
+func proposalCachePrepare(proposalCache *mock.MockProposalCache, b0, b1, preBlock *commonpb.Block) {
+	proposalCache.EXPECT().GetProposedBlockByHashAndHeight(
+		preBlock.Header.BlockHash,
+		preBlock.Header.BlockHeight).
+		Return(preBlock, nil).AnyTimes()
+
+	if b0 != nil {
+		proposalCache.EXPECT().GetProposedBlockByHashAndHeight(
+			b0.Header.BlockHash,
+			b0.Header.BlockHeight).
+			Return(b0, nil).AnyTimes()
+	}
+
+	if b1 != nil {
+		proposalCache.EXPECT().GetProposedBlockByHashAndHeight(
+			b1.Header.BlockHash,
+			b1.Header.BlockHeight).
+			Return(b1, nil).AnyTimes()
+	}
+
+}

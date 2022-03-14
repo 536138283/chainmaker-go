@@ -43,6 +43,8 @@ type CoreEngine struct {
 	proposedCache protocol.ProposalCache      // cache proposed block and proposal status
 	log           protocol.Logger             // logger
 	subscriber    *subscriber.EventSubscriber // block subsriber
+
+	netService protocol.NetService
 }
 
 // NewCoreEngine new a core engine.
@@ -56,6 +58,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		proposedCache:   cf.ProposalCache,
 		chainConf:       cf.ChainConf,
 		log:             cf.Log,
+		netService:      cf.NetService,
 	}
 
 	var schedulerFactory scheduler.TxSchedulerFactory
@@ -97,6 +100,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		TxPool:          cf.TxPool,
 		VmMgr:           cf.VmMgr,
 		StoreHelper:     cf.StoreHelper,
+		NetService:      cf.NetService,
 	}
 	core.BlockVerifier, err = verifier.NewBlockVerifier(verifierConfig, cf.Log)
 	if err != nil {
