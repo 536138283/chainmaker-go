@@ -134,16 +134,23 @@ net:
 # Transaction pool settings
 # Other txpool settings can be found in tx_Pool_config.go
 txpool:
-  # txpool type, can be signle or batch.
+  # txpool type, can be signle, normal, batch.
   # By default the txpool type is single.
   pool_type: "single"
 
-  # Max transaction count in txpool.
+  # Max common transaction count in txpool.
   # If txpool is full, the following transactions will be discarded.
   max_txpool_size: 50000
 
-  # Max config transaction count in config txpool.
+  # Max config transaction count in txpool.
   max_config_txpool_size: 10
+
+  # Interval of clear overdue transaction in queue, in second.
+  # It is valid, only block.tx_timestamp_verify is true in bc.yml
+  clear_overdue_tx_timeout: 600
+
+  # Common transaction queue num, only for normal txpool.
+  # common_queue_num: 10
 
   # Interval of creating a transaction batch, only for batch txpool, in millisecond.
   # batch_create_timeout: 200
