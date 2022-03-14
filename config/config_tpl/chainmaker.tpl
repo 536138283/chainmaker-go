@@ -282,11 +282,11 @@ storage:
 
   # bigfilter config
   disable_bigfilter: true
-    bigfilter_config:
-      redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"   #redis host:port
-      redis_password: "abcpass"  #redis password
-      tx_capacity: 1000000000   #support max transaction capacity
-      fp_rate: 0.000000001      #false postive rate
+  bigfilter_config:
+    redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"   #redis host:port
+    redis_password: "abcpass"  #redis password
+    tx_capacity: 1000000000   #support max transaction capacity
+    fp_rate: 0.000000001      #false postive rate
   # RWC config
   rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
 
@@ -294,8 +294,7 @@ storage:
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0 common write，1 quick write
-  # Whether to disable blockFileDb
-  disable_block_file_db: false
+
   state_cache_config:
     life_window: 3000000000000   #key/value ttl time, ns
     clean_window: 1000000000
