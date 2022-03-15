@@ -281,13 +281,13 @@ storage:
   logdb_segment_size: 128
 
   # bigfilter config
-  disable_bigfilter: true
+  enable_bigfilter: false    #default false
   bigfilter_config:
     redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"   #redis host:port
-    redis_password: "abcpass"  #redis password
+    redis_password: abcpass  #redis password
     tx_capacity: 1000000000   #support max transaction capacity
     fp_rate: 0.000000001      #false postive rate
-  # RWC config
+  # RWC config               default 1000000
   rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
 
   # Symmetric encryption key:16 bytes key
