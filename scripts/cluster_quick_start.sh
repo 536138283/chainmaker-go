@@ -79,5 +79,5 @@ function start_tmux() {
     tmux attach-session -t chainmaker
 }
 
-#prepare
+prepare
 cluster_start
