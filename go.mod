@@ -3,33 +3,35 @@ module chainmaker.org/chainmaker-go
 go 1.15
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.1.2-0.20220208121727-4754cdc5dc4d
-	chainmaker.org/chainmaker/common/v2 v2.1.2-0.20220308071813-e287aa8c4657
+	chainmaker.org/chainmaker/chainconf/v2 v2.1.2-0.20220310095232-5b9ddc50bb4b
+	chainmaker.org/chainmaker/common/v2 v2.2.1-0.20220317072901-325c7f26fdb4
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220214082315-669156ba05b1
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220210035435-33e5db287c6c
-	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20211231065915-33ec8814372a
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220311040810-1267bbe026c9
+	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220316072055-9c86c51d91fe
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20220214113925-c976b365d11e
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.0.0-20220208124636-a74f5f678bd1
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.0.0-20220210035037-fb9eb714eda1
-	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220215075856-a009d4167877
-	chainmaker.org/chainmaker/logger/v2 v2.1.1-0.20220128022235-c984177a37cc
-	chainmaker.org/chainmaker/net-common v1.0.2-0.20220309084221-0fca78e3619e
-	chainmaker.org/chainmaker/net-libp2p v1.0.2-0.20220309084347-254a6206dedc
-	chainmaker.org/chainmaker/net-liquid v1.0.2-0.20220309085256-a728d5e66fac
-	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20220128100409-ce390cb69a32
-	chainmaker.org/chainmaker/protocol/v2 v2.1.2-0.20220128021940-8fd70a8c2c75
-	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20220129084708-75eef4494978
-	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220128070304-a958ce8c7661
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220128062951-d5758846d3bd
-	chainmaker.org/chainmaker/txpool-single/v2 v2.1.1-0.20220128061857-855bf0e3e65b
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.0.0-20220311064722-5d9de0d56f1e
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.0.0-20220316034410-f158b4188b41
+	chainmaker.org/chainmaker/libp2p-pubsub v1.1.0 // indirect
+	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220317061812-44db5900e54f
+	chainmaker.org/chainmaker/logger/v2 v2.2.0
+	chainmaker.org/chainmaker/net-common v1.0.1
+	chainmaker.org/chainmaker/net-libp2p v1.0.1
+	chainmaker.org/chainmaker/net-liquid v1.0.0
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220317061531-6de397ebd257
+	chainmaker.org/chainmaker/protocol/v2 v2.1.2-0.20220317061956-59e2c0477e83
+	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20220311061031-fa942fcaf8a1
+	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220315021427-b6d7d4084f2a
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220317082215-d725aee9972b
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220317065147-c95df5eee311
+	chainmaker.org/chainmaker/txpool-single/v2 v2.1.1-0.20220317065135-10a1bd0f5667
 	chainmaker.org/chainmaker/utils/v2 v2.1.1-0.20220128023017-5bf8279342f1
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.1.1-0.20220214073036-d61cade783a8
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.1.1-0.20220315062103-65871bc67efa
 	chainmaker.org/chainmaker/vm-evm/v2 v2.1.1-0.20220210034424-6444fc8f91bd
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220214093400-9b027edb9a5d
-	chainmaker.org/chainmaker/vm-native/v2 v2.1.2-0.20220214074706-de3ae8c9453e
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.1.1-0.20220214101305-b714b23a89ef
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220310130906-fc7031ec25c7
+	chainmaker.org/chainmaker/vm-native/v2 v2.1.2-0.20220310100711-f3165eb285e9
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.1.1-0.20220310131354-75dde8ecad7c
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.1.1-0.20220210034407-cb55533fd090
-	chainmaker.org/chainmaker/vm/v2 v2.1.2-0.20220214092036-64a91f6bc44d
+	chainmaker.org/chainmaker/vm/v2 v2.1.2-0.20220310115911-2ea70bfd557d
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -57,7 +59,7 @@ require (
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
-	github.com/tidwall/pretty v1.0.2
+	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.7.0
