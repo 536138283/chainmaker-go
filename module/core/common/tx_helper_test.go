@@ -142,6 +142,7 @@ func txPrepare(t *testing.T) (*VerifierTx, *commonpb.Block) {
 		Version:   "1.0",
 		Crypto:    &config.CryptoConfig{Hash: "SHA256"},
 		Consensus: &config.ConsensusConfig{Type: 0},
+		Core:      &config.CoreConfig{},
 	}
 
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
