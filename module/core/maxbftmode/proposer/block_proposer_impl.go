@@ -158,7 +158,7 @@ func (bp *BlockProposerImpl) Start() error {
 
 // Stop, stop proposing loop
 func (bp *BlockProposerImpl) Stop() error {
-	defer bp.log.Infof("block proposer stoped")
+	defer bp.log.Infof("block proposer stopped")
 	bp.exitC <- true
 	return nil
 }
@@ -184,7 +184,7 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 
 		case <-bp.exitC:
 			bp.proposeTimer.Stop()
-			bp.log.Info("block proposer loop stoped")
+			bp.log.Info("block proposer loop stopped")
 			return
 		}
 	}
@@ -280,7 +280,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	dupLasts := utils.CurrentTimeMillisSeconds() - startDupTick
 	if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(checkedBatch) == 0 {
 		// can not propose empty block and tx batch is empty, then yield proposing.
-		bp.log.Debugf("no txs in tx pool, proposing block stoped")
+		bp.log.Debugf("no txs in tx pool, proposing block stopped")
 		bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
 		return nil
 	}
@@ -305,48 +305,32 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		bp.log.Warnf("generate new block failed, %s", err.Error())
 		// rollback sql
 		if sqlErr := bp.storeHelper.RollBack(block, bp.blockchainStore); sqlErr != nil {
-			bp.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+			bp.log.Errorf("block [%d] rollback sql failed: %s", height, sqlErr)
 		}
 		bp.txPool.RetryAndRemoveTxs(checkedBatch, nil) // put txs back to txpool
 		return nil
 	}
 	_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(block)
 
-	newBlock := new(commonpb.Block)
+	proposalBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
-		newBlock.Header = block.Header
-		newBlock.Dag = block.Dag
-		newTxs := make([]*commonpb.Transaction, len(block.Txs))
-		for i := range block.Txs {
-			newPayload := &commonpb.Payload{
-				TxId: block.Txs[i].Payload.TxId,
-			}
-
-			newTxs[i] = &commonpb.Transaction{
-				Payload:   newPayload,
-				Sender:    block.Txs[i].Sender,
-				Endorsers: block.Txs[i].Endorsers,
-				Result:    block.Txs[i].Result,
-			}
-		}
-		newBlock.Txs = newTxs
-		bp.log.Debugf("turn on consensus message turbo, block[%d]", newBlock.Header.BlockHeight)
+		proposalBlock = common.GetTurboBlock(block, proposalBlock, bp.log)
 	} else {
-		newBlock = block
+		proposalBlock = block
 	}
 
-	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: newBlock, TxsRwSet: txsRwSet})
+	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet})
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d,dup:%d,vm:%v,total:%d)",
-		block.Header.BlockHeight, block.Header.TxCount,
-		fetchLasts, dupLasts, timeLasts, elapsed)
+	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d,dup:%d, begin DB transaction:%v, "+
+		"new snapshot:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
+		fetchLasts, dupLasts, timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)
 	}
 	return block
 }
 
-// txDuplicateCheck, to check if transactions that are about to proposing are double spenting.
+// txDuplicateCheck, to check if transactions that are about to proposing are double spending.
 func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) (checked []*commonpb.Transaction,
 	duplicates []*commonpb.Transaction) {
 	if len(batch) == 0 {
