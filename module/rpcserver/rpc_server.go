@@ -197,10 +197,18 @@ func (s *RPCServer) Restart(reason string) error {
 
 	s.cancel()
 	s.grpcServer.GracefulStop()
+	_ = s.mixServer.Shutdown(s.ctx)
 
 	s.grpcServer, err = newGrpc(s.chainMakerServer)
 	if err != nil {
 		errMsg := fmt.Sprintf("RPCServer restart for reason [%s], new rpc server failed, %s", reason, err.Error())
+		s.log.Errorf(errMsg)
+		return errors.New(errMsg)
+	}
+
+	s.mixServer, err = newMixServer(s.grpcServer, s.chainMakerServer)
+	if err != nil {
+		errMsg := fmt.Sprintf("new http grpc server failed, %s", err.Error())
 		s.log.Errorf(errMsg)
 		return errors.New(errMsg)
 	}
@@ -363,7 +371,6 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 			GMVerifyPeerCertificate: createGMVerifyPeerCertificateFunc(acs),
 		}
 
-		//c, err := tlsRPCServer.GetCredentialsByCA(checkClientAuth)
 		c, err := tlsRPCServer.GetCredentialsByCA(checkClientAuth, customVerify)
 		if err != nil {
 			log.Errorf("new gRPC failed, GetTLSCredentialsByCA err: %v", err)
