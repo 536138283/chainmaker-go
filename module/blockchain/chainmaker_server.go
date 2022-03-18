@@ -129,13 +129,17 @@ func (server *ChainMakerServer) initNet() error {
 	default:
 		return errors.New("wrong auth type")
 	}
+	//gmtls enc key/cert
+	encKeyPath, _ := filepath.Abs(localconf.ChainMakerConfig.NetConfig.TLSConfig.PrivEncKeyFile)
+	encCertPath, _ := filepath.Abs(localconf.ChainMakerConfig.NetConfig.TLSConfig.CertEncFile)
+
 	// new net
 	var netFactory net.NetFactory
 	server.net, err = netFactory.NewNet(
 		netType,
 		net.WithReadySignalC(server.readyC),
 		net.WithListenAddr(localconf.ChainMakerConfig.NetConfig.ListenAddr),
-		net.WithCrypto(pubKeyMode, keyPath, certPath),
+		net.WithCrypto(pubKeyMode, keyPath, certPath, encKeyPath, encCertPath),
 		net.WithPeerStreamPoolSize(localconf.ChainMakerConfig.NetConfig.PeerStreamPoolSize),
 		net.WithMaxPeerCountAllowed(localconf.ChainMakerConfig.NetConfig.MaxPeerCountAllow),
 		net.WithPeerEliminationStrategy(localconf.ChainMakerConfig.NetConfig.PeerEliminationStrategy),
