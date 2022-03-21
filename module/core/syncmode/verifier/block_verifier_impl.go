@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/gogo/protobuf/proto"
@@ -379,17 +380,17 @@ func (v *BlockVerifierImpl) OnQuit() {
 	// nothing, implement Subscriber interface
 }
 
-var _ protocol.Watcher = (*BlockVerifierImpl)(nil)
-
-func (v *BlockVerifierImpl) Module() string {
-	return ModuleNameCore
-}
-
-func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) error {
-	v.chainConf.ChainConfig().Block = chainConfig.Block
-	v.log.Infof("update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
-	return nil
-}
+//var _ protocol.Watcher = (*BlockVerifierImpl)(nil)
+//
+//func (v *BlockVerifierImpl) Module() string {
+//	return ModuleNameCore
+//}
+//
+//func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) error {
+//	v.chainConf.ChainConfig().Block = chainConfig.Block
+//	v.log.Infof("update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
+//	return nil
+//}
 
 func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (
 	map[string]*commonpb.TxRWSet, map[string][]*commonpb.ContractEvent, map[string]int64, error) {

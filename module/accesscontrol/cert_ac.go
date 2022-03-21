@@ -30,7 +30,6 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"github.com/gogo/protobuf/proto"
 )
 
 const ModuleNameAccessControl = "Access Control"
@@ -441,39 +440,39 @@ func (cp *certACProvider) checkCertFrozenList(certChain []*bcx509.Certificate) e
 	return nil
 }
 
-func (cp *certACProvider) systemContractCallbackCertManagementCertFreezeCase(payload *common.Payload) error {
-	for _, param := range payload.Parameters {
-		if param.Key == PARAM_CERTS {
-			certList := strings.Replace(string(param.Value), ",", "\n", -1)
-			certBlock, rest := pem.Decode([]byte(certList))
-			for certBlock != nil {
-				cp.frozenList.Store(string(certBlock.Bytes), true)
-
-				certBlock, rest = pem.Decode(rest)
-			}
-			return nil
-		}
-	}
-	return nil
-}
-
-func (cp *certACProvider) systemContractCallbackCertManagementCertUnfreezeCase(payload *common.Payload) error {
-	for _, param := range payload.Parameters {
-		if param.Key == PARAM_CERTS {
-			certList := strings.Replace(string(param.Value), ",", "\n", -1)
-			certBlock, rest := pem.Decode([]byte(certList))
-			for certBlock != nil {
-				_, ok := cp.frozenList.Load(string(certBlock.Bytes))
-				if ok {
-					cp.frozenList.Delete(string(certBlock.Bytes))
-				}
-				certBlock, rest = pem.Decode(rest)
-			}
-			return nil
-		}
-	}
-	return nil
-}
+//func (cp *certACProvider) systemContractCallbackCertManagementCertFreezeCase(payload *common.Payload) error {
+//	for _, param := range payload.Parameters {
+//		if param.Key == PARAM_CERTS {
+//			certList := strings.Replace(string(param.Value), ",", "\n", -1)
+//			certBlock, rest := pem.Decode([]byte(certList))
+//			for certBlock != nil {
+//				cp.frozenList.Store(string(certBlock.Bytes), true)
+//
+//				certBlock, rest = pem.Decode(rest)
+//			}
+//			return nil
+//		}
+//	}
+//	return nil
+//}
+//
+//func (cp *certACProvider) systemContractCallbackCertManagementCertUnfreezeCase(payload *common.Payload) error {
+//	for _, param := range payload.Parameters {
+//		if param.Key == PARAM_CERTS {
+//			certList := strings.Replace(string(param.Value), ",", "\n", -1)
+//			certBlock, rest := pem.Decode([]byte(certList))
+//			for certBlock != nil {
+//				_, ok := cp.frozenList.Load(string(certBlock.Bytes))
+//				if ok {
+//					cp.frozenList.Delete(string(certBlock.Bytes))
+//				}
+//				certBlock, rest = pem.Decode(rest)
+//			}
+//			return nil
+//		}
+//	}
+//	return nil
+//}
 
 func (cp *certACProvider) systemContractCallbackCertManagementCertRevokeCase(payload *common.Payload) error {
 	for _, param := range payload.Parameters {
@@ -996,44 +995,46 @@ func (cp *certACProvider) findCertChain(org *organization, certChains [][]*bcx50
 	return nil
 }
 
-func (cp *certACProvider) Module() string {
-	return ModuleNameAccessControl
-}
-
-func (cp *certACProvider) Watch(chainConfig *config.ChainConfig) error {
-	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
-	err := cp.initTrustRootsForUpdatingChainConfig(chainConfig, cp.localOrg.id)
-	if err != nil {
-		return err
-	}
-
-	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
-
-	cp.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
-	cp.opts.KeyUsages[0] = x509.ExtKeyUsageAny
-
-	cp.acService.memberCache.Clear()
-	cp.certCache.Clear()
-	err = cp.initTrustMembers(chainConfig.TrustMembers)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (cp *certACProvider) ContractNames() []string {
-	return []string{syscontract.SystemContract_CERT_MANAGE.String()}
-}
-
-func (cp *certACProvider) Callback(contractName string, payloadBytes []byte) error {
-	switch contractName {
-	case syscontract.SystemContract_CERT_MANAGE.String():
-		return cp.systemContractCallbackCertManagementCase(payloadBytes)
-	default:
-		cp.acService.log.Debugf("unwatched smart contract [%s]", contractName)
-		return nil
-	}
-}
+//
+//func (cp *certACProvider) Module() string {
+//	return ModuleNameAccessControl
+//}
+//
+//
+//func (cp *certACProvider) Watch(chainConfig *config.ChainConfig) error {
+//	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
+//	err := cp.initTrustRootsForUpdatingChainConfig(chainConfig, cp.localOrg.id)
+//	if err != nil {
+//		return err
+//	}
+//
+//	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
+//
+//	cp.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
+//	cp.opts.KeyUsages[0] = x509.ExtKeyUsageAny
+//
+//	cp.acService.memberCache.Clear()
+//	cp.certCache.Clear()
+//	err = cp.initTrustMembers(chainConfig.TrustMembers)
+//	if err != nil {
+//		return err
+//	}
+//	return nil
+//}
+//
+//func (cp *certACProvider) ContractNames() []string {
+//	return []string{syscontract.SystemContract_CERT_MANAGE.String()}
+//}
+//
+//func (cp *certACProvider) Callback(contractName string, payloadBytes []byte) error {
+//	switch contractName {
+//	case syscontract.SystemContract_CERT_MANAGE.String():
+//		return cp.systemContractCallbackCertManagementCase(payloadBytes)
+//	default:
+//		cp.acService.log.Debugf("unwatched smart contract [%s]", contractName)
+//		return nil
+//	}
+//}
 
 func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *config.ChainConfig,
 	localOrgId string) error {
@@ -1114,31 +1115,31 @@ func (cp *certACProvider) buildCertificateChainForUpdatingChainConfig(root, orgI
 	return certificateChain, nil
 }
 
-func (cp *certACProvider) systemContractCallbackCertManagementCase(payloadBytes []byte) error {
-	var payload common.Payload
-	err := proto.Unmarshal(payloadBytes, &payload)
-	if err != nil {
-		return fmt.Errorf("resolve payload failed: %v", err)
-	}
-	switch payload.Method {
-	case syscontract.CertManageFunction_CERTS_FREEZE.String():
-		return cp.systemContractCallbackCertManagementCertFreezeCase(&payload)
-	case syscontract.CertManageFunction_CERTS_UNFREEZE.String():
-		return cp.systemContractCallbackCertManagementCertUnfreezeCase(&payload)
-	case syscontract.CertManageFunction_CERTS_REVOKE.String():
-		return cp.systemContractCallbackCertManagementCertRevokeCase(&payload)
-	case syscontract.CertManageFunction_CERTS_DELETE.String():
-		return cp.systemContractCallbackCertManagementCertsDeleteCase(&payload)
-	case syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String():
-		return cp.systemContractCallbackCertManagementAliasDeleteCase(&payload)
-	case syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String():
-		return cp.systemContractCallbackCertManagementAliasUpdateCase(&payload)
-
-	default:
-		cp.acService.log.Debugf("unwatched method [%s]", payload.Method)
-		return nil
-	}
-}
+//func (cp *certACProvider) systemContractCallbackCertManagementCase(payloadBytes []byte) error {
+//	var payload common.Payload
+//	err := proto.Unmarshal(payloadBytes, &payload)
+//	if err != nil {
+//		return fmt.Errorf("resolve payload failed: %v", err)
+//	}
+//	switch payload.Method {
+//	case syscontract.CertManageFunction_CERTS_FREEZE.String():
+//		return cp.systemContractCallbackCertManagementCertFreezeCase(&payload)
+//	case syscontract.CertManageFunction_CERTS_UNFREEZE.String():
+//		return cp.systemContractCallbackCertManagementCertUnfreezeCase(&payload)
+//	case syscontract.CertManageFunction_CERTS_REVOKE.String():
+//		return cp.systemContractCallbackCertManagementCertRevokeCase(&payload)
+//	case syscontract.CertManageFunction_CERTS_DELETE.String():
+//		return cp.systemContractCallbackCertManagementCertsDeleteCase(&payload)
+//	case syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String():
+//		return cp.systemContractCallbackCertManagementAliasDeleteCase(&payload)
+//	case syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String():
+//		return cp.systemContractCallbackCertManagementAliasUpdateCase(&payload)
+//
+//	default:
+//		cp.acService.log.Debugf("unwatched method [%s]", payload.Method)
+//		return nil
+//	}
+//}
 
 //GetValidEndorsements filters all endorsement entries and returns all valid ones
 func (cp *certACProvider) GetValidEndorsements(principal protocol.Principal) ([]*common.EndorsementEntry, error) {

@@ -17,7 +17,6 @@ import (
 	"chainmaker.org/chainmaker/net-common/common/priorityblocker"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 )
@@ -52,18 +51,18 @@ var _ protocol.NetService = (*NetService)(nil)
 
 // NetService provide a net service for modules.
 type NetService struct {
-	chainId                   string
-	localNet                  protocol.Net
-	msgBus                    msgbus.MessageBus
-	logger                    *rootLog.CMLogger
-	configWatcher             *ConfigWatcher
+	chainId  string
+	localNet protocol.Net
+	msgBus   msgbus.MessageBus
+	logger   *rootLog.CMLogger
+	//configWatcher             *ConfigWatcher
 	netContractEventSubscribe *NetContractEventSubscribe
 	consensusNodeIds          map[string]struct{}
 	consensusNodeIdsLock      sync.RWMutex
 
 	ac            protocol.AccessControlProvider
 	revokeNodeIds sync.Map // nolint: structcheck,unused // node id of node cert revoked , map[string]struct{}
-	vmWatcher     *VmWatcher
+	//vmWatcher     *VmWatcher
 }
 
 // NewNetService create a new net service instance.
@@ -312,22 +311,23 @@ type NetContractEventSubscribe struct {
 }
 
 func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
-	// TODO  implement
 	switch msg.Topic {
 	case msgbus.ChainConfig:
 		n.onMessageChainConfig(msg)
 	case msgbus.CertManageCertsRevoke,
 		msgbus.CertManageCertsFreeze,
-		msgbus.CertManageCertsUnfreeze:
-		n.ns.localNet.ReVerifyPeers(n.ns.chainId)
-	case msgbus.PubkeyManageAdd, msgbus.PubkeyManageDelete:
+		msgbus.CertManageCertsUnfreeze,
+		msgbus.CertManageCertsAliasUpdate,
+		msgbus.CertManageCertsAliasDelete,
+		msgbus.PubkeyManageAdd,
+		msgbus.PubkeyManageDelete:
+		n.ns.logger.Infof("call back, topic", msg.Topic.String())
 		n.ns.localNet.ReVerifyPeers(n.ns.chainId)
 	}
 
 }
-
 func (n *NetContractEventSubscribe) OnQuit() {
-
+	// nothing
 }
 
 func (n *NetContractEventSubscribe) onMessageChainConfig(msg *msgbus.Message) {
@@ -361,84 +361,85 @@ func (n *NetContractEventSubscribe) onMessageChainConfig(msg *msgbus.Message) {
 	n.ns.logger.Infof("[NetService] refresh chain config ok")
 }
 
-// ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.
-func (ns *NetService) ConfigWatcher() protocol.Watcher {
-	if ns.configWatcher == nil {
-		ns.configWatcher = &ConfigWatcher{ns: ns}
-	}
-	return ns.configWatcher
-}
-
-// ConfigWatcher is a implementation of protocol.Watcher.
-type ConfigWatcher struct {
-	ns *NetService
-}
-
-// Module
-func (cw *ConfigWatcher) Module() string {
-	return moduleSync
-}
-
-// Watch
-func (cw *ConfigWatcher) Watch(chainConfig *configPb.ChainConfig) error {
-	// refresh chainConfig
-	cw.ns.logger.Infof("[NetService] refreshing chain config...")
-	// 1.refresh consensus nodeIds
-	// 1.1 get all new nodeIds
-	newConsensusNodeIds := make(map[string]struct{})
-	for _, node := range chainConfig.Consensus.Nodes {
-		for _, nodeId := range node.NodeId {
-			newConsensusNodeIds[nodeId] = struct{}{}
-		}
-	}
-	// 1.2 refresh consensus nodeIds
-	cw.ns.consensusNodeIdsLock.Lock()
-	cw.ns.consensusNodeIds = newConsensusNodeIds
-	cw.ns.consensusNodeIdsLock.Unlock()
-	cw.ns.logger.Infof("[NetService] refresh ids of consensus nodes ok ")
-	// 2.re-verify peers
-	cw.ns.localNet.ReVerifyPeers(cw.ns.chainId)
-	cw.ns.logger.Infof("[NetService] re-verify peers ok")
-	cw.ns.logger.Infof("[NetService] refresh chain config ok")
-	return nil
-}
-
-// VmWatcher return an implementation of protocol.VmWatcher.
-// It is used for refreshing revoked peer which use revoked tls cert.
-func (ns *NetService) VmWatcher() protocol.VmWatcher {
-	if ns.vmWatcher == nil {
-		ns.vmWatcher = &VmWatcher{ns: ns}
-	}
-	return ns.vmWatcher
-}
-
-type VmWatcher struct {
-	ns *NetService
-}
-
-func (v *VmWatcher) Module() string {
-	return moduleSync
-}
-
-func (v *VmWatcher) ContractNames() []string {
-	return []string{syscontract.SystemContract_CERT_MANAGE.String(),
-		syscontract.SystemContract_PUBKEY_MANAGE.String()}
-}
-
-func (v *VmWatcher) Callback(contractName string, _ []byte) error {
-	switch contractName {
-	case syscontract.SystemContract_CERT_MANAGE.String():
-		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
-		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
-		return nil
-	case syscontract.SystemContract_PUBKEY_MANAGE.String():
-		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
-		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
-		return nil
-	default:
-		return nil
-	}
-}
+//
+//// ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.
+//func (ns *NetService) ConfigWatcher() protocol.Watcher {
+//	if ns.configWatcher == nil {
+//		ns.configWatcher = &ConfigWatcher{ns: ns}
+//	}
+//	return ns.configWatcher
+//}
+//
+//// ConfigWatcher is a implementation of protocol.Watcher.
+//type ConfigWatcher struct {
+//	ns *NetService
+//}
+//
+//// Module
+//func (cw *ConfigWatcher) Module() string {
+//	return moduleSync
+//}
+//
+//// Watch
+//func (cw *ConfigWatcher) Watch(chainConfig *configPb.ChainConfig) error {
+//	// refresh chainConfig
+//	cw.ns.logger.Infof("[NetService] refreshing chain config...")
+//	// 1.refresh consensus nodeIds
+//	// 1.1 get all new nodeIds
+//	newConsensusNodeIds := make(map[string]struct{})
+//	for _, node := range chainConfig.Consensus.Nodes {
+//		for _, nodeId := range node.NodeId {
+//			newConsensusNodeIds[nodeId] = struct{}{}
+//		}
+//	}
+//	// 1.2 refresh consensus nodeIds
+//	cw.ns.consensusNodeIdsLock.Lock()
+//	cw.ns.consensusNodeIds = newConsensusNodeIds
+//	cw.ns.consensusNodeIdsLock.Unlock()
+//	cw.ns.logger.Infof("[NetService] refresh ids of consensus nodes ok ")
+//	// 2.re-verify peers
+//	cw.ns.localNet.ReVerifyPeers(cw.ns.chainId)
+//	cw.ns.logger.Infof("[NetService] re-verify peers ok")
+//	cw.ns.logger.Infof("[NetService] refresh chain config ok")
+//	return nil
+//}
+//
+//// VmWatcher return an implementation of protocol.VmWatcher.
+//// It is used for refreshing revoked peer which use revoked tls cert.
+//func (ns *NetService) VmWatcher() protocol.VmWatcher {
+//	if ns.vmWatcher == nil {
+//		ns.vmWatcher = &VmWatcher{ns: ns}
+//	}
+//	return ns.vmWatcher
+//}
+//
+//type VmWatcher struct {
+//	ns *NetService
+//}
+//
+//func (v *VmWatcher) Module() string {
+//	return moduleSync
+//}
+//
+//func (v *VmWatcher) ContractNames() []string {
+//	return []string{syscontract.SystemContract_CERT_MANAGE.String(),
+//		syscontract.SystemContract_PUBKEY_MANAGE.String()}
+//}
+//
+//func (v *VmWatcher) Callback(contractName string, _ []byte) error {
+//	switch contractName {
+//	case syscontract.SystemContract_CERT_MANAGE.String():
+//		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
+//		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
+//		return nil
+//	case syscontract.SystemContract_PUBKEY_MANAGE.String():
+//		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
+//		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
+//		return nil
+//	default:
+//		return nil
+//	}
+//}
 
 // HandleMsgBusSubscriberOnMessage is a handler used for msg-bus subscriber OnMessage method.
 func HandleMsgBusSubscriberOnMessage(

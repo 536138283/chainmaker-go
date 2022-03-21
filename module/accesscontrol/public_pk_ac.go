@@ -248,25 +248,26 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 	return nil
 }
 
-func (p *pkACProvider) Module() string {
-	return ModuleNameAccessControl
-}
-
-func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
-
-	p.hashType = chainConfig.GetCrypto().GetHash()
-	err := p.initAdminMembers(chainConfig.TrustRoots)
-	if err != nil {
-		return fmt.Errorf("new public AC provider failed: %s", err.Error())
-	}
-
-	err = p.initConsensusMember(chainConfig)
-	if err != nil {
-		return fmt.Errorf("new public AC provider failed: %s", err.Error())
-	}
-	p.memberCache.Clear()
-	return nil
-}
+//func (p *pkACProvider) Module() string {
+//	return ModuleNameAccessControl
+//}
+//
+//
+//func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
+//
+//	p.hashType = chainConfig.GetCrypto().GetHash()
+//	err := p.initAdminMembers(chainConfig.TrustRoots)
+//	if err != nil {
+//		return fmt.Errorf("new public AC provider failed: %s", err.Error())
+//	}
+//
+//	err = p.initConsensusMember(chainConfig)
+//	if err != nil {
+//		return fmt.Errorf("new public AC provider failed: %s", err.Error())
+//	}
+//	p.memberCache.Clear()
+//	return nil
+//}
 
 func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error) {
 	cache := p.getMemberFromCache(pbMember)
