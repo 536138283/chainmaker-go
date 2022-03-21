@@ -21,7 +21,7 @@ type (
 	handleFunc      func(event queue.Item) (queue.Item, error)
 )
 
-const bufferSize = 128 //block sync pool size
+const bufferSize = 128
 
 // Routine Provide hosting of the service in goroutine
 type Routine struct {
