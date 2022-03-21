@@ -431,22 +431,7 @@ func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 // OnReceiveMaxBFTProposal, to check if this proposer should propose a new block
 // Only for maxbft consensus
 func (bp *BlockProposerImpl) OnReceiveMaxBFTProposal(proposal *maxbft.BuildProposal) {
-	proposingHeight := proposal.Height
-	preHash := proposal.PreHash
-	if !bp.shouldProposeByMaxBFT(proposingHeight, preHash) {
-		bp.log.Infof("not a legal proposal request [%d](%x)", proposingHeight, preHash)
-		return
-	}
 
-	if !bp.setNotIdle() {
-		bp.log.Warnf("concurrent propose block [%d](%x), yield!", proposingHeight, preHash)
-		return
-	}
-	defer bp.setIdle()
-
-	bp.log.Infof("trigger proposal from maxBFT, height[%d]", proposal.Height)
-	go bp.proposing(proposingHeight, preHash)
-	<-bp.finishProposeC
 }
 
 // OnReceiveYieldProposeSignal, receive yield propose signal
@@ -544,35 +529,7 @@ func (bp *BlockProposerImpl) isSelfProposer() bool {
 	return bp.isProposer
 }
 
-/*
- * shouldProposeByMaxBFT, check if node should propose new block
- * Only for maxbft consensus
- */
-func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte) bool {
-	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
-	if committedBlock == nil {
-		bp.log.Errorf("no committed block found")
-		return false
-	}
-	currentHeight := committedBlock.Header.BlockHeight
-	// proposing height must higher than current height
-	if currentHeight >= height {
-		bp.log.Errorf("current commit block height: %d, propose height: %d", currentHeight, height)
-		return false
-	}
-	if height == currentHeight+1 {
-		// height follows the last committed block
-		if bytes.Equal(committedBlock.Header.BlockHash, preHash) {
-			return true
-		}
-		bp.log.Errorf("block pre hash error, expect %x, got %x, can not propose",
-			committedBlock.Header.BlockHash, preHash)
-		return false
-	}
-	// if height not follows the last committed block, then check last proposed block
-	b, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(preHash, height-1)
-	if b == nil {
-		bp.log.Errorf("not find preBlock: [%d:%x]", height-1, preHash)
-	}
-	return b != nil
+func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
+
+	return nil, nil
 }

@@ -41,20 +41,20 @@ type BlockProposerImpl struct {
 	ac              protocol.AccessControlProvider
 	blockchainStore protocol.BlockchainStore
 
-	isProposer   bool        // whether current node can propose block now
+	//isProposer   bool        // whether current node can propose block now
 	idle         bool        // whether current node is proposing or not
-	proposeTimer *time.Timer // timer controls the proposing periods
+	//proposeTimer *time.Timer // timer controls the proposing periods
 
-	canProposeC   chan bool                   // channel to handle propose status change from consensus module
-	txPoolSignalC chan *txpoolpb.TxPoolSignal // channel to handle propose signal from tx pool
+	//canProposeC   chan bool                   // channel to handle propose status change from consensus module
+	//txPoolSignalC chan *txpoolpb.TxPoolSignal // channel to handle propose signal from tx pool
 	exitC         chan bool                   // channel to stop proposing loop
 	proposalCache protocol.ProposalCache
 
 	chainConf protocol.ChainConf // chain config
 
 	idleMu         sync.Mutex   // for proposeBlock reentrant lock
-	statusMu       sync.Mutex   // for propose status change lock
-	proposerMu     sync.RWMutex // for isProposer lock, avoid race
+	//statusMu       sync.Mutex   // for propose status change lock
+	//proposerMu     sync.RWMutex // for isProposer lock, avoid race
 	log            protocol.Logger
 	finishProposeC chan bool // channel to receive signal to yield propose block
 
@@ -87,12 +87,12 @@ const (
 func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol.BlockProposer, error) {
 	blockProposerImpl := &BlockProposerImpl{
 		chainId:         config.ChainId,
-		isProposer:      false, // not proposer when initialized
+		//isProposer:      false, // not proposer when initialized
 		idle:            true,
 		msgBus:          config.MsgBus,
 		blockchainStore: config.BlockchainStore,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
+		//canProposeC:     make(chan bool),
+		//txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
 		exitC:           make(chan bool),
 		txPool:          config.TxPool,
 		snapshotManager: config.SnapshotManager,
@@ -115,10 +115,10 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 	}
 
 	// start propose timer
-	blockProposerImpl.proposeTimer = time.NewTimer(blockProposerImpl.getDuration())
-	if !blockProposerImpl.isSelfProposer() {
-		blockProposerImpl.proposeTimer.Stop()
-	}
+	//blockProposerImpl.proposeTimer = time.NewTimer(blockProposerImpl.getDuration())
+	//if !blockProposerImpl.isSelfProposer() {
+	//	blockProposerImpl.proposeTimer.Stop()
+	//}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		blockProposerImpl.metricBlockPackageTime = monitor.NewHistogramVec(
@@ -152,8 +152,6 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 func (bp *BlockProposerImpl) Start() error {
 	defer bp.log.Info("block proposer starts")
 
-	//go bp.startProposingLoop()
-
 	return nil
 }
 
@@ -163,73 +161,6 @@ func (bp *BlockProposerImpl) Stop() error {
 	bp.exitC <- true
 	return nil
 }
-
-// Start, start proposing loop
-//func (bp *BlockProposerImpl) startProposingLoop() {
-//	for {
-//		select {
-//		case <-bp.proposeTimer.C:
-//			if !bp.isSelfProposer() {
-//				break
-//			}
-//			go bp.proposeBlock()
-//
-//		//case signal := <-bp.txPoolSignalC:
-//		//	if !bp.isSelfProposer() {
-//		//		break
-//		//	}
-//		//	if signal.SignalType != txpoolpb.SignalType_BLOCK_PROPOSE {
-//		//		break
-//		//	}
-//		//	go bp.proposeBlock()
-//
-//		case <-bp.exitC:
-//			bp.proposeTimer.Stop()
-//			bp.log.Info("block proposer loop stopped")
-//			return
-//		}
-//	}
-//}
-
-//// proposeBlock, to check if proposer can propose block right now
-//// if so, start proposing
-//func (bp *BlockProposerImpl) proposeBlock() {
-//	defer func() {
-//		if bp.isSelfProposer() {
-//			bp.proposeTimer.Reset(bp.getDuration())
-//		}
-//	}()
-//	lastBlock := bp.ledgerCache.GetLastCommittedBlock()
-//	if lastBlock == nil {
-//		bp.log.Errorf("no committed block found")
-//		return
-//	}
-//
-//	proposingHeight := lastBlock.Header.BlockHeight + 1
-//	//if !bp.shouldProposeByBFT(proposingHeight) {
-//	//	return
-//	//}
-//	if !bp.isIdle() {
-//		// concurrent control, proposer is proposing now
-//		bp.log.Debugf("proposer is busy, not propose [%d] ", proposingHeight)
-//		return
-//	}
-//	if !bp.setNotIdle() {
-//		bp.log.Infof("concurrent propose block [%d], yield!", proposingHeight)
-//		return
-//	}
-//	defer bp.setIdle()
-//
-//	go bp.proposing(proposingHeight, lastBlock.Header.BlockHash)
-//	// #DEBUG MODE#
-//	if localconf.ChainMakerConfig.DebugConfig.IsHaltPropose {
-//		go func() {
-//			bp.OnReceiveYieldProposeSignal(true)
-//		}()
-//	}
-//
-//	<-bp.finishProposeC
-//}
 
 // proposing, propose a block in new height
 func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensuspb.ProposalBlock, error) {
@@ -254,28 +185,6 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	fetchBatch := bp.txPool.FetchTxBatch(height)
 	fetchLasts := utils.CurrentTimeMillisSeconds() - startFetchTick
 	bp.log.Debugf("begin proposing block[%d], fetch tx num[%d]", height, len(fetchBatch))
-
-	//startDupTick := utils.CurrentTimeMillisSeconds()
-	//checkedBatch, duplicates := bp.txDuplicateCheck(fetchBatch)
-	//dupLasts := utils.CurrentTimeMillisSeconds() - startDupTick
-	//// todo
-	//if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(checkedBatch) == 0 {
-	//	// can not propose empty block and tx batch is empty, then yield proposing.
-	//	bp.log.Debugf("no txs in tx pool, proposing block stopped")
-	//	bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
-	//	return nil
-	//}
-	//if len(duplicates) != 0 {
-	//	// Duplicate transactions put back into the txPool
-	//	bp.log.Debugf("Remove duplicate transactions count: %d", len(duplicates))
-	//	bp.txPool.RetryAndRemoveTxs(nil, duplicates)
-	//}
-	//if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(fetchBatch) == 0 {
-	//	// can not propose empty block and tx batch is empty, then yield proposing.
-	//	bp.log.Debugf("no txs in tx pool, proposing block stoped")
-	//	bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
-	//	return nil
-	//}
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
@@ -317,43 +226,6 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	return &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet}, nil
 }
 
-// txDuplicateCheck, to check if transactions that are about to proposing are double spenting.
-func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) (checked []*commonpb.Transaction,
-	duplicates []*commonpb.Transaction) {
-	if len(batch) == 0 {
-		return nil, nil
-	}
-	checked = make([]*commonpb.Transaction, 0, len(batch))
-	duplicates = make([]*commonpb.Transaction, 0, len(batch))
-
-	verifyBatches := utils.DispatchTxVerifyTask(batch)
-	workerCount := len(verifyBatches)
-	results := make([][]*commonpb.Transaction, workerCount)
-	var wg sync.WaitGroup
-	wg.Add(workerCount)
-	for i := 0; i < workerCount; i++ {
-		go func(index int, b []*commonpb.Transaction) {
-			defer wg.Done()
-			result := make([]*commonpb.Transaction, 0)
-			for _, tx := range b {
-				exist, err := bp.blockchainStore.TxExists(tx.Payload.TxId)
-				if err == nil && !exist {
-					result = append(result, tx)
-				} else {
-					// Abnormal or existing transactions
-					duplicates = append(duplicates, tx)
-				}
-			}
-			results[index] = result
-		}(i, verifyBatches[i])
-	}
-	wg.Wait()
-	for _, result := range results {
-		checked = append(checked, result...)
-	}
-	return checked, duplicates
-}
-
 // OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
 func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPoolSignal) {
 	//bp.txPoolSignalC <- txPoolSignal
@@ -364,23 +236,6 @@ func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPool
  * if node is proposer, then reset the timer, otherwise stop the timer
  */
 func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
-	//bp.log.Debugf("OnReceiveProposeStatusChange(%t)", proposeStatus)
-	//bp.statusMu.Lock()
-	//defer bp.statusMu.Unlock()
-	//if proposeStatus == bp.isSelfProposer() {
-	//	// 状态一致，忽略
-	//	return
-	//}
-	//height, _ := bp.ledgerCache.CurrentHeight()
-	//bp.proposalCache.ResetProposedAt(height + 1) // proposer status changed, reset this round proposed status
-	//bp.setIsSelfProposer(proposeStatus)
-	//if !bp.isSelfProposer() {
-	//	bp.yieldProposing() // try to yield if proposer self is proposing right now.
-	//	bp.log.Debug("current node is not proposer ")
-	//	return
-	//}
-	//bp.proposeTimer.Reset(bp.getDuration())
-	//bp.log.Debugf("current node is proposer, timeout period is %v", bp.getDuration())
 
 }
 
@@ -470,11 +325,11 @@ func (bp *BlockProposerImpl) setNotIdle() bool {
 }
 
 // isIdle, to check if proposer is idle
-func (bp *BlockProposerImpl) isIdle() bool {
-	bp.idleMu.Lock()
-	defer bp.idleMu.Unlock()
-	return bp.idle
-}
+//func (bp *BlockProposerImpl) isIdle() bool {
+//	bp.idleMu.Lock()
+//	defer bp.idleMu.Unlock()
+//	return bp.idle
+//}
 
 // setIdle, set idle status
 func (bp *BlockProposerImpl) setIdle() {
@@ -483,24 +338,24 @@ func (bp *BlockProposerImpl) setIdle() {
 	bp.idle = true
 }
 
-// setIsSelfProposer, set isProposer status of this node
-func (bp *BlockProposerImpl) setIsSelfProposer(isSelfProposer bool) {
-	bp.proposerMu.Lock()
-	defer bp.proposerMu.Unlock()
-	bp.isProposer = isSelfProposer
-	if !bp.isProposer {
-		bp.proposeTimer.Stop()
-	} else {
-		bp.proposeTimer.Reset(bp.getDuration())
-	}
-}
-
-// isSelfProposer, return if this node is consensus proposer
-func (bp *BlockProposerImpl) isSelfProposer() bool {
-	bp.proposerMu.RLock()
-	defer bp.proposerMu.RUnlock()
-	return bp.isProposer
-}
+//// setIsSelfProposer, set isProposer status of this node
+//func (bp *BlockProposerImpl) setIsSelfProposer(isSelfProposer bool) {
+//	bp.proposerMu.Lock()
+//	defer bp.proposerMu.Unlock()
+//	bp.isProposer = isSelfProposer
+//	if !bp.isProposer {
+//		bp.proposeTimer.Stop()
+//	} else {
+//		bp.proposeTimer.Reset(bp.getDuration())
+//	}
+//}
+//
+//// isSelfProposer, return if this node is consensus proposer
+//func (bp *BlockProposerImpl) isSelfProposer() bool {
+//	bp.proposerMu.RLock()
+//	defer bp.proposerMu.RUnlock()
+//	return bp.isProposer
+//}
 
 /*
  * shouldProposeByMaxBFT, check if node should propose new block
