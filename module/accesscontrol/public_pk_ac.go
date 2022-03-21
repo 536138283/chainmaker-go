@@ -346,6 +346,13 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 		syscontract.CertManageFunction_CERTS_REVOKE.String(), pubPolicyForbidden)
 
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		syscontract.CertManageFunction_CERT_ALIAS_ADD.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(), pubPolicyForbidden)
+
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 		syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), pubPolicyForbidden)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
@@ -467,6 +474,13 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 		syscontract.CertManageFunction_CERTS_REVOKE.String(), pubPolicyForbidden)
 
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		syscontract.CertManageFunction_CERT_ALIAS_ADD.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(), pubPolicyForbidden)
+
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 		syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), pubPolicyForbidden)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
@@ -509,12 +523,17 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractQueryFunction_GET_DISABLED_CONTRACT_LIST.String(), pubPolicyForbidden)
 
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_GRANT_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), pubPolicyForbidden)
+	// disable gas related native contract
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyForbidden)
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyForbidden)
 
 	// for admin management
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+

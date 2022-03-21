@@ -270,8 +270,10 @@ func (bc *Blockchain) initOldStore() (err error) {
 		config.ResultDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	config.HistoryDbConfig.LevelDbConfig["store_path"] =
 		config.HistoryDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	config.TxExistDbConfig.LevelDbConfig["store_path"] =
-		config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
+	if config.TxExistDbConfig != nil {
+		config.TxExistDbConfig.LevelDbConfig["store_path"] =
+			config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
+	}
 	if err != nil {
 		return err
 	}
@@ -337,6 +339,11 @@ func (bc *Blockchain) initChainConf() (err error) {
 
 	if authType != localAuthType {
 		return fmt.Errorf("auth type of chain config mismatch the local config")
+	}
+
+	protocol.ParametersValueMaxLength = bc.chainConf.ChainConfig().Block.TxParameterSize * 1024 * 1024
+	if bc.chainConf.ChainConfig().Block.TxParameterSize <= 0 {
+		protocol.ParametersValueMaxLength = protocol.DefaultParametersValueMaxSize * 1024 * 1024
 	}
 
 	bc.chainNodeList, err = bc.chainConf.GetConsensusNodeIdList()
@@ -679,6 +686,7 @@ func (bc *Blockchain) initCore() (err error) {
 		VmMgr:           bc.vmMgr,
 		ProposalCache:   bc.proposalCache,
 		Subscriber:      bc.eventSubscriber,
+		NetService:      bc.netService,
 	}
 
 	coreEngineFactory := core.Factory()

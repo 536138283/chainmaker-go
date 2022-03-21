@@ -4,14 +4,14 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-pid=`ps -ef | grep chainmaker | grep "ci-sql-tbft" | grep -v grep |  awk  '{print $2}'`
+pid=`ps -ef | grep chainmaker | grep "ci-" | grep -v grep |  awk  '{print $2}'`
 if test -z "$pid";  then
   echo "no process to kill"
 else
   for p in $pid
   do
-      kill $p
-      echo "kill $p"
+      kill -9 $p
+      echo "kill -9 $p"
   done
 #  ps -ef|grep chainmaker | grep "ci-sql-tbft"
 fi
