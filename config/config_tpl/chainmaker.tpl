@@ -119,6 +119,12 @@ net:
     # TLS Certificate file path.
     cert_file: ../config/{org_path}/certs/{net_cert_path}.crt
 
+    # TLS enc private key file path. (only for gmtls1.1)
+    priv_enc_key_file: ../config/{org_path}/certs/{net_cert_path}.enc.key
+
+    # TLS enc Certificate file path.
+    cert_enc_file: ../config/{org_path}/certs/{net_cert_path}.enc.crt
+
   # The blacklist is automatically block the listed seed to connect.
   # blacklist:
       # The addresses in blacklist.
@@ -132,20 +138,32 @@ net:
       #   - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
 
 # Transaction pool settings
-# Other txpool settings can be found in tx_Pool_config.go
+# Other tx_pool settings can be found in tx_Pool_config.go
 txpool:
-  # txpool type, can be signle or batch.
-  # By default the txpool type is single.
+  # tx_pool type, can be single, normal, batch.
+  # By default the tx_pool type is single.
   pool_type: "single"
 
-  # Max transaction count in txpool.
-  # If txpool is full, the following transactions will be discarded.
+  # Max common transaction count in tx_pool.
+  # If tx_pool is full, the following transactions will be discarded.
   max_txpool_size: 50000
 
-  # Max config transaction count in config txpool.
+  # Max config transaction count in tx_pool.
   max_config_txpool_size: 10
 
-  # Interval of creating a transaction batch, only for batch txpool, in millisecond.
+  # Interval of clear overdue transaction in queue, in second.
+  # It is valid, only block.tx_timestamp_verify is true in bc.yml
+  # It should be greater than or equal to block.tx_timeout
+  clear_overdue_tx_timeout: 600
+
+  # Whether dump config and common transactions in queue when stop node,
+  # and replay transactions when restart node.
+  is_dump_txs_in_queue: true
+
+  # Common transaction queue num, only for normal tx_pool.
+  # common_queue_num: 10
+
+  # Interval of creating a transaction batch, only for batch tx_pool, in millisecond.
   # batch_create_timeout: 200
 
 # RPC service setting
@@ -203,6 +221,12 @@ rpc:
 
     # RPC TLS public key file path
     cert_file:      ../config/{org_path}/certs/{rpc_cert_path}.crt
+
+    # RPC enc TLS private key file path (only for gmtls1.1)
+    priv_enc_key_file:  ../config/{org_path}/certs/{rpc_cert_path}.enc.key
+
+    # RPC enc TLS public key file path
+    cert_enc_file:      ../config/{org_path}/certs/{rpc_cert_path}.enc.crt
 
   # RPC blacklisted ip addresses
   blacklist:
@@ -395,11 +419,11 @@ vm:
   # Unix domain socket open, used for chainmaker and docker manager communication
   uds_open: true
   # Number of user Ids
-  user_num: 100
+  user_num: 1000
   # Timeout per transaction, Unit: second
   time_limit: 8
   # Max process for contract
-  max_concurrency: 50
+  max_concurrency: 500
   # Grpc max send message size, Default size is 4, Unit: MB
   max_send_msg_size: 10
   # Grpc max receive message size, Default size is 4, Unit: MB

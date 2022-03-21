@@ -255,9 +255,9 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	fetchLasts := utils.CurrentTimeMillisSeconds() - startFetchTick
 	bp.log.Debugf("begin proposing block[%d], fetch tx num[%d]", height, len(fetchBatch))
 
-	startDupTick := utils.CurrentTimeMillisSeconds()
-	checkedBatch, duplicates := bp.txDuplicateCheck(fetchBatch)
-	dupLasts := utils.CurrentTimeMillisSeconds() - startDupTick
+	//startDupTick := utils.CurrentTimeMillisSeconds()
+	//checkedBatch, duplicates := bp.txDuplicateCheck(fetchBatch)
+	//dupLasts := utils.CurrentTimeMillisSeconds() - startDupTick
 	//// todo
 	//if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(checkedBatch) == 0 {
 	//	// can not propose empty block and tx batch is empty, then yield proposing.
@@ -265,30 +265,36 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	//	bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
 	//	return nil
 	//}
-	if len(duplicates) != 0 {
-		// Duplicate transactions put back into the txPool
-		bp.log.Debugf("Remove duplicate transactions count: %d", len(duplicates))
-		bp.txPool.RetryAndRemoveTxs(nil, duplicates)
-	}
+	//if len(duplicates) != 0 {
+	//	// Duplicate transactions put back into the txPool
+	//	bp.log.Debugf("Remove duplicate transactions count: %d", len(duplicates))
+	//	bp.txPool.RetryAndRemoveTxs(nil, duplicates)
+	//}
+	//if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(fetchBatch) == 0 {
+	//	// can not propose empty block and tx batch is empty, then yield proposing.
+	//	bp.log.Debugf("no txs in tx pool, proposing block stoped")
+	//	bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
+	//	return nil
+	//}
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
-	if len(checkedBatch) > txCapacity {
+	if len(fetchBatch) > txCapacity {
 		// check if checkedBatch > txCapacity, if so, strict block tx count according to  config,
 		// and put other txs back to txpool.
-		txRetry := checkedBatch[txCapacity:]
-		checkedBatch = checkedBatch[:txCapacity]
+		txRetry := fetchBatch[txCapacity:]
+		fetchBatch = fetchBatch[:txCapacity]
 		bp.txPool.RetryAndRemoveTxs(txRetry, nil)
-		bp.log.Warnf("txbatch oversize expect <= %d, got %d", txCapacity, len(checkedBatch))
+		bp.log.Warnf("txbatch oversize expect <= %d, got %d", txCapacity, len(fetchBatch))
 	}
 
-	block, timeLasts, err := bp.generateNewBlock(height, preHash, checkedBatch)
+	block, timeLasts, err := bp.generateNewBlock(height, preHash, fetchBatch)
 	if err != nil {
 		bp.log.Warnf("generate new block failed, %s", err.Error())
 		// rollback sql
 		if sqlErr := bp.storeHelper.RollBack(block, bp.blockchainStore); sqlErr != nil {
 			bp.log.Errorf("block [%d] rollback sql failed: %s", height, sqlErr)
 		}
-		bp.txPool.RetryAndRemoveTxs(checkedBatch, nil) // put txs back to txpool
+		bp.txPool.RetryAndRemoveTxs(fetchBatch, nil) // put txs back to txpool
 		return nil, err
 	}
 	_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(block)
@@ -302,16 +308,16 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet})
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d,dup:%d, begin DB transaction:%v, "+
+	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d, begin DB transaction:%v, "+
 		"new snapshot:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
-		fetchLasts, dupLasts, timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
+		fetchLasts, timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)
 	}
 	return &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet}, nil
 }
 
-// txDuplicateCheck, to check if transactions that are about to proposing are double spending.
+// txDuplicateCheck, to check if transactions that are about to proposing are double spenting.
 func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) (checked []*commonpb.Transaction,
 	duplicates []*commonpb.Transaction) {
 	if len(batch) == 0 {

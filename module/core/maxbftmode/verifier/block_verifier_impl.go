@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
-	"encoding/hex"
 	"fmt"
 	"sync"
 
@@ -47,6 +46,7 @@ type BlockVerifierImpl struct {
 	storeHelper    conf.StoreHelper
 
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
+	netService            protocol.NetService
 }
 
 type BlockVerifierConfig struct {
@@ -62,6 +62,7 @@ type BlockVerifierConfig struct {
 	TxPool          protocol.TxPool
 	VmMgr           protocol.VmManager
 	StoreHelper     conf.StoreHelper
+	NetService      protocol.NetService
 }
 
 func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol.BlockVerifier, error) {
@@ -81,6 +82,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		log:           log,
 		txPool:        config.TxPool,
 		storeHelper:   config.StoreHelper,
+		netService:    config.NetService,
 	}
 
 	conf := &common.VerifierBlockConf{
@@ -151,15 +153,6 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 				)
 				return nil
 			}
-			cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
-			if len(cutBlocks) > 0 {
-				v.log.Infof(
-					"cut block block hash: %s, height: %v",
-					hex.EncodeToString(lastBlock.Header.BlockHash),
-					lastBlock.Header.BlockHeight,
-				)
-				v.cutBlocks(cutBlocks, lastBlock)
-			}
 			err = v.proposalCache.SetProposedBlock(
 				block, txRwSet, eventMap, v.proposalCache.IsProposedAt(block.Header.BlockHeight))
 			return err
@@ -173,7 +166,11 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.log)
+	proposerId, err := common.GetProposerId(v.ac, v.netService, block.Header.Proposer)
+	if err != nil {
+		return err
+	}
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, proposerId, v.log)
 	if err != nil {
 		return err
 	}
@@ -275,7 +272,12 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.log)
+	proposerId, err := common.GetProposerId(v.ac, v.netService, block.Header.Proposer)
+	if err != nil {
+		return err
+	}
+
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, proposerId, v.log)
 	if err != nil {
 		return err
 	}
@@ -407,15 +409,6 @@ func (v *BlockVerifierImpl) checkPreBlock_MAXBFT(block *commonpb.Block, lastBloc
 		}
 	}
 
-	// remove unconfirmed block from proposal cache and txpool
-	cutBlocks := v.proposalCache.KeepProposedBlock(lastBlockHash, lastBlock.Header.BlockHeight)
-	if len(cutBlocks) > 0 {
-		cutTxs := make([]*commonpb.Transaction, 0)
-		for _, cutBlock := range cutBlocks {
-			cutTxs = append(cutTxs, cutBlock.Txs...)
-		}
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
-	}
 	return nil
 }
 
@@ -437,26 +430,4 @@ func parseVerifyResult(block *commonpb.Block, isValid bool,
 		verifyResult.Code = consensuspb.VerifyResult_FAIL
 	}
 	return verifyResult
-}
-
-func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
-	cutTxs := make([]*commonpb.Transaction, 0)
-	txMap := make(map[string]interface{})
-	for _, tx := range blockToKeep.Txs {
-		txMap[tx.Payload.TxId] = struct{}{}
-	}
-	for _, blockToCut := range blocksToCut {
-		v.log.Infof("cut block block hash: %s, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
-		for _, txToCut := range blockToCut.Txs {
-			if _, ok := txMap[txToCut.Payload.TxId]; ok {
-				// this transaction is kept, do NOT cut it.
-				continue
-			}
-			v.log.Debugf("cut tx hash: %s", txToCut.Payload.TxId)
-			cutTxs = append(cutTxs, txToCut)
-		}
-	}
-	if len(cutTxs) > 0 {
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
-	}
 }

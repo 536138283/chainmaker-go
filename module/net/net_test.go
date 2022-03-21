@@ -61,7 +61,7 @@ func TestNet(t *testing.T) {
 		protocol.Libp2p,
 		WithReadySignalC(readyC),
 		WithListenAddr("/ip4/127.0.0.1/tcp/6666"),
-		WithCrypto(false, key1Path, cert1Path),
+		WithCrypto(false, key1Path, cert1Path, "", ""),
 	)
 	require.Nil(t, err)
 	//a.AddSeed("/ip4/127.0.0.1/tcp/7777/p2p/QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH")
@@ -80,7 +80,7 @@ func TestNet(t *testing.T) {
 		protocol.Libp2p,
 		WithReadySignalC(readyC),
 		WithListenAddr("/ip4/127.0.0.1/tcp/7777"),
-		WithCrypto(false, key2Path, cert2Path),
+		WithCrypto(false, key2Path, cert2Path, "", ""),
 	)
 	require.Nil(t, err)
 	err = b.AddSeed("/ip4/127.0.0.1/tcp/6666/p2p/" + pid1)

@@ -681,6 +681,7 @@ func (bc *Blockchain) initCore() (err error) {
 		VmMgr:           bc.vmMgr,
 		ProposalCache:   bc.proposalCache,
 		Subscriber:      bc.eventSubscriber,
+		NetService:      bc.netService,
 	}
 
 	coreEngineFactory := core.Factory()

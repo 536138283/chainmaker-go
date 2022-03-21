@@ -10,9 +10,9 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"strings"
 	"sync"
-	"time"
+
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -25,7 +25,6 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -1072,17 +1071,30 @@ func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 }
 
 func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {
-	value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]
-	if ok {
-		txPoolType, _ := value.(string)
-		txPoolType = strings.ToUpper(txPoolType)
+	consensusTurboConfig := chainConf.ChainConfig().Core.ConsensusTurboConfig
+	if consensusTurboConfig != nil && consensusTurboConfig.ConsensusMessageTurbo {
+		return true
+	}
+	return false
+}
 
-		if chainConf.ChainConfig().Core.ConsensusTurboConfig.ConsensusMessageTurbo && txPoolType == batch.TxPoolType {
-			return true
-		}
+func GetProposerId(
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
+	proposer *accesscontrol.Member) (string, error) {
+
+	member, err := ac.NewMember(proposer)
+	if err != nil {
+		return "", err
 	}
 
-	return false
+	certId := member.GetMemberId()
+	proposerId, err := netService.GetNodeUidByCertId(certId)
+	if err != nil {
+		return "", err
+	}
+
+	return proposerId, nil
 }
 
 func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
@@ -1111,7 +1123,9 @@ func RecoverBlock(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,
 	chainConf protocol.ChainConf,
-	txPool protocol.TxPool, logger protocol.Logger) (*commonPb.Block, error) {
+	txPool protocol.TxPool,
+	proposerId string,
+	logger protocol.Logger) (*commonPb.Block, error) {
 
 	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode {
 		newBlock := &commonPb.Block{
@@ -1122,22 +1136,12 @@ func RecoverBlock(
 		}
 
 		txIds := utils.GetTxIds(block.Txs)
-		txsMap := make(map[string]*commonPb.Transaction)
 		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
 		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
-		for i := uint64(0); i < maxRetryTime; i++ {
-			txsMap, _ = txPool.GetTxsByTxIds(txIds)
-			if len(txsMap) == len(block.Txs) {
-				break
-			}
-			logger.Debugf("txs map is not map with tx count,height[%d],map[%d],txcount[%d],retry[%d]",
-				block.Header.BlockHeight, len(txsMap), block.Header.TxCount, i+1)
-			if i+1 == maxRetryTime {
-				logger.Debugf("get txs by branchId fail,height[%d],map[%d],txcount[%d]",
-					block.Header.BlockHeight, len(txsMap), block.Header.TxCount)
-				return nil, fmt.Errorf("block[%d] verify time out error", block.Header.BlockHeight)
-			}
-			time.Sleep(time.Millisecond * time.Duration(retryInterval))
+
+		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
+		if err != nil {
+			return nil, err
 		}
 
 		for i := range block.Txs {

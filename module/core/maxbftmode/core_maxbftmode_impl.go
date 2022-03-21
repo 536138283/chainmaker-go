@@ -95,6 +95,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		TxPool:          cf.TxPool,
 		VmMgr:           cf.VmMgr,
 		StoreHelper:     cf.StoreHelper,
+		NetService:      cf.NetService,
 	}
 	core.BlockVerifier, err = verifier.NewBlockVerifier(verifierConfig, cf.Log)
 	if err != nil {
