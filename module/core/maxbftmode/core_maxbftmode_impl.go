@@ -15,7 +15,6 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -140,23 +139,23 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	// 5. receive build proposal signal from maxbft consensus
 
 	switch message.Topic {
-	case msgbus.VerifyBlock:
-		go func() {
-			if block, ok := message.Payload.(*commonpb.Block); ok {
-				c.BlockVerifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY) //nolint: errcheck
-			}
-		}()
-	case msgbus.CommitBlock:
-		go func() {
-			if block, ok := message.Payload.(*commonpb.Block); ok {
-				if err := c.BlockCommitter.AddBlock(block); err != nil {
-					c.log.Warnf("put block(%d,%x) error %s",
-						block.Header.BlockHeight,
-						block.Header.BlockHash,
-						err.Error())
-				}
-			}
-		}()
+	//case msgbus.VerifyBlock:
+	//	go func() {
+	//		if block, ok := message.Payload.(*commonpb.Block); ok {
+	//			c.BlockVerifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY) //nolint: errcheck
+	//		}
+	//	}()
+	//case msgbus.CommitBlock:
+	//	go func() {
+	//		if block, ok := message.Payload.(*commonpb.Block); ok {
+	//			if err := c.BlockCommitter.AddBlock(block); err != nil {
+	//				c.log.Warnf("put block(%d,%x) error %s",
+	//					block.Header.BlockHeight,
+	//					block.Header.BlockHash,
+	//					err.Error())
+	//			}
+	//		}
+	//	}()
 	case msgbus.BuildProposal:
 		if proposal, ok := message.Payload.(*maxbft.BuildProposal); ok {
 			c.blockProposer.OnReceiveMaxBFTProposal(proposal)
@@ -166,10 +165,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 
 // Start, initialize core engine
 func (c *CoreEngine) Start() {
-	c.msgBus.Register(msgbus.ProposeState, c)
-	c.msgBus.Register(msgbus.VerifyBlock, c)
-	c.msgBus.Register(msgbus.CommitBlock, c)
-	c.msgBus.Register(msgbus.TxPoolSignal, c)
+	//c.msgBus.Register(msgbus.ProposeState, c)
+	//c.msgBus.Register(msgbus.VerifyBlock, c)
+	//c.msgBus.Register(msgbus.CommitBlock, c)
+	//c.msgBus.Register(msgbus.TxPoolSignal, c)
 	c.msgBus.Register(msgbus.BuildProposal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }

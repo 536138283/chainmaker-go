@@ -16,7 +16,7 @@ require (
 	chainmaker.org/chainmaker/net-common v1.0.2-0.20220120084355-9be05b200365
 	chainmaker.org/chainmaker/net-libp2p v1.0.2-0.20220310062754-bdea9e49c59f
 	chainmaker.org/chainmaker/net-liquid v1.0.2-0.20220301062552-8f1eaa32296b
-	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20220311064601-f5b3c043d8ca
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220318024142-2b69f6c4c706
 	chainmaker.org/chainmaker/protocol/v2 v2.1.2-0.20220310084809-43685565fb18
 	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20220311061031-fa942fcaf8a1
 	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220315021427-b6d7d4084f2a
@@ -71,6 +71,7 @@ require (
 )
 
 replace (
+	chainmaker.org/chainmaker/protocol/v2 => ../protocol
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v0.0.2
 	github.com/spf13/afero => github.com/spf13/afero v1.5.1 //for go1.15 build
 	github.com/spf13/viper => github.com/spf13/viper v1.7.1 //for go1.15 build

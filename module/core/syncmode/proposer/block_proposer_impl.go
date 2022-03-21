@@ -583,3 +583,7 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte
 	}
 	return b != nil
 }
+
+func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
+	return nil, nil
+}

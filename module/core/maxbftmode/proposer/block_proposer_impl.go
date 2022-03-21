@@ -8,6 +8,7 @@ package proposer
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"time"
 
@@ -151,7 +152,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 func (bp *BlockProposerImpl) Start() error {
 	defer bp.log.Info("block proposer starts")
 
-	go bp.startProposingLoop()
+	//go bp.startProposingLoop()
 
 	return nil
 }
@@ -164,95 +165,74 @@ func (bp *BlockProposerImpl) Stop() error {
 }
 
 // Start, start proposing loop
-func (bp *BlockProposerImpl) startProposingLoop() {
-	for {
-		select {
-		case <-bp.proposeTimer.C:
-			if !bp.isSelfProposer() {
-				break
-			}
-			go bp.proposeBlock()
+//func (bp *BlockProposerImpl) startProposingLoop() {
+//	for {
+//		select {
+//		case <-bp.proposeTimer.C:
+//			if !bp.isSelfProposer() {
+//				break
+//			}
+//			go bp.proposeBlock()
+//
+//		//case signal := <-bp.txPoolSignalC:
+//		//	if !bp.isSelfProposer() {
+//		//		break
+//		//	}
+//		//	if signal.SignalType != txpoolpb.SignalType_BLOCK_PROPOSE {
+//		//		break
+//		//	}
+//		//	go bp.proposeBlock()
+//
+//		case <-bp.exitC:
+//			bp.proposeTimer.Stop()
+//			bp.log.Info("block proposer loop stopped")
+//			return
+//		}
+//	}
+//}
 
-		case signal := <-bp.txPoolSignalC:
-			if !bp.isSelfProposer() {
-				break
-			}
-			if signal.SignalType != txpoolpb.SignalType_BLOCK_PROPOSE {
-				break
-			}
-			go bp.proposeBlock()
-
-		case <-bp.exitC:
-			bp.proposeTimer.Stop()
-			bp.log.Info("block proposer loop stopped")
-			return
-		}
-	}
-}
-
-/*
- * shouldProposeByBFT, check if node should propose new block
- * Only for *BFT consensus
- * if node is proposer, and node is not propose right now, and last proposed block is committed, then return true
- */
-func (bp *BlockProposerImpl) shouldProposeByBFT(height uint64) bool {
-	if !bp.isIdle() {
-		// concurrent control, proposer is proposing now
-		bp.log.Debugf("proposer is busy, not propose [%d] ", height)
-		return false
-	}
-	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
-	if committedBlock == nil {
-		bp.log.Errorf("no committed block found")
-		return false
-	}
-	currentHeight := committedBlock.Header.BlockHeight
-	// proposing height must higher than current height
-	return currentHeight+1 == height
-}
-
-// proposeBlock, to check if proposer can propose block right now
-// if so, start proposing
-func (bp *BlockProposerImpl) proposeBlock() {
-	defer func() {
-		if bp.isSelfProposer() {
-			bp.proposeTimer.Reset(bp.getDuration())
-		}
-	}()
-	lastBlock := bp.ledgerCache.GetLastCommittedBlock()
-	if lastBlock == nil {
-		bp.log.Errorf("no committed block found")
-		return
-	}
-
-	proposingHeight := lastBlock.Header.BlockHeight + 1
-	//if !bp.shouldProposeByBFT(proposingHeight) {
-	//	return
-	//}
-	if !bp.isIdle() {
-		// concurrent control, proposer is proposing now
-		bp.log.Debugf("proposer is busy, not propose [%d] ", proposingHeight)
-		return
-	}
-	if !bp.setNotIdle() {
-		bp.log.Infof("concurrent propose block [%d], yield!", proposingHeight)
-		return
-	}
-	defer bp.setIdle()
-
-	go bp.proposing(proposingHeight, lastBlock.Header.BlockHash)
-	// #DEBUG MODE#
-	if localconf.ChainMakerConfig.DebugConfig.IsHaltPropose {
-		go func() {
-			bp.OnReceiveYieldProposeSignal(true)
-		}()
-	}
-
-	<-bp.finishProposeC
-}
+//// proposeBlock, to check if proposer can propose block right now
+//// if so, start proposing
+//func (bp *BlockProposerImpl) proposeBlock() {
+//	defer func() {
+//		if bp.isSelfProposer() {
+//			bp.proposeTimer.Reset(bp.getDuration())
+//		}
+//	}()
+//	lastBlock := bp.ledgerCache.GetLastCommittedBlock()
+//	if lastBlock == nil {
+//		bp.log.Errorf("no committed block found")
+//		return
+//	}
+//
+//	proposingHeight := lastBlock.Header.BlockHeight + 1
+//	//if !bp.shouldProposeByBFT(proposingHeight) {
+//	//	return
+//	//}
+//	if !bp.isIdle() {
+//		// concurrent control, proposer is proposing now
+//		bp.log.Debugf("proposer is busy, not propose [%d] ", proposingHeight)
+//		return
+//	}
+//	if !bp.setNotIdle() {
+//		bp.log.Infof("concurrent propose block [%d], yield!", proposingHeight)
+//		return
+//	}
+//	defer bp.setIdle()
+//
+//	go bp.proposing(proposingHeight, lastBlock.Header.BlockHash)
+//	// #DEBUG MODE#
+//	if localconf.ChainMakerConfig.DebugConfig.IsHaltPropose {
+//		go func() {
+//			bp.OnReceiveYieldProposeSignal(true)
+//		}()
+//	}
+//
+//	<-bp.finishProposeC
+//}
 
 // proposing, propose a block in new height
-func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.Block {
+func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensuspb.ProposalBlock, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
 
@@ -278,12 +258,13 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	startDupTick := utils.CurrentTimeMillisSeconds()
 	checkedBatch, duplicates := bp.txDuplicateCheck(fetchBatch)
 	dupLasts := utils.CurrentTimeMillisSeconds() - startDupTick
-	if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(checkedBatch) == 0 {
-		// can not propose empty block and tx batch is empty, then yield proposing.
-		bp.log.Debugf("no txs in tx pool, proposing block stopped")
-		bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
-		return nil
-	}
+	//// todo
+	//if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(checkedBatch) == 0 {
+	//	// can not propose empty block and tx batch is empty, then yield proposing.
+	//	bp.log.Debugf("no txs in tx pool, proposing block stopped")
+	//	bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
+	//	return nil
+	//}
 	if len(duplicates) != 0 {
 		// Duplicate transactions put back into the txPool
 		bp.log.Debugf("Remove duplicate transactions count: %d", len(duplicates))
@@ -308,7 +289,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 			bp.log.Errorf("block [%d] rollback sql failed: %s", height, sqlErr)
 		}
 		bp.txPool.RetryAndRemoveTxs(checkedBatch, nil) // put txs back to txpool
-		return nil
+		return nil, err
 	}
 	_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(block)
 
@@ -327,7 +308,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)
 	}
-	return block
+	return &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet}, nil
 }
 
 // txDuplicateCheck, to check if transactions that are about to proposing are double spending.
@@ -369,7 +350,7 @@ func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) (ch
 
 // OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
 func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPoolSignal) {
-	bp.txPoolSignalC <- txPoolSignal
+	//bp.txPoolSignalC <- txPoolSignal
 }
 
 /*
@@ -377,23 +358,23 @@ func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPool
  * if node is proposer, then reset the timer, otherwise stop the timer
  */
 func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
-	bp.log.Debugf("OnReceiveProposeStatusChange(%t)", proposeStatus)
-	bp.statusMu.Lock()
-	defer bp.statusMu.Unlock()
-	if proposeStatus == bp.isSelfProposer() {
-		// 状态一致，忽略
-		return
-	}
-	height, _ := bp.ledgerCache.CurrentHeight()
-	bp.proposalCache.ResetProposedAt(height + 1) // proposer status changed, reset this round proposed status
-	bp.setIsSelfProposer(proposeStatus)
-	if !bp.isSelfProposer() {
-		bp.yieldProposing() // try to yield if proposer self is proposing right now.
-		bp.log.Debug("current node is not proposer ")
-		return
-	}
-	bp.proposeTimer.Reset(bp.getDuration())
-	bp.log.Debugf("current node is proposer, timeout period is %v", bp.getDuration())
+	//bp.log.Debugf("OnReceiveProposeStatusChange(%t)", proposeStatus)
+	//bp.statusMu.Lock()
+	//defer bp.statusMu.Unlock()
+	//if proposeStatus == bp.isSelfProposer() {
+	//	// 状态一致，忽略
+	//	return
+	//}
+	//height, _ := bp.ledgerCache.CurrentHeight()
+	//bp.proposalCache.ResetProposedAt(height + 1) // proposer status changed, reset this round proposed status
+	//bp.setIsSelfProposer(proposeStatus)
+	//if !bp.isSelfProposer() {
+	//	bp.yieldProposing() // try to yield if proposer self is proposing right now.
+	//	bp.log.Debug("current node is not proposer ")
+	//	return
+	//}
+	//bp.proposeTimer.Reset(bp.getDuration())
+	//bp.log.Debugf("current node is proposer, timeout period is %v", bp.getDuration())
 
 }
 
@@ -547,4 +528,62 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte
 		bp.log.Errorf("not find preBlock: [%d:%x]", height-1, preHash)
 	}
 	return b != nil
+}
+
+func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
+
+	height := proposal.Height
+	preHash := proposal.PreHash
+	if ok,err := bp.shouldProposeByMaxBFTSync(height, preHash); !ok {
+		bp.log.Errorf("not a legal proposal request [%d](%x), err: %v", height, preHash, err)
+		return nil, err
+	}
+
+	//todo view
+
+	bp.log.Infof("trigger proposal from maxBFT, height[%d]",height)
+	proposalBlock, err := bp.proposing(height, preHash)
+	if err != nil {
+		return nil, err
+	}
+
+	<-bp.finishProposeC
+
+	return proposalBlock, nil
+}
+
+/*
+ * shouldProposeByMaxBFT, check if node should propose new block
+ * Only for maxbft consensus
+ */
+func (bp *BlockProposerImpl) shouldProposeByMaxBFTSync(height uint64, preHash []byte) (bool, error) {
+	var err error
+	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
+	if committedBlock == nil {
+		err = fmt.Errorf("no committed block found")
+		return false, err
+	}
+	currentHeight := committedBlock.Header.BlockHeight
+	// proposing height must higher than current height
+	if currentHeight >= height {
+		err = fmt.Errorf("current commit block height: %d, propose height: %d", currentHeight, height)
+		return false, err
+	}
+	if height == currentHeight+1 {
+		// height follows the last committed block
+		if bytes.Equal(committedBlock.Header.BlockHash, preHash) {
+			return true, nil
+		}
+		err = fmt.Errorf("block pre hash error, expect %x, got %x, can not propose",
+			committedBlock.Header.BlockHash, preHash)
+		return false, err
+
+	}
+	// if height not follows the last committed block, then check last proposed block
+	b, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(preHash, height-1)
+	if b == nil {
+		err = fmt.Errorf("not find preBlock: [%d:%x]", height-1, preHash)
+		return false, err
+	}
+	return true, nil
 }
