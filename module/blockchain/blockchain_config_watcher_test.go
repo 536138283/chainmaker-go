@@ -5,18 +5,14 @@
 */
 package blockchain
 
-import (
-	"testing"
-)
-
-func TestModule(t *testing.T) {
-	t.Log("TestModule")
-	blockChainList := createBlockChain(t)
-
-	for _, blockChain := range blockChainList {
-		t.Log(blockChain.Module())
-	}
-}
+//func TestModule(t *testing.T) {
+//	t.Log("TestModule")
+//	blockChainList := createBlockChain(t)
+//
+//	for _, blockChain := range blockChainList {
+//		t.Log(blockChain.Module())
+//	}
+//}
 
 // TODO
 /*func TestWatch(t *testing.T) {

@@ -43,14 +43,14 @@ func (cp *certACProvider) OnQuit() {
 }
 
 func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
-	dataStr := msg.Payload.([]string)
+	dataStr, _ := msg.Payload.([]string)
 	dataBytes, err := hex.DecodeString(dataStr[0])
 	if err != nil {
 		cp.acService.log.Error(err)
 		return
 	}
 	chainConfig := &config.ChainConfig{}
-	proto.Unmarshal(dataBytes, chainConfig)
+	_ = proto.Unmarshal(dataBytes, chainConfig)
 
 	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
 	err = cp.initTrustRootsForUpdatingChainConfig(chainConfig, cp.localOrg.id)
@@ -74,7 +74,7 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 }
 
 func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
-	data := msg.Payload.([]string)
+	data, _ := msg.Payload.([]string)
 	certs := data[0]
 
 	certList := strings.Replace(certs, ",", "\n", -1)
@@ -88,7 +88,7 @@ func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
 
 func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 	// full or hash cert
-	data := msg.Payload.([]string)
+	data, _ := msg.Payload.([]string)
 	certs := data[0]
 	// TODO bug fix hash unfreeze @henry
 	// maybe not exist
@@ -170,5 +170,4 @@ func (cp *certACProvider) onMessageCertAliasUpdate(msg *msgbus.Message) {
 		cp.acService.log.Infof("remove alias from certcache: %s", string(name))
 		cp.certCache.Remove(string(name))
 	}
-	return nil
 }

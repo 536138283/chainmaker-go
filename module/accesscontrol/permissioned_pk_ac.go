@@ -56,7 +56,8 @@ type consensusMemberModel struct {
 }
 
 func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
+	protocol.AccessControlProvider, error) {
 	pPkACProvider, err := newPermissionedPkACProvider(chainConf.ChainConfig(), localOrgId, store, log)
 	if err != nil {
 		return nil, err
@@ -200,7 +201,8 @@ func (pp *permissionedPkACProvider) initConsensusMember(consensusConf []*config.
 //	}
 //}
 //
-//func (pp *permissionedPkACProvider) systemContractCallbackPublicKeyManagementDeleteCase(payload *common.Payload) error {
+//func (pp *permissionedPkACProvider) systemContractCallbackPublicKeyManagementDeleteCase(
+//payload *common.Payload) error {
 //	for _, param := range payload.Parameters {
 //		if param.Key == PUBLIC_KEYS {
 //			pk, err := asym.PublicKeyFromPEM(param.Value)

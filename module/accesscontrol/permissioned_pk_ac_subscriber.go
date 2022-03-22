@@ -29,14 +29,14 @@ func (pp *permissionedPkACProvider) OnQuit() {
 }
 
 func (pp *permissionedPkACProvider) onMessageChainConfig(msg *msgbus.Message) {
-	dataStr := msg.Payload.([]string)
+	dataStr, _ := msg.Payload.([]string)
 	dataBytes, err := hex.DecodeString(dataStr[0])
 	if err != nil {
 		pp.acService.log.Error(err)
 		return
 	}
 	chainConfig := &config.ChainConfig{}
-	proto.Unmarshal(dataBytes, chainConfig)
+	_ = proto.Unmarshal(dataBytes, chainConfig)
 
 	pp.acService.hashType = chainConfig.GetCrypto().GetHash()
 
@@ -58,7 +58,7 @@ func (pp *permissionedPkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 }
 
 func (pp *permissionedPkACProvider) onMessagePublishKeyManageDelete(msg *msgbus.Message) {
-	data := msg.Payload.([]string)
+	data, _ := msg.Payload.([]string)
 	publishKey := data[1]
 
 	pk, err := asym.PublicKeyFromPEM([]byte(publishKey))

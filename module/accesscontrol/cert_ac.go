@@ -15,7 +15,6 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -63,7 +62,8 @@ var _ protocol.AccessControlProvider = (*certACProvider)(nil)
 var NilCertACProvider ACProvider = (*certACProvider)(nil)
 
 func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
+	protocol.AccessControlProvider, error) {
 	certACProvider, err := newCertACProvider(chainConf.ChainConfig(), localOrgId, store, log)
 	if err != nil {
 		return nil, err
@@ -473,90 +473,90 @@ func (cp *certACProvider) checkCertFrozenList(certChain []*bcx509.Certificate) e
 //	}
 //	return nil
 //}
-
-func (cp *certACProvider) systemContractCallbackCertManagementCertRevokeCase(payload *common.Payload) error {
-	for _, param := range payload.Parameters {
-		if param.Key == "cert_crl" {
-			crl := strings.Replace(string(param.Value), ",", "\n", -1)
-			crls, err := cp.ValidateCRL([]byte(crl))
-			if err != nil {
-				return fmt.Errorf("update CRL failed, invalid CRLS: %v", err)
-			}
-			for _, crl := range crls {
-				aki, _, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
-				if err != nil {
-					return fmt.Errorf("update CRL failed: %v", err)
-				}
-				cp.crl.Store(string(aki), crl)
-			}
-			return nil
-		}
-	}
-	return nil
-}
-
-func (cp *certACProvider) systemContractCallbackCertManagementCertsDeleteCase(payload *common.Payload) error {
-	cp.acService.log.Debugf("callback for certsdelete")
-	for _, param := range payload.Parameters {
-		if param.Key == PARAM_CERTHASHES {
-			certHashStr := strings.TrimSpace(string(param.Value))
-			certHashes := strings.Split(certHashStr, ",")
-			for _, hash := range certHashes {
-				cp.acService.log.Debugf("certHashes in certsdelete = [%s]", hash)
-				bin, err := hex.DecodeString(string(hash))
-				if err != nil {
-					cp.acService.log.Warnf("decode error for certhash: %s", string(hash))
-					return nil
-				}
-				_, ok := cp.certCache.Get(string(bin))
-				if ok {
-					cp.acService.log.Infof("remove certhash from certcache: %s", string(hash))
-					cp.certCache.Remove(string(bin))
-				}
-			}
-
-			return nil
-		}
-	}
-	return nil
-}
-
-func (cp *certACProvider) systemContractCallbackCertManagementAliasDeleteCase(payload *common.Payload) error {
-	cp.acService.log.Debugf("callback for aliasdelete")
-	for _, param := range payload.Parameters {
-		if param.Key == PARAM_ALIASES {
-			names := strings.TrimSpace(string(param.Value))
-			nameList := strings.Split(names, ",")
-			cp.acService.log.Debugf("names in aliasdelete = [%s]", nameList)
-			for _, name := range nameList {
-				_, ok := cp.certCache.Get(string(name))
-				if ok {
-					cp.acService.log.Infof("remove alias from certcache: %s", string(name))
-					cp.certCache.Remove(string(name))
-				}
-			}
-			return nil
-		}
-	}
-	return nil
-}
-
-func (cp *certACProvider) systemContractCallbackCertManagementAliasUpdateCase(payload *common.Payload) error {
-	cp.acService.log.Debugf("callback for aliasupdate")
-	for _, param := range payload.Parameters {
-		if param.Key == PARAM_ALIAS {
-			name := strings.TrimSpace(string(param.Value))
-			cp.acService.log.Infof("name in aliasupdate = [%s]", name)
-			_, ok := cp.certCache.Get(string(name))
-			if ok {
-				cp.acService.log.Infof("remove alias from certcache: %s", string(name))
-				cp.certCache.Remove(string(name))
-			}
-			return nil
-		}
-	}
-	return nil
-}
+//
+//func (cp *certACProvider) systemContractCallbackCertManagementCertRevokeCase(payload *common.Payload) error {
+//	for _, param := range payload.Parameters {
+//		if param.Key == "cert_crl" {
+//			crl := strings.Replace(string(param.Value), ",", "\n", -1)
+//			crls, err := cp.ValidateCRL([]byte(crl))
+//			if err != nil {
+//				return fmt.Errorf("update CRL failed, invalid CRLS: %v", err)
+//			}
+//			for _, crl := range crls {
+//				aki, _, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
+//				if err != nil {
+//					return fmt.Errorf("update CRL failed: %v", err)
+//				}
+//				cp.crl.Store(string(aki), crl)
+//			}
+//			return nil
+//		}
+//	}
+//	return nil
+//}
+//
+//func (cp *certACProvider) systemContractCallbackCertManagementCertsDeleteCase(payload *common.Payload) error {
+//	cp.acService.log.Debugf("callback for certsdelete")
+//	for _, param := range payload.Parameters {
+//		if param.Key == PARAM_CERTHASHES {
+//			certHashStr := strings.TrimSpace(string(param.Value))
+//			certHashes := strings.Split(certHashStr, ",")
+//			for _, hash := range certHashes {
+//				cp.acService.log.Debugf("certHashes in certsdelete = [%s]", hash)
+//				bin, err := hex.DecodeString(string(hash))
+//				if err != nil {
+//					cp.acService.log.Warnf("decode error for certhash: %s", string(hash))
+//					return nil
+//				}
+//				_, ok := cp.certCache.Get(string(bin))
+//				if ok {
+//					cp.acService.log.Infof("remove certhash from certcache: %s", string(hash))
+//					cp.certCache.Remove(string(bin))
+//				}
+//			}
+//
+//			return nil
+//		}
+//	}
+//	return nil
+//}
+//
+//func (cp *certACProvider) systemContractCallbackCertManagementAliasDeleteCase(payload *common.Payload) error {
+//	cp.acService.log.Debugf("callback for aliasdelete")
+//	for _, param := range payload.Parameters {
+//		if param.Key == PARAM_ALIASES {
+//			names := strings.TrimSpace(string(param.Value))
+//			nameList := strings.Split(names, ",")
+//			cp.acService.log.Debugf("names in aliasdelete = [%s]", nameList)
+//			for _, name := range nameList {
+//				_, ok := cp.certCache.Get(string(name))
+//				if ok {
+//					cp.acService.log.Infof("remove alias from certcache: %s", string(name))
+//					cp.certCache.Remove(string(name))
+//				}
+//			}
+//			return nil
+//		}
+//	}
+//	return nil
+//}
+//
+//func (cp *certACProvider) systemContractCallbackCertManagementAliasUpdateCase(payload *common.Payload) error {
+//	cp.acService.log.Debugf("callback for aliasupdate")
+//	for _, param := range payload.Parameters {
+//		if param.Key == PARAM_ALIAS {
+//			name := strings.TrimSpace(string(param.Value))
+//			cp.acService.log.Infof("name in aliasupdate = [%s]", name)
+//			_, ok := cp.certCache.Get(string(name))
+//			if ok {
+//				cp.acService.log.Infof("remove alias from certcache: %s", string(name))
+//				cp.certCache.Remove(string(name))
+//			}
+//			return nil
+//		}
+//	}
+//	return nil
+//}
 
 // GetHashAlg return hash algorithm the access control provider uses
 func (cp *certACProvider) GetHashAlg() string {

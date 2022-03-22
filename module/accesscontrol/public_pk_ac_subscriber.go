@@ -26,14 +26,14 @@ func (p *pkACProvider) OnQuit() {
 }
 
 func (p *pkACProvider) onMessageChainConfig(msg *msgbus.Message) {
-	dataStr := msg.Payload.([]string)
+	dataStr, _ := msg.Payload.([]string)
 	dataBytes, err := hex.DecodeString(dataStr[0])
 	if err != nil {
 		p.log.Error(err)
 		return
 	}
 	chainConfig := &config.ChainConfig{}
-	proto.Unmarshal(dataBytes, chainConfig)
+	_ = proto.Unmarshal(dataBytes, chainConfig)
 
 	p.hashType = chainConfig.GetCrypto().GetHash()
 	err = p.initAdminMembers(chainConfig.TrustRoots)

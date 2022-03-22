@@ -30,7 +30,8 @@ func ACFactory() *AcFactory {
 }
 
 func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
+	protocol.AccessControlProvider, error) {
 
 	chainConf.ChainConfig().AuthType = strings.ToLower(chainConf.ChainConfig().AuthType)
 

@@ -107,7 +107,8 @@ type publicAdminMemberModel struct {
 }
 
 func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
+	protocol.AccessControlProvider, error) {
 	pkAcProvider, err := newPkACProvider(chainConf.ChainConfig(), store, log)
 	if err != nil {
 		return nil, err

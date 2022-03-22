@@ -35,7 +35,7 @@ const (
 
 	topicSeparator = "::"
 
-	moduleSync = "NetService"
+	//moduleSync = "NetService"
 )
 
 // CreateFlagWithPrefixAndMsgType will join prefix with msg type string.
@@ -331,14 +331,14 @@ func (n *NetContractEventSubscribe) OnQuit() {
 }
 
 func (n *NetContractEventSubscribe) onMessageChainConfig(msg *msgbus.Message) {
-	dataStr := msg.Payload.(string)
+	dataStr, _ := msg.Payload.(string)
 	dataBytes, err := hex.DecodeString(dataStr)
 	if err != nil {
 		n.ns.logger.Error(err)
 		return
 	}
 	chainConfig := &configPb.ChainConfig{}
-	proto.Unmarshal(dataBytes, chainConfig)
+	_ = proto.Unmarshal(dataBytes, chainConfig)
 
 	// refresh chainConfig
 	n.ns.logger.Infof("[NetService] refreshing chain config...")
