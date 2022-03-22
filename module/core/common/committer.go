@@ -118,8 +118,6 @@ func (cb *CommitBlock) CommitBlock(
 		if err = NotifyChainConf(block, cb.chainConf); err != nil {
 			return 0, 0, 0, 0, 0, nil, err
 		}
-
-		cb.ledgerCache.SetLastCommittedBlock(block)
 		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
 	}
 	// contract event
