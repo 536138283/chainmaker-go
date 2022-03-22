@@ -356,11 +356,10 @@ func (bc *Blockchain) initChainConf() (err error) {
 	// register myself as config watcher
 	bc.msgBus.Register(msgbus.ChainConfig, bc)
 
+	// v220_compat Deprecated
 	// register myself as config watcher
-	//bc.chainConf.AddWatch(bc)
-	//if localconf.ChainMakerConfig.StorageConfig.StateDbConfig.IsSqlDB() {
-	//	panic("init chain conf fail. sql the future feature")
-	//}
+	bc.chainConf.AddWatch(bc)
+
 	return
 }
 

@@ -112,6 +112,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
 	}
 
+	config.ChainConf.AddWatch(v) // v220_compat Deprecated
 	config.MsgBus.Register(msgbus.BlockInfo, v)
 
 	return v, nil
@@ -379,18 +380,6 @@ func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 func (v *BlockVerifierImpl) OnQuit() {
 	// nothing, implement Subscriber interface
 }
-
-//var _ protocol.Watcher = (*BlockVerifierImpl)(nil)
-//
-//func (v *BlockVerifierImpl) Module() string {
-//	return ModuleNameCore
-//}
-//
-//func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) error {
-//	v.chainConf.ChainConfig().Block = chainConfig.Block
-//	v.log.Infof("update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
-//	return nil
-//}
 
 func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (
 	map[string]*commonpb.TxRWSet, map[string][]*commonpb.ContractEvent, map[string]int64, error) {
