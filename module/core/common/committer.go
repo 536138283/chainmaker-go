@@ -18,6 +18,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+const (
+	blockVersion230 = uint32(230)
+)
+
 type CommitBlock struct {
 	store                   protocol.BlockchainStore
 	log                     protocol.Logger
@@ -80,13 +84,14 @@ func (cb *CommitBlock) CommitBlock(
 	// record contract event
 	events := rearrangeContractEvent(block, conEventMap)
 
-	// notify chainConf to update config before put block
-	startConfTick := utils.CurrentTimeMillisSeconds()
-	if err = cb.NotifyMessage(block, cb.chainConf); err != nil {
-		return 0, 0, 0, 0, 0, nil, err
+	if block.Header.BlockVersion >= blockVersion230 {
+		// notify chainConf to update config before put block
+		startConfTick := utils.CurrentTimeMillisSeconds()
+		if err = cb.NotifyMessage(block, cb.chainConf); err != nil {
+			return 0, 0, 0, 0, 0, nil, err
+		}
+		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
 	}
-	confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
-
 	// put block
 	startDBTick := utils.CurrentTimeMillisSeconds()
 	if err = cb.store.PutBlock(block, rwSet); err != nil {
@@ -106,7 +111,17 @@ func (cb *CommitBlock) CommitBlock(
 		return 0, 0, 0, 0, 0, nil, err
 	}
 	snapshotLasts = utils.CurrentTimeMillisSeconds() - startSnapshotTick
+	// v220_compat Deprecated
+	if block.Header.BlockVersion < blockVersion230 {
+		// notify chainConf to update config when config block committed
+		startConfTick := utils.CurrentTimeMillisSeconds()
+		if err = NotifyChainConf(block, cb.chainConf); err != nil {
+			return 0, 0, 0, 0, 0, nil, err
+		}
 
+		cb.ledgerCache.SetLastCommittedBlock(block)
+		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
+	}
 	// contract event
 	pubEventLasts = cb.publishContractEvent(block, events)
 
@@ -167,18 +182,6 @@ func (cb *CommitBlock) MonitorCommit(bi *commonpb.BlockInfo) error {
 	(*cb.metricTxCounter).WithLabelValues(bi.Block.Header.ChainId).Add(float64(bi.Block.Header.TxCount))
 	return nil
 }
-
-//
-//func NotifyChainConf(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
-//	if block != nil && block.GetTxs() != nil && len(block.GetTxs()) > 0 {
-//		if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); ok || utils.HasDPosTxWritesInHeader(block, chainConf) {
-//			if err = chainConf.CompleteBlock(block); err != nil {
-//				return fmt.Errorf("chainconf block complete, %s", err)
-//			}
-//		}
-//	}
-//	return nil
-//}
 
 func rearrangeContractEvent(block *commonpb.Block,
 	conEventMap map[string][]*commonpb.ContractEvent) []*commonpb.ContractEvent {

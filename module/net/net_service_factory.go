@@ -34,10 +34,13 @@ func (nsf *NetServiceFactory) NewNetService(
 		// set contract event subscribe
 		ns.msgBus.Register(msgbus.ChainConfig, ns.NetConfigSubscribe())
 
-		// set config watcher
-		//chainConf.AddWatch(ns.ConfigWatcher())
-		// set vm watcher
-		//chainConf.AddVmWatch(ns.VmWatcher())
+		// v220_compat Deprecated
+		{
+			// set config watcher
+			chainConf.AddWatch(ns.ConfigWatcher())
+			// set vm watcher
+			chainConf.AddVmWatch(ns.VmWatcher())
+		}
 	}
 	return ns, nil
 }
