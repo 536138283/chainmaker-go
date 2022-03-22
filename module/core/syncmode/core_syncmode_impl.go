@@ -187,6 +187,10 @@ func (c *CoreEngine) Stop() {
 	c.blockProposer.Stop() //nolint: errcheck
 }
 
+func (c *CoreEngine) GetBlockProposer() protocol.BlockProposer {
+	return c.blockProposer
+}
+
 func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
 	return c.BlockCommitter
 }
