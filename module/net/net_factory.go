@@ -84,8 +84,8 @@ func WithCrypto(pkMode bool, keyFile, certFile string, encKeyFile, encCertFile s
 			n.Prepare().SetKey(keyBytes)
 			if !pkMode {
 				n.Prepare().SetCert(certBytes)
-				n.Prepare().SetKey(encKeyBytes)
-				n.Prepare().SetCert(encCertBytes)
+				n.Prepare().SetEncKey(encKeyBytes)
+				n.Prepare().SetEncCert(encCertBytes)
 			}
 		case protocol.Liquid:
 			n, _ := nf.n.(*liquid.LiquidNet)
@@ -93,8 +93,8 @@ func WithCrypto(pkMode bool, keyFile, certFile string, encKeyFile, encCertFile s
 			n.CryptoConfig().KeyBytes = keyBytes
 			if !pkMode {
 				n.CryptoConfig().CertBytes = certBytes
-				n.CryptoConfig().CertBytes = encCertBytes
-				n.CryptoConfig().KeyBytes = encKeyBytes
+				n.CryptoConfig().EncCertBytes = encCertBytes
+				n.CryptoConfig().EncKeyBytes = encKeyBytes
 			}
 		}
 		return nil
