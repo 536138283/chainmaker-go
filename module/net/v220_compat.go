@@ -89,11 +89,11 @@ func (v *VmWatcher) ContractNames() []string {
 func (v *VmWatcher) Callback(contractName string, _ []byte) error {
 	switch contractName {
 	case syscontract.SystemContract_CERT_MANAGE.String():
-		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
+		v.ns.logger.Infof("[NetService] callback msg, contract name: %s", contractName)
 		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
 		return nil
 	case syscontract.SystemContract_PUBKEY_MANAGE.String():
-		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
+		v.ns.logger.Infof("[NetService] callback msg, contract name: %s", contractName)
 		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
 		return nil
 	default:

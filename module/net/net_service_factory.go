@@ -33,6 +33,13 @@ func (nsf *NetServiceFactory) NewNetService(
 		}
 		// set contract event subscribe
 		ns.msgBus.Register(msgbus.ChainConfig, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsRevoke, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsFreeze, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsUnfreeze, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsAliasUpdate, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsAliasDelete, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.PubkeyManageAdd, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.PubkeyManageDelete, ns.NetConfigSubscribe())
 
 		// v220_compat Deprecated
 		{

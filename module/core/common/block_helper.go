@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -941,13 +942,13 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
 		panicErr := recover()
-		if err == nil {
-			if panicErr != nil {
-				err = fmt.Errorf(fmt.Sprint(panicErr))
-			} else {
-				return
-			}
+		if panicErr != nil {
+			chain.log.Errorf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack()))
+			err = fmt.Errorf(fmt.Sprint(panicErr))
+		} else if err == nil {
+			return
 		}
+
 		// rollback sql
 		if err == commonErrors.ErrBlockHadBeenCommited {
 			chain.log.Warn("cache add block err: ", err)

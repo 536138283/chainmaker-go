@@ -63,6 +63,7 @@ func (cp *certACProvider) ContractNames() []string {
 func (cp *certACProvider) Callback(contractName string, payloadBytes []byte) error {
 	switch contractName {
 	case syscontract.SystemContract_CERT_MANAGE.String():
+		cp.acService.log.Infof("[AC] callback msg, contract name: %s", contractName)
 		return cp.systemContractCallbackCertManagementCase(payloadBytes)
 	default:
 		cp.acService.log.Debugf("unwatched smart contract [%s]", contractName)

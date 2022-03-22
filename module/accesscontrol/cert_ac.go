@@ -70,9 +70,12 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	}
 
 	msgBus.Register(msgbus.ChainConfig, certACProvider)
-	msgBus.Register(msgbus.CertManageCertsRevoke, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsDelete, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsUnfreeze, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsFreeze, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsRevoke, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsAliasDelete, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
 
 	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)

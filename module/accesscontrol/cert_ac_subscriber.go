@@ -25,7 +25,7 @@ var _ msgbus.Subscriber = (*certACProvider)(nil)
 
 // OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
 func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
-	cp.acService.log.Info("ac subscriber topic[%s]", msg.Topic.String())
+	cp.acService.log.Infof("[AC] receive msg, topic: %s", msg.Topic.String())
 	switch msg.Topic {
 	case msgbus.ChainConfig:
 		cp.onMessageChainConfig(msg)

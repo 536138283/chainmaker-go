@@ -23,8 +23,10 @@ var _ msgbus.Subscriber = (*permissionedPkACProvider)(nil)
 func (pp *permissionedPkACProvider) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
+		pp.acService.log.Infof("[AC_PWK] receive msg, topic: %s", msg.Topic.String())
 		pp.onMessageChainConfig(msg)
 	case msgbus.PubkeyManageDelete:
+		pp.acService.log.Infof("[AC_PWK] receive msg, topic: %s", msg.Topic.String())
 		pp.onMessagePublishKeyManageDelete(msg)
 	}
 

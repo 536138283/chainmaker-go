@@ -113,7 +113,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 	}
 
 	config.ChainConf.AddWatch(v) // v220_compat Deprecated
-	config.MsgBus.Register(msgbus.BlockInfo, v)
+	config.MsgBus.Register(msgbus.ChainConfig, v)
 
 	return v, nil
 }
@@ -355,6 +355,7 @@ var _ msgbus.Subscriber = (*BlockVerifierImpl)(nil)
 func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
+		v.log.Infof("[Blockchain] receive msg, topic: %s", msg.Topic.String())
 		dataStr, ok := msg.Payload.([]string)
 		if !ok {
 			return
@@ -371,7 +372,7 @@ func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 			return
 		}
 		v.chainConf.ChainConfig().Block = chainConfig.Block
-		v.log.Infof("update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
+		v.log.Infof("[BlockVerifierImpl] update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
 	default:
 
 	}

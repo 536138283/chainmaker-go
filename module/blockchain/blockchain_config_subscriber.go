@@ -16,6 +16,7 @@ var _ msgbus.Subscriber = (*Blockchain)(nil)
 func (bc *Blockchain) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
+		bc.log.Infof("[Blockchain] receive msg, topic: %s", msg.Topic.String())
 		if err := bc.Init(); err != nil {
 			bc.log.Errorf("blockchain init failed when the configuration of blockchain updating, %s", err)
 			return

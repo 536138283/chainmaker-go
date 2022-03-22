@@ -19,9 +19,9 @@ var _ msgbus.Subscriber = (*pkACProvider)(nil)
 
 // OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
 func (p *pkACProvider) OnMessage(msg *msgbus.Message) {
-	// TODO  implement
 	switch msg.Topic {
 	case msgbus.ChainConfig:
+		p.log.Infof("[AC_PK] receive msg, topic: %s", msg.Topic.String())
 		p.onMessageChainConfig(msg)
 	}
 

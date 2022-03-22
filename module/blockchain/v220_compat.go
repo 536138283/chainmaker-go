@@ -21,6 +21,7 @@ func (bc *Blockchain) Module() string {
 
 // Watch
 func (bc *Blockchain) Watch(_ *configPb.ChainConfig) error {
+	bc.log.Infof("[Blockchain] callback msg")
 	if err := bc.Init(); err != nil {
 		bc.log.Errorf("blockchain init failed when the configuration of blockchain updating, %s", err)
 		return err

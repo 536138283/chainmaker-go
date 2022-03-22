@@ -309,6 +309,7 @@ type NetContractEventSubscribe struct {
 }
 
 func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
+	n.ns.logger.Infof("[NetService] receive msg, topic: %s", msg.Topic.String())
 	switch msg.Topic {
 	case msgbus.ChainConfig:
 		n.onMessageChainConfig(msg)
@@ -319,27 +320,29 @@ func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
 		msgbus.CertManageCertsAliasDelete,
 		msgbus.PubkeyManageAdd,
 		msgbus.PubkeyManageDelete:
-		n.ns.logger.Infof("call back, topic", msg.Topic.String())
 		n.ns.localNet.ReVerifyPeers(n.ns.chainId)
 	}
-
 }
+
 func (n *NetContractEventSubscribe) OnQuit() {
 	// nothing
 }
 
 func (n *NetContractEventSubscribe) onMessageChainConfig(msg *msgbus.Message) {
-	dataStr, _ := msg.Payload.(string)
-	dataBytes, err := hex.DecodeString(dataStr)
+	dataStr, _ := msg.Payload.([]string)
+	dataBytes, err := hex.DecodeString(dataStr[0])
 	if err != nil {
 		n.ns.logger.Error(err)
 		return
 	}
 	chainConfig := &configPb.ChainConfig{}
-	_ = proto.Unmarshal(dataBytes, chainConfig)
+	err = proto.Unmarshal(dataBytes, chainConfig)
+	if err != nil {
+		n.ns.logger.Error(err)
+	}
 
 	// refresh chainConfig
-	n.ns.logger.Infof("[NetService] refreshing chain config...")
+	n.ns.logger.Infof("[NetService] refreshing chain config: %v", chainConfig)
 	// 1.refresh consensus nodeIds
 	// 1.1 get all new nodeIds
 	newConsensusNodeIds := make(map[string]struct{})
