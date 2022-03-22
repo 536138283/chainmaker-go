@@ -11,6 +11,7 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -90,8 +91,6 @@ func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 	// full or hash cert
 	data, _ := msg.Payload.([]string)
 	certs := data[0]
-	// TODO bug fix hash unfreeze @henry
-	// maybe not exist
 	hashes := data[1]
 
 	certList := strings.Replace(certs, ",", "\n", -1)
@@ -104,6 +103,26 @@ func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 		}
 		certBlock, rest = pem.Decode(rest)
 	}
+
+	if hashes != "" {
+		certHashes := strings.Split(hashes, ",")
+		for _, hash := range certHashes {
+			cert, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(hash))
+			if err != nil {
+				cp.acService.log.Errorf("fail to load compressed certificate from local storage [%s]", hash)
+				continue
+			}
+			if cert == nil {
+				cp.acService.log.Warnf("cert id [%s] does not exist in local storage", hash)
+				continue
+			}
+			_, ok := cp.frozenList.Load(string(cert))
+			if ok {
+				cp.frozenList.Delete(string(cert))
+			}
+		}
+	}
+
 }
 
 func (cp *certACProvider) onMessageCertRevoke(msg *msgbus.Message) {
