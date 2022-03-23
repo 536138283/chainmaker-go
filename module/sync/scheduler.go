@@ -47,6 +47,8 @@ type scheduler struct {
 	log    protocol.Logger
 	sender syncSender
 	ledger protocol.LedgerCache
+
+	// stopSyncBlock bool //indicate stop syncing block function
 }
 
 func newScheduler(sender syncSender, ledger protocol.LedgerCache,
@@ -95,6 +97,9 @@ func (sch *scheduler) handler(event queue.Item) (queue.Item, error) {
 	case *DataDetection:
 		sch.log.Debug("receive [DataDetection] msg, start handle...")
 		sch.handleDataDetection()
+	case *StopSyncMsg:
+		sch.log.Debug("receive [StopSyncMsg] msg, start handle...")
+		sch.handleStopSyncMsg()
 	}
 	return nil, nil
 }
@@ -149,6 +154,10 @@ func (sch *scheduler) handleDataDetection() {
 			delete(sch.receivedBlocks, height)
 			delete(sch.pendingTime, height)
 		}
+	}
+
+	if sch.pendingRecvHeight == math.MaxUint64 {
+		return
 	}
 	sch.pendingRecvHeight = blk.Header.BlockHeight + 1
 	// `DataDetection` 中不对 `pendingRecvHeight` 高度的状态做状态重置，防止发起重复的数据请求，这部分逻辑由活性检查处理
@@ -214,6 +223,10 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (sch *scheduler) handleStopSyncMsg() {
+	sch.pendingRecvHeight = math.MaxUint64
 }
 
 func (sch *scheduler) nextHeightToReq() uint64 {

@@ -149,3 +149,14 @@ func (m *ProcessedBlockResp) Level() int {
 func (m *ProcessedBlockResp) Compare(other queue.Item) int {
 	return Compare(m, other)
 }
+
+type StopSyncMsg struct {
+}
+
+func (m *StopSyncMsg) Level() int {
+	return priorityLow
+}
+
+func (m *StopSyncMsg) Compare(other queue.Item) int {
+	return Compare(m, other)
+}
