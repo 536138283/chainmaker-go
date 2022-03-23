@@ -303,7 +303,7 @@ func (ns *NetService) NetConfigSubscribe() msgbus.Subscriber {
 
 var _ msgbus.Subscriber = (*NetContractEventSubscribe)(nil)
 
-// NetContractEventSubscribe is a implementation of protocol.Watcher.
+// NetContractEventSubscribe is a implementation of msgbus.Subscriber
 type NetContractEventSubscribe struct {
 	ns *NetService
 }

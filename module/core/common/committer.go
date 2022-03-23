@@ -53,6 +53,7 @@ type CommitBlockConf struct {
 	MetricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
 }
 
+// NewCommitBlock new commit block
 func NewCommitBlock(cbConf *CommitBlockConf) *CommitBlock {
 	commitBlock := &CommitBlock{
 		store:           cbConf.Store,
@@ -73,7 +74,7 @@ func NewCommitBlock(cbConf *CommitBlockConf) *CommitBlock {
 	return commitBlock
 }
 
-//CommitBlock the action that all consensus types do when a block is committed
+// CommitBlock the action that all consensus types do when a block is committed
 func (cb *CommitBlock) CommitBlock(
 	block *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
@@ -87,7 +88,7 @@ func (cb *CommitBlock) CommitBlock(
 	if block.Header.BlockVersion >= blockVersion230 {
 		// notify chainConf to update config before put block
 		startConfTick := utils.CurrentTimeMillisSeconds()
-		if err = cb.NotifyMessage(block, cb.chainConf, events); err != nil {
+		if err = cb.NotifyMessage(block, events); err != nil {
 			return 0, 0, 0, 0, 0, nil, err
 		}
 		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
@@ -165,6 +166,7 @@ func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*com
 	return utils.CurrentTimeMillisSeconds() - startPublishContractEventTick
 }
 
+// MonitorCommit buried point
 func (cb *CommitBlock) MonitorCommit(bi *commonpb.BlockInfo) error {
 	if !localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		return nil
@@ -194,15 +196,10 @@ func rearrangeContractEvent(block *commonpb.Block,
 	return conEvent
 }
 
-func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.ChainConf,
-	events []*commonpb.ContractEvent) (err error) {
+// NotifyMessage Notify other subscription modules of chain configuration and certificate management events
+func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, events []*commonpb.ContractEvent) (err error) {
 	if block == nil || len(block.GetTxs()) == 0 {
 		return nil
-	}
-
-	if utils.HasDPosTxWritesInHeader(block, chainConf) {
-		// TODO
-		fmt.Print("HasDPosTxWritesInHeader ")
 	}
 
 	if native, _ := utils.IsNativeTx(block.Txs[0]); !native {

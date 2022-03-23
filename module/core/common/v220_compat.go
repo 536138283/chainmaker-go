@@ -16,6 +16,7 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// NotifyChainConf Notify each module of callback before version v2.3.0
 func NotifyChainConf(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
 	if block != nil && block.GetTxs() != nil && len(block.GetTxs()) > 0 {
 		if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); ok || utils.HasDPosTxWritesInHeader(block, chainConf) {

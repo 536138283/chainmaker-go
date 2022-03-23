@@ -73,6 +73,7 @@ func (ns *NetService) VmWatcher() protocol.VmWatcher {
 
 var _ protocol.VmWatcher = (*VmWatcher)(nil)
 
+// VmWatcher NetService callback certificate management
 type VmWatcher struct {
 	ns *NetService
 }
