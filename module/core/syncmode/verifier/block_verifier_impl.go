@@ -371,7 +371,8 @@ func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 			return
 		}
 		v.chainConf.ChainConfig().Block = chainConfig.Block
-		v.log.Infof("[BlockVerifierImpl] receive msg, topic: %s, blockverify[%v]", msg.Topic.String(), v.chainConf.ChainConfig().Block)
+		v.log.Infof("[BlockVerifierImpl] receive msg, topic: %s, blockverify[%v]",
+			msg.Topic.String(), v.chainConf.ChainConfig().Block)
 	default:
 
 	}

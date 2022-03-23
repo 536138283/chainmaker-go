@@ -194,14 +194,15 @@ func rearrangeContractEvent(block *commonpb.Block,
 	return conEvent
 }
 
-func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.ChainConf, events []*commonpb.ContractEvent) (err error) {
+func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.ChainConf,
+	events []*commonpb.ContractEvent) (err error) {
 	if block == nil || len(block.GetTxs()) == 0 {
 		return nil
 	}
 
 	if utils.HasDPosTxWritesInHeader(block, chainConf) {
 		// TODO
-
+		fmt.Print("HasDPosTxWritesInHeader ")
 	}
 
 	if native, _ := utils.IsNativeTx(block.Txs[0]); !native {
