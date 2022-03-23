@@ -87,7 +87,7 @@ func (cb *CommitBlock) CommitBlock(
 	if block.Header.BlockVersion >= blockVersion230 {
 		// notify chainConf to update config before put block
 		startConfTick := utils.CurrentTimeMillisSeconds()
-		if err = cb.NotifyMessage(block, cb.chainConf); err != nil {
+		if err = cb.NotifyMessage(block, cb.chainConf, events); err != nil {
 			return 0, 0, 0, 0, 0, nil, err
 		}
 		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
@@ -144,11 +144,10 @@ func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*com
 	}
 
 	startPublishContractEventTick := utils.CurrentTimeMillisSeconds()
-	cb.log.Infof(
-		"start publish contractEventsInfo: block[%d] ,time[%d]",
-		block.Header.BlockHeight,
-		startPublishContractEventTick,
-	)
+	cb.log.DebugDynamic(func() string {
+		return fmt.Sprintf("start publish contractEventsInfo: block[%d] ",
+			block.Header.BlockHeight)
+	})
 	var eventsInfo []*commonpb.ContractEventInfo
 	for _, t := range events {
 		eventInfo := &commonpb.ContractEventInfo{
@@ -195,31 +194,31 @@ func rearrangeContractEvent(block *commonpb.Block,
 	return conEvent
 }
 
-func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
+func (cb *CommitBlock) NotifyMessage(block *commonpb.Block, chainConf protocol.ChainConf, events []*commonpb.ContractEvent) (err error) {
 	if block == nil || len(block.GetTxs()) == 0 {
 		return nil
 	}
 
-	//if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); !ok && utils.HasDPosTxWritesInHeader(block, chainConf) {
-	//	return
-	//}
+	if utils.HasDPosTxWritesInHeader(block, chainConf) {
+		// TODO
 
-	for _, tx := range block.Txs { // one by one
-		if tx.Result == nil || tx.Result.ContractResult == nil {
+	}
+
+	if native, _ := utils.IsNativeTx(block.Txs[0]); !native {
+		return nil
+	}
+
+	for _, event := range events { // one by one
+		data := event.EventData
+		if len(data) == 0 {
 			continue
 		}
-		for _, event := range tx.Result.ContractResult.ContractEvent {
-			data := event.EventData
-			if len(data) == 0 {
-				continue
-			}
-			topicEnum, err := strconv.Atoi(event.Topic)
-			if err != nil {
-				continue
-			}
-			topic := msgbus.Topic(topicEnum)
-			cb.msgBus.PublishSync(topic, data) // data is a []string, hexToString(proto.Marshal(data))
+		topicEnum, err := strconv.Atoi(event.Topic)
+		if err != nil {
+			continue
 		}
+		topic := msgbus.Topic(topicEnum)
+		cb.msgBus.PublishSync(topic, data) // data is a []string, hexToString(proto.Marshal(data))
 	}
 	return nil
 }

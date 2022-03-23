@@ -355,7 +355,6 @@ var _ msgbus.Subscriber = (*BlockVerifierImpl)(nil)
 func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
-		v.log.Infof("[Blockchain] receive msg, topic: %s", msg.Topic.String())
 		dataStr, ok := msg.Payload.([]string)
 		if !ok {
 			return
@@ -372,7 +371,7 @@ func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 			return
 		}
 		v.chainConf.ChainConfig().Block = chainConfig.Block
-		v.log.Infof("[BlockVerifierImpl] update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
+		v.log.Infof("[BlockVerifierImpl] receive msg, topic: %s, blockverify[%v]", msg.Topic.String(), v.chainConf.ChainConfig().Block)
 	default:
 
 	}
