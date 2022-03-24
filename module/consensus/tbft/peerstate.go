@@ -357,8 +357,8 @@ func (pcs *PeerStateService) sendRoundQC(fetchQCProto *tbftpb.FetchRoundQC) {
 
 	roundQC := &tbftpb.RoundQC{
 		Id:         pcs.tbftImpl.Id,
-		Height:     pcs.tbftImpl.Height,
-		Round:      pcs.tbftImpl.Round,
+		Height:     precommits.Height,
+		Round:      precommits.Round,
 		Precommits: precommits.ToProto(),
 	}
 
