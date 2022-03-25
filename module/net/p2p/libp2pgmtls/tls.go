@@ -7,10 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package libp2pgmtls
 
 import (
-	cmcrypto "chainmaker.org/chainmaker-go/common/crypto"
-	cmtls "chainmaker.org/chainmaker-go/common/crypto/tls"
-	cmx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
-	"chainmaker.org/chainmaker-go/net/p2p/revoke"
 	"context"
 	gocrypto "crypto"
 	"crypto/ecdsa"
@@ -18,12 +14,18 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"net"
+
+	cmcrypto "chainmaker.org/chainmaker-go/common/crypto"
+	tjsm2_1_3_2 "chainmaker.org/chainmaker-go/common/crypto/tjfoc/gmsm/sm2"
+	cmtls "chainmaker.org/chainmaker-go/common/crypto/tls"
+	cmx509 "chainmaker.org/chainmaker-go/common/crypto/x509"
+	"chainmaker.org/chainmaker-go/net/p2p/revoke"
 	"github.com/libp2p/go-libp2p-core/crypto"
 	"github.com/libp2p/go-libp2p-core/peer"
 	"github.com/libp2p/go-libp2p-core/sec"
 	"github.com/tjfoc/gmsm/sm2"
 	tjx509 "github.com/tjfoc/gmsm/x509"
-	"net"
 )
 
 // ID is the protocol ID (used when negotiating with multistream)
@@ -256,11 +258,15 @@ func (t *Transport) setupConn(tlsConn *cmtls.Conn, remotePubKey crypto.PubKey) (
 }
 
 func parsePublicKeyToPubKey(publicKey gocrypto.PublicKey) (crypto.PubKey, error) {
-	if stPublicKey, ok := publicKey.(cmcrypto.PublicKey); ok{
+	if stPublicKey, ok := publicKey.(cmcrypto.PublicKey); ok {
 		publicKey = stPublicKey.ToStandardKey()
 	}
 	switch p := publicKey.(type) {
 	case *ecdsa.PublicKey:
+		//transform gmsm@v1.3.2 to gmsm@v1.4.1 to cal peer.ID. (Compatible)
+		if p.Curve == tjsm2_1_3_2.P256Sm2() {
+			p.Curve = sm2.P256Sm2()
+		}
 		if p.Curve == sm2.P256Sm2() {
 			b, err := cmx509.MarshalPKIXPublicKey(p)
 			if err != nil {
