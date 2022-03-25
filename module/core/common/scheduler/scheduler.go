@@ -601,6 +601,13 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxS
 		contractResultPayload)
 	if err != nil {
 		ts.log.Errorf("refund gas err is %v", err)
+		if txSimContext.GetBlockVersion() >= 230 {
+			result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			result.Message = err.Error()
+			result.ContractResult.Code = uint32(1)
+			result.ContractResult.Message = err.Error()
+			return result, specialTxType, err
+		}
 	}
 
 	if txStatusCode == commonPb.TxStatusCode_SUCCESS {
