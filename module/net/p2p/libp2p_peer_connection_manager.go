@@ -349,25 +349,54 @@ func (cm *PeerConnManager) AddConn(pid peer.ID, conn network.Conn) bool {
 }
 
 // RemoveConn remove a connection.
-func (cm *PeerConnManager) RemoveConn(pid peer.ID) bool {
+func (cm *PeerConnManager) RemoveConn(pid peer.ID, conn network.Conn) bool {
 	cm.cmLock.Lock()
 	defer cm.cmLock.Unlock()
-	_, idx := cm.getHighLevelConnections(pid)
+	conns, idx := cm.getHighLevelConnections(pid)
 	if idx != -1 {
-		if idx == len(cm.highLevelConn)-1 {
-			cm.highLevelConn = cm.highLevelConn[:idx]
-		} else {
-			cm.highLevelConn = append(cm.highLevelConn[:idx], cm.highLevelConn[idx+1:]...)
+		for c := range conns {
+			if c == conn {
+				delete(conns, c)
+			}
 		}
+
+		if len(conns) == 0 {
+			if idx == len(cm.highLevelConn)-1 {
+				cm.highLevelConn = cm.highLevelConn[:idx]
+			} else {
+				cm.highLevelConn = append(cm.highLevelConn[:idx], cm.highLevelConn[idx+1:]...)
+			}
+		} else {
+			cm.highLevelConn[idx] = &peerConnections{
+				pid:  pid,
+				conn: conns,
+			}
+		}
+		return true
 	}
-	_, idx2 := cm.getLowLevelConnections(pid)
+	conns2, idx2 := cm.getLowLevelConnections(pid)
 	if idx2 != -1 {
-		if idx2 == len(cm.lowLevelConn)-1 {
-			cm.lowLevelConn = cm.lowLevelConn[:idx2]
-		} else {
-			cm.lowLevelConn = append(cm.lowLevelConn[:idx2], cm.lowLevelConn[idx2+1:]...)
+		for c := range conns2 {
+			if c == conn {
+				delete(conns2, c)
+			}
 		}
+
+		if len(conns2) == 0 {
+			if idx2 == len(cm.lowLevelConn)-1 {
+				cm.lowLevelConn = cm.lowLevelConn[:idx2]
+			} else {
+				cm.lowLevelConn = append(cm.lowLevelConn[:idx2], cm.lowLevelConn[idx2+1:]...)
+			}
+		} else {
+			cm.lowLevelConn[idx2] = &peerConnections{
+				pid:  pid,
+				conn: conns2,
+			}
+		}
+		return true
 	}
+
 	return false
 }
 
@@ -386,6 +415,24 @@ func (cm *PeerConnManager) GetConn(pid peer.ID) network.Conn {
 		}
 	}
 	return nil
+}
+
+// GetConns return a connection for peer.
+func (cm *PeerConnManager) GetConns(pid peer.ID) []network.Conn {
+	cm.cmLock.RLock()
+	defer cm.cmLock.RUnlock()
+	conns := make([]network.Conn, 0)
+	if m, idx := cm.getHighLevelConnections(pid); idx != -1 {
+		for conn := range m {
+			conns = append(conns, conn)
+		}
+	}
+	if m, idx := cm.getLowLevelConnections(pid); idx != -1 {
+		for conn := range m {
+			conns = append(conns, conn)
+		}
+	}
+	return conns
 }
 
 // IsConnected return true if peer has connected. Otherwise return false.

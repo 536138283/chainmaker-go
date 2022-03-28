@@ -209,4 +209,5 @@ func (sp *StreamPool) cleanAndDisable() {
 	sp.currentSize = 0
 	close(sp.streams)
 	close(sp.newStreamSignalC)
+	logger.Infof("clean the stream pool successfully")
 }

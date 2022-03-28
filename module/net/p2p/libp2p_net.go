@@ -63,6 +63,9 @@ const compressThreshold = 1024 * 1024
 const pubsubWhiteListChanCap = 50
 const pubsubWhiteListChanQuitCheckDelay = 10
 
+// training Interval for refreshing the whitelist
+const refreshPubSubWhiteListTickerTime = time.Duration(time.Second * 60)
+
 // LibP2pNet is an implementation of net.Net interface.
 type LibP2pNet struct {
 	compressMsgBytes          bool
@@ -174,6 +177,10 @@ func (ln *LibP2pNet) InitPubsub(chainId string, maxMessageSize int) error {
 	}
 	go ln.reloadChainPubSubWhiteListLoop(chainId, ps)
 	ln.reloadChainPubSubWhiteList(chainId)
+
+	// the loop for refreshing the whitelist
+	go ln.checkPubsubWhitelistLoop(chainId, ps)
+
 	return nil
 }
 
@@ -708,14 +715,54 @@ func (ln *LibP2pNet) ReVerifyTrustRoots(chainId string) {
 		if err != nil {
 			continue
 		}
-		for c := ln.libP2pHost.connManager.GetConn(pid); c != nil; c = ln.libP2pHost.connManager.GetConn(pid) {
-			_ = c.Close()
-			logger.Infof("[Net] [ReVerifyTrustRoots] close connection of peer %s", s)
-			time.Sleep(time.Second)
+		conns := ln.libP2pHost.connManager.GetConns(pid)
+		for _, c := range conns {
+			// 由于底层的swarm_conn close只做了一次(once.Do)操作，所以反复调用没用。
+			//TODO 什么情况关闭失败，会不会有内存泄露？
+			err := c.Close()
+			if err != nil {
+				// 即使关闭出问题了，也先把上层状态删掉
+				ln.libP2pHost.connManager.RemoveConn(pid, c)
+				logger.Warnf("[Net][ReVerifyPeers] close connection failed, peer[%s], err:[%v], remove this conn, remote multi-addr:[%s]",
+					s, err, c.RemoteMultiaddr().String())
+			} else {
+				logger.Infof("[Net][ReVerifyPeers] close connection of peer %s", s)
+			}
 		}
+
+		// 关闭连接失败不能回调host移除上层其他状态,故检测
+		go ln.checkThePeerConns(s, pid)
 	}
 
 	ln.reloadChainPubSubWhiteList(chainId)
+}
+
+func (ln *LibP2pNet) checkThePeerConns(peerId string, pid peer.ID) {
+
+	// 延迟两秒，再检测，留出关闭时间
+	time.Sleep(time.Second * 2)
+	conns := ln.libP2pHost.connManager.GetConns(pid)
+	if len(conns) == 0 {
+
+		if ln.libP2pHost.removeTlsPeerNotifyC != nil {
+			ln.libP2pHost.removeTlsPeerNotifyC <- peerId
+		}
+
+		if ln.libP2pHost.removeTlsCertIdPeerIdNotifyC != nil {
+			ln.libP2pHost.removeTlsCertIdPeerIdNotifyC <- peerId
+		}
+
+		if ln.libP2pHost.removePeerIdTlsCertNotifyC != nil {
+			ln.libP2pHost.removePeerIdTlsCertNotifyC <- peerId
+		}
+
+		ln.libP2pHost.peerStreamManager.cleanPeerStream(pid)
+
+		logger.Infof("[Net][ReVerifyPeers] there is no connection available, remove all peer infos. peer[%s]",
+			peerId)
+	}
+	logger.Infof("[Net][ReVerifyPeers] there are available connections, peer[%s],conn num:[%d]",
+		peerId, len(conns))
 }
 
 func (ln *LibP2pNet) removeChainPubSubWhiteList(chainId, pidStr string) error {
@@ -725,7 +772,7 @@ func (ln *LibP2pNet) removeChainPubSubWhiteList(chainId, pidStr string) error {
 			ps := v.(*LibP2pPubSub)
 			pid, err := peer.Decode(pidStr)
 			if err != nil {
-				logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
+				logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
 				return err
 			}
 			return ps.RemoveWhitelistPeer(pid)
@@ -741,7 +788,7 @@ func (ln *LibP2pNet) addChainPubSubWhiteList(chainId, pidStr string) error {
 			ps := v.(*LibP2pPubSub)
 			pid, err := peer.Decode(pidStr)
 			if err != nil {
-				logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
+				logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
 				return err
 			}
 			return ps.AddWhitelistPeer(pid)
@@ -774,12 +821,12 @@ func (ln *LibP2pNet) reloadChainPubSubWhiteListLoop(chainId string, ps *LibP2pPu
 				for _, pidStr := range ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId) {
 					pid, err := peer.Decode(pidStr)
 					if err != nil {
-						logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
+						logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
 						continue
 					}
 					err = ps.AddWhitelistPeer(pid)
 					if err != nil {
-						logger.Errorf("[Net] add pub-sub white list failed. %s (pid: %s, chain id: %s)",
+						logger.Infof("[Net] add pub-sub white list failed. %s (pid: %s, chain id: %s)",
 							err.Error(), pid, chainId)
 						continue
 					}
@@ -789,6 +836,43 @@ func (ln *LibP2pNet) reloadChainPubSubWhiteListLoop(chainId string, ps *LibP2pPu
 			case <-ln.ctx.Done():
 				return
 			}
+		}
+	}
+}
+
+func (ln *LibP2pNet) checkPubsubWhitelistLoop(chainId string, ps *LibP2pPubSub) {
+	// time interval of check the list
+	ticker := time.NewTicker(refreshPubSubWhiteListTickerTime)
+
+	for {
+		select {
+		case <-ticker.C:
+			peers := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
+
+			// means that the libp2p pubsub stream was not successfully established or closed
+			if len(peers) > ps.pubsub.GetWhitelistSize() {
+
+				// need to iterate over the PeerIdsOfChain
+				for _, pidStr := range ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId) {
+					pid, err := peer.Decode(pidStr)
+					if err != nil {
+						logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
+						continue
+					}
+					// add to the whitle list again
+					err = ps.AddWhitelistPeer(pid)
+					if err != nil {
+						logger.Infof("[Net] add pub-sub white list failed. %s (pid: %s, chain id: %s)",
+							err.Error(), pid, chainId)
+						continue
+					}
+					logger.Infof("[Net] add peer to chain pub-sub white list, (pid: %s, chain id: %s)",
+						pid, chainId)
+				}
+			}
+
+		case <-ln.ctx.Done():
+			return
 		}
 	}
 }
@@ -829,10 +913,18 @@ func (ln *LibP2pNet) ChainNodesInfo(chainId string) ([]*api.ChainNodeInfo, error
 	result := make([]*api.ChainNodeInfo, 0)
 	if ln.libP2pHost.isTls {
 		// 1.find all peerIds of chain
-		peerIds := make([]string, 0)
-		peerIds = append(peerIds, ln.libP2pHost.host.ID().Pretty())
-		peerIds = append(peerIds, ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)...)
-		for _, peerId := range peerIds {
+		peerIds := make(map[string]struct{})
+		if _, ok := peerIds[ln.libP2pHost.host.ID().Pretty()]; !ok {
+			peerIds[ln.libP2pHost.host.ID().Pretty()] = struct{}{}
+		}
+		ids := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
+		for _, id := range ids {
+			if _, ok := peerIds[id]; !ok {
+				peerIds[id] = struct{}{}
+			}
+		}
+
+		for peerId := range peerIds {
 			// 2.find addr
 			pid, _ := peer.Decode(peerId)
 			addrs := make([]string, 0)
@@ -841,11 +933,13 @@ func (ln *LibP2pNet) ChainNodesInfo(chainId string) ([]*api.ChainNodeInfo, error
 					addrs = append(addrs, multiaddr.String())
 				}
 			} else {
-				conn := ln.libP2pHost.connManager.GetConn(pid)
-				if conn == nil || conn.RemoteMultiaddr() == nil {
-					continue
+				conns := ln.libP2pHost.connManager.GetConns(pid)
+				for _, c := range conns {
+					if c == nil || c.RemoteMultiaddr() == nil {
+						continue
+					}
+					addrs = append(addrs, c.RemoteMultiaddr().String())
 				}
-				addrs = append(addrs, conn.RemoteMultiaddr().String())
 			}
 
 			// 3.find cert
@@ -1092,8 +1186,10 @@ func (ln *LibP2pNet) closeRevokedPeerConnection(revokedPeerIds []string) error {
 		}
 		ln.libP2pHost.revokedValidator.AddPeerId(pid)
 		if ln.libP2pHost.connManager.IsConnected(peerId) {
-			conn := ln.libP2pHost.connManager.GetConn(peerId)
-			_ = conn.Close()
+			conns := ln.libP2pHost.connManager.GetConns(peerId)
+			for _, c := range conns {
+				_ = c.Close()
+			}
 			logger.Infof("[Net] closing revoked peer connection(pid: %s)", pid)
 		}
 	}
