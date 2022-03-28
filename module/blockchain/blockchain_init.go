@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core"
@@ -352,10 +354,12 @@ func (bc *Blockchain) initChainConf() (err error) {
 	bc.initModules[moduleNameChainConf] = struct{}{}
 
 	// register myself as config watcher
+	bc.msgBus.Register(msgbus.ChainConfig, bc)
+
+	// v220_compat Deprecated
+	// register myself as config watcher
 	bc.chainConf.AddWatch(bc)
-	//if localconf.ChainMakerConfig.StorageConfig.StateDbConfig.IsSqlDB() {
-	//	panic("init chain conf fail. sql the future feature")
-	//}
+
 	return
 }
 
@@ -466,7 +470,7 @@ func (bc *Blockchain) initAC() (err error) {
 	//	return
 	//}
 	acFactory := accesscontrol.ACFactory()
-	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog, bc.msgBus)
 	if err != nil {
 		bc.log.Errorf("new ac provider failed, %s", err.Error())
 		return

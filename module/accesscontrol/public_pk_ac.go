@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -105,11 +107,15 @@ type publicAdminMemberModel struct {
 }
 
 func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
+	protocol.AccessControlProvider, error) {
 	pkAcProvider, err := newPkACProvider(chainConf.ChainConfig(), store, log)
 	if err != nil {
 		return nil, err
 	}
+
+	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
+	//v220_compat Deprecated
 	chainConf.AddWatch(pkAcProvider)
 	return pkAcProvider, nil
 }
@@ -244,25 +250,26 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 	return nil
 }
 
-func (p *pkACProvider) Module() string {
-	return ModuleNameAccessControl
-}
-
-func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
-
-	p.hashType = chainConfig.GetCrypto().GetHash()
-	err := p.initAdminMembers(chainConfig.TrustRoots)
-	if err != nil {
-		return fmt.Errorf("new public AC provider failed: %s", err.Error())
-	}
-
-	err = p.initConsensusMember(chainConfig)
-	if err != nil {
-		return fmt.Errorf("new public AC provider failed: %s", err.Error())
-	}
-	p.memberCache.Clear()
-	return nil
-}
+//func (p *pkACProvider) Module() string {
+//	return ModuleNameAccessControl
+//}
+//
+//
+//func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
+//
+//	p.hashType = chainConfig.GetCrypto().GetHash()
+//	err := p.initAdminMembers(chainConfig.TrustRoots)
+//	if err != nil {
+//		return fmt.Errorf("new public AC provider failed: %s", err.Error())
+//	}
+//
+//	err = p.initConsensusMember(chainConfig)
+//	if err != nil {
+//		return fmt.Errorf("new public AC provider failed: %s", err.Error())
+//	}
+//	p.memberCache.Clear()
+//	return nil
+//}
 
 func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error) {
 	cache := p.getMemberFromCache(pbMember)

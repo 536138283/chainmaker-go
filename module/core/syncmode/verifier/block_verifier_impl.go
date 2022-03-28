@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
+	"encoding/hex"
 	"fmt"
+
+	"github.com/gogo/protobuf/proto"
 
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core/common"
@@ -109,7 +112,8 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
 	}
 
-	config.ChainConf.AddWatch(v)
+	config.ChainConf.AddWatch(v) // v220_compat Deprecated
+	config.MsgBus.Register(msgbus.ChainConfig, v)
 
 	return v, nil
 }
@@ -345,14 +349,37 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	return nil
 }
 
-func (v *BlockVerifierImpl) Module() string {
-	return ModuleNameCore
+var _ msgbus.Subscriber = (*BlockVerifierImpl)(nil)
+
+// OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
+func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
+	switch msg.Topic {
+	case msgbus.ChainConfig:
+		dataStr, ok := msg.Payload.([]string)
+		if !ok {
+			return
+		}
+		dataBytes, err := hex.DecodeString(dataStr[0])
+		if err != nil {
+			v.log.Warn(err)
+			return
+		}
+		chainConfig := &chainConfConfig.ChainConfig{}
+		err = proto.Unmarshal(dataBytes, chainConfig)
+		if err != nil {
+			v.log.Warn(err)
+			return
+		}
+		v.chainConf.ChainConfig().Block = chainConfig.Block
+		v.log.Infof("[BlockVerifierImpl] receive msg, topic: %s, blockverify[%v]",
+			msg.Topic.String(), v.chainConf.ChainConfig().Block)
+	default:
+
+	}
 }
 
-func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) error {
-	v.chainConf.ChainConfig().Block = chainConfig.Block
-	v.log.Infof("update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
-	return nil
+func (v *BlockVerifierImpl) OnQuit() {
+	// nothing, implement Subscriber interface
 }
 
 func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (

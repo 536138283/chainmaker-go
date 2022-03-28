@@ -90,12 +90,12 @@ func createBlockChain(t *testing.T) []*Blockchain {
 	for i := 0; i < 6; i++ {
 
 		var (
-			genesis         = "test" + strconv.Itoa(i)
-			chainId         = "Chain" + strconv.Itoa(i)
-			ctrl            = gomock.NewController(t)
-			chainConf       = mock.NewMockChainConf(ctrl)
-			ac              = mock.NewMockAccessControlProvider(ctrl)
-			watcher         = mock.NewMockWatcher(ctrl)
+			genesis   = "test" + strconv.Itoa(i)
+			chainId   = "Chain" + strconv.Itoa(i)
+			ctrl      = gomock.NewController(t)
+			chainConf = mock.NewMockChainConf(ctrl)
+			ac        = mock.NewMockAccessControlProvider(ctrl)
+			//watcher         = mock.NewMockWatcher(ctrl)
 			msgbusNew       = msgbusMock.NewMockMessageBus(ctrl)
 			syncService     = mock.NewMockSyncService(ctrl)
 			coreEngine      = mock.NewMockCoreEngine(ctrl)
@@ -122,16 +122,16 @@ func createBlockChain(t *testing.T) []*Blockchain {
 
 		consensusType = getConsensusType(i)
 
-		chainConf.EXPECT().AddWatch(gomock.Any()).AnyTimes().Return()
-		chainConf.EXPECT().AddVmWatch(gomock.Any()).AnyTimes().Return()
+		//chainConf.EXPECT().AddWatch(gomock.Any()).AnyTimes().Return()
+		//chainConf.EXPECT().AddVmWatch(gomock.Any()).AnyTimes().Return()
 		chainConf.EXPECT().Init().AnyTimes().Return(nil)
 		chainConf.EXPECT().GetChainConfigFromFuture(gomock.Any()).AnyTimes().Return(nil, nil)
 		chainConf.EXPECT().GetChainConfigAt(gomock.Any()).AnyTimes().Return(nil, nil)
 		chainConf.EXPECT().GetConsensusNodeIdList().AnyTimes().Return(nil, nil)
-		chainConf.EXPECT().CompleteBlock(gomock.Any()).AnyTimes().Return(nil)
+		//chainConf.EXPECT().CompleteBlock(gomock.Any()).AnyTimes().Return(nil)
 
 		ac.EXPECT().GetHashAlg().AnyTimes().Return(genesis) // 随机id
-		watcher.EXPECT().Watch(chainConf).AnyTimes().Return(nil)
+		//watcher.EXPECT().Watch(chainConf).AnyTimes().Return(nil)
 		coreEngine.EXPECT().GetBlockVerifier().AnyTimes().Return(nil)
 		coreEngine.EXPECT().GetBlockCommitter().AnyTimes().Return(nil)
 		coreEngine.EXPECT().Start().AnyTimes()
