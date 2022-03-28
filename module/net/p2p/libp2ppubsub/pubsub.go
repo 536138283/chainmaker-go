@@ -44,8 +44,9 @@ type PubSub struct {
 	// pubsubUid is the unique id of pubsub
 	pubsubUid string
 	// whitelist is a peer whitelist of pubsub
-	whitelist     Whitelist
-	whitelistLock sync.Mutex
+	whitelist           Whitelist
+	whitelistLock       sync.Mutex
+	removeWhitelistPeer chan peer.ID
 
 	// Customize part end
 
@@ -218,8 +219,9 @@ func NewPubSub(ctx context.Context, h host.Host, rt PubSubRouter, opts ...Option
 	ps := &PubSub{
 		// Customize part start
 
-		pubsubUid: "default",
-		whitelist: NewMapWhitelist(),
+		pubsubUid:           "default",
+		whitelist:           NewMapWhitelist(),
+		removeWhitelistPeer: make(chan peer.ID),
 
 		// Customize part end
 
@@ -338,7 +340,11 @@ func (p *PubSub) RemoveWhitelistPeer(pid peer.ID) {
 	p.whitelistLock.Lock()
 	defer p.whitelistLock.Unlock()
 	p.whitelist.Remove(pid)
-	p.rt.RemovePeer(pid)
+	p.removeWhitelistPeer <- pid
+}
+
+func (p *PubSub) GetWhitelistSize() int {
+	return p.whitelist.Size()
 }
 
 // Customize part end
@@ -585,6 +591,10 @@ func (p *PubSub) processLoop(ctx context.Context) {
 		case pid := <-p.newPeerError:
 			delete(p.peers, pid)
 
+			// Customize part start
+			p.whitelist.Remove(pid)
+			// Customize part end
+
 		case pid := <-p.peerDead:
 			ch, ok := p.peers[pid]
 			if !ok {
@@ -605,6 +615,10 @@ func (p *PubSub) processLoop(ctx context.Context) {
 			}
 
 			delete(p.peers, pid)
+			// Customize part start
+			p.whitelist.Remove(pid)
+			// Customize part end
+
 			for t, tmap := range p.topics {
 				if _, ok := tmap[pid]; ok {
 					delete(tmap, pid)
@@ -684,6 +698,24 @@ func (p *PubSub) processLoop(ctx context.Context) {
 				}
 				p.rt.RemovePeer(pid)
 			}
+
+			// Customize part start
+		case pid := <-p.removeWhitelistPeer:
+			log.Infof("remove whitelist peer %s", pid)
+
+			_, ok := p.peers[pid]
+			if ok {
+				//close(ch)
+				delete(p.peers, pid)
+				for t, tmap := range p.topics {
+					if _, ok := tmap[pid]; ok {
+						delete(tmap, pid)
+						p.notifyLeave(t, pid)
+					}
+				}
+				p.rt.RemovePeer(pid)
+			}
+			// Customize part end
 
 		case <-ctx.Done():
 			log.Info("libp2ppubsub processloop shutting down")

@@ -63,6 +63,9 @@ const compressThreshold = 1024 * 1024
 const pubsubWhiteListChanCap = 50
 const pubsubWhiteListChanQuitCheckDelay = 10
 
+// training Interval for refreshing the whitelist
+const refreshPubSubWhiteListTickerTime = time.Duration(time.Second * 60)
+
 // LibP2pNet is an implementation of net.Net interface.
 type LibP2pNet struct {
 	compressMsgBytes          bool
@@ -174,6 +177,10 @@ func (ln *LibP2pNet) InitPubsub(chainId string, maxMessageSize int) error {
 	}
 	go ln.reloadChainPubSubWhiteListLoop(chainId, ps)
 	ln.reloadChainPubSubWhiteList(chainId)
+
+	// the loop for refreshing the whitelist
+	go ln.checkPubsubWhitelistLoop(chainId, ps)
+
 	return nil
 }
 
@@ -725,7 +732,7 @@ func (ln *LibP2pNet) removeChainPubSubWhiteList(chainId, pidStr string) error {
 			ps := v.(*LibP2pPubSub)
 			pid, err := peer.Decode(pidStr)
 			if err != nil {
-				logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
+				logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
 				return err
 			}
 			return ps.RemoveWhitelistPeer(pid)
@@ -741,7 +748,7 @@ func (ln *LibP2pNet) addChainPubSubWhiteList(chainId, pidStr string) error {
 			ps := v.(*LibP2pPubSub)
 			pid, err := peer.Decode(pidStr)
 			if err != nil {
-				logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
+				logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
 				return err
 			}
 			return ps.AddWhitelistPeer(pid)
@@ -774,12 +781,12 @@ func (ln *LibP2pNet) reloadChainPubSubWhiteListLoop(chainId string, ps *LibP2pPu
 				for _, pidStr := range ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId) {
 					pid, err := peer.Decode(pidStr)
 					if err != nil {
-						logger.Errorf("[Net] parse peer id string to pid failed. %s", err.Error())
+						logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
 						continue
 					}
 					err = ps.AddWhitelistPeer(pid)
 					if err != nil {
-						logger.Errorf("[Net] add pub-sub white list failed. %s (pid: %s, chain id: %s)",
+						logger.Infof("[Net] add pub-sub white list failed. %s (pid: %s, chain id: %s)",
 							err.Error(), pid, chainId)
 						continue
 					}
@@ -789,6 +796,43 @@ func (ln *LibP2pNet) reloadChainPubSubWhiteListLoop(chainId string, ps *LibP2pPu
 			case <-ln.ctx.Done():
 				return
 			}
+		}
+	}
+}
+
+func (ln *LibP2pNet) checkPubsubWhitelistLoop(chainId string, ps *LibP2pPubSub) {
+	// time interval of check the list
+	ticker := time.NewTicker(refreshPubSubWhiteListTickerTime)
+
+	for {
+		select {
+		case <-ticker.C:
+			peers := ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId)
+
+			// means that the libp2p pubsub stream was not successfully established or closed
+			if len(peers) > ps.pubsub.GetWhitelistSize() {
+
+				// need to iterate over the PeerIdsOfChain
+				for _, pidStr := range ln.libP2pHost.peerChainIdsRecorder.peerIdsOfChain(chainId) {
+					pid, err := peer.Decode(pidStr)
+					if err != nil {
+						logger.Infof("[Net] parse peer id string to pid failed. %s", err.Error())
+						continue
+					}
+					// add to the whitle list again
+					err = ps.AddWhitelistPeer(pid)
+					if err != nil {
+						logger.Infof("[Net] add pub-sub white list failed. %s (pid: %s, chain id: %s)",
+							err.Error(), pid, chainId)
+						continue
+					}
+					logger.Infof("[Net] add peer to chain pub-sub white list, (pid: %s, chain id: %s)",
+						pid, chainId)
+				}
+			}
+
+		case <-ln.ctx.Done():
+			return
 		}
 	}
 }
