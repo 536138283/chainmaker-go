@@ -48,7 +48,7 @@ type scheduler struct {
 	sender syncSender
 	ledger protocol.LedgerCache
 
-	// stopSyncBlock bool //indicate stop syncing block function
+	stopSyncBlock bool //indicate stop syncing block function
 }
 
 func newScheduler(sender syncSender, ledger protocol.LedgerCache,
@@ -156,9 +156,6 @@ func (sch *scheduler) handleDataDetection() {
 		}
 	}
 
-	if sch.pendingRecvHeight == math.MaxUint64 {
-		return
-	}
 	sch.pendingRecvHeight = blk.Header.BlockHeight + 1
 	// `DataDetection` 中不对 `pendingRecvHeight` 高度的状态做状态重置，防止发起重复的数据请求，这部分逻辑由活性检查处理
 	// match pendingRecvHeight to (local commit block height + 1)
@@ -226,7 +223,7 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 }
 
 func (sch *scheduler) handleStopSyncMsg() {
-	sch.pendingRecvHeight = math.MaxUint64
+	sch.stopSyncBlock = true
 }
 
 func (sch *scheduler) nextHeightToReq() uint64 {
@@ -254,6 +251,9 @@ func (sch *scheduler) maxHeight() uint64 {
 }
 
 func (sch *scheduler) isNeedSync() bool {
+	if sch.stopSyncBlock {
+		return false
+	}
 	currHeight, err := sch.ledger.CurrentHeight()
 	if err != nil {
 		panic(err)
