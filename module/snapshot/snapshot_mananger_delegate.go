@@ -46,6 +46,7 @@ func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block, blockHeight in
 
 		chainId:        block.Header.ChainId,
 		blockHeight:    block.Header.BlockHeight,
+		blockVersion:   block.Header.BlockVersion,
 		blockTimestamp: block.Header.BlockTimestamp,
 		blockProposer:  block.Header.Proposer,
 		preBlockHash:   block.Header.PreBlockHash,
