@@ -343,6 +343,10 @@ func (p *PubSub) RemoveWhitelistPeer(pid peer.ID) {
 	p.removeWhitelistPeer <- pid
 }
 
+func (p *PubSub) GetWhitelistSize() int {
+	return p.whitelist.Size()
+}
+
 // Customize part end
 
 // MsgIdFunction returns a unique ID for the passed Message, and PubSub can be customized to use any
@@ -598,6 +602,10 @@ func (p *PubSub) processLoop(ctx context.Context) {
 		case pid := <-p.newPeerError:
 			delete(p.peers, pid)
 
+			// Customize part start
+			p.whitelist.Remove(pid)
+			// Customize part end
+
 		case pid := <-p.peerDead:
 			ch, ok := p.peers[pid]
 			if !ok {
@@ -618,6 +626,10 @@ func (p *PubSub) processLoop(ctx context.Context) {
 			}
 
 			delete(p.peers, pid)
+			// Customize part start
+			p.whitelist.Remove(pid)
+			// Customize part end
+
 			for t, tmap := range p.topics {
 				if _, ok := tmap[pid]; ok {
 					delete(tmap, pid)
@@ -698,9 +710,9 @@ func (p *PubSub) processLoop(ctx context.Context) {
 				p.rt.RemovePeer(pid)
 			}
 
-		// Customize part start
+			// Customize part start
 		case pid := <-p.removeWhitelistPeer:
-			log.Infof("leave whitelist peer %s", pid)
+			log.Infof("remove whitelist peer %s", pid)
 
 			_, ok := p.peers[pid]
 			if ok {
@@ -714,7 +726,7 @@ func (p *PubSub) processLoop(ctx context.Context) {
 				}
 				p.rt.RemovePeer(pid)
 			}
-		// Customize part end
+			// Customize part end
 
 		case <-ctx.Done():
 			log.Info("libp2ppubsub processloop shutting down")
