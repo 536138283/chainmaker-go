@@ -20,6 +20,7 @@ type RuntimeInstance struct {
 	pool    *vmPool
 	log     *logger.CMLogger
 	chainId string
+	vmPoolManager *VmPoolManager
 }
 
 // Invoke contract by call vm, implement protocol.RuntimeInstance
@@ -99,7 +100,11 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		msg := fmt.Sprintf("contract invoke failed, %s", err.Error())
 		r.log.Errorf(msg)
 		contractResult.Message = msg
-		instanceInfo.errCount++
+		if method == "init_contract" {
+			r.vmPoolManager.closeAVmPool(contractId)
+		}else {
+			instanceInfo.errCount++
+		}
 		return
 	}
 	contractResult.ContractEvent = sc.ContractEvent
