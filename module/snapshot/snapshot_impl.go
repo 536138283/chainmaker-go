@@ -9,9 +9,10 @@ package snapshot
 
 import (
 	"fmt"
-	"go.uber.org/atomic"
 	"strings"
 	"sync"
+
+	"go.uber.org/atomic"
 
 	"chainmaker.org/chainmaker-go/localconf"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
@@ -41,6 +42,7 @@ type SnapshotImpl struct {
 	blockTimestamp int64
 	blockProposer  []byte
 	blockHeight    int64
+	blockVersion   []byte
 	preBlockHash   []byte
 
 	preSnapshot protocol.Snapshot
@@ -149,7 +151,7 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 	return s.blockchainStore.ReadObject(contractName, key)
 }
 
-// After the read-write set is generated, add TxSimContext to the snapshot
+// ApplyTxSimContext apply the read-write set to the snapshot,
 // return if apply successfully or not, and current applied tx num
 func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, applySpecialTx bool) (bool, int) {
@@ -179,7 +181,7 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	txResult = txSimContext.GetTxResult()
 
 	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.txTable) {
-		s.apply(tx, txRWSet, txResult)
+		s.apply(tx, txRWSet, txResult, runVmSuccess)
 		return true, len(s.txTable)
 	}
 
@@ -194,19 +196,22 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 		}
 	}
 
-	s.apply(tx, txRWSet, txResult)
+	s.apply(tx, txRWSet, txResult, runVmSuccess)
 	return true, len(s.txTable)
 }
 
 // After the read-write set is generated, add TxSimContext to the snapshot
-func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet, txResult *commonPb.Result) {
+func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet, txResult *commonPb.Result,
+	runVmSuccess bool) {
 	// Append to read table
 	applySeq := len(s.txTable)
-	for _, txRead := range txRWSet.TxReads {
-		finalKey := constructKey(txRead.ContractName, txRead.Key)
-		s.readTable[finalKey] = &sv{
-			seq:   applySeq,
-			value: txRead.Value,
+	if string(s.blockVersion) < "v1.2.7" || runVmSuccess {
+		for _, txRead := range txRWSet.TxReads {
+			finalKey := constructKey(txRead.ContractName, txRead.Key)
+			s.readTable[finalKey] = &sv{
+				seq:   applySeq,
+				value: txRead.Value,
+			}
 		}
 	}
 

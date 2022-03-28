@@ -179,6 +179,7 @@ func testSnapshot(t *testing.T, i int) {
 		blockTimestamp:  0,
 		blockProposer:   nil,
 		blockHeight:     100,
+		blockVersion:    []byte("v1.2.7"),
 		preSnapshot:     nil,
 		txRWSetTable:    nil,
 		txTable:         make([]*commonPb.Transaction, 0, 2048),
