@@ -408,7 +408,7 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
 		return nil, err
 	}
 
-	<-bp.finishProposeC
+	//<-bp.finishProposeC
 
 	return proposalBlock, nil
 }
