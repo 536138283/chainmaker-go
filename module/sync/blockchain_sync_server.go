@@ -216,6 +216,8 @@ func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from s
 	// create a key-value pair when receive block request, ignore repeat request
 	processKey := fmt.Sprintf("%s_%d", from, req.BlockHeight)
 	if _, loaded := sync.requestCache.LoadOrStore(processKey, time.Now()); loaded {
+		sync.log.Warnf("received duplicate request to get block [height: %d, batch_size: %d] from "+
+			"node [%s]", req.BlockHeight, req.BatchSize, from)
 		return nil
 	}
 
