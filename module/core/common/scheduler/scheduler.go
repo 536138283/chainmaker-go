@@ -580,9 +580,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxS
 		if err != nil {
 			return result, specialTxType, err
 		}
-	}
 
-	if ts.checkGasEnable() {
 		_, err = ts.chargeGasLimit(accountMangerContract, tx, txSimContext, contractName, method, pk, result)
 		if err != nil {
 			ts.log.Errorf("charge gas limit err is %v", err)
