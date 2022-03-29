@@ -42,17 +42,17 @@ type BlockProposerImpl struct {
 	blockchainStore protocol.BlockchainStore
 
 	//isProposer   bool        // whether current node can propose block now
-	idle         bool        // whether current node is proposing or not
+	idle bool // whether current node is proposing or not
 	//proposeTimer *time.Timer // timer controls the proposing periods
 
 	//canProposeC   chan bool                   // channel to handle propose status change from consensus module
 	//txPoolSignalC chan *txpoolpb.TxPoolSignal // channel to handle propose signal from tx pool
-	exitC         chan bool                   // channel to stop proposing loop
+	exitC         chan bool // channel to stop proposing loop
 	proposalCache protocol.ProposalCache
 
 	chainConf protocol.ChainConf // chain config
 
-	idleMu         sync.Mutex   // for proposeBlock reentrant lock
+	idleMu sync.Mutex // for proposeBlock reentrant lock
 	//statusMu       sync.Mutex   // for propose status change lock
 	//proposerMu     sync.RWMutex // for isProposer lock, avoid race
 	log            protocol.Logger
@@ -86,7 +86,7 @@ const (
 
 func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol.BlockProposer, error) {
 	blockProposerImpl := &BlockProposerImpl{
-		chainId:         config.ChainId,
+		chainId: config.ChainId,
 		//isProposer:      false, // not proposer when initialized
 		idle:            true,
 		msgBus:          config.MsgBus,
@@ -381,7 +381,6 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte
 		bp.log.Errorf("block pre hash error, expect %x, got %x, can not propose",
 			committedBlock.Header.BlockHash, preHash)
 		return false
-
 	}
 	// if height not follows the last committed block, then check last proposed block
 	b, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(preHash, height-1)
@@ -395,14 +394,14 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
 
 	height := proposal.Height
 	preHash := proposal.PreHash
-	if ok,err := bp.shouldProposeByMaxBFTSync(height, preHash); !ok {
+	if ok, err := bp.shouldProposeByMaxBFTSync(height, preHash); !ok {
 		bp.log.Errorf("not a legal proposal request [%d](%x), err: %v", height, preHash, err)
 		return nil, err
 	}
 
 	//todo view
 
-	bp.log.Infof("trigger proposal from maxBFT, height[%d]",height)
+	bp.log.Infof("trigger proposal from maxBFT, height[%d]", height)
 	proposalBlock, err := bp.proposing(height, preHash)
 	if err != nil {
 		return nil, err
@@ -441,10 +440,10 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFTSync(height uint64, preHash []
 
 	}
 	// if height not follows the last committed block, then check last proposed block
-	b, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(preHash, height-1)
-	if b == nil {
-		err = fmt.Errorf("not find preBlock: [%d:%x]", height-1, preHash)
-		return false, err
-	}
+	//b, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(preHash, height-1)
+	//if b == nil {
+	//	err = fmt.Errorf("not find preBlock: [%d:%x]", height-1, preHash)
+	//	return false, err
+	//}
 	return true, nil
 }
