@@ -12,12 +12,13 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
+
+	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 
 	"chainmaker.org/chainmaker-go/utils"
 	"github.com/gogo/protobuf/proto"
