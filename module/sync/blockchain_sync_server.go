@@ -9,6 +9,7 @@ package sync
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -43,6 +44,8 @@ type BlockChainSyncServer struct {
 
 	scheduler *Routine // Service that get blocks from other nodes
 	processor *Routine // Service that processes block data, adding valid blocks to the chain
+
+	requestCache sync.Map // ignore repeat block sync request when in process
 }
 
 func NewBlockChainSyncServer(chainId string,
@@ -63,6 +66,7 @@ func NewBlockChainSyncServer(chainId string,
 		blockCommitter:  blockCommitter,
 		close:           make(chan bool),
 		log:             logger.GetLoggerByChain(logger.MODULE_SYNC, chainId),
+		requestCache:    sync.Map{},
 	}
 	return syncServer
 }
@@ -102,6 +106,7 @@ func (sync *BlockChainSyncServer) Start() error {
 		return err
 	}
 	go sync.loop()
+	go sync.blockRequestEntrance()
 	return nil
 }
 
@@ -207,6 +212,13 @@ func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from s
 		sync.log.Errorf("fail to proto.Unmarshal the syncPb.SyncMsg:%s", err.Error())
 		return err
 	}
+	// 针对 `SyncMsg_BLOCK_SYNC_REQ` 消息处理函数，添加处理状态检查，要求同一个 `请求来源 + 高度` 不会重复返回多次数据
+	// create a key-value pair when receive block request, ignore repeat request
+	processKey := fmt.Sprintf("%s_%d", from, req.BlockHeight)
+	if _, loaded := sync.requestCache.LoadOrStore(processKey, time.Now()); loaded {
+		return nil
+	}
+
 	sync.log.Debugf("receive request to get block [height: %d, batch_size: %d] from "+
 		"node [%s]", req.BlockHeight, req.BatchSize, from)
 	if req.WithRwset {
@@ -359,6 +371,32 @@ func (sync *BlockChainSyncServer) loop() {
 			if err := sync.scheduler.addTask(resp); err != nil {
 				sync.log.Errorf("add processor task to scheduler failed, reason: %s", err)
 			}
+		}
+	}
+}
+
+// auto check block request from other node
+func (sync *BlockChainSyncServer) blockRequestEntrance() {
+	ticker := time.NewTicker(sync.conf.blockRequestTime)
+	dealFunc := func(key, value interface{}) bool {
+		if value == nil {
+			return true
+		}
+		if t, ok := value.(time.Time); ok {
+			if time.Since(t) > sync.conf.blockRequestTime {
+				sync.requestCache.Delete(key)
+			}
+			return true
+		}
+		return true
+	}
+	for {
+		select {
+		case <-sync.close:
+			return
+
+		case <-ticker.C:
+			sync.requestCache.Range(dealFunc)
 		}
 	}
 }
