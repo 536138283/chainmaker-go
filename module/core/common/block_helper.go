@@ -627,6 +627,7 @@ func (vb *VerifierBlock) ValidateBlock(
 		Ac:          vb.ac,
 		TxPool:      vb.txPool,
 		Store:       vb.blockchainStore,
+		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, errTxs, err := verifiertx.verifierTxs(block)
