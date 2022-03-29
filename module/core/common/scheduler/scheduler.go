@@ -575,20 +575,21 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxS
 		})
 	}
 
-	accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contractName, method)
-	if err != nil {
-		return result, specialTxType, err
-	}
+	if ts.checkGasEnable() {
+		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contractName, method)
+		if err != nil {
+			return result, specialTxType, err
+		}
 
-	// charge gas limit
-	_, err = ts.chargeGasLimit(accountMangerContract, tx, txSimContext, contractName, method, pk, result)
-	if err != nil {
-		ts.log.Errorf("charge gas limit err is %v", err)
-		result.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
-		result.Message = err.Error()
-		result.ContractResult.Code = uint32(1)
-		result.ContractResult.Message = err.Error()
-		return result, specialTxType, err
+		_, err = ts.chargeGasLimit(accountMangerContract, tx, txSimContext, contractName, method, pk, result)
+		if err != nil {
+			ts.log.Errorf("charge gas limit err is %v", err)
+			result.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
+			result.Message = err.Error()
+			result.ContractResult.Code = uint32(1)
+			result.ContractResult.Message = err.Error()
+			return result, specialTxType, err
+		}
 	}
 
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
@@ -596,11 +597,18 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxS
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
-	// refund gas
-	_, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
-		contractResultPayload)
-	if err != nil {
-		ts.log.Errorf("refund gas err is %v", err)
+	if ts.checkGasEnable() {
+		if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
+			contractResultPayload); err != nil {
+			ts.log.Errorf("refund gas err is %v", err)
+			if txSimContext.GetBlockVersion() >= 230 {
+				result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+				result.Message = err.Error()
+				result.ContractResult.Code = uint32(1)
+				result.ContractResult.Message = err.Error()
+				return result, specialTxType, err
+			}
+		}
 	}
 
 	if txStatusCode == commonPb.TxStatusCode_SUCCESS {
@@ -673,8 +681,7 @@ func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
 	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
 	result *commonPb.Result) (re *commonPb.Result, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
-		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+	if ts.checkNativeFilter(contractName, method) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		var code commonPb.TxStatusCode
 		var runChargeGasContract *commonPb.ContractResult
 		var limit uint64
@@ -705,8 +712,7 @@ func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, 
 func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
 	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
 	result *commonPb.Result, contractResultPayload *commonPb.ContractResult) (re *commonPb.Result, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
-		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+	if ts.checkNativeFilter(contractName, method) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		var code commonPb.TxStatusCode
 		var refundGasContract *commonPb.ContractResult
 		var limit uint64
@@ -751,8 +757,7 @@ func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *c
 
 func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction,
 	contractName, method string) (accountMangerContract *commonPb.Contract, pk []byte, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
-		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+	if ts.checkNativeFilter(contractName, method) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		accountMangerContract, err = txSimContext.GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String())
 		if err != nil {
 			ts.log.Error(err.Error())
