@@ -187,7 +187,7 @@ func initProvider() protocol.SqlDBHandle {
 	return p
 }
 func initStateSqlDB() *StateSqlDB {
-	db, _ := newStateSqlDB("dbName", "chain1", initProvider(), conf, log)
+	db, _ := newStateSqlDB("dbName", "chain1", initProvider(), conf, log, 1)
 	_, blockInfo0, _ := serialization.SerializeBlock(block0)
 	db.InitGenesis(blockInfo0)
 	return db
