@@ -29,7 +29,7 @@ import (
 // This implementation provides a mysql based data model
 type StateSqlDB struct {
 	db          protocol.SqlDBHandle
-	contractDbs map[string]protocol.SqlDBHandle
+	contractDbs *types.ConnectionPoolDBHandle
 	dbConfig    *localconf.SqlDbConfig
 	logger      protocol.Logger
 	chainId     string
@@ -78,21 +78,21 @@ func (db *StateSqlDB) initSystemStateDb(dbName string) error {
 }
 
 // NewStateSqlDB construct a new `StateDB` for given chainId
-func NewStateSqlDB(chainId string, dbConfig *localconf.SqlDbConfig, logger protocol.Logger) (*StateSqlDB, error) {
+func NewStateSqlDB(chainId string, dbConfig *localconf.SqlDbConfig, logger protocol.Logger, sqlDbConnPoolSize int) (*StateSqlDB, error) {
 	dbName := getDbName(dbConfig, chainId)
 	db := rawsqlprovider.NewSqlDBHandle(dbName, dbConfig, logger)
-	return newStateSqlDB(dbName, chainId, db, dbConfig, logger)
+	return newStateSqlDB(dbName, chainId, db, dbConfig, logger, sqlDbConnPoolSize)
 }
 
 func newStateSqlDB(dbName, chainId string, db protocol.SqlDBHandle, dbConfig *localconf.SqlDbConfig,
-	logger protocol.Logger) (*StateSqlDB, error) {
+	logger protocol.Logger, sqlDbConnPoolSize int) (*StateSqlDB, error) {
 	stateDB := &StateSqlDB{
 		db:          db,
 		dbConfig:    dbConfig,
 		logger:      logger,
 		chainId:     chainId,
 		dbName:      dbName,
-		contractDbs: make(map[string]protocol.SqlDBHandle),
+		contractDbs: types.NewConnectionPoolDBHandle(sqlDbConnPoolSize, logger),
 	}
 
 	return stateDB, nil
@@ -391,12 +391,12 @@ func (s *StateSqlDB) GetLastSavepoint() (uint64, error) {
 	return *height, nil
 }
 func (s *StateSqlDB) getContractDbHandle(contractName string) protocol.SqlDBHandle {
-	if handle, ok := s.contractDbs[contractName]; ok {
+	if handle, ok := s.contractDbs.GetDBHandle(contractName); ok {
 		s.logger.Debugf("reuse exist db handle for contract[%s],handle:%p", contractName, handle)
 		return handle
 	}
 	if s.dbConfig.SqlDbType == "sqlite" { //sqlite is a file db, don't create multi connection.
-		s.contractDbs[contractName] = s.db
+		s.contractDbs.SetDBHandle(contractName, s.db)
 		return s.db
 	}
 	dbName := getContractDbName(s.dbConfig, s.chainId, contractName)
@@ -405,7 +405,7 @@ func (s *StateSqlDB) getContractDbHandle(contractName string) protocol.SqlDBHand
 		s.logger.Error(err)
 	}
 
-	s.contractDbs[contractName] = db
+	s.contractDbs.SetDBHandle(contractName, db)
 	s.logger.Infof("create new sql db handle[%p] database[%s] for contract[%s]", db, dbName, contractName)
 	return db
 }
@@ -416,10 +416,11 @@ func (s *StateSqlDB) Close() {
 	defer s.Unlock()
 	s.logger.Info("close state sql db")
 	s.db.Close()
-	for contract, db := range s.contractDbs {
-		s.logger.Infof("close state sql db for contract:%s", contract)
-		db.Close()
-	}
+	s.contractDbs.Clear()
+	//for contract, db := range s.contractDbs {
+	//	s.logger.Infof("close state sql db for contract:%s", contract)
+	//	db.Close()
+	//}
 }
 
 func (s *StateSqlDB) QuerySingle(contractName, sql string, values ...interface{}) (protocol.SqlRow, error) {

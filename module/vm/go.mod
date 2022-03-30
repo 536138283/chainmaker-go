@@ -17,7 +17,7 @@ require (
 	chainmaker.org/chainmaker-go/wasmer v0.0.0
 	chainmaker.org/chainmaker-go/wxvm v0.0.0
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.4.3
 	github.com/mr-tron/base58 v1.2.0
 	github.com/spf13/cobra v1.1.1
