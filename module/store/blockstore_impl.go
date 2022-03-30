@@ -65,6 +65,9 @@ func NewBlockStoreImpl(chainId string,
 	binLog binlog.BinLoger,
 	logger protocol.Logger) (*BlockStoreImpl, error) {
 	walPath := filepath.Join(storeConfig.StorePath, chainId, logPath)
+	if len(storeConfig.StoreWALFileName) > 0 {
+		walPath = filepath.Join(storeConfig.StorePath, chainId, storeConfig.StoreWALFileName)
+	}
 	writeAsync := storeConfig.LogDBWriteAsync
 	walOpt := &wal.Options{
 		NoSync: writeAsync,
