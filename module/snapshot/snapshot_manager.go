@@ -86,7 +86,7 @@ func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 
 		if block.Header.BlockHeight-snapshot.GetBlockHeight() > 8 {
 			delete(m.snapshots, finger)
-			log.Infof("delete snapshot %v at height %d while gc", deleteFp, snapshot.blockHeight)
+			log.Infof("delete snapshot %v at height %d while gc", finger, snapshot.blockHeight)
 			snapshot.SetPreSnapshot(nil)
 		}
 	}
