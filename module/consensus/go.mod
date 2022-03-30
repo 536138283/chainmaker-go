@@ -16,7 +16,7 @@ require (
 	chainmaker.org/chainmaker-go/utils v0.0.0
 	chainmaker.org/chainmaker-go/vm v0.0.0-00010101000000-000000000000
 	github.com/gogo/protobuf v1.3.2
-	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.5.2
 	github.com/jfcg/sorty v1.0.15
 	github.com/kr/pretty v0.2.0 // indirect
