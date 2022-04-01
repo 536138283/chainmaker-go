@@ -924,7 +924,8 @@ type TxCollection struct {
 
 func (g *TxCollection) String() string {
 	pubKeyStr, _ := g.publicKey.String()
-	return fmt.Sprintf("\nTxsGroup{ \n\tpublicKey: %s, \n\taccountBalance: %v, \n\ttotalGasUsed: %v, \n\ttxs: [%d items] }",
+	return fmt.Sprintf(
+		"\nTxsGroup{ \n\tpublicKey: %s, \n\taccountBalance: %v, \n\ttotalGasUsed: %v, \n\ttxs: [%d items] }",
 		pubKeyStr, g.accountBalance, g.totalGasUsed, len(g.txs))
 }
 
