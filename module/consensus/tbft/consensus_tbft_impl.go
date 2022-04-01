@@ -897,7 +897,7 @@ func (consensus *ConsensusTBFTImpl) addPrevoteVote(vote *Vote) {
 	}
 	voteSet := consensus.heightRoundVoteSet.prevotes(vote.Round)
 	hash, ok := voteSet.twoThirdsMajority()
-	if !ok {
+	if !ok || vote.Round != consensus.Round {
 		consensus.logger.Debugf("[%s](%d/%d/%s) addVote %v without majority",
 			consensus.Id, consensus.Height, consensus.Round, consensus.Step, vote)
 
@@ -942,7 +942,7 @@ func (consensus *ConsensusTBFTImpl) addPrecommitVote(vote *Vote) {
 
 	voteSet := consensus.heightRoundVoteSet.precommits(vote.Round)
 	hash, ok := voteSet.twoThirdsMajority()
-	if !ok {
+	if !ok || vote.Round != consensus.Round {
 		consensus.logger.Debugf("[%s](%d/%d/%s) addVote %v without majority",
 			consensus.Id, consensus.Height, consensus.Round, consensus.Step, vote)
 
