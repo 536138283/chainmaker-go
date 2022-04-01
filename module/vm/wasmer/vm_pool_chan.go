@@ -117,6 +117,7 @@ func (m *VmPoolManager) NewRuntimeInstance(contractId *commonPb.ContractId, byte
 		pool:    pool,
 		log:     m.log,
 		chainId: m.chainId,
+		vmPoolManager: m,
 	}
 
 	return runtime, nil
@@ -444,25 +445,35 @@ func (p *vmPool) close() {
 
 // close the contract vm pool
 func (m *VmPoolManager) closeAVmPool(contractId *commonPb.ContractId) {
+	m.m.Lock()
+	defer m.m.Unlock()
+
 	key := contractId.ContractName + "_" + contractId.ContractVersion
 	pool, ok := m.instanceMap[key]
 	if ok {
 		m.log.Infof("close pool %s", key)
 		pool.close()
+		delete(m.instanceMap, key)
 	}
 }
 
 // close all contract vm pool
 func (m *VmPoolManager) closeAllVmPool() {
+	m.m.Lock()
+	defer m.m.Unlock()
+
 	for key, pool := range m.instanceMap {
 		m.log.Infof("close pool %s", key)
 		pool.close()
 	}
+	m.instanceMap = make(map[string]*vmPool)
 }
 
 // FIXME: 确认函数名是否多了字符A？@taifu
 // reset a contract vm pool install
 func (m *VmPoolManager) resetAVmPool(contractId *commonPb.ContractId) {
+	m.m.Lock()
+	defer m.m.Unlock()
 
 	key := contractId.ContractName + "_" + contractId.ContractVersion
 	pool, ok := m.instanceMap[key]
@@ -474,6 +485,9 @@ func (m *VmPoolManager) resetAVmPool(contractId *commonPb.ContractId) {
 
 // reset all contract pool instance
 func (m *VmPoolManager) ResetAllPool() {
+	m.m.Lock()
+	defer m.m.Unlock()
+
 	for key, pool := range m.instanceMap {
 		m.log.Infof("reset pool %s", key)
 		pool.reset()
