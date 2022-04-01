@@ -241,8 +241,8 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 
 func (r *RuntimeInstance) runtimeTypeError(contractId *commonPb.ContractId, runtimeSdkType []uint64,
 	txContext protocol.TxSimContext, contractResult *commonPb.ContractResult) {
-	msg := fmt.Sprintf("runtime type error, expect gasm:%d, but got %d", uint64(commonPb.RuntimeType_GASM),
-		runtimeSdkType[0])
+	msg := fmt.Sprintf("runtime type error, expect gasm:%d, but got %d",
+		uint64(commonPb.RuntimeType_GASM), runtimeSdkType[0])
 	contractResult.Code = commonPb.ContractResultCode_FAIL
 	contractResult.Message = msg
 	r.Log.Errorf(msg)
