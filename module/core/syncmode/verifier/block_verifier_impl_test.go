@@ -184,6 +184,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 		TxScheduler:     verifier.txScheduler,
 	}
 
+	conf.ChainConf.ChainConfig().AuthType = protocol.Identity
 	verifier.verifierBlock = common.NewVerifierBlock(conf)
 
 	err = verifier.VerifyBlock(b1, protocol.CONSENSUS_VERIFY)
