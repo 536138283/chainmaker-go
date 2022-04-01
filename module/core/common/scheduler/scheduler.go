@@ -8,11 +8,15 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/evmutils"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"regexp"
 	"strconv"
 	"sync"
@@ -50,6 +54,7 @@ type TxScheduler struct {
 	metricVMRunTime *prometheus.HistogramVec
 	StoreHelper     conf.StoreHelper
 	keyReg          *regexp.Regexp
+	signer 			protocol.SigningMember
 }
 
 // Transaction dependency in adjacency table representation
@@ -74,12 +79,26 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	timeoutC := time.After(ScheduleTimeout * time.Second)
 	startTime := time.Now()
-
-	enableConflictsBitWindow, enableSenderGroup, conflictsBitWindow, senderGroup := ts.initOptimizeTools(txBatch)
-
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
-	if enableSenderGroup {
+	if len(txBatch) == 0 {
+		finishC <- true
+	}
+
+	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
+	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
+	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
+	var senderGroup *SenderGroup
+	var senderCollection *SenderCollection
+
+	if enableOptimizeChargeGas {
+		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
+		ts.log.Debug("initOptimizeTools() has done -> senderCollection = %v", senderCollection)
+		dispatchSenderCollection(senderCollection, runningTxC)
+
+	}else if enableSenderGroup {
+		senderGroup = NewSenderGroup(txBatch)
+		ts.log.Debug("initOptimizeTools() has done -> senderGroup - %v", senderGroup)
 		if enableConflictsBitWindow {
 			conflictsBitWindow.setMaxPoolCapacity(len(senderGroup.txsMap))
 		}
@@ -87,17 +106,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		go func() {
 			ts.sendTxBySenderGroup(conflictsBitWindow, senderGroup, runningTxC, enableConflictsBitWindow)
 		}()
-	} else {
-		go func() {
-			if len(txBatch) > 0 {
-				for _, tx := range txBatch {
-					runningTxC <- tx
-				}
-			} else {
-				finishC <- true
-			}
-		}()
 	}
+
 	// Put the pending transaction into the running queue
 	go func() {
 		for {
@@ -127,8 +137,18 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 						ts.log.Debugf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
 							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
 					} else {
-						ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
-							conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
+						if enableOptimizeChargeGas {
+							if enableConflictsBitWindow {
+								ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, NormalTx)
+							}
+							if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+								elapsed := time.Since(start)
+								ts.metricVMRunTime.WithLabelValues(tx.Payload.ChainId).Observe(elapsed.Seconds())
+							}
+						}else {
+							ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
+								conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
+						}
 						ts.log.Debugf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
 							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
 					}
@@ -172,6 +192,11 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
+	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+		ts.log.Debug("append charge gas tx to block ...")
+		ts.appendChargeGasTx(block, snapshot, senderCollection)
+	}
+
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
 		"dag building cost %v, total used %v, tps %v\n", len(block.Dag.Vertexes), timeCostA,
@@ -182,16 +207,13 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	return txRWSetMap, contractEventMap, nil
 }
 
-func (ts *TxScheduler) initOptimizeTools(txBatch []*commonPb.Transaction) (bool, bool,
-	*ConflictsBitWindow, *SenderGroup) {
+func (ts *TxScheduler) initOptimizeTools(
+	txBatch []*commonPb.Transaction) (bool, *ConflictsBitWindow) {
 	txBatchSize := len(txBatch)
 	var conflictsBitWindow *ConflictsBitWindow
-	var senderGroup *SenderGroup
 	enableConflictsBitWindow := ts.chainConf.ChainConfig().Core.EnableConflictsBitWindow
-	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 
-	ts.log.Infof("enable conflicts bit window: [%t], enable sender group: [%t]\n",
-		enableConflictsBitWindow, enableSenderGroup)
+	ts.log.Infof("enable conflicts bit window: [%t]\n", enableConflictsBitWindow)
 
 	if AdjustWindowSize*MinAdjustTimes > txBatchSize {
 		enableConflictsBitWindow = false
@@ -199,10 +221,8 @@ func (ts *TxScheduler) initOptimizeTools(txBatch []*commonPb.Transaction) (bool,
 	if enableConflictsBitWindow {
 		conflictsBitWindow = NewConflictsBitWindow(txBatchSize)
 	}
-	if enableSenderGroup {
-		senderGroup = NewSenderGroup(txBatch)
-	}
-	return enableConflictsBitWindow, enableSenderGroup, conflictsBitWindow, senderGroup
+
+	return enableConflictsBitWindow, conflictsBitWindow
 }
 
 func (ts *TxScheduler) sendTxBySenderGroup(conflictsBitWindow *ConflictsBitWindow, senderGroup *SenderGroup,
@@ -888,4 +908,359 @@ func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	return sha256.Sum256(keyBytes), nil
+}
+
+type SenderCollection struct {
+	txsMap map[string]*TxCollection
+}
+
+type TxCollection struct {
+	publicKey 		crypto.PublicKey
+	accountBalance 	int64
+	totalGasUsed 	int64
+	txs 			[]*commonPb.Transaction
+}
+
+
+func (g *TxCollection) String() string {
+	pubKeyStr, _ := g.publicKey.String()
+	return fmt.Sprintf("\nTxsGroup{ \n\tpublicKey: %s, \n\taccountBalance: %v, \n\ttotalGasUsed: %v, \n\ttxs: [%d items] }",
+		pubKeyStr, g.accountBalance, g.totalGasUsed, len(g.txs))
+}
+
+func NewSenderCollection(
+	txBatch []*commonPb.Transaction,
+	snapshot protocol.Snapshot,
+	log protocol.Logger) *SenderCollection {
+	return &SenderCollection {
+		txsMap: getSenderTxCollection(txBatch, snapshot, log),
+	}
+}
+
+
+func getSenderTxCollection(
+	txBatch []*commonPb.Transaction,
+	snapshot protocol.Snapshot,
+	log protocol.Logger) map[string]*TxCollection {
+	var err error
+	txCollectionMap := make(map[string]*TxCollection)
+
+	for _, tx := range txBatch {
+		pk, err := getPkFromTx(tx, snapshot)
+		if err != nil {
+			log.Errorf("getPkFromTx failed: err = %v", err)
+			continue
+		}
+
+		address, err := publicKeyToAddress(pk)
+		if err != nil {
+			log.Error("publicKeyToAddress failed: err = %v", err)
+			continue
+		}
+
+		txCollection, exists := txCollectionMap[address]
+		if !exists {
+			txCollection := &TxCollection {
+				publicKey: pk,
+				accountBalance: int64(0),
+				totalGasUsed: int64(0),
+				txs: make([]*commonPb.Transaction, 0),
+			}
+			txCollectionMap[address] = txCollection
+		}
+		txCollection.txs = append(txCollection.txs, tx)
+	}
+
+	for senderAddress, txCollection := range txCollectionMap {
+		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot)
+		if err != nil {
+			log.Error("getAccountBalanceFromSnapshot failed: err = %v", err)
+		}
+	}
+
+	return txCollectionMap
+}
+
+func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (int64, error) {
+
+	var err error
+	var balance int64
+	balanceData, err := snapshot.GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		[]byte(accountmgr.AccountPrefix+address))
+	if err != nil {
+		return -1, err
+	}
+
+	if len(balanceData) == 0 {
+		balance = int64(0)
+	}else {
+		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return balance, nil
+}
+
+func publicKeyToAddress(publicKey crypto.PublicKey) (string, error) {
+	address, err := evmutils.ZXAddressFromPublicKey(publicKey)
+	if err != nil {
+		return "", err
+	}
+	return address, nil
+}
+
+func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+
+	var err error
+	var pk []byte
+	var publicKey crypto.PublicKey
+	signingMember := tx.GetSender().GetSigner()
+	if signingMember == nil {
+		err = errors.New(" can not find sender from tx ")
+		return nil, err
+	}
+
+	switch signingMember.MemberType {
+	case accesscontrol.MemberType_CERT:
+		pk, err = publicKeyFromCert(signingMember.MemberInfo)
+		if err != nil {
+			return nil, err
+		}
+		publicKey, err = asym.PublicKeyFromDER(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	case accesscontrol.MemberType_CERT_HASH:
+		var certInfo *commonPb.CertInfo
+		infoHex := hex.EncodeToString(signingMember.MemberInfo)
+		if certInfo, err = wholeCertInfoFromSnapshot(snapshot, infoHex); err != nil {
+			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
+		}
+
+		pk, err = publicKeyFromCert(certInfo.Cert)
+		if err != nil {
+			return nil, err
+		}
+
+		publicKey, err = asym.PublicKeyFromDER(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	case accesscontrol.MemberType_PUBLIC_KEY:
+		pk = signingMember.MemberInfo
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	default:
+		err = fmt.Errorf("invalid member type: %s", signingMember.MemberType)
+		return nil, err
+	}
+
+	return publicKey, nil
+}
+
+func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*commonPb.CertInfo, error) {
+	certBytes, err := snapshot.GetKey(-1, syscontract.SystemContract_CERT_MANAGE.String(), []byte(certHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &commonPb.CertInfo{
+		Hash: certHash,
+		Cert: certBytes,
+	}, nil
+}
+
+func dispatchSenderCollection(senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
+	for _, txCollection := range senderCollection.txsMap {
+		balance := txCollection.accountBalance
+		for _, tx := range txCollection.txs {
+			if tx.Payload.Limit == nil {
+				tx.Result = &commonPb.Result{
+					Code: commonPb.TxStatusCode_CONTRACT_FAIL,
+					ContractResult: &commonPb.ContractResult{
+						Code:    uint32(0),
+						Result:  nil,
+						Message: "",
+						GasUsed: uint64(0),
+					},
+					RwSetHash: nil,
+					Message: "gas_limit field must be set.",
+				}
+				continue
+			}
+			gasLimit := int64(tx.Payload.Limit.GasLimit)
+			if balance - gasLimit < 0 {
+				tx.Result = &commonPb.Result{
+					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
+					ContractResult: &commonPb.ContractResult{
+						Code:    uint32(0),
+						Result:  nil,
+						Message: "",
+						GasUsed: uint64(0),
+					},
+					RwSetHash: nil,
+					Message:   "there is no enough balance to execute tx.",
+				}
+				continue
+			}
+			balance = balance - gasLimit
+			runningTxC <- tx
+		}
+	}
+}
+
+func (ts *TxScheduler) appendChargeGasTx(
+	block *commonPb.Block,
+	snapshot protocol.Snapshot,
+	senderCollection *SenderCollection) {
+	ts.log.Info("TxScheduler => appendChargeGasTx() => createChargeGasTx() begin ")
+	tx, err := ts.createChargeGasTx(senderCollection)
+	if err != nil {
+		return
+	}
+
+	ts.log.Info("TxScheduler => appendChargeGasTx() => executeGhargeGasTx() begin ")
+	txSimContext := ts.executeChargeGasTx(tx, block, snapshot)
+	tx.Result = txSimContext.GetTxResult()
+
+	ts.log.Info("TxScheduler => appendChargeGasTx() => appendChargeGasTxToDAG() begin ")
+	ts.appendChargeGasTxToDAG(block, snapshot)
+}
+
+func (ts *TxScheduler) signTxPayload(
+	payload *commonPb.Payload) ([]byte, error) {
+
+	payloadBytes, err := proto.Marshal(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return ts.signer.Sign(ts.chainConf.ChainConfig().GetCrypto().Hash, payloadBytes)
+}
+
+func (ts *TxScheduler) createChargeGasTx(
+	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
+
+	// 构造参数
+	parameters := make([]*commonPb.KeyValuePair, 0)
+	for address, txCollection := range senderCollection.txsMap {
+		totalGasUsed := int64(0)
+		for _, tx := range txCollection.txs {
+			if tx.Result != nil {
+				totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
+			}
+		}
+		keyValuePair := commonPb.KeyValuePair {
+			Key: 	address,
+			Value: 	[]byte(fmt.Sprintf("%d", totalGasUsed)),
+		}
+		parameters = append(parameters, &keyValuePair)
+	}
+
+	// 构造 Payload
+	payload := &commonPb.Payload {
+		ChainId: ts.chainConf.ChainConfig().ChainId,
+		TxType: commonPb.TxType_INVOKE_CONTRACT,
+		TxId: utils.GetRandTxId(),
+		Timestamp: time.Now().Unix(),
+		ExpirationTime: time.Now().Add(time.Second * 1).Unix(),
+		ContractName: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		Method: syscontract.GasAccountFunction_CHARGE_GAS.String(),
+		Parameters: parameters,
+		Sequence: uint64(0),
+		Limit: &commonPb.Limit{ GasLimit: uint64(0) },
+	}
+
+	// 对 Payload 签名
+	signature, err := ts.signTxPayload(payload)
+	if err != nil {
+		ts.log.Errorf("createChargeGasTx => signTxPayload() error: %v", err.Error())
+		return nil, err
+	}
+
+	// 构造 Transaction
+	signingMember, err := ts.signer.GetMember()
+	if err != nil {
+		ts.log.Errorf("createChargeGasTx => GetMember() error: %v", err.Error())
+		return nil, err
+	}
+	return &commonPb.Transaction {
+		Payload: payload,
+		Sender: &commonPb.EndorsementEntry {
+			Signer: signingMember,
+			Signature: signature,
+		},
+		Endorsers: make([]*commonPb.EndorsementEntry,0),
+		Result: nil,
+	}, nil
+}
+
+func (ts *TxScheduler) executeChargeGasTx(
+	tx *commonPb.Transaction,
+	block *commonPb.Block,
+	snapshot protocol.Snapshot) protocol.TxSimContext  {
+
+	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
+	ts.log.Debugf("new tx for charging gas, id = %s", tx.Payload.GetTxId())
+
+	result := &commonPb.Result{
+		Code: commonPb.TxStatusCode_SUCCESS,
+		ContractResult: &commonPb.ContractResult{
+			Code:    uint32(0),
+			Result:  nil,
+			Message: "",
+		},
+		RwSetHash: nil,
+	}
+
+	contract, err := txSimContext.GetContractByName(tx.Payload.ContractName)
+	if err != nil {
+		ts.log.Errorf("Get contract info by name[%s] error:%s", tx.Payload.ContractName, err)
+		result.ContractResult.Message = err.Error()
+		result.Code = commonPb.TxStatusCode_INVALID_PARAMETER
+		result.ContractResult.Code = 1
+		txSimContext.SetTxResult(result)
+		return txSimContext
+	}
+
+	params := make(map[string][]byte, 0)
+	for _, item := range tx.Payload.Parameters {
+		address := item.Key
+		data := item.Value
+		params[address] = data
+	}
+	contractResultPayload, _, txStatusCode := ts.VmManager.RunContract(contract, tx.Payload.Method, nil,
+		params, txSimContext, 0, tx.Payload.TxType)
+	result.Code = txStatusCode
+	result.ContractResult = contractResultPayload
+	ts.log.Debugf("finished tx for charging gas, id = :%s, txStatusCode = %v", tx.Payload.TxId, txStatusCode)
+
+	txSimContext.SetTxResult(result)
+	snapshot.ApplyTxSimContext(
+		txSimContext,
+		protocol.ExecOrderTxTypeChargeGas,
+		true, true)
+
+	return txSimContext
+}
+
+func (ts *TxScheduler) appendChargeGasTxToDAG(
+	block *commonPb.Block,
+	snapshot protocol.Snapshot) {
+
+	dagNeighbors := &commonPb.DAG_Neighbor{
+		Neighbors: make([]uint32, 0, snapshot.GetSnapshotSize()-1),
+	}
+	for i := uint32(0); i < uint32(snapshot.GetSnapshotSize()-1); i++ {
+		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
+	}
+	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
 }
