@@ -619,14 +619,15 @@ func (vb *VerifierBlock) ValidateBlock(
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
 	verifierTxConf := &VerifierTxConfig{
-		Block:       block,
-		TxResultMap: txResultMap,
-		TxRWSetMap:  txRWSetMap,
-		ChainConf:   vb.chainConf,
-		Log:         vb.log,
-		Ac:          vb.ac,
-		TxPool:      vb.txPool,
-		Store:       vb.blockchainStore,
+		Block:         block,
+		TxResultMap:   txResultMap,
+		TxRWSetMap:    txRWSetMap,
+		ChainConf:     vb.chainConf,
+		Log:           vb.log,
+		Ac:            vb.ac,
+		TxPool:        vb.txPool,
+		Store:         vb.blockchainStore,
+		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, errTxs, err := verifiertx.verifierTxs(block)
