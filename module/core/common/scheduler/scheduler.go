@@ -8,19 +8,20 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/evmutils"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"regexp"
 	"strconv"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/evmutils"
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/hokaccha/go-prettyjson"
 
@@ -54,7 +55,7 @@ type TxScheduler struct {
 	metricVMRunTime *prometheus.HistogramVec
 	StoreHelper     conf.StoreHelper
 	keyReg          *regexp.Regexp
-	signer 			protocol.SigningMember
+	signer          protocol.SigningMember
 }
 
 // Transaction dependency in adjacency table representation
@@ -96,7 +97,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.log.Debug("initOptimizeTools() has done -> senderCollection = %v", senderCollection)
 		dispatchSenderCollection(senderCollection, runningTxC)
 
-	}else if enableSenderGroup {
+	} else if enableSenderGroup {
 		senderGroup = NewSenderGroup(txBatch)
 		ts.log.Debug("initOptimizeTools() has done -> senderGroup - %v", senderGroup)
 		if enableConflictsBitWindow {
@@ -145,7 +146,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 								elapsed := time.Since(start)
 								ts.metricVMRunTime.WithLabelValues(tx.Payload.ChainId).Observe(elapsed.Seconds())
 							}
-						}else {
+						} else {
 							ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
 								conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
 						}
@@ -915,12 +916,11 @@ type SenderCollection struct {
 }
 
 type TxCollection struct {
-	publicKey 		crypto.PublicKey
-	accountBalance 	int64
-	totalGasUsed 	int64
-	txs 			[]*commonPb.Transaction
+	publicKey      crypto.PublicKey
+	accountBalance int64
+	totalGasUsed   int64
+	txs            []*commonPb.Transaction
 }
-
 
 func (g *TxCollection) String() string {
 	pubKeyStr, _ := g.publicKey.String()
@@ -932,17 +932,15 @@ func NewSenderCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
 	log protocol.Logger) *SenderCollection {
-	return &SenderCollection {
+	return &SenderCollection{
 		txsMap: getSenderTxCollection(txBatch, snapshot, log),
 	}
 }
-
 
 func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
 	log protocol.Logger) map[string]*TxCollection {
-	var err error
 	txCollectionMap := make(map[string]*TxCollection)
 
 	for _, tx := range txBatch {
@@ -960,17 +958,18 @@ func getSenderTxCollection(
 
 		txCollection, exists := txCollectionMap[address]
 		if !exists {
-			txCollection := &TxCollection {
-				publicKey: pk,
+			txCollection = &TxCollection{
+				publicKey:      pk,
 				accountBalance: int64(0),
-				totalGasUsed: int64(0),
-				txs: make([]*commonPb.Transaction, 0),
+				totalGasUsed:   int64(0),
+				txs:            make([]*commonPb.Transaction, 0),
 			}
 			txCollectionMap[address] = txCollection
 		}
 		txCollection.txs = append(txCollection.txs, tx)
 	}
 
+	var err error
 	for senderAddress, txCollection := range txCollectionMap {
 		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot)
 		if err != nil {
@@ -994,7 +993,7 @@ func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (
 
 	if len(balanceData) == 0 {
 		balance = int64(0)
-	}else {
+	} else {
 		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
 		if err != nil {
 			return 0, err
@@ -1092,12 +1091,12 @@ func dispatchSenderCollection(senderCollection *SenderCollection, runningTxC cha
 						GasUsed: uint64(0),
 					},
 					RwSetHash: nil,
-					Message: "gas_limit field must be set.",
+					Message:   "gas_limit field must be set.",
 				}
 				continue
 			}
 			gasLimit := int64(tx.Payload.Limit.GasLimit)
-			if balance - gasLimit < 0 {
+			if balance-gasLimit < 0 {
 				tx.Result = &commonPb.Result{
 					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
 					ContractResult: &commonPb.ContractResult{
@@ -1158,25 +1157,25 @@ func (ts *TxScheduler) createChargeGasTx(
 				totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
 			}
 		}
-		keyValuePair := commonPb.KeyValuePair {
-			Key: 	address,
-			Value: 	[]byte(fmt.Sprintf("%d", totalGasUsed)),
+		keyValuePair := commonPb.KeyValuePair{
+			Key:   address,
+			Value: []byte(fmt.Sprintf("%d", totalGasUsed)),
 		}
 		parameters = append(parameters, &keyValuePair)
 	}
 
 	// 构造 Payload
-	payload := &commonPb.Payload {
-		ChainId: ts.chainConf.ChainConfig().ChainId,
-		TxType: commonPb.TxType_INVOKE_CONTRACT,
-		TxId: utils.GetRandTxId(),
-		Timestamp: time.Now().Unix(),
+	payload := &commonPb.Payload{
+		ChainId:        ts.chainConf.ChainConfig().ChainId,
+		TxType:         commonPb.TxType_INVOKE_CONTRACT,
+		TxId:           utils.GetRandTxId(),
+		Timestamp:      time.Now().Unix(),
 		ExpirationTime: time.Now().Add(time.Second * 1).Unix(),
-		ContractName: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-		Method: syscontract.GasAccountFunction_CHARGE_GAS.String(),
-		Parameters: parameters,
-		Sequence: uint64(0),
-		Limit: &commonPb.Limit{ GasLimit: uint64(0) },
+		ContractName:   syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		Method:         syscontract.GasAccountFunction_CHARGE_GAS.String(),
+		Parameters:     parameters,
+		Sequence:       uint64(0),
+		Limit:          &commonPb.Limit{GasLimit: uint64(0)},
 	}
 
 	// 对 Payload 签名
@@ -1192,21 +1191,21 @@ func (ts *TxScheduler) createChargeGasTx(
 		ts.log.Errorf("createChargeGasTx => GetMember() error: %v", err.Error())
 		return nil, err
 	}
-	return &commonPb.Transaction {
+	return &commonPb.Transaction{
 		Payload: payload,
-		Sender: &commonPb.EndorsementEntry {
-			Signer: signingMember,
+		Sender: &commonPb.EndorsementEntry{
+			Signer:    signingMember,
 			Signature: signature,
 		},
-		Endorsers: make([]*commonPb.EndorsementEntry,0),
-		Result: nil,
+		Endorsers: make([]*commonPb.EndorsementEntry, 0),
+		Result:    nil,
 	}, nil
 }
 
 func (ts *TxScheduler) executeChargeGasTx(
 	tx *commonPb.Transaction,
 	block *commonPb.Block,
-	snapshot protocol.Snapshot) protocol.TxSimContext  {
+	snapshot protocol.Snapshot) protocol.TxSimContext {
 
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("new tx for charging gas, id = %s", tx.Payload.GetTxId())
@@ -1231,7 +1230,7 @@ func (ts *TxScheduler) executeChargeGasTx(
 		return txSimContext
 	}
 
-	params := make(map[string][]byte, 0)
+	params := make(map[string][]byte)
 	for _, item := range tx.Payload.Parameters {
 		address := item.Key
 		data := item.Value

@@ -7,11 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker-go/module/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"fmt"
 	"regexp"
 	"sync"
+
+	"chainmaker.org/chainmaker-go/module/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/monitor"
