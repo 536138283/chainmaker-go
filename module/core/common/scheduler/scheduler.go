@@ -99,7 +99,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		enableOptimizeChargeGas,
 		senderCollection,
 		enableSenderGroup,
-		senderGroup,
+		senderGroup,q
 		enableConflictsBitWindow,
 		conflictsBitWindow)
 
@@ -1086,7 +1086,7 @@ func (ts *TxScheduler) dispatchTxs(
 		goRoutinePool.Tune(len(senderGroup.txsMap))
 		ts.sendTxBySenderGroup(conflictsBitWindow, senderGroup, runningTxC, enableConflictsBitWindow)
 
-	}else {
+	} else {
 		for _, tx := range txBatch {
 			runningTxC <- tx
 		}
