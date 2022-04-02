@@ -99,7 +99,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		enableOptimizeChargeGas,
 		senderCollection,
 		enableSenderGroup,
-		senderGroup,q
+		senderGroup,
 		enableConflictsBitWindow,
 		conflictsBitWindow)
 
