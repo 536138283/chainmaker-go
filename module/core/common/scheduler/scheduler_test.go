@@ -114,7 +114,8 @@ func newBlock() *commonpb.Block {
 	}
 }
 
-func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
+func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+	*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonpb.Contract, *commonpb.Block) {
 	var txRWSetTable = make([]*commonpb.TxRWSet, txCount)
 	var txTable = make([]*commonpb.Transaction, txCount)
@@ -128,7 +129,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
-		Crypto: &crypto,
+		Crypto:   &crypto,
 		Contract: &contractConf,
 		AuthType: protocol.Identity,
 		Core: &configpb.CoreConfig{

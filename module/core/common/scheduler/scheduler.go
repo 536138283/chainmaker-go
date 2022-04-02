@@ -137,19 +137,11 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 						runningTxC <- tx
 						ts.log.Debugf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
 							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+
 					} else {
-						if enableOptimizeChargeGas {
-							if enableConflictsBitWindow {
-								ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, NormalTx)
-							}
-							if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-								elapsed := time.Since(start)
-								ts.metricVMRunTime.WithLabelValues(tx.Payload.ChainId).Observe(elapsed.Seconds())
-							}
-						} else {
-							ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
-								conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
-						}
+						ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
+							conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
+
 						ts.log.Debugf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
 							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
 					}
