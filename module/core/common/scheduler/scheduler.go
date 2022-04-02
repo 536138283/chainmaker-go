@@ -95,7 +95,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	if enableOptimizeChargeGas {
 		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
 		ts.log.Debug("initOptimizeTools() has done -> senderCollection = %v", senderCollection)
-		dispatchSenderCollection(senderCollection, runningTxC)
+		go dispatchSenderCollection(senderCollection, runningTxC)
 
 	} else if enableSenderGroup {
 		senderGroup = NewSenderGroup(txBatch)
@@ -104,8 +104,13 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 			conflictsBitWindow.setMaxPoolCapacity(len(senderGroup.txsMap))
 		}
 		goRoutinePool.Tune(len(senderGroup.txsMap))
+		go ts.sendTxBySenderGroup(conflictsBitWindow, senderGroup, runningTxC, enableConflictsBitWindow)
+
+	}else {
 		go func() {
-			ts.sendTxBySenderGroup(conflictsBitWindow, senderGroup, runningTxC, enableConflictsBitWindow)
+			for _, tx := range txBatch {
+				runningTxC <- tx
+			}
 		}()
 	}
 
