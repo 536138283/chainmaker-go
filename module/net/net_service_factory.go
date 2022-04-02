@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package net
 
 import (
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -30,10 +31,23 @@ func (nsf *NetServiceFactory) NewNetService(
 		if err := nsf.setAllConsensusNodeIds(ns, chainConf); err != nil {
 			return nil, err
 		}
-		// set config watcher
-		chainConf.AddWatch(ns.ConfigWatcher())
-		// set vm watcher
-		chainConf.AddVmWatch(ns.VmWatcher())
+		// set contract event subscribe
+		ns.msgBus.Register(msgbus.ChainConfig, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsRevoke, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsFreeze, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsUnfreeze, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsAliasUpdate, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.CertManageCertsAliasDelete, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.PubkeyManageAdd, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.PubkeyManageDelete, ns.NetConfigSubscribe())
+
+		// v220_compat Deprecated
+		{
+			// set config watcher
+			chainConf.AddWatch(ns.ConfigWatcher())
+			// set vm watcher
+			chainConf.AddVmWatch(ns.VmWatcher())
+		}
 	}
 	return ns, nil
 }

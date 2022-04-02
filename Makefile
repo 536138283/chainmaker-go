@@ -8,7 +8,7 @@ else
     endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=v2.2.0_alpha
+VERSION=v2.3.0_alpha
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
 
@@ -110,7 +110,7 @@ test-deploy:
 
 sql-qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
+	cd test/send_proposal_request_ci && ./stop_force.sh
 	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 	echo "start new sql-qta test"
 	cd test/send_proposal_request_ci && ./build.sh
@@ -120,7 +120,7 @@ sql-qta:
 	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_solo.sh
+	cd test/send_proposal_request_ci && ./stop_force.sh
 	cd test/send_proposal_request_ci && ./clean_data_log.sh
 	echo "start new qta test"
 	cd test/send_proposal_request_ci && ./build.sh

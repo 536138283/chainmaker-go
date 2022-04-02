@@ -5,9 +5,7 @@
 */
 package blockchain
 
-import (
-	"testing"
-)
+import "testing"
 
 func TestModule(t *testing.T) {
 	t.Log("TestModule")

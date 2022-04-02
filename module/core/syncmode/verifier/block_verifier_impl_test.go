@@ -41,6 +41,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	txpool := mock.NewMockTxPool(ctl)
+	netService := mock.NewMockNetService(ctl)
 
 	tx := createNewTestTx()
 	txs := make([]*commonpb.Transaction, 1)
@@ -62,87 +63,6 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 		TxReads:  nil,
 		TxWrites: nil,
 	})
-
-	txpool.EXPECT().GetTxsByTxIds(gomock.Any()).Return(txList, heights).AnyTimes()
-	txpool.EXPECT().AddTxsToPendingCache(gomock.Any(), gomock.Any()).AnyTimes()
-	txResultMap := make(map[string]*commonpb.Result)
-	txResultMap[tx.Payload.TxId] = tx.Result
-
-	snapshot := mock.NewMockSnapshot(ctl)
-	snapshot.EXPECT().GetBlockchainStore().AnyTimes()
-	snapshot.EXPECT().Seal().AnyTimes()
-	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
-	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
-
-	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
-	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
-	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()
-	txScheduler.EXPECT().SimulateWithDag(gomock.Any(), gomock.Any()).Return(rwSetmap, txResultMap, nil).AnyTimes()
-
-	consensus := configpb.ConsensusConfig{
-		Type: consensus.ConsensusType_TBFT,
-	}
-	block := configpb.BlockConfig{
-		TxTimestampVerify: false,
-		TxTimeout:         1000000000,
-		BlockTxCapacity:   100,
-		BlockSize:         100000,
-		BlockInterval:     1000,
-	}
-	crypro := configpb.CryptoConfig{Hash: hashType}
-	contract := configpb.ContractConfig{EnableSqlSupport: false}
-	chainConfig := configpb.ChainConfig{
-		Consensus: &consensus,
-		Block:     &block,
-		Contract:  &contract,
-		Crypto:    &crypro,
-		Core: &configpb.CoreConfig{
-			TxSchedulerTimeout:         0,
-			TxSchedulerValidateTimeout: 0,
-			ConsensusTurboConfig: &configpb.ConsensusTurboConfig{
-				ConsensusMessageTurbo: false,
-				RetryTime:             0,
-				RetryInterval:         0,
-			},
-		}}
-	chainConf.EXPECT().ChainConfig().Return(&chainConfig).AnyTimes()
-
-	verifier := &BlockVerifierImpl{
-		chainId:         chainId,
-		msgBus:          msgBus,
-		txScheduler:     txScheduler,
-		snapshotManager: snapshotMgr,
-		ledgerCache:     ledgerCache,
-		blockchainStore: blockchainStoreImpl,
-		reentrantLocks: &common.ReentrantLocks{
-			ReentrantLocks: make(map[string]interface{}),
-		},
-		proposalCache:         proposedCache,
-		chainConf:             chainConf,
-		ac:                    ac,
-		log:                   logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
-		txPool:                txpool,
-		verifierBlock:         nil,
-		storeHelper:           common.NewKVStoreHelper(chainId),
-		metricBlockVerifyTime: nil,
-	}
-
-	conf := &common.VerifierBlockConf{
-		ChainConf:       verifier.chainConf,
-		Log:             verifier.log,
-		LedgerCache:     verifier.ledgerCache,
-		Ac:              verifier.ac,
-		SnapshotManager: verifier.snapshotManager,
-		TxPool:          verifier.txPool,
-		BlockchainStore: verifier.blockchainStore,
-		ProposalCache:   verifier.proposalCache,
-		VmMgr:           nil,
-		StoreHelper:     verifier.storeHelper,
-		TxScheduler:     verifier.txScheduler,
-	}
-
-	verifier.verifierBlock = common.NewVerifierBlock(conf)
 
 	var err error
 	tx.Result.RwSetHash, err = utils.CalcRWSetHash(hashType, rwSetmap[tx.Payload.TxId])
@@ -177,46 +97,13 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	require.Nil(t, err)
 	b1.Header.BlockHash = blockHash
 
-	err = verifier.VerifyBlock(b1, protocol.CONSENSUS_VERIFY)
-	require.Nil(t, err)
-}
+	member := mock.NewMockMember(ctl)
+	member.EXPECT().GetMemberId().Return("123").AnyTimes()
+	ac.EXPECT().NewMember(b1.Header.Proposer).Return(member, nil)
 
-func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
-	ctl := gomock.NewController(t)
-	var chainId = "Chain1"
-
-	msgBus := msgbus.NewMessageBus()
-	txScheduler := mock.NewMockTxScheduler(ctl)
-	snapshotMgr := mock.NewMockSnapshotManager(ctl)
-	ledgerCache := cache.NewLedgerCache(chainId)
-	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
-	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
-	chainConf := mock.NewMockChainConf(ctl)
-	ac := mock.NewMockAccessControlProvider(ctl)
-	txpool := mock.NewMockTxPool(ctl)
-
-	tx := createNewTestTx()
-	txs := make([]*commonpb.Transaction, 1)
-	txs[0] = tx
-	rwSetmap := make(map[string]*commonpb.TxRWSet)
-	rwSetmap[tx.Payload.TxId] = &commonpb.TxRWSet{
-		TxId:     tx.Payload.TxId,
-		TxReads:  nil,
-		TxWrites: nil,
-	}
-
-	txList := make(map[string]*commonpb.Transaction)
-	txList[tx.Payload.TxId] = tx
-	heights := make(map[string]uint64)
-	heights[tx.Payload.TxId] = 1
-	txRwSetTable := make([]*commonpb.TxRWSet, 0)
-	txRwSetTable = append(txRwSetTable, &commonpb.TxRWSet{
-		TxId:     tx.Payload.TxId,
-		TxReads:  nil,
-		TxWrites: nil,
-	})
-
-	txpool.EXPECT().GetTxsByTxIds(gomock.Any()).Return(txList, heights).AnyTimes()
+	txpool.EXPECT().GetTxsByTxIds(gomock.Any()).Return(txList, nil).AnyTimes()
+	txpool.EXPECT().GetAllTxsByTxIds(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(txList, nil).AnyTimes()
 	txpool.EXPECT().AddTxsToPendingCache(gomock.Any(), gomock.Any()).AnyTimes()
 	txResultMap := make(map[string]*commonpb.Result)
 	txResultMap[tx.Payload.TxId] = tx.Result
@@ -227,6 +114,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
 
+	netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -279,6 +167,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 		verifierBlock:         nil,
 		storeHelper:           common.NewKVStoreHelper(chainId),
 		metricBlockVerifyTime: nil,
+		netService:            netService,
 	}
 
 	conf := &common.VerifierBlockConf{
@@ -296,6 +185,46 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	}
 
 	verifier.verifierBlock = common.NewVerifierBlock(conf)
+
+	err = verifier.VerifyBlock(b1, protocol.CONSENSUS_VERIFY)
+	require.Nil(t, err)
+}
+
+func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
+	ctl := gomock.NewController(t)
+	var chainId = "Chain1"
+
+	msgBus := msgbus.NewMessageBus()
+	txScheduler := mock.NewMockTxScheduler(ctl)
+	snapshotMgr := mock.NewMockSnapshotManager(ctl)
+	ledgerCache := cache.NewLedgerCache(chainId)
+	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
+	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
+	chainConf := mock.NewMockChainConf(ctl)
+	ac := mock.NewMockAccessControlProvider(ctl)
+	txpool := mock.NewMockTxPool(ctl)
+	netService := mock.NewMockNetService(ctl)
+
+	tx := createNewTestTx()
+	txs := make([]*commonpb.Transaction, 1)
+	txs[0] = tx
+	rwSetmap := make(map[string]*commonpb.TxRWSet)
+	rwSetmap[tx.Payload.TxId] = &commonpb.TxRWSet{
+		TxId:     tx.Payload.TxId,
+		TxReads:  nil,
+		TxWrites: nil,
+	}
+
+	txList := make(map[string]*commonpb.Transaction)
+	txList[tx.Payload.TxId] = tx
+	heights := make(map[string]uint64)
+	heights[tx.Payload.TxId] = 1
+	txRwSetTable := make([]*commonpb.TxRWSet, 0)
+	txRwSetTable = append(txRwSetTable, &commonpb.TxRWSet{
+		TxId:     tx.Payload.TxId,
+		TxReads:  nil,
+		TxWrites: nil,
+	})
 
 	var err error
 	tx.Result.RwSetHash, err = utils.CalcRWSetHash(hashType, rwSetmap[tx.Payload.TxId])
@@ -336,6 +265,96 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 		TxReads:  nil,
 		TxWrites: nil,
 	})
+
+	member := mock.NewMockMember(ctl)
+	member.EXPECT().GetMemberId().Return("123").AnyTimes()
+	ac.EXPECT().NewMember(b1.Header.Proposer).Return(member, nil)
+
+	txpool.EXPECT().GetTxsByTxIds(gomock.Any()).Return(txList, nil).AnyTimes()
+	txpool.EXPECT().GetAllTxsByTxIds(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+		Return(txList, nil).AnyTimes()
+	txpool.EXPECT().AddTxsToPendingCache(gomock.Any(), gomock.Any()).AnyTimes()
+	txResultMap := make(map[string]*commonpb.Result)
+	txResultMap[tx.Payload.TxId] = tx.Result
+
+	snapshot := mock.NewMockSnapshot(ctl)
+	snapshot.EXPECT().GetBlockchainStore().AnyTimes()
+	snapshot.EXPECT().Seal().AnyTimes()
+	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
+	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
+	netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
+
+	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
+	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
+	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
+	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()
+	txScheduler.EXPECT().SimulateWithDag(gomock.Any(), gomock.Any()).Return(rwSetmap, txResultMap, nil).AnyTimes()
+
+	consensus := configpb.ConsensusConfig{
+		Type: consensus.ConsensusType_TBFT,
+	}
+	block := configpb.BlockConfig{
+		TxTimestampVerify: false,
+		TxTimeout:         1000000000,
+		BlockTxCapacity:   100,
+		BlockSize:         100000,
+		BlockInterval:     1000,
+	}
+	crypro := configpb.CryptoConfig{Hash: hashType}
+	contract := configpb.ContractConfig{EnableSqlSupport: false}
+	chainConfig := configpb.ChainConfig{
+		Consensus: &consensus,
+		Block:     &block,
+		Contract:  &contract,
+		Crypto:    &crypro,
+		Core: &configpb.CoreConfig{
+			TxSchedulerTimeout:         0,
+			TxSchedulerValidateTimeout: 0,
+			ConsensusTurboConfig: &configpb.ConsensusTurboConfig{
+				ConsensusMessageTurbo: false,
+				RetryTime:             0,
+				RetryInterval:         0,
+			},
+		}}
+	chainConf.EXPECT().ChainConfig().Return(&chainConfig).AnyTimes()
+
+	verifier := &BlockVerifierImpl{
+		chainId:         chainId,
+		msgBus:          msgBus,
+		txScheduler:     txScheduler,
+		snapshotManager: snapshotMgr,
+		ledgerCache:     ledgerCache,
+		blockchainStore: blockchainStoreImpl,
+		reentrantLocks: &common.ReentrantLocks{
+			ReentrantLocks: make(map[string]interface{}),
+		},
+		proposalCache:         proposedCache,
+		chainConf:             chainConf,
+		ac:                    ac,
+		log:                   logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
+		txPool:                txpool,
+		verifierBlock:         nil,
+		storeHelper:           common.NewKVStoreHelper(chainId),
+		metricBlockVerifyTime: nil,
+		netService:            netService,
+	}
+
+	conf := &common.VerifierBlockConf{
+		ChainConf:       verifier.chainConf,
+		Log:             verifier.log,
+		LedgerCache:     verifier.ledgerCache,
+		Ac:              verifier.ac,
+		SnapshotManager: verifier.snapshotManager,
+		TxPool:          verifier.txPool,
+		BlockchainStore: verifier.blockchainStore,
+		ProposalCache:   verifier.proposalCache,
+		VmMgr:           nil,
+		StoreHelper:     verifier.storeHelper,
+		TxScheduler:     verifier.txScheduler,
+	}
+
+	verifier.verifierBlock = common.NewVerifierBlock(conf)
+
 	err = verifier.VerifyBlockWithRwSets(b1, rwSet, protocol.CONSENSUS_VERIFY)
 	require.Nil(t, err)
 }

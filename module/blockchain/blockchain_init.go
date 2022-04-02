@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core"
@@ -268,8 +270,10 @@ func (bc *Blockchain) initOldStore() (err error) {
 		config.ResultDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	config.HistoryDbConfig.LevelDbConfig["store_path"] =
 		config.HistoryDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	config.TxExistDbConfig.LevelDbConfig["store_path"] =
-		config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
+	if config.TxExistDbConfig != nil {
+		config.TxExistDbConfig.LevelDbConfig["store_path"] =
+			config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
+	}
 	if err != nil {
 		return err
 	}
@@ -337,6 +341,11 @@ func (bc *Blockchain) initChainConf() (err error) {
 		return fmt.Errorf("auth type of chain config mismatch the local config")
 	}
 
+	protocol.ParametersValueMaxLength = bc.chainConf.ChainConfig().Block.TxParameterSize * 1024 * 1024
+	if bc.chainConf.ChainConfig().Block.TxParameterSize <= 0 {
+		protocol.ParametersValueMaxLength = protocol.DefaultParametersValueMaxSize * 1024 * 1024
+	}
+
 	bc.chainNodeList, err = bc.chainConf.GetConsensusNodeIdList()
 	if err != nil {
 		bc.log.Errorf("load node list of chain config failed, %s", err)
@@ -345,10 +354,12 @@ func (bc *Blockchain) initChainConf() (err error) {
 	bc.initModules[moduleNameChainConf] = struct{}{}
 
 	// register myself as config watcher
+	bc.msgBus.Register(msgbus.ChainConfig, bc)
+
+	// v220_compat Deprecated
+	// register myself as config watcher
 	bc.chainConf.AddWatch(bc)
-	//if localconf.ChainMakerConfig.StorageConfig.StateDbConfig.IsSqlDB() {
-	//	panic("init chain conf fail. sql the future feature")
-	//}
+
 	return
 }
 
@@ -459,7 +470,7 @@ func (bc *Blockchain) initAC() (err error) {
 	//	return
 	//}
 	acFactory := accesscontrol.ACFactory()
-	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog, bc.msgBus)
 	if err != nil {
 		bc.log.Errorf("new ac provider failed, %s", err.Error())
 		return
@@ -674,6 +685,7 @@ func (bc *Blockchain) initCore() (err error) {
 		VmMgr:           bc.vmMgr,
 		ProposalCache:   bc.proposalCache,
 		Subscriber:      bc.eventSubscriber,
+		NetService:      bc.netService,
 	}
 
 	coreEngineFactory := core.Factory()

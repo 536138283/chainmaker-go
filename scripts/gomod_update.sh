@@ -9,9 +9,9 @@
 set -x
 BRANCH=$1
 if [[ ! -n $BRANCH ]]; then
-  BRANCH="develop"
+				  BRANCH="develop"
 fi
-QC="v2.2.0_alpha_qc"
+QC="develop"
 cd ..
 
 go get chainmaker.org/chainmaker/chainconf/v2@${BRANCH}
@@ -24,9 +24,9 @@ go get chainmaker.org/chainmaker/consensus-tbft/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-utils/v2@${BRANCH}
 go get chainmaker.org/chainmaker/localconf/v2@${BRANCH}
 go get chainmaker.org/chainmaker/logger/v2@${BRANCH}
-go get chainmaker.org/chainmaker/net-common@${BRANCH}
-go get chainmaker.org/chainmaker/net-libp2p@${BRANCH}
-go get chainmaker.org/chainmaker/net-liquid@${BRANCH}
+go get chainmaker.org/chainmaker/net-common@v1.1.0
+go get chainmaker.org/chainmaker/net-libp2p@v1.1.0
+go get chainmaker.org/chainmaker/net-liquid@v1.0.0
 go get chainmaker.org/chainmaker/pb-go/v2@${BRANCH}
 go get chainmaker.org/chainmaker/protocol/v2@${BRANCH}
 go get chainmaker.org/chainmaker/sdk-go/v2@${BRANCH}

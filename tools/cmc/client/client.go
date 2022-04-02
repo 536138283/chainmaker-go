@@ -9,13 +9,10 @@ package client
 
 import (
 	"fmt"
-	"log"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
 var (
@@ -53,15 +50,16 @@ var (
 	userSignKeyFilePath string
 	userSignCrtFilePath string
 
-	blockInterval  uint32
-	nodeOrgId      string
-	nodeIdOld      string
-	nodeId         string
-	nodeIds        string
-	trustRootOrgId string
-	trustRootPaths []string
-	certFilePaths  string
-	certCrlPath    string
+	blockInterval   uint32
+	txParameterSize uint32
+	nodeOrgId       string
+	nodeIdOld       string
+	nodeId          string
+	nodeIds         string
+	trustRootOrgId  string
+	trustRootPaths  []string
+	certFilePaths   string
+	certCrlPath     string
 
 	address   string
 	amount    string
@@ -116,6 +114,7 @@ const (
 	flagUserSignCrtFilePath              = "user-signcrt-file-path"
 	flagTimeout                          = "timeout"
 	flagBlockInterval                    = "block-interval"
+	flagTxParameterSize                  = "tx-parameter-size"
 	flagNodeOrgId                        = "node-org-id"
 	flagNodeIdOld                        = "node-id-old"
 	flagNodeId                           = "node-id"
@@ -157,6 +156,7 @@ func ClientCMD() *cobra.Command {
 	clientCmd.AddCommand(certManageCMD())
 	clientCmd.AddCommand(blockChainsCMD())
 	clientCmd.AddCommand(enableOrDisableGasCMD())
+	clientCmd.AddCommand(certAliasCMD())
 
 	return clientCmd
 }
@@ -211,7 +211,7 @@ func init() {
 
 	// 链配置
 	flags.Uint32Var(&blockInterval, flagBlockInterval, 2000, "block interval timeout in milliseconds, default 2000ms")
-
+	flags.Uint32Var(&txParameterSize, flagTxParameterSize, 10, "tx parameter size, default 10MB")
 	flags.StringVar(&nodeOrgId, flagNodeOrgId, "", "specify node org id")
 	flags.StringVar(&nodeIdOld, flagNodeIdOld, "", "specify old node id")
 	flags.StringVar(&nodeId, flagNodeId, "", "specify node id(which will be added or update to")
@@ -261,25 +261,6 @@ func attachFlags(cmd *cobra.Command, names []string) {
 			//cmdFlags.AddFlag(flag)
 		}
 	}
-}
-
-func createAdminWithConfig(adminKeyFilePath, adminCrtFilePath string) (*sdk.ChainClient, error) {
-	chainClient, err := sdk.NewChainClient(
-		sdk.WithConfPath(sdkConfPath),
-		sdk.WithUserKeyFilePath(adminKeyFilePath),
-		sdk.WithUserCrtFilePath(adminCrtFilePath),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	//启用证书压缩（开启证书压缩可以减小交易包大小，提升处理性能）
-	err = chainClient.EnableCertHash()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	return chainClient, nil
 }
 
 func getChainMakerServerVersionCMD() *cobra.Command {

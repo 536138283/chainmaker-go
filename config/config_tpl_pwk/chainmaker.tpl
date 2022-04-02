@@ -263,6 +263,16 @@ storage:
   # file size of .fdb, MB, default: 20
   logdb_segment_size: 128
 
+  # bigfilter config
+  enable_bigfilter: false    #default false
+  bigfilter_config:
+    redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"   #redis host:port
+    redis_password: abcpass  #redis password
+    tx_capacity: 1000000000   #support max transaction capacity
+    fp_rate: 0.000000001      #false postive rate
+  # RWC config               default 1000000
+  rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
+
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
@@ -367,8 +377,12 @@ vm:
   # Unix domain socket open, used for chainmaker and docker manager communication
   uds_open: true
   # Number of user Ids
-  user_num: 100
+  user_num: 1000
   # Timeout per transaction, Unit: second
   time_limit: 8
   # Max process for contract
-  max_concurrency: 50
+  max_concurrency: 500
+  # Grpc max send message size, Default size is 4, Unit: MB
+  max_send_msg_size: 10
+  # Grpc max receive message size, Default size is 4, Unit: MB
+  max_recv_msg_size: 10
