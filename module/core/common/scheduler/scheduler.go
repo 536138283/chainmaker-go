@@ -89,30 +89,19 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
-	var senderGroup *SenderGroup
-	var senderCollection *SenderCollection
+	var senderGroup = NewSenderGroup(txBatch)
+	var senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
 
-	if enableOptimizeChargeGas {
-		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
-		ts.log.Debug("initOptimizeTools() has done -> senderCollection = %v", senderCollection)
-		go dispatchSenderCollection(senderCollection, runningTxC)
-
-	} else if enableSenderGroup {
-		senderGroup = NewSenderGroup(txBatch)
-		ts.log.Debug("initOptimizeTools() has done -> senderGroup - %v", senderGroup)
-		if enableConflictsBitWindow {
-			conflictsBitWindow.setMaxPoolCapacity(len(senderGroup.txsMap))
-		}
-		goRoutinePool.Tune(len(senderGroup.txsMap))
-		go ts.sendTxBySenderGroup(conflictsBitWindow, senderGroup, runningTxC, enableConflictsBitWindow)
-
-	}else {
-		go func() {
-			for _, tx := range txBatch {
-				runningTxC <- tx
-			}
-		}()
-	}
+	go ts.dispatchTxs(
+		txBatch,
+		runningTxC,
+		goRoutinePool,
+		enableOptimizeChargeGas,
+		senderCollection,
+		enableSenderGroup,
+		senderGroup,
+		enableConflictsBitWindow,
+		conflictsBitWindow)
 
 	// Put the pending transaction into the running queue
 	go func() {
@@ -1073,6 +1062,35 @@ func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*co
 		Hash: certHash,
 		Cert: certBytes,
 	}, nil
+}
+
+func (ts *TxScheduler) dispatchTxs(
+	txBatch []*commonPb.Transaction,
+	runningTxC chan *commonPb.Transaction,
+	goRoutinePool *ants.Pool,
+	enableOptimizeChargeGas bool,
+	senderCollection *SenderCollection,
+	enableSenderGroup bool,
+	senderGroup *SenderGroup,
+	enableConflictsBitWindow bool,
+	conflictsBitWindow *ConflictsBitWindow) {
+	if enableOptimizeChargeGas {
+		ts.log.Debug("initOptimizeTools() has done -> senderCollection = %v", senderCollection)
+		dispatchSenderCollection(senderCollection, runningTxC)
+
+	} else if enableSenderGroup {
+		ts.log.Debug("initOptimizeTools() has done -> senderGroup - %v", senderGroup)
+		if enableConflictsBitWindow {
+			conflictsBitWindow.setMaxPoolCapacity(len(senderGroup.txsMap))
+		}
+		goRoutinePool.Tune(len(senderGroup.txsMap))
+		ts.sendTxBySenderGroup(conflictsBitWindow, senderGroup, runningTxC, enableConflictsBitWindow)
+
+	}else {
+		for _, tx := range txBatch {
+			runningTxC <- tx
+		}
+	}
 }
 
 func dispatchSenderCollection(senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
