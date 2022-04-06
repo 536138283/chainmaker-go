@@ -100,7 +100,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		msg := fmt.Sprintf("contract invoke failed, %s", err.Error())
 		r.log.Errorf(msg)
 		contractResult.Message = msg
-		if method == "init_contract" {
+		if method == "init_contract" && utils.ConvertBlockVersion(txContext.GetBlockVersion()) >= 127 {
 			r.vmPoolManager.closeAVmPool(contractId)
 		}else {
 			instanceInfo.errCount++
