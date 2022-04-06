@@ -166,11 +166,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	proposerId, err := common.GetProposerId(v.ac, v.netService, block.Header.Proposer)
-	if err != nil {
-		return err
-	}
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, proposerId, v.log)
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}
@@ -272,12 +268,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	proposerId, err := common.GetProposerId(v.ac, v.netService, block.Header.Proposer)
-	if err != nil {
-		return err
-	}
-
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, proposerId, v.log)
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}

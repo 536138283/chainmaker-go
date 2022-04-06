@@ -1104,7 +1104,8 @@ func RecoverBlock(
 	mode protocol.VerifyMode,
 	chainConf protocol.ChainConf,
 	txPool protocol.TxPool,
-	proposerId string,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, error) {
 
 	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode {
@@ -1118,6 +1119,11 @@ func RecoverBlock(
 		txIds := utils.GetTxIds(block.Txs)
 		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
 		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
+
+		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
+		if err != nil {
+			return nil, err
+		}
 
 		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
 		if err != nil {
