@@ -9,13 +9,16 @@ package utils
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"fmt"
+	"strconv"
+	"strings"
+
 	"chainmaker.org/chainmaker-go/common/crypto/hash"
 	acPb "chainmaker.org/chainmaker-go/pb/protogo/accesscontrol"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	consensusPb "chainmaker.org/chainmaker-go/pb/protogo/consensus"
 	"chainmaker.org/chainmaker-go/protocol"
-	"crypto/sha256"
-	"fmt"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -227,4 +230,14 @@ func VerifyBlockSig(hashType string, b *commonPb.Block, ac protocol.AccessContro
 		return false, fmt.Errorf("authentication fail")
 	}
 	return true, nil
+}
+
+// ConvertBlockVersion  eg: v1.2.7 to 127
+func ConvertBlockVersion(blockVersion string) uint32 {
+	versionString := strings.Join(strings.Split(blockVersion[1:], "."), "")
+	versionNumber, err := strconv.Atoi(versionString)
+	if err != nil {
+		return uint32(0)
+	}
+	return uint32(versionNumber)
 }

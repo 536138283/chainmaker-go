@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/utils"
 	"github.com/golang/groupcache/lru"
 )
 
@@ -177,7 +178,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm,tx id:%s, error= %s", tx.GetHeader().TxId, err.Error())
-		r.removeModByMethod(method, contractId)
+		r.removeModByMethod(method, contractId, txContext)
 		return
 	}
 	var paramMarshalBytes []byte
@@ -186,7 +187,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm,tx id:%s, failed to call args(), error=", tx.GetHeader().TxId, err.Error())
-		r.removeModByMethod(method, contractId)
+		r.removeModByMethod(method, contractId, txContext)
 		return
 	}
 
@@ -195,7 +196,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		ec := serialize.NewEasyCodecWithMap(parameters)
 		paramMarshalBytes = ec.Marshal()
 	} else {
-		r.runtimeTypeError(contractId, runtimeSdkType, contractResult)
+		r.runtimeTypeError(contractId, runtimeSdkType, txContext, contractResult)
 		return
 	}
 
@@ -205,7 +206,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm, tx id:%s,failed to allocate, error=", tx.GetHeader().TxId, err.Error())
-		r.removeModByMethod(method, contractId)
+		r.removeModByMethod(method, contractId, txContext)
 		return
 	}
 	copy(vm.Memory[allocatePtr[0]:allocatePtr[0]+allocateSize], paramMarshalBytes)
@@ -215,7 +216,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm, tx id:%s,error=%+v", tx.GetHeader().TxId, err.Error())
-		r.removeModByMethod(method, contractId)
+		r.removeModByMethod(method, contractId, txContext)
 	} else {
 		contractResult.ContractEvent = waciInstance.ContractEvent
 		r.Log.Debugf("invoke gasm success, tx id:%s, gas cost %+v,[IGNORE: ret %+v, retTypes %+v]",
@@ -239,18 +240,22 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 }
 
 func (r *RuntimeInstance) runtimeTypeError(contractId *commonPb.ContractId, runtimeSdkType []uint64,
-	contractResult *commonPb.ContractResult) {
-	msg := fmt.Sprintf("runtime type error, expect gasm:%d, but got %d", uint64(commonPb.RuntimeType_GASM),
-		runtimeSdkType[0])
+	txContext protocol.TxSimContext, contractResult *commonPb.ContractResult) {
+	msg := fmt.Sprintf("runtime type error, expect gasm:%d, but got %d",
+		uint64(commonPb.RuntimeType_GASM), runtimeSdkType[0])
 	contractResult.Code = commonPb.ContractResultCode_FAIL
 	contractResult.Message = msg
 	r.Log.Errorf(msg)
-	removeContractDecodedMod(r.ChainId, contractId)
+	if utils.ConvertBlockVersion(txContext.GetBlockVersion()) >= 127 {
+		removeContractDecodedMod(r.ChainId, contractId)
+	}
 }
 
 // removeModByMethod
-func (r *RuntimeInstance) removeModByMethod(method string, contractId *commonPb.ContractId) {
-	if method == commonPb.ManageUserContractFunction_INIT_CONTRACT.String() {
+func (r *RuntimeInstance) removeModByMethod(method string, contractId *commonPb.ContractId,
+	txContext protocol.TxSimContext) {
+	if method == commonPb.ManageUserContractFunction_INIT_CONTRACT.String() &&
+		utils.ConvertBlockVersion(txContext.GetBlockVersion()) >= 127 {
 		removeContractDecodedMod(r.ChainId, contractId)
 	}
 }
