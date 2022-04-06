@@ -23,4 +23,5 @@ replace (
 	chainmaker.org/chainmaker-go/utils => ../../utils
 	chainmaker.org/chainmaker-go/wasi => ../wasi
 	chainmaker.org/chainmaker-go/wasmer => ../wasmer
+	chainmaker.org/chainmaker-go/mock => ../../../mock
 )
