@@ -82,8 +82,8 @@ core:
 
   # Consensus message compression related settings
   # consensus_turbo_config:
-    # If consensus message compression is enabled or not.
-    # consensus_message_turbo: true
+    # If consensus message compression is enabled or not(solo could not use consensus message turbo).
+    # consensus_message_turbo: false
 
     # Max retry count of fetching transaction in txpool by txid.
     # retry_time: 500

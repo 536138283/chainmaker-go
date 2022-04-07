@@ -1074,7 +1074,9 @@ func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 
 func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {
 	consensusTurboConfig := chainConf.ChainConfig().Core.ConsensusTurboConfig
-	if consensusTurboConfig != nil && consensusTurboConfig.ConsensusMessageTurbo {
+	if consensusTurboConfig != nil &&
+		consensusTurboConfig.ConsensusMessageTurbo &&
+		chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_SOLO {
 		return true
 	}
 	return false
