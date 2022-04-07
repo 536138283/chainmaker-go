@@ -8,7 +8,7 @@ else
   endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=v1.2.6
+VERSION=v1.2.7
 
 AARCH64="aarch64"
 CPU=$(shell uname -m)
