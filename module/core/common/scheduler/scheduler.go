@@ -577,7 +577,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 
 	contractName = payload.ContractName
 	method = payload.Method
-	parameters, err := ts.parseParameter(payload.Parameters)
+	parameters, err := ts.parseParameter(payload.Parameters, !enableOptimizeChargeGas)
 	if err != nil {
 		ts.log.Errorf("parse contract[%s] parameters error:%s", contractName, err)
 		return errResult(result, fmt.Errorf(
@@ -654,9 +654,11 @@ func errResult(result *commonPb.Result, err error) (*commonPb.Result, protocol.E
 	result.ContractResult.Code = 1
 	return result, protocol.ExecOrderTxTypeNormal, err
 }
-func (ts *TxScheduler) parseParameter(parameterPairs []*commonPb.KeyValuePair) (map[string][]byte, error) {
+func (ts *TxScheduler) parseParameter(
+	parameterPairs []*commonPb.KeyValuePair,
+	checkParamsNum bool) (map[string][]byte, error) {
 	// verify parameters
-	if len(parameterPairs) > protocol.ParametersKeyMaxCount {
+	if checkParamsNum && len(parameterPairs) > protocol.ParametersKeyMaxCount {
 		return nil, fmt.Errorf(
 			"expect parameters length less than %d, but got %d",
 			protocol.ParametersKeyMaxCount,
