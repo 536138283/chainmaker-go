@@ -619,14 +619,15 @@ func (vb *VerifierBlock) ValidateBlock(
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
 	verifierTxConf := &VerifierTxConfig{
-		Block:       block,
-		TxResultMap: txResultMap,
-		TxRWSetMap:  txRWSetMap,
-		ChainConf:   vb.chainConf,
-		Log:         vb.log,
-		Ac:          vb.ac,
-		TxPool:      vb.txPool,
-		Store:       vb.blockchainStore,
+		Block:         block,
+		TxResultMap:   txResultMap,
+		TxRWSetMap:    txRWSetMap,
+		ChainConf:     vb.chainConf,
+		Log:           vb.log,
+		Ac:            vb.ac,
+		TxPool:        vb.txPool,
+		Store:         vb.blockchainStore,
+		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, errTxs, err := verifiertx.verifierTxs(block)
@@ -1073,7 +1074,9 @@ func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 
 func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {
 	consensusTurboConfig := chainConf.ChainConfig().Core.ConsensusTurboConfig
-	if consensusTurboConfig != nil && consensusTurboConfig.ConsensusMessageTurbo {
+	if consensusTurboConfig != nil &&
+		consensusTurboConfig.ConsensusMessageTurbo &&
+		chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_SOLO {
 		return true
 	}
 	return false
@@ -1103,7 +1106,8 @@ func RecoverBlock(
 	mode protocol.VerifyMode,
 	chainConf protocol.ChainConf,
 	txPool protocol.TxPool,
-	proposerId string,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, error) {
 
 	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode {
@@ -1117,6 +1121,11 @@ func RecoverBlock(
 		txIds := utils.GetTxIds(block.Txs)
 		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
 		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
+
+		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
+		if err != nil {
+			return nil, err
+		}
 
 		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
 		if err != nil {
