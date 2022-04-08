@@ -12,18 +12,21 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
+
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -40,6 +43,7 @@ type BlockProposerImpl struct {
 	msgBus          msgbus.MessageBus        // channel to give out proposed block
 	ac              protocol.AccessControlProvider
 	blockchainStore protocol.BlockchainStore
+	txFilter        protocol.TxFilter // Verify the transaction rules with TxFilter
 
 	//isProposer   bool        // whether current node can propose block now
 	idle bool // whether current node is proposing or not
@@ -78,6 +82,7 @@ type BlockProposerConfig struct {
 	AC              protocol.AccessControlProvider
 	BlockchainStore protocol.BlockchainStore
 	StoreHelper     conf.StoreHelper
+	TxFilter        protocol.TxFilter
 }
 
 const (
@@ -105,6 +110,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 		log:             log,
 		finishProposeC:  make(chan bool),
 		storeHelper:     config.StoreHelper,
+		txFilter:        config.TxFilter,
 	}
 
 	var err error
@@ -179,12 +185,46 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
 		}
 	}
-
-	// retrieve tx batch from tx pool
-	startFetchTick := utils.CurrentTimeMillisSeconds()
-	fetchBatch := bp.txPool.FetchTxBatch(height)
-	fetchLasts := utils.CurrentTimeMillisSeconds() - startFetchTick
-	bp.log.Debugf("begin proposing block[%d], fetch tx num[%d]", height, len(fetchBatch))
+	var (
+		fetchLasts          int64
+		filterValidateLasts int64
+		fetchTotalLasts     int64 // The total time consuming
+		totalTimes          int   // loop count
+		fetchBatch          []*commonpb.Transaction
+	)
+	// 根据TxFilter时间规则过滤交易，如果剩余的交易为0，则再次从交易池拉取交易，重复执行
+	// The transaction is filtered according to txFilter time rule. If the remaining transaction is 0, the transaction
+	// is pulled from the trading pool again and executed repeatedly
+	fetchTotalFirst := utils.CurrentTimeMillisSeconds()
+	for {
+		totalTimes++
+		// retrieve tx batch from tx pool
+		fetchFirst := utils.CurrentTimeMillisSeconds()
+		fetchBatch = bp.txPool.FetchTxBatch(height)
+		fetchLasts += utils.CurrentTimeMillisSeconds() - fetchFirst
+		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
+			height, len(fetchBatch)))
+		if len(fetchBatch) == 0 {
+			bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("no txs in tx pool, proposing block stoped"))
+			break
+		}
+		// validate txFilter rules
+		filterValidateFirst := utils.CurrentTimeMillisSeconds()
+		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
+		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
+		if len(removeTxs) > 0 {
+			// remove
+			bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+			bp.log.Warnf("remove the overtime transactions, total:%d, remain:%d, remove:%d",
+				len(fetchBatch), len(remainTxs), len(removeTxs))
+		}
+		if len(remainTxs) > 0 {
+			// 剩余交易大于0则跳出循环
+			fetchBatch = remainTxs
+			break
+		}
+	}
+	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
@@ -217,8 +257,10 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet})
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d, begin DB transaction:%v, "+
+	bp.log.Infof("proposer success [%d](txs:%d), fetch(times:%v,fetch:%v,filter:%v,total:%d) " +
+		"time used(begin DB transaction:%v, "+
 		"new snapshot:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
+		totalTimes, fetchLasts, filterValidateLasts, fetchTotalLasts,
 		fetchLasts, timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)

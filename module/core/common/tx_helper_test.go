@@ -35,7 +35,7 @@ func TestValidateTx(t *testing.T) {
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
 	verifyTx.chainConf = chainConf
-	hashes, _, _, err := verifyTx.verifierTxs(block)
+	hashes, _, _, err := verifyTx.verifierTxs(block, protocol.protocol.SYNC_VERIFY)
 	require.Nil(t, err)
 
 	for _, hash := range hashes {
@@ -173,7 +173,6 @@ func txPrepare(t *testing.T) (*VerifierTx, *commonpb.Block) {
 		Block:       block,
 		TxRWSetMap:  txRWSetMap,
 		TxResultMap: txResultMap,
-		Store:       store,
 		TxPool:      txPool,
 		Ac:          ac,
 		ChainConf:   chainConf,
@@ -399,19 +398,19 @@ func TestValidateTx1(t *testing.T) {
 		block         *commonpb.Block
 		consensusType consensusPb.ConsensusType
 		hashType      string
-		store         protocol.BlockchainStore
 		chainId       string
 		ac            protocol.AccessControlProvider
 		proposalCache protocol.ProposalCache
+		txFilter 	  protocol.TxFilter
 	}
 
 	var (
-		store         = newMockBlockchainStore(t)
+		txFilter      = mock.NewMockTxFilter(gomock.NewController(t))
 		ac            = newMockAccessControlProvider(t)
 		proposalCache = newMockProposalCache(t)
 		block0        = createBlock(0)
 	)
-	store.EXPECT().TxExists(gomock.Any()).AnyTimes()
+	txFilter.EXPECT().IsExists(gomock.Any()).AnyTimes()
 
 	ctrl := gomock.NewController(t)
 	principal := mock.NewMockPrincipal(ctrl)
@@ -445,7 +444,7 @@ func TestValidateTx1(t *testing.T) {
 				},
 				blockHeight:   0,
 				block:         block0,
-				store:         store,
+				txFilter:         txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
 			},
@@ -475,7 +474,7 @@ func TestValidateTx1(t *testing.T) {
 				block:         block0,
 				consensusType: 0,
 				hashType:      "SHA256",
-				store:         store,
+				txFilter:         txFilter,
 				chainId:       "",
 				ac:            ac,
 				proposalCache: proposalCache,
@@ -509,7 +508,7 @@ func TestValidateTx1(t *testing.T) {
 				}(),
 				consensusType: consensusPb.ConsensusType_MAXBFT,
 				hashType:      "SHA256",
-				store:         store,
+				txFilter:         txFilter,
 				ac:            ac,
 				proposalCache: func() protocol.ProposalCache {
 					proposalCache = newMockProposalCache(t)
@@ -547,7 +546,7 @@ func TestValidateTx1(t *testing.T) {
 				}(),
 				consensusType: consensusPb.ConsensusType_MAXBFT,
 				hashType:      "SHA256",
-				store:         store,
+				txFilter:         txFilter,
 				ac:            ac,
 				proposalCache: func() protocol.ProposalCache {
 					proposalCache = newMockProposalCache(t)
@@ -587,7 +586,7 @@ func TestValidateTx1(t *testing.T) {
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
 				hashType:      "SHA256",
-				store:         store,
+				txFilter:         txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
 			},
@@ -629,7 +628,7 @@ func TestValidateTx1(t *testing.T) {
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
 				hashType:      "SHA256",
-				store:         store,
+				txFilter:         txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
 			},
@@ -672,7 +671,7 @@ func TestValidateTx1(t *testing.T) {
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
 				hashType:      "SHA256",
-				store:         store,
+				txFilter:         txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
 			},
@@ -681,7 +680,7 @@ func TestValidateTx1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, tt.args.hashType, tt.args.store, tt.args.chainId, tt.args.ac, tt.args.proposalCache); (err != nil) != tt.wantErr {
+			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, tt.args.hashType,txFilter , tt.args.chainId, tt.args.ac, tt.args.proposalCache, protocol.SYNC_VERIFY); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateTx() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -694,7 +693,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 		txRWSetMap  map[string]*commonpb.TxRWSet
 		txResultMap map[string]*commonpb.Result
 		log         protocol.Logger
-		store       protocol.BlockchainStore
+		txFilter       protocol.TxFilter
 		txPool      protocol.TxPool
 		ac          protocol.AccessControlProvider
 		chainConf   protocol.ChainConf
@@ -710,11 +709,11 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 	var (
 		block0 = newBlock()
 		log    = newMockLogger(t)
-		store  = newMockBlockchainStore(t)
+		txFilter  = mock.NewMockTxFilter(gomock.NewController(t))
 		txPool = newMockTxPool(t)
 		ac     = newMockAccessControlProvider(t)
 	)
-	store.EXPECT().TxExists(gomock.Any()).AnyTimes()
+	txFilter.EXPECT().IsExists(gomock.Any()).AnyTimes()
 	log.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
 
 	tests := []struct {
@@ -732,7 +731,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 				txRWSetMap:  nil,
 				txResultMap: nil,
 				log:         log,
-				store:       store,
+				txFilter:       txFilter,
 				txPool:      txPool,
 				ac:          ac,
 				chainConf: func() protocol.ChainConf {
@@ -806,7 +805,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 					return result
 				}(),
 				log:    log,
-				store:  store,
+				txFilter:  txFilter,
 				txPool: txPool,
 				ac:     ac,
 				chainConf: func() protocol.ChainConf {
@@ -897,7 +896,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 		//			return result
 		//		}(),
 		//		log:    log,
-		//		store:  store,
+		//		txFilter:  txFilter,
 		//		txPool: txPool,
 		//		ac:     ac,
 		//		chainConf: func() protocol.ChainConf {
@@ -966,12 +965,12 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 				txRWSetMap:  tt.fields.txRWSetMap,
 				txResultMap: tt.fields.txResultMap,
 				log:         tt.fields.log,
-				store:       tt.fields.store,
+				txFilter:       tt.fields.txFilter,
 				txPool:      tt.fields.txPool,
 				ac:          tt.fields.ac,
 				chainConf:   tt.fields.chainConf,
 			}
-			got, got1, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block)
+			got, got1, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block, protocol.SYNC_VERIFY)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("verifyTx() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -981,6 +980,73 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got1, tt.want1) {
 				t.Errorf("verifyTx() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestValidateTxRules(t *testing.T) {
+	var txs []*common.Transaction
+	for i := 0; i < 100; i++ {
+		txs = append(txs, &common.Transaction{
+			Payload: &common.Payload{
+				TxId: utils.GetTimestampTxId(),
+			},
+		})
+	}
+	type args struct {
+		filter protocol.TxFilter
+		txs    []*common.Transaction
+	}
+	tests := []struct {
+		name          string
+		args          args
+		wantRemoveTxs []*common.Transaction
+		wantRemainTxs []*common.Transaction
+	}{
+		{
+			name: "正常流",
+			args: args{
+				filter: func() protocol.TxFilter {
+					filter := mock.NewMockTxFilter(gomock.NewController(t))
+					filter.EXPECT().ValidateRule(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(txId string, ruleType ...common.RuleType) error {
+						if []byte(txId)[63]%2 == 1 {
+							return nil
+						}
+						return bn.ErrKeyTimeIsNotInTheFilterRange
+					})
+					return filter
+				}(),
+				txs: txs,
+			},
+			wantRemoveTxs: func() []*common.Transaction {
+				var arr []*common.Transaction
+				for _, tx := range txs {
+					if []byte(tx.Payload.TxId)[63]%2 == 0 {
+						arr = append(arr, tx)
+					}
+				}
+				return arr
+			}(),
+			wantRemainTxs: func() []*common.Transaction {
+				var arr []*common.Transaction
+				for _, tx := range txs {
+					if []byte(tx.Payload.TxId)[63]%2 == 1 {
+						arr = append(arr, tx)
+					}
+				}
+				return arr
+			}(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			gotRemoveTxs, gotRemainTxs := ValidateTxRules(tt.args.filter, tt.args.txs)
+			if !reflect.DeepEqual(gotRemoveTxs, tt.wantRemoveTxs) {
+				t.Errorf("ValidateTxRules() gotRemoveTxs = %v, want %v", gotRemoveTxs, tt.wantRemoveTxs)
+			}
+			if !reflect.DeepEqual(gotRemainTxs, tt.wantRemainTxs) {
+				t.Errorf("ValidateTxRules() gotRemainTxs = %v, want %v", gotRemainTxs, tt.wantRemainTxs)
 			}
 		})
 	}
