@@ -203,7 +203,9 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
 	contractEventMap := ts.getContractEventMap(block)
-	senderCollection.Clear()
+	if enableOptimizeChargeGas {
+		senderCollection.Clear()
+	}
 	return txRWSetMap, contractEventMap, nil
 }
 
