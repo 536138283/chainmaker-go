@@ -8,6 +8,7 @@ package scheduler
 
 import (
 	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"fmt"
 	"runtime"
 
@@ -241,6 +242,9 @@ func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 			EnableSenderGroup:        enableSenderGroup,
 			EnableConflictsBitWindow: enableConflictsBitWindow,
 		},
+		AccountConfig: &configpb.GasAccountConfig {
+			EnableGas: true,
+		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 
@@ -255,7 +259,7 @@ func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	}
 
 	sysContractId := &commonpb.Contract{
-		Name:			"ACCOUNT_MANAGER",
+		Name:			syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 		Version: 		"1",
 		RuntimeType:	commonpb.RuntimeType_NATIVE,
 	}
@@ -273,10 +277,10 @@ func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
-	reqCall := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
+	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
+	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
-	blockChainStore.EXPECT().GetContractByName("ACCOUNT_MANAGER").Return(sysContractId, nil).After(reqCall)
-	blockChainStore.EXPECT().GetContractBytecode("ACCOUNT_MANAGER").AnyTimes()
+	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -480,6 +484,72 @@ func TestSchedule4(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.CertFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
 	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare2(t, true, false, false, 2)
+
+	parameters := make(map[string]string, 8)
+	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
+	tx1 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000002", contractId, parameters, 102)
+
+	txTable[0] = tx0
+	txTable[1] = tx1
+	txRWSetTable[0] = &commonpb.TxRWSet{
+		TxId: tx0.Payload.TxId,
+		TxReads: []*commonpb.TxRead{{
+			ContractName: contractId.Name,
+			Key:          []byte("K1"),
+			Value:        []byte("V"),
+		}},
+		TxWrites: []*commonpb.TxWrite{{
+			ContractName: contractId.Name,
+			Key:          []byte("K2"),
+			Value:        []byte("V"),
+		}},
+	}
+	txRWSetTable[1] = &commonpb.TxRWSet{
+		TxId: tx1.Payload.TxId,
+		TxReads: []*commonpb.TxRead{
+			{
+				ContractName: contractId.Name,
+				Key:          []byte("K2"),
+				Value:        []byte("V"),
+			},
+			{
+				ContractName: contractId.Name,
+				Key:          []byte("K2"),
+				Value:        []byte("V"),
+			},
+		},
+		TxWrites: []*commonpb.TxWrite{{
+			ContractName: contractId.Name,
+			Key:          []byte("K3"),
+			Value:        []byte("V"),
+		}},
+	}
+
+	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 2).AnyTimes()
+	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
+	snapshot.EXPECT().Seal().Return()
+
+	dag := &commonpb.DAG{
+		Vertexes: []*commonpb.DAG_Neighbor{{}},
+	}
+	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+
+	txBatch := []*commonpb.Transaction{tx0, tx1}
+	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
+	require.Nil(t, err)
+	require.NotNil(t, txSet)
+	require.NotNil(t, contractEven)
+
+	fmt.Println(txSet)
+	fmt.Println(contractEven)
+}
+
+func TestSchedule5(t *testing.T) {
+
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.key"
+	localconf.ChainMakerConfig.NodeConfig.CertFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare2(t, true, false, true, 2)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)

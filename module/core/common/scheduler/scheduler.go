@@ -607,7 +607,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		})
 	}
 
-	if ts.checkGasEnable() && enableOptimizeChargeGas {
+	if ts.checkGasEnable() && !enableOptimizeChargeGas {
 		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contractName, method)
 		if err != nil {
 			return result, specialTxType, err
@@ -629,7 +629,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
-	if ts.checkGasEnable() && enableOptimizeChargeGas {
+	if ts.checkGasEnable() && !enableOptimizeChargeGas {
 		if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
 			contractResultPayload); err != nil {
 			ts.log.Errorf("refund gas err is %v", err)
