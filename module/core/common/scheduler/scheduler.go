@@ -191,7 +191,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
-	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+	if ts.checkGasEnable() && enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
 		ts.log.Debug("append charge gas tx to block ...")
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
 	}
@@ -203,6 +203,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
 	contractEventMap := ts.getContractEventMap(block)
+	senderCollection.Clear()
 	return txRWSetMap, contractEventMap, nil
 }
 
@@ -438,7 +439,8 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 	pool.Tune(newPoolSize)
 }
 
-func (ts *TxScheduler) executeTx(tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
+func (ts *TxScheduler) executeTx(
+	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
 
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
@@ -447,14 +449,14 @@ func (ts *TxScheduler) executeTx(tx *commonPb.Transaction, snapshot protocol.Sna
 	if tx.Result.Code != commonPb.TxStatusCode_SUCCESS {
 		return txSimContext, protocol.ExecOrderTxTypeNormal, false
 	}
-
+	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
 	runVmSuccess := true
 	var txResult *commonPb.Result
 	var err error
 	var specialTxType protocol.ExecOrderTxType
 
 	ts.log.Debugf("run vm start for tx:%s", tx.Payload.GetTxId())
-	if txResult, specialTxType, err = ts.runVM(tx, txSimContext); err != nil {
+	if txResult, specialTxType, err = ts.runVM(tx, txSimContext, enableOptimizeChargeGas); err != nil {
 		runVmSuccess = false
 		ts.log.Errorf("failed to run vm for tx id:%s, tx result:%+v, error:%+v",
 			tx.Payload.GetTxId(), txResult, err)
@@ -542,7 +544,9 @@ func (ts *TxScheduler) Halt() {
 	ts.scheduleFinishC <- true
 }
 
-func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxSimContext) (
+func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
+	txSimContext protocol.TxSimContext,
+	enableOptimizeChargeGas bool) (
 	*commonPb.Result, protocol.ExecOrderTxType, error) {
 	var (
 		contractName          string
@@ -601,7 +605,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxS
 		})
 	}
 
-	if ts.checkGasEnable() {
+	if ts.checkGasEnable() && enableOptimizeChargeGas {
 		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contractName, method)
 		if err != nil {
 			return result, specialTxType, err
@@ -623,7 +627,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction, txSimContext protocol.TxS
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
-	if ts.checkGasEnable() {
+	if ts.checkGasEnable() && enableOptimizeChargeGas {
 		if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
 			contractResultPayload); err != nil {
 			ts.log.Errorf("refund gas err is %v", err)
@@ -916,76 +920,6 @@ func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
 	return sha256.Sum256(keyBytes), nil
 }
 
-type SenderCollection struct {
-	txsMap map[string]*TxCollection
-}
-
-type TxCollection struct {
-	publicKey      crypto.PublicKey
-	accountBalance int64
-	totalGasUsed   int64
-	txs            []*commonPb.Transaction
-}
-
-func (g *TxCollection) String() string {
-	pubKeyStr, _ := g.publicKey.String()
-	return fmt.Sprintf(
-		"\nTxsGroup{ \n\tpublicKey: %s, \n\taccountBalance: %v, \n\ttotalGasUsed: %v, \n\ttxs: [%d items] }",
-		pubKeyStr, g.accountBalance, g.totalGasUsed, len(g.txs))
-}
-
-func NewSenderCollection(
-	txBatch []*commonPb.Transaction,
-	snapshot protocol.Snapshot,
-	log protocol.Logger) *SenderCollection {
-	return &SenderCollection{
-		txsMap: getSenderTxCollection(txBatch, snapshot, log),
-	}
-}
-
-func getSenderTxCollection(
-	txBatch []*commonPb.Transaction,
-	snapshot protocol.Snapshot,
-	log protocol.Logger) map[string]*TxCollection {
-	txCollectionMap := make(map[string]*TxCollection)
-
-	for _, tx := range txBatch {
-		pk, err := getPkFromTx(tx, snapshot)
-		if err != nil {
-			log.Errorf("getPkFromTx failed: err = %v", err)
-			continue
-		}
-
-		address, err := publicKeyToAddress(pk)
-		if err != nil {
-			log.Error("publicKeyToAddress failed: err = %v", err)
-			continue
-		}
-
-		txCollection, exists := txCollectionMap[address]
-		if !exists {
-			txCollection = &TxCollection{
-				publicKey:      pk,
-				accountBalance: int64(0),
-				totalGasUsed:   int64(0),
-				txs:            make([]*commonPb.Transaction, 0),
-			}
-			txCollectionMap[address] = txCollection
-		}
-		txCollection.txs = append(txCollection.txs, tx)
-	}
-
-	var err error
-	for senderAddress, txCollection := range txCollectionMap {
-		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot)
-		if err != nil {
-			log.Error("getAccountBalanceFromSnapshot failed: err = %v", err)
-		}
-	}
-
-	return txCollectionMap
-}
-
 func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (int64, error) {
 
 	var err error
@@ -1212,7 +1146,7 @@ func (ts *TxScheduler) createChargeGasTx(
 		Timestamp:      time.Now().Unix(),
 		ExpirationTime: time.Now().Add(time.Second * 1).Unix(),
 		ContractName:   syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-		Method:         syscontract.GasAccountFunction_CHARGE_GAS.String(),
+		Method:         syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(),
 		Parameters:     parameters,
 		Sequence:       uint64(0),
 		Limit:          &commonPb.Limit{GasLimit: uint64(0)},
