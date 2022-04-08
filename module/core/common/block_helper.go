@@ -136,7 +136,7 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 	ssLasts := beginDbTick - ssStartTick
 	dbLasts := vmStartTick - beginDbTick
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
-	timeLasts = append(timeLasts, ssLasts, dbLasts, vmLasts)
+	timeLasts = append(timeLasts, dbLasts, ssLasts, vmLasts)
 
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("schedule block(%d,%x) error %s",
@@ -1074,7 +1074,9 @@ func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 
 func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {
 	consensusTurboConfig := chainConf.ChainConfig().Core.ConsensusTurboConfig
-	if consensusTurboConfig != nil && consensusTurboConfig.ConsensusMessageTurbo {
+	if consensusTurboConfig != nil &&
+		consensusTurboConfig.ConsensusMessageTurbo &&
+		chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_SOLO {
 		return true
 	}
 	return false
@@ -1126,7 +1128,8 @@ func RecoverBlock(
 	mode protocol.VerifyMode,
 	chainConf protocol.ChainConf,
 	txPool protocol.TxPool,
-	proposerId string,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, error) {
 
 	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode {
@@ -1140,6 +1143,11 @@ func RecoverBlock(
 		txIds := utils.GetTxIds(block.Txs)
 		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
 		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
+
+		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
+		if err != nil {
+			return nil, err
+		}
 
 		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
 		if err != nil {

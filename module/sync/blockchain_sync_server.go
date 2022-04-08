@@ -219,9 +219,8 @@ func (sync *BlockChainSyncServer) handleNodeStatusResp(syncMsg *syncPb.SyncMsg, 
 
 func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from string) error {
 	var (
-		err    error
-		loaded bool
-		req    syncPb.BlockSyncReq
+		err error
+		req syncPb.BlockSyncReq
 	)
 
 	if err = proto.Unmarshal(syncMsg.Payload, &req); err != nil {
@@ -231,10 +230,11 @@ func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from s
 	// 针对 `SyncMsg_BLOCK_SYNC_REQ` 消息处理函数，添加处理状态检查，要求同一个 `请求来源 + 高度` 不会重复返回多次数据
 	// create a key-value pair when receive block request, ignore repeat request
 	processKey := fmt.Sprintf("%s_%d", from, req.BlockHeight)
-	if _, loaded = sync.requestCache.LoadOrStore(processKey, nil); loaded {
+	if _, loaded := sync.requestCache.LoadOrStore(processKey, time.Now()); loaded {
+		sync.log.Warnf("received duplicate request to get block [height: %d, batch_size: %d] from "+
+			"node [%s]", req.BlockHeight, req.BatchSize, from)
 		return nil
 	}
-	defer sync.requestCache.Store(processKey, time.Now())
 
 	sync.log.Infof("receive request to get block [height: %d, batch_size: %d] from "+
 		"node [%s]"+"WithRwset [%v]", req.BlockHeight, req.BatchSize, from, req.WithRwset)
