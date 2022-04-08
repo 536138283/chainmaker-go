@@ -48,8 +48,8 @@ else
   #ut_cover "module/consensus/raft" 0
 #  ut_cover "module/consensus/solo" 0
   #ut_cover "module/consensus/tbft" 10
-  ut_cover "module/core" 40 7
-  ut_cover "module/net" 29 8
+  ut_cover "module/core" 56 6.7
+  ut_cover "module/net" 29 11
   ut_cover "module/rpcserver" 0 2.9
   ut_cover "module/snapshot" 47 15
   ut_cover "module/sync" 71 2.5
