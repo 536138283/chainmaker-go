@@ -969,7 +969,7 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 					return block
 				}(),
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 	for _, tt := range tests {
@@ -1691,6 +1691,9 @@ func TestIfOpenConsensusMessageTurbo(t *testing.T) {
 								ConsensusMessageTurbo: true,
 							},
 						},
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensus.ConsensusType_TBFT,
+						},
 					}
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
@@ -1725,12 +1728,14 @@ func TestIfOpenConsensusMessageTurbo(t *testing.T) {
 
 func TestRecoverBlock(t *testing.T) {
 	type args struct {
-		block     *commonpb.Block
-		mode      protocol.VerifyMode
-		chainConf protocol.ChainConf
-		txPool    protocol.TxPool
-		logger    protocol.Logger
-		proposeId string
+		block      *commonpb.Block
+		mode       protocol.VerifyMode
+		chainConf  protocol.ChainConf
+		txPool     protocol.TxPool
+		logger     protocol.Logger
+		proposeId  string
+		netService protocol.NetService
+		ac         protocol.AccessControlProvider
 	}
 
 	block := createBlock(1)
@@ -1753,6 +1758,9 @@ func TestRecoverBlock(t *testing.T) {
 								ConsensusMessageTurbo: true,
 							},
 						},
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensus.ConsensusType_TBFT,
+						},
 					}
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
@@ -1773,6 +1781,20 @@ func TestRecoverBlock(t *testing.T) {
 				}(),
 				logger:    newMockLogger(t),
 				proposeId: "test0",
+				ac: func() protocol.AccessControlProvider {
+					ac := newMockAccessControlProvider(t)
+					ctrl := gomock.NewController(t)
+					member := mock.NewMockMember(ctrl)
+					member.EXPECT().GetMemberId().Return("chain1").AnyTimes()
+					ac.EXPECT().NewMember(gomock.Any()).Return(member, nil).AnyTimes()
+					return ac
+				}(),
+				netService: func() protocol.NetService {
+					ctrl := gomock.NewController(t)
+					netService := mock.NewMockNetService(ctrl)
+					netService.EXPECT().GetNodeUidByCertId(gomock.Any()).AnyTimes()
+					return netService
+				}(),
 			},
 			want:    createBlock(0),
 			wantErr: false,
@@ -1791,6 +1813,9 @@ func TestRecoverBlock(t *testing.T) {
 								RetryTime:             100,
 								RetryInterval:         100,
 							},
+						},
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensus.ConsensusType_TBFT,
 						},
 					}
 
@@ -1813,6 +1838,20 @@ func TestRecoverBlock(t *testing.T) {
 				}(),
 				logger:    newMockLogger(t),
 				proposeId: "test1",
+				ac: func() protocol.AccessControlProvider {
+					ac := newMockAccessControlProvider(t)
+					ctrl := gomock.NewController(t)
+					member := mock.NewMockMember(ctrl)
+					member.EXPECT().GetMemberId().Return("chain1").AnyTimes()
+					ac.EXPECT().NewMember(gomock.Any()).Return(member, nil).AnyTimes()
+					return ac
+				}(),
+				netService: func() protocol.NetService {
+					ctrl := gomock.NewController(t)
+					netService := mock.NewMockNetService(ctrl)
+					netService.EXPECT().GetNodeUidByCertId(gomock.Any()).AnyTimes()
+					return netService
+				}(),
 			},
 			want:    block,
 			wantErr: false,
@@ -1836,7 +1875,7 @@ func TestRecoverBlock(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RecoverBlock(tt.args.block, tt.args.mode, tt.args.chainConf, tt.args.txPool, tt.args.proposeId, tt.args.logger)
+			got, err := RecoverBlock(tt.args.block, tt.args.mode, tt.args.chainConf, tt.args.txPool, tt.args.ac, tt.args.netService, tt.args.logger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RecoverBlock() error = %v, wantErr %v", err, tt.wantErr)
 				return
