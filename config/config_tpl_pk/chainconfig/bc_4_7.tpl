@@ -38,13 +38,14 @@ contract:
 
 vm:
   #0:chainmaker, 1:zxl, 2:ethereum(reserved)
-  addr_type: 1
+  addr_type: 0
   # support vm list
   support_list:
     - "wasmer"
     - "gasm"
     - "evm"
     - "dockergo"
+    - "wxvm"
 
 # Block proposing related settings
 block:

@@ -3,41 +3,43 @@ module chainmaker.org/chainmaker-go
 go 1.15
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.1.2-0.20220304064458-4d8be01d6961
-	chainmaker.org/chainmaker/common/v2 v2.1.2-0.20220301062133-c3850a6efa7f
-	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20211220115802-ad63e1565a38
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220214094627-a616ca03d6aa
-	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220221033200-bcc78c45c616
-	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20211220120848-36f05d90fd9c
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.0.0-20220125101157-16e2bb0098ae
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.0.0-20220215071220-a392a07ce38a
-	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220302084404-928bd4a6131a
-	chainmaker.org/chainmaker/logger/v2 v2.1.1-0.20220128022235-c984177a37cc
-	chainmaker.org/chainmaker/net-common v1.0.2-0.20220120084355-9be05b200365
-	chainmaker.org/chainmaker/net-libp2p v1.0.2-0.20220310062754-bdea9e49c59f
-	chainmaker.org/chainmaker/net-liquid v1.0.1
-	chainmaker.org/chainmaker/pb-go/v2 v2.1.1-0.20220304062644-4fc635a393ba
-	chainmaker.org/chainmaker/protocol/v2 v2.1.2-0.20220304060945-5ff4c843652c
-	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20220307094104-7c57adca66c3
-	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220228032811-8168a2644c25
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220114030910-a28969c65faf
-	chainmaker.org/chainmaker/txpool-single/v2 v2.1.1-0.20220307123659-15ee2703b337
-	chainmaker.org/chainmaker/utils/v2 v2.1.1-0.20220124072923-e59e8500c1a7
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.0
-	chainmaker.org/chainmaker/vm-evm/v2 v2.1.1-0.20220124125450-af7817cb999a
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220223062538-5503a7415fe3
-	chainmaker.org/chainmaker/vm-native/v2 v2.1.2-0.20220315093818-4ca46eca8753
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.1.1-0.20220224064011-5a7caccf53ed
-	chainmaker.org/chainmaker/vm-wxvm/v2 v2.1.1-0.20211223061926-78b8d34d3aa3
-	chainmaker.org/chainmaker/vm/v2 v2.1.2-0.20220309092204-09d1810a96e1
+	chainmaker.org/chainmaker/chainconf/v2 v2.2.1-0.20220325075945-eaeb2da74121
+	chainmaker.org/chainmaker/common/v2 v2.2.1-0.20220409112150-0efe8a6b089e
+	chainmaker.org/chainmaker/consensus-dpos/v2 v2.2.0
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.0
+	chainmaker.org/chainmaker/consensus-raft/v2 v2.2.0
+	chainmaker.org/chainmaker/consensus-solo/v2 v2.2.0
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.1-0.20220401115342-c8f001943747
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.1-0.20220325083126-1cbf15e66536
+	chainmaker.org/chainmaker/localconf/v2 v2.2.1-0.20220325094831-e2f9ba5f86e7
+	chainmaker.org/chainmaker/logger/v2 v2.2.1-0.20220325095821-5810a4273801
+	chainmaker.org/chainmaker/net-common v1.1.1-0.20220406070416-647f0fe32eba
+	chainmaker.org/chainmaker/net-libp2p v1.1.1-0.20220406075858-e48e6aa44e91
+	chainmaker.org/chainmaker/net-liquid v1.0.2-0.20220406070644-ebf371efea9f
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220330115503-be7240795241
+	chainmaker.org/chainmaker/protocol/v2 v2.2.1-0.20220409112136-f7506aac6642
+	chainmaker.org/chainmaker/sdk-go/v2 v2.2.1-0.20220325141922-16692061d611
+	chainmaker.org/chainmaker/store/v2 v2.2.1-0.20220331022409-310cc00ac325
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.1-0.20220411015157-992ad4e544a2
+	chainmaker.org/chainmaker/txpool-single/v2 v2.2.1-0.20220411015124-dbc80094a8ac
+	chainmaker.org/chainmaker/utils/v2 v2.2.1-0.20220412111749-c93a9ea6d390
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.1.1-0.20220407092706-9b53d656d1b0
+	chainmaker.org/chainmaker/vm-evm/v2 v2.2.0
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1-0.20220406070125-35578d2320b1
+	chainmaker.org/chainmaker/vm-native/v2 v2.2.1-0.20220412111856-529183f6ce89
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.1-0.20220406065233-c3010bf3dfd3
+	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1-0.20220411033255-9fbd24b81561
+	chainmaker.org/chainmaker/vm/v2 v2.2.1-0.20220325083648-c3a63de45a27
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
 	github.com/c-bata/go-prompt v0.2.2
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
 	github.com/ethereum/go-ethereum v1.10.4
+	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
+	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/gosuri/uiprogress v0.0.1
@@ -45,17 +47,21 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20201222001619-a42f9ac2ec8e
 	github.com/holiman/uint256 v1.2.0
 	github.com/hpcloud/tail v1.0.0
+	github.com/linvon/cuckoo-filter v0.4.0
+	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/mr-tron/base58 v1.2.0
 	github.com/panjf2000/ants/v2 v2.4.7
+	github.com/pelletier/go-toml v1.8.1 // indirect
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
+	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
-	github.com/tidwall/pretty v1.0.2
+	github.com/tidwall/pretty v1.2.0
 	go.opencensus.io v0.23.0 // indirect
 	go.uber.org/atomic v1.7.0
 	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
@@ -67,7 +73,8 @@ require (
 )
 
 replace (
-	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v0.0.2
+	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.0
+	github.com/linvon/cuckoo-filter => github.com/GuoxinL/cuckoo-filter v0.4.1
 	github.com/spf13/afero => github.com/spf13/afero v1.5.1 //for go1.15 build
 	github.com/spf13/viper => github.com/spf13/viper v1.7.1 //for go1.15 build
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0

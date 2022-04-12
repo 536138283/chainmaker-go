@@ -256,7 +256,7 @@ func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *common
 	//ts.dumpDAG(block.Dag, block.Txs)
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		result, _ := prettyjson.Marshal(txRWSetMap)
-		ts.log.Infof("schedule rwset :%s", result)
+		ts.log.Infof("schedule rwset :%s, dag:%+v", result, block.Dag)
 	}
 	return txRWSetMap
 }
@@ -383,7 +383,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	}
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		result, _ := prettyjson.Marshal(txRWSetMap)
-		ts.log.Infof("simulate with dag rwset :%s", result)
+		ts.log.Infof("simulate with dag rwset :%s, dag: %+v", result, block.Dag)
 	}
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
@@ -725,7 +725,7 @@ func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *c
 		}
 
 		refundGas := limit - contractResultPayload.GasUsed
-		ts.log.Infof("=======refund gas %v  gas used %v======", refundGas, contractResultPayload.GasUsed)
+		ts.log.Debugf("refund gas [%d], gas used [%d]", refundGas, contractResultPayload.GasUsed)
 
 		if refundGas == 0 {
 			return result, nil
