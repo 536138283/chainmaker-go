@@ -110,6 +110,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	// Put the pending transaction into the running queue
 	go func() {
+		counter := 0
 		for {
 			select {
 			case tx := <-runningTxC:
@@ -175,7 +176,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				}
 				return
 			}
-			ts.log.Debugf("test...")
+			counter++
+			ts.log.Debugf("schedule tx %d times ... ", counter)
 		}
 	}()
 
@@ -191,6 +193,9 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
+	ts.log.Debugf("check_gas_enable = %v", ts.checkGasEnable())
+	ts.log.Debugf("enable_optimize_charge_gas = %v", enableOptimizeChargeGas)
+	ts.log.Debugf("snapshot size = %v", snapshot.GetSnapshotSize())
 	if ts.checkGasEnable() && enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
 		ts.log.Debug("append charge gas tx to block ...")
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
@@ -447,8 +452,10 @@ func (ts *TxScheduler) executeTx(
 
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("new tx simulate context finished for tx id:%s", tx.Payload.GetTxId())
+	ts.log.Debugf("tx.Result = %v", tx.Result)
 
-	if tx.Result.Code != commonPb.TxStatusCode_SUCCESS {
+	if tx.Result != nil && tx.Result.Code != commonPb.TxStatusCode_SUCCESS {
+		txSimContext.SetTxResult(tx.Result)
 		return txSimContext, protocol.ExecOrderTxTypeNormal, false
 	}
 	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
@@ -463,7 +470,7 @@ func (ts *TxScheduler) executeTx(
 		ts.log.Errorf("failed to run vm for tx id:%s, tx result:%+v, error:%+v",
 			tx.Payload.GetTxId(), txResult, err)
 	}
-	ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v", tx.Payload.TxId, runVmSuccess)
+	ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ", tx.Payload.TxId, runVmSuccess, txResult)
 	txSimContext.SetTxResult(txResult)
 	return txSimContext, specialTxType, runVmSuccess
 }
@@ -629,16 +636,41 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
-	if ts.checkGasEnable() && !enableOptimizeChargeGas {
-		if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
-			contractResultPayload); err != nil {
-			ts.log.Errorf("refund gas err is %v", err)
-			if txSimContext.GetBlockVersion() >= 230 {
-				result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-				result.Message = err.Error()
-				result.ContractResult.Code = uint32(1)
-				result.ContractResult.Message = err.Error()
-				return result, specialTxType, err
+	if ts.checkGasEnable() {
+		// check if this invoke needs charging gas
+		if !ts.checkNativeFilter(contract.Name, method) {
+			return result, specialTxType, err
+		}
+
+		// get tx's gas limit
+		limit, err := getTxGasLimit(tx)
+		if err != nil {
+			ts.log.Errorf("getTxGasLimit error: %v", err)
+			result.Message = err.Error()
+			return result, specialTxType, err
+		}
+
+		// compare the gas used with gas limit
+		if limit < contractResultPayload.GasUsed {
+			err = fmt.Errorf("gas limit is not enough, [limit:%d]/[gasUsed:%d]",
+				limit, contractResultPayload.GasUsed)
+			ts.log.Error(err.Error())
+			result.ContractResult.Code = uint32(commonPb.TxStatusCode_CONTRACT_FAIL)
+			result.ContractResult.Message = err.Error()
+			result.ContractResult.GasUsed = limit
+			return result, specialTxType, err
+		}
+		if !enableOptimizeChargeGas {
+			if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
+				contractResultPayload); err != nil {
+				ts.log.Errorf("refund gas err is %v", err)
+				if txSimContext.GetBlockVersion() >= 230 {
+					result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+					result.Message = err.Error()
+					result.ContractResult.Code = uint32(1)
+					result.ContractResult.Message = err.Error()
+					return result, specialTxType, err
+				}
 			}
 		}
 	}
@@ -1037,7 +1069,7 @@ func (ts *TxScheduler) dispatchTxs(
 			ts.log.Debugf("%v => {balance: %v, tx size: %v}",
 				addr, txCollection.accountBalance, len(txCollection.txs))
 		}
-		dispatchSenderCollection(senderCollection, runningTxC)
+		ts.dispatchSenderCollection(senderCollection, runningTxC)
 
 	} else if enableSenderGroup {
 		ts.log.Debugf("initOptimizeTools() has done -> senderGroup - %v", senderGroup)
@@ -1054,13 +1086,24 @@ func (ts *TxScheduler) dispatchTxs(
 	}
 }
 
-func dispatchSenderCollection(senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
-	for _, txCollection := range senderCollection.txsMap {
+func (ts *TxScheduler) dispatchSenderCollection(senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
+	for addr, txCollection := range senderCollection.txsMap {
 		balance := txCollection.accountBalance
 		for _, tx := range txCollection.txs {
-			if tx.Payload.Limit == nil {
+			ts.log.Debugf("dispatch sender collection tx => %s", tx.Payload)
+			limit := tx.Payload.Limit
+			if limit == nil {
+				limit = &commonPb.Limit{
+					GasLimit: uint64(0),
+				}
+			}
+			
+			gasLimit := int64(limit.GasLimit)
+			if balance-gasLimit < 0 {
+				pkStr, _ := txCollection.publicKey.String()
+				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)		
 				tx.Result = &commonPb.Result{
-					Code: commonPb.TxStatusCode_CONTRACT_FAIL,
+					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
 					ContractResult: &commonPb.ContractResult{
 						Code:    uint32(0),
 						Result:  nil,
@@ -1068,26 +1111,12 @@ func dispatchSenderCollection(senderCollection *SenderCollection, runningTxC cha
 						GasUsed: uint64(0),
 					},
 					RwSetHash: nil,
-					Message:   "gas_limit field must be set.",
+					Message:   fmt.Sprintf("`%s` has no enough balance to execute tx.", addr),
 				}
 			}else {
-				gasLimit := int64(tx.Payload.Limit.GasLimit)
-				if balance-gasLimit < 0 {
-					tx.Result = &commonPb.Result{
-						Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
-						ContractResult: &commonPb.ContractResult{
-							Code:    uint32(0),
-							Result:  nil,
-							Message: "",
-							GasUsed: uint64(0),
-						},
-						RwSetHash: nil,
-						Message:   "there is no enough balance to execute tx.",
-					}
-				}else {
-					balance = balance - gasLimit
-				}
+				balance = balance - gasLimit
 			}
+			
 			runningTxC <- tx
 		}
 	}
@@ -1241,3 +1270,16 @@ func (ts *TxScheduler) appendChargeGasTxToDAG(
 	}
 	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
 }
+
+
+func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
+	var limit uint64
+
+	if tx.Payload.Limit == nil {
+		return limit, errors.New("tx payload limit is nil")
+	}
+
+	limit = tx.Payload.Limit.GasLimit
+	return limit, nil
+}
+

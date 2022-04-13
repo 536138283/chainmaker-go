@@ -342,6 +342,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		return nil
 	}
 	_, rwSetMap, _ := bp.proposalCache.GetProposedBlock(block)
+	bp.log.Debugf("proposing block \n %s", utils.FormatBlock(block))
 
 	newBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {

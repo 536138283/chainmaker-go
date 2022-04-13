@@ -629,6 +629,9 @@ func (vb *VerifierBlock) ValidateBlock(
 		Store:       vb.blockchainStore,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
+	vb.log.Debugf("TxResultMap = %v", txResultMap)
+	vb.log.Debugf("TxRWSetMap = %v", txRWSetMap)
+
 	txHashes, _, errTxs, err := verifiertx.verifierTxs(block)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
