@@ -93,6 +93,7 @@ func newTxSchedulerEvidence(vmMgr protocol.VmManager, chainConf protocol.ChainCo
 	return txSchedulerEvidence
 }
 
+// init a signer with node private key
 func initSigner(
 	chainConfig *config.ChainConfig,
 	cmConfig *localconf.CMConfig,

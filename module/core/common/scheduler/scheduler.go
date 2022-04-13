@@ -1082,7 +1082,7 @@ func (ts *TxScheduler) dispatchTxs(
 			ts.log.Debugf("%v => {balance: %v, tx size: %v}",
 				addr, txCollection.accountBalance, len(txCollection.txs))
 		}
-		ts.dispatchSenderCollection(senderCollection, runningTxC)
+		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC)
 
 	} else if enableSenderGroup {
 		ts.log.Debugf("initOptimizeTools() has done -> senderGroup - %v", senderGroup)
@@ -1099,7 +1099,9 @@ func (ts *TxScheduler) dispatchTxs(
 	}
 }
 
-func (ts *TxScheduler) dispatchSenderCollection(
+// dispatchTxsInSenderCollection dispatch txs from senderCollection to runningTxC chan
+// if the balance less than gas limit, set the result of tx and dispatch this tx.
+func (ts *TxScheduler) dispatchTxsInSenderCollection(
 	senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
 	for addr, txCollection := range senderCollection.txsMap {
 		balance := txCollection.accountBalance
@@ -1113,6 +1115,7 @@ func (ts *TxScheduler) dispatchSenderCollection(
 			}
 
 			gasLimit := int64(limit.GasLimit)
+			// if the balance less than gas limit, do not dispatch this tx.
 			if balance-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
@@ -1136,6 +1139,10 @@ func (ts *TxScheduler) dispatchSenderCollection(
 	}
 }
 
+// appendChargeGasTx include 3 step:
+// 1) create a new charging gas tx
+// 2) execute tx by calling native contract
+// 3) append tx to DAG struct
 func (ts *TxScheduler) appendChargeGasTx(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot,
@@ -1154,6 +1161,7 @@ func (ts *TxScheduler) appendChargeGasTx(
 	ts.appendChargeGasTxToDAG(block, snapshot)
 }
 
+// signTxPayload sign charging tx with node's private key
 func (ts *TxScheduler) signTxPayload(
 	payload *commonPb.Payload) ([]byte, error) {
 
