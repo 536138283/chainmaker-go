@@ -174,6 +174,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	return txRWSetMap, contractEventMap, nil
 }
 
+// handleTx: run tx and apply tx sim context to snapshot
 func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ts *TxScheduler, tx *commonPb.Transaction,
 	runningTxC chan *commonPb.Transaction, finishC chan bool,
@@ -193,12 +194,16 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 		start = time.Now()
 	}
 
+	// execute tx, and get
+	// 1) the read/write set
+	// 2) the result that telling if the invoke success.
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
 	tx.Result = txSimContext.GetTxResult()
 
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
+	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
 	if !applyResult {
 		if enableConflictsBitWindow {
 			ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, ConflictTx)
