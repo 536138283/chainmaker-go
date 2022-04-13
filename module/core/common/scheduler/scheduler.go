@@ -97,6 +97,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		senderGroup = NewSenderGroup(txBatch)
 	}
 
+	// launch the go routine to dispatch tx to runningTxC
 	go ts.dispatchTxs(
 		txBatch,
 		runningTxC,
@@ -156,6 +157,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
+	// if the block is not empty, append the charging gas tx
 	if ts.checkGasEnable() && enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
 		ts.log.Debug("append charge gas tx to block ...")
 		ts.appendChargeGasTx(block, snapshot, senderCollection)

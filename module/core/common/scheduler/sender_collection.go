@@ -41,6 +41,7 @@ func NewSenderCollection(
 	}
 }
 
+// getSenderTxCollection split txs in txBatch by sender account
 func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
@@ -48,12 +49,14 @@ func getSenderTxCollection(
 	txCollectionMap := make(map[string]*TxCollection)
 
 	for _, tx := range txBatch {
+		// get the public key from tx
 		pk, err := getPkFromTx(tx, snapshot)
 		if err != nil {
 			log.Errorf("getPkFromTx failed: err = %v", err)
 			continue
 		}
 
+		// convert the public key to `ZX` address
 		address, err := publicKeyToAddress(pk)
 		if err != nil {
 			log.Error("publicKeyToAddress failed: err = %v", err)
@@ -75,6 +78,7 @@ func getSenderTxCollection(
 
 	var err error
 	for senderAddress, txCollection := range txCollectionMap {
+		// get the account balance from snapshot
 		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot)
 		if err != nil {
 			log.Error("getAccountBalanceFromSnapshot failed: err = %v", err)
