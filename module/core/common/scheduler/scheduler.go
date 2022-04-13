@@ -93,7 +93,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	var senderCollection *SenderCollection
 	if enableOptimizeChargeGas {
 		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
-	}else if enableSenderGroup {
+	} else if enableSenderGroup {
 		senderGroup = NewSenderGroup(txBatch)
 	}
 
@@ -115,47 +115,10 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 			select {
 			case tx := <-runningTxC:
 				ts.log.Debugf("prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
-				chargeGasFailed := false
-				if tx.Result != nil {
-					chargeGasFailed = true
-				}
+
 				err := goRoutinePool.Submit(func() {
-					// If snapshot is sealed, no more transaction will be added into snapshot
-					if snapshot.IsSealed() {
-						return
-					}
-					var start time.Time
-					if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-						start = time.Now()
-					}
-
-					txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
-					tx.Result = txSimContext.GetTxResult()
-
-					// Apply failed means this tx's read set conflict with other txs' write set
-					applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
-						runVmSuccess, false)
-					if !applyResult {
-						if enableConflictsBitWindow {
-							ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, ConflictTx)
-						}
-						if !chargeGasFailed {
-							runningTxC <- tx
-						}
-						ts.log.Debugf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
-							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
-
-					} else {
-						ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
-							conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
-
-						ts.log.Debugf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
-							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
-					}
-					// If all transactions have been successfully added to dag
-					if applySize >= txBatchSize {
-						finishC <- true
-					}
+					handleTx(block, snapshot, ts, tx, runningTxC, finishC, goRoutinePool, txBatchSize,
+						enableConflictsBitWindow, conflictsBitWindow, enableSenderGroup, senderGroup)
 				})
 				if err != nil {
 					ts.log.Warnf("failed to submit running task, tx id:%s during schedule, %+v",
@@ -193,9 +156,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
-	ts.log.Debugf("check_gas_enable = %v", ts.checkGasEnable())
-	ts.log.Debugf("enable_optimize_charge_gas = %v", enableOptimizeChargeGas)
-	ts.log.Debugf("snapshot size = %v", snapshot.GetSnapshotSize())
 	if ts.checkGasEnable() && enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
 		ts.log.Debug("append charge gas tx to block ...")
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
@@ -212,6 +172,54 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		senderCollection.Clear()
 	}
 	return txRWSetMap, contractEventMap, nil
+}
+
+func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
+	ts *TxScheduler, tx *commonPb.Transaction,
+	runningTxC chan *commonPb.Transaction, finishC chan bool,
+	goRoutinePool *ants.Pool, txBatchSize int,
+	enableConflictsBitWindow bool, conflictsBitWindow *ConflictsBitWindow,
+	enableSenderGroup bool, senderGroup *SenderGroup) {
+	chargeGasLimitFailed := false
+	if tx.Result != nil {
+		chargeGasLimitFailed = true
+	}
+	// If snapshot is sealed, no more transaction will be added into snapshot
+	if snapshot.IsSealed() {
+		return
+	}
+	var start time.Time
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		start = time.Now()
+	}
+
+	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
+	tx.Result = txSimContext.GetTxResult()
+
+	// Apply failed means this tx's read set conflict with other txs' write set
+	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
+		runVmSuccess, false)
+	if !applyResult {
+		if enableConflictsBitWindow {
+			ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, ConflictTx)
+		}
+		if !chargeGasLimitFailed {
+			runningTxC <- tx
+		}
+		ts.log.Debugf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
+			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+
+	} else {
+		ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
+			conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
+
+		ts.log.Debugf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
+			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+	}
+	// If all transactions have been successfully added to dag
+	if applySize >= txBatchSize {
+		finishC <- true
+	}
 }
 
 func (ts *TxScheduler) initOptimizeTools(
@@ -1086,7 +1094,8 @@ func (ts *TxScheduler) dispatchTxs(
 	}
 }
 
-func (ts *TxScheduler) dispatchSenderCollection(senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
+func (ts *TxScheduler) dispatchSenderCollection(
+	senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
 	for addr, txCollection := range senderCollection.txsMap {
 		balance := txCollection.accountBalance
 		for _, tx := range txCollection.txs {
@@ -1097,11 +1106,11 @@ func (ts *TxScheduler) dispatchSenderCollection(senderCollection *SenderCollecti
 					GasLimit: uint64(0),
 				}
 			}
-			
+
 			gasLimit := int64(limit.GasLimit)
 			if balance-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()
-				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)		
+				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
 				tx.Result = &commonPb.Result{
 					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
 					ContractResult: &commonPb.ContractResult{
@@ -1113,10 +1122,10 @@ func (ts *TxScheduler) dispatchSenderCollection(senderCollection *SenderCollecti
 					RwSetHash: nil,
 					Message:   fmt.Sprintf("`%s` has no enough balance to execute tx.", addr),
 				}
-			}else {
+			} else {
 				balance = balance - gasLimit
 			}
-			
+
 			runningTxC <- tx
 		}
 	}
@@ -1271,7 +1280,6 @@ func (ts *TxScheduler) appendChargeGasTxToDAG(
 	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
 }
 
-
 func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 	var limit uint64
 
@@ -1282,4 +1290,3 @@ func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 	limit = tx.Payload.Limit.GasLimit
 	return limit, nil
 }
-

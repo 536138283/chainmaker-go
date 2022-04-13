@@ -1,10 +1,11 @@
 package scheduler
 
 import (
+	"fmt"
+
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"fmt"
 )
 
 type SenderCollection struct {
@@ -78,7 +79,7 @@ func getSenderTxCollection(
 }
 
 func (s SenderCollection) Clear() {
-	for addr, _ := range s.txsMap {
+	for addr := range s.txsMap {
 		delete(s.txsMap, addr)
 	}
 }

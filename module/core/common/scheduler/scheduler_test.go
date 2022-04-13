@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"fmt"
 	"runtime"
+
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
@@ -24,6 +25,11 @@ import (
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	TestPrivKeyFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.key"
+	TestCertFile    = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
 )
 
 //func TestDag(t *testing.T) {
@@ -108,7 +114,7 @@ func newTxWithPubKeyAndGasLimit(txId string, contractId *commonpb.Contract, para
 			Parameters:     parameters,
 			Timestamp:      0,
 			ExpirationTime: 0,
-			Limit:			&commonpb.Limit{ GasLimit: gasLimit},
+			Limit:          &commonpb.Limit{GasLimit: gasLimit},
 		},
 		Result: &commonpb.Result{
 			Code: commonpb.TxStatusCode_SUCCESS,
@@ -242,7 +248,7 @@ func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 			EnableSenderGroup:        enableSenderGroup,
 			EnableConflictsBitWindow: enableConflictsBitWindow,
 		},
-		AccountConfig: &configpb.GasAccountConfig {
+		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
 		},
 	}
@@ -259,9 +265,9 @@ func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	}
 
 	sysContractId := &commonpb.Contract{
-		Name:			syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-		Version: 		"1",
-		RuntimeType:	commonpb.RuntimeType_NATIVE,
+		Name:        syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		Version:     "1",
+		RuntimeType: commonpb.RuntimeType_NATIVE,
 	}
 
 	contractResult := &commonpb.ContractResult{
@@ -480,8 +486,8 @@ func TestSchedule3(t *testing.T) {
 
 func TestSchedule4(t *testing.T) {
 
-	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.key"
-	localconf.ChainMakerConfig.NodeConfig.CertFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
+	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
 	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare2(t, true, false, false, 2)
 
@@ -546,8 +552,8 @@ func TestSchedule4(t *testing.T) {
 
 func TestSchedule5(t *testing.T) {
 
-	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.key"
-	localconf.ChainMakerConfig.NodeConfig.CertFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
+	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
 	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare2(t, true, false, true, 2)
 
