@@ -295,6 +295,76 @@ func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
+func prepare3(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+	*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
+	*mock.MockSnapshot, protocol.TxScheduler, *commonpb.Contract, *commonpb.Block) {
+	var txRWSetTable = make([]*commonpb.TxRWSet, txCount)
+	var txTable = make([]*commonpb.Transaction, txCount)
+
+	ctl := gomock.NewController(t)
+	snapshot := mock.NewMockSnapshot(ctl)
+	vmMgr := mock.NewMockVmManager(ctl)
+	chainConf := mock.NewMockChainConf(ctl)
+	crypto := configpb.CryptoConfig{
+		Hash: "SHA256",
+	}
+	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
+	chainConfig := &configpb.ChainConfig{
+		Crypto:   &crypto,
+		Contract: &contractConf,
+		AuthType: protocol.Identity,
+		Core: &configpb.CoreConfig{
+			EnableOptimizeChargeGas:  enableOptimizeChargeGas,
+			EnableSenderGroup:        enableSenderGroup,
+			EnableConflictsBitWindow: enableConflictsBitWindow,
+		},
+		AccountConfig: &configpb.GasAccountConfig{
+			EnableGas: true,
+		},
+	}
+	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
+
+	storeHelper := mock.NewMockStoreHelper(ctl)
+	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
+	var schedulerFactory TxSchedulerFactory
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	contractId := &commonpb.Contract{
+		Name:        "ContractName",
+		Version:     "1",
+		RuntimeType: commonpb.RuntimeType_WASMER,
+	}
+
+	sysContractId := &commonpb.Contract{
+		Name:        syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		Version:     "1",
+		RuntimeType: commonpb.RuntimeType_NATIVE,
+	}
+
+	contractResult := &commonpb.ContractResult{
+		Code:    0,
+		Result:  nil,
+		Message: "",
+	}
+	block := newBlock()
+
+	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
+	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
+	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
+	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
+	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
+	blockChainStore := mock.NewMockBlockchainStore(ctl)
+	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(3)
+	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
+	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+
+	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
+	//snapshot.EXPECT().Seal()
+
+	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonpb.TxStatusCode_SUCCESS)
+	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
+}
+
 func TestSchedule(t *testing.T) {
 
 	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t, false, false, false, 2)
@@ -555,7 +625,7 @@ func TestSchedule5(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare2(t, true, false, true, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare3(t, true, false, true, 2)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
