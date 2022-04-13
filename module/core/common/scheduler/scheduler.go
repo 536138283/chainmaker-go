@@ -1066,6 +1066,11 @@ func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*co
 	}, nil
 }
 
+// dispatchTxs dispatch txs from:
+// 	1) senderCollection when flag `enableOptimizeChargeGas` was set
+// 	2) senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
+// 	3) txBatch directly where no flags was set
+// to runningTxC
 func (ts *TxScheduler) dispatchTxs(
 	txBatch []*commonPb.Transaction,
 	runningTxC chan *commonPb.Transaction,
@@ -1115,7 +1120,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			}
 
 			gasLimit := int64(limit.GasLimit)
-			// if the balance less than gas limit, do not dispatch this tx.
+			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
 			if balance-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
@@ -1147,17 +1152,17 @@ func (ts *TxScheduler) appendChargeGasTx(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot,
 	senderCollection *SenderCollection) {
-	ts.log.Info("TxScheduler => appendChargeGasTx() => createChargeGasTx() begin ")
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => createChargeGasTx() begin ")
 	tx, err := ts.createChargeGasTx(senderCollection)
 	if err != nil {
 		return
 	}
 
-	ts.log.Info("TxScheduler => appendChargeGasTx() => executeGhargeGasTx() begin ")
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => executeGhargeGasTx() begin ")
 	txSimContext := ts.executeChargeGasTx(tx, block, snapshot)
 	tx.Result = txSimContext.GetTxResult()
 
-	ts.log.Info("TxScheduler => appendChargeGasTx() => appendChargeGasTxToDAG() begin ")
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendChargeGasTxToDAG() begin ")
 	ts.appendChargeGasTxToDAG(block, snapshot)
 }
 
@@ -1170,6 +1175,7 @@ func (ts *TxScheduler) signTxPayload(
 		return nil, err
 	}
 
+	// using the default hash type of the chain
 	hashType := ts.chainConf.ChainConfig().GetCrypto().Hash
 	return ts.signer.Sign(hashType, payloadBytes)
 }
@@ -1220,6 +1226,7 @@ func (ts *TxScheduler) createChargeGasTx(
 		ts.log.Errorf("createChargeGasTx => GetMember() error: %v", err.Error())
 		return nil, err
 	}
+
 	return &commonPb.Transaction{
 		Payload: payload,
 		Sender: &commonPb.EndorsementEntry{
@@ -1265,8 +1272,13 @@ func (ts *TxScheduler) executeChargeGasTx(
 		data := item.Value
 		params[address] = data
 	}
+
+	// this native contract call will never failed
 	contractResultPayload, _, txStatusCode := ts.VmManager.RunContract(contract, tx.Payload.Method, nil,
 		params, txSimContext, 0, tx.Payload.TxType)
+	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
+		panic("running the tx of charging gas will never failed.")
+	}
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 	ts.log.Debugf("finished tx for charging gas, id = :%s, txStatusCode = %v", tx.Payload.TxId, txStatusCode)
@@ -1280,6 +1292,7 @@ func (ts *TxScheduler) executeChargeGasTx(
 	return txSimContext
 }
 
+// appendChargeGasTxToDAG append the tx to the DAG with dependencies on all tx.
 func (ts *TxScheduler) appendChargeGasTxToDAG(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot) {
@@ -1293,6 +1306,7 @@ func (ts *TxScheduler) appendChargeGasTxToDAG(
 	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
 }
 
+// getTxGasLimit get the gas limit field from tx, and will return err when the gas limit field is not set.
 func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 	var limit uint64
 

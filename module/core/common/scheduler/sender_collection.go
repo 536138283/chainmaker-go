@@ -8,13 +8,19 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// SenderCollection contains:
+// key: address
+// value: tx collection will address's other data
 type SenderCollection struct {
 	txsMap map[string]*TxCollection
 }
 
 type TxCollection struct {
+	// public key to generate address
 	publicKey      crypto.PublicKey
+	// balance of the address saved at SenderCollection
 	accountBalance int64
+	// total gas added each tx
 	totalGasUsed   int64
 	txs            []*commonPb.Transaction
 }
