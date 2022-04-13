@@ -17,12 +17,12 @@ type SenderCollection struct {
 
 type TxCollection struct {
 	// public key to generate address
-	publicKey      crypto.PublicKey
+	publicKey crypto.PublicKey
 	// balance of the address saved at SenderCollection
 	accountBalance int64
 	// total gas added each tx
-	totalGasUsed   int64
-	txs            []*commonPb.Transaction
+	totalGasUsed int64
+	txs          []*commonPb.Transaction
 }
 
 func (g *TxCollection) String() string {
