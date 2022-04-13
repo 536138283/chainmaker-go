@@ -61,7 +61,8 @@ type TxScheduler struct {
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]bool
 
-// Schedule according to a batch of transactions, and generating DAG according to the conflict relationship
+// Schedule according to a batch of transactions,
+// and generating DAG according to the conflict relationship
 func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot) (map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, error) {
 
@@ -247,6 +248,7 @@ func (ts *TxScheduler) initOptimizeTools(
 	return enableConflictsBitWindow, conflictsBitWindow
 }
 
+// send txs from sender group
 func (ts *TxScheduler) sendTxBySenderGroup(conflictsBitWindow *ConflictsBitWindow, senderGroup *SenderGroup,
 	runningTxC chan *commonPb.Transaction, enableConflictsBitWindow bool) {
 	// first round
@@ -271,6 +273,8 @@ func (ts *TxScheduler) sendTxBySenderGroup(conflictsBitWindow *ConflictsBitWindo
 	}
 }
 
+// apply the read/write set to txSimContext,
+// and adjust the go routine size
 func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSenderGroup bool,
 	conflictsBitWindow *ConflictsBitWindow, senderGroup *SenderGroup, goRoutinePool *ants.Pool,
 	tx *commonPb.Transaction, start time.Time) {
