@@ -485,6 +485,37 @@ func (cms *ConsensusMsgSubscriber) OnQuit() {
 	//panic("implement me")
 }
 
+// ConsistentMsgSubscriber is a subscriber implementation subscribe consistent msg for msgbus.
+type ConsistentMsgSubscriber struct {
+	netService *NetService
+}
+
+func (cms *ConsistentMsgSubscriber) OnMessage(message *msgbus.Message) {
+	switch message.Topic {
+	case msgbus.SendConsistentMsg:
+		go func() {
+			err := HandleMsgBusSubscriberOnMessage(
+				cms.netService,
+				netPb.NetMsg_CONSISTENT_MSG,
+				"consistent msg",
+				message,
+			)
+			if err != nil {
+				cms.netService.logger.Warnf(
+					"[ConsistentMsgSubscriber] handle message failed, %s",
+					err.Error(),
+				)
+			}
+		}()
+	default:
+	}
+}
+
+func (cms *ConsistentMsgSubscriber) OnQuit() {
+	// do nothing
+	//panic("implement me")
+}
+
 // TxPoolMsgSubscriber is a subscriber implementation subscribe tx pool msg for msgbus.
 type TxPoolMsgSubscriber struct {
 	netService *NetService
@@ -622,6 +653,40 @@ func (ns *NetService) initBindMsgBus() error {
 		netService: ns,
 	}
 	ns.msgBus.Register(msgbus.SendConsensusMsg, cmSubscriber)
+
+	// for consistent module
+	// receive consistent msg from net then publish to msg-bus
+	consistentMsgHandler := CreateMsgHandlerForMsgBus(
+		ns,
+		msgbus.RecvConsistentMsg,
+		"consistent msg",
+		netPb.NetMsg_CONSISTENT_MSG,
+	)
+	if err := ns.receiveMsgForMsgBus(
+		consistentMsgHandler,
+		CreateFlagWithPrefixAndMsgType(
+			msgBusMsgFlagPrefix,
+			netPb.NetMsg_CONSISTENT_MSG,
+		),
+	); err != nil {
+		return err
+	}
+	if err := ns.receiveMsgForMsgBus(
+		consistentMsgHandler,
+		CreateFlagWithPrefixAndMsgType(
+			msgBusConsensusTopicPrefix,
+			netPb.NetMsg_CONSISTENT_MSG,
+		),
+	); err != nil {
+		return err
+	}
+
+	// subscribe a consistent msg subscriber for receiving consistent msg
+	// from msg-bus then broadcast the msg to consistent nodes.
+	consistentSubscriber := &ConsistentMsgSubscriber{
+		netService: ns,
+	}
+	ns.msgBus.Register(msgbus.SendConsistentMsg, consistentSubscriber)
 
 	// ===========================================
 
