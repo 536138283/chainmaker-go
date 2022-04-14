@@ -646,8 +646,8 @@ func TestSchedule5(t *testing.T) {
 		}},
 		TxWrites: []*commonpb.TxWrite{{
 			ContractName: contractId.Name,
-			Key:          []byte("K2"),
-			Value:        []byte("V"),
+			Key:          []byte("K1"),
+			Value:        []byte("V1"),
 		}},
 	}
 	txRWSetTable[1] = &commonpb.TxRWSet{
@@ -655,19 +655,19 @@ func TestSchedule5(t *testing.T) {
 		TxReads: []*commonpb.TxRead{
 			{
 				ContractName: contractId.Name,
-				Key:          []byte("K2"),
+				Key:          []byte("K3"),
 				Value:        []byte("V"),
 			},
 			{
 				ContractName: contractId.Name,
-				Key:          []byte("K2"),
+				Key:          []byte("K4"),
 				Value:        []byte("V"),
 			},
 		},
 		TxWrites: []*commonpb.TxWrite{{
 			ContractName: contractId.Name,
 			Key:          []byte("K3"),
-			Value:        []byte("V"),
+			Value:        []byte("V3"),
 		}},
 	}
 
