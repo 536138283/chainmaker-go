@@ -6,7 +6,14 @@ SPDX-License-Identifier: Apache-2.0
 
 package types
 
-import "strings"
+import (
+	"errors"
+	"strings"
+)
+
+var (
+	ValueNotFoundError = errors.New("value not found")
+)
 
 //EngineType database type
 type EngineType int32
@@ -23,7 +30,7 @@ const (
 	//Sqlite Sqlite
 	Sqlite EngineType = 4
 	//BadgerDB BadgerDB
-	BadgerDb  EngineType = 6
+	BadgerDb EngineType = 6
 )
 
 func (t EngineType) String() string {

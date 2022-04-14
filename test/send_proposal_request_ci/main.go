@@ -1052,7 +1052,8 @@ func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId stri
 
 	resp := proposalRequest(sk3, client, commonPb.TxType_QUERY_SYSTEM_CONTRACT,
 		chainId, txId, payloadBytes)
-	if resp == nil || resp.ContractResult == nil || strings.Contains(resp.Message, "no such transaction") {
+	if resp == nil || resp.ContractResult == nil || strings.Contains(resp.Message, "no such transaction") ||
+		strings.Contains(resp.Message, "value not found") {
 		time.Sleep(time.Second * 2)
 		testWaitTx(sk3, client, chainId, txId)
 	} else if resp != nil && len(resp.Message) != 0 {
