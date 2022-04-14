@@ -225,7 +225,7 @@ func prepare(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCon
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
-func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
 	*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonpb.Contract, *commonpb.Block) {
 	var txRWSetTable = make([]*commonpb.TxRWSet, txCount)
@@ -295,7 +295,7 @@ func prepare2(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
-func prepare3(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
 	*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonpb.Contract, *commonpb.Block) {
 	var txRWSetTable = make([]*commonpb.TxRWSet, txCount)
@@ -353,7 +353,7 @@ func prepare3(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
-	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(3)
+	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
@@ -559,7 +559,7 @@ func TestSchedule4(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare2(t, true, false, false, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 2)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
@@ -625,7 +625,7 @@ func TestSchedule5(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare3(t, true, false, true, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
