@@ -284,7 +284,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
-	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
+	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(3)
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
@@ -355,7 +355,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
-	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
+	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(3)
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
@@ -618,9 +618,6 @@ func TestSchedule4(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, txSet)
 	require.NotNil(t, contractEven)
-
-	fmt.Println(txSet)
-	fmt.Println(contractEven)
 }
 
 // TestSchedule5 test the conflictsBitWindows features under flag `enableOptimizeChargeGas` is opened.
@@ -629,7 +626,7 @@ func TestSchedule5(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, false, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
@@ -685,9 +682,6 @@ func TestSchedule5(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, txSet)
 	require.NotNil(t, contractEven)
-
-	fmt.Println(txSet)
-	fmt.Println(contractEven)
 }
 
 func TestSimulateWithDag(t *testing.T) {
