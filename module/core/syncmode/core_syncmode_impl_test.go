@@ -578,33 +578,6 @@ func newMockBlockProposer(t *testing.T) *mock.MockBlockProposer {
 //	return block
 //}
 
-func TestCoreEngine_DiscardAboveHeight(t *testing.T) {
-	type fields struct {
-	}
-	type args struct {
-		baseHeight int64
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name:   "test0",
-			fields: fields{},
-			args: args{
-				baseHeight: 0,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			c := &CoreEngine{}
-			c.DiscardAboveHeight(tt.args.baseHeight)
-		})
-	}
-}
-
 func TestCoreEngine_GetMaxbftHelper(t *testing.T) {
 	type fields struct {
 		MaxbftHelper protocol.MaxbftHelper
