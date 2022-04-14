@@ -225,6 +225,7 @@ func prepare(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCon
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
+// prepare4 is used only by TestSchedule4
 func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
 	*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonpb.Contract, *commonpb.Block) {
@@ -295,6 +296,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
+// prepare5 is used only by TestSchedule5
 func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
 	*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonpb.Contract, *commonpb.Block) {
@@ -554,6 +556,7 @@ func TestSchedule3(t *testing.T) {
 	fmt.Println(contractEven)
 }
 
+// TestSchedule4 test the flag `enableOptimizeChargeGas` is opened.
 func TestSchedule4(t *testing.T) {
 
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
@@ -620,6 +623,7 @@ func TestSchedule4(t *testing.T) {
 	fmt.Println(contractEven)
 }
 
+// TestSchedule5 test the conflictsBitWindows features under flag `enableOptimizeChargeGas` is opened.
 func TestSchedule5(t *testing.T) {
 
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
