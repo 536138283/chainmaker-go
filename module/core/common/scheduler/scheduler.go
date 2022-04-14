@@ -614,6 +614,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		)
 	}
 
+	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`)", contractName)
 	contract, err := txSimContext.GetContractByName(contractName)
 	if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
@@ -843,6 +844,8 @@ func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *c
 func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction,
 	contractName, method string) (accountMangerContract *commonPb.Contract, pk []byte, err error) {
 	if ts.checkNativeFilter(contractName, method) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+		ts.log.Debugf("getAccountMgrContractAndPk => txSimContext.GetContractByName(`%s`)",
+			syscontract.SystemContract_ACCOUNT_MANAGER.String())
 		accountMangerContract, err = txSimContext.GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String())
 		if err != nil {
 			ts.log.Error(err.Error())
@@ -1262,6 +1265,7 @@ func (ts *TxScheduler) executeChargeGasTx(
 		RwSetHash: nil,
 	}
 
+	ts.log.Debugf("executeChargeGasTx => txSimContext.GetContractByName(`%s`)", tx.Payload.ContractName)
 	contract, err := txSimContext.GetContractByName(tx.Payload.ContractName)
 	if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", tx.Payload.ContractName, err)
