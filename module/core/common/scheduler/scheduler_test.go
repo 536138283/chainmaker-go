@@ -629,7 +629,7 @@ func TestSchedule5(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, false, 2)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
