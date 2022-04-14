@@ -83,9 +83,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	startTime := time.Now()
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
-	if len(txBatch) == 0 {
-		finishC <- true
-	}
 
 	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
@@ -99,16 +96,22 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	// launch the go routine to dispatch tx to runningTxC
-	go ts.dispatchTxs(
-		txBatch,
-		runningTxC,
-		goRoutinePool,
-		enableOptimizeChargeGas,
-		senderCollection,
-		enableSenderGroup,
-		senderGroup,
-		enableConflictsBitWindow,
-		conflictsBitWindow)
+	go func() {
+		if len(txBatch) == 0 {
+			finishC <- true
+		}else {
+			ts.dispatchTxs(
+				txBatch,
+				runningTxC,
+				goRoutinePool,
+				enableOptimizeChargeGas,
+				senderCollection,
+				enableSenderGroup,
+				senderGroup,
+				enableConflictsBitWindow,
+				conflictsBitWindow)
+		}
+	}()
 
 	// Put the pending transaction into the running queue
 	go func() {
