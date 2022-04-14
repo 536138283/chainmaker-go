@@ -64,7 +64,8 @@ func ifExitInSameBranch(height uint64, txId string, proposalCache protocol.Propo
 func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transaction,
 	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
 	consensusType consensuspb.ConsensusType, hashType string, filter protocol.TxFilter,
-	chainId string, ac protocol.AccessControlProvider, proposalCache protocol.ProposalCache, mode protocol.VerifyMode) error {
+	chainId string, ac protocol.AccessControlProvider, proposalCache protocol.ProposalCache,
+	mode protocol.VerifyMode) error {
 	txInPool, existTx := txsRet[tx.Payload.TxId]
 	if existTx {
 		if consensuspb.ConsensusType_MAXBFT == consensusType &&

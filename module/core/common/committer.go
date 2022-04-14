@@ -84,7 +84,8 @@ func (cb *CommitBlock) CommitBlock(
 	block *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
 	conEventMap map[string][]*commonpb.ContractEvent) (
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEventLasts, filterLasts int64, blockInfo *commonpb.BlockInfo, err error) {
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEventLasts, filterLasts int64, blockInfo *commonpb.BlockInfo,
+	err error) {
 	// record block
 	rwSet := RearrangeRWSet(block, rwSetMap)
 	// record contract event
