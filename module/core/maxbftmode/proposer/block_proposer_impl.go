@@ -256,7 +256,11 @@ func (bp *BlockProposerImpl) OnReceiveMaxBFTProposal(proposal *maxbft.BuildPropo
 	defer bp.setIdle()
 
 	bp.log.Infof("trigger proposal from maxBFT, height[%d]", proposal.Height)
-	go bp.proposing(proposingHeight, preHash)
+	go func() {
+		if _, err := bp.proposing(proposingHeight, preHash); err != nil {
+			bp.log.Warnf("proposing err:%s", err.Error())
+		}
+	}()
 	<-bp.finishProposeC
 }
 

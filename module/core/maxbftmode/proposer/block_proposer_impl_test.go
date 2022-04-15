@@ -9,8 +9,6 @@ package proposer
 import (
 	"crypto/sha256"
 	"fmt"
-	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
@@ -73,7 +71,7 @@ func TestProposeStatusChange(t *testing.T) {
 	identity.EXPECT().GetMember().AnyTimes()
 	txPool.EXPECT().FetchTxBatch(gomock.Any()).Return(txs).AnyTimes()
 	//msgBus.EXPECT().Publish(gomock.Any(), gomock.Any())
-	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any())
+	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any()).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
 		Type: consensus.ConsensusType_TBFT,
@@ -124,12 +122,8 @@ func TestProposeStatusChange(t *testing.T) {
 
 	blockProposer := &BlockProposerImpl{
 		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
 		idle:            true,
 		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
 		exitC:           make(chan bool),
 		txPool:          txPool,
 		snapshotManager: snapshotMgr,
@@ -145,10 +139,7 @@ func TestProposeStatusChange(t *testing.T) {
 		blockBuilder: blockBuilder,
 		storeHelper:  storeHelper,
 	}
-	require.False(t, blockProposer.isProposer)
-	require.Nil(t, blockProposer.proposeTimer)
 
-	blockProposer.proposeBlock()
 	blockProposer.OnReceiveYieldProposeSignal(true)
 }
 
@@ -156,37 +147,12 @@ func TestProposeStatusChange(t *testing.T) {
  * test unit ShouldPropose func
  */
 func TestShouldPropose(t *testing.T) {
-	ctl := gomock.NewController(t)
-	txPool := mock.NewMockTxPool(ctl)
-	snapshotMgr := mock.NewMockSnapshotManager(ctl)
-	msgBus := mbusmock.NewMockMessageBus(ctl)
-	identity := mock.NewMockSigningMember(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
 	proposedCache := cache.NewProposalCache(nil, ledgerCache)
-	txScheduler := mock.NewMockTxScheduler(ctl)
-
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
-	blockProposer := &BlockProposerImpl{
-		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
-		idle:            true,
-		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
-		exitC:           make(chan bool),
-		txPool:          txPool,
-		snapshotManager: snapshotMgr,
-		txScheduler:     txScheduler,
-		identity:        identity,
-		ledgerCache:     ledgerCache,
-		proposalCache:   proposedCache,
-		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
-	}
 
 	b0 := createNewTestBlock(0)
 	ledgerCache.SetLastCommittedBlock(b0)
-	require.True(t, blockProposer.shouldProposeByBFT(b0.Header.BlockHeight+1))
 
 	b := createNewTestBlock(1)
 	proposedCache.SetProposedBlock(b, nil, nil, false)
@@ -197,16 +163,14 @@ func TestShouldPropose(t *testing.T) {
 	b2 := createNewTestBlock(1)
 	b2.Header.BlockHash = nil
 	proposedCache.SetProposedBlock(b2, nil, nil, true)
-	require.False(t, blockProposer.shouldProposeByBFT(b2.Header.BlockHeight+1))
+
 	require.NotNil(t, proposedCache.GetSelfProposedBlockAt(1))
 	ledgerCache.SetLastCommittedBlock(b2)
-	require.True(t, blockProposer.shouldProposeByBFT(b2.Header.BlockHeight+1))
 
 	b3, _, _ := proposedCache.GetProposedBlock(b2)
 	require.NotNil(t, b3)
 
 	proposedCache.SetProposedAt(b3.Header.BlockHeight)
-	require.False(t, blockProposer.shouldProposeByBFT(b3.Header.BlockHeight))
 }
 
 /*
@@ -228,12 +192,8 @@ func TestShouldProposeByMaxBFT(t *testing.T) {
 	log.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
 	blockProposer := &BlockProposerImpl{
 		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
 		idle:            true,
 		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
 		exitC:           make(chan bool),
 		txPool:          txPool,
 		snapshotManager: snapshotMgr,
@@ -379,97 +339,6 @@ func TestFinalize(t *testing.T) {
 
 	err := localconf.UpdateDebugConfig(kvs)
 	require.Nil(t, err)
-}
-
-/*
- * test unit TxDuplicateCheck func
- */
-func TestTxDuplicateCheck(t *testing.T) {
-	// init
-	// 1. init transactions
-	const (
-		originalTx   = "QmXDdHkYEbAshxDnHxpDAvog7a2y3zknuKJgFnx4YLfYD"
-		duplicateTx3 = originalTx + "3"
-		duplicateTx5 = originalTx + "5"
-		duplicateTx7 = originalTx + "7"
-	)
-	var duplicateTxs []*commonpb.Transaction
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(3),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(5),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(7),
-		},
-	})
-	var txs []*commonpb.Transaction
-	for i := 0; i < 10; i++ {
-		tx := &commonpb.Transaction{
-			Payload: &commonpb.Payload{
-				ChainId: "chain1",
-				TxType:  commonpb.TxType_INVOKE_CONTRACT,
-				TxId:    originalTx + strconv.Itoa(i),
-			},
-		}
-		txs = append(txs, tx)
-	}
-	// 2. init store
-	ctl := gomock.NewController(t)
-	// Three repeat transactions
-	blockchainStore1 := mock.NewMockBlockchainStore(ctl)
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx3)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx5)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx7)).Return(true, nil).AnyTimes()
-	// No repeat transactions
-	blockchainStore2 := mock.NewMockBlockchainStore(ctl)
-	// All repeat transactions
-	blockchainStore3 := mock.NewMockBlockchainStore(ctl)
-	for i := 0; i < 10; i++ {
-		blockchainStore3.EXPECT().TxExists(gomock.Eq(originalTx+strconv.Itoa(i))).Return(true, nil).AnyTimes()
-	}
-	// execute case
-	cases := []struct {
-		comment      string
-		duplicateTxs []*commonpb.Transaction
-		store        *mock.MockBlockchainStore
-	}{
-		{comment: "Three repeat transactions", duplicateTxs: duplicateTxs, store: blockchainStore1},
-		{comment: "No repeat transactions", duplicateTxs: []*commonpb.Transaction{}, store: blockchainStore2},
-		{comment: "All repeat transactions", duplicateTxs: txs, store: blockchainStore3},
-	}
-	for _, case_ := range cases {
-		t.Logf("comment: %s", case_.comment)
-		blockProposerImpl := &BlockProposerImpl{
-			blockchainStore: case_.store,
-		}
-		// 3. test Duplicate
-		_, duplicates := blockProposerImpl.txDuplicateCheck(case_.duplicateTxs)
-		if len(duplicates) != len(case_.duplicateTxs) {
-			t.Errorf("duplicates size error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		// note: For convenience, uses an empty slice
-		if duplicates == nil {
-			duplicates = []*commonpb.Transaction{}
-		}
-		equal := reflect.DeepEqual(duplicates, case_.duplicateTxs)
-		if !equal {
-			t.Errorf("duplicates error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		t.Logf("comment: %s success", case_.comment)
-	}
 }
 
 /*
@@ -636,11 +505,7 @@ func TestBlockProposerImpl_OnReceiveTxPoolSignal(t *testing.T) {
 		msgBus                 msgbus.MessageBus
 		ac                     protocol.AccessControlProvider
 		blockchainStore        protocol.BlockchainStore
-		isProposer             bool
 		idle                   bool
-		proposeTimer           *time.Timer
-		canProposeC            chan bool
-		txPoolSignalC          chan *txpoolpb.TxPoolSignal
 		exitC                  chan bool
 		proposalCache          protocol.ProposalCache
 		chainConf              protocol.ChainConf
@@ -662,28 +527,16 @@ func TestBlockProposerImpl_OnReceiveTxPoolSignal(t *testing.T) {
 		{
 			name: "test0",
 			fields: fields{
-				chainId:         "test0",
-				txPool:          nil,
-				txScheduler:     nil,
-				snapshotManager: nil,
-				identity:        nil,
-				ledgerCache:     nil,
-				msgBus:          nil,
-				ac:              nil,
-				blockchainStore: nil,
-				isProposer:      true,
-				idle:            false,
-				proposeTimer:    nil,
-				canProposeC:     nil,
-				txPoolSignalC: func() chan *txpoolpb.TxPoolSignal {
-					signal := make(chan *txpoolpb.TxPoolSignal, 1)
-					signal <- &txpoolpb.TxPoolSignal{
-						SignalType: txpoolpb.SignalType_BLOCK_PROPOSE,
-						ChainId:    "test123456",
-					}
-					<-signal
-					return signal
-				}(),
+				chainId:                "test0",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				idle:                   false,
 				exitC:                  nil,
 				proposalCache:          nil,
 				chainConf:              nil,
@@ -714,11 +567,7 @@ func TestBlockProposerImpl_OnReceiveTxPoolSignal(t *testing.T) {
 				msgBus:                 tt.fields.msgBus,
 				ac:                     tt.fields.ac,
 				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
 				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
 				exitC:                  tt.fields.exitC,
 				proposalCache:          tt.fields.proposalCache,
 				chainConf:              tt.fields.chainConf,
@@ -748,11 +597,7 @@ func TestBlockProposerImpl_OnReceiveProposeStatusChange(t *testing.T) {
 		msgBus                 msgbus.MessageBus
 		ac                     protocol.AccessControlProvider
 		blockchainStore        protocol.BlockchainStore
-		isProposer             bool
 		idle                   bool
-		proposeTimer           *time.Timer
-		canProposeC            chan bool
-		txPoolSignalC          chan *txpoolpb.TxPoolSignal
 		exitC                  chan bool
 		proposalCache          protocol.ProposalCache
 		chainConf              protocol.ChainConf
@@ -783,11 +628,7 @@ func TestBlockProposerImpl_OnReceiveProposeStatusChange(t *testing.T) {
 				msgBus:                 nil,
 				ac:                     nil,
 				blockchainStore:        nil,
-				isProposer:             false,
 				idle:                   false,
-				proposeTimer:           nil,
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
 				exitC:                  nil,
 				proposalCache:          nil,
 				chainConf:              nil,
@@ -814,11 +655,7 @@ func TestBlockProposerImpl_OnReceiveProposeStatusChange(t *testing.T) {
 				msgBus:                 nil,
 				ac:                     nil,
 				blockchainStore:        nil,
-				isProposer:             true,
 				idle:                   false,
-				proposeTimer:           nil,
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
 				exitC:                  nil,
 				proposalCache:          nil,
 				chainConf:              nil,
@@ -853,15 +690,8 @@ func TestBlockProposerImpl_OnReceiveProposeStatusChange(t *testing.T) {
 				msgBus:          nil,
 				ac:              nil,
 				blockchainStore: nil,
-				isProposer:      true,
 				idle:            false,
-				proposeTimer: func() *time.Timer {
-					timer := time.NewTimer(1 * time.Second)
-					return timer
-				}(),
-				canProposeC:   nil,
-				txPoolSignalC: nil,
-				exitC:         nil,
+				exitC:           nil,
 				proposalCache: func() protocol.ProposalCache {
 					proposalCache := newMockProposalCache(t)
 					proposalCache.EXPECT().ResetProposedAt(gomock.Any()).AnyTimes()
@@ -896,11 +726,7 @@ func TestBlockProposerImpl_OnReceiveProposeStatusChange(t *testing.T) {
 				msgBus:                 tt.fields.msgBus,
 				ac:                     tt.fields.ac,
 				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
 				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
 				exitC:                  tt.fields.exitC,
 				proposalCache:          tt.fields.proposalCache,
 				chainConf:              tt.fields.chainConf,
@@ -1010,11 +836,7 @@ func TestBlockProposerImpl_yieldProposing(t *testing.T) {
 		msgBus                 msgbus.MessageBus
 		ac                     protocol.AccessControlProvider
 		blockchainStore        protocol.BlockchainStore
-		isProposer             bool
 		idle                   bool
-		proposeTimer           *time.Timer
-		canProposeC            chan bool
-		txPoolSignalC          chan *txpoolpb.TxPoolSignal
 		exitC                  chan bool
 		proposalCache          protocol.ProposalCache
 		chainConf              protocol.ChainConf
@@ -1042,11 +864,7 @@ func TestBlockProposerImpl_yieldProposing(t *testing.T) {
 				msgBus:          nil,
 				ac:              nil,
 				blockchainStore: nil,
-				isProposer:      false,
 				idle:            true,
-				proposeTimer:    nil,
-				canProposeC:     nil,
-				txPoolSignalC:   nil,
 				exitC:           nil,
 				proposalCache:   nil,
 				chainConf:       nil,
@@ -1075,11 +893,7 @@ func TestBlockProposerImpl_yieldProposing(t *testing.T) {
 				msgBus:                 tt.fields.msgBus,
 				ac:                     tt.fields.ac,
 				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
 				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
 				exitC:                  tt.fields.exitC,
 				proposalCache:          tt.fields.proposalCache,
 				chainConf:              tt.fields.chainConf,
@@ -1211,11 +1025,7 @@ func TestBlockProposerImpl_getDuration(t *testing.T) {
 				msgBus:                 tt.fields.msgBus,
 				ac:                     tt.fields.ac,
 				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
 				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
 				exitC:                  tt.fields.exitC,
 				proposalCache:          tt.fields.proposalCache,
 				chainConf:              tt.fields.chainConf,
@@ -1309,11 +1119,7 @@ func TestBlockProposerImpl_getChainVersion(t *testing.T) {
 				msgBus:                 tt.fields.msgBus,
 				ac:                     tt.fields.ac,
 				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
 				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
 				exitC:                  tt.fields.exitC,
 				proposalCache:          tt.fields.proposalCache,
 				chainConf:              tt.fields.chainConf,
@@ -1436,11 +1242,7 @@ func TestBlockProposerImpl_setNotIdle(t *testing.T) {
 				msgBus:                 tt.fields.msgBus,
 				ac:                     tt.fields.ac,
 				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
 				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
 				exitC:                  tt.fields.exitC,
 				proposalCache:          tt.fields.proposalCache,
 				chainConf:              tt.fields.chainConf,
@@ -1453,133 +1255,6 @@ func TestBlockProposerImpl_setNotIdle(t *testing.T) {
 			}
 			if got := bp.setNotIdle(); got != tt.want {
 				t.Errorf("setNotIdle() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-/*
- * test unit BlockProposerImpl isIdle func
- */
-func TestBlockProposerImpl_isIdle(t *testing.T) {
-	type fields struct {
-		chainId                string
-		txPool                 protocol.TxPool
-		txScheduler            protocol.TxScheduler
-		snapshotManager        protocol.SnapshotManager
-		identity               protocol.SigningMember
-		ledgerCache            protocol.LedgerCache
-		msgBus                 msgbus.MessageBus
-		ac                     protocol.AccessControlProvider
-		blockchainStore        protocol.BlockchainStore
-		isProposer             bool
-		idle                   bool
-		proposeTimer           *time.Timer
-		canProposeC            chan bool
-		txPoolSignalC          chan *txpoolpb.TxPoolSignal
-		exitC                  chan bool
-		proposalCache          protocol.ProposalCache
-		chainConf              protocol.ChainConf
-		log                    protocol.Logger
-		finishProposeC         chan bool
-		metricBlockPackageTime *prometheus.HistogramVec
-		proposer               *pbac.Member
-		blockBuilder           *common.BlockBuilder
-		storeHelper            conf.StoreHelper
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "test0",
-			fields: fields{
-				chainId:                "",
-				txPool:                 nil,
-				txScheduler:            nil,
-				snapshotManager:        nil,
-				identity:               nil,
-				ledgerCache:            nil,
-				msgBus:                 nil,
-				ac:                     nil,
-				blockchainStore:        nil,
-				isProposer:             false,
-				idle:                   false,
-				proposeTimer:           nil,
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
-				exitC:                  nil,
-				proposalCache:          nil,
-				chainConf:              nil,
-				log:                    nil,
-				finishProposeC:         nil,
-				metricBlockPackageTime: nil,
-				proposer:               nil,
-				blockBuilder:           nil,
-				storeHelper:            nil,
-			},
-			want: false,
-		},
-		{
-			name: "test0",
-			fields: fields{
-				chainId:                "",
-				txPool:                 nil,
-				txScheduler:            nil,
-				snapshotManager:        nil,
-				identity:               nil,
-				ledgerCache:            nil,
-				msgBus:                 nil,
-				ac:                     nil,
-				blockchainStore:        nil,
-				isProposer:             false,
-				idle:                   true,
-				proposeTimer:           nil,
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
-				exitC:                  nil,
-				proposalCache:          nil,
-				chainConf:              nil,
-				log:                    nil,
-				finishProposeC:         nil,
-				metricBlockPackageTime: nil,
-				proposer:               nil,
-				blockBuilder:           nil,
-				storeHelper:            nil,
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bp := &BlockProposerImpl{
-				chainId:                tt.fields.chainId,
-				txPool:                 tt.fields.txPool,
-				txScheduler:            tt.fields.txScheduler,
-				snapshotManager:        tt.fields.snapshotManager,
-				identity:               tt.fields.identity,
-				ledgerCache:            tt.fields.ledgerCache,
-				msgBus:                 tt.fields.msgBus,
-				ac:                     tt.fields.ac,
-				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
-				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
-				exitC:                  tt.fields.exitC,
-				proposalCache:          tt.fields.proposalCache,
-				chainConf:              tt.fields.chainConf,
-				log:                    tt.fields.log,
-				finishProposeC:         tt.fields.finishProposeC,
-				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
-				proposer:               tt.fields.proposer,
-				blockBuilder:           tt.fields.blockBuilder,
-				storeHelper:            tt.fields.storeHelper,
-			}
-			if got := bp.isIdle(); got != tt.want {
-				t.Errorf("isIdle() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -1599,11 +1274,7 @@ func TestBlockProposerImpl_setIdle(t *testing.T) {
 		msgBus                 msgbus.MessageBus
 		ac                     protocol.AccessControlProvider
 		blockchainStore        protocol.BlockchainStore
-		isProposer             bool
 		idle                   bool
-		proposeTimer           *time.Timer
-		canProposeC            chan bool
-		txPoolSignalC          chan *txpoolpb.TxPoolSignal
 		exitC                  chan bool
 		proposalCache          protocol.ProposalCache
 		chainConf              protocol.ChainConf
@@ -1632,11 +1303,7 @@ func TestBlockProposerImpl_setIdle(t *testing.T) {
 				msgBus:                 tt.fields.msgBus,
 				ac:                     tt.fields.ac,
 				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
 				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
 				exitC:                  tt.fields.exitC,
 				proposalCache:          tt.fields.proposalCache,
 				chainConf:              tt.fields.chainConf,
@@ -1648,269 +1315,6 @@ func TestBlockProposerImpl_setIdle(t *testing.T) {
 				storeHelper:            tt.fields.storeHelper,
 			}
 			bp.setIdle()
-		})
-	}
-}
-
-/*
- * test unit BlockProposerImpl setIsSelfProposer func
- */
-func TestBlockProposerImpl_setIsSelfProposer(t *testing.T) {
-	type fields struct {
-		chainId                string
-		txPool                 protocol.TxPool
-		txScheduler            protocol.TxScheduler
-		snapshotManager        protocol.SnapshotManager
-		identity               protocol.SigningMember
-		ledgerCache            protocol.LedgerCache
-		msgBus                 msgbus.MessageBus
-		ac                     protocol.AccessControlProvider
-		blockchainStore        protocol.BlockchainStore
-		isProposer             bool
-		idle                   bool
-		proposeTimer           *time.Timer
-		canProposeC            chan bool
-		txPoolSignalC          chan *txpoolpb.TxPoolSignal
-		exitC                  chan bool
-		proposalCache          protocol.ProposalCache
-		chainConf              protocol.ChainConf
-		log                    protocol.Logger
-		finishProposeC         chan bool
-		metricBlockPackageTime *prometheus.HistogramVec
-		proposer               *pbac.Member
-		blockBuilder           *common.BlockBuilder
-		storeHelper            conf.StoreHelper
-	}
-	type args struct {
-		isSelfProposer bool
-	}
-
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		{
-			name: "test0",
-			fields: fields{
-				chainId:         "",
-				txPool:          nil,
-				txScheduler:     nil,
-				snapshotManager: nil,
-				identity:        nil,
-				ledgerCache:     nil,
-				msgBus:          nil,
-				ac:              nil,
-				blockchainStore: nil,
-				isProposer:      false,
-				idle:            false,
-				proposeTimer: func() *time.Timer {
-					timer := time.NewTimer(1 * time.Second)
-					return timer
-				}(),
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
-				exitC:                  nil,
-				proposalCache:          nil,
-				chainConf:              nil,
-				log:                    nil,
-				finishProposeC:         nil,
-				metricBlockPackageTime: nil,
-				proposer:               nil,
-				blockBuilder:           nil,
-				storeHelper:            nil,
-			},
-			args: args{
-				isSelfProposer: true,
-			},
-		},
-		{
-			name: "test1",
-			fields: fields{
-				chainId:         "123456",
-				txPool:          nil,
-				txScheduler:     nil,
-				snapshotManager: nil,
-				identity:        nil,
-				ledgerCache:     nil,
-				msgBus:          nil,
-				ac:              nil,
-				blockchainStore: nil,
-				isProposer:      false,
-				idle:            false,
-				proposeTimer: func() *time.Timer {
-					timer := time.NewTimer(1 * time.Second)
-					return timer
-				}(),
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
-				exitC:                  nil,
-				proposalCache:          nil,
-				chainConf:              nil,
-				log:                    nil,
-				finishProposeC:         nil,
-				metricBlockPackageTime: nil,
-				proposer:               nil,
-				blockBuilder:           nil,
-				storeHelper:            nil,
-			},
-			args: args{
-				isSelfProposer: false,
-			},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bp := &BlockProposerImpl{
-				chainId:                tt.fields.chainId,
-				txPool:                 tt.fields.txPool,
-				txScheduler:            tt.fields.txScheduler,
-				snapshotManager:        tt.fields.snapshotManager,
-				identity:               tt.fields.identity,
-				ledgerCache:            tt.fields.ledgerCache,
-				msgBus:                 tt.fields.msgBus,
-				ac:                     tt.fields.ac,
-				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
-				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
-				exitC:                  tt.fields.exitC,
-				proposalCache:          tt.fields.proposalCache,
-				chainConf:              tt.fields.chainConf,
-				log:                    tt.fields.log,
-				finishProposeC:         tt.fields.finishProposeC,
-				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
-				proposer:               tt.fields.proposer,
-				blockBuilder:           tt.fields.blockBuilder,
-				storeHelper:            tt.fields.storeHelper,
-			}
-			bp.setIsSelfProposer(tt.args.isSelfProposer)
-		})
-	}
-}
-
-/*
- * test unit BlockProposerImpl isSelfProposer func
- */
-func TestBlockProposerImpl_isSelfProposer(t *testing.T) {
-	type fields struct {
-		chainId                string
-		txPool                 protocol.TxPool
-		txScheduler            protocol.TxScheduler
-		snapshotManager        protocol.SnapshotManager
-		identity               protocol.SigningMember
-		ledgerCache            protocol.LedgerCache
-		msgBus                 msgbus.MessageBus
-		ac                     protocol.AccessControlProvider
-		blockchainStore        protocol.BlockchainStore
-		isProposer             bool
-		idle                   bool
-		proposeTimer           *time.Timer
-		canProposeC            chan bool
-		txPoolSignalC          chan *txpoolpb.TxPoolSignal
-		exitC                  chan bool
-		proposalCache          protocol.ProposalCache
-		chainConf              protocol.ChainConf
-		log                    protocol.Logger
-		finishProposeC         chan bool
-		metricBlockPackageTime *prometheus.HistogramVec
-		proposer               *pbac.Member
-		blockBuilder           *common.BlockBuilder
-		storeHelper            conf.StoreHelper
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		want   bool
-	}{
-		{
-			name: "test0",
-			fields: fields{
-				chainId:         "test0",
-				txPool:          newMockTxPool(t),
-				txScheduler:     newMockTxScheduler(t),
-				snapshotManager: newMockSnapshotManager(t),
-				identity:        newMockSigningMember(t),
-				ledgerCache:     newMockLedgerCache(t),
-				//msgBus:                 msgbus.MessageBus(),
-				ac:                     newMockAccessControlProvider(t),
-				blockchainStore:        newMockBlockchainStore(t),
-				isProposer:             false,
-				idle:                   false,
-				proposeTimer:           nil,
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
-				exitC:                  nil,
-				proposalCache:          nil,
-				chainConf:              nil,
-				log:                    newMockLogger(t),
-				finishProposeC:         nil,
-				metricBlockPackageTime: nil,
-				blockBuilder:           nil,
-				storeHelper:            newMockStoreHelper(t),
-			},
-			want: false,
-		},
-		{
-			name: "test0",
-			fields: fields{
-				chainId:                "test0",
-				txPool:                 newMockTxPool(t),
-				txScheduler:            newMockTxScheduler(t),
-				snapshotManager:        newMockSnapshotManager(t),
-				identity:               newMockSigningMember(t),
-				ledgerCache:            newMockLedgerCache(t),
-				ac:                     newMockAccessControlProvider(t),
-				blockchainStore:        newMockBlockchainStore(t),
-				isProposer:             true,
-				idle:                   false,
-				proposeTimer:           nil,
-				canProposeC:            nil,
-				txPoolSignalC:          nil,
-				exitC:                  nil,
-				proposalCache:          nil,
-				chainConf:              nil,
-				log:                    newMockLogger(t),
-				finishProposeC:         nil,
-				metricBlockPackageTime: nil,
-				blockBuilder:           nil,
-				storeHelper:            newMockStoreHelper(t),
-			},
-			want: true,
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			bp := &BlockProposerImpl{
-				chainId:                tt.fields.chainId,
-				txPool:                 tt.fields.txPool,
-				txScheduler:            tt.fields.txScheduler,
-				snapshotManager:        tt.fields.snapshotManager,
-				identity:               tt.fields.identity,
-				ledgerCache:            tt.fields.ledgerCache,
-				msgBus:                 tt.fields.msgBus,
-				ac:                     tt.fields.ac,
-				blockchainStore:        tt.fields.blockchainStore,
-				isProposer:             tt.fields.isProposer,
-				idle:                   tt.fields.idle,
-				proposeTimer:           tt.fields.proposeTimer,
-				canProposeC:            tt.fields.canProposeC,
-				txPoolSignalC:          tt.fields.txPoolSignalC,
-				exitC:                  tt.fields.exitC,
-				proposalCache:          tt.fields.proposalCache,
-				chainConf:              tt.fields.chainConf,
-				log:                    tt.fields.log,
-				finishProposeC:         tt.fields.finishProposeC,
-				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
-				proposer:               tt.fields.proposer,
-				blockBuilder:           tt.fields.blockBuilder,
-				storeHelper:            tt.fields.storeHelper,
-			}
-			if got := bp.isSelfProposer(); got != tt.want {
-				t.Errorf("isSelfProposer() = %v, want %v", got, tt.want)
-			}
 		})
 	}
 }

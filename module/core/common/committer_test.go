@@ -220,9 +220,7 @@ func TestCommitBlock_MonitorCommit(t *testing.T) {
 				metricTxCounter:       tt.fields.metricTxCounter,
 				metricBlockCommitTime: tt.fields.metricBlockCommitTime,
 			}
-			if err := cb.MonitorCommit(tt.args.bi); (err != nil) != tt.wantErr {
-				t.Errorf("MonitorCommit() error = %v, wantErr %v", err, tt.wantErr)
-			}
+			cb.MonitorCommit(tt.args.bi)
 		})
 	}
 }
