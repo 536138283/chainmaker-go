@@ -191,7 +191,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	enableSenderGroup bool, senderGroup *SenderGroup) {
 
 	ts.log.Debugf("handleTx(`%v`) begin", tx.GetPayload().TxId)
-	ts.log.Debugf("handleTx(`%v`) => txBatchSize = %v", txBatchSize)
+	ts.log.Debugf("handleTx(`%v`) => txBatchSize = %v", tx.GetPayload().TxId, txBatchSize)
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
 		return
