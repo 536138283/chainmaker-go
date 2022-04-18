@@ -589,12 +589,12 @@ func TestSchedule4(t *testing.T) {
 		TxReads: []*commonpb.TxRead{
 			{
 				ContractName: contractId.Name,
-				Key:          []byte("K2"),
+				Key:          []byte("K1"),
 				Value:        []byte("V"),
 			},
 			{
 				ContractName: contractId.Name,
-				Key:          []byte("K3"),
+				Key:          []byte("K2"),
 				Value:        []byte("V"),
 			},
 		},
