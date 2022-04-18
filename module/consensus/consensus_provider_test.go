@@ -15,7 +15,8 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	dpos "chainmaker.org/chainmaker/consensus-dpos/v2"
+	dPos "chainmaker.org/chainmaker/consensus-dpos/v2"
+
 	//maxbft "chainmaker.org/chainmaker/consensus-maxbft/v2"
 	raft "chainmaker.org/chainmaker/consensus-raft/v2"
 	solo "chainmaker.org/chainmaker/consensus-solo/v2"
@@ -140,7 +141,7 @@ func TestNewConsensusEngine(t *testing.T) {
 		},
 		{"new DPOS consensus engine",
 			consensuspb.ConsensusType_DPOS,
-			&dpos.DPoSImpl{},
+			&dPos.DPoSImpl{},
 			false,
 		},
 		//{"new MAXBFT consensus engine",
@@ -195,7 +196,7 @@ func registerConsensuses() {
 			if err != nil {
 				return nil, err
 			}
-			dposEngine := dpos.NewDPoSImpl(config, tbftEngine)
+			dposEngine := dPos.NewDPoSImpl(config, tbftEngine)
 			return dposEngine, nil
 		},
 	)
