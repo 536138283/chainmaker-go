@@ -210,9 +210,12 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 
 	// Apply failed means this tx's read set conflict with other txs' write set
+	ts.log.Debugf("handleTx(`%v`) => before ApplyTxSimContext(...) => snapshot.txTable = %v",
+		tx.GetPayload().TxId, len(snapshot.GetTxTable()))
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
-	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => applySize = %v", tx.GetPayload().TxId, applySize)
+	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
+		tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
 
 	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
 	if !applyResult {
