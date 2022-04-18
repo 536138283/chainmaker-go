@@ -206,12 +206,12 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// 2) the result that telling if the invoke success.
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
 	tx.Result = txSimContext.GetTxResult()
-	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", runVmSuccess)
+	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
-	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => applySize = %v", applySize)
+	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => applySize = %v", tx.GetPayload().TxId, applySize)
 
 	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
 	if !applyResult {
