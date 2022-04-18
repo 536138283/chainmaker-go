@@ -130,6 +130,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 						tx.Payload.GetTxId(), err)
 				}
 			case <-timeoutC:
+				ts.log.Debugf("Schedule(...) timeout ...")
 				ts.scheduleFinishC <- true
 				if enableSenderGroup {
 					senderGroup.doneTxKeyC <- [32]byte{}
@@ -137,6 +138,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				ts.log.Warnf("block [%d] schedule reached time limit", block.Header.BlockHeight)
 				return
 			case <-finishC:
+				ts.log.Debugf("Schedule(...) finish ...")
 				ts.log.Debugf("schedule finish")
 				ts.scheduleFinishC <- true
 				if enableSenderGroup {
@@ -187,10 +189,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	goRoutinePool *ants.Pool, txBatchSize int,
 	enableConflictsBitWindow bool, conflictsBitWindow *ConflictsBitWindow,
 	enableSenderGroup bool, senderGroup *SenderGroup) {
-	chargeGasLimitFailed := false
-	if tx.Result != nil {
-		chargeGasLimitFailed = true
-	}
+
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
 		return
@@ -214,9 +213,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 		if enableConflictsBitWindow {
 			ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, ConflictTx)
 		}
-		if !chargeGasLimitFailed {
-			runningTxC <- tx
-		}
+
+		runningTxC <- tx
+
 		ts.log.Debugf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
 			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
 
