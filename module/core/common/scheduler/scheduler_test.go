@@ -559,6 +559,7 @@ func TestSchedule3(t *testing.T) {
 // TestSchedule4 test the flag `enableOptimizeChargeGas` is opened.
 func TestSchedule4(t *testing.T) {
 
+	fmt.Println("===== TestSchedule4() begin ==== ")
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
@@ -623,6 +624,7 @@ func TestSchedule4(t *testing.T) {
 // TestSchedule5 test the conflictsBitWindows features under flag `enableOptimizeChargeGas` is opened.
 func TestSchedule5(t *testing.T) {
 
+	fmt.Println("===== TestSchedule5() begin ==== ")
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
