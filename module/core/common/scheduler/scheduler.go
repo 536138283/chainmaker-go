@@ -99,7 +99,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	go func() {
 		if len(txBatch) == 0 {
 			finishC <- true
-		}else {
+		} else {
 			ts.dispatchTxs(
 				txBatch,
 				runningTxC,
