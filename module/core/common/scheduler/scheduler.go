@@ -214,7 +214,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 		tx.GetPayload().TxId, len(snapshot.GetTxTable()))
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
-	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
+	ts.log.Debugf("handleTx(`%v`) => after ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
 		tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
 
 	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
