@@ -140,7 +140,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				return
 			case <-finishC:
 				ts.log.Debugf("Schedule(...) finish ...")
-				ts.log.Debugf("schedule finish")
 				ts.scheduleFinishC <- true
 				if enableSenderGroup {
 					senderGroup.doneTxKeyC <- [32]byte{}
@@ -191,7 +190,8 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	enableConflictsBitWindow bool, conflictsBitWindow *ConflictsBitWindow,
 	enableSenderGroup bool, senderGroup *SenderGroup) {
 
-	ts.log.Debugf("handleTx(...) => txId = %v", tx.GetPayload().TxId)
+	ts.log.Debugf("handleTx(`%v`) begin", tx.GetPayload().TxId)
+	ts.log.Debugf("handleTx(`%v`) => txBatchSize = %v", txBatchSize)
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
 		return
@@ -206,10 +206,13 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// 2) the result that telling if the invoke success.
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
 	tx.Result = txSimContext.GetTxResult()
+	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", runVmSuccess)
 
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
+	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => applySize = %v", applySize)
+
 	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
 	if !applyResult {
 		if enableConflictsBitWindow {
