@@ -622,69 +622,69 @@ func TestSchedule4(t *testing.T) {
 }
 
 // TestSchedule5 test the conflictsBitWindows features under flag `enableOptimizeChargeGas` is opened.
-func TestSchedule5(t *testing.T) {
-
-	fmt.Println("===== TestSchedule5() begin ==== ")
-	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
-	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
-	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2)
-
-	parameters := make(map[string]string, 8)
-	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
-	tx1 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000002", contractId, parameters, 102)
-
-	txTable[0] = tx0
-	txTable[1] = tx1
-	txRWSetTable[0] = &commonpb.TxRWSet{
-		TxId: tx0.Payload.TxId,
-		TxReads: []*commonpb.TxRead{{
-			ContractName: contractId.Name,
-			Key:          []byte("K1"),
-			Value:        []byte("V"),
-		}},
-		TxWrites: []*commonpb.TxWrite{{
-			ContractName: contractId.Name,
-			Key:          []byte("K1"),
-			Value:        []byte("V1"),
-		}},
-	}
-	txRWSetTable[1] = &commonpb.TxRWSet{
-		TxId: tx1.Payload.TxId,
-		TxReads: []*commonpb.TxRead{
-			{
-				ContractName: contractId.Name,
-				Key:          []byte("K3"),
-				Value:        []byte("V"),
-			},
-			{
-				ContractName: contractId.Name,
-				Key:          []byte("K4"),
-				Value:        []byte("V"),
-			},
-		},
-		TxWrites: []*commonpb.TxWrite{{
-			ContractName: contractId.Name,
-			Key:          []byte("K3"),
-			Value:        []byte("V3"),
-		}},
-	}
-
-	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 2).AnyTimes()
-	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
-	snapshot.EXPECT().Seal().Return()
-
-	dag := &commonpb.DAG{
-		Vertexes: []*commonpb.DAG_Neighbor{{}},
-	}
-	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
-
-	txBatch := []*commonpb.Transaction{tx0, tx1}
-	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
-	require.Nil(t, err)
-	require.NotNil(t, txSet)
-	require.NotNil(t, contractEven)
-}
+//func TestSchedule5(t *testing.T) {
+//
+//	fmt.Println("===== TestSchedule5() begin ==== ")
+//	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
+//	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
+//	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
+//	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2)
+//
+//	parameters := make(map[string]string, 8)
+//	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
+//	tx1 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000002", contractId, parameters, 102)
+//
+//	txTable[0] = tx0
+//	txTable[1] = tx1
+//	txRWSetTable[0] = &commonpb.TxRWSet{
+//		TxId: tx0.Payload.TxId,
+//		TxReads: []*commonpb.TxRead{{
+//			ContractName: contractId.Name,
+//			Key:          []byte("K1"),
+//			Value:        []byte("V"),
+//		}},
+//		TxWrites: []*commonpb.TxWrite{{
+//			ContractName: contractId.Name,
+//			Key:          []byte("K1"),
+//			Value:        []byte("V1"),
+//		}},
+//	}
+//	txRWSetTable[1] = &commonpb.TxRWSet{
+//		TxId: tx1.Payload.TxId,
+//		TxReads: []*commonpb.TxRead{
+//			{
+//				ContractName: contractId.Name,
+//				Key:          []byte("K3"),
+//				Value:        []byte("V"),
+//			},
+//			{
+//				ContractName: contractId.Name,
+//				Key:          []byte("K4"),
+//				Value:        []byte("V"),
+//			},
+//		},
+//		TxWrites: []*commonpb.TxWrite{{
+//			ContractName: contractId.Name,
+//			Key:          []byte("K3"),
+//			Value:        []byte("V3"),
+//		}},
+//	}
+//
+//	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 2).AnyTimes()
+//	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
+//	snapshot.EXPECT().Seal().Return()
+//
+//	dag := &commonpb.DAG{
+//		Vertexes: []*commonpb.DAG_Neighbor{{}},
+//	}
+//	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+//
+//	txBatch := []*commonpb.Transaction{tx0, tx1}
+//	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
+//	require.Nil(t, err)
+//	require.NotNil(t, txSet)
+//	require.NotNil(t, contractEven)
+//}
 
 func TestSimulateWithDag(t *testing.T) {
 
