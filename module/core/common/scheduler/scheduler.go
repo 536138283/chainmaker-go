@@ -74,6 +74,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	var goRoutinePool *ants.Pool
 	var err error
 	poolCapacity := ts.StoreHelper.GetPoolCapacity()
+	ts.log.Debugf("GetPoolCapacity() => %v", poolCapacity)
 	if goRoutinePool, err = ants.NewPool(poolCapacity, ants.WithPreAlloc(false)); err != nil {
 		return nil, nil, err
 	}
