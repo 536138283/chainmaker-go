@@ -549,6 +549,7 @@ func (bc *Blockchain) initVM() (err error) {
 		bc.log.Infof("vm module existed, ignore.")
 		return
 	}
+	vmlog := logger.GetLoggerByChain(logger.MODULE_VM, bc.chainId)
 	// init VM
 	if bc.netService == nil {
 		/*
@@ -596,6 +597,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.ac,
 			&soloChainNodesInfoProvider{},
 			bc.chainConf,
+			vmlog,
 		)
 	} else {
 		/*
@@ -643,6 +645,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.ac,
 			bc.netService.GetChainNodesInfoProvider(),
 			bc.chainConf,
+			vmlog,
 		)
 	}
 	bc.initModules[moduleNameVM] = struct{}{}

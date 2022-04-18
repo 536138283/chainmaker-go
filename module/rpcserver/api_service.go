@@ -319,7 +319,7 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
 		defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
 	}
-	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas)
+	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas, s.log)
 	txResult := runtimeInstance.Invoke(&commonPb.Contract{
 		Name: tx.Payload.ContractName,
 	},
