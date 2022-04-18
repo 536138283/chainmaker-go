@@ -22,7 +22,4 @@ if [ ${enable_dockervm} == "true" ];then
   done
 fi
 
-if [ ! -z ${pid} ];then
-    lsof -p $pid +r 1 &>/dev/null
-fi
 echo "chainmaker is stopped"
