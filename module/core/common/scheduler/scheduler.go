@@ -190,6 +190,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	enableConflictsBitWindow bool, conflictsBitWindow *ConflictsBitWindow,
 	enableSenderGroup bool, senderGroup *SenderGroup) {
 
+	ts.log.Debugf("handleTx(...) => txId = %v", tx.GetPayload().TxId)
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
 		return
@@ -472,7 +473,7 @@ func (ts *TxScheduler) executeTx(
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
 
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
-	ts.log.Debugf("new tx simulate context finished for tx id:%s", tx.Payload.GetTxId())
+	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
 	ts.log.Debugf("tx.Result = %v", tx.Result)
 
 	if tx.Result != nil && tx.Result.Code != commonPb.TxStatusCode_SUCCESS {
