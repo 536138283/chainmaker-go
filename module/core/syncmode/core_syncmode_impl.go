@@ -177,14 +177,18 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.VerifyBlock, c)
 	c.msgBus.Register(msgbus.CommitBlock, c)
 	c.msgBus.Register(msgbus.TxPoolSignal, c)
-	c.msgBus.Register(msgbus.BuildProposal, c)
+	//c.msgBus.Register(msgbus.BuildProposal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 
 // Stop, stop core engine
 func (c *CoreEngine) Stop() {
-	defer c.log.Infof("core stoped.")
+	defer c.log.Infof("core stopped.")
 	c.blockProposer.Stop() //nolint: errcheck
+}
+
+func (c *CoreEngine) GetBlockProposer() protocol.BlockProposer {
+	return c.blockProposer
 }
 
 func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
@@ -193,9 +197,6 @@ func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
 
 func (c *CoreEngine) GetBlockVerifier() protocol.BlockVerifier {
 	return c.BlockVerifier
-}
-
-func (c *CoreEngine) DiscardAboveHeight(baseHeight int64) {
 }
 
 func (c *CoreEngine) GetMaxbftHelper() protocol.MaxbftHelper {

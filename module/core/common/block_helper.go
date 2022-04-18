@@ -1101,6 +1101,28 @@ func GetProposerId(
 	return proposerId, nil
 }
 
+func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
+	turboBlock.Header = block.Header
+	turboBlock.Dag = block.Dag
+	newTxs := make([]*commonPb.Transaction, len(block.Txs))
+	for i := range block.Txs {
+		newPayload := &commonPb.Payload{
+			TxId: block.Txs[i].Payload.TxId,
+		}
+
+		newTxs[i] = &commonPb.Transaction{
+			Payload:   newPayload,
+			Sender:    block.Txs[i].Sender,
+			Endorsers: block.Txs[i].Endorsers,
+			Result:    block.Txs[i].Result,
+		}
+	}
+	turboBlock.Txs = newTxs
+	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+
+	return turboBlock
+}
+
 func RecoverBlock(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,

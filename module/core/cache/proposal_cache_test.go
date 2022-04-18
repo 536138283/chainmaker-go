@@ -621,62 +621,6 @@ func TestProposalCache_KeepProposedBlock(t *testing.T) {
 }
 
 /*
- * test unit proposal cache DiscardAboveHeight func
- */
-func TestProposalCache_DiscardAboveHeight(t *testing.T) {
-	type fields struct {
-		lastProposedBlock map[uint64]map[string]*blockProposal
-		chainConf         protocol.ChainConf
-		ledgerCache       protocol.LedgerCache
-	}
-	type args struct {
-		baseHeight uint64
-	}
-
-	ctl := gomock.NewController(t)
-	chainConf := mock.NewMockChainConf(ctl)
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-		want   []*commonpb.Block
-	}{
-		{
-			name: "test0",
-			fields: fields{
-				lastProposedBlock: map[uint64]map[string]*blockProposal{
-					uint64(0): {
-						"0": &blockProposal{
-							block:                CreateNewTestBlock(uint64(0)),
-							isSelfProposed:       true,
-							hasProposedThisRound: true,
-						},
-					},
-				},
-				chainConf:   chainConf,
-				ledgerCache: NewLedgerCache("12345"),
-			},
-			args: args{
-				baseHeight: uint64(1),
-			},
-			want: []*commonpb.Block{},
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			pc := &ProposalCache{
-				lastProposedBlock: tt.fields.lastProposedBlock,
-				chainConf:         tt.fields.chainConf,
-				ledgerCache:       tt.fields.ledgerCache,
-			}
-			if got := pc.DiscardAboveHeight(tt.args.baseHeight); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("DiscardAboveHeight() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-/*
  * test unit proposal cache getHashType func
  */
 func TestProposalCache_getHashType(t *testing.T) {

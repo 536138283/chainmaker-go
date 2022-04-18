@@ -200,58 +200,6 @@ func TestShouldPropose(t *testing.T) {
 	require.False(t, blockProposer.shouldProposeByBFT(b3.Header.BlockHeight))
 }
 
-func TestShouldProposeByMaxBFT(t *testing.T) {
-	ctl := gomock.NewController(t)
-	txPool := mock.NewMockTxPool(ctl)
-	snapshotMgr := mock.NewMockSnapshotManager(ctl)
-	msgBus := mbusmock.NewMockMessageBus(ctl)
-	identity := mock.NewMockSigningMember(ctl)
-	ledgerCache := cache.NewLedgerCache(chainId)
-	proposedCache := cache.NewProposalCache(nil, ledgerCache)
-	txScheduler := mock.NewMockTxScheduler(ctl)
-
-	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
-	blockProposer := &BlockProposerImpl{
-		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
-		idle:            true,
-		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
-		exitC:           make(chan bool),
-		txPool:          txPool,
-		snapshotManager: snapshotMgr,
-		txScheduler:     txScheduler,
-		identity:        identity,
-		ledgerCache:     ledgerCache,
-		proposalCache:   proposedCache,
-		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
-	}
-
-	b0 := createNewTestBlock(0)
-	ledgerCache.SetLastCommittedBlock(b0)
-	require.True(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight+1, b0.Header.BlockHash))
-	require.False(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight+1, []byte("xyz")))
-	require.False(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight, b0.Header.PreBlockHash))
-
-	b := createNewTestBlock(1)
-	proposedCache.SetProposedBlock(b, nil, nil, false)
-	require.Nil(t, proposedCache.GetSelfProposedBlockAt(1))
-	b1, _, _ := proposedCache.GetProposedBlock(b)
-	require.NotNil(t, b1)
-
-	b2 := createNewTestBlock(1)
-	b2.Header.BlockHash = nil
-	proposedCache.SetProposedBlock(b2, nil, nil, true)
-	require.NotNil(t, proposedCache.GetSelfProposedBlockAt(1))
-	require.True(t, blockProposer.shouldProposeByMaxBFT(b2.Header.BlockHeight, b0.Header.BlockHash))
-
-	b3, _, _ := proposedCache.GetProposedBlock(b2)
-	require.NotNil(t, b3)
-
-}
-
 func TestYieldGoRountine(t *testing.T) {
 	exitC := make(chan bool)
 	go func() {
@@ -801,7 +749,7 @@ func TestBlockProposerImpl_OnReceiveMaxBFTProposal(t *testing.T) {
 	log := newMockLogger(t)
 	commonBlock := createNewTestBlock(2)
 
-	log.EXPECT().Warnf(gomock.Any(), gomock.Any())
+	log.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
 
 	header := *preBlock.Header
 	header.Signature = nil
@@ -823,9 +771,8 @@ func TestBlockProposerImpl_OnReceiveMaxBFTProposal(t *testing.T) {
 			},
 			args: args{
 				proposal: &maxbft.BuildProposal{
-					Height:     3,
-					PreHash:    preHash,
-					IsProposer: false,
+					Height:  3,
+					PreHash: preHash,
 				},
 			},
 		},

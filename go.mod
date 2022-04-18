@@ -3,21 +3,21 @@ module chainmaker.org/chainmaker-go
 go 1.15
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.1.2-0.20220310095232-5b9ddc50bb4b
+	chainmaker.org/chainmaker/chainconf/v2 v2.2.1-0.20220415025833-8ffe39b33773
 	chainmaker.org/chainmaker/common/v2 v2.2.1-0.20220322022231-fa4c645753d5
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220214082315-669156ba05b1
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220311040810-1267bbe026c9
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220418081104-0f2d02dfb0fc
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220316072055-9c86c51d91fe
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20220214113925-c976b365d11e
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.0.0-20220329123745-18e96410ac8a
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.1-0.20220324065440-ab3e2c28682c
-	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220317094530-02352a4a0dfa
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.1-0.20220415030140-e62b6b522c15
+	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220321090903-1507deaf95a7
 	chainmaker.org/chainmaker/logger/v2 v2.2.0
 	chainmaker.org/chainmaker/net-common v1.1.1-0.20220317094854-1f309816cacf
-	chainmaker.org/chainmaker/net-libp2p v1.1.1-0.20220318022330-f23874b250e9
+	chainmaker.org/chainmaker/net-libp2p v1.1.1-0.20220414122330-52530a7c05ec
 	chainmaker.org/chainmaker/net-liquid v1.0.2-0.20220318022337-c9e131793e19
-	chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220402074244-a9d40587a7d4
-	chainmaker.org/chainmaker/protocol/v2 v2.2.1-0.20220402074320-575edd002585
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220411063956-cbaa264f9862
+	chainmaker.org/chainmaker/protocol/v2 v2.2.1-0.20220413112952-531c6636673d
 	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20220318050403-1f1d893eb879
 	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220315021427-b6d7d4084f2a
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220317082215-d725aee9972b
@@ -39,6 +39,7 @@ require (
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang/mock v1.6.0
+	github.com/golang/protobuf v1.5.2
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/shlex v0.0.0-20181106134648-c34317bd91bf
 	github.com/gosuri/uilive v0.0.4 // indirect
@@ -50,7 +51,7 @@ require (
 	github.com/hpcloud/tail v1.0.0
 	github.com/mitchellh/mapstructure v1.4.2
 	github.com/mr-tron/base58 v1.2.0
-	github.com/panjf2000/ants/v2 v2.4.7
+	github.com/panjf2000/ants/v2 v2.4.8
 	github.com/prometheus/client_golang v1.11.0
 	github.com/rcrowley/go-metrics v0.0.0-20190826022208-cac0b30c2563
 	github.com/spf13/cobra v1.1.3

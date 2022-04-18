@@ -23,11 +23,11 @@ func NewMaxbftHelper(txPool protocol.TxPool,
 	return &maxBftHelper{txPool: txPool, chainConf: chainConf, proposalCache: proposalCache}
 }
 
-func (hp *maxBftHelper) DiscardAboveHeight(baseHeight uint64) {
+func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 	if hp.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_MAXBFT {
 		return
 	}
-	delBlocks := hp.proposalCache.DiscardAboveHeight(baseHeight)
+	delBlocks := hp.proposalCache.DiscardBlocks(baseHeight)
 	if len(delBlocks) == 0 {
 		return
 	}

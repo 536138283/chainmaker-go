@@ -162,7 +162,7 @@ func (bp *BlockProposerImpl) Start() error {
 
 // Stop, stop proposing loop
 func (bp *BlockProposerImpl) Stop() error {
-	defer bp.log.Infof("block proposer stoped")
+	defer bp.log.Infof("block proposer stopped")
 	bp.exitC <- true
 	return nil
 }
@@ -188,7 +188,7 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 
 		case <-bp.exitC:
 			bp.proposeTimer.Stop()
-			bp.log.Info("block proposer loop stoped")
+			bp.log.Info("block proposer loop stopped")
 			return
 		}
 	}
@@ -316,7 +316,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 
 	if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(fetchBatch) == 0 {
 		// can not propose empty block and tx batch is empty, then yield proposing.
-		bp.log.Debugf("no txs in tx pool, proposing block stoped")
+		bp.log.Debugf("no txs in tx pool, proposing block stopped")
 		bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
 		return nil
 	}
@@ -335,7 +335,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	if err != nil {
 		// rollback sql
 		if sqlErr := bp.storeHelper.RollBack(block, bp.blockchainStore); sqlErr != nil {
-			bp.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+			bp.log.Errorf("block [%d] rollback sql failed: %s", height, sqlErr)
 		}
 		bp.txPool.RetryAndRemoveTxs(fetchBatch, nil) // put txs back to txpool
 		bp.log.Warnf("generate new block failed, %s", err.Error())
@@ -343,34 +343,18 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	}
 	_, rwSetMap, _ := bp.proposalCache.GetProposedBlock(block)
 
-	newBlock := new(commonpb.Block)
+	proposalBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
-		newBlock.Header = block.Header
-		newBlock.Dag = block.Dag
-		newTxs := make([]*commonpb.Transaction, len(block.Txs))
-		for i := range block.Txs {
-			newPayload := &commonpb.Payload{
-				TxId: block.Txs[i].Payload.TxId,
-			}
-
-			newTxs[i] = &commonpb.Transaction{
-				Payload:   newPayload,
-				Sender:    block.Txs[i].Sender,
-				Endorsers: block.Txs[i].Endorsers,
-				Result:    block.Txs[i].Result,
-			}
-		}
-		newBlock.Txs = newTxs
-		bp.log.Debugf("turn on consensus message turbo, block[%d]", newBlock.Header.BlockHeight)
+		proposalBlock = common.GetTurboBlock(block, proposalBlock, bp.log)
 	} else {
-		newBlock = block
+		proposalBlock = block
 	}
 
-	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: newBlock, TxsRwSet: rwSetMap})
+	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: rwSetMap})
 	//bp.log.Debugf("finalized block \n%s", utils.FormatBlock(block))
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d, begin DB transaction:%v, "+
-		"new snapshort:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
+		"new snapshot:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
 		fetchLasts, timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)
@@ -378,7 +362,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	return block
 }
 
-// txDuplicateCheck, to check if transactions that are about to proposing are double spenting.
+// txDuplicateCheck, to check if transactions that are about to proposing are double spending.
 func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) (checked []*commonpb.Transaction,
 	duplicates []*commonpb.Transaction) {
 	if len(batch) == 0 {
@@ -447,22 +431,7 @@ func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 // OnReceiveMaxBFTProposal, to check if this proposer should propose a new block
 // Only for maxbft consensus
 func (bp *BlockProposerImpl) OnReceiveMaxBFTProposal(proposal *maxbft.BuildProposal) {
-	proposingHeight := proposal.Height
-	preHash := proposal.PreHash
-	if !bp.shouldProposeByMaxBFT(proposingHeight, preHash) {
-		bp.log.Infof("not a legal proposal request [%d](%x)", proposingHeight, preHash)
-		return
-	}
 
-	if !bp.setNotIdle() {
-		bp.log.Warnf("concurrent propose block [%d](%x), yield!", proposingHeight, preHash)
-		return
-	}
-	defer bp.setIdle()
-
-	bp.log.Infof("trigger proposal from maxBFT, height[%d]", proposal.Height)
-	go bp.proposing(proposingHeight, preHash)
-	<-bp.finishProposeC
 }
 
 // OnReceiveYieldProposeSignal, receive yield propose signal
@@ -560,35 +529,7 @@ func (bp *BlockProposerImpl) isSelfProposer() bool {
 	return bp.isProposer
 }
 
-/*
- * shouldProposeByMaxBFT, check if node should propose new block
- * Only for maxbft consensus
- */
-func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte) bool {
-	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
-	if committedBlock == nil {
-		bp.log.Errorf("no committed block found")
-		return false
-	}
-	currentHeight := committedBlock.Header.BlockHeight
-	// proposing height must higher than current height
-	if currentHeight >= height {
-		bp.log.Errorf("current commit block height: %d, propose height: %d", currentHeight, height)
-		return false
-	}
-	if height == currentHeight+1 {
-		// height follows the last committed block
-		if bytes.Equal(committedBlock.Header.BlockHash, preHash) {
-			return true
-		}
-		bp.log.Errorf("block pre hash error, expect %x, got %x, can not propose",
-			committedBlock.Header.BlockHash, preHash)
-		return false
-	}
-	// if height not follows the last committed block, then check last proposed block
-	b, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(preHash, height-1)
-	if b == nil {
-		bp.log.Errorf("not find preBlock: [%d:%x]", height-1, preHash)
-	}
-	return b != nil
+func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
+
+	return nil, nil
 }
