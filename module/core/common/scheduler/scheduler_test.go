@@ -284,6 +284,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
+	// simulate calling GetContractByName(...) 3 times
 	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
@@ -355,6 +356,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
+	// simulate calling GetContractByName(...) 3 times
 	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
@@ -605,6 +607,7 @@ func TestSchedule4(t *testing.T) {
 		}},
 	}
 
+	// simulate Calling ApplyTxSimContext(...) 3 times
 	preCall1 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
 	preCall2 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall1).Return(true, 2).Times(1)
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
@@ -672,6 +675,7 @@ func TestSchedule5(t *testing.T) {
 		}},
 	}
 
+	// simulate Calling ApplyTxSimContext(...) 3 times
 	preCall1 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
 	preCall2 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall1).Return(true, 2).Times(1)
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
