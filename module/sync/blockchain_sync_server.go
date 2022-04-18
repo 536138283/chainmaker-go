@@ -49,7 +49,7 @@ type BlockChainSyncServer struct {
 	requestCache sync.Map // ignore repeat block sync request when in process
 
 	minLagReachC chan struct{} //If the synced block height reaches the conf.minLabValue put a event to this channel
-	commitBlockC chan struct{} //if a synced block is commited to local ledger put a event to this channel
+	commitBlockC chan struct{} //if a synced block is committed to local ledger put a event to this channel
 }
 
 func NewBlockChainSyncServer(
@@ -504,7 +504,7 @@ func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *common
 }
 
 func (sync *BlockChainSyncServer) StopBlockSync() {
-	sync.scheduler.addTask(&StopSyncMsg{})
+	_ = sync.scheduler.addTask(&StopSyncMsg{})
 }
 
 func (sync *BlockChainSyncServer) Stop() {
