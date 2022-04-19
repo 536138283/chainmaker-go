@@ -91,9 +91,13 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	var senderGroup *SenderGroup
 	var senderCollection *SenderCollection
 	if enableOptimizeChargeGas {
+		ts.log.Debugf("before prepare `SenderCollection` ")
 		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
+		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
+		ts.log.Debugf("before prepare `SenderGroup` ")
 		senderGroup = NewSenderGroup(txBatch)
+		ts.log.Debugf("end prepare `SenderGroup` ")
 	}
 
 	// launch the go routine to dispatch tx to runningTxC
@@ -1097,21 +1101,25 @@ func (ts *TxScheduler) dispatchTxs(
 	enableConflictsBitWindow bool,
 	conflictsBitWindow *ConflictsBitWindow) {
 	if enableOptimizeChargeGas {
-		ts.log.Debugf("senderCollection => ")
+		ts.log.Debugf("before `SenderCollection` dispatch => ")
 		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC)
+		ts.log.Debugf("end `SenderCollection` dispatch => ")
 
 	} else if enableSenderGroup {
-		ts.log.Debugf("initOptimizeTools() has done -> senderGroup - %v", senderGroup)
+		ts.log.Debugf("before `SenderGroup` dispatch => ")
 		if enableConflictsBitWindow {
 			conflictsBitWindow.setMaxPoolCapacity(len(senderGroup.txsMap))
 		}
 		goRoutinePool.Tune(len(senderGroup.txsMap))
 		ts.sendTxBySenderGroup(conflictsBitWindow, senderGroup, runningTxC, enableConflictsBitWindow)
+		ts.log.Debugf("end `SenderGroup` dispatch => ")
 
 	} else {
+		ts.log.Debugf("before `Normal` dispatch => ")
 		for _, tx := range txBatch {
 			runningTxC <- tx
 		}
+		ts.log.Debugf("end `Normal` dispatch => ")
 	}
 }
 
