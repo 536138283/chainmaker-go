@@ -1130,10 +1130,20 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 		for _, tx := range txCollection.txs {
 			ts.log.Debugf("dispatch sender collection tx => %s", tx.Payload)
 			limit := tx.Payload.Limit
-			if limit == nil {
-				limit = &commonPb.Limit{
-					GasLimit: uint64(0),
+			if limit == nil && ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method){
+				errMsg := fmt.Sprintf("field `GasLimit` must be set.")
+				tx.Result = &commonPb.Result{
+					Code: commonPb.TxStatusCode_INVALID_PARAMETER,
+					ContractResult: &commonPb.ContractResult{
+						Code:    uint32(1),
+						Result:  nil,
+						Message: errMsg,
+						GasUsed: uint64(0),
+					},
+					RwSetHash: nil,
+					Message:   errMsg,
 				}
+				continue
 			}
 
 			gasLimit := int64(limit.GasLimit)
@@ -1141,17 +1151,17 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			if balance-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
-				message := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
+				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
 				tx.Result = &commonPb.Result{
 					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
 					ContractResult: &commonPb.ContractResult{
 						Code:    uint32(1),
 						Result:  nil,
-						Message: message,
+						Message: errMsg,
 						GasUsed: uint64(0),
 					},
 					RwSetHash: nil,
-					Message:   message,
+					Message:   errMsg,
 				}
 			} else {
 				balance = balance - gasLimit
