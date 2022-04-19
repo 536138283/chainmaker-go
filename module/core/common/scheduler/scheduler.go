@@ -1130,7 +1130,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 		for _, tx := range txCollection.txs {
 			ts.log.Debugf("dispatch sender collection tx => %s", tx.Payload)
 			limit := tx.Payload.Limit
-			if limit == nil && ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method){
+			if limit == nil && ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method) {
 				errMsg := fmt.Sprintf("field `GasLimit` must be set.")
 				tx.Result = &commonPb.Result{
 					Code: commonPb.TxStatusCode_INVALID_PARAMETER,
