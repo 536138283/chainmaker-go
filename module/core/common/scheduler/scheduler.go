@@ -69,7 +69,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 	txBatchSize := len(txBatch)
-	ts.log.Infof("schedule tx batch start, size %d", txBatchSize)
+	ts.log.Infof("schedule tx batch start, block_number = %v, size = %d", block.Header.BlockHeight, txBatchSize)
 
 	var goRoutinePool *ants.Pool
 	var err error
@@ -102,6 +102,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	// launch the go routine to dispatch tx to runningTxC
 	go func() {
+		ts.log.Debugf("before Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
 		if len(txBatch) == 0 {
 			finishC <- true
 		} else {
@@ -116,6 +117,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				enableConflictsBitWindow,
 				conflictsBitWindow)
 		}
+		ts.log.Debugf("end Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
 	}()
 
 	// Put the pending transaction into the running queue
