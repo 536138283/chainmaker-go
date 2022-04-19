@@ -42,6 +42,9 @@ func TestChainedSnapshot(t *testing.T) {
 	block3a := createNewBlock(3, 4)
 	snapshot3a := snapshotMgr.NewSnapshot(block2, block3a)
 
+	block4a := createNewBlock(13, 4)
+	snapshot4a := snapshotMgr.NewSnapshot(block2, block4a)
+
 	fmt.Printf("%v\n", snapshot1)
 	fmt.Printf("%v\n", snapshot2)
 	fmt.Printf("%v\n", snapshot3)
@@ -53,6 +56,9 @@ func TestChainedSnapshot(t *testing.T) {
 	require.Equal(t, nil, snapshot2.GetPreSnapshot())
 	require.Equal(t, nil, snapshotMgr.NotifyBlockCommitted(block2))
 	require.Equal(t, nil, snapshot3.GetPreSnapshot())
+
+	require.Equal(t, nil, snapshotMgr.NotifyBlockCommitted(block4a))
+	require.Equal(t, nil, snapshot4a.GetPreSnapshot())
 }
 
 func createNewBlock(height uint64, timeStamp int64) *commonPb.Block {
