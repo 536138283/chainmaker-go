@@ -102,7 +102,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	// launch the go routine to dispatch tx to runningTxC
 	go func() {
-		ts.log.Debugf("before Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
+		ts.log.Infof("before Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
 		if len(txBatch) == 0 {
 			finishC <- true
 		} else {
@@ -117,7 +117,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				enableConflictsBitWindow,
 				conflictsBitWindow)
 		}
-		ts.log.Debugf("end Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
+		ts.log.Infof("end Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
 	}()
 
 	// Put the pending transaction into the running queue
