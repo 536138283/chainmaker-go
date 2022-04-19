@@ -1137,9 +1137,11 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 		balance := txCollection.accountBalance
 		for _, tx := range txCollection.txs {
 			ts.log.Debugf("dispatch sender collection tx => %s", tx.Payload)
-			limit := tx.Payload.Limit
 			var gasLimit int64
-			if limit == nil && ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method) {
+			limit := tx.Payload.Limit
+			txNeedChargeGas := ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method)
+			ts.log.Debugf("tx need charge gas => %v", txNeedChargeGas)
+			if limit == nil && txNeedChargeGas {
 				// tx需要扣费，但是limit没有设置
 				errMsg := "field `GasLimit` must be set in payload."
 				tx.Result = &commonPb.Result{
@@ -1154,7 +1156,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 					Message:   errMsg,
 				}
 				continue
-			}else if !ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method) {
+			}else if !txNeedChargeGas {
 				// tx 不需要扣费
 				gasLimit = int64(0)
 			}else {
