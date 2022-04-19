@@ -81,7 +81,21 @@ func getSenderTxCollection(
 		// get the account balance from snapshot
 		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot)
 		if err != nil {
-			log.Error("getAccountBalanceFromSnapshot failed: err = %v", err)
+			errMsg := fmt.Sprintf("get account balance failed: err = %v", err)
+			log.Error(errMsg)
+			for _, tx := range txCollection.txs {
+				tx.Result = &commonPb.Result{
+					Code: commonPb.TxStatusCode_CONTRACT_FAIL,
+					ContractResult: &commonPb.ContractResult{
+						Code:    uint32(1),
+						Result:  nil,
+						Message: errMsg,
+						GasUsed: uint64(0),
+					},
+					RwSetHash: nil,
+					Message:   errMsg,
+				}
+			}
 		}
 	}
 

@@ -176,9 +176,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
 	contractEventMap := ts.getContractEventMap(block)
-	if enableOptimizeChargeGas {
-		senderCollection.Clear()
-	}
+
 	return txRWSetMap, contractEventMap, nil
 }
 
@@ -190,8 +188,6 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	enableConflictsBitWindow bool, conflictsBitWindow *ConflictsBitWindow,
 	enableSenderGroup bool, senderGroup *SenderGroup) {
 
-	ts.log.Debugf("handleTx(`%v`) begin", tx.GetPayload().TxId)
-	ts.log.Debugf("handleTx(`%v`) => txBatchSize = %v", tx.GetPayload().TxId, txBatchSize)
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
 		ts.log.Debugf("handleTx(`%v`) snapshot has already sealed.", tx.GetPayload().TxId)
@@ -210,11 +206,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 
 	// Apply failed means this tx's read set conflict with other txs' write set
-	ts.log.Debugf("handleTx(`%v`) => before ApplyTxSimContext(...) => snapshot.txTable = %v",
-		tx.GetPayload().TxId, len(snapshot.GetTxTable()))
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
-	ts.log.Debugf("handleTx(`%v`) => after ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
+	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
 		tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
 
 	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
@@ -1104,10 +1098,6 @@ func (ts *TxScheduler) dispatchTxs(
 	conflictsBitWindow *ConflictsBitWindow) {
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("senderCollection => ")
-		for addr, txCollection := range senderCollection.txsMap {
-			ts.log.Debugf("%v => {balance: %v, tx size: %v}",
-				addr, txCollection.accountBalance, len(txCollection.txs))
-		}
 		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC)
 
 	} else if enableSenderGroup {
@@ -1129,6 +1119,12 @@ func (ts *TxScheduler) dispatchTxs(
 // if the balance less than gas limit, set the result of tx and dispatch this tx.
 func (ts *TxScheduler) dispatchTxsInSenderCollection(
 	senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
+	ts.log.Debugf("begin dispatchTxsInSenderCollection(...)")
+	for addr, txCollection := range senderCollection.txsMap {
+		ts.log.Debugf("%v => {balance: %v, tx size: %v}",
+			addr, txCollection.accountBalance, len(txCollection.txs))
+	}
+
 	for addr, txCollection := range senderCollection.txsMap {
 		balance := txCollection.accountBalance
 		for _, tx := range txCollection.txs {
@@ -1145,16 +1141,17 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			if balance-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
+				message := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
 				tx.Result = &commonPb.Result{
 					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
 					ContractResult: &commonPb.ContractResult{
-						Code:    uint32(0),
+						Code:    uint32(1),
 						Result:  nil,
-						Message: "",
+						Message: message,
 						GasUsed: uint64(0),
 					},
 					RwSetHash: nil,
-					Message:   fmt.Sprintf("`%s` has no enough balance to execute tx.", addr),
+					Message:   message,
 				}
 			} else {
 				balance = balance - gasLimit
