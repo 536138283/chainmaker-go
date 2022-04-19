@@ -1138,7 +1138,9 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 		for _, tx := range txCollection.txs {
 			ts.log.Debugf("dispatch sender collection tx => %s", tx.Payload)
 			limit := tx.Payload.Limit
+			var gasLimit int64
 			if limit == nil && ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method) {
+				// tx需要扣费，但是limit没有设置
 				errMsg := "field `GasLimit` must be set in payload."
 				tx.Result = &commonPb.Result{
 					Code: commonPb.TxStatusCode_INVALID_PARAMETER,
@@ -1152,9 +1154,15 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 					Message:   errMsg,
 				}
 				continue
+			}else if !ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method) {
+				// tx 不需要扣费
+				gasLimit = int64(0)
+			}else {
+				// tx 需要扣费，limit 正常设置
+				gasLimit = int64(limit.GasLimit)
 			}
 
-			gasLimit := int64(limit.GasLimit)
+
 			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
 			if balance-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()
