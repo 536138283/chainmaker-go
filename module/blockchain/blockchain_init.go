@@ -95,10 +95,10 @@ func (bc *Blockchain) Init() (err error) {
 			{moduleNameTxPool: bc.initTxPool},
 			// init core engine
 			{moduleNameCore: bc.initCore},
-			// init consensus module
-			{moduleNameConsensus: bc.initConsensus},
 			// init sync service module
 			{moduleNameSync: bc.initSync},
+			// init consensus module
+			{moduleNameConsensus: bc.initConsensus},
 		}
 	}
 
