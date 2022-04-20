@@ -158,6 +158,13 @@ rpc:
   # The minium value is 10.
   check_chain_conf_trust_roots_change_interval: 60
 
+  # restful api gateway
+  gateway:
+    # enable restful api
+    enabled: false
+    # max resp body buffer size, unit: M
+    max_resp_body_size: 16
+
   # Rate limit related settings
   # Here we use token bucket to limit rate.
   ratelimit:
