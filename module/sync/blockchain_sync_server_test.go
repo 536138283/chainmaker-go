@@ -164,11 +164,14 @@ func TestSyncMsg_BLOCK_SYNC_RESP(t *testing.T) {
 	// 1. add peer status
 	bz := getNodeStatusResp(t, 120)
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", bz, netPb.NetMsg_SYNC_BLOCK_MSG))
-
+	//测试概率失败：收到netPb.NetMsg_SYNC_BLOCK_MSG消息后会添加一个NodeStatusMsg的任务，此任务优先级较低，netPb.NetMsg_SYNC_BLOCK_MSG消息会添加一个SyncedBlockMsg类型的任务,优先级为中级
+	//如果NodeStatusMsg的任务在消费前添加了一个SyncedBlockMsg类型的任务, 则SyncedBlockMsg的任务会优先被消费，此时scheduler中updateSchedulerBySyncBlockBatch函数中sch.blockStates为空，即needToProcess会被判定为false，消息不能被处理
+	//sleep为了避免此情况发生
+	time.Sleep(200 * time.Microsecond)
 	// 2. receive block
 	blkBz := getBlockResp(t, 11)
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", blkBz, netPb.NetMsg_SYNC_BLOCK_MSG))
-	time.Sleep(10 * time.Second)
+	time.Sleep(4 * time.Second)
 	require.EqualValues(t, "pendingRecvHeight: 12, peers num: 1, blockStates num: 109, "+
 		"pendingBlocks num: 109, receivedBlocks num: 0", implSync.scheduler.getServiceState())
 	require.EqualValues(t, "pendingBlockHeight: 12, queue num: 0", implSync.processor.getServiceState())
