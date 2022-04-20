@@ -731,6 +731,7 @@ func (bc *Blockchain) initConsensus() (err error) {
 		ChainId:       bc.chainId,
 		NodeId:        id,
 		Ac:            bc.ac,
+		Sync:          bc.syncServer,
 		Core:          bc.coreEngine,
 		ChainConf:     bc.chainConf,
 		NetService:    bc.netService,
