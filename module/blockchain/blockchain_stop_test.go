@@ -21,40 +21,40 @@ func TestStopOnRequirements(t *testing.T) {
 	}
 }
 
-func TestStopNetService(t *testing.T) {
-	t.Log("TestStopNetService")
+//func TestStopNetService(t *testing.T) {
+//	t.Log("TestStopNetService")
+//
+//	blockchainList := createBlockChain(t)
+//
+//	for _, blockchain := range blockchainList {
+//		err := blockchain.Start()
+//		if err != nil {
+//			t.Log(err)
+//		}
+//
+//		err = blockchain.stopNetService()
+//		if err != nil {
+//			t.Log(err)
+//		}
+//	}
+//}
 
-	blockchainList := createBlockChain(t)
-
-	for _, blockchain := range blockchainList {
-		err := blockchain.Start()
-		if err != nil {
-			t.Log(err)
-		}
-
-		err = blockchain.stopNetService()
-		if err != nil {
-			t.Log(err)
-		}
-	}
-}
-
-func TestStopConsensus(t *testing.T) {
-	t.Log("TestStopConsensus")
-
-	blockchainList := createBlockChain(t)
-
-	for _, blockchain := range blockchainList {
-		err := blockchain.Start()
-		if err != nil {
-			t.Log(err)
-		}
-		err = blockchain.stopConsensus()
-		if err != nil {
-			t.Log(err)
-		}
-	}
-}
+//func TestStopConsensus(t *testing.T) {
+//	t.Log("TestStopConsensus")
+//
+//	blockchainList := createBlockChain(t)
+//
+//	for _, blockchain := range blockchainList {
+//		err := blockchain.Start()
+//		if err != nil {
+//			t.Log(err)
+//		}
+//		err = blockchain.stopConsensus()
+//		if err != nil {
+//			t.Log(err)
+//		}
+//	}
+//}
 
 func TestStopCoreEngine(t *testing.T) {
 	t.Log("TestStopCoreEngine")

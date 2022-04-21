@@ -40,7 +40,7 @@ if [ -n "$1" ] ;then
   ut_cover "$1" 40 10
 else
    ut_cover "module/accesscontrol" 47 3
-#  ut_cover "module/blockchain" 2
+   ut_cover "module/blockchain" 40 1.3
 #  ut_cover "module/conf/chainconf" 26
 #  ut_cover "module/conf/localconf" 11
   ut_cover "module/consensus" 30 5.8
