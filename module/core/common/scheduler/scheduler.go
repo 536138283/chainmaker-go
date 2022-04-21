@@ -139,7 +139,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 			case <-timeoutC:
 				ts.log.Debugf("Schedule(...) timeout ...")
 				ts.scheduleFinishC <- true
-				if enableSenderGroup {
+				if !enableOptimizeChargeGas && enableSenderGroup {
 					senderGroup.doneTxKeyC <- [32]byte{}
 				}
 				ts.log.Warnf("block [%d] schedule reached time limit", block.Header.BlockHeight)
@@ -147,7 +147,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 			case <-finishC:
 				ts.log.Debugf("Schedule(...) finish ...")
 				ts.scheduleFinishC <- true
-				if enableSenderGroup {
+				if !enableOptimizeChargeGas && enableSenderGroup {
 					senderGroup.doneTxKeyC <- [32]byte{}
 				}
 				return
