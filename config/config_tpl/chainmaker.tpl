@@ -54,7 +54,7 @@ node:
   # fast sync settings
   fast_sync:
     # Enable it or not
-    enabled: false  # [*]
+    enabled: true  # [*]
 
     # The number of blocks that did not perform fast synchronization at the end
     min_full_blocks: 10
