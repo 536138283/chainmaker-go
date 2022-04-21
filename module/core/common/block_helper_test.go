@@ -417,8 +417,9 @@ func TestBlockBuilder_GenerateNewBlock(t *testing.T) {
 				proposingHeight: 1,
 				preHash:         block.Hash(),
 			},
-			want:    nil,
-			want1:   []int64{0, 0, 0},
+			want:  nil,
+			want1: []int64{0, 0, 0},
+
 			wantErr: true,
 		},
 		//{

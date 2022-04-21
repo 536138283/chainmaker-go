@@ -109,6 +109,7 @@ func newMockNet(ctrl *gomock.Controller) protocol.NetService {
 func newMockVerifier(ctrl *gomock.Controller) protocol.BlockVerifier {
 	mockVerify := mock.NewMockBlockVerifier(ctrl)
 	mockVerify.EXPECT().VerifyBlock(gomock.Any(), gomock.Any()).AnyTimes()
+	mockVerify.EXPECT().VerifyBlockWithRwSets(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	return mockVerify
 }
 
