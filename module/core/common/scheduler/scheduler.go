@@ -1158,14 +1158,13 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 					Message:   errMsg,
 				}
 				continue
-			}else if !txNeedChargeGas {
+			} else if !txNeedChargeGas {
 				// tx 不需要扣费
 				gasLimit = int64(0)
-			}else {
+			} else {
 				// tx 需要扣费，limit 正常设置
 				gasLimit = int64(limit.GasLimit)
 			}
-
 
 			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
 			if balance-gasLimit < 0 {
