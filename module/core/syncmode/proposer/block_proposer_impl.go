@@ -282,8 +282,15 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 				bp.proposalCache.SetProposedAt(height)
 				_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
 
+				cutBlock := new(commonpb.Block)
+				if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
+					cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.log)
+				} else {
+					cutBlock = selfProposedBlock
+				}
+
 				bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: selfProposedBlock,
-					TxsRwSet: txsRwSet})
+					TxsRwSet: txsRwSet, CutBlock: cutBlock})
 				bp.log.Infof("proposer success repeat [%d](txs:%d,hash:%x)",
 					selfProposedBlock.Header.BlockHeight, selfProposedBlock.Header.TxCount,
 					selfProposedBlock.Header.BlockHash)
@@ -335,14 +342,14 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	}
 	_, rwSetMap, _ := bp.proposalCache.GetProposedBlock(block)
 
-	proposalBlock := new(commonpb.Block)
+	cutBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
-		proposalBlock = common.GetTurboBlock(block, proposalBlock, bp.log)
+		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
 	} else {
-		proposalBlock = block
+		cutBlock = block
 	}
 
-	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: rwSetMap})
+	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: block, TxsRwSet: rwSetMap, CutBlock: cutBlock})
 	//bp.log.Debugf("finalized block \n%s", utils.FormatBlock(block))
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d, begin DB transaction:%v, "+
