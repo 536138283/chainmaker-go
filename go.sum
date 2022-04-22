@@ -96,8 +96,9 @@ chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220402074244-a9d40587a7d4/go.mod h
 chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220418083449-5ddd619fd3f6/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220419065859-0853174f8fb0/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220419123031-1f6cae2792f2/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
-chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220420095257-86ba63d44902 h1:mNUA7nXnqEElGC1Qsnjc3ngBvJCIHeXP06/rHsubDqs=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220420095257-86ba63d44902/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
+chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220421130838-50644627e88c h1:4cqaY7d3WKgRsxxKQgYwDehN0MJcrIvd2sxiVOBoqDo=
+chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220421130838-50644627e88c/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/protocol/v2 v2.0.0-20220128021940-8fd70a8c2c75/go.mod h1:oR5lqSI3ELuzdcYVHBeV9d6SN8FgfSa/VMRfBWFzK9g=
 chainmaker.org/chainmaker/protocol/v2 v2.0.1-0.20211109074216-fc2674ef6e22/go.mod h1:HfUAVSphtyXjvk0vVJSQCLYBocUuxxZxMDrrIc72vic=
 chainmaker.org/chainmaker/protocol/v2 v2.1.1-0.20211213131053-f33b74e6a760/go.mod h1:HfUAVSphtyXjvk0vVJSQCLYBocUuxxZxMDrrIc72vic=
