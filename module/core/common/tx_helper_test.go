@@ -37,7 +37,7 @@ func TestValidateTx(t *testing.T) {
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
 	verifyTx.chainConf = chainConf
-	hashes, _, _, err := verifyTx.verifierTxs(block, protocol.SYNC_VERIFY)
+	hashes, _, _, _, err := verifyTx.verifierTxs(block, protocol.SYNC_VERIFY)
 	require.Nil(t, err)
 
 	for _, hash := range hashes {
@@ -717,6 +717,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 	)
 	txFilter.EXPECT().IsExists(gomock.Any()).AnyTimes()
 	log.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
+	log.EXPECT().Warn(gomock.Any()).AnyTimes()
 
 	tests := []struct {
 		name    string
@@ -972,7 +973,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 				ac:          tt.fields.ac,
 				chainConf:   tt.fields.chainConf,
 			}
-			got, got1, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block, protocol.SYNC_VERIFY)
+			got, got1, _, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block, protocol.SYNC_VERIFY)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("verifyTx() error = %v, wantErr %v", err, tt.wantErr)
 				return

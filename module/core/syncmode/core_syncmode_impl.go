@@ -16,6 +16,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -169,6 +170,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	case msgbus.TxPoolSignal:
 		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
 			c.blockProposer.OnReceiveTxPoolSignal(signal)
+		}
+	case msgbus.RwSetVerifyFailTxs:
+		if signal, ok := message.Payload.(*consensuspb.RwSetVerifyFailTxs); ok {
+			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
 		}
 	}
 }

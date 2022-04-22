@@ -69,9 +69,6 @@ type BlockProposerImpl struct {
 	storeHelper  conf.StoreHelper
 }
 
-func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
-}
-
 type BlockProposerConfig struct {
 	ChainId         string
 	TxPool          protocol.TxPool
@@ -175,6 +172,8 @@ func (bp *BlockProposerImpl) Stop() error {
 func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensuspb.ProposalBlock, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
+
+	bp.log.Debugf("maxbftmode::BlockProposerImpl::proposing() => tx_pool status = %#v", bp.txPool.GetPoolStatus())
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 	if selfProposedBlock != nil {
@@ -495,4 +494,45 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFTSync(height uint64, preHash []
 	//	return false, err
 	//}
 	return true, nil
+}
+
+/*
+ * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
+ */
+func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
+	height := rwSetVerifyFailTxs.BlockHeight
+	block := bp.proposalCache.GetSelfProposedBlockAt(height)
+
+	if block == nil {
+		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
+		txs := make([]*commonpb.Transaction, 0)
+		for _, v := range txsRet {
+			txs = append(txs, v)
+		}
+		bp.txPool.RetryAndRemoveTxs(nil, txs)
+		return
+	}
+
+	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
+	for _, tx := range block.Txs {
+		for _, txId := range rwSetVerifyFailTxs.TxIds {
+			if tx.Payload.TxId == txId {
+				txsMap[txId] = tx
+				removeTxs = append(removeTxs, tx)
+				break
+			}
+		}
+	}
+
+	for _, tx := range block.Txs {
+		if _, ok := txsMap[tx.Payload.TxId]; !ok {
+			retryTxs = append(retryTxs, tx)
+		}
+	}
+
+	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
+	bp.proposalCache.ClearProposedBlockAt(height)
+
 }
