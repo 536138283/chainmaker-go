@@ -81,7 +81,7 @@ var caPaths = []string{certPathPrefix + "/crypto-config/wx-org1.chainmaker.org/c
 func main() {
 	common.SetCertPathPrefix(certPathPrefix)
 	nativeTest()
-	//evmtest()
+	evmtest()
 	initWasmerTest()
 	runTest()
 	initGasmTest()
