@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"sync"
 
+	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -38,6 +39,11 @@ type VerifyStat struct {
 	SigLasts    int64
 	OthersLasts int64
 	SigCount    int
+}
+
+type RwSetVerifyFailTx struct {
+	TxIds       []string
+	BlockHeight uint64
 }
 
 // 判断相同分支上是否存在交易重复（防止双花）
@@ -240,14 +246,14 @@ func NewVerifierTx(conf *VerifierTxConfig) *VerifierTx {
 // VerifyTxs verify transactions in block
 // include if transaction is double spent, transaction signature
 func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMode) ([][]byte, []*commonpb.Transaction,
-	[]*commonpb.Transaction, error) {
+	[]*commonpb.Transaction, *RwSetVerifyFailTx, error) {
 
-	verifyBatchs := utils.DispatchTxVerifyTask(block.Txs)
+	verifyBatch := utils.DispatchTxVerifyTask(block.Txs)
 	resultTasks := make(map[int]VerifyBlockBatch)
 	stats := make(map[int]*VerifyStat)
 	var resultMu sync.Mutex
 	var wg sync.WaitGroup
-	waitCount := len(verifyBatchs)
+	waitCount := len(verifyBatch)
 	wg.Add(waitCount)
 	txIds := utils.GetTxIds(block.Txs)
 
@@ -260,18 +266,25 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 
 	var err error
 	startTicker := utils.CurrentTimeMillisSeconds()
+
+	rwSetVerifyFailTxIds := make([]string, 0)
 	for i := 0; i < waitCount; i++ {
 		index := i
 		go func() {
 			defer wg.Done()
-			txs := verifyBatchs[index]
+			txs := verifyBatch[index]
 			stat := &VerifyStat{
 				TotalCount: len(txs),
 			}
-			txHashes1, newAddTxs, err1 := vt.verifyTx(txs, txsRet, stat, block, mode)
+			//txHashes1, newAddTxs, err1 := vt.verifyTx(txs, txsRet, stat, block)
+			txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode)
 			if err1 != nil {
 				vt.log.Errorf("VerifyTx => verifyTx(...) failed, err = %v", err1)
 				err = err1
+
+				if rwSetVerifyFailTxIdsIncr != nil {
+					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, rwSetVerifyFailTxIdsIncr...)
+				}
 				return
 			}
 			resultMu.Lock()
@@ -287,10 +300,18 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	wg.Wait()
 	concurrentLasts := utils.CurrentTimeMillisSeconds() - startTicker
 
+	if len(rwSetVerifyFailTxIds) > 0 {
+		rwSetVerifyFailTx := &RwSetVerifyFailTx{
+			TxIds:       rwSetVerifyFailTxIds,
+			BlockHeight: block.Header.BlockHeight,
+		}
+		return nil, nil, nil, rwSetVerifyFailTx, err
+	}
+
 	resultStart := utils.CurrentTimeMillisSeconds()
-	txHashes, txNewAdd, errTxs, err := TxVerifyResultsMerge(resultTasks, verifyBatchs)
+	txHashes, txNewAdd, errTxs, err := TxVerifyResultsMerge(resultTasks, verifyBatch)
 	if err != nil {
-		return txHashes, txNewAdd, errTxs, err
+		return txHashes, txNewAdd, errTxs, nil, err
 	}
 	resultLasts := utils.CurrentTimeMillisSeconds() - resultStart
 
@@ -303,21 +324,23 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 
 	vt.log.Infof("verify txs,height: [%d] (pool:%d,txVerify:%d,results:%d)",
 		block.Header.BlockHeight, poolLasts, concurrentLasts, resultLasts)
-	return txHashes, txNewAdd, nil, nil
+	return txHashes, txNewAdd, nil, nil, nil
 }
 
 func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*commonpb.Transaction,
 	stat *VerifyStat, block *commonpb.Block, mode protocol.VerifyMode) (
-	[][]byte, []*commonpb.Transaction, error) {
+	[][]byte, []*commonpb.Transaction, []string, error) {
 	txHashes := make([][]byte, 0)
 	newAddTxs := make([]*commonpb.Transaction, 0) // tx that verified and not in txpool, need to be added to txpool
+
+	rwSetVerifyFailTxIds := make([]string, 0)
 	for _, tx := range txs {
 		// tx must in txpool when open consensus message turbo
 		if !IfOpenConsensusMessageTurbo(vt.chainConf) {
 			if err := ValidateTx(txsRet, tx, stat, newAddTxs, block,
 				vt.chainConf.ChainConfig().Consensus.Type, vt.chainConf.ChainConfig().Crypto.Hash,
 				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac, vt.proposalCache, mode); err != nil {
-				return nil, nil, err
+				return nil, nil, nil, err
 			}
 		}
 
@@ -327,27 +350,33 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
 		if err != nil {
 			vt.log.Warnf("calc rwset hash error (tx:%s), %s", tx.Payload.TxId, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
-			vt.log.Warnf("txId = %v, rwSet = %v, result = %v",
-				tx.Payload.TxId, rwSet, result)
-			return nil, nil, err
+			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+			continue
 		}
 		result.RwSetHash = rwsetHash
 		// verify if rwset hash is equal
 		if err = VerifyTxResult(tx, result, vt.chainConf.ChainConfig().Crypto.Hash); err != nil {
-			return nil, nil, err
+			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+			continue
 		}
 		hash, err := utils.CalcTxHash(vt.chainConf.ChainConfig().Crypto.Hash, tx)
 		if err != nil {
 			vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
-			return nil, nil, err
+			return nil, nil, nil, err
 		}
 		txHashes = append(txHashes, hash)
 		stat.OthersLasts += utils.CurrentTimeMillisSeconds() - startOthersTicker
 	}
-	return txHashes, newAddTxs, nil
+
+	if len(rwSetVerifyFailTxIds) > 0 {
+		vt.log.Warn(commonErr.WarnRwSetVerifyFailTxs.Message)
+		return nil, nil, rwSetVerifyFailTxIds, commonErr.WarnRwSetVerifyFailTxs
+	}
+
+	return txHashes, newAddTxs, nil, nil
 }
 
 // ValidateTxRules validate Transactions and return remain Transactions and Transactions that

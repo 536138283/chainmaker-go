@@ -1674,6 +1674,9 @@ func TestIfOpenConsensusMessageTurbo(t *testing.T) {
 								ConsensusMessageTurbo: false,
 							},
 						},
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensus.ConsensusType_SOLO,
+						},
 					}
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
@@ -2013,4 +2016,10 @@ func newMockAccessControlProvider(t *testing.T) *mock.MockAccessControlProvider 
 	ctrl := gomock.NewController(t)
 	accessControlProvider := mock.NewMockAccessControlProvider(ctrl)
 	return accessControlProvider
+}
+
+func newMockNetService(t *testing.T) *mock.MockNetService {
+	ctrl := gomock.NewController(t)
+	netService := mock.NewMockNetService(ctrl)
+	return netService
 }
