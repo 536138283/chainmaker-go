@@ -9,6 +9,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"chainmaker.org/chainmaker/pb-go/v2/config"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -28,6 +30,7 @@ type CommitBlock struct {
 	snapshotManager         protocol.SnapshotManager
 	ledgerCache             protocol.LedgerCache
 	chainConf               protocol.ChainConf
+	txFilter                protocol.TxFilter
 	msgBus                  msgbus.MessageBus
 	metricBlockSize         *prometheus.HistogramVec // metric block size
 	metricBlockCounter      *prometheus.CounterVec   // metric block counter
@@ -44,6 +47,7 @@ type CommitBlockConf struct {
 	TxPool                  protocol.TxPool
 	LedgerCache             protocol.LedgerCache
 	ChainConf               protocol.ChainConf
+	TxFilter                protocol.TxFilter
 	MsgBus                  msgbus.MessageBus
 	MetricBlockSize         *prometheus.HistogramVec // metric block size
 	MetricBlockCounter      *prometheus.CounterVec   // metric block counter
@@ -57,6 +61,7 @@ type CommitBlockConf struct {
 func NewCommitBlock(cbConf *CommitBlockConf) *CommitBlock {
 	commitBlock := &CommitBlock{
 		store:           cbConf.Store,
+		txFilter:        cbConf.TxFilter,
 		log:             cbConf.Log,
 		snapshotManager: cbConf.SnapshotManager,
 		ledgerCache:     cbConf.LedgerCache,
@@ -79,7 +84,8 @@ func (cb *CommitBlock) CommitBlock(
 	block *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
 	conEventMap map[string][]*commonpb.ContractEvent) (
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEventLasts int64, blockInfo *commonpb.BlockInfo, err error) {
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEventLasts, filterLasts int64, blockInfo *commonpb.BlockInfo,
+	err error) {
 	// record block
 	rwSet := RearrangeRWSet(block, rwSetMap)
 	// record contract event
@@ -89,7 +95,7 @@ func (cb *CommitBlock) CommitBlock(
 		// notify chainConf to update config before put block
 		startConfTick := utils.CurrentTimeMillisSeconds()
 		if err = cb.NotifyMessage(block, events); err != nil {
-			return 0, 0, 0, 0, 0, nil, err
+			return 0, 0, 0, 0, 0, 0, nil, err
 		}
 		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
 	}
@@ -103,13 +109,26 @@ func (cb *CommitBlock) CommitBlock(
 	cb.ledgerCache.SetLastCommittedBlock(block)
 	dbLasts = utils.CurrentTimeMillisSeconds() - startDBTick
 
+	// TxFilter adds
+	filterLasts = utils.CurrentTimeMillisSeconds()
+	// The default filter type does not run AddsAndSetHeight
+	if localconf.ChainMakerConfig.TxFilter.Type != int32(config.TxFilterType_None) {
+		err = cb.txFilter.AddsAndSetHeight(utils.GetTxIds(block.Txs), block.Header.GetBlockHeight())
+		if err != nil {
+			// if add filter error, then panic
+			cb.log.Error(err)
+			panic(err)
+		}
+	}
+	filterLasts = utils.CurrentTimeMillisSeconds() - filterLasts
+
 	// clear snapshot
 	startSnapshotTick := utils.CurrentTimeMillisSeconds()
 	if err = cb.snapshotManager.NotifyBlockCommitted(block); err != nil {
 		err = fmt.Errorf("notify snapshot error [%d](hash:%x)",
 			block.Header.BlockHeight, block.Header.BlockHash)
 		cb.log.Error(err)
-		return 0, 0, 0, 0, 0, nil, err
+		return 0, 0, 0, 0, 0, 0, nil, err
 	}
 	snapshotLasts = utils.CurrentTimeMillisSeconds() - startSnapshotTick
 	// v220_compat Deprecated
@@ -117,7 +136,7 @@ func (cb *CommitBlock) CommitBlock(
 		// notify chainConf to update config when config block committed
 		startConfTick := utils.CurrentTimeMillisSeconds()
 		if err = NotifyChainConf(block, cb.chainConf); err != nil {
-			return 0, 0, 0, 0, 0, nil, err
+			return 0, 0, 0, 0, 0, 0, nil, err
 		}
 		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
 	}

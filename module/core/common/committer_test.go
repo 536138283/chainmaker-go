@@ -94,7 +94,7 @@ func TestCommitBlock_CommitBlock(t *testing.T) {
 	conEventMap := make(map[string][]*commonpb.ContractEvent)
 
 	commiter := NewCommitBlock(cbConf)
-	_, _, _, _, _, _, err := commiter.CommitBlock(block, txRWSetMap, conEventMap)
+	_, _, _, _, _, _, _, err := commiter.CommitBlock(block, txRWSetMap, conEventMap)
 	if err != nil {
 		panic(err)
 	}
