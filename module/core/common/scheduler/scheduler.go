@@ -484,7 +484,7 @@ func (ts *TxScheduler) executeTx(
 	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
 	ts.log.Debugf("tx.Result = %v", tx.Result)
 
-	if tx.Result != nil && tx.Result.Code != commonPb.TxStatusCode_SUCCESS {
+	if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
 		txSimContext.SetTxResult(tx.Result)
 		return txSimContext, protocol.ExecOrderTxTypeNormal, false
 	}
@@ -1147,7 +1147,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 				// tx需要扣费，但是limit没有设置
 				errMsg := "field `GasLimit` must be set in payload."
 				tx.Result = &commonPb.Result{
-					Code: commonPb.TxStatusCode_INVALID_PARAMETER,
+					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
 					ContractResult: &commonPb.ContractResult{
 						Code:    uint32(1),
 						Result:  nil,
