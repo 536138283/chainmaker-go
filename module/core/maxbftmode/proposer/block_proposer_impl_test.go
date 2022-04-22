@@ -9,26 +9,31 @@ package proposer
 import (
 	"crypto/sha256"
 	"fmt"
-	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	mbusmock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
 	"chainmaker.org/chainmaker/common/v2/random/uuid"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/utils/v2"
+
 	"github.com/golang/mock/gomock"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -37,6 +42,9 @@ var (
 	contractName = "contractName"
 )
 
+/*
+ * test unit ProposeStatusChange func
+ */
 func TestProposeStatusChange(t *testing.T) {
 	ctl := gomock.NewController(t)
 	txPool := mock.NewMockTxPool(ctl)
@@ -64,7 +72,7 @@ func TestProposeStatusChange(t *testing.T) {
 	txPool.EXPECT().FetchTxBatch(gomock.Any()).Return(txs).AnyTimes()
 	txPool.EXPECT().GetPoolStatus().Return(&txpoolpb.TxPoolStatus{}).AnyTimes()
 	//msgBus.EXPECT().Publish(gomock.Any(), gomock.Any())
-	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any())
+	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any()).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
 		Type: consensus.ConsensusType_TBFT,
@@ -115,12 +123,8 @@ func TestProposeStatusChange(t *testing.T) {
 
 	blockProposer := &BlockProposerImpl{
 		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
 		idle:            true,
 		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
 		exitC:           make(chan bool),
 		txPool:          txPool,
 		snapshotManager: snapshotMgr,
@@ -136,45 +140,20 @@ func TestProposeStatusChange(t *testing.T) {
 		blockBuilder: blockBuilder,
 		storeHelper:  storeHelper,
 	}
-	require.False(t, blockProposer.isProposer)
-	require.Nil(t, blockProposer.proposeTimer)
 
-	blockProposer.proposeBlock()
 	blockProposer.OnReceiveYieldProposeSignal(true)
 }
 
+/*
+ * test unit ShouldPropose func
+ */
 func TestShouldPropose(t *testing.T) {
-	ctl := gomock.NewController(t)
-	txPool := mock.NewMockTxPool(ctl)
-	snapshotMgr := mock.NewMockSnapshotManager(ctl)
-	msgBus := mbusmock.NewMockMessageBus(ctl)
-	identity := mock.NewMockSigningMember(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
 	proposedCache := cache.NewProposalCache(nil, ledgerCache)
-	txScheduler := mock.NewMockTxScheduler(ctl)
-
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
-	blockProposer := &BlockProposerImpl{
-		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
-		idle:            true,
-		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
-		exitC:           make(chan bool),
-		txPool:          txPool,
-		snapshotManager: snapshotMgr,
-		txScheduler:     txScheduler,
-		identity:        identity,
-		ledgerCache:     ledgerCache,
-		proposalCache:   proposedCache,
-		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
-	}
 
 	b0 := createNewTestBlock(0)
 	ledgerCache.SetLastCommittedBlock(b0)
-	require.True(t, blockProposer.shouldProposeByBFT(b0.Header.BlockHeight+1))
 
 	b := createNewTestBlock(1)
 	proposedCache.SetProposedBlock(b, nil, nil, false)
@@ -185,18 +164,19 @@ func TestShouldPropose(t *testing.T) {
 	b2 := createNewTestBlock(1)
 	b2.Header.BlockHash = nil
 	proposedCache.SetProposedBlock(b2, nil, nil, true)
-	require.False(t, blockProposer.shouldProposeByBFT(b2.Header.BlockHeight+1))
+
 	require.NotNil(t, proposedCache.GetSelfProposedBlockAt(1))
 	ledgerCache.SetLastCommittedBlock(b2)
-	require.True(t, blockProposer.shouldProposeByBFT(b2.Header.BlockHeight+1))
 
 	b3, _, _ := proposedCache.GetProposedBlock(b2)
 	require.NotNil(t, b3)
 
 	proposedCache.SetProposedAt(b3.Header.BlockHeight)
-	require.False(t, blockProposer.shouldProposeByBFT(b3.Header.BlockHeight))
 }
 
+/*
+ * test unit ShouldProposeByMaxBFT func
+ */
 func TestShouldProposeByMaxBFT(t *testing.T) {
 	ctl := gomock.NewController(t)
 	txPool := mock.NewMockTxPool(ctl)
@@ -208,14 +188,13 @@ func TestShouldProposeByMaxBFT(t *testing.T) {
 	txScheduler := mock.NewMockTxScheduler(ctl)
 
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
+
+	log := newMockLogger(t)
+	log.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
 	blockProposer := &BlockProposerImpl{
 		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
 		idle:            true,
 		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
 		exitC:           make(chan bool),
 		txPool:          txPool,
 		snapshotManager: snapshotMgr,
@@ -223,7 +202,7 @@ func TestShouldProposeByMaxBFT(t *testing.T) {
 		identity:        identity,
 		ledgerCache:     ledgerCache,
 		proposalCache:   proposedCache,
-		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
+		log:             log,
 	}
 
 	b0 := createNewTestBlock(0)
@@ -249,6 +228,9 @@ func TestShouldProposeByMaxBFT(t *testing.T) {
 
 }
 
+/*
+ * test unit YieldGoRountine func
+ */
 func TestYieldGoRountine(t *testing.T) {
 	exitC := make(chan bool)
 	go func() {
@@ -261,6 +243,9 @@ func TestYieldGoRountine(t *testing.T) {
 	fmt.Println("exit1")
 }
 
+/*
+ * test unit Hash func
+ */
 func TestHash(t *testing.T) {
 	txCount := 50000
 	txs := make([][]byte, 0)
@@ -280,6 +265,9 @@ func TestHash(t *testing.T) {
 	fmt.Println(utils.CurrentTimeMillisSeconds() - start)
 }
 
+/*
+ * test unit Finalize func
+ */
 func TestFinalize(t *testing.T) {
 	txCount := 50000
 	dag := &commonpb.DAG{Vertexes: make([]*commonpb.DAG_Neighbor, txCount)}
@@ -354,98 +342,16 @@ func TestFinalize(t *testing.T) {
 	require.Nil(t, err)
 }
 
-func TestTxDuplicateCheck(t *testing.T) {
-	// init
-	// 1. init transactions
-	const (
-		originalTx   = "QmXDdHkYEbAshxDnHxpDAvog7a2y3zknuKJgFnx4YLfYD"
-		duplicateTx3 = originalTx + "3"
-		duplicateTx5 = originalTx + "5"
-		duplicateTx7 = originalTx + "7"
-	)
-	var duplicateTxs []*commonpb.Transaction
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(3),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(5),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(7),
-		},
-	})
-	var txs []*commonpb.Transaction
-	for i := 0; i < 10; i++ {
-		tx := &commonpb.Transaction{
-			Payload: &commonpb.Payload{
-				ChainId: "chain1",
-				TxType:  commonpb.TxType_INVOKE_CONTRACT,
-				TxId:    originalTx + strconv.Itoa(i),
-			},
-		}
-		txs = append(txs, tx)
-	}
-	// 2. init store
-	ctl := gomock.NewController(t)
-	// Three repeat transactions
-	blockchainStore1 := mock.NewMockBlockchainStore(ctl)
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx3)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx5)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx7)).Return(true, nil).AnyTimes()
-	// No repeat transactions
-	blockchainStore2 := mock.NewMockBlockchainStore(ctl)
-	// All repeat transactions
-	blockchainStore3 := mock.NewMockBlockchainStore(ctl)
-	for i := 0; i < 10; i++ {
-		blockchainStore3.EXPECT().TxExists(gomock.Eq(originalTx+strconv.Itoa(i))).Return(true, nil).AnyTimes()
-	}
-	// execute case
-	cases := []struct {
-		comment      string
-		duplicateTxs []*commonpb.Transaction
-		store        *mock.MockBlockchainStore
-	}{
-		{comment: "Three repeat transactions", duplicateTxs: duplicateTxs, store: blockchainStore1},
-		{comment: "No repeat transactions", duplicateTxs: []*commonpb.Transaction{}, store: blockchainStore2},
-		{comment: "All repeat transactions", duplicateTxs: txs, store: blockchainStore3},
-	}
-	for _, case_ := range cases {
-		t.Logf("comment: %s", case_.comment)
-		blockProposerImpl := &BlockProposerImpl{
-			blockchainStore: case_.store,
-		}
-		// 3. test Duplicate
-		_, duplicates := blockProposerImpl.txDuplicateCheck(case_.duplicateTxs)
-		if len(duplicates) != len(case_.duplicateTxs) {
-			t.Errorf("duplicates size error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		// note: For convenience, uses an empty slice
-		if duplicates == nil {
-			duplicates = []*commonpb.Transaction{}
-		}
-		equal := reflect.DeepEqual(duplicates, case_.duplicateTxs)
-		if !equal {
-			t.Errorf("duplicates error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		t.Logf("comment: %s success", case_.comment)
-	}
-}
-
+/*
+ * test unit finalizeBlockRoots func
+ */
 func finalizeBlockRoots() (interface{}, interface{}) {
 	return nil, nil
 }
 
+/*
+ * test unit parseTxs func
+ */
 func parseTxs(num int) []*commonpb.Transaction {
 	txs := make([]*commonpb.Transaction, 0)
 	for i := 0; i < num; i++ {
@@ -457,6 +363,9 @@ func parseTxs(num int) []*commonpb.Transaction {
 	return txs
 }
 
+/*
+ * test unit parsePayload func
+ */
 func parsePayload(txId string) *commonpb.Payload {
 	pairs := []*commonpb.KeyValuePair{
 		{
@@ -479,6 +388,9 @@ func parsePayload(txId string) *commonpb.Payload {
 	}
 }
 
+/*
+ * test unit parseTx func
+ */
 func parseTx(txId string, payloadBytes []byte) *commonpb.Transaction {
 	return &commonpb.Transaction{
 		Payload: &commonpb.Payload{
@@ -509,6 +421,9 @@ func parseTx(txId string, payloadBytes []byte) *commonpb.Transaction {
 
 }
 
+/*
+ * test unit createNewTestBlock func
+ */
 func createNewTestBlock(height uint64) *commonpb.Block {
 	var hash = []byte("0123456789")
 	var block = &commonpb.Block{
@@ -545,6 +460,9 @@ func createNewTestBlock(height uint64) *commonpb.Block {
 	return block
 }
 
+/*
+ * test unit createNewTestTx func
+ */
 func createNewTestTx(txId string) *commonpb.Transaction {
 	var hash = []byte("0123456789")
 	return &commonpb.Transaction{
@@ -572,4 +490,983 @@ func createNewTestTx(txId string) *commonpb.Transaction {
 			Message:        "",
 		},
 	}
+}
+
+/*
+ * test unit BlockProposerImpl OnReceiveTxPoolSignal func
+ */
+func TestBlockProposerImpl_OnReceiveTxPoolSignal(t *testing.T) {
+	type fields struct {
+		chainId                string
+		txPool                 protocol.TxPool
+		txScheduler            protocol.TxScheduler
+		snapshotManager        protocol.SnapshotManager
+		identity               protocol.SigningMember
+		ledgerCache            protocol.LedgerCache
+		msgBus                 msgbus.MessageBus
+		ac                     protocol.AccessControlProvider
+		blockchainStore        protocol.BlockchainStore
+		idle                   bool
+		exitC                  chan bool
+		proposalCache          protocol.ProposalCache
+		chainConf              protocol.ChainConf
+		log                    protocol.Logger
+		finishProposeC         chan bool
+		metricBlockPackageTime *prometheus.HistogramVec
+		proposer               *pbac.Member
+		blockBuilder           *common.BlockBuilder
+		storeHelper            conf.StoreHelper
+	}
+	type args struct {
+		txPoolSignal *txpoolpb.TxPoolSignal
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId:                "test0",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				idle:                   false,
+				exitC:                  nil,
+				proposalCache:          nil,
+				chainConf:              nil,
+				log:                    nil,
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			args: args{
+				txPoolSignal: &txpoolpb.TxPoolSignal{
+					SignalType: txpoolpb.SignalType_BLOCK_PROPOSE,
+					ChainId:    "test123456",
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:                tt.fields.chainId,
+				txPool:                 tt.fields.txPool,
+				txScheduler:            tt.fields.txScheduler,
+				snapshotManager:        tt.fields.snapshotManager,
+				identity:               tt.fields.identity,
+				ledgerCache:            tt.fields.ledgerCache,
+				msgBus:                 tt.fields.msgBus,
+				ac:                     tt.fields.ac,
+				blockchainStore:        tt.fields.blockchainStore,
+				idle:                   tt.fields.idle,
+				exitC:                  tt.fields.exitC,
+				proposalCache:          tt.fields.proposalCache,
+				chainConf:              tt.fields.chainConf,
+				log:                    tt.fields.log,
+				finishProposeC:         tt.fields.finishProposeC,
+				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+				proposer:               tt.fields.proposer,
+				blockBuilder:           tt.fields.blockBuilder,
+				storeHelper:            tt.fields.storeHelper,
+			}
+			bp.OnReceiveTxPoolSignal(tt.args.txPoolSignal)
+		})
+	}
+}
+
+/*
+ * test unit BlockProposerImpl OnReceiveProposeStatusChange func
+ */
+func TestBlockProposerImpl_OnReceiveProposeStatusChange(t *testing.T) {
+	type fields struct {
+		chainId                string
+		txPool                 protocol.TxPool
+		txScheduler            protocol.TxScheduler
+		snapshotManager        protocol.SnapshotManager
+		identity               protocol.SigningMember
+		ledgerCache            protocol.LedgerCache
+		msgBus                 msgbus.MessageBus
+		ac                     protocol.AccessControlProvider
+		blockchainStore        protocol.BlockchainStore
+		idle                   bool
+		exitC                  chan bool
+		proposalCache          protocol.ProposalCache
+		chainConf              protocol.ChainConf
+		log                    protocol.Logger
+		finishProposeC         chan bool
+		metricBlockPackageTime *prometheus.HistogramVec
+		proposer               *pbac.Member
+		blockBuilder           *common.BlockBuilder
+		storeHelper            conf.StoreHelper
+	}
+	type args struct {
+		proposeStatus bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId:                "123456",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				idle:                   false,
+				exitC:                  nil,
+				proposalCache:          nil,
+				chainConf:              nil,
+				log:                    newMockLogger(t),
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			args: args{
+				proposeStatus: false,
+			},
+		},
+		{
+			name: "test1",
+			fields: fields{
+				chainId:                "123456",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				idle:                   false,
+				exitC:                  nil,
+				proposalCache:          nil,
+				chainConf:              nil,
+				log:                    newMockLogger(t),
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer: &accesscontrol.Member{
+					OrgId:      "org1",
+					MemberType: 0,
+					MemberInfo: nil,
+				},
+				blockBuilder: nil,
+				storeHelper:  nil,
+			},
+			args: args{
+				proposeStatus: true,
+			},
+		},
+		{
+			name: "test2",
+			fields: fields{
+				chainId:         "123456",
+				txPool:          nil,
+				txScheduler:     nil,
+				snapshotManager: nil,
+				identity:        nil,
+				ledgerCache: func() protocol.LedgerCache {
+					ledgerCache := newMockLedgerCache(t)
+					ledgerCache.EXPECT().CurrentHeight().Return(uint64(0), nil).AnyTimes()
+					return ledgerCache
+				}(),
+				msgBus:          nil,
+				ac:              nil,
+				blockchainStore: nil,
+				idle:            false,
+				exitC:           nil,
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := newMockProposalCache(t)
+					proposalCache.EXPECT().ResetProposedAt(gomock.Any()).AnyTimes()
+					return proposalCache
+				}(),
+				chainConf:              nil,
+				log:                    newMockLogger(t),
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer: &accesscontrol.Member{
+					OrgId:      "org1",
+					MemberType: 0,
+					MemberInfo: nil,
+				},
+				blockBuilder: nil,
+				storeHelper:  nil,
+			},
+			args: args{
+				proposeStatus: true,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:                tt.fields.chainId,
+				txPool:                 tt.fields.txPool,
+				txScheduler:            tt.fields.txScheduler,
+				snapshotManager:        tt.fields.snapshotManager,
+				identity:               tt.fields.identity,
+				ledgerCache:            tt.fields.ledgerCache,
+				msgBus:                 tt.fields.msgBus,
+				ac:                     tt.fields.ac,
+				blockchainStore:        tt.fields.blockchainStore,
+				idle:                   tt.fields.idle,
+				exitC:                  tt.fields.exitC,
+				proposalCache:          tt.fields.proposalCache,
+				chainConf:              tt.fields.chainConf,
+				log:                    tt.fields.log,
+				finishProposeC:         tt.fields.finishProposeC,
+				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+				proposer:               tt.fields.proposer,
+				blockBuilder:           tt.fields.blockBuilder,
+				storeHelper:            tt.fields.storeHelper,
+			}
+			bp.OnReceiveProposeStatusChange(tt.args.proposeStatus)
+		})
+	}
+}
+
+/*
+ * test unit BlockProposerImpl OnReceiveMaxBFTProposal func
+ */
+func TestBlockProposerImpl_OnReceiveMaxBFTProposal(t *testing.T) {
+	type fields struct {
+		chainId     string
+		ledgerCache protocol.LedgerCache
+		log         protocol.Logger
+	}
+	type args struct {
+		proposal *maxbft.BuildProposal
+	}
+
+	var (
+		block0      = createNewTestBlock(3)
+		ledgerCache = newMockLedgerCache(t)
+		log         = newMockLogger(t)
+	)
+
+	ledgerCache.EXPECT().GetLastCommittedBlock().Return(block0).AnyTimes()
+	log.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
+	log.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId:     "test0",
+				ledgerCache: ledgerCache,
+				log:         log,
+			},
+			args: args{
+				proposal: &maxbft.BuildProposal{
+					Height: 0,
+				},
+			},
+		},
+		{
+			name: "test1",
+			fields: fields{
+				chainId:     "test1",
+				ledgerCache: ledgerCache,
+				log:         log,
+			},
+			args: args{
+				proposal: &maxbft.BuildProposal{
+					Height: 4,
+				},
+			},
+		},
+		{
+			name: "test2",
+			fields: fields{
+				chainId:     "test2",
+				ledgerCache: ledgerCache,
+				log:         log,
+			},
+			args: args{
+				proposal: &maxbft.BuildProposal{
+					Height:  4,
+					PreHash: []byte("0123456789"),
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:     tt.fields.chainId,
+				ledgerCache: tt.fields.ledgerCache,
+				log:         log,
+			}
+			bp.OnReceiveMaxBFTProposal(tt.args.proposal)
+		})
+	}
+}
+
+/*
+ * test unit BlockProposerImpl yieldProposing func
+ */
+func TestBlockProposerImpl_yieldProposing(t *testing.T) {
+	type fields struct {
+		chainId                string
+		txPool                 protocol.TxPool
+		txScheduler            protocol.TxScheduler
+		snapshotManager        protocol.SnapshotManager
+		identity               protocol.SigningMember
+		ledgerCache            protocol.LedgerCache
+		msgBus                 msgbus.MessageBus
+		ac                     protocol.AccessControlProvider
+		blockchainStore        protocol.BlockchainStore
+		idle                   bool
+		exitC                  chan bool
+		proposalCache          protocol.ProposalCache
+		chainConf              protocol.ChainConf
+		log                    protocol.Logger
+		finishProposeC         chan bool
+		metricBlockPackageTime *prometheus.HistogramVec
+		proposer               *pbac.Member
+		blockBuilder           *common.BlockBuilder
+		storeHelper            conf.StoreHelper
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId:         "123456",
+				txPool:          nil,
+				txScheduler:     nil,
+				snapshotManager: nil,
+				identity:        nil,
+				ledgerCache:     nil,
+				msgBus:          nil,
+				ac:              nil,
+				blockchainStore: nil,
+				idle:            true,
+				exitC:           nil,
+				proposalCache:   nil,
+				chainConf:       nil,
+				log:             nil,
+				finishProposeC: func() chan bool {
+					c := make(chan bool)
+					return c
+				}(),
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:                tt.fields.chainId,
+				txPool:                 tt.fields.txPool,
+				txScheduler:            tt.fields.txScheduler,
+				snapshotManager:        tt.fields.snapshotManager,
+				identity:               tt.fields.identity,
+				ledgerCache:            tt.fields.ledgerCache,
+				msgBus:                 tt.fields.msgBus,
+				ac:                     tt.fields.ac,
+				blockchainStore:        tt.fields.blockchainStore,
+				idle:                   tt.fields.idle,
+				exitC:                  tt.fields.exitC,
+				proposalCache:          tt.fields.proposalCache,
+				chainConf:              tt.fields.chainConf,
+				log:                    tt.fields.log,
+				finishProposeC:         tt.fields.finishProposeC,
+				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+				proposer:               tt.fields.proposer,
+				blockBuilder:           tt.fields.blockBuilder,
+				storeHelper:            tt.fields.storeHelper,
+			}
+			if got := bp.yieldProposing(); got != tt.want {
+				t.Errorf("yieldProposing() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+/*
+ * test unit BlockProposerImpl getDuration func
+ */
+func TestBlockProposerImpl_getDuration(t *testing.T) {
+	type fields struct {
+		chainId                string
+		txPool                 protocol.TxPool
+		txScheduler            protocol.TxScheduler
+		snapshotManager        protocol.SnapshotManager
+		identity               protocol.SigningMember
+		ledgerCache            protocol.LedgerCache
+		msgBus                 msgbus.MessageBus
+		ac                     protocol.AccessControlProvider
+		blockchainStore        protocol.BlockchainStore
+		isProposer             bool
+		idle                   bool
+		proposeTimer           *time.Timer
+		canProposeC            chan bool
+		txPoolSignalC          chan *txpoolpb.TxPoolSignal
+		exitC                  chan bool
+		proposalCache          protocol.ProposalCache
+		chainConf              protocol.ChainConf
+		log                    protocol.Logger
+		finishProposeC         chan bool
+		metricBlockPackageTime *prometheus.HistogramVec
+		proposer               *pbac.Member
+		blockBuilder           *common.BlockBuilder
+		storeHelper            conf.StoreHelper
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   time.Duration
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId:                "123456",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				isProposer:             false,
+				idle:                   false,
+				proposeTimer:           nil,
+				canProposeC:            nil,
+				txPoolSignalC:          nil,
+				exitC:                  nil,
+				proposalCache:          nil,
+				chainConf:              nil,
+				log:                    nil,
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			want: 1 * time.Second,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				chainId:         "123456",
+				txPool:          nil,
+				txScheduler:     nil,
+				snapshotManager: nil,
+				identity:        nil,
+				ledgerCache:     nil,
+				msgBus:          nil,
+				ac:              nil,
+				blockchainStore: nil,
+				isProposer:      false,
+				idle:            false,
+				proposeTimer:    nil,
+				canProposeC:     nil,
+				txPoolSignalC:   nil,
+				exitC:           nil,
+				proposalCache:   nil,
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConfig := &configpb.ChainConfig{
+						Block: &configpb.BlockConfig{
+							BlockInterval: DEFAULTDURATION,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log:                    nil,
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			want: 1 * time.Second,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:                tt.fields.chainId,
+				txPool:                 tt.fields.txPool,
+				txScheduler:            tt.fields.txScheduler,
+				snapshotManager:        tt.fields.snapshotManager,
+				identity:               tt.fields.identity,
+				ledgerCache:            tt.fields.ledgerCache,
+				msgBus:                 tt.fields.msgBus,
+				ac:                     tt.fields.ac,
+				blockchainStore:        tt.fields.blockchainStore,
+				idle:                   tt.fields.idle,
+				exitC:                  tt.fields.exitC,
+				proposalCache:          tt.fields.proposalCache,
+				chainConf:              tt.fields.chainConf,
+				log:                    tt.fields.log,
+				finishProposeC:         tt.fields.finishProposeC,
+				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+				proposer:               tt.fields.proposer,
+				blockBuilder:           tt.fields.blockBuilder,
+				storeHelper:            tt.fields.storeHelper,
+			}
+			if got := bp.getDuration(); got != tt.want {
+				t.Errorf("getDuration() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+/*
+ * test unit BlockProposerImpl getChainVersion func
+ */
+func TestBlockProposerImpl_getChainVersion(t *testing.T) {
+	type fields struct {
+		chainId                string
+		txPool                 protocol.TxPool
+		txScheduler            protocol.TxScheduler
+		snapshotManager        protocol.SnapshotManager
+		identity               protocol.SigningMember
+		ledgerCache            protocol.LedgerCache
+		msgBus                 msgbus.MessageBus
+		ac                     protocol.AccessControlProvider
+		blockchainStore        protocol.BlockchainStore
+		isProposer             bool
+		idle                   bool
+		proposeTimer           *time.Timer
+		canProposeC            chan bool
+		txPoolSignalC          chan *txpoolpb.TxPoolSignal
+		exitC                  chan bool
+		proposalCache          protocol.ProposalCache
+		chainConf              protocol.ChainConf
+		log                    protocol.Logger
+		finishProposeC         chan bool
+		metricBlockPackageTime *prometheus.HistogramVec
+		proposer               *pbac.Member
+		blockBuilder           *common.BlockBuilder
+		storeHelper            conf.StoreHelper
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   uint32
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId:                "123456",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				isProposer:             false,
+				idle:                   false,
+				proposeTimer:           nil,
+				canProposeC:            nil,
+				txPoolSignalC:          nil,
+				exitC:                  nil,
+				proposalCache:          nil,
+				chainConf:              nil,
+				log:                    nil,
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			want: protocol.DefaultBlockVersion,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:                tt.fields.chainId,
+				txPool:                 tt.fields.txPool,
+				txScheduler:            tt.fields.txScheduler,
+				snapshotManager:        tt.fields.snapshotManager,
+				identity:               tt.fields.identity,
+				ledgerCache:            tt.fields.ledgerCache,
+				msgBus:                 tt.fields.msgBus,
+				ac:                     tt.fields.ac,
+				blockchainStore:        tt.fields.blockchainStore,
+				idle:                   tt.fields.idle,
+				exitC:                  tt.fields.exitC,
+				proposalCache:          tt.fields.proposalCache,
+				chainConf:              tt.fields.chainConf,
+				log:                    tt.fields.log,
+				finishProposeC:         tt.fields.finishProposeC,
+				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+				proposer:               tt.fields.proposer,
+				blockBuilder:           tt.fields.blockBuilder,
+				storeHelper:            tt.fields.storeHelper,
+			}
+			if got := bp.getChainVersion(); got != tt.want {
+				t.Errorf("getChainVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+/*
+ * test unit BlockProposerImpl setNotIdle func
+ */
+func TestBlockProposerImpl_setNotIdle(t *testing.T) {
+	type fields struct {
+		chainId                string
+		txPool                 protocol.TxPool
+		txScheduler            protocol.TxScheduler
+		snapshotManager        protocol.SnapshotManager
+		identity               protocol.SigningMember
+		ledgerCache            protocol.LedgerCache
+		msgBus                 msgbus.MessageBus
+		ac                     protocol.AccessControlProvider
+		blockchainStore        protocol.BlockchainStore
+		isProposer             bool
+		idle                   bool
+		proposeTimer           *time.Timer
+		canProposeC            chan bool
+		txPoolSignalC          chan *txpoolpb.TxPoolSignal
+		exitC                  chan bool
+		proposalCache          protocol.ProposalCache
+		chainConf              protocol.ChainConf
+		log                    protocol.Logger
+		finishProposeC         chan bool
+		metricBlockPackageTime *prometheus.HistogramVec
+		proposer               *pbac.Member
+		blockBuilder           *common.BlockBuilder
+		storeHelper            conf.StoreHelper
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId:                "123456",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				isProposer:             false,
+				idle:                   false,
+				proposeTimer:           nil,
+				canProposeC:            nil,
+				txPoolSignalC:          nil,
+				exitC:                  nil,
+				proposalCache:          nil,
+				chainConf:              nil,
+				log:                    nil,
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			want: false,
+		},
+		{
+			name: "test0",
+			fields: fields{
+				chainId:                "123456",
+				txPool:                 nil,
+				txScheduler:            nil,
+				snapshotManager:        nil,
+				identity:               nil,
+				ledgerCache:            nil,
+				msgBus:                 nil,
+				ac:                     nil,
+				blockchainStore:        nil,
+				isProposer:             false,
+				idle:                   true,
+				proposeTimer:           nil,
+				canProposeC:            nil,
+				txPoolSignalC:          nil,
+				exitC:                  nil,
+				proposalCache:          nil,
+				chainConf:              nil,
+				log:                    nil,
+				finishProposeC:         nil,
+				metricBlockPackageTime: nil,
+				proposer:               nil,
+				blockBuilder:           nil,
+				storeHelper:            nil,
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:                tt.fields.chainId,
+				txPool:                 tt.fields.txPool,
+				txScheduler:            tt.fields.txScheduler,
+				snapshotManager:        tt.fields.snapshotManager,
+				identity:               tt.fields.identity,
+				ledgerCache:            tt.fields.ledgerCache,
+				msgBus:                 tt.fields.msgBus,
+				ac:                     tt.fields.ac,
+				blockchainStore:        tt.fields.blockchainStore,
+				idle:                   tt.fields.idle,
+				exitC:                  tt.fields.exitC,
+				proposalCache:          tt.fields.proposalCache,
+				chainConf:              tt.fields.chainConf,
+				log:                    tt.fields.log,
+				finishProposeC:         tt.fields.finishProposeC,
+				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+				proposer:               tt.fields.proposer,
+				blockBuilder:           tt.fields.blockBuilder,
+				storeHelper:            tt.fields.storeHelper,
+			}
+			if got := bp.setNotIdle(); got != tt.want {
+				t.Errorf("setNotIdle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+/*
+ * test unit BlockProposerImpl setIdle func
+ */
+func TestBlockProposerImpl_setIdle(t *testing.T) {
+	type fields struct {
+		chainId                string
+		txPool                 protocol.TxPool
+		txScheduler            protocol.TxScheduler
+		snapshotManager        protocol.SnapshotManager
+		identity               protocol.SigningMember
+		ledgerCache            protocol.LedgerCache
+		msgBus                 msgbus.MessageBus
+		ac                     protocol.AccessControlProvider
+		blockchainStore        protocol.BlockchainStore
+		idle                   bool
+		exitC                  chan bool
+		proposalCache          protocol.ProposalCache
+		chainConf              protocol.ChainConf
+		log                    protocol.Logger
+		finishProposeC         chan bool
+		metricBlockPackageTime *prometheus.HistogramVec
+		proposer               *pbac.Member
+		blockBuilder           *common.BlockBuilder
+		storeHelper            conf.StoreHelper
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainId:                tt.fields.chainId,
+				txPool:                 tt.fields.txPool,
+				txScheduler:            tt.fields.txScheduler,
+				snapshotManager:        tt.fields.snapshotManager,
+				identity:               tt.fields.identity,
+				ledgerCache:            tt.fields.ledgerCache,
+				msgBus:                 tt.fields.msgBus,
+				ac:                     tt.fields.ac,
+				blockchainStore:        tt.fields.blockchainStore,
+				idle:                   tt.fields.idle,
+				exitC:                  tt.fields.exitC,
+				proposalCache:          tt.fields.proposalCache,
+				chainConf:              tt.fields.chainConf,
+				log:                    tt.fields.log,
+				finishProposeC:         tt.fields.finishProposeC,
+				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+				proposer:               tt.fields.proposer,
+				blockBuilder:           tt.fields.blockBuilder,
+				storeHelper:            tt.fields.storeHelper,
+			}
+			bp.setIdle()
+		})
+	}
+}
+
+/*
+ * test unit mock newMockChainConf
+ */
+func newMockChainConf(t *testing.T) *mock.MockChainConf {
+	ctrl := gomock.NewController(t)
+	chainConf := mock.NewMockChainConf(ctrl)
+	return chainConf
+}
+
+/*
+ * test unit mock newMockBlockchainStore
+ */
+func newMockBlockchainStore(t *testing.T) *mock.MockBlockchainStore {
+	ctrl := gomock.NewController(t)
+	blockchainStore := mock.NewMockBlockchainStore(ctrl)
+	return blockchainStore
+}
+
+/*
+ * test unit mock newMockStoreHelper
+ */
+func newMockStoreHelper(t *testing.T) *mock.MockStoreHelper {
+	ctrl := gomock.NewController(t)
+	storeHelper := mock.NewMockStoreHelper(ctrl)
+	return storeHelper
+}
+
+/*
+ * test unit mock newMockLogger
+ */
+func newMockLogger(t *testing.T) *mock.MockLogger {
+	ctrl := gomock.NewController(t)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	return logger
+}
+
+/*
+ * test unit mock newMockVmManager
+ */
+func newMockVmManager(t *testing.T) *mock.MockVmManager {
+	ctrl := gomock.NewController(t)
+	vmManager := mock.NewMockVmManager(ctrl)
+	vmManager.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&commonpb.ContractResult{
+		Code: 0,
+	}, protocol.ExecOrderTxTypeNormal, commonpb.TxStatusCode_SUCCESS).AnyTimes()
+	return vmManager
+}
+
+/*
+ * test unit mock newMockTxPool
+ */
+func newMockTxPool(t *testing.T) *mock.MockTxPool {
+	ctrl := gomock.NewController(t)
+	txPool := mock.NewMockTxPool(ctrl)
+	return txPool
+}
+
+/*
+ * test unit mock newMockSnapshotManager
+ */
+func newMockSnapshotManager(t *testing.T) *mock.MockSnapshotManager {
+	ctrl := gomock.NewController(t)
+	snapshotManager := mock.NewMockSnapshotManager(ctrl)
+	return snapshotManager
+}
+
+/*
+ * test unit mock newMockLedgerCache
+ */
+func newMockLedgerCache(t *testing.T) *mock.MockLedgerCache {
+	ctrl := gomock.NewController(t)
+	newMockLedgerCache := mock.NewMockLedgerCache(ctrl)
+	return newMockLedgerCache
+}
+
+/*
+ * test unit mock newMockProposalCache
+ */
+func newMockProposalCache(t *testing.T) *mock.MockProposalCache {
+	ctrl := gomock.NewController(t)
+	proposalCache := mock.NewMockProposalCache(ctrl)
+	return proposalCache
+}
+
+/*
+ * test unit mock newMockBlockVerifier
+ */
+func newMockBlockVerifier(t *testing.T) *mock.MockBlockVerifier {
+	ctrl := gomock.NewController(t)
+	blockVerifier := mock.NewMockBlockVerifier(ctrl)
+	return blockVerifier
+}
+
+/*
+ * test unit mock newMockBlockCommitter
+ */
+func newMockBlockCommitter(t *testing.T) *mock.MockBlockCommitter {
+	ctrl := gomock.NewController(t)
+	blockCommitter := mock.NewMockBlockCommitter(ctrl)
+	return blockCommitter
+}
+
+/*
+ * test unit mock newMockTxScheduler
+ */
+func newMockTxScheduler(t *testing.T) *mock.MockTxScheduler {
+	ctrl := gomock.NewController(t)
+	txScheduler := mock.NewMockTxScheduler(ctrl)
+	return txScheduler
+}
+
+/*
+ * test unit mock newMockSigningMember
+ */
+func newMockSigningMember(t *testing.T) *mock.MockSigningMember {
+	ctrl := gomock.NewController(t)
+	signingMember := mock.NewMockSigningMember(ctrl)
+	return signingMember
+}
+
+/*
+ * test unit mock newMockAccessControlProvider
+ */
+func newMockAccessControlProvider(t *testing.T) *mock.MockAccessControlProvider {
+	ctrl := gomock.NewController(t)
+	accessControlProvider := mock.NewMockAccessControlProvider(ctrl)
+	return accessControlProvider
+}
+
+/*
+ * test unit mock newMockBlockProposer
+ */
+func newMockBlockProposer(t *testing.T) *mock.MockBlockProposer {
+	ctrl := gomock.NewController(t)
+	blockProposer := mock.NewMockBlockProposer(ctrl)
+	return blockProposer
+}
+
+/*
+ * test unit mock newMockSnapshot
+ */
+func newMockSnapshot(t *testing.T) *mock.MockSnapshot {
+	ctrl := gomock.NewController(t)
+	snapshot := mock.NewMockSnapshot(ctrl)
+	return snapshot
 }

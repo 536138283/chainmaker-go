@@ -153,7 +153,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				return
 			}
 			counter++
-			ts.log.Debugf("schedule tx %d times ... ", counter)
+			ts.log.Debugf("schedule tx run %d times ... ", counter)
 		}
 	}()
 

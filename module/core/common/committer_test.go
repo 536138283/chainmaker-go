@@ -2,16 +2,23 @@ package common
 
 import (
 	"encoding/hex"
+	"errors"
+	"reflect"
 	"testing"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	mbusmock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
 	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
+	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
+
 	"github.com/golang/mock/gomock"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestCommitBlock_CommitBlock(t *testing.T) {
@@ -87,7 +94,7 @@ func TestCommitBlock_CommitBlock(t *testing.T) {
 	conEventMap := make(map[string][]*commonpb.ContractEvent)
 
 	commiter := NewCommitBlock(cbConf)
-	_, _, _, _, _, _, err := commiter.CommitBlock(block, txRWSetMap, conEventMap)
+	_, _, _, _, _, _, _, err := commiter.CommitBlock(block, txRWSetMap, conEventMap)
 	if err != nil {
 		panic(err)
 	}
@@ -125,4 +132,224 @@ func createNewTestBlock(height uint64) *commonpb.Block {
 	txs[0] = tx
 	block.Txs = txs
 	return block
+}
+
+func TestCommitBlock_MonitorCommit(t *testing.T) {
+	type fields struct {
+		store                 protocol.BlockchainStore
+		log                   protocol.Logger
+		snapshotManager       protocol.SnapshotManager
+		ledgerCache           protocol.LedgerCache
+		chainConf             protocol.ChainConf
+		msgBus                msgbus.MessageBus
+		metricBlockSize       *prometheus.HistogramVec
+		metricBlockCounter    *prometheus.CounterVec
+		metricTxCounter       *prometheus.CounterVec
+		metricBlockCommitTime *prometheus.HistogramVec
+	}
+	type args struct {
+		bi *commonpb.BlockInfo
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				store:                 newMockBlockchainStore(t),
+				log:                   newMockLogger(t),
+				snapshotManager:       newMockSnapshotManager(t),
+				ledgerCache:           newMockLedgerCache(t),
+				chainConf:             newMockChainConf(t),
+				msgBus:                msgbus.NewMessageBus(),
+				metricBlockSize:       nil,
+				metricBlockCounter:    nil,
+				metricTxCounter:       nil,
+				metricBlockCommitTime: nil,
+			},
+			args: args{
+				bi: &commonpb.BlockInfo{
+					Block:     createBlock(0),
+					RwsetList: RearrangeRWSet(createBlock(0), map[string]*commonpb.TxRWSet{}),
+				},
+			},
+			wantErr: false,
+		},
+		//{
+		//	name:    "test1", // TODO monitor
+		//	fields:  fields{
+		//		store:                 newMockBlockchainStore(t),
+		//		log:                   newMockLogger(t),
+		//		snapshotManager:       newMockSnapshotManager(t),
+		//		ledgerCache:           newMockLedgerCache(t),
+		//		chainConf:             newMockChainConf(t),
+		//		msgBus:                msgbus.NewMessageBus(),
+		//		metricBlockSize:       nil,
+		//		metricBlockCounter:    nil,
+		//		metricTxCounter:       nil,
+		//		metricBlockCommitTime: nil,
+		//	},
+		//	args:    args{
+		//		bi: &commonpb.BlockInfo{
+		//			Block: func() *commonpb.Block {
+		//				localconf.ChainMakerConfig.MonitorConfig.Enabled = true
+		//
+		//				block := createBlock(0)
+		//				return block
+		//			}(),
+		//			RwsetList: RearrangeRWSet(createBlock(0), map[string]*commonpb.TxRWSet{}),
+		//		},
+		//	},
+		//	wantErr: false,
+		//},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cb := &CommitBlock{
+				store:                 tt.fields.store,
+				log:                   tt.fields.log,
+				snapshotManager:       tt.fields.snapshotManager,
+				ledgerCache:           tt.fields.ledgerCache,
+				chainConf:             tt.fields.chainConf,
+				msgBus:                tt.fields.msgBus,
+				metricBlockSize:       tt.fields.metricBlockSize,
+				metricBlockCounter:    tt.fields.metricBlockCounter,
+				metricTxCounter:       tt.fields.metricTxCounter,
+				metricBlockCommitTime: tt.fields.metricBlockCommitTime,
+			}
+			cb.MonitorCommit(tt.args.bi)
+		})
+	}
+}
+
+func TestNotifyChainConf(t *testing.T) {
+	type args struct {
+		block     *commonpb.Block
+		chainConf protocol.ChainConf
+	}
+
+	block := createBlock(0)
+	block.Header.ConsensusArgs = []byte("test123456")
+	block.Txs = []*commonpb.Transaction{
+		{
+			Payload: &commonpb.Payload{
+				TxId: "123456",
+			},
+		},
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			args: args{
+				block:     createBlock(0),
+				chainConf: newMockChainConf(t),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			args: args{
+				block: block,
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConfig := &configpb.ChainConfig{
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensusPb.ConsensusType_DPOS,
+						},
+					}
+
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					chainConf.EXPECT().CompleteBlock(block).Return(nil).AnyTimes()
+					return chainConf
+				}(),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			args: args{
+				block: block,
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConfig := &configpb.ChainConfig{
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensusPb.ConsensusType_DPOS,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					chainConf.EXPECT().CompleteBlock(block).Return(errors.New("chainconf block complete")).AnyTimes()
+					return chainConf
+				}(),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := NotifyChainConf(tt.args.block, tt.args.chainConf); (err != nil) != tt.wantErr {
+				t.Errorf("NotifyChainConf() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func Test_rearrangeContractEvent(t *testing.T) {
+	type args struct {
+		block       *commonpb.Block
+		conEventMap map[string][]*commonpb.ContractEvent
+	}
+	tests := []struct {
+		name string
+		args args
+		want []*commonpb.ContractEvent
+	}{
+		{
+			name: "test0",
+			args: args{
+				block:       createBlock(0),
+				conEventMap: nil,
+			},
+			want: make([]*commonpb.ContractEvent, 0),
+		},
+		{
+			name: "test1",
+			args: args{
+				block: func() *commonpb.Block {
+					block := createBlock(0)
+					block.Txs = []*commonpb.Transaction{
+						{
+							Payload: &commonpb.Payload{
+								TxId: "123456",
+							},
+						},
+					}
+					return block
+				}(),
+				conEventMap: map[string][]*commonpb.ContractEvent{
+					"test": {
+						{
+							TxId: "123456",
+						},
+					},
+				},
+			},
+			want: make([]*commonpb.ContractEvent, 0),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := rearrangeContractEvent(tt.args.block, tt.args.conEventMap); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("rearrangeContractEvent() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

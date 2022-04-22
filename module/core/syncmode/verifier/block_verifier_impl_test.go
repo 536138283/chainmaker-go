@@ -97,9 +97,9 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	require.Nil(t, err)
 	b1.Header.BlockHash = blockHash
 
-	member := mock.NewMockMember(ctl)
-	member.EXPECT().GetMemberId().Return("123").AnyTimes()
-	ac.EXPECT().NewMember(b1.Header.Proposer).Return(member, nil)
+	//member := mock.NewMockMember(ctl)
+	//member.EXPECT().GetMemberId().Return("123").AnyTimes()
+	//ac.EXPECT().NewMember(b1.Header.Proposer).Return(member, nil)
 
 	txpool.EXPECT().GetTxsByTxIds(gomock.Any()).Return(txList, nil).AnyTimes()
 	txpool.EXPECT().GetAllTxsByTxIds(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -114,7 +114,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
 
-	netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
+	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -267,9 +267,9 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 		TxWrites: nil,
 	})
 
-	member := mock.NewMockMember(ctl)
-	member.EXPECT().GetMemberId().Return("123").AnyTimes()
-	ac.EXPECT().NewMember(b1.Header.Proposer).Return(member, nil)
+	//member := mock.NewMockMember(ctl)
+	//member.EXPECT().GetMemberId().Return("123").AnyTimes()
+	//ac.EXPECT().NewMember(b1.Header.Proposer).Return(member, nil)
 
 	txpool.EXPECT().GetTxsByTxIds(gomock.Any()).Return(txList, nil).AnyTimes()
 	txpool.EXPECT().GetAllTxsByTxIds(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
@@ -283,7 +283,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshot.EXPECT().Seal().AnyTimes()
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
-	netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
+	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()

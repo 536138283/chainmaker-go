@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
@@ -25,9 +24,13 @@ import (
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/utils/v2"
+
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -50,7 +53,7 @@ func TestProposeStatusChange(t *testing.T) {
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	storeHelper := common.NewKVStoreHelper("chain1")
-
+	filter := mock.NewMockTxFilter(ctl)
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
 
 	txs := make([]*commonpb.Transaction, 0)
@@ -65,6 +68,7 @@ func TestProposeStatusChange(t *testing.T) {
 	txPool.EXPECT().GetPoolStatus().Return(&txpoolpb.TxPoolStatus{}).AnyTimes()
 	//msgBus.EXPECT().Publish(gomock.Any(), gomock.Any())
 	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any())
+	filter.EXPECT().ValidateRule(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
 		Type: consensus.ConsensusType_TBFT,
@@ -132,9 +136,9 @@ func TestProposeStatusChange(t *testing.T) {
 		finishProposeC:  make(chan bool),
 		blockchainStore: blockChainStore,
 		chainConf:       chainConf,
-
-		blockBuilder: blockBuilder,
-		storeHelper:  storeHelper,
+		txFilter:        filter,
+		blockBuilder:    blockBuilder,
+		storeHelper:     storeHelper,
 	}
 	require.False(t, blockProposer.isProposer)
 	require.Nil(t, blockProposer.proposeTimer)
@@ -195,58 +199,6 @@ func TestShouldPropose(t *testing.T) {
 
 	proposedCache.SetProposedAt(b3.Header.BlockHeight)
 	require.False(t, blockProposer.shouldProposeByBFT(b3.Header.BlockHeight))
-}
-
-func TestShouldProposeByMaxBFT(t *testing.T) {
-	ctl := gomock.NewController(t)
-	txPool := mock.NewMockTxPool(ctl)
-	snapshotMgr := mock.NewMockSnapshotManager(ctl)
-	msgBus := mbusmock.NewMockMessageBus(ctl)
-	identity := mock.NewMockSigningMember(ctl)
-	ledgerCache := cache.NewLedgerCache(chainId)
-	proposedCache := cache.NewProposalCache(nil, ledgerCache)
-	txScheduler := mock.NewMockTxScheduler(ctl)
-
-	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
-	blockProposer := &BlockProposerImpl{
-		chainId:         chainId,
-		isProposer:      false, // not proposer when initialized
-		idle:            true,
-		msgBus:          msgBus,
-		canProposeC:     make(chan bool),
-		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
-		proposeTimer:    nil,
-		exitC:           make(chan bool),
-		txPool:          txPool,
-		snapshotManager: snapshotMgr,
-		txScheduler:     txScheduler,
-		identity:        identity,
-		ledgerCache:     ledgerCache,
-		proposalCache:   proposedCache,
-		log:             logger.GetLoggerByChain(logger.MODULE_CORE, chainId),
-	}
-
-	b0 := createNewTestBlock(0)
-	ledgerCache.SetLastCommittedBlock(b0)
-	require.True(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight+1, b0.Header.BlockHash))
-	require.False(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight+1, []byte("xyz")))
-	require.False(t, blockProposer.shouldProposeByMaxBFT(b0.Header.BlockHeight, b0.Header.PreBlockHash))
-
-	b := createNewTestBlock(1)
-	proposedCache.SetProposedBlock(b, nil, nil, false)
-	require.Nil(t, proposedCache.GetSelfProposedBlockAt(1))
-	b1, _, _ := proposedCache.GetProposedBlock(b)
-	require.NotNil(t, b1)
-
-	b2 := createNewTestBlock(1)
-	b2.Header.BlockHash = nil
-	proposedCache.SetProposedBlock(b2, nil, nil, true)
-	require.NotNil(t, proposedCache.GetSelfProposedBlockAt(1))
-	require.True(t, blockProposer.shouldProposeByMaxBFT(b2.Header.BlockHeight, b0.Header.BlockHash))
-
-	b3, _, _ := proposedCache.GetProposedBlock(b2)
-	require.NotNil(t, b3)
-
 }
 
 func TestYieldGoRountine(t *testing.T) {
@@ -352,109 +304,6 @@ func TestFinalize(t *testing.T) {
 
 	err := localconf.UpdateDebugConfig(kvs)
 	require.Nil(t, err)
-}
-
-func TestTxDuplicateCheck(t *testing.T) {
-	// init
-	// 1. init transactions
-	const (
-		originalTx   = "QmXDdHkYEbAshxDnHxpDAvog7a2y3zknuKJgFnx4YLfYD"
-		duplicateTx3 = originalTx + "3"
-		duplicateTx5 = originalTx + "5"
-		duplicateTx7 = originalTx + "7"
-	)
-	var duplicateTxs []*commonpb.Transaction
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(3),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(5),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(7),
-		},
-	})
-	var txs []*commonpb.Transaction
-	for i := 0; i < 10; i++ {
-		tx := &commonpb.Transaction{
-			Payload: &commonpb.Payload{
-				ChainId: "chain1",
-				TxType:  commonpb.TxType_INVOKE_CONTRACT,
-				TxId:    originalTx + strconv.Itoa(i),
-			},
-		}
-		txs = append(txs, tx)
-	}
-	// 2. init store
-	ctl := gomock.NewController(t)
-	// Three repeat transactions
-	blockchainStore1 := mock.NewMockBlockchainStore(ctl)
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx3)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx5)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx7)).Return(true, nil).AnyTimes()
-	// No repeat transactions
-	blockchainStore2 := mock.NewMockBlockchainStore(ctl)
-	// All repeat transactions
-	blockchainStore3 := mock.NewMockBlockchainStore(ctl)
-	for i := 0; i < 10; i++ {
-		blockchainStore3.EXPECT().TxExists(gomock.Eq(originalTx+strconv.Itoa(i))).Return(true, nil).AnyTimes()
-	}
-	// execute case
-	cases := []struct {
-		comment      string
-		duplicateTxs []*commonpb.Transaction
-		store        *mock.MockBlockchainStore
-	}{
-		{comment: "Three repeat transactions", duplicateTxs: duplicateTxs, store: blockchainStore1},
-		{comment: "No repeat transactions", duplicateTxs: []*commonpb.Transaction{}, store: blockchainStore2},
-		{comment: "All repeat transactions", duplicateTxs: txs, store: blockchainStore3},
-	}
-	for _, case_ := range cases {
-		t.Logf("comment: %s", case_.comment)
-		blockProposerImpl := &BlockProposerImpl{
-			blockchainStore: case_.store,
-		}
-		// 3. test Duplicate
-		_, duplicates := blockProposerImpl.txDuplicateCheck(case_.duplicateTxs)
-		if len(duplicates) != len(case_.duplicateTxs) {
-			t.Errorf("duplicates size error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		// note: For convenience, uses an empty slice
-		if duplicates == nil {
-			duplicates = []*commonpb.Transaction{}
-		}
-		equal := reflect.DeepEqual(duplicates, case_.duplicateTxs)
-		if !equal {
-			t.Errorf("duplicates error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		t.Logf("comment: %s success", case_.comment)
-	}
-}
-
-func finalizeBlockRoots() (interface{}, interface{}) {
-	return nil, nil
-}
-
-func parseTxs(num int) []*commonpb.Transaction {
-	txs := make([]*commonpb.Transaction, 0)
-	for i := 0; i < num; i++ {
-		txId := uuid.GetUUID() + uuid.GetUUID()
-		payload := parsePayload(txId)
-		payloadBytes, _ := json.Marshal(payload)
-		txs = append(txs, parseTx(txId, payloadBytes))
-	}
-	return txs
 }
 
 func parsePayload(txId string) *commonpb.Payload {
@@ -572,4 +421,691 @@ func createNewTestTx(txId string) *commonpb.Transaction {
 			Message:        "",
 		},
 	}
+}
+
+//func TestBlockProposerImpl_proposing(t *testing.T) {
+//	type fields struct {
+//		chainId                string
+//		txPool                 protocol.TxPool
+//		txScheduler            protocol.TxScheduler
+//		snapshotManager        protocol.SnapshotManager
+//		identity               protocol.SigningMember
+//		ledgerCache            protocol.LedgerCache
+//		msgBus                 msgbus.MessageBus
+//		ac                     protocol.AccessControlProvider
+//		blockchainStore        protocol.BlockchainStore
+//		isProposer             bool
+//		idle                   bool
+//		proposeTimer           *time.Timer
+//		canProposeC            chan bool
+//		txPoolSignalC          chan *txpoolpb.TxPoolSignal
+//		exitC                  chan bool
+//		proposalCache          protocol.ProposalCache
+//		chainConf              protocol.ChainConf
+//		idleMu                 sync.Mutex
+//		statusMu               sync.Mutex
+//		proposerMu             sync.RWMutex
+//		log                    protocol.Logger
+//		finishProposeC         chan bool
+//		metricBlockPackageTime *prometheus.HistogramVec
+//		//proposer               *pbac.Member
+//		blockBuilder *common.BlockBuilder
+//		storeHelper  conf.StoreHelper
+//	}
+//
+//	txPool := newMockTxPool(t)
+//	snapshotMgr := newMockSnapshotManager(t)
+//	msgBus := newMockMessageBus(t)
+//	msgBus.EXPECT().Register(gomock.Any(), gomock.Any()).AnyTimes()
+//	identity := newMockSigningMember(t)
+//	ledgerCache := newMockLedgerCache(t)
+//	proposedCache := newMockProposalCache(t)
+//	txScheduler := newMockTxScheduler(t)
+//	blockChainStore := newMockBlockchainStore(t)
+//	chainConf := newMockChainConf(t)
+//	storeHelper := newMockStoreHelper(t)
+//	//signingMember := newMockSigningMember(t)
+//	ac := newMockAccessControlProvider(t)
+//	log := newMockLogger(t)
+//	//ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
+//
+//	type args struct {
+//		height  uint64
+//		preHash []byte
+//	}
+//	tests := []struct {
+//		name   string
+//		fields fields
+//		args   args
+//		want   *commonpb.Block
+//	}{
+//		{
+//			name: "test0",
+//			fields: fields{
+//				chainId:         "123456",
+//				txPool:          txPool,
+//				txScheduler:     txScheduler,
+//				snapshotManager: snapshotMgr,
+//				identity:        identity,
+//				ledgerCache:     ledgerCache,
+//				msgBus:          msgBus,
+//				ac:              ac,
+//				blockchainStore: blockChainStore,
+//				isProposer:      false,
+//				idle:            false,
+//				proposeTimer:    nil,
+//				canProposeC:     nil,
+//				txPoolSignalC:   nil,
+//				exitC:           nil,
+//				proposalCache:   proposedCache,
+//				chainConf:       chainConf,
+//				//idleMu:                 sync.Mutex{},
+//				//statusMu:               sync.Mutex{},
+//				//proposerMu:             sync.RWMutex{},
+//				log:                    log,
+//				finishProposeC:         nil,
+//				metricBlockPackageTime: nil,
+//				//proposer:               nil,
+//				blockBuilder: nil,
+//				storeHelper:  storeHelper,
+//			},
+//			args: args{
+//
+//			},
+//			want: nil,
+//		},
+//	}
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			bp := &BlockProposerImpl{
+//				chainId:         tt.fields.chainId,
+//				txPool:          tt.fields.txPool,
+//				txScheduler:     tt.fields.txScheduler,
+//				snapshotManager: tt.fields.snapshotManager,
+//				identity:        tt.fields.identity,
+//				ledgerCache:     tt.fields.ledgerCache,
+//				msgBus:          tt.fields.msgBus,
+//				ac:              tt.fields.ac,
+//				blockchainStore: tt.fields.blockchainStore,
+//				isProposer:      tt.fields.isProposer,
+//				idle:            tt.fields.idle,
+//				//proposeTimer:           tt.fields.proposeTimer,
+//				//canProposeC:            tt.fields.canProposeC,
+//				//txPoolSignalC:          tt.fields.txPoolSignalC,
+//				//exitC:                  tt.fields.exitC,
+//				proposalCache: tt.fields.proposalCache,
+//				chainConf:     tt.fields.chainConf,
+//				//idleMu:                 tt.fields.idleMu,
+//				//statusMu:               tt.fields.statusMu,
+//				//proposerMu:             tt.fields.proposerMu,
+//				log:                    tt.fields.log,
+//				finishProposeC:         tt.fields.finishProposeC,
+//				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+//				//proposer:               tt.fields.proposer,
+//				blockBuilder: tt.fields.blockBuilder,
+//				storeHelper:  tt.fields.storeHelper,
+//			}
+//			if got := bp.proposing(tt.args.height, tt.args.preHash); !reflect.DeepEqual(got, tt.want) {
+//				t.Errorf("proposing() = %v, want %v", got, tt.want)
+//			}
+//		})
+//	}
+//}
+
+func TestBlockProposerImpl_OnReceiveProposeStatusChange(t *testing.T) {
+	type fields struct {
+		log           protocol.Logger
+		isProposer    bool
+		ledgerCache   protocol.LedgerCache
+		proposalCache protocol.ProposalCache
+		proposeTimer  *time.Timer
+		idle          bool
+	}
+	type args struct {
+		proposeStatus bool
+	}
+
+	ledgerCache := newMockLedgerCache(t)
+	log := newMockLogger(t)
+	proposalCache := newMockProposalCache(t)
+
+	log.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
+	log.EXPECT().Debug(gomock.Any()).AnyTimes()
+
+	ledgerCache.EXPECT().CurrentHeight().Return(uint64(3), nil).AnyTimes()
+	proposalCache.EXPECT().ResetProposedAt(gomock.Any()).AnyTimes()
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				log:         log,
+				ledgerCache: ledgerCache,
+				isProposer:  false,
+			},
+			args: args{
+				proposeStatus: false,
+			},
+		},
+		{
+			name: "test1",
+			fields: fields{
+				log:           log,
+				ledgerCache:   ledgerCache,
+				isProposer:    false,
+				proposalCache: proposalCache,
+				proposeTimer:  time.NewTimer(1 * time.Second),
+			},
+			args: args{
+				proposeStatus: true,
+			},
+		},
+		{
+			name: "test2",
+			fields: fields{
+				log:           log,
+				ledgerCache:   ledgerCache,
+				isProposer:    true,
+				proposalCache: proposalCache,
+				proposeTimer:  time.NewTimer(2 * time.Second),
+				idle:          true,
+			},
+			args: args{
+				proposeStatus: false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				log:           tt.fields.log,
+				ledgerCache:   tt.fields.ledgerCache,
+				isProposer:    tt.fields.isProposer,
+				proposalCache: tt.fields.proposalCache,
+				proposeTimer:  tt.fields.proposeTimer,
+				idle:          tt.fields.idle,
+			}
+			bp.OnReceiveProposeStatusChange(tt.args.proposeStatus)
+		})
+	}
+}
+
+func TestBlockProposerImpl_OnReceiveMaxBFTProposal(t *testing.T) {
+	type fields struct {
+		isProposer bool
+	}
+	type args struct {
+		proposal *maxbft.BuildProposal
+	}
+
+	preBlock := createNewTestBlock(0)
+	ledgerCache := newMockLedgerCache(t)
+	log := newMockLogger(t)
+	commonBlock := createNewTestBlock(2)
+
+	log.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
+
+	header := *preBlock.Header
+	header.Signature = nil
+	header.BlockHash = nil
+	preHash, _ := proto.Marshal(&header)
+
+	commonBlock.Header.BlockHash = preHash
+	ledgerCache.EXPECT().GetLastCommittedBlock().Return(commonBlock).AnyTimes()
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				isProposer: false,
+			},
+			args: args{
+				proposal: &maxbft.BuildProposal{
+					Height:  3,
+					PreHash: preHash,
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				ledgerCache: ledgerCache,
+				log:         log,
+			}
+			bp.OnReceiveMaxBFTProposal(tt.args.proposal)
+		})
+	}
+}
+
+func TestBlockProposerImpl_yieldProposing(t *testing.T) {
+	type fields struct {
+		idle           bool
+		finishProposeC chan bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				idle: false,
+				finishProposeC: func() chan bool {
+					finishProposeC := make(chan bool, 1)
+					return finishProposeC
+				}(),
+			},
+			want: true,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				idle: true,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				idle:           tt.fields.idle,
+				finishProposeC: tt.fields.finishProposeC,
+			}
+
+			if got := bp.yieldProposing(); got != tt.want {
+				t.Errorf("yieldProposing() = %v, want %v", got, tt.want)
+			} else {
+				if tt.fields.finishProposeC != nil {
+					res := <-tt.fields.finishProposeC
+					t.Log(res)
+					close(tt.fields.finishProposeC)
+				}
+			}
+		})
+	}
+}
+
+func TestBlockProposerImpl_getDuration(t *testing.T) {
+	type fields struct {
+		chainConf protocol.ChainConf
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   time.Duration
+	}{
+		{
+			name:   "test0",
+			fields: fields{},
+			want:   1000000000,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConfig := &configpb.ChainConfig{
+						Block: &configpb.BlockConfig{
+							BlockInterval: 10,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+			},
+			want: 10000000,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainConf: tt.fields.chainConf,
+			}
+			if got := bp.getDuration(); got != tt.want {
+				t.Errorf("getDuration() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBlockProposerImpl_getChainVersion(t *testing.T) {
+	type fields struct {
+		chainConf protocol.ChainConf
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   []byte
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainConf: nil,
+			},
+			want: []byte(DEFAULTVERSION),
+		},
+		{
+			name: "test1",
+			fields: fields{
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConfig := &configpb.ChainConfig{
+						Version: "v1.1.1",
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+			},
+			want: []byte("v1.1.1"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				chainConf: tt.fields.chainConf,
+			}
+			if got := bp.getChainVersion(); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getChainVersion() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBlockProposerImpl_setNotIdle(t *testing.T) {
+	type fields struct {
+		idle bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				idle: false,
+			},
+			want: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				idle: true,
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				idle: tt.fields.idle,
+			}
+			if got := bp.setNotIdle(); got != tt.want {
+				t.Errorf("setNotIdle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBlockProposerImpl_isIdle(t *testing.T) {
+	type fields struct {
+		idle bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				idle: false,
+			},
+			want: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				idle: true,
+			},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				idle: tt.fields.idle,
+			}
+			if got := bp.isIdle(); got != tt.want {
+				t.Errorf("isIdle() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBlockProposerImpl_setIdle(t *testing.T) {
+	type fields struct {
+		idle bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				idle: false,
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				idle: tt.fields.idle,
+			}
+			bp.setIdle()
+		})
+	}
+}
+
+func TestBlockProposerImpl_setIsSelfProposer(t *testing.T) {
+	type fields struct {
+		isProposer   bool
+		proposeTimer *time.Timer
+	}
+	type args struct{}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				isProposer:   false,
+				proposeTimer: time.NewTimer(1 * time.Second),
+			},
+			args: args{},
+		},
+		{
+			name: "test1",
+			fields: fields{
+				isProposer:   true,
+				proposeTimer: time.NewTimer(1 * time.Second),
+			},
+			args: args{},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				isProposer:   tt.fields.isProposer,
+				proposeTimer: tt.fields.proposeTimer,
+			}
+			bp.setIsSelfProposer(tt.fields.isProposer)
+		})
+	}
+}
+
+func TestBlockProposerImpl_isSelfProposer(t *testing.T) {
+	type fields struct {
+		isProposer bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name:   "test0",
+			fields: fields{},
+			want:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bp := &BlockProposerImpl{
+				isProposer: tt.fields.isProposer,
+			}
+			if got := bp.isSelfProposer(); got != tt.want {
+				t.Errorf("isSelfProposer() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func newMockChainConf(t *testing.T) *mock.MockChainConf {
+	ctrl := gomock.NewController(t)
+	chainConf := mock.NewMockChainConf(ctrl)
+	return chainConf
+}
+
+func newMockLedgerCache(t *testing.T) *mock.MockLedgerCache {
+	ctrl := gomock.NewController(t)
+	newMockLedgerCache := mock.NewMockLedgerCache(ctrl)
+	return newMockLedgerCache
+}
+
+func newMockLogger(t *testing.T) *mock.MockLogger {
+	ctrl := gomock.NewController(t)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	return logger
+}
+
+func newMockProposalCache(t *testing.T) *mock.MockProposalCache {
+	ctrl := gomock.NewController(t)
+	proposalCache := mock.NewMockProposalCache(ctrl)
+	return proposalCache
+}
+
+func newMockBlockchainStore(t *testing.T) *mock.MockBlockchainStore {
+	ctrl := gomock.NewController(t)
+	blockchainStore := mock.NewMockBlockchainStore(ctrl)
+	return blockchainStore
+}
+
+func newMockStoreHelper(t *testing.T) *mock.MockStoreHelper {
+	ctrl := gomock.NewController(t)
+	storeHelper := mock.NewMockStoreHelper(ctrl)
+	return storeHelper
+}
+
+func newMockVmManager(t *testing.T) *mock.MockVmManager {
+	ctrl := gomock.NewController(t)
+	vmManager := mock.NewMockVmManager(ctrl)
+	vmManager.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&commonpb.ContractResult{
+		Code: 0,
+	}, protocol.ExecOrderTxTypeNormal, commonpb.TxStatusCode_SUCCESS).AnyTimes()
+	return vmManager
+}
+
+func newMockTxPool(t *testing.T) *mock.MockTxPool {
+	ctrl := gomock.NewController(t)
+	txPool := mock.NewMockTxPool(ctrl)
+	return txPool
+}
+
+func newMockSnapshotManager(t *testing.T) *mock.MockSnapshotManager {
+	ctrl := gomock.NewController(t)
+	snapshotManager := mock.NewMockSnapshotManager(ctrl)
+	return snapshotManager
+}
+
+func newMockBlockVerifier(t *testing.T) *mock.MockBlockVerifier {
+	ctrl := gomock.NewController(t)
+	blockVerifier := mock.NewMockBlockVerifier(ctrl)
+	return blockVerifier
+}
+
+func newMockBlockCommitter(t *testing.T) *mock.MockBlockCommitter {
+	ctrl := gomock.NewController(t)
+	blockCommitter := mock.NewMockBlockCommitter(ctrl)
+	return blockCommitter
+}
+
+func newMockSigningMember(t *testing.T) *mock.MockSigningMember {
+	ctrl := gomock.NewController(t)
+	signingMember := mock.NewMockSigningMember(ctrl)
+	return signingMember
+}
+
+func newMockTxScheduler(t *testing.T) *mock.MockTxScheduler {
+	ctrl := gomock.NewController(t)
+	txScheduler := mock.NewMockTxScheduler(ctrl)
+	return txScheduler
+}
+
+func newMockAccessControlProvider(t *testing.T) *mock.MockAccessControlProvider {
+	ctrl := gomock.NewController(t)
+	ac := mock.NewMockAccessControlProvider(ctrl)
+	return ac
+}
+
+func newMockMessageBus(t *testing.T) *mbusmock.MockMessageBus {
+	ctrl := gomock.NewController(t)
+	messageBus := mbusmock.NewMockMessageBus(ctrl)
+	return messageBus
+}
+
+func createBlockByHash(height uint64, hash []byte) *commonpb.Block {
+	//var hash = []byte("0123456789")
+	var version = uint32(1)
+	var block = &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			ChainId:        "Chain1",
+			BlockHeight:    height,
+			PreBlockHash:   hash,
+			BlockHash:      hash,
+			PreConfHeight:  0,
+			BlockVersion:   version,
+			DagHash:        hash,
+			RwSetRoot:      hash,
+			TxRoot:         hash,
+			BlockTimestamp: 0,
+			Proposer:       &accesscontrol.Member{MemberInfo: hash},
+			ConsensusArgs:  nil,
+			TxCount:        1,
+			Signature:      []byte(""),
+		},
+		Dag: &commonpb.DAG{
+			Vertexes: nil,
+		},
+		Txs: nil,
+	}
+
+	return block
 }

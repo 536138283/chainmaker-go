@@ -166,17 +166,13 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	proposerId, err := common.GetProposerId(v.ac, v.netService, block.Header.Proposer)
-	if err != nil {
-		return err
-	}
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, proposerId, v.log)
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
 
-	txRWSetMap, contractEventMap, timeLasts, err := v.validateBlock(newBlock, lastBlock)
+	txRWSetMap, contractEventMap, timeLasts, err := v.validateBlock(newBlock, lastBlock, mode)
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
@@ -272,17 +268,12 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	proposerId, err := common.GetProposerId(v.ac, v.netService, block.Header.Proposer)
-	if err != nil {
-		return err
-	}
-
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, proposerId, v.log)
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
-	contractEventMap, timeLasts, err := v.validateBlockWithRWSets(newBlock, lastBlock, txRWSetMap)
+	contractEventMap, timeLasts, err := v.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
@@ -335,8 +326,8 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	return nil
 }
 
-func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (map[string]*commonpb.TxRWSet,
-	map[string][]*commonpb.ContractEvent, map[string]int64, error) {
+func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode protocol.VerifyMode) (
+	map[string]*commonpb.TxRWSet, map[string][]*commonpb.ContractEvent, map[string]int64, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make(map[string]int64)
 	var err error
@@ -363,10 +354,10 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (map
 		return nil, nil, timeLasts, err
 	}
 
-	return v.verifierBlock.ValidateBlock(block, lastBlock, hashType, timeLasts)
+	return v.verifierBlock.ValidateBlock(block, lastBlock, hashType, timeLasts, mode)
 }
 
-func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block,
+func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block, mode protocol.VerifyMode,
 	txRWSetMap map[string]*commonpb.TxRWSet) (
 	map[string][]*commonpb.ContractEvent, map[string]int64, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
@@ -390,7 +381,7 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 		return nil, timeLasts, err
 	}
 
-	return v.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap)
+	return v.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap, mode)
 }
 
 func (v *BlockVerifierImpl) checkPreBlock_MAXBFT(block *commonpb.Block, lastBlock *commonpb.Block, err error,
