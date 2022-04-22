@@ -844,8 +844,8 @@ func evmtest() {
 		panic(err)
 	}
 	fmt.Println("---------------A(User1) 创建ERC20合约-------------", time.Now().Format("2006-01-02 15:04:05"))
-	//txId := testCreateEvm(sk3, client, CHAIN1)
-	//testWaitTx(sk3, client, CHAIN1, txId)
+	txId := testCreateEvm(sk3, client, CHAIN1)
+	testWaitTx(sk3, client, CHAIN1, txId)
 	fmt.Println("---------------查询A(User1) B(Admin1)账户余额-------------", time.Now().Format("2006-01-02 15:04:05"))
 
 	balanceA := testQueryBalance(sk3, client, CHAIN1, userCrtPath)
