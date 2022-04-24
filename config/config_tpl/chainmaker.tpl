@@ -161,7 +161,8 @@ txpool:
   is_dump_txs_in_queue: true
 
   # Common transaction queue num, only for normal tx_pool.
-  # common_queue_num: 10
+  # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
+  # common_queue_num: 8
 
   # Interval of creating a transaction batch, only for batch tx_pool, in millisecond.
   # batch_create_timeout: 200
