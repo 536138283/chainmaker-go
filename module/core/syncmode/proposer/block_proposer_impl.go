@@ -8,7 +8,7 @@ package proposer
 
 import (
 	"bytes"
-	"fmt"
+	"errors"
 	"sync"
 	"time"
 
@@ -261,42 +261,41 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	defer bp.yieldProposing()
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
-	if selfProposedBlock != nil {
-		if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
 
-			hash := fmt.Sprint(selfProposedBlock.Header.BlockHash)
-			var timer *time.Timer
-			ti, ok := common.ProposeRepeatTimerMap.Load(hash)
-			if !ok {
-				timer = time.NewTimer(1 * time.Second)
-				common.ProposeRepeatTimerMap.Store(hash, timer)
-			} else {
-				timer, _ = ti.(*time.Timer)
-				if timer == nil {
-					bp.log.Warnf("timer is nil, height(%d)", height)
-					timer = time.NewTimer(1 * time.Second)
-					common.ProposeRepeatTimerMap.Store(hash, timer)
-				}
+	if selfProposedBlock != nil {
+
+		if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
+			blockFinger := utils.CalcBlockFingerPrint(selfProposedBlock)
+			timeNow, err := bp.getLastProposeTimeByBlockFinger(string(blockFinger))
+
+			if err != nil {
+				bp.log.Errorf("proposer fail, get last propose time by hash err %s", err.Error())
+				return nil
 			}
 
-			select {
-			case <-timer.C:
+			if timeNow == 0 {
+				return nil
+			}
 
+			if utils.CurrentTimeMillisSeconds()-timeNow >= 1000 {
 				// Repeat propose block if node has proposed before at the same height
 				bp.proposalCache.SetProposedAt(height)
 				_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
 
+				cutBlock := new(commonpb.Block)
+				if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
+					cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.log)
+				} else {
+					cutBlock = selfProposedBlock
+				}
+
 				bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: selfProposedBlock,
-					TxsRwSet: txsRwSet})
+					TxsRwSet: txsRwSet, CutBlock: cutBlock})
 				bp.log.Infof("proposer success repeat [%d](txs:%d,hash:%x)",
 					selfProposedBlock.Header.BlockHeight, selfProposedBlock.Header.TxCount,
 					selfProposedBlock.Header.BlockHash)
-
-				return nil
-
-			default:
-				return nil
 			}
+			return nil
 
 		}
 		bp.proposalCache.ClearTheBlock(selfProposedBlock)
@@ -343,14 +342,14 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	}
 	_, rwSetMap, _ := bp.proposalCache.GetProposedBlock(block)
 
-	proposalBlock := new(commonpb.Block)
+	cutBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
-		proposalBlock = common.GetTurboBlock(block, proposalBlock, bp.log)
+		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
 	} else {
-		proposalBlock = block
+		cutBlock = block
 	}
 
-	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: rwSetMap})
+	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: block, TxsRwSet: rwSetMap, CutBlock: cutBlock})
 	//bp.log.Debugf("finalized block \n%s", utils.FormatBlock(block))
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d, begin DB transaction:%v, "+
@@ -532,4 +531,29 @@ func (bp *BlockProposerImpl) isSelfProposer() bool {
 func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
 
 	return nil, nil
+}
+
+/*
+ * getLastProposeTimeByBlockFinger, get prorpose block time by block finger, it delayed by some second
+ */
+func (bp *BlockProposerImpl) getLastProposeTimeByBlockFinger(blockFinger string) (int64, error) {
+
+	var timeNow int64
+	timeValue, ok := common.ProposeRepeatTimerMap.Load(blockFinger)
+
+	if !ok {
+		timeNow = utils.CurrentTimeMillisSeconds()
+		common.ProposeRepeatTimerMap.Store(blockFinger, timeNow)
+		return timeNow, nil
+	}
+
+	switch timeNow := timeValue.(type) {
+	case int64:
+		return timeNow, nil
+	default:
+		timeNow = utils.CurrentTimeMillisSeconds()
+		common.ProposeRepeatTimerMap.Store(blockFinger, timeNow)
+		errMsg := "propose repeat time map type is wrong"
+		return 0, errors.New(errMsg)
+	}
 }

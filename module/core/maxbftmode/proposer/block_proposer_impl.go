@@ -208,14 +208,14 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	}
 	_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(block)
 
-	proposalBlock := new(commonpb.Block)
+	cutBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
-		proposalBlock = common.GetTurboBlock(block, proposalBlock, bp.log)
+		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
 	} else {
-		proposalBlock = block
+		cutBlock = block
 	}
 
-	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet})
+	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: block, TxsRwSet: txsRwSet, CutBlock: cutBlock})
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d, begin DB transaction:%v, "+
 		"new snapshot:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
@@ -223,7 +223,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)
 	}
-	return &consensuspb.ProposalBlock{Block: proposalBlock, TxsRwSet: txsRwSet}, nil
+	return &consensuspb.ProposalBlock{Block: block, TxsRwSet: txsRwSet, CutBlock: cutBlock}, nil
 }
 
 // OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
