@@ -1133,8 +1133,7 @@ func RecoverBlock(
 	logger protocol.Logger) (*commonPb.Block, error) {
 
 	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode &&
-		len(block.Txs) != 0 && block.Txs[0].Payload != nil &&
-		block.Txs[0].Payload.ContractName != "" {
+		len(block.Txs) != 0 && block.Txs[0].Payload != nil {
 
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
