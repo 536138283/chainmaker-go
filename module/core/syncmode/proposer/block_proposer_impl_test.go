@@ -10,7 +10,6 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"reflect"
-	"strconv"
 	"testing"
 	"time"
 
@@ -54,7 +53,7 @@ func TestProposeStatusChange(t *testing.T) {
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	storeHelper := common.NewKVStoreHelper("chain1")
-
+	filter := mock.NewMockTxFilter(ctl)
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
 
 	txs := make([]*commonpb.Transaction, 0)
@@ -66,8 +65,10 @@ func TestProposeStatusChange(t *testing.T) {
 
 	identity.EXPECT().GetMember().AnyTimes()
 	txPool.EXPECT().FetchTxBatch(gomock.Any()).Return(txs).AnyTimes()
+	txPool.EXPECT().GetPoolStatus().Return(&txpoolpb.TxPoolStatus{}).AnyTimes()
 	//msgBus.EXPECT().Publish(gomock.Any(), gomock.Any())
 	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any())
+	filter.EXPECT().ValidateRule(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
 		Type: consensus.ConsensusType_TBFT,
@@ -135,9 +136,9 @@ func TestProposeStatusChange(t *testing.T) {
 		finishProposeC:  make(chan bool),
 		blockchainStore: blockChainStore,
 		chainConf:       chainConf,
-
-		blockBuilder: blockBuilder,
-		storeHelper:  storeHelper,
+		txFilter:        filter,
+		blockBuilder:    blockBuilder,
+		storeHelper:     storeHelper,
 	}
 	require.False(t, blockProposer.isProposer)
 	require.Nil(t, blockProposer.proposeTimer)
@@ -303,109 +304,6 @@ func TestFinalize(t *testing.T) {
 
 	err := localconf.UpdateDebugConfig(kvs)
 	require.Nil(t, err)
-}
-
-func TestTxDuplicateCheck(t *testing.T) {
-	// init
-	// 1. init transactions
-	const (
-		originalTx   = "QmXDdHkYEbAshxDnHxpDAvog7a2y3zknuKJgFnx4YLfYD"
-		duplicateTx3 = originalTx + "3"
-		duplicateTx5 = originalTx + "5"
-		duplicateTx7 = originalTx + "7"
-	)
-	var duplicateTxs []*commonpb.Transaction
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(3),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(5),
-		},
-	})
-	duplicateTxs = append(duplicateTxs, &commonpb.Transaction{
-		Payload: &commonpb.Payload{
-			ChainId: "chain1",
-			TxType:  commonpb.TxType_INVOKE_CONTRACT,
-			TxId:    originalTx + strconv.Itoa(7),
-		},
-	})
-	var txs []*commonpb.Transaction
-	for i := 0; i < 10; i++ {
-		tx := &commonpb.Transaction{
-			Payload: &commonpb.Payload{
-				ChainId: "chain1",
-				TxType:  commonpb.TxType_INVOKE_CONTRACT,
-				TxId:    originalTx + strconv.Itoa(i),
-			},
-		}
-		txs = append(txs, tx)
-	}
-	// 2. init store
-	ctl := gomock.NewController(t)
-	// Three repeat transactions
-	blockchainStore1 := mock.NewMockBlockchainStore(ctl)
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx3)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx5)).Return(true, nil).AnyTimes()
-	blockchainStore1.EXPECT().TxExists(gomock.Eq(duplicateTx7)).Return(true, nil).AnyTimes()
-	// No repeat transactions
-	blockchainStore2 := mock.NewMockBlockchainStore(ctl)
-	// All repeat transactions
-	blockchainStore3 := mock.NewMockBlockchainStore(ctl)
-	for i := 0; i < 10; i++ {
-		blockchainStore3.EXPECT().TxExists(gomock.Eq(originalTx+strconv.Itoa(i))).Return(true, nil).AnyTimes()
-	}
-	// execute case
-	cases := []struct {
-		comment      string
-		duplicateTxs []*commonpb.Transaction
-		store        *mock.MockBlockchainStore
-	}{
-		{comment: "Three repeat transactions", duplicateTxs: duplicateTxs, store: blockchainStore1},
-		{comment: "No repeat transactions", duplicateTxs: []*commonpb.Transaction{}, store: blockchainStore2},
-		{comment: "All repeat transactions", duplicateTxs: txs, store: blockchainStore3},
-	}
-	for _, case_ := range cases {
-		t.Logf("comment: %s", case_.comment)
-		blockProposerImpl := &BlockProposerImpl{
-			blockchainStore: case_.store,
-		}
-		// 3. test Duplicate
-		_, duplicates := blockProposerImpl.txDuplicateCheck(case_.duplicateTxs)
-		if len(duplicates) != len(case_.duplicateTxs) {
-			t.Errorf("duplicates size error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		// note: For convenience, uses an empty slice
-		if duplicates == nil {
-			duplicates = []*commonpb.Transaction{}
-		}
-		equal := reflect.DeepEqual(duplicates, case_.duplicateTxs)
-		if !equal {
-			t.Errorf("duplicates error result: %v, original: %v", duplicates, duplicateTxs)
-		}
-		t.Logf("comment: %s success", case_.comment)
-	}
-}
-
-func finalizeBlockRoots() (interface{}, interface{}) {
-	return nil, nil
-}
-
-func parseTxs(num int) []*commonpb.Transaction {
-	txs := make([]*commonpb.Transaction, 0)
-	for i := 0; i < num; i++ {
-		txId := uuid.GetUUID() + uuid.GetUUID()
-		payload := parsePayload(txId)
-		payloadBytes, _ := json.Marshal(payload)
-		txs = append(txs, parseTx(txId, payloadBytes))
-	}
-	return txs
 }
 
 func parsePayload(txId string) *commonpb.Payload {

@@ -12,19 +12,21 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
+
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -41,6 +43,7 @@ type BlockProposerImpl struct {
 	msgBus          msgbus.MessageBus        // channel to give out proposed block
 	ac              protocol.AccessControlProvider
 	blockchainStore protocol.BlockchainStore
+	txFilter        protocol.TxFilter // Verify the transaction rules with TxFilter
 
 	isProposer   bool        // whether current node can propose block now
 	idle         bool        // whether current node is proposing or not
@@ -79,6 +82,7 @@ type BlockProposerConfig struct {
 	AC              protocol.AccessControlProvider
 	BlockchainStore protocol.BlockchainStore
 	StoreHelper     conf.StoreHelper
+	TxFilter        protocol.TxFilter
 }
 
 const (
@@ -107,6 +111,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 		log:             log,
 		finishProposeC:  make(chan bool),
 		storeHelper:     config.StoreHelper,
+		txFilter:        config.TxFilter,
 	}
 
 	var err error
@@ -260,6 +265,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
 
+	bp.log.Debugf("syncmode::BlockProposerImpl::proposing() => tx_pool status = %#v", bp.txPool.GetPoolStatus())
+
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 
 	if selfProposedBlock != nil {
@@ -307,11 +314,46 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
 	}
 
-	// retrieve tx batch from tx pool
-	startFetchTick := utils.CurrentTimeMillisSeconds()
-	fetchBatch := bp.txPool.FetchTxBatch(height)
-	fetchLasts := utils.CurrentTimeMillisSeconds() - startFetchTick
-	bp.log.Debugf("begin proposing block[%d], fetch tx num[%d]", height, len(fetchBatch))
+	var (
+		fetchLasts          int64
+		filterValidateLasts int64
+		fetchTotalLasts     int64 // The total time consuming
+		totalTimes          int   // loop count
+		fetchBatch          []*commonpb.Transaction
+	)
+	// 根据TxFilter时间规则过滤交易，如果剩余的交易为0，则再次从交易池拉取交易，重复执行
+	// The transaction is filtered according to txFilter time rule. If the remaining transaction is 0, the transaction
+	// is pulled from the trading pool again and executed repeatedly
+	fetchTotalFirst := utils.CurrentTimeMillisSeconds()
+	for {
+		totalTimes++
+		// retrieve tx batch from tx pool
+		fetchFirst := utils.CurrentTimeMillisSeconds()
+		fetchBatch = bp.txPool.FetchTxBatch(height)
+		fetchLasts += utils.CurrentTimeMillisSeconds() - fetchFirst
+		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
+			height, len(fetchBatch)))
+		if len(fetchBatch) == 0 {
+			bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("no txs in tx pool, proposing block stoped"))
+			return nil
+		}
+		// validate txFilter rules
+		filterValidateFirst := utils.CurrentTimeMillisSeconds()
+		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
+		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
+		if len(removeTxs) > 0 {
+			// remove
+			bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+			bp.log.Warnf("remove the overtime transactions, total:%d, remain:%d, remove:%d",
+				len(fetchBatch), len(remainTxs), len(removeTxs))
+		}
+		if len(remainTxs) > 0 {
+			// 剩余交易大于0则跳出循环
+			fetchBatch = remainTxs
+			break
+		}
+	}
+	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
 	if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(fetchBatch) == 0 {
 		// can not propose empty block and tx batch is empty, then yield proposing.
@@ -341,6 +383,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		return nil
 	}
 	_, rwSetMap, _ := bp.proposalCache.GetProposedBlock(block)
+	bp.log.Debugf("proposing block \n %s", utils.FormatBlock(block))
 
 	cutBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
@@ -352,50 +395,15 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: block, TxsRwSet: rwSetMap, CutBlock: cutBlock})
 	//bp.log.Debugf("finalized block \n%s", utils.FormatBlock(block))
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	bp.log.Infof("proposer success [%d](txs:%d), time used(fetch:%d, begin DB transaction:%v, "+
-		"new snapshot:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
-		fetchLasts, timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
+	bp.log.Infof("proposer success [%d](txs:%d),fetch(times:%v,fetch:%v,filter:%v,total:%d), time used("+
+		"begin DB transaction:%v, new snapshot:%v, vm:%v, finalize block:%v,total:%d)",
+		block.Header.BlockHeight, block.Header.TxCount,
+		totalTimes, fetchLasts, filterValidateLasts, fetchTotalLasts,
+		timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)
 	}
 	return block
-}
-
-// txDuplicateCheck, to check if transactions that are about to proposing are double spending.
-func (bp *BlockProposerImpl) txDuplicateCheck(batch []*commonpb.Transaction) (checked []*commonpb.Transaction,
-	duplicates []*commonpb.Transaction) {
-	if len(batch) == 0 {
-		return nil, nil
-	}
-	checked = make([]*commonpb.Transaction, 0, len(batch))
-	duplicates = make([]*commonpb.Transaction, 0, len(batch))
-
-	verifyBatches := utils.DispatchTxVerifyTask(batch)
-	workerCount := len(verifyBatches)
-	results := make([][]*commonpb.Transaction, workerCount)
-	var wg sync.WaitGroup
-	wg.Add(workerCount)
-	for i := 0; i < workerCount; i++ {
-		go func(index int, b []*commonpb.Transaction) {
-			defer wg.Done()
-			result := make([]*commonpb.Transaction, 0)
-			for _, tx := range b {
-				exist, err := bp.blockchainStore.TxExists(tx.Payload.TxId)
-				if err == nil && !exist {
-					result = append(result, tx)
-				} else {
-					// Abnormal or existing transactions
-					duplicates = append(duplicates, tx)
-				}
-			}
-			results[index] = result
-		}(i, verifyBatches[i])
-	}
-	wg.Wait()
-	for _, result := range results {
-		checked = append(checked, result...)
-	}
-	return checked, duplicates
 }
 
 // OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
@@ -534,15 +542,53 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
 }
 
 /*
+ * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
+ */
+func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
+	height := rwSetVerifyFailTxs.BlockHeight
+	block := bp.proposalCache.GetSelfProposedBlockAt(height)
+
+	if block == nil {
+		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
+		txs := make([]*commonpb.Transaction, 0)
+		for _, v := range txsRet {
+			txs = append(txs, v)
+		}
+		bp.txPool.RetryAndRemoveTxs(nil, txs)
+		return
+	}
+
+	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
+	for _, tx := range block.Txs {
+		for _, txId := range rwSetVerifyFailTxs.TxIds {
+			if tx.Payload.TxId == txId {
+				txsMap[txId] = tx
+				removeTxs = append(removeTxs, tx)
+				break
+			}
+		}
+	}
+
+	for _, tx := range block.Txs {
+		if _, ok := txsMap[tx.Payload.TxId]; !ok {
+			retryTxs = append(retryTxs, tx)
+		}
+	}
+
+	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
+	bp.proposalCache.ClearProposedBlockAt(height)
+
+}
+
+/*
  * getLastProposeTimeByBlockFinger, get prorpose block time by block finger, it delayed by some second
  */
 func (bp *BlockProposerImpl) getLastProposeTimeByBlockFinger(blockFinger string) (int64, error) {
-
-	var timeNow int64
 	timeValue, ok := common.ProposeRepeatTimerMap.Load(blockFinger)
-
 	if !ok {
-		timeNow = utils.CurrentTimeMillisSeconds()
+		timeNow := utils.CurrentTimeMillisSeconds()
 		common.ProposeRepeatTimerMap.Store(blockFinger, timeNow)
 		return timeNow, nil
 	}

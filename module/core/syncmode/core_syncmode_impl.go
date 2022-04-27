@@ -16,6 +16,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -80,6 +81,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		AC:              cf.AC,
 		BlockchainStore: cf.BlockchainStore,
 		StoreHelper:     cf.StoreHelper,
+		TxFilter:        cf.TxFilter,
 	}
 	core.blockProposer, err = proposer.NewBlockProposer(proposerConfig, cf.Log)
 	if err != nil {
@@ -101,6 +103,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		VmMgr:           cf.VmMgr,
 		StoreHelper:     cf.StoreHelper,
 		NetService:      cf.NetService,
+		TxFilter:        cf.TxFilter,
 	}
 	core.BlockVerifier, err = verifier.NewBlockVerifier(verifierConfig, cf.Log)
 	if err != nil {
@@ -120,12 +123,12 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		Subscriber:      cf.Subscriber,
 		Verifier:        core.BlockVerifier,
 		StoreHelper:     cf.StoreHelper,
+		TxFilter:        cf.TxFilter,
 	}
 	core.BlockCommitter, err = common.NewBlockCommitter(committerConfig, cf.Log)
 	if err != nil {
 		return nil, err
 	}
-
 	return core, nil
 }
 
@@ -167,6 +170,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	case msgbus.TxPoolSignal:
 		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
 			c.blockProposer.OnReceiveTxPoolSignal(signal)
+		}
+	case msgbus.RwSetVerifyFailTxs:
+		if signal, ok := message.Payload.(*consensuspb.RwSetVerifyFailTxs); ok {
+			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
 		}
 	}
 }

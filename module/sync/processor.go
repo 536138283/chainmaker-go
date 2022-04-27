@@ -52,7 +52,7 @@ func newProcessor(verify verifyAndAddBlock, ledgerCache protocol.LedgerCache, lo
 func (pro *processor) handler(event queue.Item) (queue.Item, error) {
 	switch msg := event.(type) {
 	case *ReceivedBlockInfos:
-		pro.log.Debugf("receive [ReceivedBlockInfos] msg, start handle...", msg.Data)
+		pro.log.Debugf("receive [ReceivedBlockInfos] msg, start handle... %v", msg.Data)
 		pro.handleReceivedBlockInfos(msg)
 	case *ProcessBlockMsg:
 		//pro.log.Debugf("receive [ProcessBlockMsg] msg, start handle...")
