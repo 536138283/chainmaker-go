@@ -40,7 +40,7 @@ if [ -n "$1" ] ;then
   ut_cover "$1" 40 10
 else
    ut_cover "module/accesscontrol" 47 3
-#  ut_cover "module/blockchain" 2
+   ut_cover "module/blockchain" 40 1.3
 #  ut_cover "module/conf/chainconf" 26
 #  ut_cover "module/conf/localconf" 11
   ut_cover "module/consensus" 30 5.8
@@ -48,11 +48,13 @@ else
   #ut_cover "module/consensus/raft" 0
 #  ut_cover "module/consensus/solo" 0
   #ut_cover "module/consensus/tbft" 10
-  ut_cover "module/core" 40 7
+  ut_cover "module/core" 51 6.7
   ut_cover "module/net" 29 8
   ut_cover "module/rpcserver" 0 2.9
   ut_cover "module/snapshot" 47 15
   ut_cover "module/sync" 71 2.5
-  ut_cover "module/subscriber" 70 2.3
+  ut_cover "module/txfilter" 40 0
+  ut_cover "module/subscriber" 70 0.9
+#  ut_cover "module/txpool" 0
   ut_cover "tools/cmc" 10 2.3
 fi

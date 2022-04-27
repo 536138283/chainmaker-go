@@ -15,8 +15,9 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	dpos "chainmaker.org/chainmaker/consensus-dpos/v2"
-	maxbft "chainmaker.org/chainmaker/consensus-maxbft/v2"
+	dPos "chainmaker.org/chainmaker/consensus-dpos/v2"
+
+	//maxbft "chainmaker.org/chainmaker/consensus-maxbft/v2"
 	raft "chainmaker.org/chainmaker/consensus-raft/v2"
 	solo "chainmaker.org/chainmaker/consensus-solo/v2"
 	tbft "chainmaker.org/chainmaker/consensus-tbft/v2"
@@ -54,11 +55,7 @@ func (bc *TestBlockchain) MockInit(ctrl *gomock.Controller, consensusType consen
 	bc.identity = mock.NewMockSigningMember(ctrl)
 	ledgerCache := mock.NewMockLedgerCache(ctrl)
 	ledgerCache.EXPECT().CurrentHeight().AnyTimes().Return(uint64(1), nil)
-	qc := &maxbftpb.QuorumCert{
-		BlockId: []byte("32c8b26"),
-		Level:   0,
-		Height:  0,
-	}
+	qc := &maxbftpb.QuorumCert{}
 	bytesQc, _ := proto.Marshal(qc)
 	ledgerCache.EXPECT().GetLastCommittedBlock().AnyTimes().Return(&common.Block{
 		Header: &common.BlockHeader{
@@ -85,12 +82,16 @@ func (bc *TestBlockchain) MockInit(ctrl *gomock.Controller, consensusType consen
 		Contract: &configpb.ContractConfig{
 			EnableSqlSupport: false,
 		},
+		Crypto: &configpb.CryptoConfig{
+			Hash: "hash",
+		},
 	})
 	bc.chainConf = chainConf
 	coreEngine := mock.NewMockCoreEngine(ctrl)
 	coreEngine.EXPECT().GetBlockVerifier().AnyTimes().Return(nil)
 	coreEngine.EXPECT().GetBlockCommitter().AnyTimes().Return(nil)
 	coreEngine.EXPECT().GetMaxbftHelper().AnyTimes().Return(nil)
+	coreEngine.EXPECT().GetBlockProposer().AnyTimes().Return(nil)
 	bc.coreEngine = coreEngine
 	store := mock.NewMockBlockchainStore(ctrl)
 	store.EXPECT().ReadObject("GOVERNANCE", []byte("GOVERNANCE")).AnyTimes().Return(
@@ -140,14 +141,14 @@ func TestNewConsensusEngine(t *testing.T) {
 		},
 		{"new DPOS consensus engine",
 			consensuspb.ConsensusType_DPOS,
-			&dpos.DPoSImpl{},
+			&dPos.DPoSImpl{},
 			false,
 		},
-		{"new MAXBFT consensus engine",
-			consensuspb.ConsensusType_MAXBFT,
-			&maxbft.ConsensusMaxBftImpl{},
-			false,
-		},
+		//{"new MAXBFT consensus engine",
+		//	consensuspb.ConsensusType_MAXBFT,
+		//	&maxbft.Maxbft{},
+		//	false,
+		//},
 	}
 	registerConsensuses()
 	for _, tt := range tests {
@@ -195,7 +196,7 @@ func registerConsensuses() {
 			if err != nil {
 				return nil, err
 			}
-			dposEngine := dpos.NewDPoSImpl(config, tbftEngine)
+			dposEngine := dPos.NewDPoSImpl(config, tbftEngine)
 			return dposEngine, nil
 		},
 	)
@@ -214,10 +215,10 @@ func registerConsensuses() {
 		},
 	)
 
-	RegisterConsensusProvider(
-		consensuspb.ConsensusType_MAXBFT,
-		func(config *utils.ConsensusImplConfig) (protocol.ConsensusEngine, error) {
-			return maxbft.New(config)
-		},
-	)
+	//RegisterConsensusProvider(
+	//	consensuspb.ConsensusType_MAXBFT,
+	//	func(config *utils.ConsensusImplConfig) (protocol.ConsensusEngine, error) {
+	//		return maxbft.New(config)
+	//	},
+	//)
 }

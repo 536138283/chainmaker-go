@@ -136,7 +136,7 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 	ssLasts := beginDbTick - ssStartTick
 	dbLasts := vmStartTick - beginDbTick
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
-	timeLasts = append(timeLasts, ssLasts, dbLasts, vmLasts)
+	timeLasts = append(timeLasts, dbLasts, ssLasts, vmLasts)
 
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("schedule block(%d,%x) error %s",
@@ -502,6 +502,7 @@ type VerifierBlockConf struct {
 	ProposalCache   protocol.ProposalCache // proposal cache
 	StoreHelper     conf.StoreHelper
 	TxScheduler     protocol.TxScheduler
+	TxFilter        protocol.TxFilter
 }
 
 type VerifierBlock struct {
@@ -516,6 +517,7 @@ type VerifierBlock struct {
 	blockchainStore protocol.BlockchainStore
 	proposalCache   protocol.ProposalCache // proposal cache
 	storeHelper     conf.StoreHelper
+	txFilter        protocol.TxFilter
 }
 
 func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
@@ -531,6 +533,7 @@ func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
 		proposalCache:   conf.ProposalCache,
 		storeHelper:     conf.StoreHelper,
 		txScheduler:     conf.TxScheduler,
+		txFilter:        conf.TxFilter,
 	}
 	var schedulerFactory scheduler.TxSchedulerFactory
 	verifyBlock.txScheduler = schedulerFactory.NewTxScheduler(
@@ -562,11 +565,11 @@ func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block,
 
 // validateBlock, validate block and transactions
 func (vb *VerifierBlock) ValidateBlock(
-	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64) (
-	map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, map[string]int64, error) {
+	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64, mode protocol.VerifyMode) (
+	map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
 
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
-		return nil, nil, timeLasts, err
+		return nil, nil, timeLasts, nil, err
 	}
 
 	// verify block sig and also verify identity and auth of block proposer
@@ -575,7 +578,7 @@ func (vb *VerifierBlock) ValidateBlock(
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
 	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+		return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
@@ -583,18 +586,18 @@ func (vb *VerifierBlock) ValidateBlock(
 
 	err := CheckVacuumBlock(block, vb.chainConf.ChainConfig().Consensus.Type)
 	if err != nil {
-		return nil, nil, timeLasts, err
+		return nil, nil, timeLasts, nil, err
 	}
 	// we must new a snapshot for the vacant block,
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
 	snapshotTick := utils.CurrentTimeMillisSeconds()
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
-		return nil, nil, timeLasts, nil
+		return nil, nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
 	if IsTxDuplicate(block.Txs) {
-		return nil, nil, timeLasts, fmt.Errorf("tx duplicate")
+		return nil, nil, timeLasts, nil, fmt.Errorf("tx duplicate")
 	}
 
 	// simulate with DAG, and verify read write set
@@ -609,10 +612,10 @@ func (vb *VerifierBlock) ValidateBlock(
 
 	timeLasts[VM] = vmLasts
 	if err != nil {
-		return nil, nil, timeLasts, fmt.Errorf("simulate %s", err)
+		return nil, nil, timeLasts, nil, fmt.Errorf("simulate %s", err)
 	}
 	if block.Header.TxCount != uint32(len(txRWSetMap)) {
-		return nil, nil, timeLasts, fmt.Errorf("simulate txcount expect %d, got %d",
+		return nil, nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
 			block.Header.TxCount, len(txRWSetMap))
 	}
 
@@ -626,11 +629,11 @@ func (vb *VerifierBlock) ValidateBlock(
 		Log:           vb.log,
 		Ac:            vb.ac,
 		TxPool:        vb.txPool,
-		Store:         vb.blockchainStore,
 		ProposalCache: vb.proposalCache,
+		TxFilter:      vb.txFilter,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, err := verifiertx.verifierTxs(block)
+	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
@@ -638,7 +641,7 @@ func (vb *VerifierBlock) ValidateBlock(
 			vb.log.Warn("[Duplicate txs] delete the err txs")
 			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
 		}
-		return nil, nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
+		return nil, nil, timeLasts, rwSetVerifyFailTx, fmt.Errorf("verify failed [%d](%x), %s ",
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
 	//if protocol.CONSENSUS_VERIFY == mode && len(newAddTx) > 0 {
@@ -658,22 +661,22 @@ func (vb *VerifierBlock) ValidateBlock(
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
 	if err != nil {
-		return txRWSetMap, contractEventMap, timeLasts, err
+		return txRWSetMap, contractEventMap, timeLasts, nil, err
 	}
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts[TxRoot] = rootsLast
 
-	return txRWSetMap, contractEventMap, timeLasts, nil
+	return txRWSetMap, contractEventMap, timeLasts, nil, nil
 }
 
 // validateBlock, validate block and transactions
 func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	block, lastBlock *commonPb.Block, hashType string,
-	timeLasts map[string]int64, txRWSetMap map[string]*commonPb.TxRWSet) (
-	map[string][]*commonPb.ContractEvent, map[string]int64, error) {
+	timeLasts map[string]int64, txRWSetMap map[string]*commonPb.TxRWSet, mode protocol.VerifyMode) (
+	map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
 	// 1.block verify
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
-		return nil, timeLasts, err
+		return nil, timeLasts, nil, err
 	}
 	txResultMap := make(map[string]*commonPb.Result)
 	for _, tx := range block.GetTxs() {
@@ -687,7 +690,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
 	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+		return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
@@ -695,17 +698,17 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 
 	err := CheckVacuumBlock(block, vb.chainConf.ChainConfig().Consensus.Type)
 	if err != nil {
-		return nil, timeLasts, err
+		return nil, timeLasts, nil, err
 	}
 	// we must new a snapshot for the vacant block,
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
-		return nil, timeLasts, nil
+		return nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
 	if IsTxDuplicate(block.Txs) {
-		return nil, timeLasts, fmt.Errorf("tx duplicate")
+		return nil, timeLasts, nil, fmt.Errorf("tx duplicate")
 	}
 
 	// simulate with DAG, and verify read write set
@@ -720,7 +723,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	timeLasts[VM] = vmLasts
 
 	if block.Header.TxCount != uint32(len(txRWSetMap)) {
-		return nil, timeLasts, fmt.Errorf("simulate txcount expect %d, got %d",
+		return nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
 			block.Header.TxCount, len(txRWSetMap))
 	}
 
@@ -734,10 +737,10 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		Log:         vb.log,
 		Ac:          vb.ac,
 		TxPool:      vb.txPool,
-		Store:       vb.blockchainStore,
+		TxFilter:    vb.txFilter,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, err := verifiertx.verifierTxs(block)
+	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode)
 	vb.log.Warnf("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
@@ -746,7 +749,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 			vb.log.Warn("[Duplicate txs] delete the err txs")
 			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
 		}
-		return nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
+		return nil, timeLasts, rwSetVerifyFailTx, fmt.Errorf("verify failed [%d](%x), %s ",
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
 	//if protocol.CONSENSUS_VERIFY == mode && len(newAddTx) > 0 {
@@ -766,12 +769,12 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
 	if err != nil {
-		return contractEventMap, timeLasts, err
+		return contractEventMap, timeLasts, nil, err
 	}
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts[TxRoot] = rootsLast
 
-	return contractEventMap, timeLasts, nil
+	return contractEventMap, timeLasts, nil, nil
 }
 
 //nolint: staticcheck
@@ -825,6 +828,7 @@ type BlockCommitterConfig struct {
 	Subscriber      *subscriber.EventSubscriber
 	Verifier        protocol.BlockVerifier
 	StoreHelper     conf.StoreHelper
+	TxFilter        protocol.TxFilter
 }
 
 func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protocol.BlockCommitter, error) {
@@ -897,6 +901,7 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 		TxPool:                  blockchain.txPool,
 		LedgerCache:             blockchain.ledgerCache,
 		ChainConf:               blockchain.chainConf,
+		TxFilter:                config.TxFilter,
 		MsgBus:                  blockchain.msgBus,
 		MetricBlockCommitTime:   blockchain.metricBlockCommitTime,
 		MetricBlockIntervalTime: blockchain.metricBlockIntervalTime,
@@ -992,7 +997,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	lastProposed.AdditionalData = block.AdditionalData
 
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, blockInfo, err := chain.commonCommit.CommitBlock(
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err := chain.commonCommit.CommitBlock(
 		lastProposed, rwSetMap, conEventMap)
 	if err != nil {
 		chain.log.Errorf("block common commit failed: %s, blockHeight: (%d)",
@@ -1020,9 +1025,9 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	chain.blockInterval = curTime
 	chain.log.Infof(
 		"commit block [%d](count:%d,hash:%x)"+
-			"time used(check:%d,db:%d,ss:%d,conf:%d,pool:%d,pubConEvent:%d,other:%d,total:%d,interval:%d)",
+			"time used(check:%d,db:%d,ss:%d,conf:%d,pool:%d,pubConEvent:%d,filter:%d,other:%d,total:%d,interval:%d)",
 		height, lastProposed.Header.TxCount, lastProposed.Header.BlockHash,
-		checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, pubEvent, otherLasts, elapsed, interval)
+		checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, pubEvent, filterLasts, otherLasts, elapsed, interval)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
 		chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
@@ -1099,6 +1104,28 @@ func GetProposerId(
 	}
 
 	return proposerId, nil
+}
+
+func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
+	turboBlock.Header = block.Header
+	turboBlock.Dag = block.Dag
+	newTxs := make([]*commonPb.Transaction, len(block.Txs))
+	for i := range block.Txs {
+		newPayload := &commonPb.Payload{
+			TxId: block.Txs[i].Payload.TxId,
+		}
+
+		newTxs[i] = &commonPb.Transaction{
+			Payload:   newPayload,
+			Sender:    block.Txs[i].Sender,
+			Endorsers: block.Txs[i].Endorsers,
+			Result:    block.Txs[i].Result,
+		}
+	}
+	turboBlock.Txs = newTxs
+	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+
+	return turboBlock
 }
 
 func RecoverBlock(

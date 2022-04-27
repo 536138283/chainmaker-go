@@ -7,40 +7,52 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"crypto/sha256"
+	"errors"
 	"fmt"
+	"reflect"
+	"regexp"
 	"runtime"
-
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
-	"github.com/gogo/protobuf/proto"
-
 	"testing"
 
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
+	"chainmaker.org/chainmaker/localconf/v2"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2/mock"
+	"chainmaker.org/chainmaker/utils/v2"
+
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+)
+
+var (
+	TestPrivKeyFile = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.key"
+	TestCertFile    = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
 )
 
 //func TestDag(t *testing.T) {
 //	for i := 0; i < 10; i++ {
 //
-//		neb1 := &commonpb.DAG_Neighbor{
+//		neb1 := &commonPb.DAG_Neighbor{
 //			Neighbors: []int32{1, 2, 3, 4},
 //		}
-//		neb2 := &commonpb.DAG_Neighbor{
+//		neb2 := &commonPb.DAG_Neighbor{
 //			Neighbors: []int32{1, 2, 3, 4},
 //		}
-//		neb3 := &commonpb.DAG_Neighbor{
+//		neb3 := &commonPb.DAG_Neighbor{
 //			Neighbors: []int32{1, 2, 3, 4},
 //		}
-//		vs := make([]*commonpb.DAG_Neighbor, 3)
+//		vs := make([]*commonPb.DAG_Neighbor, 3)
 //		vs[0] = neb1
 //		vs[1] = neb2
 //		vs[2] = neb3
-//		dag := &commonpb.DAG{
+//		dag := &commonPb.DAG{
 //			Vertexes: vs,
 //		}
 //		marshal, _ := proto.Marshal(dag)
@@ -48,18 +60,18 @@ import (
 //	}
 //}
 //
-func newTx(txId string, contractId *commonpb.Contract, parameterMap map[string]string) *commonpb.Transaction {
+func newTx(txId string, contractId *commonPb.Contract, parameterMap map[string]string) *commonPb.Transaction {
 
-	var parameters []*commonpb.KeyValuePair
+	var parameters []*commonPb.KeyValuePair
 	for key, value := range parameterMap {
-		parameters = append(parameters, &commonpb.KeyValuePair{
+		parameters = append(parameters, &commonPb.KeyValuePair{
 			Key:   key,
 			Value: []byte(value),
 		})
 	}
 
-	return &commonpb.Transaction{
-		Payload: &commonpb.Payload{
+	return &commonPb.Transaction{
+		Payload: &commonPb.Payload{
 			ChainId:        "Chain1",
 			TxType:         0,
 			TxId:           txId,
@@ -69,9 +81,9 @@ func newTx(txId string, contractId *commonpb.Contract, parameterMap map[string]s
 			Timestamp:      0,
 			ExpirationTime: 0,
 		},
-		Result: &commonpb.Result{
-			Code: commonpb.TxStatusCode_SUCCESS,
-			ContractResult: &commonpb.ContractResult{
+		Result: &commonPb.Result{
+			Code: commonPb.TxStatusCode_SUCCESS,
+			ContractResult: &commonPb.ContractResult{
 				Code:          0,
 				Result:        nil,
 				Message:       "",
@@ -80,16 +92,61 @@ func newTx(txId string, contractId *commonpb.Contract, parameterMap map[string]s
 			},
 			RwSetHash: nil,
 		},
-		Sender: &commonpb.EndorsementEntry{Signer: &acPb.Member{OrgId: "org1", MemberInfo: []byte("cert1...")},
+		Sender: &commonPb.EndorsementEntry{Signer: &acPb.Member{OrgId: "org1", MemberInfo: []byte("cert1...")},
 			Signature: []byte("sign1"),
 		},
 	}
 
 }
 
-func newBlock() *commonpb.Block {
-	return &commonpb.Block{
-		Header: &commonpb.BlockHeader{
+func newTxWithPubKeyAndGasLimit(txId string, contractId *commonPb.Contract, parameterMap map[string]string, gasLimit uint64) *commonPb.Transaction {
+
+	var parameters []*commonPb.KeyValuePair
+	for key, value := range parameterMap {
+		parameters = append(parameters, &commonPb.KeyValuePair{
+			Key:   key,
+			Value: []byte(value),
+		})
+	}
+
+	return &commonPb.Transaction{
+		Payload: &commonPb.Payload{
+			ChainId:        "Chain1",
+			TxType:         0,
+			TxId:           txId,
+			ContractName:   contractId.Name,
+			Method:         "method",
+			Parameters:     parameters,
+			Timestamp:      0,
+			ExpirationTime: 0,
+			Limit:          &commonPb.Limit{GasLimit: gasLimit},
+		},
+		Result: &commonPb.Result{
+			Code: commonPb.TxStatusCode_SUCCESS,
+			ContractResult: &commonPb.ContractResult{
+				Code:          0,
+				Result:        nil,
+				Message:       "",
+				GasUsed:       0,
+				ContractEvent: nil,
+			},
+			RwSetHash: nil,
+		},
+		Sender: &commonPb.EndorsementEntry{
+			Signer: &acPb.Member{
+				OrgId:      "org1",
+				MemberType: acPb.MemberType_PUBLIC_KEY,
+				MemberInfo: []byte("-----BEGIN PUBLIC KEY-----\nMIIBCgKCAQEAvIU7PHVzanE3V6GHHS5OQLYRAh8gjKIzSVI+UKPRcy6hB8u/z7Is\n2oNPeOLW/N9umreCgi1nBhcjczOlbpIzq8YIMP/7HN3gnyPpsSp4y6GelKzl0YNy\nAN5huqyNU8dn2Du0xFeyzK6UGqmKb9Le1nfLZq6YtVB0NEfPfxzkTG15RrJg/eRn\nc0Lywl8tMwAptRE3ZJA791/aEJWdJLB52vqhM+fGn5+ol6OO/0mQAHdopIutYrZI\nzvM9GBZHdDEdz3f+44IRmc9qmzhoEEp5epD2LJDCtfNnwbKP/cwBaTMNCMqSibA4\nlMMMSwU88dmY6ZH4RCxDXaI9suMGzFh/fwIDAQAB\n-----END PUBLIC KEY-----"),
+			},
+			Signature: []byte("sign1"),
+		},
+	}
+
+}
+
+func newBlock() *commonPb.Block {
+	return &commonPb.Block{
+		Header: &commonPb.BlockHeader{
 			ChainId:        "",
 			BlockHeight:    0,
 			PreBlockHash:   nil,
@@ -104,20 +161,20 @@ func newBlock() *commonpb.Block {
 			TxCount:        0,
 			Signature:      nil,
 		},
-		Dag: &commonpb.DAG{
+		Dag: &commonPb.DAG{
 			Vertexes: nil,
 		},
 		Txs: nil,
-		AdditionalData: &commonpb.AdditionalData{
+		AdditionalData: &commonPb.AdditionalData{
 			ExtraData: nil,
 		},
 	}
 }
 
-func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (*mock.MockVmManager, []*commonpb.TxRWSet, []*commonpb.Transaction,
-	*mock.MockSnapshot, protocol.TxScheduler, *commonpb.Contract, *commonpb.Block) {
-	var txRWSetTable = make([]*commonpb.TxRWSet, txCount)
-	var txTable = make([]*commonpb.Transaction, txCount)
+func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
+	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
+	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
@@ -138,13 +195,13 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
 	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
-	contractId := &commonpb.Contract{
+	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
-		RuntimeType: commonpb.RuntimeType_WASMER,
+		RuntimeType: commonPb.RuntimeType_WASMER,
 	}
 
-	contractResult := &commonpb.ContractResult{
+	contractResult := &commonPb.ContractResult{
 		Code:    0,
 		Result:  nil,
 		Message: "",
@@ -154,7 +211,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
-	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonpb.Transaction{})
+	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
@@ -162,7 +219,151 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
 
-	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonpb.TxStatusCode_SUCCESS)
+	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
+}
+
+// prepare4 is used only by TestSchedule4
+func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
+	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
+	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	var txTable = make([]*commonPb.Transaction, txCount)
+
+	ctl := gomock.NewController(t)
+	snapshot := mock.NewMockSnapshot(ctl)
+	vmMgr := mock.NewMockVmManager(ctl)
+	chainConf := mock.NewMockChainConf(ctl)
+	crypto := configpb.CryptoConfig{
+		Hash: "SHA256",
+	}
+	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
+	chainConfig := &configpb.ChainConfig{
+		Crypto:   &crypto,
+		Contract: &contractConf,
+		AuthType: protocol.Identity,
+		Core: &configpb.CoreConfig{
+			EnableOptimizeChargeGas:  enableOptimizeChargeGas,
+			EnableSenderGroup:        enableSenderGroup,
+			EnableConflictsBitWindow: enableConflictsBitWindow,
+		},
+		AccountConfig: &configpb.GasAccountConfig{
+			EnableGas: true,
+		},
+	}
+	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
+
+	storeHelper := mock.NewMockStoreHelper(ctl)
+	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
+	var schedulerFactory TxSchedulerFactory
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	contractId := &commonPb.Contract{
+		Name:        "ContractName",
+		Version:     "1",
+		RuntimeType: commonPb.RuntimeType_WASMER,
+	}
+
+	sysContractId := &commonPb.Contract{
+		Name:        syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		Version:     "1",
+		RuntimeType: commonPb.RuntimeType_NATIVE,
+	}
+
+	contractResult := &commonPb.ContractResult{
+		Code:    0,
+		Result:  nil,
+		Message: "",
+	}
+	block := newBlock()
+
+	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
+	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
+	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
+	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
+	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
+	blockChainStore := mock.NewMockBlockchainStore(ctl)
+	// simulate calling GetContractByName(...) 3 times
+	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
+	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
+	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+
+	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
+	//snapshot.EXPECT().Seal()
+
+	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
+}
+
+// prepare5 is used only by TestSchedule5
+func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
+	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
+	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	var txTable = make([]*commonPb.Transaction, txCount)
+
+	ctl := gomock.NewController(t)
+	snapshot := mock.NewMockSnapshot(ctl)
+	vmMgr := mock.NewMockVmManager(ctl)
+	chainConf := mock.NewMockChainConf(ctl)
+	crypto := configpb.CryptoConfig{
+		Hash: "SHA256",
+	}
+	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
+	chainConfig := &configpb.ChainConfig{
+		Crypto:   &crypto,
+		Contract: &contractConf,
+		AuthType: protocol.Identity,
+		Core: &configpb.CoreConfig{
+			EnableOptimizeChargeGas:  enableOptimizeChargeGas,
+			EnableSenderGroup:        enableSenderGroup,
+			EnableConflictsBitWindow: enableConflictsBitWindow,
+		},
+		AccountConfig: &configpb.GasAccountConfig{
+			EnableGas: true,
+		},
+	}
+	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
+
+	storeHelper := mock.NewMockStoreHelper(ctl)
+	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
+	var schedulerFactory TxSchedulerFactory
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	contractId := &commonPb.Contract{
+		Name:        "ContractName",
+		Version:     "1",
+		RuntimeType: commonPb.RuntimeType_WASMER,
+	}
+
+	sysContractId := &commonPb.Contract{
+		Name:        syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		Version:     "1",
+		RuntimeType: commonPb.RuntimeType_NATIVE,
+	}
+
+	contractResult := &commonPb.ContractResult{
+		Code:    0,
+		Result:  nil,
+		Message: "",
+	}
+	block := newBlock()
+
+	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
+	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
+	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
+	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
+	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
+	blockChainStore := mock.NewMockBlockchainStore(ctl)
+	// simulate calling GetContractByName(...) 3 times
+	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
+	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
+	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+
+	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
+	//snapshot.EXPECT().Seal()
+
+	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
@@ -176,22 +377,22 @@ func TestSchedule(t *testing.T) {
 
 	txTable[0] = tx0
 	txTable[1] = tx1
-	txRWSetTable[0] = &commonpb.TxRWSet{
+	txRWSetTable[0] = &commonPb.TxRWSet{
 		TxId: tx0.Payload.TxId,
-		TxReads: []*commonpb.TxRead{{
+		TxReads: []*commonPb.TxRead{{
 			ContractName: contractId.Name,
 			Key:          []byte("K1"),
 			Value:        []byte("V"),
 		}},
-		TxWrites: []*commonpb.TxWrite{{
+		TxWrites: []*commonPb.TxWrite{{
 			ContractName: contractId.Name,
 			Key:          []byte("K2"),
 			Value:        []byte("V"),
 		}},
 	}
-	txRWSetTable[1] = &commonpb.TxRWSet{
+	txRWSetTable[1] = &commonPb.TxRWSet{
 		TxId: tx1.Payload.TxId,
-		TxReads: []*commonpb.TxRead{
+		TxReads: []*commonPb.TxRead{
 			{
 				ContractName: contractId.Name,
 				Key:          []byte("K2"),
@@ -203,7 +404,7 @@ func TestSchedule(t *testing.T) {
 				Value:        []byte("V"),
 			},
 		},
-		TxWrites: []*commonpb.TxWrite{{
+		TxWrites: []*commonPb.TxWrite{{
 			ContractName: contractId.Name,
 			Key:          []byte("K3"),
 			Value:        []byte("V"),
@@ -214,12 +415,12 @@ func TestSchedule(t *testing.T) {
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
 
-	dag := &commonpb.DAG{
-		Vertexes: []*commonpb.DAG_Neighbor{{}},
+	dag := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
 	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
 
-	txBatch := []*commonpb.Transaction{tx0, tx1}
+	txBatch := []*commonPb.Transaction{tx0, tx1}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
 	require.Nil(t, err)
 	require.NotNil(t, txSet)
@@ -239,22 +440,22 @@ func TestSchedule2(t *testing.T) {
 
 	txTable[0] = tx0
 	//txTable[1] = tx1
-	txRWSetTable[0] = &commonpb.TxRWSet{
+	txRWSetTable[0] = &commonPb.TxRWSet{
 		TxId: tx0.Payload.TxId,
-		TxReads: []*commonpb.TxRead{{
+		TxReads: []*commonPb.TxRead{{
 			ContractName: contractId.Name,
 			Key:          []byte("K1"),
 			Value:        []byte("V"),
 		}},
-		TxWrites: []*commonpb.TxWrite{{
+		TxWrites: []*commonPb.TxWrite{{
 			ContractName: contractId.Name,
 			Key:          []byte("K2"),
 			Value:        []byte("V"),
 		}},
 	}
-	//txRWSetTable[1] = &commonpb.TxRWSet{
+	//txRWSetTable[1] = &commonPb.TxRWSet{
 	//	TxId: tx1.Payload.TxId,
-	//	TxReads: []*commonpb.TxRead{
+	//	TxReads: []*commonPb.TxRead{
 	//		{
 	//			ContractName: contractId.Name,
 	//			Key:          []byte("K2"),
@@ -266,7 +467,7 @@ func TestSchedule2(t *testing.T) {
 	//			Value:        []byte("V"),
 	//		},
 	//	},
-	//	TxWrites: []*commonpb.TxWrite{{
+	//	TxWrites: []*commonPb.TxWrite{{
 	//		ContractName: contractId.Name,
 	//		Key:          []byte("K3"),
 	//		Value:        []byte("V"),
@@ -277,12 +478,12 @@ func TestSchedule2(t *testing.T) {
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
 
-	dag := &commonpb.DAG{
-		Vertexes: []*commonpb.DAG_Neighbor{{}},
+	dag := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
 	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
 
-	txBatch := []*commonpb.Transaction{tx0}
+	txBatch := []*commonPb.Transaction{tx0}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
 	require.Nil(t, err)
 	require.NotNil(t, txSet)
@@ -302,22 +503,22 @@ func TestSchedule3(t *testing.T) {
 
 	txTable[0] = tx0
 	//txTable[1] = tx1
-	txRWSetTable[0] = &commonpb.TxRWSet{
+	txRWSetTable[0] = &commonPb.TxRWSet{
 		TxId: tx0.Payload.TxId,
-		TxReads: []*commonpb.TxRead{{
+		TxReads: []*commonPb.TxRead{{
 			ContractName: contractId.Name,
 			Key:          []byte("K1"),
 			Value:        []byte("V"),
 		}},
-		TxWrites: []*commonpb.TxWrite{{
+		TxWrites: []*commonPb.TxWrite{{
 			ContractName: contractId.Name,
 			Key:          []byte("K2"),
 			Value:        []byte("V"),
 		}},
 	}
-	//txRWSetTable[1] = &commonpb.TxRWSet{
+	//txRWSetTable[1] = &commonPb.TxRWSet{
 	//	TxId: tx1.Payload.TxId,
-	//	TxReads: []*commonpb.TxRead{
+	//	TxReads: []*commonPb.TxRead{
 	//		{
 	//			ContractName: contractId.Name,
 	//			Key:          []byte("K2"),
@@ -329,7 +530,7 @@ func TestSchedule3(t *testing.T) {
 	//			Value:        []byte("V"),
 	//		},
 	//	},
-	//	TxWrites: []*commonpb.TxWrite{{
+	//	TxWrites: []*commonPb.TxWrite{{
 	//		ContractName: contractId.Name,
 	//		Key:          []byte("K3"),
 	//		Value:        []byte("V"),
@@ -340,12 +541,12 @@ func TestSchedule3(t *testing.T) {
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
 
-	dag := &commonpb.DAG{
-		Vertexes: []*commonpb.DAG_Neighbor{{}},
+	dag := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
 	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
 
-	txBatch := []*commonpb.Transaction{tx0}
+	txBatch := []*commonPb.Transaction{tx0}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
 	require.Nil(t, err)
 	require.NotNil(t, txSet)
@@ -353,6 +554,142 @@ func TestSchedule3(t *testing.T) {
 
 	fmt.Println(txSet)
 	fmt.Println(contractEven)
+}
+
+// TestSchedule4 test the flag `enableOptimizeChargeGas` is opened.
+func TestSchedule4(t *testing.T) {
+
+	fmt.Println("===== TestSchedule4() begin ==== ")
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
+	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 2)
+
+	parameters := make(map[string]string, 8)
+	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
+	tx1 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000002", contractId, parameters, 102)
+
+	txTable[0] = tx0
+	txTable[1] = tx1
+	txRWSetTable[0] = &commonPb.TxRWSet{
+		TxId: tx0.Payload.TxId,
+		TxReads: []*commonPb.TxRead{{
+			ContractName: contractId.Name,
+			Key:          []byte("K1"),
+			Value:        []byte("V"),
+		}},
+		TxWrites: []*commonPb.TxWrite{{
+			ContractName: contractId.Name,
+			Key:          []byte("K1"),
+			Value:        []byte("V1"),
+		}},
+	}
+	txRWSetTable[1] = &commonPb.TxRWSet{
+		TxId: tx1.Payload.TxId,
+		TxReads: []*commonPb.TxRead{
+			{
+				ContractName: contractId.Name,
+				Key:          []byte("K1"),
+				Value:        []byte("V"),
+			},
+			{
+				ContractName: contractId.Name,
+				Key:          []byte("K2"),
+				Value:        []byte("V"),
+			},
+		},
+		TxWrites: []*commonPb.TxWrite{{
+			ContractName: contractId.Name,
+			Key:          []byte("K2"),
+			Value:        []byte("V2"),
+		}},
+	}
+
+	// simulate Calling ApplyTxSimContext(...) 3 times
+	preCall1 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
+	preCall2 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall1).Return(true, 2).Times(1)
+	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
+	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
+	snapshot.EXPECT().Seal().Return()
+
+	dag := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{{}},
+	}
+	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+
+	txBatch := []*commonPb.Transaction{tx0, tx1}
+	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
+	require.Nil(t, err)
+	require.NotNil(t, txSet)
+	require.NotNil(t, contractEven)
+}
+
+// TestSchedule5 test the conflictsBitWindows features under flag `enableOptimizeChargeGas` is opened.
+func TestSchedule5(t *testing.T) {
+
+	fmt.Println("===== TestSchedule5() begin ==== ")
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
+	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
+	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2)
+
+	parameters := make(map[string]string, 8)
+	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
+	tx1 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000002", contractId, parameters, 102)
+
+	txTable[0] = tx0
+	txTable[1] = tx1
+	txRWSetTable[0] = &commonPb.TxRWSet{
+		TxId: tx0.Payload.TxId,
+		TxReads: []*commonPb.TxRead{{
+			ContractName: contractId.Name,
+			Key:          []byte("K1"),
+			Value:        []byte("V"),
+		}},
+		TxWrites: []*commonPb.TxWrite{{
+			ContractName: contractId.Name,
+			Key:          []byte("K1"),
+			Value:        []byte("V1"),
+		}},
+	}
+	txRWSetTable[1] = &commonPb.TxRWSet{
+		TxId: tx1.Payload.TxId,
+		TxReads: []*commonPb.TxRead{
+			{
+				ContractName: contractId.Name,
+				Key:          []byte("K3"),
+				Value:        []byte("V"),
+			},
+			{
+				ContractName: contractId.Name,
+				Key:          []byte("K4"),
+				Value:        []byte("V"),
+			},
+		},
+		TxWrites: []*commonPb.TxWrite{{
+			ContractName: contractId.Name,
+			Key:          []byte("K3"),
+			Value:        []byte("V3"),
+		}},
+	}
+
+	// simulate Calling ApplyTxSimContext(...) 3 times
+	preCall1 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
+	preCall2 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall1).Return(true, 2).Times(1)
+	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
+	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
+	snapshot.EXPECT().Seal().Return()
+
+	dag := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{{}},
+	}
+	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+
+	txBatch := []*commonPb.Transaction{tx0, tx1}
+	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
+	require.Nil(t, err)
+	require.NotNil(t, txSet)
+	require.NotNil(t, contractEven)
 }
 
 func TestSimulateWithDag(t *testing.T) {
@@ -364,9 +701,9 @@ func TestSimulateWithDag(t *testing.T) {
 	tx1 := newTx("a0000000000000000000000000000001", contractId, parameters)
 	tx2 := newTx("a0000000000000000000000000000002", contractId, parameters)
 
-	block.Txs = []*commonpb.Transaction{tx0, tx1, tx2}
-	block.Dag = &commonpb.DAG{
-		Vertexes: []*commonpb.DAG_Neighbor{
+	block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
+	block.Dag = &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
 			{
 				Neighbors: nil,
 			},
@@ -383,7 +720,7 @@ func TestSimulateWithDag(t *testing.T) {
 	snapshot.EXPECT().Seal().Return()
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 3).AnyTimes()
 
-	txRWSets := make(map[string]*commonpb.Result, len(block.Txs))
+	txRWSets := make(map[string]*commonPb.Result, len(block.Txs))
 	//
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txRWSets)
 
@@ -396,8 +733,8 @@ func TestSimulateWithDag(t *testing.T) {
 }
 
 func TestMarshalDag(t *testing.T) {
-	dag := &commonpb.DAG{
-		Vertexes: []*commonpb.DAG_Neighbor{
+	dag := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
 			{
 				Neighbors: []uint32{0},
 			},
@@ -409,8 +746,1494 @@ func TestMarshalDag(t *testing.T) {
 
 	mar, _ := proto.Marshal(dag)
 
-	dag2 := &commonpb.DAG{}
+	dag2 := &commonPb.DAG{}
 	proto.Unmarshal(mar, dag2)
 
 	require.Equal(t, len(dag2.Vertexes), 2)
+}
+
+func Test_errResult(t *testing.T) {
+	type args struct {
+		result *commonPb.Result
+		err    error
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    *commonPb.Result
+		want1   protocol.ExecOrderTxType
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			args: args{
+				result: &commonPb.Result{
+					ContractResult: &commonPb.ContractResult{
+						Message: "test err",
+					},
+				},
+				err: errors.New("test err"),
+			},
+			want: &commonPb.Result{
+				Code: commonPb.TxStatusCode_INVALID_PARAMETER,
+				ContractResult: &commonPb.ContractResult{
+					Code:    uint32(commonPb.TxStatusCode_TIMEOUT),
+					Message: "test err",
+				},
+			},
+			want1:   0,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, got1, err := errResult(tt.args.result, tt.args.err)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("errResult() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("errResult() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("errResult() got1 = %v, want %v", got1, tt.want1)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_parseParameter(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+	type args struct {
+		parameterPairs []*commonPb.KeyValuePair
+	}
+
+	ctrl := gomock.NewController(t)
+	vmM := mock.NewMockVmManager(ctrl)
+	chainConf := mock.NewMockChainConf(ctrl)
+	storeHelper := mock.NewMockStoreHelper(ctrl)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	vmM.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&commonPb.ContractResult{
+		Code: 0,
+	}, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS).AnyTimes()
+	keyReg, _ := regexp.Compile(protocol.DefaultStateRegex)
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    map[string][]byte
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: nil,
+				StoreHelper:     storeHelper,
+				keyReg:          keyReg,
+			},
+			args: args{
+				parameterPairs: []*commonPb.KeyValuePair{
+					{
+						Key:   "test",
+						Value: []byte("get"),
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: nil,
+				StoreHelper:     storeHelper,
+				keyReg:          keyReg,
+			},
+			args: args{
+				parameterPairs: []*commonPb.KeyValuePair{
+					{
+						Key:   "123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890123456890",
+						Value: []byte("get"),
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			got, err := ts.parseParameter(tt.args.parameterPairs, false)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("parseParameter() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("parseParameter() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_dumpDAG(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+	type args struct {
+		dag *commonPb.DAG
+		txs []*commonPb.Transaction
+	}
+
+	ctrl := gomock.NewController(t)
+	vmM := mock.NewMockVmManager(ctrl)
+	chainConf := mock.NewMockChainConf(ctrl)
+	storeHelper := mock.NewMockStoreHelper(ctrl)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	vmM.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&commonPb.ContractResult{
+		Code: 0,
+	}, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS).AnyTimes()
+
+	//_, _, _, _, _, contractId, _ := prepare(t, false, false, 2)
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: nil,
+				StoreHelper:     storeHelper,
+				keyReg:          nil,
+			},
+			args: args{
+				dag: &commonPb.DAG{},
+				txs: []*commonPb.Transaction{},
+			},
+		},
+		//{
+		//	name: "test1",
+		//	fields: fields{
+		//		lock:            sync.Mutex{},
+		//		VmManager:       vmM,
+		//		scheduleFinishC: make(chan bool),
+		//		log:             logger,
+		//		chainConf:       chainConf,
+		//		metricVMRunTime: nil,
+		//		StoreHelper:     storeHelper,
+		//		keyReg:          nil,
+		//	},
+		//	args: args{
+		//		dag: &commonPb.DAG{
+		//			Vertexes: []*commonPb.DAG_Neighbor{
+		//				{
+		//					Neighbors: []uint32{0, 1, 2, 3},
+		//				},
+		//				{
+		//					Neighbors: []uint32{4, 5, 6, 7},
+		//				},
+		//				{
+		//					Neighbors: []uint32{8, 9},
+		//				},
+		//			},
+		//		},
+		//		txs: []*commonPb.Transaction{
+		//			newTx("a0000000000000000000000000000001", contractId, make(map[string]string, 8)),
+		//		},
+		//	},
+		//},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			ts.dumpDAG(tt.args.dag, tt.args.txs)
+		})
+	}
+}
+
+func TestTxScheduler_chargeGasLimit(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+	type args struct {
+		accountMangerContract *commonPb.Contract
+		tx                    *commonPb.Transaction
+		txSimContext          protocol.TxSimContext
+		contractName          string
+		method                string
+		pk                    []byte
+		result                *commonPb.Result
+	}
+
+	ctrl := gomock.NewController(t)
+	vmM := mock.NewMockVmManager(ctrl)
+	storeHelper := mock.NewMockStoreHelper(ctrl)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	vmM.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&commonPb.ContractResult{
+		Code: 0,
+	}, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS).AnyTimes()
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantRe  *commonPb.Result
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				metricVMRunTime: nil,
+				StoreHelper:     storeHelper,
+				keyReg:          nil,
+			},
+			args: args{
+				accountMangerContract: &commonPb.Contract{
+					Name: syscontract.InitContract_CONTRACT_NAME.String(),
+				},
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+						Limit: &commonPb.Limit{
+							GasLimit: 100,
+						},
+					},
+				},
+				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					return txSimContext
+				}(),
+				result: &commonPb.Result{
+					Code: 0,
+				},
+			},
+			wantRe:  &commonPb.Result{},
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				metricVMRunTime: nil,
+				StoreHelper:     storeHelper,
+				keyReg:          nil,
+			},
+			args: args{
+				accountMangerContract: &commonPb.Contract{
+					Name: syscontract.InitContract_CONTRACT_NAME.String(),
+				},
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+					},
+				},
+				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					return txSimContext
+				}(),
+				result: &commonPb.Result{
+					Code:    0,
+					Message: "tx payload limit is nil",
+				},
+			},
+			wantRe: &commonPb.Result{
+				Message: "tx payload limit is nil",
+			},
+			wantErr: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				VmManager: func() protocol.VmManager {
+
+					vmM := mock.NewMockVmManager(ctrl)
+					vmM.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&commonPb.ContractResult{
+						Code:    uint32(commonPb.TxStatusCode_CONTRACT_FAIL),
+						Message: "invoke contract fail",
+					}, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_CONTRACT_FAIL).AnyTimes()
+
+					return vmM
+				}(),
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				metricVMRunTime: nil,
+				StoreHelper:     storeHelper,
+				keyReg:          nil,
+			},
+			args: args{
+				accountMangerContract: &commonPb.Contract{
+					Name: syscontract.InitContract_CONTRACT_NAME.String(),
+				},
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+						Limit: &commonPb.Limit{
+							GasLimit: 100,
+						},
+					},
+				},
+				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					return txSimContext
+				}(),
+				result: &commonPb.Result{
+					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
+					Message: "invoke contract fail",
+				},
+			},
+			wantRe: &commonPb.Result{
+				Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
+				Message: "invoke contract fail",
+				ContractResult: &commonPb.ContractResult{
+					Code:    uint32(commonPb.TxStatusCode_CONTRACT_FAIL),
+					Message: "invoke contract fail",
+				},
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			gotRe, err := ts.chargeGasLimit(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("chargeGasLimit() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotRe, tt.wantRe) {
+				t.Errorf("chargeGasLimit() gotRe = %v, want %v", gotRe, tt.wantRe)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_refundGas(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+	type args struct {
+		accountMangerContract *commonPb.Contract
+		tx                    *commonPb.Transaction
+		txSimContext          protocol.TxSimContext
+		contractName          string
+		method                string
+		pk                    []byte
+		result                *commonPb.Result
+		contractResultPayload *commonPb.ContractResult
+	}
+
+	ctrl := gomock.NewController(t)
+	vmM := mock.NewMockVmManager(ctrl)
+	storeHelper := mock.NewMockStoreHelper(ctrl)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	vmM.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(&commonPb.ContractResult{
+		Code: 0,
+	}, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS).AnyTimes()
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantRe  *commonPb.Result
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				VmManager:   vmM,
+				StoreHelper: storeHelper,
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log: logger,
+			},
+			args: args{
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+					},
+				},
+				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					return txSimContext
+				}(),
+				result: &commonPb.Result{
+					Code: 0,
+				},
+				contractResultPayload: &commonPb.ContractResult{
+					Code:   0,
+					Result: []byte("success"),
+				},
+			},
+			wantRe: &commonPb.Result{
+				Code:    0,
+				Message: "tx payload limit is nil",
+			},
+			wantErr: true,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				VmManager:   vmM,
+				StoreHelper: storeHelper,
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log: logger,
+			},
+			args: args{
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+						Limit: &commonPb.Limit{
+							GasLimit: 10,
+						},
+					},
+				},
+				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					return txSimContext
+				}(),
+				result: &commonPb.Result{
+					Code: 0,
+				},
+				contractResultPayload: &commonPb.ContractResult{
+					Code:    0,
+					Result:  []byte("success"),
+					GasUsed: 100,
+				},
+			},
+			wantRe: &commonPb.Result{
+				Code:    0,
+				Message: "gas limit is not enough, [limit:10]/[gasUsed:100]",
+			},
+			wantErr: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				VmManager:   vmM,
+				StoreHelper: storeHelper,
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log: logger,
+			},
+			args: args{
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+						Limit: &commonPb.Limit{
+							GasLimit: 200,
+						},
+					},
+				},
+				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					return txSimContext
+				}(),
+				result: &commonPb.Result{
+					Code: 0,
+				},
+				contractResultPayload: &commonPb.ContractResult{
+					Code:    0,
+					Result:  []byte("success"),
+					GasUsed: 100,
+				},
+			},
+			wantRe: &commonPb.Result{
+				Code: 0,
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			gotRe, err := ts.refundGas(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result, tt.args.contractResultPayload)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("refundGas() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotRe, tt.wantRe) {
+				t.Errorf("refundGas() gotRe = %v, want %v", gotRe, tt.wantRe)
+			}
+		})
+	}
+}
+
+const cert = "-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"
+
+func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+	type args struct {
+		txSimContext protocol.TxSimContext
+		tx           *commonPb.Transaction
+		contractName string
+		method       string
+	}
+
+	ctrl := gomock.NewController(t)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	tests := []struct {
+		name                      string
+		fields                    fields
+		args                      args
+		wantAccountMangerContract *commonPb.Contract
+		wantPk                    []byte
+		wantErr                   bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log: logger,
+			},
+			args: args{
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+					},
+				},
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+
+					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
+						OrgId:      "org1",
+						MemberType: acPb.MemberType_CERT,
+						MemberInfo: []byte(cert),
+					})
+					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).Return(&commonPb.Contract{
+						Name: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+					}, nil)
+
+					return txSimContext
+				}(),
+			},
+			wantAccountMangerContract: func() *commonPb.Contract {
+
+				return &commonPb.Contract{
+					Name: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+				}
+			}(),
+			wantPk: func() []byte {
+				member := cert
+				pubKeyBytes, err := publicKeyFromCert([]byte(member))
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+
+				return pubKeyBytes
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log: logger,
+			},
+			args: args{
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+					},
+				},
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).Return(nil, errors.New("txSimContext GetContractByName data is nil"))
+					return txSimContext
+				}(),
+			},
+			wantAccountMangerContract: func() *commonPb.Contract {
+				return nil
+			}(),
+			wantPk: func() []byte {
+				return nil
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: false,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log: logger,
+			},
+			args: args{
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+				tx: &commonPb.Transaction{
+					Payload: &commonPb.Payload{
+						TxType: commonPb.TxType_INVOKE_CONTRACT,
+					},
+				},
+				txSimContext: func() protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
+					txSimContext.EXPECT().GetSender().AnyTimes()
+					return txSimContext
+				}(),
+			},
+			wantAccountMangerContract: func() *commonPb.Contract {
+				return nil
+			}(),
+			wantPk: func() []byte {
+				return nil
+			}(),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			gotAccountMangerContract, gotPk, err := ts.getAccountMgrContractAndPk(tt.args.txSimContext, tt.args.tx, tt.args.contractName, tt.args.method)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getAccountMgrContractAndPk() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(gotAccountMangerContract, tt.wantAccountMangerContract) {
+				t.Errorf("getAccountMgrContractAndPk() gotAccountMangerContract = %v, want %v", gotAccountMangerContract, tt.wantAccountMangerContract)
+			}
+			if !reflect.DeepEqual(gotPk, tt.wantPk) {
+				t.Errorf("getAccountMgrContractAndPk() gotPk = %v, want %v", gotPk, tt.wantPk)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_checkGasEnable(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+
+	ctrl := gomock.NewController(t)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+	tests := []struct {
+		name   string
+		fields fields
+		want   bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+
+					return chainConf
+				}(),
+				log: logger,
+			},
+			want: true,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				chainConf: func() protocol.ChainConf {
+					chainConf := mock.NewMockChainConf(ctrl)
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: false,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				log: logger,
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			if got := ts.checkGasEnable(); got != tt.want {
+				t.Errorf("checkGasEnable() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_checkNativeFilter(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+	type args struct {
+		contractName string
+		method       string
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+	}{
+		{
+			name:   "test0",
+			fields: fields{},
+			args: args{
+				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
+				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
+			},
+			want: true,
+		},
+		{
+			name:   "test1",
+			fields: fields{},
+			args: args{
+				contractName: syscontract.SystemContract_CHAIN_QUERY.String(),
+				method:       syscontract.ChainQueryFunction_GET_BLOCK_BY_HASH.String(),
+			},
+			want: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			if got := ts.checkNativeFilter(tt.args.contractName, tt.args.method); got != tt.want {
+				t.Errorf("checkNativeFilter() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_getSenderPk(t *testing.T) {
+	type fields struct {
+		VmManager       protocol.VmManager
+		scheduleFinishC chan bool
+		log             protocol.Logger
+		chainConf       protocol.ChainConf
+		metricVMRunTime *prometheus.HistogramVec
+		StoreHelper     conf.StoreHelper
+		keyReg          *regexp.Regexp
+	}
+	type args struct {
+		txSimContext protocol.TxSimContext
+	}
+
+	ctrl := gomock.NewController(t)
+	vmM := mock.NewMockVmManager(ctrl)
+	chainConf := mock.NewMockChainConf(ctrl)
+	storeHelper := mock.NewMockStoreHelper(ctrl)
+	logger := mock.NewMockLogger(ctrl)
+	logger.EXPECT().Error(gomock.Any()).AnyTimes()
+
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: &prometheus.HistogramVec{},
+				StoreHelper:     storeHelper,
+				keyReg:          &regexp.Regexp{},
+			},
+			args: args{
+				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
+						OrgId:      "org1",
+						MemberType: acPb.MemberType_CERT,
+						MemberInfo: []byte(cert),
+					})
+					return txSimContext
+				}(ctrl),
+			},
+			want: func() []byte {
+
+				member := cert
+				pubKeyBytes, err := publicKeyFromCert([]byte(member))
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+
+				return pubKeyBytes
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: &prometheus.HistogramVec{},
+				StoreHelper:     storeHelper,
+				keyReg:          &regexp.Regexp{},
+			},
+			args: args{
+				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+
+					txSimContext.EXPECT().Get(syscontract.SystemContract_CERT_MANAGE.String(), []byte("2d2d2d2d2d424547494e2043455254494649434154452d2d2d2d2d0a4d4949436e544343416b53674177494241674944424d58784d416f4743437147534d343942414d434d49474b4d517377435159445651514745774a44546a45510a4d4134474131554543424d48516d5670616d6c755a7a45514d4134474131554542784d48516d5670616d6c755a7a45664d4230474131554543684d57643367740a62334a6e4d53356a61474670626d3168613256794c6d39795a7a45534d4241474131554543784d4a636d39766443316a5a584a304d53497749415944565151440a45786c6a5953353365433176636d63784c6d4e6f59576c75625746725a58497562334a6e4d423458445449794d444d774d5445794d4449794e6c6f5844544d790a4d4449794e7a45794d4449794e6c6f7767596f78437a414a42674e5642415954416b4e4f4d5241774467594456515149457764435a576c716157356e4d5241770a4467594456515148457764435a576c716157356e4d523877485159445651514b45785a3365433176636d63784c6d4e6f59576c75625746725a58497562334a6e0a4d524977454159445651514c45776c79623239304c574e6c636e5178496a416742674e5642414d5447574e684c6e64344c5739795a7a457559326868615735740a5957746c63693576636d63775754415442676371686b6a4f5051494242676771686b6a4f50514d4242774e434141526347456e544441635666316475495477490a53493253355a43306a64514f7968554435694132567631586e47304749455a4e744a4d7a4c4a59756e5a4348673071774646394856445474675557777a6458380a633856426f3447574d4947544d41344741315564447745422f77514541774942426a415042674e5648524d4241663845425441444151482f4d436b47413155640a446751694243427a7958766f326f50683168304b49426570666f7071322f526864396238663545684b654a6255556e734c7a424642674e5648524545506a41380a6767356a61474670626d3168613256794c6d39795a34494a6247396a5957786f62334e3067686c6a5953353365433176636d63784c6d4e6f59576c75625746720a5a58497562334a6e6877522f414141424d416f4743437147534d343942414d43413063414d455143494346764749767868647a6b754d736a6b6756524e504d350a6679344b484c473870444c7a6a38626e32644771416942305a424131642f754242504e4a4166337331667942345233502f67644b4269754441765a39347a6e330a5a673d3d0a2d2d2d2d2d454e442043455254494649434154452d2d2d2d2d0a")).Return([]byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"), nil)
+					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
+						OrgId:      "org1",
+						MemberType: acPb.MemberType_CERT_HASH,
+						MemberInfo: []byte(cert),
+					})
+					return txSimContext
+				}(ctrl),
+			},
+			want: func() []byte {
+
+				certificate, err := utils.ParseCert([]byte(cert))
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+
+				return pubKeyBytes
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: &prometheus.HistogramVec{},
+				StoreHelper:     storeHelper,
+				keyReg:          &regexp.Regexp{},
+			},
+			args: args{
+				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+
+					txSimContext.EXPECT().Get(
+						syscontract.SystemContract_CERT_MANAGE.String(),
+						[]byte("2d2d2d2d2d424547494e2043455254494649434154452d2d2d2d2d0a4d4949436e544343416b53674177494241674944424d58784d416f4743437147534d343942414d434d49474b4d517377435159445651514745774a44546a45510a4d4134474131554543424d48516d5670616d6c755a7a45514d4134474131554542784d48516d5670616d6c755a7a45664d4230474131554543684d57643367740a62334a6e4d53356a61474670626d3168613256794c6d39795a7a45534d4241474131554543784d4a636d39766443316a5a584a304d53497749415944565151440a45786c6a5953353365433176636d63784c6d4e6f59576c75625746725a58497562334a6e4d423458445449794d444d774d5445794d4449794e6c6f5844544d790a4d4449794e7a45794d4449794e6c6f7767596f78437a414a42674e5642415954416b4e4f4d5241774467594456515149457764435a576c716157356e4d5241770a4467594456515148457764435a576c716157356e4d523877485159445651514b45785a3365433176636d63784c6d4e6f59576c75625746725a58497562334a6e0a4d524977454159445651514c45776c79623239304c574e6c636e5178496a416742674e5642414d5447574e684c6e64344c5739795a7a457559326868615735740a5957746c63693576636d63775754415442676371686b6a4f5051494242676771686b6a4f50514d4242774e434141526347456e544441635666316475495477490a53493253355a43306a64514f7968554435694132567631586e47304749455a4e744a4d7a4c4a59756e5a4348673071774646394856445474675557777a6458380a633856426f3447574d4947544d41344741315564447745422f77514541774942426a415042674e5648524d4241663845425441444151482f4d436b47413155640a446751694243427a7958766f326f50683168304b49426570666f7071322f526864396238663545684b654a6255556e734c7a424642674e5648524545506a41380a6767356a61474670626d3168613256794c6d39795a34494a6247396a5957786f62334e3067686c6a5953353365433176636d63784c6d4e6f59576c75625746720a5a58497562334a6e6877522f414141424d416f4743437147534d343942414d43413063414d455143494346764749767868647a6b754d736a6b6756524e504d350a6679344b484c473870444c7a6a38626e32644771416942305a424131642f754242504e4a4166337331667942345233502f67644b4269754441765a39347a6e330a5a673d3d0a2d2d2d2d2d454e442043455254494649434154452d2d2d2d2d0a")).
+						Return([]byte("123456"), nil)
+
+					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
+						OrgId:      "org1",
+						MemberType: acPb.MemberType_CERT_HASH,
+						MemberInfo: []byte(cert),
+					})
+					return txSimContext
+				}(ctrl),
+			},
+			want: func() []byte {
+				return nil
+			}(),
+			wantErr: true,
+		},
+		{
+			name: "test3",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: &prometheus.HistogramVec{},
+				StoreHelper:     storeHelper,
+				keyReg:          &regexp.Regexp{},
+			},
+			args: args{
+				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
+						OrgId:      "org1",
+						MemberType: acPb.MemberType_PUBLIC_KEY,
+						MemberInfo: []byte(cert),
+					})
+					return txSimContext
+				}(ctrl),
+			},
+			want:    []byte(cert),
+			wantErr: false,
+		},
+		{
+			name: "test4",
+			fields: fields{
+				VmManager:       vmM,
+				scheduleFinishC: make(chan bool),
+				log:             logger,
+				chainConf:       chainConf,
+				metricVMRunTime: &prometheus.HistogramVec{},
+				StoreHelper:     storeHelper,
+				keyReg:          &regexp.Regexp{},
+			},
+			args: args{
+				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
+						OrgId:      "org1",
+						MemberType: acPb.MemberType_DID,
+						MemberInfo: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+					})
+					return txSimContext
+				}(ctrl),
+			},
+			want: func() []byte {
+				return nil
+			}(),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ts := &TxScheduler{
+				VmManager:       tt.fields.VmManager,
+				scheduleFinishC: tt.fields.scheduleFinishC,
+				log:             tt.fields.log,
+				chainConf:       tt.fields.chainConf,
+				metricVMRunTime: tt.fields.metricVMRunTime,
+				StoreHelper:     tt.fields.StoreHelper,
+				keyReg:          tt.fields.keyReg,
+			}
+			got, err := ts.getSenderPk(tt.args.txSimContext)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getSenderPk() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getSenderPk() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_publicKeyFromCert(t *testing.T) {
+	type args struct {
+		member []byte
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []byte
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			args: args{
+				member: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
+			},
+			want: func() []byte {
+
+				member := "-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"
+
+				certificate, err := utils.ParseCert([]byte(member))
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+
+				return pubKeyBytes
+			}(),
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			args: args{
+				member: []byte("123456"),
+			},
+			want: func() []byte {
+
+				member := "123456"
+				certificate, err := utils.ParseCert([]byte(member))
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				if err != nil {
+					t.Log(err)
+					return nil
+				}
+
+				return pubKeyBytes
+			}(),
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := publicKeyFromCert(tt.args.member)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("publicKeyFromCert() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("publicKeyFromCert() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_wholeCertInfo(t *testing.T) {
+	type args struct {
+		txSimContext protocol.TxSimContext
+		certHash     string
+	}
+
+	tests := []struct {
+		name    string
+		args    args
+		want    *commonPb.CertInfo
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			args: args{
+				txSimContext: func() protocol.TxSimContext {
+					ctrl := gomock.NewController(t)
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().Get(syscontract.SystemContract_CERT_MANAGE.String(), []byte("123456")).Return([]byte("123456"), nil)
+					return txSimContext
+				}(),
+				certHash: "123456",
+			},
+			want: &commonPb.CertInfo{
+				Hash: "123456",
+				Cert: []byte("123456"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			args: args{
+				txSimContext: func() protocol.TxSimContext {
+					ctrl := gomock.NewController(t)
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().Get(syscontract.SystemContract_CERT_MANAGE.String(), []byte("123456")).Return(nil, errors.New("txSimContext get is nil"))
+					return txSimContext
+				}(),
+				certHash: "123456",
+			},
+			want:    nil,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := wholeCertInfo(tt.args.txSimContext, tt.args.certHash)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("wholeCertInfo() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("wholeCertInfo() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestNewSenderGroup(t *testing.T) {
+	type args struct {
+		txBatch []*commonPb.Transaction
+	}
+
+	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2)
+
+	parameters := make(map[string]string, 8)
+
+	txBatch := make([]*commonPb.Transaction, 0)
+
+	txBatch = append(txBatch, newTx("a0000000000000000000000000000001", contractId, parameters))
+	tests := []struct {
+		name string
+		args args
+		want *SenderGroup
+	}{
+		{
+			name: "test0",
+			args: args{
+				txBatch: txBatch,
+			},
+			want: &SenderGroup{
+				txsMap:     getSenderTxsMap(txBatch),
+				doneTxKeyC: make(chan [32]byte, len(txBatch)),
+			},
+		},
+		{
+			name: "test1",
+			args: args{
+				txBatch: []*commonPb.Transaction{
+					newTx("a0000000000000000000000000000001", contractId, parameters),
+					newTx("a0000000000000000000000000000002", contractId, parameters),
+				},
+			},
+			want: &SenderGroup{
+				txsMap: getSenderTxsMap([]*commonPb.Transaction{
+					newTx("a0000000000000000000000000000001", contractId, parameters),
+					newTx("a0000000000000000000000000000002", contractId, parameters),
+				}),
+				doneTxKeyC: make(chan [32]byte, 2),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := NewSenderGroup(tt.args.txBatch); !reflect.DeepEqual(got.txsMap, tt.want.txsMap) {
+				t.Errorf("NewSenderGroup() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getSenderTxsMap(t *testing.T) {
+	type args struct {
+		txBatch []*commonPb.Transaction
+	}
+
+	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2)
+
+	parameters := make(map[string]string, 8)
+	tests := []struct {
+		name string
+		args args
+		want map[[32]byte][]*commonPb.Transaction
+	}{
+		{
+			name: "test0",
+			args: args{
+				txBatch: []*commonPb.Transaction{
+					newTx("a0000000000000000000000000000001", contractId, parameters),
+				},
+			},
+			want: func() map[[32]byte][]*commonPb.Transaction {
+				senderTxsMap := make(map[[32]byte][]*commonPb.Transaction)
+				tx := newTx("a0000000000000000000000000000001", contractId, parameters)
+				hashKey, _ := getSenderHashKey(tx)
+				senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
+				return senderTxsMap
+			}(),
+		},
+		{
+			name: "test1",
+			args: args{
+				txBatch: []*commonPb.Transaction{
+					newTx("a0000000000000000000000000000001", contractId, parameters),
+					newTx("a0000000000000000000000000000002", contractId, parameters),
+				},
+			},
+			want: func() map[[32]byte][]*commonPb.Transaction {
+				senderTxsMap := make(map[[32]byte][]*commonPb.Transaction)
+				tx1 := newTx("a0000000000000000000000000000001", contractId, parameters)
+				hashKey1, _ := getSenderHashKey(tx1)
+				senderTxsMap[hashKey1] = append(senderTxsMap[hashKey1], tx1)
+				tx2 := newTx("a0000000000000000000000000000002", contractId, parameters)
+				hashKey2, _ := getSenderHashKey(tx2)
+				senderTxsMap[hashKey2] = append(senderTxsMap[hashKey2], tx2)
+				return senderTxsMap
+			}(),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := getSenderTxsMap(tt.args.txBatch); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getSenderTxsMap() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func Test_getSenderHashKey(t *testing.T) {
+	type args struct {
+		tx *commonPb.Transaction
+	}
+
+	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2)
+
+	parameters := make(map[string]string, 8)
+	tests := []struct {
+		name    string
+		args    args
+		want    [32]byte
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			args: args{
+				tx: newTx("a0000000000000000000000000000001", contractId, parameters),
+			},
+			want: func() [32]byte {
+				keyBytes, _ := newTx("a0000000000000000000000000000001", contractId, parameters).Sender.GetSigner().Marshal()
+				return sha256.Sum256(keyBytes)
+			}(),
+			wantErr: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := getSenderHashKey(tt.args.tx)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("getSenderHashKey() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("getSenderHashKey() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }

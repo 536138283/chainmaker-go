@@ -8,6 +8,7 @@
 pid=`ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep |  awk  '{print $2}'`
 if [ ! -z ${pid} ];then
     kill $pid
+    echo "chainmaker is stopping..."
 fi
 
 enable_dockervm=`grep 'enable_dockervm:' ../config/{org_id}/chainmaker.yml | awk '{print $2}'`
@@ -21,4 +22,7 @@ if [ ${enable_dockervm} == "true" ];then
   done
 fi
 
+if [ ! -z ${pid} ];then
+    lsof -p $pid +r 1 &>/dev/null
+fi
 echo "chainmaker is stopped"
