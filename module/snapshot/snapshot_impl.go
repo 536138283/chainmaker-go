@@ -226,6 +226,8 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 
 	// Append to read-write-set table
 	s.txRWSetTable = append(s.txRWSetTable, txRWSet)
+	s.log.Debugf("apply tx: %s, rwset.TxReads", tx.Payload.TxId, txRWSet.TxReads)
+	s.log.Debugf("apply tx: %s, rwset.TxWrites", tx.Payload.TxId, txRWSet.TxWrites)
 	s.log.Debugf("apply tx: %s, rwset table size %d", tx.Payload.TxId, len(s.txRWSetTable))
 
 	// Add to tx result map

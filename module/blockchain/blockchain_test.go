@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	msgbusMock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
@@ -21,6 +19,8 @@ import (
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
+
+	"github.com/golang/mock/gomock"
 )
 
 const (
@@ -39,17 +39,6 @@ func TestNewBlockchain(t *testing.T) {
 	)
 	blockChain := NewBlockchain(genesis, chainId, msgBus, net)
 	t.Log(blockChain)
-}
-
-func TestGetConsensusType(t *testing.T) {
-	t.Log("TestGetConsensusType")
-
-	blockchainList := createBlockChain(t)
-	for _, blockchain := range blockchainList {
-		res := blockchain.getConsensusType()
-		t.Log(res)
-	}
-
 }
 
 func TestGetAccessControl(t *testing.T) {
@@ -260,6 +249,7 @@ func createBlockChain(t *testing.T) []*Blockchain {
 		blockchain.snapshotManager = snapshotManager
 		blockchain.consensus = consensus
 		blockchain.coreEngine = coreEngine
+		blockchain.genesis = "chain1"
 
 		// 合并列表
 		blockChainList = append(blockChainList, blockchain)
@@ -503,3 +493,60 @@ func getSigner(sk3 crypto.PrivateKey, sender *acPb.Member) protocol.SigningMembe
   return signer
 }
 */
+
+func TestBlockchain_getConsensusType(t *testing.T) {
+	type fields struct {
+		chainId   string
+		chainConf protocol.ChainConf
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   consensuspb.ConsensusType
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId: "chain1",
+				chainConf: func() protocol.ChainConf {
+					ctrl := gomock.NewController(t)
+					chainConf := mock.NewMockChainConf(ctrl)
+
+					var chainConfig = &configpb.ChainConfig{
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensusType,
+							Nodes: []*configpb.OrgConfig{
+								{
+									OrgId:  org1Id,
+									NodeId: []string{id},
+								},
+							},
+						},
+						Crypto: &configpb.CryptoConfig{Hash: "SHA256"},
+						Contract: &configpb.ContractConfig{
+							EnableSqlSupport: true,
+						},
+						Block: &configpb.BlockConfig{
+							BlockInterval: 5,
+						},
+					}
+
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+			},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bc := &Blockchain{
+				chainId:   tt.fields.chainId,
+				chainConf: tt.fields.chainConf,
+			}
+			if got := bc.getConsensusType(); got != tt.want {
+				t.Errorf("getConsensusType() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
