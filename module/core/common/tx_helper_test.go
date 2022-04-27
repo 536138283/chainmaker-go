@@ -34,6 +34,7 @@ func TestValidateTx(t *testing.T) {
 				ConsensusMessageTurbo: true,
 			},
 		},
+		Block: &config.BlockConfig{},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
 	verifyTx.chainConf = chainConf
@@ -706,6 +707,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 		txsHeightRet map[string]uint64
 		stat         *VerifyStat
 		block        *commonpb.Block
+		mode         protocol.VerifyMode
 	}
 
 	var (
@@ -718,6 +720,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 	txFilter.EXPECT().IsExists(gomock.Any()).AnyTimes()
 	log.EXPECT().Warnf(gomock.Any(), gomock.Any()).AnyTimes()
 	log.EXPECT().Warn(gomock.Any()).AnyTimes()
+	log.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
 
 	tests := []struct {
 		name    string
@@ -749,6 +752,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 								ConsensusMessageTurbo: true,
 							},
 						},
+						Block: &config.BlockConfig{},
 					}
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
@@ -781,6 +785,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 					TotalCount: 20,
 				},
 				block: nil,
+				mode:  protocol.SYNC_VERIFY,
 			},
 			want:    nil,
 			want1:   nil,
@@ -823,6 +828,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 								ConsensusMessageTurbo: false,
 							},
 						},
+						Block: &config.BlockConfig{},
 					}
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
@@ -868,97 +874,93 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 					TotalCount: 20,
 				},
 				block: nil,
+				mode:  protocol.SYNC_VERIFY,
 			},
 			want:    nil,
 			want1:   nil,
 			wantErr: true,
 		},
-		//{
-		//	name: "test2",
-		//	fields: fields{
-		//		block: block0,
-		//		txRWSetMap: func() map[string]*commonpb.TxRWSet {
-		//			txRet := map[string]*commonpb.TxRWSet{
-		//				"test2": {
-		//					TxReads: []*commonpb.TxRead{
-		//
-		//					},
-		//					TxWrites: []*commonpb.TxWrite{
-		//
-		//					},
-		//				},
-		//			}
-		//			return txRet
-		//		}(),
-		//		txResultMap: func() map[string]*commonpb.Result {
-		//			result := map[string]*commonpb.Result{
-		//				"test2": {
-		//					RwSetHash: []byte("test2"),
-		//				},
-		//			}
-		//			return result
-		//		}(),
-		//		log:    log,
-		//		txFilter:  txFilter,
-		//		txPool: txPool,
-		//		ac:     ac,
-		//		chainConf: func() protocol.ChainConf {
-		//			chainConf := newMockChainConf(t)
-		//			chainConfig := &config.ChainConfig{
-		//				Crypto: &config.CryptoConfig{Hash: "SHA256"},
-		//				Consensus: &config.ConsensusConfig{
-		//					Type: consensusPb.ConsensusType_TBFT,
-		//				},
-		//			}
-		//			chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
-		//			return chainConf
-		//		}(),
-		//	},
-		//	args: args{
-		//		txs: func() []*commonpb.Transaction {
-		//			txs := make([]*commonpb.Transaction, 0)
-		//			txs = []*commonpb.Transaction{
-		//				{
-		//					Payload: &commonpb.Payload{
-		//						ChainId:      "test2",
-		//						TxId:         "test2",
-		//						TxType:       commonpb.TxType_INVOKE_CONTRACT,
-		//						ContractName: "test2",
-		//						Method:       "test",
-		//					},
-		//					Result: &commonpb.Result{
-		//						RwSetHash: []byte("test2"),
-		//					},
-		//				},
-		//			}
-		//			return txs
-		//		}(),
-		//		txsRet: func() map[string]*commonpb.Transaction {
-		//			txRet := map[string]*commonpb.Transaction{
-		//				"test2": {
-		//					Payload: &commonpb.Payload{
-		//						ChainId:      "test2",
-		//						TxId:         "test2",
-		//						TxType:       commonpb.TxType_INVOKE_CONTRACT,
-		//						ContractName: "test2",
-		//						Method:       "test",
-		//					},
-		//				},
-		//			}
-		//			return txRet
-		//		}(),
-		//		txsHeightRet: map[string]uint64{
-		//			"test2": 0,
-		//		},
-		//		stat: &VerifyStat{
-		//			TotalCount: 20,
-		//		},
-		//		block: nil,
-		//	},
-		//	want:    nil,
-		//	want1:   nil,
-		//	wantErr: false,
-		//},
+		{
+			name: "test2", // test2 case verify tx timestamp is expired
+			fields: fields{
+				block: block0,
+				txRWSetMap: map[string]*commonpb.TxRWSet{
+					"test2": {
+						TxReads:  []*commonpb.TxRead{},
+						TxWrites: []*commonpb.TxWrite{},
+					},
+				},
+				txResultMap: map[string]*commonpb.Result{
+					"test2": {
+						RwSetHash: []byte("test2"),
+					},
+				},
+				log:      log,
+				txFilter: txFilter,
+				txPool:   txPool,
+				ac:       ac,
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConfig := &config.ChainConfig{
+						Crypto: &config.CryptoConfig{Hash: "SHA256"},
+						Consensus: &config.ConsensusConfig{
+							Type: consensusPb.ConsensusType_TBFT,
+						},
+						Core: &config.CoreConfig{
+							ConsensusTurboConfig: &config.ConsensusTurboConfig{
+								ConsensusMessageTurbo: true,
+							},
+						},
+						Block: &config.BlockConfig{
+							TxTimestampVerify: true,
+							TxTimeout:         30,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+			},
+			args: args{
+				txs: []*commonpb.Transaction{
+					{
+						Payload: &commonpb.Payload{
+							ChainId:      "test2",
+							TxId:         "test2",
+							TxType:       commonpb.TxType_INVOKE_CONTRACT,
+							ContractName: "test2",
+							Method:       "test2",
+							Timestamp:    utils.CurrentTimeSeconds() - 60,
+						},
+						Result: &commonpb.Result{
+							RwSetHash: []byte("test2"),
+						},
+					},
+				},
+				txsRet: map[string]*commonpb.Transaction{
+					"test2": {
+						Payload: &commonpb.Payload{
+							ChainId:      "test2",
+							TxId:         "test2",
+							TxType:       commonpb.TxType_INVOKE_CONTRACT,
+							ContractName: "test2",
+							Method:       "test2",
+							Timestamp:    utils.CurrentTimeSeconds() - 60,
+						},
+					},
+				},
+				txsHeightRet: map[string]uint64{
+					"test1": 0,
+				},
+				stat: &VerifyStat{
+					TotalCount: 20,
+				},
+				block: nil,
+				mode:  protocol.CONSENSUS_VERIFY,
+			},
+			want:    nil,
+			want1:   nil,
+			wantErr: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -973,7 +975,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 				ac:          tt.fields.ac,
 				chainConf:   tt.fields.chainConf,
 			}
-			got, got1, _, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block, protocol.SYNC_VERIFY)
+			got, got1, _, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block, tt.args.mode)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("verifyTx() error = %v, wantErr %v", err, tt.wantErr)
 				return
