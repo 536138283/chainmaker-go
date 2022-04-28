@@ -38,7 +38,7 @@ func TestValidateTx(t *testing.T) {
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
 	verifyTx.chainConf = chainConf
-	hashes, _, _, _, err := verifyTx.verifierTxs(block, protocol.SYNC_VERIFY)
+	hashes, _, _, _, err := verifyTx.verifierTxs(block, protocol.SYNC_VERIFY, QuickSyncVerifyMode)
 	require.Nil(t, err)
 
 	for _, hash := range hashes {
@@ -683,7 +683,7 @@ func TestValidateTx1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, tt.args.hashType, txFilter, tt.args.chainId, tt.args.ac, tt.args.proposalCache, protocol.SYNC_VERIFY); (err != nil) != tt.wantErr {
+			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, tt.args.hashType, txFilter, tt.args.chainId, tt.args.ac, tt.args.proposalCache, protocol.SYNC_VERIFY, QuickSyncVerifyMode); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateTx() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
@@ -975,7 +975,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 				ac:          tt.fields.ac,
 				chainConf:   tt.fields.chainConf,
 			}
-			got, got1, _, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block, tt.args.mode)
+			got, got1, _, err := vt.verifyTx(tt.args.txs, tt.args.txsRet, tt.args.stat, tt.args.block, protocol.SYNC_VERIFY, QuickSyncVerifyMode)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("verifyTx() error = %v, wantErr %v", err, tt.wantErr)
 				return
