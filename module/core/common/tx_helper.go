@@ -8,6 +8,7 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -276,7 +277,6 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			stat := &VerifyStat{
 				TotalCount: len(txs),
 			}
-			//txHashes1, newAddTxs, err1 := vt.verifyTx(txs, txsRet, stat, block)
 			txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode)
 			if err1 != nil {
 				vt.log.Errorf("VerifyTx => verifyTx(...) failed, err = %v", err1)
@@ -341,6 +341,18 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 				vt.chainConf.ChainConfig().Consensus.Type, vt.chainConf.ChainConfig().Crypto.Hash,
 				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac, vt.proposalCache, mode); err != nil {
 				return nil, nil, nil, err
+			}
+		}
+
+		if mode == protocol.CONSENSUS_VERIFY {
+			if vt.chainConf.ChainConfig().Block.TxTimestampVerify {
+				currentTime := utils.CurrentTimeSeconds()
+				if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
+					errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current timestamp:%d",
+						tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
+					vt.log.Errorf(errMsg)
+					return nil, nil, nil, errors.New(errMsg)
+				}
 			}
 		}
 
