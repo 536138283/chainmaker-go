@@ -3,7 +3,7 @@ module chainmaker.org/chainmaker-go
 go 1.15
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.2.0
+	chainmaker.org/chainmaker/chainconf/v2 v2.2.1
 	chainmaker.org/chainmaker/common/v2 v2.2.0
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.2.0
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.0
@@ -13,23 +13,23 @@ require (
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.0
 	chainmaker.org/chainmaker/localconf/v2 v2.2.0
 	chainmaker.org/chainmaker/logger/v2 v2.2.0
-	chainmaker.org/chainmaker/net-common v1.1.0
-	chainmaker.org/chainmaker/net-libp2p v1.1.0
-	chainmaker.org/chainmaker/net-liquid v1.0.0
+	chainmaker.org/chainmaker/net-common v1.1.1
+	chainmaker.org/chainmaker/net-libp2p v1.1.1
+	chainmaker.org/chainmaker/net-liquid v1.0.2
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.0
-	chainmaker.org/chainmaker/protocol/v2 v2.2.0
+	chainmaker.org/chainmaker/protocol/v2 v2.2.1
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.0
 	chainmaker.org/chainmaker/store/v2 v2.2.0
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.0
-	chainmaker.org/chainmaker/txpool-single/v2 v2.2.0
-	chainmaker.org/chainmaker/utils/v2 v2.2.0
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.0
-	chainmaker.org/chainmaker/vm-evm/v2 v2.2.0
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.0
-	chainmaker.org/chainmaker/vm-native/v2 v2.2.0
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.0
-	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.0
-	chainmaker.org/chainmaker/vm/v2 v2.2.0
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.1
+	chainmaker.org/chainmaker/txpool-single/v2 v2.2.1
+	chainmaker.org/chainmaker/utils/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-evm/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-native/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
+	chainmaker.org/chainmaker/vm/v2 v2.2.1
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
