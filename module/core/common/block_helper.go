@@ -40,10 +40,12 @@ var (
 const (
 	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
 	//blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
-	BlockSig = "blockSig"
-	VM       = "vm"
-	TxVerify = "txVerify"
-	TxRoot   = "txRoot"
+	BlockSig            = "blockSig"
+	VM                  = "vm"
+	TxVerify            = "txVerify"
+	TxRoot              = "txRoot"
+	QuickSyncVerifyMode = uint8(1) // quick sync verify mode
+	NormalVerifyMode    = uint8(0) // normal verify mode
 )
 
 type BlockBuilderConf struct {
@@ -633,7 +635,7 @@ func (vb *VerifierBlock) ValidateBlock(
 		TxFilter:      vb.txFilter,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode)
+	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, NormalVerifyMode)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
@@ -740,7 +742,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		TxFilter:    vb.txFilter,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode)
+	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
 	vb.log.Warnf("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts

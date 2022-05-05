@@ -8,6 +8,7 @@ package common
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"sync"
 
@@ -71,7 +72,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
 	consensusType consensuspb.ConsensusType, hashType string, filter protocol.TxFilter,
 	chainId string, ac protocol.AccessControlProvider, proposalCache protocol.ProposalCache,
-	mode protocol.VerifyMode) error {
+	mode protocol.VerifyMode, verifyMode uint8) error {
 	txInPool, existTx := txsRet[tx.Payload.TxId]
 	if existTx {
 		if consensuspb.ConsensusType_MAXBFT == consensusType &&
@@ -89,11 +90,15 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 		isExist bool
 		err     error
 	)
-	if mode == protocol.CONSENSUS_VERIFY {
-		isExist, err = filter.IsExists(tx.Payload.TxId, commonpb.RuleType_AbsoluteExpireTime)
-	} else {
-		isExist, err = filter.IsExists(tx.Payload.TxId)
+
+	if verifyMode != QuickSyncVerifyMode {
+		if mode == protocol.CONSENSUS_VERIFY {
+			isExist, err = filter.IsExists(tx.Payload.TxId, commonpb.RuleType_AbsoluteExpireTime)
+		} else {
+			isExist, err = filter.IsExists(tx.Payload.TxId)
+		}
 	}
+
 	stat.DBLasts += utils.CurrentTimeMillisSeconds() - startDBTicker
 	if err != nil || isExist {
 		err = fmt.Errorf("tx duplicate in DB (tx:%s) error: %v", tx.Payload.TxId, err)
@@ -245,7 +250,8 @@ func NewVerifierTx(conf *VerifierTxConfig) *VerifierTx {
 
 // VerifyTxs verify transactions in block
 // include if transaction is double spent, transaction signature
-func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMode) ([][]byte, []*commonpb.Transaction,
+func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
+	[][]byte, []*commonpb.Transaction,
 	[]*commonpb.Transaction, *RwSetVerifyFailTx, error) {
 
 	verifyBatch := utils.DispatchTxVerifyTask(block.Txs)
@@ -276,8 +282,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			stat := &VerifyStat{
 				TotalCount: len(txs),
 			}
-			//txHashes1, newAddTxs, err1 := vt.verifyTx(txs, txsRet, stat, block)
-			txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode)
+			txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
 			if err1 != nil {
 				vt.log.Errorf("VerifyTx => verifyTx(...) failed, err = %v", err1)
 				err = err1
@@ -328,7 +333,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 }
 
 func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*commonpb.Transaction,
-	stat *VerifyStat, block *commonpb.Block, mode protocol.VerifyMode) (
+	stat *VerifyStat, block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
 	[][]byte, []*commonpb.Transaction, []string, error) {
 	txHashes := make([][]byte, 0)
 	newAddTxs := make([]*commonpb.Transaction, 0) // tx that verified and not in txpool, need to be added to txpool
@@ -339,8 +344,20 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		if !IfOpenConsensusMessageTurbo(vt.chainConf) {
 			if err := ValidateTx(txsRet, tx, stat, newAddTxs, block,
 				vt.chainConf.ChainConfig().Consensus.Type, vt.chainConf.ChainConfig().Crypto.Hash,
-				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac, vt.proposalCache, mode); err != nil {
+				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac, vt.proposalCache, mode, verifyMode); err != nil {
 				return nil, nil, nil, err
+			}
+		}
+
+		if mode == protocol.CONSENSUS_VERIFY {
+			if vt.chainConf.ChainConfig().Block.TxTimestampVerify {
+				currentTime := utils.CurrentTimeSeconds()
+				if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
+					errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current timestamp:%d",
+						tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
+					vt.log.Errorf(errMsg)
+					return nil, nil, nil, errors.New(errMsg)
+				}
 			}
 		}
 
