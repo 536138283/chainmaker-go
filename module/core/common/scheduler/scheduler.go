@@ -8,19 +8,20 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/evmutils"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
 	"regexp"
 	"strconv"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/evmutils"
+	"github.com/gogo/protobuf/proto"
 
 	"github.com/hokaccha/go-prettyjson"
 
