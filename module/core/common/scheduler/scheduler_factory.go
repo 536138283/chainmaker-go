@@ -7,6 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker-go/module/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"fmt"
 	"regexp"
 	"sync"
 
@@ -46,11 +49,53 @@ func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf, stor
 	if err != nil {
 		log.Fatalf("compile default state regex error %v", err)
 	}
+	if chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
+		txScheduler.signer, err = initSigner(chainConf.ChainConfig(), localconf.ChainMakerConfig, log)
+		if err != nil {
+			log.Fatalf("init signer of TxScheduler failed: err = %v", err)
+		}
+	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		txScheduler.metricVMRunTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER, "metric_vm_run_time",
 			"VM run time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
 	}
 	return txScheduler
+}
+
+// init a signer with node private key
+func initSigner(
+	chainConfig *config.ChainConfig,
+	cmConfig *localconf.CMConfig,
+	log protocol.Logger) (protocol.SigningMember, error) {
+	var err error
+	var signingMember protocol.SigningMember
+	nodeConfig := cmConfig.NodeConfig
+
+	switch chainConfig.AuthType {
+	case protocol.PermissionedWithCert, protocol.Identity:
+		signingMember, err = accesscontrol.InitCertSigningMember(
+			chainConfig,
+			nodeConfig.OrgId,
+			nodeConfig.PrivKeyFile,
+			nodeConfig.PrivKeyPassword,
+			nodeConfig.CertFile)
+		if err != nil {
+			return nil, fmt.Errorf("InitCertSigningMember failed: err = %v", err)
+		}
+	case protocol.PermissionedWithKey, protocol.Public:
+		signingMember, err = accesscontrol.InitPKSigningMember(
+			chainConfig.Crypto.Hash,
+			nodeConfig.OrgId,
+			nodeConfig.PrivKeyFile,
+			nodeConfig.PrivKeyPassword)
+		if err != nil {
+			return nil, fmt.Errorf("InitPKSigningMember failed: err = %v", err)
+		}
+	default:
+		return nil, fmt.Errorf("unknown auth type: %v", chainConfig.AuthType)
+	}
+
+	return signingMember, nil
 }
 
 // newTxSchedulerEvidence building a evidence transaction scheduler
