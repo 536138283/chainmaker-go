@@ -19,7 +19,7 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220421130838-50644627e88c
 	chainmaker.org/chainmaker/protocol/v2 v2.2.1-0.20220420035842-6273a5991b73
 	chainmaker.org/chainmaker/sdk-go/v2 v2.0.1-0.20220418100041-cac8964d0a31
-	chainmaker.org/chainmaker/store/v2 v2.1.1-0.20220419065222-a59f36284484
+	chainmaker.org/chainmaker/store/v2 v2.2.1-0.20220506093443-87e13815d402
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220420034825-39cdf486a77f
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220420034855-578e1b594513
 	chainmaker.org/chainmaker/txpool-single/v2 v2.1.1-0.20220420034917-c503c5695ebc
@@ -36,6 +36,7 @@ require (
 	github.com/Workiva/go-datastructures v1.0.53
 	github.com/c-bata/go-prompt v0.2.2
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
+	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2
