@@ -250,7 +250,8 @@ func NewCertSigningMember(hashType string, member *pbac.Member, privateKeyPem,
 	var sk bccrypto.PrivateKey
 	nodeConfig := localconf.ChainMakerConfig.NodeConfig
 	if nodeConfig.P11Config.Enabled {
-		handle, err := getHSMHandle()
+		var handle interface{}
+		handle, err = getHSMHandle()
 		if err != nil {
 			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 		}

@@ -104,7 +104,8 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 		var sk bccrypto.PrivateKey
 		cfg := localconf.ChainMakerConfig.NodeConfig.P11Config
 		if cfg.Enabled {
-			handle, err := getHSMHandle()
+			var handle interface{}
+			handle, err = getHSMHandle()
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
 			}
@@ -139,7 +140,8 @@ func InitPKSigningMember(hashType,
 		var sk bccrypto.PrivateKey
 		p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
 		if p11Config.Enabled {
-			handle, err := getHSMHandle()
+			var handle interface{}
+			handle, err = getHSMHandle()
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
