@@ -225,5 +225,5 @@ func TestStopSyncBlock(t *testing.T) {
 	bz = getNodeStatusResp(t, 41)
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", bz, netPb.NetMsg_SYNC_BLOCK_MSG))
 	time.Sleep(1 * time.Second)
-	require.EqualValues(t, "pendingRecvHeight: 12, peers num: 1, blockStates num: 30, pendingBlocks num: 10, receivedBlocks num: 0", implSync.scheduler.getServiceState())
+	require.EqualValues(t, "pendingRecvHeight: 12, peers num: 1, blockStates num: 30, pendingBlocks num: 0, receivedBlocks num: 0", implSync.scheduler.getServiceState())
 }

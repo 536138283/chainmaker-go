@@ -146,7 +146,7 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 // receiveMajorityBlocks Check that most blocks are synchronized.
 // currTime - startTime > thresholdTime && maxHeight - localHeight <= thresholdBlocks
 func (sch *scheduler) receiveMajorityBlocks() bool {
-	if time.Now().Sub(sch.startTime) < sch.thresholdTime {
+	if time.Since(sch.startTime) < sch.thresholdTime {
 		return false
 	}
 	maxHeight := sch.maxHeight()
