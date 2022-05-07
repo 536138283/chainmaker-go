@@ -386,9 +386,9 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	var err error
 	var txCapacity uint32
 	if v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
-		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity) + 1
+		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
-		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)
+		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
 	}
 	if block.Header.TxCount > txCapacity {
 		return nil, nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)

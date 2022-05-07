@@ -392,7 +392,9 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		cutBlock = block
 	}
 
-	bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: block, TxsRwSet: rwSetMap, CutBlock: cutBlock})
+	bp.msgBus.Publish(msgbus.ProposedBlock,
+		&consensuspb.ProposalBlock{Block: block, TxsRwSet: rwSetMap, CutBlock: cutBlock})
+
 	//bp.log.Debugf("finalized block \n%s", utils.FormatBlock(block))
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	bp.log.Infof("proposer success [%d](txs:%d),fetch(times:%v,fetch:%v,filter:%v,total:%d), time used("+
