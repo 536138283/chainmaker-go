@@ -520,8 +520,8 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ContractQueryFunction_GET_DISABLED_CONTRACT_LIST.String(), pubPolicyForbidden)
 
 	// disable gas related native contract
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
+	//p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+	//	syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+

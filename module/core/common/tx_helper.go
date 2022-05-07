@@ -241,7 +241,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			}
 			txHashes1, newAddTxs, err1 := vt.verifyTx(txs, txsRet, txsHeightRet, stat, block, mode)
 			if err1 != nil {
-				vt.log.Error(err1)
+				vt.log.Errorf("VerifyTx => verifyTx(...) failed, err = %v", err1)
 				err = err1
 				return
 			}
@@ -298,6 +298,8 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			return nil, nil, err
 		}
 		if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
+			vt.log.Warnf("txId = %v, rwSet = %v, result = %v",
+				tx.Payload.TxId, rwSet, result)
 			return nil, nil, err
 		}
 		result.RwSetHash = rwsetHash

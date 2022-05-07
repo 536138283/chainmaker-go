@@ -252,6 +252,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
 
+	bp.log.Debugf("maxbftmode::BlockProposerImpl::proposing() => tx_pool status = %#v", bp.txPool)
+
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 	if selfProposedBlock != nil {
 		if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
