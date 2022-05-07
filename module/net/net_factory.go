@@ -56,12 +56,17 @@ func WithListenAddr(addr string) NetOption {
 }
 
 // WithCrypto set private key file and tls cert file for the net to create connection.
-func WithCrypto(pkMode bool, keyFile string, certFile string) NetOption {
+func WithCrypto(pkMode bool, keyFile, certFile string, encKeyFile, encCertFile string) NetOption {
 	return func(nf *NetFactory) error {
 		var (
-			err                 error
-			keyBytes, certBytes []byte
+			err                       error
+			keyBytes, certBytes       []byte
+			encKeyBytes, encCertBytes []byte
 		)
+		//try to read
+		encKeyBytes, _ = ioutil.ReadFile(encKeyFile)
+		encCertBytes, _ = ioutil.ReadFile(encCertFile)
+
 		keyBytes, err = ioutil.ReadFile(keyFile)
 		if err != nil {
 			return err
@@ -79,6 +84,8 @@ func WithCrypto(pkMode bool, keyFile string, certFile string) NetOption {
 			n.Prepare().SetKey(keyBytes)
 			if !pkMode {
 				n.Prepare().SetCert(certBytes)
+				n.Prepare().SetEncKey(encKeyBytes)
+				n.Prepare().SetEncCert(encCertBytes)
 			}
 		case protocol.Liquid:
 			n, _ := nf.n.(*liquid.LiquidNet)
@@ -86,6 +93,8 @@ func WithCrypto(pkMode bool, keyFile string, certFile string) NetOption {
 			n.CryptoConfig().KeyBytes = keyBytes
 			if !pkMode {
 				n.CryptoConfig().CertBytes = certBytes
+				n.CryptoConfig().EncCertBytes = encCertBytes
+				n.CryptoConfig().EncKeyBytes = encKeyBytes
 			}
 		}
 		return nil

@@ -16,7 +16,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -44,6 +44,8 @@ type CoreEngine struct {
 	proposedCache protocol.ProposalCache      // cache proposed block and proposal status
 	log           protocol.Logger             // logger
 	subscriber    *subscriber.EventSubscriber // block subsriber
+
+	netService protocol.NetService
 }
 
 // NewCoreEngine new a core engine.
@@ -57,6 +59,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		proposedCache:   cf.ProposalCache,
 		chainConf:       cf.ChainConf,
 		log:             cf.Log,
+		netService:      cf.NetService,
 	}
 
 	var schedulerFactory scheduler.TxSchedulerFactory
@@ -78,6 +81,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		AC:              cf.AC,
 		BlockchainStore: cf.BlockchainStore,
 		StoreHelper:     cf.StoreHelper,
+		TxFilter:        cf.TxFilter,
 	}
 	core.blockProposer, err = proposer.NewBlockProposer(proposerConfig, cf.Log)
 	if err != nil {
@@ -98,6 +102,8 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		TxPool:          cf.TxPool,
 		VmMgr:           cf.VmMgr,
 		StoreHelper:     cf.StoreHelper,
+		NetService:      cf.NetService,
+		TxFilter:        cf.TxFilter,
 	}
 	core.BlockVerifier, err = verifier.NewBlockVerifier(verifierConfig, cf.Log)
 	if err != nil {
@@ -117,12 +123,12 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		Subscriber:      cf.Subscriber,
 		Verifier:        core.BlockVerifier,
 		StoreHelper:     cf.StoreHelper,
+		TxFilter:        cf.TxFilter,
 	}
 	core.BlockCommitter, err = common.NewBlockCommitter(committerConfig, cf.Log)
 	if err != nil {
 		return nil, err
 	}
-
 	return core, nil
 }
 
@@ -145,25 +151,29 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 			c.blockProposer.OnReceiveProposeStatusChange(proposeStatus)
 		}
 	case msgbus.VerifyBlock:
-		if block, ok := message.Payload.(*commonpb.Block); ok {
-			c.BlockVerifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY) //nolint: errcheck
-		}
-	case msgbus.CommitBlock:
-		if block, ok := message.Payload.(*commonpb.Block); ok {
-			if err := c.BlockCommitter.AddBlock(block); err != nil {
-				c.log.Warnf("put block(%d,%x) error %s",
-					block.Header.BlockHeight,
-					block.Header.BlockHash,
-					err.Error())
+		go func() {
+			if block, ok := message.Payload.(*commonpb.Block); ok {
+				c.BlockVerifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY) //nolint: errcheck
 			}
-		}
+		}()
+	case msgbus.CommitBlock:
+		go func() {
+			if block, ok := message.Payload.(*commonpb.Block); ok {
+				if err := c.BlockCommitter.AddBlock(block); err != nil {
+					c.log.Warnf("put block(%d,%x) error %s",
+						block.Header.BlockHeight,
+						block.Header.BlockHash,
+						err.Error())
+				}
+			}
+		}()
 	case msgbus.TxPoolSignal:
 		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
 			c.blockProposer.OnReceiveTxPoolSignal(signal)
 		}
-	case msgbus.BuildProposal:
-		if proposal, ok := message.Payload.(*maxbft.BuildProposal); ok {
-			c.blockProposer.OnReceiveMaxBFTProposal(proposal)
+	case msgbus.RwSetVerifyFailTxs:
+		if signal, ok := message.Payload.(*consensuspb.RwSetVerifyFailTxs); ok {
+			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
 		}
 	}
 }
@@ -174,14 +184,18 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.VerifyBlock, c)
 	c.msgBus.Register(msgbus.CommitBlock, c)
 	c.msgBus.Register(msgbus.TxPoolSignal, c)
-	c.msgBus.Register(msgbus.BuildProposal, c)
+	//c.msgBus.Register(msgbus.BuildProposal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 
 // Stop, stop core engine
 func (c *CoreEngine) Stop() {
-	defer c.log.Infof("core stoped.")
+	defer c.log.Infof("core stopped.")
 	c.blockProposer.Stop() //nolint: errcheck
+}
+
+func (c *CoreEngine) GetBlockProposer() protocol.BlockProposer {
+	return c.blockProposer
 }
 
 func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
@@ -190,9 +204,6 @@ func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
 
 func (c *CoreEngine) GetBlockVerifier() protocol.BlockVerifier {
 	return c.BlockVerifier
-}
-
-func (c *CoreEngine) DiscardAboveHeight(baseHeight int64) {
 }
 
 func (c *CoreEngine) GetMaxbftHelper() protocol.MaxbftHelper {

@@ -156,6 +156,13 @@ rpc:
   # The minium value is 10.
   check_chain_conf_trust_roots_change_interval: 60
 
+  # restful api gateway
+  gateway:
+    # enable restful api
+    enabled: false
+    # max resp body buffer size, unit: M
+    max_resp_body_size: 16
+
   # Rate limit related settings
   # Here we use token bucket to limit rate.
   ratelimit:
@@ -192,6 +199,109 @@ rpc:
   # RPC server max send/receive message size in MB
   max_send_msg_size: 10
   max_recv_msg_size: 10
+
+tx_filter:
+  # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
+  # 3 is recommended.
+  type: 0
+  # sharding bird's nest config
+  # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
+  sharding:
+    # sharding number
+    length: 5
+    # sharding task timeout in seconds
+    timeout: 3
+    snapshot:
+      # serialize type
+      # 0 Serialization by height interval
+      # 1 Serialization by time interval
+      type: 0
+      timed:
+        # Time interval in seconds
+        interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
+      # file path
+      path: ../data/{org_id}/tx_filter
+    # bird's nest config
+    birds_nest:
+      # bird's nest size
+      length: 10
+      # Transaction filter rules
+      rules:
+        # Absolute expiration time /second
+        # Based on the number of transactions per day, for example, the current total capacity of blockchain transaction
+        # filters is 100 million, and there are 10 million transaction requests per day.
+        #
+        # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
+        #
+        # absolute expire time = total keys / number of requests per day
+        absolute_expire_time: 172800
+      cuckoo:
+        # 0 NormalKey; 1 TimestampKey
+        key_type: 1
+        # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
+        # If you are using a semi-sorted bucket, the default is 4
+        # 2 is recommended.
+        tags_per_bucket: 2
+        # num of bits for each item, which is length of tag(fingerprint)
+        # 11 is recommended.
+        bits_per_item: 11
+        # keys number
+        max_num_keys: 2000000
+        # 0 TableTypeSingle normal single table
+        # 1 TableTypePacked packed table, use semi-sort to save 1 bit per item
+        # 0 is recommended
+        table_type: 0
+  # bird's nest config
+  # total keys = birds_nest.length * birds_nest.cuckoo.max_num_keys
+  birds_nest:
+    # bird's nest size
+    length: 10
+    snapshot:
+      # serialize type
+      # 0 Serialization by height interval
+      # 1 Serialization by time interval
+      type: 0
+      timed:
+        # Time interval in seconds
+        interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
+      # file path
+      path: ../data/{org_id}/tx_filter
+    # Transaction filter rules
+    rules:
+      # Absolute expiration time /second
+      # Based on the number of transactions per day, for example, the current total capacity of blockchain transaction
+      # filters is 100 million, and there are 10 million transaction requests per day.
+      #
+      # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
+      #
+      # absolute expire time = total keys / number of requests per day
+      absolute_expire_time: 172800
+    cuckoo:
+      # 0 NormalKey; 1 TimestampKey
+      key_type: 1
+      # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
+      # If you are using a semi-sorted bucket, the default is 4
+      # 2 is recommended.
+      tags_per_bucket: 2
+      # num of bits for each item, which is length of tag(fingerprint)
+      # 11 is recommended.
+      bits_per_item: 11
+      # keys number
+      max_num_keys: 2000000
+      # 0 TableTypeSingle normal single table
+      # 1 TableTypePacked packed table, use semi-sort to save 1 bit per item
+      # 0 is recommended
+      table_type: 0
 
 # Monitor related settings
 monitor:
@@ -259,6 +369,17 @@ storage:
 
   # file size of .fdb, MB, default: 20
   logdb_segment_size: 128
+
+  # bigfilter config
+  enable_bigfilter: false    #default false
+  bigfilter_config:
+    redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"   #redis host:port
+    redis_password: abcpass  #redis password
+    tx_capacity: 1000000000   #support max transaction capacity
+    fp_rate: 0.000000001      #false postive rate
+  # RWC config               default 1000000
+  rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
+
 
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
@@ -364,8 +485,12 @@ vm:
   # Unix domain socket open, used for chainmaker and docker manager communication
   uds_open: true
   # Number of user Ids
-  user_num: 100
+  user_num: 1000
   # Timeout per transaction, Unit: second
   time_limit: 8
   # Max process for contract
-  max_concurrency: 50
+  max_concurrency: 500
+  # Grpc max send message size, Default size is 4, Unit: MB
+  max_send_msg_size: 10
+  # Grpc max receive message size, Default size is 4, Unit: MB
+  max_recv_msg_size: 10

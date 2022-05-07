@@ -28,6 +28,8 @@ type CoreEngineConfig struct {
 	VmMgr           protocol.VmManager
 	Subscriber      *subscriber.EventSubscriber // block subsriber
 	StoreHelper     StoreHelper
+	NetService      protocol.NetService
+	TxFilter        protocol.TxFilter
 }
 
 type StoreHelper interface {

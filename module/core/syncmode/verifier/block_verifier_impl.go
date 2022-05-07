@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"github.com/gogo/protobuf/proto"
+
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -46,11 +48,13 @@ type BlockVerifierImpl struct {
 	ac             protocol.AccessControlProvider // access control manager
 	log            protocol.Logger                // logger
 	txPool         protocol.TxPool                // tx pool to check if tx is duplicate
+	txFilter       protocol.TxFilter              // tx pool to check if tx is duplicate
 	//mu             sync.Mutex                     // to avoid concurrent map modify
 	verifierBlock *common.VerifierBlock
 	storeHelper   conf.StoreHelper
 
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
+	netService            protocol.NetService
 }
 
 type BlockVerifierConfig struct {
@@ -66,6 +70,8 @@ type BlockVerifierConfig struct {
 	TxPool          protocol.TxPool
 	VmMgr           protocol.VmManager
 	StoreHelper     conf.StoreHelper
+	NetService      protocol.NetService
+	TxFilter        protocol.TxFilter
 }
 
 func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol.BlockVerifier, error) {
@@ -85,6 +91,8 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		log:           log,
 		txPool:        config.TxPool,
 		storeHelper:   config.StoreHelper,
+		netService:    config.NetService,
+		txFilter:      config.TxFilter,
 	}
 
 	conf := &common.VerifierBlockConf{
@@ -99,6 +107,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		ProposalCache:   config.ProposedCache,
 		StoreHelper:     config.StoreHelper,
 		TxScheduler:     config.TxScheduler,
+		TxFilter:        config.TxFilter,
 	}
 	v.verifierBlock = common.NewVerifierBlock(conf)
 
@@ -107,7 +116,8 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
 	}
 
-	config.ChainConf.AddWatch(v)
+	config.ChainConf.AddWatch(v) // v220_compat Deprecated
+	config.MsgBus.Register(msgbus.ChainConfig, v)
 
 	return v, nil
 }
@@ -149,7 +159,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 			isValid = true
 			if protocol.CONSENSUS_VERIFY == mode {
 				// consensus mode, publish verify result to message bus
-				v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid, txRwSet))
+				v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, isValid, txRwSet, nil))
 			}
 			lastBlock, _ := v.proposalCache.GetProposedBlockByHashAndHeight(
 				block.Header.PreBlockHash, block.Header.BlockHeight-1)
@@ -160,15 +170,6 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 					block.Header.PreBlockHash,
 				)
 				return nil
-			}
-			cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
-			if len(cutBlocks) > 0 {
-				v.log.Infof(
-					"cut block block hash: %s, height: %v",
-					hex.EncodeToString(lastBlock.Header.BlockHash),
-					lastBlock.Header.BlockHeight,
-				)
-				v.cutBlocks(cutBlocks, lastBlock)
 			}
 
 			return nil
@@ -182,18 +183,19 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.log)
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
+		v.log.Errorf("RecoverBlock failed, err:%v", err)
 		return err
 	}
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
 
-	txRWSetMap, contractEventMap, timeLasts, err := v.validateBlock(newBlock, lastBlock)
+	txRWSetMap, contractEventMap, timeLasts, rwSetVerifyFailTx, err := v.validateBlock(newBlock, lastBlock, mode)
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
 		if protocol.CONSENSUS_VERIFY == mode {
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap))
+			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap, rwSetVerifyFailTx))
 		}
 
 		// rollback sql
@@ -226,13 +228,13 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 
 	isValid = true
 	if protocol.CONSENSUS_VERIFY == mode {
-		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap))
+		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap, nil))
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	v.log.Infof("verify success [%d,%x]"+
 		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
-		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[0], timeLasts[1],
-		timeLasts[2], timeLasts[3], lastPool, consensusCheckUsed, elapsed)
+		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[common.BlockSig], timeLasts[common.VM],
+		timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
@@ -283,17 +285,17 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.log)
+	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
-	contractEventMap, timeLasts, err := v.validateBlockWithRWSets(newBlock, lastBlock, txRWSetMap)
+	contractEventMap, timeLasts, rwSetVerifyFailTx, err := v.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
 		if protocol.CONSENSUS_VERIFY == mode {
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap))
+			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap, rwSetVerifyFailTx))
 		}
 
 		// rollback sql
@@ -313,7 +315,6 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		}
 	}
 	consensusCheckUsed := utils.CurrentTimeMillisSeconds() - beginConsensCheck
-	timeLasts = append(timeLasts, consensusCheckUsed)
 
 	if notSolo {
 		// verify success, cache block and read write set
@@ -328,14 +329,13 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 
 	isValid = true
 	if protocol.CONSENSUS_VERIFY == mode {
-		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap))
+		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap, nil))
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	timeLasts = append(timeLasts, elapsed)
 	v.log.Infof("verify success [%d,%x]"+
 		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
-		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[0], timeLasts[1],
-		timeLasts[2], timeLasts[3], lastPool, consensusCheckUsed, elapsed)
+		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[common.BlockSig], timeLasts[common.VM],
+		timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
@@ -343,28 +343,59 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	return nil
 }
 
-func (v *BlockVerifierImpl) Module() string {
-	return ModuleNameCore
+var _ msgbus.Subscriber = (*BlockVerifierImpl)(nil)
+
+// OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
+func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
+	switch msg.Topic {
+	case msgbus.ChainConfig:
+		dataStr, ok := msg.Payload.([]string)
+		if !ok {
+			return
+		}
+		dataBytes, err := hex.DecodeString(dataStr[0])
+		if err != nil {
+			v.log.Warn(err)
+			return
+		}
+		chainConfig := &chainConfConfig.ChainConfig{}
+		err = proto.Unmarshal(dataBytes, chainConfig)
+		if err != nil {
+			v.log.Warn(err)
+			return
+		}
+		v.chainConf.ChainConfig().Block = chainConfig.Block
+		v.log.Infof("[BlockVerifierImpl] receive msg, topic: %s, blockverify[%v]",
+			msg.Topic.String(), v.chainConf.ChainConfig().Block)
+	default:
+
+	}
 }
 
-func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) error {
-	v.chainConf.ChainConfig().Block = chainConfig.Block
-	v.log.Infof("update chainconf,blockverify[%v]", v.chainConf.ChainConfig().Block)
-	return nil
+func (v *BlockVerifierImpl) OnQuit() {
+	// nothing, implement Subscriber interface
 }
 
-func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (
-	map[string]*commonpb.TxRWSet, map[string][]*commonpb.ContractEvent, []int64, error) {
+func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode protocol.VerifyMode) (
+	map[string]*commonpb.TxRWSet,
+	map[string][]*commonpb.ContractEvent,
+	map[string]int64,
+	*common.RwSetVerifyFailTx, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
-	timeLasts := make([]int64, 0)
+	timeLasts := make(map[string]int64)
 	var err error
-	txCapacity := uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)
+	var txCapacity uint32
+	if v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
+		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
+	} else {
+		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
+	}
 	if block.Header.TxCount > txCapacity {
-		return nil, nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+		return nil, nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
 	}
 
 	if err = common.IsTxCountValid(block); err != nil {
-		return nil, nil, timeLasts, err
+		return nil, nil, timeLasts, nil, err
 	}
 
 	// proposed height == proposing height - 1
@@ -373,25 +404,25 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block) (
 	lastBlockHash := lastBlock.Header.BlockHash
 	err = common.CheckPreBlock(block, lastBlock, err, lastBlockHash, proposedHeight)
 	if err != nil {
-		return nil, nil, timeLasts, err
+		return nil, nil, timeLasts, nil, err
 	}
 
-	return v.verifierBlock.ValidateBlock(block, lastBlock, hashType, timeLasts)
+	return v.verifierBlock.ValidateBlock(block, lastBlock, hashType, timeLasts, mode)
 }
 
-func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block,
+func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block, mode protocol.VerifyMode,
 	txRWSetMap map[string]*commonpb.TxRWSet) (
-	map[string][]*commonpb.ContractEvent, []int64, error) {
+	map[string][]*commonpb.ContractEvent, map[string]int64, *common.RwSetVerifyFailTx, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
-	timeLasts := make([]int64, 0)
+	timeLasts := make(map[string]int64)
 	var err error
 	txCapacity := uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if block.Header.TxCount > txCapacity {
-		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+		return nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
 	}
 
 	if err = common.IsTxCountValid(block); err != nil {
-		return nil, timeLasts, err
+		return nil, timeLasts, nil, err
 	}
 
 	// proposed height == proposing height - 1
@@ -400,10 +431,10 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 	lastBlockHash := lastBlock.Header.BlockHash
 	err = common.CheckPreBlock(block, lastBlock, err, lastBlockHash, proposedHeight)
 	if err != nil {
-		return nil, timeLasts, err
+		return nil, timeLasts, nil, err
 	}
 
-	return v.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap)
+	return v.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap, mode)
 }
 
 func (v *BlockVerifierImpl) verifyVoteSig(block *commonpb.Block) error {
@@ -411,7 +442,7 @@ func (v *BlockVerifierImpl) verifyVoteSig(block *commonpb.Block) error {
 }
 
 func parseVerifyResult(block *commonpb.Block, isValid bool,
-	txsRwSet map[string]*commonpb.TxRWSet) *consensuspb.VerifyResult {
+	txsRwSet map[string]*commonpb.TxRWSet, rwSetVerifyFailTxs *common.RwSetVerifyFailTx) *consensuspb.VerifyResult {
 	verifyResult := &consensuspb.VerifyResult{
 		VerifiedBlock: block,
 		TxsRwSet:      txsRwSet,
@@ -422,28 +453,10 @@ func parseVerifyResult(block *commonpb.Block, isValid bool,
 	} else {
 		verifyResult.Msg = "FAIL"
 		verifyResult.Code = consensuspb.VerifyResult_FAIL
-	}
-	return verifyResult
-}
-
-func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
-	cutTxs := make([]*commonpb.Transaction, 0)
-	txMap := make(map[string]interface{})
-	for _, tx := range blockToKeep.Txs {
-		txMap[tx.Payload.TxId] = struct{}{}
-	}
-	for _, blockToCut := range blocksToCut {
-		v.log.Infof("cut block block hash: %s, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
-		for _, txToCut := range blockToCut.Txs {
-			if _, ok := txMap[txToCut.Payload.TxId]; ok {
-				// this transaction is kept, do NOT cut it.
-				continue
-			}
-			v.log.Debugf("cut tx hash: %s", txToCut.Payload.TxId)
-			cutTxs = append(cutTxs, txToCut)
+		verifyResult.RwSetVerifyFailTxs = &consensuspb.RwSetVerifyFailTxs{
+			TxIds:       rwSetVerifyFailTxs.TxIds,
+			BlockHeight: rwSetVerifyFailTxs.BlockHeight,
 		}
 	}
-	if len(cutTxs) > 0 {
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
-	}
+	return verifyResult
 }

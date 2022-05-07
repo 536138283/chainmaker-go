@@ -10,8 +10,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/golang/mock/gomock"
-
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	msgbusMock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
@@ -21,6 +19,8 @@ import (
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
+
+	"github.com/golang/mock/gomock"
 )
 
 const (
@@ -39,17 +39,6 @@ func TestNewBlockchain(t *testing.T) {
 	)
 	blockChain := NewBlockchain(genesis, chainId, msgBus, net)
 	t.Log(blockChain)
-}
-
-func TestGetConsensusType(t *testing.T) {
-	t.Log("TestGetConsensusType")
-
-	blockchainList := createBlockChain(t)
-	for _, blockchain := range blockchainList {
-		res := blockchain.getConsensusType()
-		t.Log(res)
-	}
-
 }
 
 func TestGetAccessControl(t *testing.T) {
@@ -90,12 +79,12 @@ func createBlockChain(t *testing.T) []*Blockchain {
 	for i := 0; i < 6; i++ {
 
 		var (
-			genesis         = "test" + strconv.Itoa(i)
-			chainId         = "Chain" + strconv.Itoa(i)
-			ctrl            = gomock.NewController(t)
-			chainConf       = mock.NewMockChainConf(ctrl)
-			ac              = mock.NewMockAccessControlProvider(ctrl)
-			watcher         = mock.NewMockWatcher(ctrl)
+			genesis   = "test" + strconv.Itoa(i)
+			chainId   = "Chain" + strconv.Itoa(i)
+			ctrl      = gomock.NewController(t)
+			chainConf = mock.NewMockChainConf(ctrl)
+			ac        = mock.NewMockAccessControlProvider(ctrl)
+			//watcher         = mock.NewMockWatcher(ctrl)
 			msgbusNew       = msgbusMock.NewMockMessageBus(ctrl)
 			syncService     = mock.NewMockSyncService(ctrl)
 			coreEngine      = mock.NewMockCoreEngine(ctrl)
@@ -122,16 +111,16 @@ func createBlockChain(t *testing.T) []*Blockchain {
 
 		consensusType = getConsensusType(i)
 
-		chainConf.EXPECT().AddWatch(gomock.Any()).AnyTimes().Return()
-		chainConf.EXPECT().AddVmWatch(gomock.Any()).AnyTimes().Return()
+		//chainConf.EXPECT().AddWatch(gomock.Any()).AnyTimes().Return()
+		//chainConf.EXPECT().AddVmWatch(gomock.Any()).AnyTimes().Return()
 		chainConf.EXPECT().Init().AnyTimes().Return(nil)
 		chainConf.EXPECT().GetChainConfigFromFuture(gomock.Any()).AnyTimes().Return(nil, nil)
 		chainConf.EXPECT().GetChainConfigAt(gomock.Any()).AnyTimes().Return(nil, nil)
 		chainConf.EXPECT().GetConsensusNodeIdList().AnyTimes().Return(nil, nil)
-		chainConf.EXPECT().CompleteBlock(gomock.Any()).AnyTimes().Return(nil)
+		//chainConf.EXPECT().CompleteBlock(gomock.Any()).AnyTimes().Return(nil)
 
 		ac.EXPECT().GetHashAlg().AnyTimes().Return(genesis) // 随机id
-		watcher.EXPECT().Watch(chainConf).AnyTimes().Return(nil)
+		//watcher.EXPECT().Watch(chainConf).AnyTimes().Return(nil)
 		coreEngine.EXPECT().GetBlockVerifier().AnyTimes().Return(nil)
 		coreEngine.EXPECT().GetBlockCommitter().AnyTimes().Return(nil)
 		coreEngine.EXPECT().Start().AnyTimes()
@@ -260,6 +249,7 @@ func createBlockChain(t *testing.T) []*Blockchain {
 		blockchain.snapshotManager = snapshotManager
 		blockchain.consensus = consensus
 		blockchain.coreEngine = coreEngine
+		blockchain.genesis = "chain1"
 
 		// 合并列表
 		blockChainList = append(blockChainList, blockchain)
@@ -503,3 +493,60 @@ func getSigner(sk3 crypto.PrivateKey, sender *acPb.Member) protocol.SigningMembe
   return signer
 }
 */
+
+func TestBlockchain_getConsensusType(t *testing.T) {
+	type fields struct {
+		chainId   string
+		chainConf protocol.ChainConf
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		want   consensuspb.ConsensusType
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				chainId: "chain1",
+				chainConf: func() protocol.ChainConf {
+					ctrl := gomock.NewController(t)
+					chainConf := mock.NewMockChainConf(ctrl)
+
+					var chainConfig = &configpb.ChainConfig{
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensusType,
+							Nodes: []*configpb.OrgConfig{
+								{
+									OrgId:  org1Id,
+									NodeId: []string{id},
+								},
+							},
+						},
+						Crypto: &configpb.CryptoConfig{Hash: "SHA256"},
+						Contract: &configpb.ContractConfig{
+							EnableSqlSupport: true,
+						},
+						Block: &configpb.BlockConfig{
+							BlockInterval: 5,
+						},
+					}
+
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+			},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bc := &Blockchain{
+				chainId:   tt.fields.chainId,
+				chainConf: tt.fields.chainConf,
+			}
+			if got := bc.getConsensusType(); got != tt.want {
+				t.Errorf("getConsensusType() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

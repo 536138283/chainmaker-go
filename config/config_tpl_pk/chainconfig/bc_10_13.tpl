@@ -38,7 +38,7 @@ contract:
 
 vm:
   #0:chainmaker, 1:zxl, 2:ethereum(reserved)
-  addr_type: 1
+  addr_type: 0
   # support vm list
   support_list:
     - "wasmer"
@@ -82,8 +82,8 @@ core:
 
   # Consensus message compression related settings
   # consensus_turbo_config:
-    # If consensus message compression is enabled or not.
-    # consensus_message_turbo: true
+    # If consensus message compression is enabled or not(solo could not use consensus message turbo).
+    # consensus_message_turbo: false
 
     # Max retry count of fetching transaction in txpool by txid.
     # retry_time: 500

@@ -13,6 +13,18 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker-go/module/txfilter"
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
+	"chainmaker.org/chainmaker/chainconf/v2"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/store/v2"
+	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/vm/v2"
+
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core"
@@ -24,19 +36,12 @@ import (
 	blockSync "chainmaker.org/chainmaker-go/module/sync"
 	"chainmaker.org/chainmaker-go/module/txpool"
 	componentVm "chainmaker.org/chainmaker-go/module/vm"
-	"chainmaker.org/chainmaker/chainconf/v2"
 	"chainmaker.org/chainmaker/common/v2/container"
 	consensusUtils "chainmaker.org/chainmaker/consensus-utils/v2"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/store/v2"
 	"chainmaker.org/chainmaker/store/v2/conf"
-	"chainmaker.org/chainmaker/utils/v2"
-	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -56,6 +61,8 @@ func (bc *Blockchain) Init() (err error) {
 		{moduleNameLedger: bc.initCache},
 		// init chain config , must latter than store module
 		{moduleNameChainConf: bc.initChainConf},
+		// init tx filter , must latter than store module
+		{moduleNameTxFilter: bc.initTxFilter},
 	}
 
 	if err := bc.initBaseModules(baseModules); err != nil {
@@ -118,6 +125,8 @@ func (bc *Blockchain) InitForRebuildDbs() (err error) {
 		{moduleNameLedger: bc.initCache},
 		// init chain config , must latter than store module
 		{moduleNameChainConf: bc.initChainConf},
+		// init tx filter , must latter than store module
+		{moduleNameTxFilter: bc.initTxFilter},
 	}
 	if err := bc.initBaseModules(baseModules); err != nil {
 		return err
@@ -268,8 +277,10 @@ func (bc *Blockchain) initOldStore() (err error) {
 		config.ResultDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
 	config.HistoryDbConfig.LevelDbConfig["store_path"] =
 		config.HistoryDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	config.TxExistDbConfig.LevelDbConfig["store_path"] =
-		config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
+	if config.TxExistDbConfig != nil {
+		config.TxExistDbConfig.LevelDbConfig["store_path"] =
+			config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
+	}
 	if err != nil {
 		return err
 	}
@@ -337,6 +348,11 @@ func (bc *Blockchain) initChainConf() (err error) {
 		return fmt.Errorf("auth type of chain config mismatch the local config")
 	}
 
+	protocol.ParametersValueMaxLength = bc.chainConf.ChainConfig().Block.TxParameterSize * 1024 * 1024
+	if bc.chainConf.ChainConfig().Block.TxParameterSize <= 0 {
+		protocol.ParametersValueMaxLength = protocol.DefaultParametersValueMaxSize * 1024 * 1024
+	}
+
 	bc.chainNodeList, err = bc.chainConf.GetConsensusNodeIdList()
 	if err != nil {
 		bc.log.Errorf("load node list of chain config failed, %s", err)
@@ -345,10 +361,12 @@ func (bc *Blockchain) initChainConf() (err error) {
 	bc.initModules[moduleNameChainConf] = struct{}{}
 
 	// register myself as config watcher
+	bc.msgBus.Register(msgbus.ChainConfig, bc)
+
+	// v220_compat Deprecated
+	// register myself as config watcher
 	bc.chainConf.AddWatch(bc)
-	//if localconf.ChainMakerConfig.StorageConfig.StateDbConfig.IsSqlDB() {
-	//	panic("init chain conf fail. sql the future feature")
-	//}
+
 	return
 }
 
@@ -459,7 +477,7 @@ func (bc *Blockchain) initAC() (err error) {
 	//	return
 	//}
 	acFactory := accesscontrol.ACFactory()
-	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog, bc.msgBus)
 	if err != nil {
 		bc.log.Errorf("new ac provider failed, %s", err.Error())
 		return
@@ -513,6 +531,7 @@ func (bc *Blockchain) initTxPool() (err error) {
 	currentTxPool, err := txPoolProvider(
 		localconf.ChainMakerConfig.NodeConfig.NodeId,
 		bc.chainId,
+		bc.txFilter,
 		bc.store,
 		bc.msgBus,
 		bc.chainConf,
@@ -538,6 +557,7 @@ func (bc *Blockchain) initVM() (err error) {
 		bc.log.Infof("vm module existed, ignore.")
 		return
 	}
+	vmlog := logger.GetLoggerByChain(logger.MODULE_VM, bc.chainId)
 	// init VM
 	if bc.netService == nil {
 		/*
@@ -585,6 +605,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.ac,
 			&soloChainNodesInfoProvider{},
 			bc.chainConf,
+			vmlog,
 		)
 	} else {
 		/*
@@ -632,6 +653,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.ac,
 			bc.netService.GetChainNodesInfoProvider(),
 			bc.chainConf,
+			vmlog,
 		)
 	}
 	bc.initModules[moduleNameVM] = struct{}{}
@@ -658,7 +680,7 @@ func (bc *Blockchain) initCore() (err error) {
 	} else {
 		bc.snapshotManager = snapshotFactory.NewSnapshotManager(bc.store, log)
 	}
-
+	log = logger.GetLoggerByChain(logger.MODULE_CORE, bc.chainId)
 	// init coreEngine module
 	coreEngineConfig := &providerConf.CoreEngineConfig{
 		ChainId:         bc.chainId,
@@ -670,12 +692,14 @@ func (bc *Blockchain) initCore() (err error) {
 		ChainConf:       bc.chainConf,
 		AC:              bc.ac,
 		BlockchainStore: bc.store,
-		Log:             logger.GetLoggerByChain(logger.MODULE_CORE, bc.chainId),
+		Log:             log,
 		VmMgr:           bc.vmMgr,
 		ProposalCache:   bc.proposalCache,
 		Subscriber:      bc.eventSubscriber,
+		NetService:      bc.netService,
+		TxFilter:        bc.txFilter,
 	}
-
+	// 时间戳
 	coreEngineFactory := core.Factory()
 	bc.coreEngine, err = coreEngineFactory.NewConsensusEngine(bc.getConsensusType().String(), coreEngineConfig)
 	if err != nil {
@@ -765,6 +789,26 @@ func (bc *Blockchain) initSubscriber() error {
 	}
 	bc.eventSubscriber = subscriber.NewSubscriber(bc.msgBus)
 	bc.initModules[moduleNameSubscriber] = struct{}{}
+	return nil
+}
+
+func (bc *Blockchain) initTxFilter() error {
+	_, ok := bc.initModules[moduleNameTxFilter]
+	if ok {
+		bc.log.Infof("tx filter module existed, ignore.")
+		return nil
+	}
+	log := logger.GetLoggerByChain(logger.MODULE_TXFILTER, bc.chainId)
+	config, err := filtercommon.GetConf(bc.chainId)
+	if err != nil {
+		return err
+	}
+	txFilter, err := txfilter.Factory().NewTxFilter(config, log, bc.store)
+	if err != nil {
+		return err
+	}
+	bc.txFilter = txFilter
+	bc.initModules[moduleNameTxFilter] = struct{}{}
 	return nil
 }
 

@@ -54,7 +54,7 @@ node:
   # fast sync settings
   fast_sync:
     # Enable it or not
-    enabled: false  # [*]
+    enabled: true  # [*]
 
     # The number of blocks that did not perform fast synchronization at the end
     min_full_blocks: 10
@@ -122,6 +122,12 @@ net:
     # TLS Certificate file path.
     cert_file: ../config/{org_path}/certs/{net_cert_path}.crt
 
+    # TLS enc private key file path. (only for gmtls1.1)
+    priv_enc_key_file: ../config/{org_path}/certs/{net_cert_path}.enc.key
+
+    # TLS enc Certificate file path.
+    cert_enc_file: ../config/{org_path}/certs/{net_cert_path}.enc.crt
+
   # The blacklist is automatically block the listed seed to connect.
   # blacklist:
       # The addresses in blacklist.
@@ -135,20 +141,33 @@ net:
       #   - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
 
 # Transaction pool settings
-# Other txpool settings can be found in tx_Pool_config.go
+# Other tx_pool settings can be found in tx_Pool_config.go
 txpool:
-  # txpool type, can be signle or batch.
-  # By default the txpool type is single.
+  # tx_pool type, can be single, normal, batch.
+  # By default the tx_pool type is single.
   pool_type: "single"
 
-  # Max transaction count in txpool.
-  # If txpool is full, the following transactions will be discarded.
+  # Max common transaction count in tx_pool.
+  # If tx_pool is full, the following transactions will be discarded.
   max_txpool_size: 50000
 
-  # Max config transaction count in config txpool.
+  # Max config transaction count in tx_pool.
   max_config_txpool_size: 10
 
-  # Interval of creating a transaction batch, only for batch txpool, in millisecond.
+  # Interval of clear overdue transaction in queue, in second.
+  # It is valid, only block.tx_timestamp_verify is true in bc.yml
+  # It should be greater than or equal to block.tx_timeout
+  clear_overdue_tx_timeout: 600
+
+  # Whether dump config and common transactions in queue when stop node,
+  # and replay transactions when restart node.
+  is_dump_txs_in_queue: true
+
+  # Common transaction queue num, only for normal tx_pool.
+  # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
+  # common_queue_num: 8
+
+  # Interval of creating a transaction batch, only for batch tx_pool, in millisecond.
   # batch_create_timeout: 200
 
 # RPC service setting
@@ -207,6 +226,12 @@ rpc:
     # RPC TLS public key file path
     cert_file:      ../config/{org_path}/certs/{rpc_cert_path}.crt
 
+    # RPC enc TLS private key file path (only for gmtls1.1)
+    priv_enc_key_file:  ../config/{org_path}/certs/{rpc_cert_path}.enc.key
+
+    # RPC enc TLS public key file path
+    cert_enc_file:      ../config/{org_path}/certs/{rpc_cert_path}.enc.crt
+
   # RPC blacklisted ip addresses
   blacklist:
     addresses:
@@ -215,6 +240,109 @@ rpc:
   # RPC server max send/receive message size in MB
   max_send_msg_size: 10
   max_recv_msg_size: 10
+
+tx_filter:
+  # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
+  # 3 is recommended.
+  type: 0
+  # sharding bird's nest config
+  # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
+  sharding:
+    # sharding number
+    length: 5
+    # sharding task timeout in seconds
+    timeout: 3
+    snapshot:
+      # serialize type
+      # 0 Serialization by height interval
+      # 1 Serialization by time interval
+      type: 0
+      timed:
+        # Time interval in seconds
+        interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
+      # file path
+      path: ../data/{org_id}/tx_filter
+    # bird's nest config
+    birds_nest:
+      # bird's nest size
+      length: 10
+      # Transaction filter rules
+      rules:
+        # Absolute expiration time /second
+        # Based on the number of transactions per day, for example, the current total capacity of blockchain transaction
+        # filters is 100 million, and there are 10 million transaction requests per day.
+        #
+        # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
+        #
+        # absolute expire time = total keys / number of requests per day
+        absolute_expire_time: 172800
+      cuckoo:
+        # 0 NormalKey; 1 TimestampKey
+        key_type: 1
+        # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
+        # If you are using a semi-sorted bucket, the default is 4
+        # 2 is recommended.
+        tags_per_bucket: 2
+        # num of bits for each item, which is length of tag(fingerprint)
+        # 11 is recommended.
+        bits_per_item: 11
+        # keys number
+        max_num_keys: 2000000
+        # 0 TableTypeSingle normal single table
+        # 1 TableTypePacked packed table, use semi-sort to save 1 bit per item
+        # 0 is recommended
+        table_type: 0
+  # bird's nest config
+  # total keys = birds_nest.length * birds_nest.cuckoo.max_num_keys
+  birds_nest:
+    # bird's nest size
+    length: 10
+    snapshot:
+      # serialize type
+      # 0 Serialization by height interval
+      # 1 Serialization by time interval
+      type: 0
+      timed:
+        # Time interval in seconds
+        interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
+      # file path
+      path: ../data/{org_id}/tx_filter
+    # Transaction filter rules
+    rules:
+      # Absolute expiration time /second
+      # Based on the number of transactions per day, for example, the current total capacity of blockchain transaction
+      # filters is 100 million, and there are 10 million transaction requests per day.
+      #
+      # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
+      #
+      # absolute expire time = total keys / number of requests per day
+      absolute_expire_time: 172800
+    cuckoo:
+      # 0 NormalKey; 1 TimestampKey
+      key_type: 1
+      # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
+      # If you are using a semi-sorted bucket, the default is 4
+      # 2 is recommended.
+      tags_per_bucket: 2
+      # num of bits for each item, which is length of tag(fingerprint)
+      # 11 is recommended.
+      bits_per_item: 11
+      # keys number
+      max_num_keys: 2000000
+      # 0 TableTypeSingle normal single table
+      # 1 TableTypePacked packed table, use semi-sort to save 1 bit per item
+      # 0 is recommended
+      table_type: 0
 
 # Monitor related settings
 monitor:
@@ -283,12 +411,21 @@ storage:
   # file size of .fdb, MB, default: 20
   logdb_segment_size: 128
 
+  # bigfilter config
+  enable_bigfilter: false    #default false
+  bigfilter_config:
+    redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"   #redis host:port
+    redis_password: abcpass  #redis password
+    tx_capacity: 1000000000   #support max transaction capacity
+    fp_rate: 0.000000001      #false postive rate
+  # RWC config               default 1000000
+  rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
+
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0 common write，1 quick write
-  # Whether to disable blockFileDb
-  disable_block_file_db: false
+
   state_cache_config:
     life_window: 3000000000000   #key/value ttl time, ns
     clean_window: 1000000000
@@ -389,8 +526,12 @@ vm:
   # Unix domain socket open, used for chainmaker and docker manager communication
   uds_open: true
   # Number of user Ids
-  user_num: 100
+  user_num: 1000
   # Timeout per transaction, Unit: second
   time_limit: 8
   # Max process for contract
-  max_concurrency: 50
+  max_concurrency: 500
+  # Grpc max send message size, Default size is 4, Unit: MB
+  max_send_msg_size: 10
+  # Grpc max receive message size, Default size is 4, Unit: MB
+  max_recv_msg_size: 10

@@ -24,10 +24,10 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
 	cmtls "chainmaker.org/chainmaker/common/v2/crypto/tls"
 	"chainmaker.org/chainmaker/common/v2/monitor"
-	localconf "chainmaker.org/chainmaker/localconf/v2"
-	logger "chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/grpc-ecosystem/grpc-gateway/runtime"
 	"github.com/prometheus/client_golang/prometheus"
@@ -140,7 +140,9 @@ func (s *RPCServer) Start() error {
 		}
 
 		tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
-			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts)
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts,
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertEncFile,
+			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivEncKeyFile)
 
 		if err != nil {
 			log.Errorf("GetTLSConfig, failed, %s", err.Error())
@@ -195,10 +197,18 @@ func (s *RPCServer) Restart(reason string) error {
 
 	s.cancel()
 	s.grpcServer.GracefulStop()
+	_ = s.mixServer.Shutdown(s.ctx)
 
 	s.grpcServer, err = newGrpc(s.chainMakerServer)
 	if err != nil {
 		errMsg := fmt.Sprintf("RPCServer restart for reason [%s], new rpc server failed, %s", reason, err.Error())
+		s.log.Errorf(errMsg)
+		return errors.New(errMsg)
+	}
+
+	s.mixServer, err = newMixServer(s.grpcServer, s.chainMakerServer)
+	if err != nil {
+		errMsg := fmt.Sprintf("new http grpc server failed, %s", err.Error())
 		s.log.Errorf(errMsg)
 		return errors.New(errMsg)
 	}
@@ -361,7 +371,6 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 			GMVerifyPeerCertificate: createGMVerifyPeerCertificateFunc(acs),
 		}
 
-		//c, err := tlsRPCServer.GetCredentialsByCA(checkClientAuth)
 		c, err := tlsRPCServer.GetCredentialsByCA(checkClientAuth, customVerify)
 		if err != nil {
 			log.Errorf("new gRPC failed, GetTLSCredentialsByCA err: %v", err)

@@ -15,9 +15,10 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"strings"
 	"sync"
 	"sync/atomic"
+
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
@@ -28,7 +29,6 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"github.com/gogo/protobuf/proto"
 )
 
 const ModuleNameAccessControl = "Access Control"
@@ -62,11 +62,22 @@ var _ protocol.AccessControlProvider = (*certACProvider)(nil)
 var NilCertACProvider ACProvider = (*certACProvider)(nil)
 
 func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
+	protocol.AccessControlProvider, error) {
 	certACProvider, err := newCertACProvider(chainConf.ChainConfig(), localOrgId, store, log)
 	if err != nil {
 		return nil, err
 	}
+
+	msgBus.Register(msgbus.ChainConfig, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsDelete, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsUnfreeze, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsFreeze, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsRevoke, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsAliasDelete, certACProvider)
+	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
+
+	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)
 	chainConf.AddVmWatch(certACProvider)
 	return certACProvider, nil
@@ -432,61 +443,6 @@ func (cp *certACProvider) checkCertFrozenList(certChain []*bcx509.Certificate) e
 	return nil
 }
 
-func (cp *certACProvider) systemContractCallbackCertManagementCertFreezeCase(payload *common.Payload) error {
-	for _, param := range payload.Parameters {
-		if param.Key == PARAM_CERTS {
-			certList := strings.Replace(string(param.Value), ",", "\n", -1)
-			certBlock, rest := pem.Decode([]byte(certList))
-			for certBlock != nil {
-				cp.frozenList.Store(string(certBlock.Bytes), true)
-
-				certBlock, rest = pem.Decode(rest)
-			}
-			return nil
-		}
-	}
-	return nil
-}
-
-func (cp *certACProvider) systemContractCallbackCertManagementCertUnfreezeCase(payload *common.Payload) error {
-	for _, param := range payload.Parameters {
-		if param.Key == PARAM_CERTS {
-			certList := strings.Replace(string(param.Value), ",", "\n", -1)
-			certBlock, rest := pem.Decode([]byte(certList))
-			for certBlock != nil {
-				_, ok := cp.frozenList.Load(string(certBlock.Bytes))
-				if ok {
-					cp.frozenList.Delete(string(certBlock.Bytes))
-				}
-				certBlock, rest = pem.Decode(rest)
-			}
-			return nil
-		}
-	}
-	return nil
-}
-
-func (cp *certACProvider) systemContractCallbackCertManagementCertRevokeCase(payload *common.Payload) error {
-	for _, param := range payload.Parameters {
-		if param.Key == "cert_crl" {
-			crl := strings.Replace(string(param.Value), ",", "\n", -1)
-			crls, err := cp.ValidateCRL([]byte(crl))
-			if err != nil {
-				return fmt.Errorf("update CRL failed, invalid CRLS: %v", err)
-			}
-			for _, crl := range crls {
-				aki, _, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
-				if err != nil {
-					return fmt.Errorf("update CRL failed: %v", err)
-				}
-				cp.crl.Store(string(aki), crl)
-			}
-			return nil
-		}
-	}
-	return nil
-}
-
 // GetHashAlg return hash algorithm the access control provider uses
 func (cp *certACProvider) GetHashAlg() string {
 	return cp.acService.hashType
@@ -496,11 +452,12 @@ func (cp *certACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, err
 
 	var memberTmp *pbac.Member
 	if pbMember.MemberType != pbac.MemberType_CERT &&
+		pbMember.MemberType != pbac.MemberType_ALIAS &&
 		pbMember.MemberType != pbac.MemberType_CERT_HASH {
 		return nil, fmt.Errorf("new member failed: the member type does not match")
 	}
 
-	if pbMember.MemberType == pbac.MemberType_CERT_HASH {
+	if pbMember.MemberType == pbac.MemberType_CERT_HASH || pbMember.MemberType == pbac.MemberType_ALIAS {
 		memInfoBytes, ok := cp.lookUpCertCache(pbMember.MemberInfo)
 		if !ok {
 			return nil, fmt.Errorf("new member failed, the provided certificate ID is not registered")
@@ -719,11 +676,12 @@ func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementE
 			cp.acService.log.Debugf("target endorser uses full certificate")
 			memInfo = string(endorsement.Signer.MemberInfo)
 		}
-		if endorsement.Signer.MemberType == pbac.MemberType_CERT_HASH {
+		if endorsement.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			endorsement.Signer.MemberType == pbac.MemberType_ALIAS {
 			cp.acService.log.Debugf("target endorser uses compressed certificate")
 			memInfoBytes, ok := cp.lookUpCertCache(endorsement.Signer.MemberInfo)
 			if !ok {
-				cp.acService.log.Infof("authentication failed, unknown signer, the provided certificate ID is not registered")
+				cp.acService.log.Warnf("authentication failed, unknown signer, the provided certificate ID is not registered")
 				continue
 			}
 			memInfo = string(memInfoBytes)
@@ -736,7 +694,7 @@ func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementE
 				"\n%s", memInfo)
 			remoteMember, certChain, ok, err := cp.verifyPrincipalSignerNotInCache(endorsement, msg, memInfo)
 			if !ok {
-				cp.acService.log.Infof("verify principal signer not in cache failed, [endorsement: %v],[err: %s]",
+				cp.acService.log.Warnf("verify principal signer not in cache failed, [endorsement: %v],[err: %s]",
 					endorsement, err.Error())
 				continue
 			}
@@ -749,7 +707,7 @@ func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementE
 		} else {
 			flat, err := cp.verifyPrincipalSignerInCache(signerInfo, endorsement, msg, memInfo)
 			if !flat {
-				cp.acService.log.Infof("verify principal signer in cache failed, [endorsement: %v],[err: %s]",
+				cp.acService.log.Warnf("verify principal signer in cache failed, [endorsement: %v],[err: %s]",
 					endorsement, err.Error())
 				continue
 			}
@@ -769,17 +727,17 @@ func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 	if !ok {
 		cp.acService.log.Debugf("looking up the full certificate for the compressed one [%v]", certId)
 		if cp.acService.dataStore == nil {
-			cp.acService.log.Debugf("local data storage is not set up")
+			cp.acService.log.Errorf("local data storage is not set up")
 			return nil, false
 		}
 		certIdHex := hex.EncodeToString(certId)
 		cert, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(certIdHex))
 		if err != nil {
-			cp.acService.log.Debugf("fail to load compressed certificate from local storage [%s]", certIdHex)
+			cp.acService.log.Errorf("fail to load compressed certificate from local storage [%s]", certIdHex)
 			return nil, false
 		}
 		if cert == nil {
-			cp.acService.log.Debugf("cert id [%s] does not exist in local storage", certIdHex)
+			cp.acService.log.Warnf("cert id [%s] does not exist in local storage", certIdHex)
 			return nil, false
 		}
 		cp.addCertCache(string(certId), cert)
@@ -820,7 +778,7 @@ func (cp *certACProvider) verifyPrincipalSignerNotInCache(endorsement *common.En
 
 	if err = remoteMember.Verify(cp.acService.hashType, msg, endorsement.Signature); err != nil {
 		err = fmt.Errorf("member verify signature failed: [%s]", err.Error())
-		cp.acService.log.Debugf("information for invalid signature:\norganization: %s\ncertificate: %s\nmessage: %s\n"+
+		cp.acService.log.Warnf("information for invalid signature:\norganization: %s\ncertificate: %s\nmessage: %s\n"+
 			"signature: %s", endorsement.Signer.OrgId, memInfo, hex.Dump(msg), hex.Dump(endorsement.Signature))
 		ok = false
 		return
@@ -854,7 +812,7 @@ func (cp *certACProvider) verifyPrincipalSignerInCache(signerInfo *memberCached,
 	}
 	if err := signerInfo.member.Verify(cp.acService.hashType, msg, endorsement.Signature); err != nil {
 		err = fmt.Errorf("signer member verify signature failed: [%s]", err.Error())
-		cp.acService.log.Debugf("information for invalid signature:\norganization: %s\ncertificate: %s\nmessage: %s\n"+
+		cp.acService.log.Warnf("information for invalid signature:\norganization: %s\ncertificate: %s\nmessage: %s\n"+
 			"signature: %s", endorsement.Signer.OrgId, memInfo, hex.Dump(msg), hex.Dump(endorsement.Signature))
 		return false, err
 	}
@@ -908,58 +866,18 @@ func (cp *certACProvider) findCertChain(org *organization, certChains [][]*bcx50
 			// check CRL and frozen list
 			err = cp.checkCRL(chain)
 			if err != nil {
-				cp.acService.log.Debugf("authentication failed, CRL: %v", err)
+				cp.acService.log.Warnf("authentication failed, CRL: %v", err)
 				continue
 			}
 			err = cp.checkCertFrozenList(chain)
 			if err != nil {
-				cp.acService.log.Debugf("authentication failed, certificate frozen list: %v", err)
+				cp.acService.log.Warnf("authentication failed, certificate frozen list: %v", err)
 				continue
 			}
 			return chain
 		}
 	}
 	return nil
-}
-
-func (cp *certACProvider) Module() string {
-	return ModuleNameAccessControl
-}
-
-func (cp *certACProvider) Watch(chainConfig *config.ChainConfig) error {
-	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
-	cp.acService.authType = chainConfig.AuthType
-	err := cp.initTrustRootsForUpdatingChainConfig(chainConfig, cp.localOrg.id)
-	if err != nil {
-		return err
-	}
-
-	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
-
-	cp.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
-	cp.opts.KeyUsages[0] = x509.ExtKeyUsageAny
-
-	cp.acService.memberCache.Clear()
-	cp.certCache.Clear()
-	err = cp.initTrustMembers(chainConfig.TrustMembers)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (cp *certACProvider) ContractNames() []string {
-	return []string{syscontract.SystemContract_CERT_MANAGE.String()}
-}
-
-func (cp *certACProvider) Callback(contractName string, payloadBytes []byte) error {
-	switch contractName {
-	case syscontract.SystemContract_CERT_MANAGE.String():
-		return cp.systemContractCallbackCertManagementCase(payloadBytes)
-	default:
-		cp.acService.log.Debugf("unwatched smart contract [%s]", contractName)
-		return nil
-	}
 }
 
 func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *config.ChainConfig,
@@ -1039,25 +957,6 @@ func (cp *certACProvider) buildCertificateChainForUpdatingChainConfig(root, orgI
 
 	certificateChain = bcx509.BuildCertificateChain(certificates)
 	return certificateChain, nil
-}
-
-func (cp *certACProvider) systemContractCallbackCertManagementCase(payloadBytes []byte) error {
-	var payload common.Payload
-	err := proto.Unmarshal(payloadBytes, &payload)
-	if err != nil {
-		return fmt.Errorf("resolve payload failed: %v", err)
-	}
-	switch payload.Method {
-	case syscontract.CertManageFunction_CERTS_FREEZE.String():
-		return cp.systemContractCallbackCertManagementCertFreezeCase(&payload)
-	case syscontract.CertManageFunction_CERTS_UNFREEZE.String():
-		return cp.systemContractCallbackCertManagementCertUnfreezeCase(&payload)
-	case syscontract.CertManageFunction_CERTS_REVOKE.String():
-		return cp.systemContractCallbackCertManagementCertRevokeCase(&payload)
-	default:
-		cp.acService.log.Debugf("unwatched method [%s]", payload.Method)
-		return nil
-	}
 }
 
 //GetValidEndorsements filters all endorsement entries and returns all valid ones

@@ -10,8 +10,9 @@ package consensus
 import (
 	"fmt"
 
-	dpos "chainmaker.org/chainmaker/consensus-dpos/v2"
 	maxbft "chainmaker.org/chainmaker/consensus-maxbft/v2"
+
+	dpos "chainmaker.org/chainmaker/consensus-dpos/v2"
 	raft "chainmaker.org/chainmaker/consensus-raft/v2"
 	tbft "chainmaker.org/chainmaker/consensus-tbft/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
