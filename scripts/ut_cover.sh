@@ -52,7 +52,7 @@ else
   ut_cover "module/net" 29 8
   ut_cover "module/rpcserver" 0 2.9
   ut_cover "module/snapshot" 47 15
-  ut_cover "module/sync" 71 2.5
+  ut_cover "module/sync" 69 2.5
   ut_cover "module/txfilter" 40 0
   ut_cover "module/subscriber" 70 0.9
 #  ut_cover "module/txpool" 0
