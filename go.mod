@@ -4,14 +4,14 @@ go 1.15
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.1-0.20220415025833-8ffe39b33773
-	chainmaker.org/chainmaker/common/v2 v2.2.1-0.20220420121946-d63ef7f18c32
+	chainmaker.org/chainmaker/common/v2 v2.2.1-0.20220507024351-dcc5d6e2dff0
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20211220115802-ad63e1565a38
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220420070530-7a1f3e129ca3
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220221033200-bcc78c45c616
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20211220120848-36f05d90fd9c
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.1-0.20220420125631-6a9d855b0b27
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.1-0.20220420121134-d8f4f86d2847
-	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220421082758-9c9e1a4abeb4
+	chainmaker.org/chainmaker/localconf/v2 v2.1.1-0.20220506080400-927ae8f98029
 	chainmaker.org/chainmaker/logger/v2 v2.2.1-0.20220421081736-616ccb000399
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220426061105-482b8e05df81
 	chainmaker.org/chainmaker/net-libp2p v1.1.2-0.20220426061305-7eb782dcf5f8
@@ -36,7 +36,6 @@ require (
 	github.com/Workiva/go-datastructures v1.0.53
 	github.com/c-bata/go-prompt v0.2.2
 	github.com/common-nighthawk/go-figure v0.0.0-20210622060536-734e95fb86be
-	github.com/emirpasic/gods v1.12.0 // indirect
 	github.com/ethereum/go-ethereum v1.10.4
 	github.com/fsnotify/fsnotify v1.5.1 // indirect
 	github.com/gogo/protobuf v1.3.2
