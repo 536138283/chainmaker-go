@@ -118,6 +118,8 @@ func (sch *scheduler) handler(event queue.Item) (queue.Item, error) {
 	case *StopSyncMsg:
 		sch.log.Debug("receive [StopSyncMsg] msg, start handle...")
 		sch.handleStopSyncMsg()
+	case *StartSyncMsg:
+		sch.handleStartSyncMsg()
 	}
 	return nil, nil
 }
@@ -269,6 +271,15 @@ func (sch *scheduler) handleStopSyncMsg() {
 	sch.receivedBlocks = make(map[uint64]string)
 }
 
+func (sch *scheduler) handleStartSyncMsg() {
+	// 1. 避免
+	select {
+	case <-sch.minLagReachC:
+	default:
+	}
+	sch.stopSyncBlock = false
+}
+
 func (sch *scheduler) nextHeightToReq() uint64 {
 	var min uint64 = math.MaxUint64
 	for height, status := range sch.blockStates {
@@ -354,6 +365,10 @@ func (sch *scheduler) handleSyncedBlockMsg(msg *SyncedBlockMsg) (queue.Item, err
 	//保证缓存的数据量可控
 	// if len(receivedBlocks) > maxPendingBlocks, do not handle the msg
 	if len(sch.receivedBlocks) > int(sch.maxPendingBlocks) {
+		return nil, nil
+	}
+	// 如果已停止请求服务，将未停止服务前发送请求的到现在才收到的区块数据丢球
+	if sch.stopSyncBlock {
 		return nil, nil
 	}
 	blkBatch := syncPb.SyncBlockBatch{}

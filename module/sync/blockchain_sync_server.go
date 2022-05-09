@@ -483,6 +483,10 @@ func (sync *BlockChainSyncServer) StopBlockSync() {
 	_ = sync.processor.addTask(&StopSyncMsg{})
 }
 
+func (sync *BlockChainSyncServer) StartBlockSync() {
+	_ = sync.scheduler.addTask(&StartSyncMsg{})
+}
+
 func (sync *BlockChainSyncServer) Stop() {
 	if !atomic.CompareAndSwapInt32(&sync.start, 1, 0) {
 		return
