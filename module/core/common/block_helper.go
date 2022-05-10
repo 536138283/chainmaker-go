@@ -1139,7 +1139,9 @@ func RecoverBlock(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, error) {
 
-	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode {
+	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode &&
+		len(block.Txs) != 0 && block.Txs[0].Payload != nil {
+
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
 			Dag:            block.Dag,

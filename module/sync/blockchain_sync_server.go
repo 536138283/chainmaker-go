@@ -88,7 +88,9 @@ func (sync *BlockChainSyncServer) Start() error {
 	sync.initSyncConfIfRequire()
 	processor := newProcessor(sync, sync.ledgerCache, sync.log)
 	scheduler := newScheduler(sync, sync.ledgerCache,
-		sync.conf.blockPoolSize, sync.conf.timeOut, sync.conf.reqTimeThreshold, sync.conf.batchSizeFromOneNode, sync.log)
+		sync.conf.blockPoolSize, sync.conf.timeOut,
+		sync.conf.reqTimeThreshold, sync.conf.batchSizeFromOneNode,
+		sync.log, sync.minLagReachC, sync.conf.minLagThreshold, sync.conf.minLagThresholdTime)
 	if scheduler == nil {
 		return fmt.Errorf("init scheduler failed")
 	}
@@ -115,7 +117,6 @@ func (sync *BlockChainSyncServer) Start() error {
 	}
 	go sync.loop()
 	go sync.blockRequestEntrance()
-	go sync.checkLagBlocks(scheduler.maxHeight)
 	return nil
 }
 
@@ -412,33 +413,9 @@ func (sync *BlockChainSyncServer) blockRequestEntrance() {
 	}
 }
 
-//ListenSyncToIdeal listen local block height has synced to ideal height
+// ListenSyncToIdealHeight listen local block height has synced to ideal height
 func (sync *BlockChainSyncServer) ListenSyncToIdealHeight() <-chan struct{} {
 	return sync.minLagReachC
-}
-
-func (sync *BlockChainSyncServer) checkLagBlocks(maxHeight func() uint64) {
-	for {
-		<-sync.commitBlockC
-		maxH := maxHeight()
-		curH, err := sync.ledgerCache.CurrentHeight()
-		if err != nil {
-			continue
-		}
-		if maxH-curH <= sync.conf.minLagThreshold {
-			select {
-			case sync.minLagReachC <- struct{}{}:
-			default:
-			}
-		}
-	}
-}
-
-func (sync *BlockChainSyncServer) noticeBlockCommited() {
-	select {
-	case sync.commitBlockC <- struct{}{}:
-	default:
-	}
 }
 
 func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) processedBlockStatus {
@@ -466,7 +443,6 @@ func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) 
 		sync.log.Warnf("fail to commit the block whose height is %d, err: %s", block.Header.BlockHeight, err)
 		return addErr
 	}
-	sync.noticeBlockCommited()
 	return ok
 }
 
@@ -498,13 +474,13 @@ func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *common
 		sync.log.Warnf("fail to commit the block whose height is %d, err: %s", block.Header.BlockHeight, err)
 		return addErr
 	}
-	sync.noticeBlockCommited()
 	sync.log.Debugf("AddBlock end, height is: %d ....", block.Header.BlockHeight)
 	return ok
 }
 
 func (sync *BlockChainSyncServer) StopBlockSync() {
 	_ = sync.scheduler.addTask(&StopSyncMsg{})
+	_ = sync.processor.addTask(&StopSyncMsg{})
 }
 
 func (sync *BlockChainSyncServer) Stop() {

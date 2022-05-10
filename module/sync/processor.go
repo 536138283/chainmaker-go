@@ -60,6 +60,8 @@ func (pro *processor) handler(event queue.Item) (queue.Item, error) {
 	case *DataDetection:
 		pro.log.Debugf("receive [DataDetection] msg, start handle...")
 		pro.handleDataDetection()
+	case *StopSyncMsg:
+		pro.handleStopSyncMsg()
 	}
 	return nil, nil
 }
@@ -101,6 +103,11 @@ func (pro *processor) handleReceivedBlockInfos(msg *ReceivedBlockInfos) {
 	default:
 		pro.log.Errorf("handleReceivedBlockInfos get unrecognized msg, type: %t", msg.Data)
 	}
+}
+
+func (pro *processor) handleStopSyncMsg() {
+	// clear all block data that will be processing
+	pro.queue = make(map[uint64]blockWithPeerInfo)
 }
 
 func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
