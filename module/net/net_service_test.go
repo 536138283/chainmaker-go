@@ -15,6 +15,8 @@ import (
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/stretchr/testify/require"
@@ -228,5 +230,56 @@ func TestNetService(t *testing.T) {
 	require.Nil(t, err)
 	err = b.Stop()
 	require.Nil(t, err)
+
+}
+func TestConsistentMsgSubscriber(t *testing.T) {
+	certPath := filepath.Join("./testdata/cert")
+	defer func() {
+		_ = filepath.Walk(filepath.Join("./"), func(path string, info os.FileInfo, err error) error {
+			if !info.IsDir() && strings.Contains(path, "default.log") {
+				_ = os.Remove(path)
+			}
+			return nil
+		})
+	}()
+	caBytes6666, err := ioutil.ReadFile(filepath.Join(certPath, "ca1.crt"))
+	require.Nil(t, err)
+	caBytes7777, err := ioutil.ReadFile(filepath.Join(certPath, "ca2.crt"))
+	require.Nil(t, err)
+	key1Path := filepath.Join(certPath, "key1.key")
+	cert1Path := filepath.Join(certPath, "cert1.crt")
+
+	readyC := make(chan struct{})
+
+	// start node A
+	var nf NetFactory
+	a, err := nf.NewNet(
+		protocol.Libp2p,
+		WithReadySignalC(readyC),
+		WithListenAddr("/ip4/127.0.0.1/tcp/8888"),
+		WithCrypto(false, key1Path, cert1Path, "", ""),
+	)
+	require.Nil(t, err)
+	//a.AddSeed("/ip4/127.0.0.1/tcp/7777/p2p/" + pid2)
+	a.SetChainCustomTrustRoots(chainId1, [][]byte{caBytes6666, caBytes7777})
+
+	err = a.Start()
+	require.Nil(t, err)
+
+	ns := NewNetService(chainId1, a, nil)
+	ns.Start()
+	consistentSubscriber := &ConsistentMsgSubscriber{
+		netService: ns,
+	}
+	ns.msgBus = msgbus.NewMessageBus()
+	ns.msgBus.Register(msgbus.SendConsistentMsg, consistentSubscriber)
+	netMsg := &netPb.NetMsg{
+		Payload: nil,
+		Type:    netPb.NetMsg_CONSISTENT_MSG,
+		To:      "node1",
+	}
+	ns.msgBus.Publish(msgbus.SendConsistentMsg, netMsg)
+	time.Sleep(10 * time.Millisecond)
+	ns.Stop()
 
 }
