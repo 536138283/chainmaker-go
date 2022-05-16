@@ -160,3 +160,14 @@ func (m *StopSyncMsg) Level() int {
 func (m *StopSyncMsg) Compare(other queue.Item) int {
 	return Compare(m, other)
 }
+
+type StartSyncMsg struct {
+}
+
+func (m *StartSyncMsg) Level() int {
+	return priorityLow
+}
+
+func (m *StartSyncMsg) Compare(other queue.Item) int {
+	return Compare(m, other)
+}
