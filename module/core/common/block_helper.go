@@ -732,14 +732,15 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
 	verifierTxConf := &VerifierTxConfig{
-		Block:       block,
-		TxResultMap: txResultMap,
-		TxRWSetMap:  txRWSetMap,
-		ChainConf:   vb.chainConf,
-		Log:         vb.log,
-		Ac:          vb.ac,
-		TxPool:      vb.txPool,
-		TxFilter:    vb.txFilter,
+		Block:         block,
+		TxResultMap:   txResultMap,
+		TxRWSetMap:    txRWSetMap,
+		ChainConf:     vb.chainConf,
+		Log:           vb.log,
+		Ac:            vb.ac,
+		TxPool:        vb.txPool,
+		TxFilter:      vb.txFilter,
+		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
