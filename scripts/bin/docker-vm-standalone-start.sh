@@ -9,7 +9,7 @@ LOG_PATH=$(pwd)/log
 LOG_LEVEL=INFO
 EXPOSE_PORT=22351
 CONTAINER_NAME=chainmaker-docker-vm
-IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.2.1"
+IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.2.2"
 
 
 read -r -p "input log path(must be absolute path, default:'./log'): " tmp
