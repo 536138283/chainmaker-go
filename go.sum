@@ -100,6 +100,10 @@ chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220507094912-20831c2cf1a8 h
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220507094912-20831c2cf1a8/go.mod h1:p/1q3zMGoygUy9X6kr/kUvWVbslNPdj4OkWoCuh4GOE=
 chainmaker.org/chainmaker/vm-evm/v2 v2.2.1 h1:CvSPbRwgmkJOQqZrwEuZTPpW6YAJpkEWxBMxJxODdFc=
 chainmaker.org/chainmaker/vm-evm/v2 v2.2.1/go.mod h1:Fn9UDYlIq9GWgLZ3iJGoOlPNId289+0YwfJFxzE7Ju8=
+chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220517061954-3d849270ee72 h1:I3I/xz+RcUbszNoyOf00vwVm8Q5PC9eyJTQdLP9t+xM=
+chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220517061954-3d849270ee72/go.mod h1:cSltaEBKN6lppEsFMITICZGN2Pq2A52Z5wMntcYNIRc=
+chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220517064946-14365f49f318 h1:B8jJpQ5sADgY3258W1B0XgHqvS3oVomIBi8Y4np8FKU=
+chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220517064946-14365f49f318/go.mod h1:cSltaEBKN6lppEsFMITICZGN2Pq2A52Z5wMntcYNIRc=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1 h1:0WIsRfy5zzvIp80pa0+ABhVUAZmxiCBel8Y3OBD1ah8=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1/go.mod h1:4YBIWiBD7CEQPq3CQ/i3n2cC59I+ZgpLfZsFAz9vQAg=
 chainmaker.org/chainmaker/vm-native/v2 v2.2.0/go.mod h1:tTWzhpHDu2GgI9HaDMkt/DMtPSqFM3btG9TyGwUPE8A=
