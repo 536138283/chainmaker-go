@@ -7,9 +7,11 @@ package util
 
 import (
 	"encoding/hex"
+	"fmt"
 
 	"chainmaker.org/chainmaker/common/v2/evmutils"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"github.com/hokaccha/go-prettyjson"
 )
 
 func MaxInt(i, j int) int {
@@ -32,4 +34,12 @@ func ConvertParameters(pars map[string]string) []*common.KeyValuePair {
 
 func CalcEvmContractName(contractName string) string {
 	return hex.EncodeToString(evmutils.Keccak256([]byte(contractName)))[24:]
+}
+
+func PrintPrettyJson(data interface{}) {
+	output, err := prettyjson.Marshal(data)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(string(output))
 }
