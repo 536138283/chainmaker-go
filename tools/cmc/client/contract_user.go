@@ -16,6 +16,7 @@ import (
 	"io/ioutil"
 	"strings"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
@@ -385,7 +386,18 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	util.PrintPrettyJson(resp)
+	var contract common.Contract
+	err = contract.Unmarshal(resp.ContractResult.Result)
+	if err != nil {
+		return err
+	}
+	util.PrintPrettyJson(types.TxResponse{
+		TxResponse: resp,
+		ContractResult: &types.ContractResult{
+			ContractResult: resp.ContractResult,
+			Result:         &contract,
+		},
+	})
 	return nil
 }
 
@@ -682,7 +694,18 @@ func upgradeUserContract() error {
 	if err != nil {
 		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
 	}
-	util.PrintPrettyJson(resp)
+	var contract common.Contract
+	err = contract.Unmarshal(resp.ContractResult.Result)
+	if err != nil {
+		return err
+	}
+	util.PrintPrettyJson(types.TxResponse{
+		TxResponse: resp,
+		ContractResult: &types.ContractResult{
+			ContractResult: resp.ContractResult,
+			Result:         &contract,
+		},
+	})
 	return nil
 }
 
