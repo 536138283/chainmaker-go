@@ -81,8 +81,7 @@ func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs
 			resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
 		}
 
-		fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]/[txId:%s]\n", resp.Code, resp.Message,
-			resp.ContractResult, txId)
+		util.PrintPrettyJson(resp)
 	}
 }
 
@@ -140,6 +139,5 @@ func invokeContract(client *sdk.ChainClient, contractName, method, txId string, 
 		resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
 	}
 
-	fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]/[txId:%s]\n", resp.Code, resp.Message,
-		resp.ContractResult, txId)
+	util.PrintPrettyJson(resp)
 }
