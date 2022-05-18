@@ -625,9 +625,9 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		return errResult(result, err)
 	}
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE && contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO {
-		byteCode, err = txSimContext.GetContractBytecode(contractName)
+		byteCode, err = txSimContext.GetContractBytecode(contract.Name)
 		if err != nil {
-			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contractName, err)
+			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
 			return errResult(result, err)
 		}
 	} else {
@@ -639,13 +639,13 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 	}
 
 	if ts.checkGasEnable() && !enableOptimizeChargeGas {
-		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contractName, method)
+		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contract.Name, method)
 		if err != nil {
 			return result, specialTxType, err
 		}
 
 		// charge gas limit
-		_, err = ts.chargeGasLimit(accountMangerContract, tx, txSimContext, contractName, method, pk, result)
+		_, err = ts.chargeGasLimit(accountMangerContract, tx, txSimContext, contract.Name, method, pk, result)
 		if err != nil {
 			ts.log.Errorf("charge gas limit err is %v", err)
 			result.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
