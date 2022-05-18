@@ -1,6 +1,6 @@
 module chainmaker.org/chainmaker-go
 
-go 1.15
+go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.1-0.20220415025833-8ffe39b33773
