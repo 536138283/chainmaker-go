@@ -20,8 +20,8 @@ import (
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	evm "chainmaker.org/chainmaker/common/v2/evmutils"
+	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 )
 
 //func getByteCode(bytecode []byte, runtime commonPb.RuntimeType) ([]*commonPb.KeyValuePair, error) {
