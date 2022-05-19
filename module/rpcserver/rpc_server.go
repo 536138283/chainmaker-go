@@ -158,7 +158,6 @@ func (s *RPCServer) stopGrpcServer() {
 		s.grpcServer.Stop()
 	case <-stopped:
 	}
-	s.log.Info("RPCServer is stopped!")
 }
 
 // Stop - stop RPCServer
