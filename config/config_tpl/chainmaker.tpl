@@ -145,6 +145,7 @@ net:
 txpool:
   # tx_pool type, can be single, normal, batch.
   # By default the tx_pool type is single.
+  # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
   pool_type: "single"
 
   # Max common transaction count in tx_pool.
@@ -153,11 +154,6 @@ txpool:
 
   # Max config transaction count in tx_pool.
   max_config_txpool_size: 10
-
-  # Interval of clear overdue transaction in queue, in second.
-  # It is valid, only block.tx_timestamp_verify is true in bc.yml
-  # It should be greater than or equal to block.tx_timeout
-  clear_overdue_tx_timeout: 600
 
   # Whether dump config and common transactions in queue when stop node,
   # and replay transactions when restart node.
@@ -169,6 +165,14 @@ txpool:
 
   # Interval of creating a transaction batch, only for batch tx_pool, in millisecond.
   # batch_create_timeout: 200
+
+  # The number of transactions contained in a batch, only for batch tx_pool.
+  # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
+  # batch_max_size: 100
+
+  # Interval of clear overdue transaction in pendingCache, only for batch tx_pool, in second.
+  # It should be greater than or equal to block.tx_timeout
+  # clear_overdue_tx_timeout: 600
 
 # RPC service setting
 rpc:

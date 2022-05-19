@@ -329,7 +329,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		totalTimes++
 		// retrieve tx batch from tx pool
 		fetchFirst := utils.CurrentTimeMillisSeconds()
-		fetchBatch = bp.txPool.FetchTxBatch(height)
+		// todo 返回的batchIds是否需要进行处理？
+		fetchBatch, _ = bp.txPool.FetchTxBatch(height)
 		fetchLasts += utils.CurrentTimeMillisSeconds() - fetchFirst
 		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
 			height, len(fetchBatch)))
