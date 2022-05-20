@@ -11,13 +11,21 @@ import (
 
 const (
 	flagAddressType = "address-type"
+	flagHashType    = "hash-type"
 
 	// address types
 	addressTypeZXL = "zxl"
+	addressTypeCM  = "cm"
 )
 
 var (
 	addressType string
+	hashType    int
+	hashAlgoMap = map[int]string{
+		0: "SHA256",
+		1: "SHA3_256",
+		2: "SM3",
+	}
 )
 
 var flags *pflag.FlagSet
@@ -27,6 +35,10 @@ func init() {
 
 	flags.StringVar(&addressType, flagAddressType, "zxl", `The type of address obtained. 
 eg. --address-type=zxl`)
+
+	flags.IntVar(&hashType, flagHashType, 0,
+		`The type of hash algo obtained. 0: SAH256 (default), 1: SHA3_256, 2: SM3"
+eg. --address-type=0`)
 }
 
 func NewAddressCMD() *cobra.Command {
