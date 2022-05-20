@@ -33,7 +33,8 @@ var flags *pflag.FlagSet
 func init() {
 	flags = &pflag.FlagSet{}
 
-	flags.StringVar(&addressType, flagAddressType, "zxl", `The type of address obtained. 
+	flags.StringVar(&addressType, flagAddressType, "zxl", `The type of address obtained.
+supported address types zhixinlian: zxl, chainmaker: cm 
 eg. --address-type=zxl`)
 
 	flags.IntVar(&hashType, flagHashType, 0,
