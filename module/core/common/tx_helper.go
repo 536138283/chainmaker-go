@@ -83,7 +83,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 			return err
 		}
 
-		return IsTxHashValid(tx, txInPool, hashType)
+		return IsTxRequestValid(tx, txInPool)
 	}
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	var (
@@ -155,42 +155,42 @@ func RearrangeRWSet(block *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet
 	return rwSet
 }
 
-// IsTxHashValid, to check if transaction hash is valid
-func IsTxHashValid(tx *commonpb.Transaction, txInPool *commonpb.Transaction, hashType string) error {
-	poolTxRawHash, err := utils.CalcTxRequestHash(hashType, txInPool)
+// IsTxRequestValid, to check if transaction request payload is valid
+func IsTxRequestValid(tx *commonpb.Transaction, txInPool *commonpb.Transaction) error {
+	poolTxRawBytes, err := utils.CalcUnsignedTxBytes(txInPool)
 	if err != nil {
-		return fmt.Errorf("calc pool txhash error (tx:%s), %s", tx.Payload.TxId, err.Error())
+		return fmt.Errorf("calc pool tx bytes error (tx:%s), %s", tx.Payload.TxId, err.Error())
 	}
-	txRawHash, err := utils.CalcTxRequestHash(hashType, tx)
+	txRawBytes, err := utils.CalcUnsignedTxBytes(tx)
 	if err != nil {
-		return fmt.Errorf("calc req txhash error (tx:%s), %s", tx.Payload.TxId, err.Error())
+		return fmt.Errorf("calc req tx bytes error (tx:%s), %s", tx.Payload.TxId, err.Error())
 	}
 	// check if tx equals with tx in pool
-	if !bytes.Equal(txRawHash, poolTxRawHash) {
-		return fmt.Errorf("txhash (tx:%s) expect %x, got %x", tx.Payload.TxId, poolTxRawHash, txRawHash)
+	if !bytes.Equal(txRawBytes, poolTxRawBytes) {
+		return fmt.Errorf("txhash (tx:%s) expect %x, got %x", tx.Payload.TxId, poolTxRawBytes, txRawBytes)
 	}
 	return nil
 }
 
 // VerifyTxResult, to check if transaction result is valid,
 // compare result simulate in this node with executed in other node
-func VerifyTxResult(tx *commonpb.Transaction, result *commonpb.Result, hashType string) error {
+func VerifyTxResult(tx *commonpb.Transaction, result *commonpb.Result) error {
 	// verify if result is equal
-	txResultHash, err := utils.CalcTxResultHash(hashType, tx.Result)
+	txResultBytes, err := utils.CalcResultBytes(tx.Result)
 	if err != nil {
 		return fmt.Errorf("calc tx result (tx:%s), %s)", tx.Payload.TxId, err.Error())
 	}
-	resultHash, err := utils.CalcTxResultHash(hashType, result)
+	resultBytes, err := utils.CalcResultBytes(result)
 	if err != nil {
 		return fmt.Errorf("calc tx result (tx:%s), %s)", tx.Payload.TxId, err.Error())
 	}
-	if !bytes.Equal(txResultHash, resultHash) {
+	if !bytes.Equal(txResultBytes, resultBytes) {
 		debugInfo := "tx.Result:"
 		r1, _ := json.Marshal(tx.Result)
 		r2, _ := json.Marshal(result)
 		debugInfo += string(r1) + "\ncurrent result:\n" + string(r2)
 		return fmt.Errorf("tx result (tx:%s) expect %x, got %x\nDebug info:%s",
-			tx.Payload.TxId, txResultHash, resultHash, debugInfo)
+			tx.Payload.TxId, txResultBytes, resultBytes, debugInfo)
 	}
 	return nil
 }
@@ -378,7 +378,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		}
 		result.RwSetHash = rwsetHash
 		// verify if rwset hash is equal
-		if err = VerifyTxResult(tx, result, vt.chainConf.ChainConfig().Crypto.Hash); err != nil {
+		if err = VerifyTxResult(tx, result); err != nil {
 			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
 			continue
 		}

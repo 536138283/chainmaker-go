@@ -428,32 +428,6 @@ func TestValidateTx1(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "test0",
-			args: args{
-				txsRet: func() map[string]*commonpb.Transaction {
-					txRet := map[string]*commonpb.Transaction{
-						"test0": {
-							Payload: &commonpb.Payload{
-								TxId: "test0",
-							},
-						},
-					}
-					return txRet
-				}(),
-				tx: &commonpb.Transaction{
-					Payload: &commonpb.Payload{
-						TxId: "test0",
-					},
-				},
-				blockHeight:   0,
-				block:         block0,
-				txFilter:      txFilter,
-				ac:            ac,
-				proposalCache: proposalCache,
-			},
-			wantErr: true,
-		},
-		{
 			name: "test1",
 			args: args{
 				txsRet: func() map[string]*commonpb.Transaction {

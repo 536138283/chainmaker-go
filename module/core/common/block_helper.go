@@ -616,7 +616,7 @@ func (vb *VerifierBlock) ValidateBlock(
 	if err != nil {
 		return nil, nil, timeLasts, nil, fmt.Errorf("simulate %s", err)
 	}
-	if block.Header.TxCount != uint32(len(txRWSetMap)) {
+	if block.Header.TxCount != uint32(len(txRWSetMap)) || block.Header.TxCount != uint32(len(txResultMap)) {
 		return nil, nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
 			block.Header.TxCount, len(txRWSetMap))
 	}
