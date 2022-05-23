@@ -18,12 +18,12 @@ import (
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/evmutils"
+	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
-	ethcmn "github.com/ethereum/go-ethereum/common"
 	"github.com/spf13/cobra"
 )
 
@@ -311,7 +311,7 @@ func createUserContract() error {
 		}
 		byteCodePath = string(byteCode)
 
-		if !ethcmn.IsHexAddress(contractName) {
+		if _, err := evmutils.StringToAddress(contractName); err != nil {
 			contractName = util.CalcEvmContractName(contractName)
 		}
 		fmt.Printf("EVM contract name in hex: %s\n", contractName)
@@ -381,7 +381,7 @@ func invokeUserContract() error {
 	defer client.Stop()
 
 	var kvs []*common.KeyValuePair
-	var evmMethod *ethabi.Method
+	var evmMethod *abi.ABI
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -389,18 +389,19 @@ func invokeUserContract() error {
 			return err
 		}
 
-		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		contractAbi, err := abi.JSON(bytes.NewReader(abiBytes))
 		if err != nil {
 			return err
 		}
 
-		m, exist := contractAbi.Methods[method]
-		if !exist {
-			return fmt.Errorf("method '%s' not found", method)
-		}
-		evmMethod = &m
+		//m, exist := contractAbi.Methods[method]
+		//if !exist {
+		//	return fmt.Errorf("method '%s' not found", method)
+		//}
+		//evmMethod = &m
+		evmMethod = contractAbi
 
-		inputData, err := util.Pack(evmMethod, params)
+		inputData, err := contractAbi.Pack(method, params)
 		if err != nil {
 			return err
 		}
@@ -415,7 +416,7 @@ func invokeUserContract() error {
 			},
 		}
 
-		if !ethcmn.IsHexAddress(contractName) {
+		if _, err := evmutils.StringToAddress(contractName); err != nil {
 			contractName = util.CalcEvmContractName(contractName)
 		}
 		fmt.Printf("EVM contract name in hex: %s\n", contractName)
@@ -448,7 +449,7 @@ func invokeContractTimes() error {
 	defer client.Stop()
 
 	var kvs []*common.KeyValuePair
-	var evmMethod *ethabi.Method
+	var evmMethod *abi.ABI
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -456,18 +457,19 @@ func invokeContractTimes() error {
 			return err
 		}
 
-		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		contractAbi, err := abi.JSON(bytes.NewReader(abiBytes))
 		if err != nil {
 			return err
 		}
 
-		m, exist := contractAbi.Methods[method]
-		if !exist {
-			return fmt.Errorf("method '%s' not found", method)
-		}
-		evmMethod = &m
+		//m, exist := contractAbi.Methods[method]
+		//if !exist {
+		//	return fmt.Errorf("method '%s' not found", method)
+		//}
+		//evmMethod = &m
+		evmMethod = contractAbi
 
-		inputData, err := util.Pack(evmMethod, params)
+		inputData, err := contractAbi.Pack(method, params)
 		if err != nil {
 			return err
 		}
@@ -482,7 +484,7 @@ func invokeContractTimes() error {
 			},
 		}
 
-		if !ethcmn.IsHexAddress(contractName) {
+		if _, err := evmutils.StringToAddress(contractName); err != nil {
 			contractName = util.CalcEvmContractName(contractName)
 		}
 		fmt.Printf("EVM contract name in hex: %s\n", contractName)

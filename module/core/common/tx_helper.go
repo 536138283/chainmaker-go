@@ -273,6 +273,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	var err error
 	startTicker := utils.CurrentTimeMillisSeconds()
 
+	var failTxLock sync.Mutex
 	rwSetVerifyFailTxIds := make([]string, 0)
 	for i := 0; i < waitCount; i++ {
 		index := i
@@ -288,7 +289,9 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 				err = err1
 
 				if rwSetVerifyFailTxIdsIncr != nil {
+					failTxLock.Lock()
 					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, rwSetVerifyFailTxIdsIncr...)
+					failTxLock.Unlock()
 				}
 				return
 			}

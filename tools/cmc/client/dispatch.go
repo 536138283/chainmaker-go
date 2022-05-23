@@ -11,10 +11,9 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
-
-	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdkPbCommon "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -22,7 +21,7 @@ import (
 )
 
 func Dispatch(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	evmMethod *ethabi.Method, limit *sdkPbCommon.Limit) {
+	evmMethod *abi.ABI, limit *sdkPbCommon.Limit) {
 	var (
 		wgSendReq sync.WaitGroup
 	)
@@ -35,7 +34,7 @@ func Dispatch(client *sdk.ChainClient, contractName, method string, kvs []*sdkPb
 	wgSendReq.Wait()
 }
 func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	evmMethod *ethabi.Method) {
+	evmMethod *abi.ABI) {
 	var (
 		wgSendReq sync.WaitGroup
 	)
@@ -48,7 +47,7 @@ func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*
 }
 
 func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	wg *sync.WaitGroup, evmMethod *ethabi.Method, limit *sdkPbCommon.Limit) {
+	wg *sync.WaitGroup, evmMethod *abi.ABI, limit *sdkPbCommon.Limit) {
 
 	defer func() {
 		wg.Done()
@@ -73,7 +72,7 @@ func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs
 		}
 
 		if evmMethod != nil && resp.ContractResult != nil {
-			output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
+			output, err := evmMethod.Unpack(method, resp.ContractResult.Result)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -87,7 +86,7 @@ func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs
 }
 
 func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	wg *sync.WaitGroup, evmMethod *ethabi.Method) {
+	wg *sync.WaitGroup, evmMethod *abi.ABI) {
 
 	defer func() {
 		wg.Done()
@@ -106,7 +105,7 @@ func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string,
 	}
 
 	if evmMethod != nil && resp.ContractResult != nil {
-		output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
+		output, err := evmMethod.Unpack(method, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
 			return

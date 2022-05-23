@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
+	ethabi "chainmaker.org/chainmaker/common/v2/evmutils/abi"
 )
 
 var abiJson = `
