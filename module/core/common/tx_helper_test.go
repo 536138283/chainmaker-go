@@ -400,7 +400,6 @@ func TestValidateTx1(t *testing.T) {
 		newAddTxs     []*commonpb.Transaction
 		block         *commonpb.Block
 		consensusType consensusPb.ConsensusType
-		hashType      string
 		chainId       string
 		ac            protocol.AccessControlProvider
 		proposalCache protocol.ProposalCache
