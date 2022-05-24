@@ -159,10 +159,6 @@ txpool:
   # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
   # batch_max_size: 100
 
-  # Interval of clear overdue transaction in pendingCache, only for batch tx_pool, in second.
-  # It should be greater than or equal to block.tx_timeout
-  # clear_overdue_tx_timeout: 600
-
 # RPC service setting
 rpc:
   # RPC type, can only be grpc now
