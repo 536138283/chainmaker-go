@@ -70,7 +70,7 @@ func ifExitInSameBranch(height uint64, txId string, proposalCache protocol.Propo
 
 func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transaction,
 	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
-	consensusType consensuspb.ConsensusType, hashType string, filter protocol.TxFilter,
+	consensusType consensuspb.ConsensusType, filter protocol.TxFilter,
 	chainId string, ac protocol.AccessControlProvider, proposalCache protocol.ProposalCache,
 	mode protocol.VerifyMode, verifyMode uint8) error {
 	txInPool, existTx := txsRet[tx.Payload.TxId]
@@ -346,7 +346,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		// tx must in txpool when open consensus message turbo
 		if !IfOpenConsensusMessageTurbo(vt.chainConf) {
 			if err := ValidateTx(txsRet, tx, stat, newAddTxs, block,
-				vt.chainConf.ChainConfig().Consensus.Type, vt.chainConf.ChainConfig().Crypto.Hash,
+				vt.chainConf.ChainConfig().Consensus.Type,
 				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac, vt.proposalCache, mode, verifyMode); err != nil {
 				return nil, nil, nil, err
 			}

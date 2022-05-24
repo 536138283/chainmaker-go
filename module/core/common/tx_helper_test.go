@@ -450,7 +450,6 @@ func TestValidateTx1(t *testing.T) {
 				newAddTxs:     nil,
 				block:         block0,
 				consensusType: 0,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				chainId:       "",
 				ac:            ac,
@@ -484,7 +483,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_MAXBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: func() protocol.ProposalCache {
@@ -522,7 +520,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_MAXBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: func() protocol.ProposalCache {
@@ -562,7 +559,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
@@ -604,7 +600,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
@@ -647,7 +642,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
@@ -657,7 +651,7 @@ func TestValidateTx1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, tt.args.hashType, txFilter, tt.args.chainId, tt.args.ac, tt.args.proposalCache, protocol.SYNC_VERIFY, QuickSyncVerifyMode); (err != nil) != tt.wantErr {
+			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, txFilter, tt.args.chainId, tt.args.ac, tt.args.proposalCache, protocol.SYNC_VERIFY, QuickSyncVerifyMode); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateTx() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})
