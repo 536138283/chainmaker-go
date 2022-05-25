@@ -202,7 +202,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		totalTimes++
 		// retrieve tx batch from tx pool
 		fetchFirst := utils.CurrentTimeMillisSeconds()
-		// todo 返回的batchIds是否需要进行处理？
+
 		fetchBatch, batchIds = bp.txPool.FetchTxBatch(height)
 		fetchLasts += utils.CurrentTimeMillisSeconds() - fetchFirst
 		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
@@ -216,11 +216,19 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
 		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
 		if len(removeTxs) > 0 {
-			// remove
-			bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+			// don't remove tx when is batchTx pool
+			if common.TxPoolType != batch.TxPoolType {
+				// remove and get new batchIds
+				batchIds = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
+
+			} else {
+				bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+			}
+
 			bp.log.Warnf("remove the overtime transactions, total:%d, remain:%d, remove:%d",
 				len(fetchBatch), len(remainTxs), len(removeTxs))
 		}
+
 		if len(remainTxs) > 0 {
 			// 剩余交易大于0则跳出循环
 			fetchBatch = remainTxs

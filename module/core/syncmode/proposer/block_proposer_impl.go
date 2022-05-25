@@ -348,9 +348,12 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 				// remove and get new batchIds
 				batchIds = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
 
-				bp.log.Warnf("remove the overtime transactions, total:%d, remain:%d, remove:%d",
-					len(fetchBatch), len(remainTxs), len(removeTxs))
+			} else {
+				bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
 			}
+
+			bp.log.Warnf("remove the overtime transactions, total:%d, remain:%d, remove:%d",
+				len(fetchBatch), len(remainTxs), len(removeTxs))
 		}
 		if len(remainTxs) > 0 {
 			// 剩余交易大于0则跳出循环
