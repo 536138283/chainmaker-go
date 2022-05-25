@@ -44,9 +44,9 @@ func (nsf *NetServiceFactory) NewNetService(
 		// v220_compat Deprecated
 		{
 			// set config watcher
-			chainConf.AddWatch(ns.ConfigWatcher())
+			chainConf.AddWatch(ns.ConfigWatcher()) //nolint: staticcheck
 			// set vm watcher
-			chainConf.AddVmWatch(ns.VmWatcher())
+			chainConf.AddVmWatch(ns.VmWatcher()) //nolint: staticcheck
 		}
 	}
 	return ns, nil

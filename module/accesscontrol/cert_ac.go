@@ -78,8 +78,8 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
 
 	//v220_compat Deprecated
-	chainConf.AddWatch(certACProvider)
-	chainConf.AddVmWatch(certACProvider)
+	chainConf.AddWatch(certACProvider)   //nolint: staticcheck
+	chainConf.AddVmWatch(certACProvider) //nolint: staticcheck
 	return certACProvider, nil
 }
 

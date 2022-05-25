@@ -99,8 +99,8 @@ func NewAccessControlWithChainConfig(chainConfig protocol.ChainConf, localOrgId 
 	msgBus.Register(msgbus.CertManageCertsRevoke, acp)
 	msgBus.Register(msgbus.CertManageCertsUnfreeze, acp)
 	msgBus.Register(msgbus.CertManageCertsFreeze, acp)
-	chainConfig.AddWatch(acp)
-	chainConfig.AddVmWatch(acp)
+	chainConfig.AddWatch(acp)   //nolint: staticcheck
+	chainConfig.AddVmWatch(acp) //nolint: staticcheck
 	//InitCertSigningMember(testChainConfig, localOrgId, localPrivKeyFile, localPrivKeyPwd, localCertFile)
 	return acp, err
 }

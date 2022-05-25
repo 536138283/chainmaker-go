@@ -115,8 +115,8 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		v.metricBlockVerifyTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_VERIFIER, "metric_block_verify_time",
 			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
 	}
-
-	config.ChainConf.AddWatch(v) // v220_compat Deprecated
+	// v220_compat Deprecated
+	config.ChainConf.AddWatch(v) //nolint: staticcheck
 	config.MsgBus.Register(msgbus.ChainConfig, v)
 
 	return v, nil
