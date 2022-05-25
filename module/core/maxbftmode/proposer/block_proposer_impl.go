@@ -8,6 +8,7 @@ package proposer
 
 import (
 	"bytes"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"fmt"
 	"sync"
 	"time"
@@ -173,8 +174,6 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
 
-	bp.log.Debugf("maxbftmode::BlockProposerImpl::proposing() => tx_pool status = %#v", bp.txPool.GetPoolStatus())
-
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 	if selfProposedBlock != nil {
 		if !bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
@@ -193,6 +192,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		fetchTotalLasts     int64 // The total time consuming
 		totalTimes          int   // loop count
 		fetchBatch          []*commonpb.Transaction
+		batchIds            []string
 	)
 	// 根据TxFilter时间规则过滤交易，如果剩余的交易为0，则再次从交易池拉取交易，重复执行
 	// The transaction is filtered according to txFilter time rule. If the remaining transaction is 0, the transaction
@@ -203,7 +203,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		// retrieve tx batch from tx pool
 		fetchFirst := utils.CurrentTimeMillisSeconds()
 		// todo 返回的batchIds是否需要进行处理？
-		fetchBatch, _ = bp.txPool.FetchTxBatch(height)
+		fetchBatch, batchIds = bp.txPool.FetchTxBatch(height)
 		fetchLasts += utils.CurrentTimeMillisSeconds() - fetchFirst
 		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
 			height, len(fetchBatch)))
@@ -229,6 +229,22 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	}
 	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
+	if common.TxPoolType == batch.TxPoolType {
+		dupTxs := make([]*commonpb.Transaction, len(fetchBatch))
+		finalBatch := make([]*commonpb.Transaction, len(fetchBatch))
+		for _, v := range fetchBatch {
+			if common.IfExitInSameBranch(height, v.Payload.TxId, bp.proposalCache, preHash) {
+				dupTxs = append(dupTxs, v)
+			} else {
+				finalBatch = append(finalBatch, v)
+			}
+		}
+
+		if len(dupTxs) != 0 {
+			batchIds = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
+		}
+	}
+
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
 		// check if checkedBatch > txCapacity, if so, strict block tx count according to  config,
@@ -239,7 +255,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		bp.log.Warnf("txbatch oversize expect <= %d, got %d", txCapacity, len(fetchBatch))
 	}
 
-	block, timeLasts, err := bp.generateNewBlock(height, preHash, fetchBatch)
+	block, timeLasts, err := bp.generateNewBlock(height, preHash, fetchBatch, batchIds)
 	if err != nil {
 		bp.log.Warnf("generate new block failed, %s", err.Error())
 		// rollback sql
@@ -507,12 +523,6 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 	block := bp.proposalCache.GetSelfProposedBlockAt(height)
 
 	if block == nil {
-		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
-		txs := make([]*commonpb.Transaction, 0)
-		for _, v := range txsRet {
-			txs = append(txs, v)
-		}
-		bp.txPool.RetryAndRemoveTxs(nil, txs)
 		return
 	}
 
@@ -533,6 +543,13 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		if _, ok := txsMap[tx.Payload.TxId]; !ok {
 			retryTxs = append(retryTxs, tx)
 		}
+	}
+
+	if common.TxPoolType == batch.TxPoolType {
+		batchIds := common.GetBatchIds(block)
+		bp.txPool.RemoveTxsInTxBatches(batchIds, removeTxs)
+		bp.proposalCache.ClearProposedBlockAt(height)
+		return
 	}
 
 	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)

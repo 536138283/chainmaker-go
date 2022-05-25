@@ -7,6 +7,7 @@ package common
 
 import (
 	"bytes"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -18,6 +19,8 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 )
+
+var TxPoolType string
 
 type VerifyBlockBatch struct {
 	txs       []*commonpb.Transaction
@@ -48,7 +51,7 @@ type RwSetVerifyFailTx struct {
 }
 
 // 判断相同分支上是否存在交易重复（防止双花）
-func ifExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) bool {
+func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) bool {
 	hash := preBlockHash
 
 	for i := uint64(1); i <= 3; i++ {
@@ -76,7 +79,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	txInPool, existTx := txsRet[tx.Payload.TxId]
 	if existTx {
 		if consensuspb.ConsensusType_MAXBFT == consensusType &&
-			ifExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash) {
+			IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash) {
 
 			err := fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d",
 				tx.Payload.TxId, block.Header.BlockHeight)
@@ -440,4 +443,12 @@ func IntegersContains(array []int, val int) bool {
 		}
 	}
 	return false
+}
+
+func GetBatchIds(block *commonpb.Block) []string {
+	batchIds := make([]string, 0)
+	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
+	_ = json.Unmarshal(batchIdsByte, batchIds)
+
+	return batchIds
 }

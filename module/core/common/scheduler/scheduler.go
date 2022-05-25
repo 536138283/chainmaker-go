@@ -69,7 +69,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 	txBatchSize := len(txBatch)
-	ts.log.Infof("schedule tx batch start, block_number = %v, size = %d", block.Header.BlockHeight, txBatchSize)
+	ts.log.Infof("schedule tx batch start, height:%v, size:%d", block.Header.BlockHeight, txBatchSize)
 
 	var goRoutinePool *ants.Pool
 	var err error

@@ -347,7 +347,7 @@ func TestIfExitInSameBranch(t *testing.T) {
 
 		var finalResult bool
 		for _, tx := range v.block.Txs {
-			result := ifExitInSameBranch(
+			result := IfExitInSameBranch(
 				v.block.Header.BlockHeight,
 				tx.Payload.TxId,
 				proposalCache,

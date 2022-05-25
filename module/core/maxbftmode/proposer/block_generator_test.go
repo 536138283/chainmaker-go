@@ -311,7 +311,7 @@ func TestBlockProposerImpl_generateNewBlock(t *testing.T) {
 				storeHelper:  tt.fields.storeHelper,
 				txScheduler:  tt.fields.txScheduler,
 			}
-			got, _, err := bp.generateNewBlock(tt.args.proposingHeight, tt.args.preHash, tt.args.txBatch)
+			got, _, err := bp.generateNewBlock(tt.args.proposingHeight, tt.args.preHash, tt.args.txBatch, []string{})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("generateNewBlock() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -7,6 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"fmt"
 	"sync"
 
@@ -16,11 +20,8 @@ import (
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -47,6 +48,7 @@ type BlockVerifierImpl struct {
 
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
 	netService            protocol.NetService
+	txFilter              protocol.TxFilter // Verify the transaction rules with TxFilter
 }
 
 type BlockVerifierConfig struct {
@@ -84,6 +86,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		txPool:        config.TxPool,
 		storeHelper:   config.StoreHelper,
 		netService:    config.NetService,
+		txFilter:      config.TxFilter,
 	}
 
 	conf := &common.VerifierBlockConf{
@@ -168,7 +171,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
+	newBlock, batchIds, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}
@@ -209,7 +212,11 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	// mark transactions in block as pending status in txpool
-	v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	if common.TxPoolType == batch.TxPoolType {
+		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
+	} else {
+		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	}
 
 	isValid = true
 	if protocol.CONSENSUS_VERIFY == mode {
@@ -270,7 +277,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
+	newBlock, batchIds, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}
@@ -310,7 +317,11 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	// mark transactions in block as pending status in txpool
-	v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	if common.TxPoolType == batch.TxPoolType {
+		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
+	} else {
+		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	}
 
 	isValid = true
 	if protocol.CONSENSUS_VERIFY == mode {
