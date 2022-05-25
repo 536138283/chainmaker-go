@@ -8,69 +8,22 @@ package common
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"github.com/gogo/protobuf/proto"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 type CommitBlock struct {
-	store                   protocol.BlockchainStore
-	log                     protocol.Logger
-	snapshotManager         protocol.SnapshotManager
-	ledgerCache             protocol.LedgerCache
-	chainConf               protocol.ChainConf
-	txFilter                protocol.TxFilter
-	msgBus                  msgbus.MessageBus
-	metricBlockSize         *prometheus.HistogramVec // metric block size
-	metricBlockCounter      *prometheus.CounterVec   // metric block counter
-	metricTxCounter         *prometheus.CounterVec   // metric transaction counter
-	metricTpsGauge          *prometheus.GaugeVec     // metric real-time transaction per second (TPS)
-	metricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
-	metricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
-}
-
-type CommitBlockConf struct {
-	Store                   protocol.BlockchainStore
-	Log                     protocol.Logger
-	SnapshotManager         protocol.SnapshotManager
-	TxPool                  protocol.TxPool
-	LedgerCache             protocol.LedgerCache
-	ChainConf               protocol.ChainConf
-	TxFilter                protocol.TxFilter
-	MsgBus                  msgbus.MessageBus
-	MetricBlockSize         *prometheus.HistogramVec // metric block size
-	MetricBlockCounter      *prometheus.CounterVec   // metric block counter
-	MetricTxCounter         *prometheus.CounterVec   // metric transaction counter
-	MetricTpsGauge          *prometheus.GaugeVec     // metric real-time transaction per second (TPS)
-	MetricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
-	MetricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
-}
-
-func NewCommitBlock(cbConf *CommitBlockConf) *CommitBlock {
-	commitBlock := &CommitBlock{
-		store:           cbConf.Store,
-		txFilter:        cbConf.TxFilter,
-		log:             cbConf.Log,
-		snapshotManager: cbConf.SnapshotManager,
-		ledgerCache:     cbConf.LedgerCache,
-		chainConf:       cbConf.ChainConf,
-		msgBus:          cbConf.MsgBus,
-	}
-	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		commitBlock.metricBlockSize = cbConf.MetricBlockSize
-		commitBlock.metricBlockCounter = cbConf.MetricBlockCounter
-		commitBlock.metricTxCounter = cbConf.MetricTxCounter
-		commitBlock.metricBlockCommitTime = cbConf.MetricBlockCommitTime
-		commitBlock.metricBlockIntervalTime = cbConf.MetricBlockIntervalTime
-		commitBlock.metricTpsGauge = cbConf.MetricTpsGauge
-	}
-	return commitBlock
+	store           protocol.BlockchainStore
+	log             protocol.Logger
+	snapshotManager protocol.SnapshotManager
+	ledgerCache     protocol.LedgerCache
+	chainConf       protocol.ChainConf
+	txFilter        protocol.TxFilter
+	msgBus          msgbus.MessageBus
 }
 
 //CommitBlock the action that all consensus types do when a block is committed
@@ -154,23 +107,8 @@ func (cb *CommitBlock) CommitBlock(
 		Block:     block,
 		RwsetList: rwSet,
 	}
-	go cb.MonitorCommit(blockInfo)
 	otherLasts = utils.CurrentTimeMillisSeconds() - startOtherTick
 	return
-}
-
-func (cb *CommitBlock) MonitorCommit(bi *commonpb.BlockInfo) {
-	if !localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		return
-	}
-	raw, err := proto.Marshal(bi)
-	if err != nil {
-		cb.log.Errorw("marshal BlockInfo failed", "err", err)
-		return
-	}
-	(*cb.metricBlockSize).WithLabelValues(bi.Block.Header.ChainId).Observe(float64(len(raw)))
-	(*cb.metricBlockCounter).WithLabelValues(bi.Block.Header.ChainId).Inc()
-	(*cb.metricTxCounter).WithLabelValues(bi.Block.Header.ChainId).Add(float64(bi.Block.Header.TxCount))
 }
 
 func NotifyChainConf(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
