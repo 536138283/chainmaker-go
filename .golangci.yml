@@ -23,7 +23,7 @@ linters:
     - gocyclo
     - gofmt
     - ineffassign
-    - staticcheck
+#    - staticcheck
     - structcheck # 当非导出结构嵌入另一个结构, 前一个结构被使用就不会监测到, 这个需要每个业务自己屏蔽
     - typecheck
     - goimports
