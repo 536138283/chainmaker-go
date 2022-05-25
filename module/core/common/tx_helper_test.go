@@ -400,7 +400,6 @@ func TestValidateTx1(t *testing.T) {
 		newAddTxs     []*commonpb.Transaction
 		block         *commonpb.Block
 		consensusType consensusPb.ConsensusType
-		hashType      string
 		chainId       string
 		ac            protocol.AccessControlProvider
 		proposalCache protocol.ProposalCache
@@ -428,32 +427,6 @@ func TestValidateTx1(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "test0",
-			args: args{
-				txsRet: func() map[string]*commonpb.Transaction {
-					txRet := map[string]*commonpb.Transaction{
-						"test0": {
-							Payload: &commonpb.Payload{
-								TxId: "test0",
-							},
-						},
-					}
-					return txRet
-				}(),
-				tx: &commonpb.Transaction{
-					Payload: &commonpb.Payload{
-						TxId: "test0",
-					},
-				},
-				blockHeight:   0,
-				block:         block0,
-				txFilter:      txFilter,
-				ac:            ac,
-				proposalCache: proposalCache,
-			},
-			wantErr: true,
-		},
-		{
 			name: "test1",
 			args: args{
 				txsRet: func() map[string]*commonpb.Transaction {
@@ -476,7 +449,6 @@ func TestValidateTx1(t *testing.T) {
 				newAddTxs:     nil,
 				block:         block0,
 				consensusType: 0,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				chainId:       "",
 				ac:            ac,
@@ -510,7 +482,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_MAXBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: func() protocol.ProposalCache {
@@ -548,7 +519,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_MAXBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: func() protocol.ProposalCache {
@@ -588,7 +558,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
@@ -630,7 +599,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
@@ -673,7 +641,6 @@ func TestValidateTx1(t *testing.T) {
 					return block
 				}(),
 				consensusType: consensusPb.ConsensusType_TBFT,
-				hashType:      "SHA256",
 				txFilter:      txFilter,
 				ac:            ac,
 				proposalCache: proposalCache,
@@ -683,7 +650,7 @@ func TestValidateTx1(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, tt.args.hashType, txFilter, tt.args.chainId, tt.args.ac, tt.args.proposalCache, protocol.SYNC_VERIFY, QuickSyncVerifyMode); (err != nil) != tt.wantErr {
+			if err := ValidateTx(tt.args.txsRet, tt.args.tx, tt.args.stat, tt.args.newAddTxs, tt.args.block, tt.args.consensusType, txFilter, tt.args.chainId, tt.args.ac, tt.args.proposalCache, protocol.SYNC_VERIFY, QuickSyncVerifyMode); (err != nil) != tt.wantErr {
 				t.Errorf("ValidateTx() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

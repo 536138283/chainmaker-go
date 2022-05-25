@@ -616,9 +616,9 @@ func (vb *VerifierBlock) ValidateBlock(
 	if err != nil {
 		return nil, nil, timeLasts, nil, fmt.Errorf("simulate %s", err)
 	}
-	if block.Header.TxCount != uint32(len(txRWSetMap)) {
-		return nil, nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
-			block.Header.TxCount, len(txRWSetMap))
+	if block.Header.TxCount != uint32(len(txRWSetMap)) || block.Header.TxCount != uint32(len(txResultMap)) {
+		return nil, nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got txRWSetMap %d, txResultMap %d",
+			block.Header.TxCount, len(txRWSetMap), len(txResultMap))
 	}
 
 	// 2.transaction verify

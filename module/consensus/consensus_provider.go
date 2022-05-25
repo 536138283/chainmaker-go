@@ -27,3 +27,4 @@ func GetConsensusProvider(t consensusPb.ConsensusType) Provider {
 	}
 	return provider
 }
+
