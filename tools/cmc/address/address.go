@@ -42,6 +42,15 @@ func newPK2AddrCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
+			case addressTypeCM:
+				hash, ok := hashAlgoMap[hashType]
+				if !ok {
+					return fmt.Errorf("unsupported hash type %d", hashType)
+				}
+				addr, err = sdk.GetCMAddressFromPKPEM(keyPemStr, hash)
+				if err != nil {
+					return err
+				}
 			default:
 				return fmt.Errorf("unsupported address type %s", addressType)
 			}
@@ -54,7 +63,7 @@ func newPK2AddrCMD() *cobra.Command {
 			return nil
 		},
 	}
-	util.AttachFlags(cmd, flags, []string{flagAddressType})
+	util.AttachFlags(cmd, flags, []string{flagAddressType, flagHashType})
 	return cmd
 }
 
@@ -73,6 +82,17 @@ func newHex2AddrCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
+			case addressTypeCM:
+				hash, ok := hashAlgoMap[hashType]
+				if !ok {
+					return fmt.Errorf("unsupported hash type %d", hashType)
+				}
+
+				addr, err = sdk.GetCMAddressFromPKHex(args[0], hash)
+				if err != nil {
+					return err
+				}
+
 			default:
 				return fmt.Errorf("unsupported address type %s", addressType)
 			}
@@ -85,7 +105,7 @@ func newHex2AddrCMD() *cobra.Command {
 			return nil
 		},
 	}
-	util.AttachFlags(cmd, flags, []string{flagAddressType})
+	util.AttachFlags(cmd, flags, []string{flagAddressType, flagHashType})
 	return cmd
 }
 
@@ -108,6 +128,18 @@ func newCert2AddrCMD() *cobra.Command {
 					}
 				} else {
 					addr, err = sdk.GetZXAddressFromCertPEM(args[0])
+					if err != nil {
+						return err
+					}
+				}
+			case addressTypeCM:
+				if isFile {
+					addr, err = sdk.GetCMAddressFromCertPath(args[0])
+					if err != nil {
+						return err
+					}
+				} else {
+					addr, err = sdk.GetCMAddressFromCertPEM(args[0])
 					if err != nil {
 						return err
 					}
