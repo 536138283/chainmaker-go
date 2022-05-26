@@ -462,9 +462,9 @@ func IntegersContains(array []int, val int) bool {
 }
 
 func GetBatchIds(block *commonpb.Block) []string {
-	batchIds := make([]string, 0)
 	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
-	_ = json.Unmarshal(batchIdsByte, batchIds)
+
+	batchIds, _ := DeserializeBatchIds(batchIdsByte)
 
 	return batchIds
 }

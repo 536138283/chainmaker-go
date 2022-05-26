@@ -1230,12 +1230,7 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
-		batchIds, err := DeserializeBatchIds(batchIdsByte)
-		if err != nil {
-			return nil, nil, err
-		}
-
+		batchIds := GetBatchIds(block)
 		txs, err := txPool.GetAllTxsByBatchIds(batchIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
 		if err != nil {
 			return nil, nil, err
@@ -1256,18 +1251,12 @@ func recoverBlockByBatch(
 		return newBlock, batchIds, nil
 	}
 
-	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
-	batchIds, err := DeserializeBatchIds(batchIdsByte)
-	if err != nil {
-		return nil, nil, err
-	}
-
 	return &commonPb.Block{
 		Header:         block.Header,
 		Dag:            block.Dag,
 		Txs:            block.Txs,
 		AdditionalData: block.AdditionalData,
-	}, batchIds, nil
+	}, GetBatchIds(block), nil
 }
 
 func recoverBlock(
