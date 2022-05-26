@@ -1031,7 +1031,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	txRetry, batchRetry := chain.syncWithTxPool(lastProposed, height)
 
 	if TxPoolType == batch.TxPoolType {
-		batchIds := GetBatchIds(block)
+		batchIds := GetBatchIds(lastProposed)
 		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
 		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
 	} else {
