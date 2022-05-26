@@ -344,7 +344,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
 		if len(removeTxs) > 0 {
 			// don't remove tx when is batchTx pool
-			if common.TxPoolType != batch.TxPoolType {
+			if common.TxPoolType == batch.TxPoolType {
 				// remove and get new batchIds
 				batchIds = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
 
