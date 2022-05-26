@@ -15,8 +15,10 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"strings"
 )
 
 // CoreEngine is a block handle engine.
@@ -125,6 +127,12 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 	}
 
 	core.MaxbftHelper = helper.NewMaxbftHelper(cf.TxPool, cf.ChainConf, cf.ProposalCache)
+
+	// get the type of tx pool
+	if value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]; ok {
+		common.TxPoolType, _ = value.(string)
+		common.TxPoolType = strings.ToUpper(common.TxPoolType)
+	}
 
 	return core, nil
 }

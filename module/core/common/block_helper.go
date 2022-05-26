@@ -1223,7 +1223,7 @@ func recoverBlockByBatch(
 		}
 
 		batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
-		err = json.Unmarshal(batchIdsByte, batchIds)
+		err = json.Unmarshal(batchIdsByte, &batchIds)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1239,7 +1239,7 @@ func recoverBlockByBatch(
 	}
 
 	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
-	err := json.Unmarshal(batchIdsByte, batchIds)
+	err := json.Unmarshal(batchIdsByte, &batchIds)
 	if err != nil {
 		return nil, nil, err
 	}

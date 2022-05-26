@@ -400,6 +400,10 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		cutBlock = block
 	}
 
+	if common.TxPoolType == batch.TxPoolType {
+		cutBlock.Txs = nil
+	}
+
 	bp.msgBus.Publish(msgbus.ProposedBlock,
 		&consensuspb.ProposalBlock{Block: block, TxsRwSet: rwSetMap, CutBlock: cutBlock})
 
