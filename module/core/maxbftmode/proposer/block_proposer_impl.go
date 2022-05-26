@@ -238,7 +238,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
 	if common.TxPoolType == batch.TxPoolType {
-		dupTxs := make([]*commonpb.Transaction, len(fetchBatch))
+		dupTxs := make([]*commonpb.Transaction, 0)
 		finalBatch := make([]*commonpb.Transaction, len(fetchBatch))
 		for _, v := range fetchBatch {
 			if common.IfExitInSameBranch(height, v.Payload.TxId, bp.proposalCache, preHash) {
