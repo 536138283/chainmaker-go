@@ -76,6 +76,20 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	consensusType consensuspb.ConsensusType, hashType string, filter protocol.TxFilter,
 	chainId string, ac protocol.AccessControlProvider, proposalCache protocol.ProposalCache,
 	mode protocol.VerifyMode, verifyMode uint8) error {
+
+	if TxPoolType == batch.TxPoolType {
+		if consensuspb.ConsensusType_MAXBFT == consensusType &&
+			IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash) {
+
+			err := fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d",
+				tx.Payload.TxId, block.Header.BlockHeight)
+			return err
+		}
+
+		// tx pool batch not need to verify TxHash
+		return nil
+	}
+
 	txInPool, existTx := txsRet[tx.Payload.TxId]
 	if existTx {
 		if consensuspb.ConsensusType_MAXBFT == consensusType &&
@@ -269,7 +283,9 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	poolStart := utils.CurrentTimeMillisSeconds()
 	txsRet := make(map[string]*commonpb.Transaction)
 	if !IfOpenConsensusMessageTurbo(vt.chainConf) {
-		txsRet, _ = vt.txPool.GetTxsByTxIds(txIds)
+		if TxPoolType != batch.TxPoolType {
+			txsRet, _ = vt.txPool.GetTxsByTxIds(txIds)
+		}
 	}
 	poolLasts := utils.CurrentTimeMillisSeconds() - poolStart
 

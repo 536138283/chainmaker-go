@@ -276,14 +276,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(block)
 
 	cutBlock := new(commonpb.Block)
-	if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
+	if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
+		common.TxPoolType == batch.TxPoolType {
 		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
 	} else {
 		cutBlock = block
-	}
-
-	if common.TxPoolType == batch.TxPoolType {
-		cutBlock.Txs = nil
 	}
 
 	bp.msgBus.Publish(msgbus.ProposedBlock,

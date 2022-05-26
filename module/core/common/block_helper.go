@@ -9,8 +9,8 @@ package common
 import (
 	"bytes"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
+	"encoding/gob"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"runtime/debug"
 	"sync"
@@ -186,8 +186,8 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 	}
 
 	if TxPoolType == batch.TxPoolType {
-		// set batchIds into add
-		batchIdBytes, err := json.Marshal(batchIds)
+		// set batchIds into additional data
+		batchIdBytes, err := SerializeBatchIds(batchIds)
 		if err != nil {
 			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
@@ -1162,6 +1162,8 @@ func GetProposerId(
 func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
 	turboBlock.Header = block.Header
 	turboBlock.Dag = block.Dag
+	turboBlock.AdditionalData = block.AdditionalData
+
 	newTxs := make([]*commonPb.Transaction, len(block.Txs))
 	for i := range block.Txs {
 		newPayload := &commonPb.Payload{
@@ -1169,11 +1171,15 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 		}
 
 		newTxs[i] = &commonPb.Transaction{
-			Payload:   newPayload,
-			Sender:    block.Txs[i].Sender,
-			Endorsers: block.Txs[i].Endorsers,
-			Result:    block.Txs[i].Result,
+			Payload: newPayload,
+			Result:  block.Txs[i].Result,
 		}
+
+		if TxPoolType != batch.TxPoolType {
+			newTxs[i].Sender = block.Txs[i].Sender
+			newTxs[i].Endorsers = block.Txs[i].Endorsers
+		}
+
 	}
 	turboBlock.Txs = newTxs
 	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
@@ -1191,7 +1197,7 @@ func RecoverBlock(
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
 	if TxPoolType == batch.TxPoolType {
-		return recoverBlockByBatch(block, mode, chainConf, txPool, ac, netService)
+		return recoverBlockByBatch(block, mode, chainConf, txPool, ac, netService, logger)
 	}
 
 	return recoverBlock(block, mode, chainConf, txPool, ac, netService, logger)
@@ -1203,14 +1209,16 @@ func recoverBlockByBatch(
 	chainConf protocol.ChainConf,
 	txPool protocol.TxPool,
 	ac protocol.AccessControlProvider,
-	netService protocol.NetService) (*commonPb.Block, []string, error) {
+	netService protocol.NetService,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	batchIds := make([]string, 0)
-	if len(block.Txs) == 0 && mode != protocol.SYNC_VERIFY {
+	if len(block.Txs) != 0 && block.Txs[0].Payload != nil &&
+		mode != protocol.SYNC_VERIFY {
+
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
 			Dag:            block.Dag,
-			Txs:            make([]*commonPb.Transaction, 0),
+			Txs:            make([]*commonPb.Transaction, len(block.Txs)),
 			AdditionalData: block.AdditionalData,
 		}
 
@@ -1223,7 +1231,7 @@ func recoverBlockByBatch(
 		}
 
 		batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
-		err = json.Unmarshal(batchIdsByte, &batchIds)
+		batchIds, err := DeserializeBatchIds(batchIdsByte)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1233,13 +1241,23 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		newBlock.Txs = txs
+		txsMap := make(map[string]*commonPb.Transaction)
+		for _, tx := range txs {
+			txsMap[tx.Payload.TxId] = tx
+		}
+
+		for i := range block.Txs {
+			newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
+			newBlock.Txs[i].Result = block.Txs[i].Result
+			logger.Debugf("recover the block[%d], TxId[%s, %s]",
+				newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+		}
 
 		return newBlock, batchIds, nil
 	}
 
 	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
-	err := json.Unmarshal(batchIdsByte, &batchIds)
+	batchIds, err := DeserializeBatchIds(batchIdsByte)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1303,4 +1321,26 @@ func recoverBlock(
 		AdditionalData: block.AdditionalData,
 	}, nil, nil
 
+}
+
+func SerializeBatchIds(batchIds []string) ([]byte, error) {
+
+	buffer := &bytes.Buffer{}
+	err := gob.NewEncoder(buffer).Encode(batchIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), err
+}
+
+func DeserializeBatchIds(data []byte) ([]string, error) {
+
+	batchIds := make([]string, 0)
+	err := gob.NewDecoder(bytes.NewReader(data)).Decode(&batchIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return batchIds, err
 }
