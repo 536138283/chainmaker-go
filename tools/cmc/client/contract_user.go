@@ -401,7 +401,7 @@ func invokeUserContract() error {
 		//evmMethod = &m
 		evmMethod = contractAbi
 
-		inputData, err := contractAbi.Pack(method, params)
+		inputData, err := util.Pack(contractAbi, method, params)
 		if err != nil {
 			return err
 		}
@@ -469,7 +469,7 @@ func invokeContractTimes() error {
 		//evmMethod = &m
 		evmMethod = contractAbi
 
-		inputData, err := contractAbi.Pack(method, params)
+		inputData, err := util.Pack(contractAbi, method, params)
 		if err != nil {
 			return err
 		}
