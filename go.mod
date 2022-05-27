@@ -3,18 +3,18 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.2.1-0.20220415025833-8ffe39b33773
+	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220517144703-b126df4a3ed4
 	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220518091326-42bdf196d002
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220420070758-a25aa71c7410
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220426033108-4aafa46a6f03
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220316072055-9c86c51d91fe
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20220420072039-bc207cc67903
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.1-0.20220427090416-d2288b48f6ac
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.1-0.20220422083335-d2aeacafcfe5
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220525070322-216e77822b46
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220524102354-c060fd783111
 	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220517143546-a82c5a2a4b68
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220517143358-e208fb1bab2d
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220426061105-482b8e05df81
-	chainmaker.org/chainmaker/net-libp2p v1.1.2-0.20220426061305-7eb782dcf5f8
+	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220517151833-04df69759f7f
 	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220426061931-9011730f7fba
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220519000546-25afb023f1b8
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220525015436-bb72498ca2ae
