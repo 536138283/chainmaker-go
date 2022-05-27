@@ -6,6 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package birdnest
 
 import (
+	"sync"
 	"time"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
@@ -20,6 +21,7 @@ type TxFilter struct {
 	bn    *bn.BirdsNestImpl
 	store protocol.BlockchainStore
 	exitC chan struct{}
+	l     sync.RWMutex
 }
 
 func (f *TxFilter) ValidateRule(txId string, ruleType ...commonPb.RuleType) error {
@@ -37,6 +39,10 @@ func (f *TxFilter) ValidateRule(txId string, ruleType ...commonPb.RuleType) erro
 // New transaction filter init
 func New(config *commonPb.BirdsNestConfig, log protocol.Logger, store protocol.BlockchainStore) (
 	protocol.TxFilter, error) {
+	// Because it is compatible with Normal type, the transaction ID cannot be converted to time transaction ID, so the
+	// database can be queried directly. Therefore, the transaction ID type is fixed as TimestampKey
+	config.Cuckoo.KeyType = commonPb.KeyType_KTTimestampKey
+
 	initLasts := time.Now()
 	exitC := make(chan struct{})
 	birdsNest, err := bn.NewBirdsNest(config, exitC, bn.LruStrategy, filtercommon.NewLogger(log))
@@ -86,6 +92,8 @@ func (f *TxFilter) Add(txId string) error {
 	if err != nil {
 		return nil
 	}
+	f.l.Lock()
+	defer f.l.Unlock()
 	return f.bn.Add(timestampKey)
 }
 
@@ -99,7 +107,9 @@ func (f *TxFilter) Adds(txIds []string) error {
 			f.log.Warnf("filter adds fail, txid size: %v, error: %v", len(txIds), err)
 		}
 	}
+	f.l.Lock()
 	err := f.bn.Adds(timestampKeys)
+	f.l.Unlock()
 	if err != nil {
 		f.log.Errorf("filter adds fail, txid size: %v, error: %v", len(txIds), err)
 		return err
@@ -128,9 +138,14 @@ func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 	start := time.Now()
 	timestampKeys, _ := bn.ToTimestampKeysAndNormalKeys(txIds)
 	if len(timestampKeys) <= 0 {
+		f.SetHeight(height)
+		f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("adds and set height, no timestamp keys height: %d",
+			height))
 		return nil
 	}
+	f.l.Lock()
 	err := f.bn.AddsAndSetHeight(timestampKeys, height)
+	f.l.Unlock()
 	if err != nil {
 		return err
 	}
@@ -149,6 +164,8 @@ func (f *TxFilter) IsExists(txId string, ruleType ...commonPb.RuleType) (exists 
 		}
 		return exists, nil
 	}
+	f.l.RLock()
+	defer f.l.RUnlock()
 	contains, err := f.bn.Contains(key, ruleType...)
 	if err != nil {
 		f.log.Errorf("filter check exists, query from filter fail, txid: %v, error: %v", txId, err)

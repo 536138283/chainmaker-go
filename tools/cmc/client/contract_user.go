@@ -76,7 +76,7 @@ func createUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserTlsKeyFilePath, flagUserTlsCrtFilePath, flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
-		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
+		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash, flagAbiFilePath,
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
@@ -304,7 +304,33 @@ func createUserContract() error {
 			}
 			kvs = util.ConvertParameters(kvsMap)
 		}
-	} else {
+	} else { // EVM contract deploy
+		if abiFilePath == "" {
+			return errors.New("required abi file path when deploy EVM contract")
+		}
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
+		if err != nil {
+			return err
+		}
+
+		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		inputData, err := util.Pack(&contractAbi.Constructor, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+
 		byteCode, err := ioutil.ReadFile(byteCodePath)
 		if err != nil {
 			return err
@@ -373,12 +399,22 @@ func createUserContract() error {
 }
 
 func invokeUserContract() error {
-	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+	cc, err := sdk.NewChainClient(
+		sdk.WithConfPath(sdkConfPath),
+		sdk.WithChainClientChainId(chainId),
+		sdk.WithChainClientOrgId(orgId),
+		sdk.WithUserCrtFilePath(userTlsCrtFilePath),
+		sdk.WithUserKeyFilePath(userTlsKeyFilePath),
+		sdk.WithUserSignCrtFilePath(userSignCrtFilePath),
+		sdk.WithUserSignKeyFilePath(userSignKeyFilePath),
+	)
 	if err != nil {
 		return err
 	}
-	defer client.Stop()
+	defer cc.Stop()
+	if err := util.DealChainClientCertHash(cc, enableCertHash); err != nil {
+		return err
+	}
 
 	var kvs []*common.KeyValuePair
 	var evmMethod *ethabi.Method
@@ -436,9 +472,9 @@ func invokeUserContract() error {
 	}
 
 	if txId != "" {
-		invokeContract(client, contractName, method, txId, kvs, evmMethod, limit)
+		invokeContract(cc, contractName, method, txId, kvs, evmMethod, limit)
 	} else {
-		Dispatch(client, contractName, method, kvs, evmMethod, limit)
+		Dispatch(cc, contractName, method, kvs, evmMethod, limit)
 	}
 	return nil
 }
