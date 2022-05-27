@@ -17,12 +17,12 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.1.2-0.20220426061305-7eb782dcf5f8
 	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220426061931-9011730f7fba
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220519000546-25afb023f1b8
-	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220524044503-ab6ea0fd0406
+	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220525015436-bb72498ca2ae
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220518091801-8d37c755195b
 	chainmaker.org/chainmaker/store/v2 v2.2.1-0.20220506093443-87e13815d402
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220524075146-fd8d06cc41c9
-	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220524075238-cb411f425e44
-	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220524075313-5f4c64bc7ef5
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.1.1-0.20220526144826-e2f1738f806a
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220525081922-a6786583a998
+	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220525082103-dac0e122d384
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220517140042-94d5a0c83290
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.1.1-0.20220510070036-9816a868987a
 	chainmaker.org/chainmaker/vm-evm/v2 v2.1.1-0.20220518091952-cc31d46894b1
