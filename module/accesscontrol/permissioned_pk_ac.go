@@ -66,8 +66,8 @@ func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, 
 	msgBus.Register(msgbus.PubkeyManageDelete, pPkACProvider)
 	// v220_compat Deprecated
 	{
-		chainConf.AddWatch(pPkACProvider)
-		chainConf.AddVmWatch(pPkACProvider)
+		chainConf.AddWatch(pPkACProvider)   //nolint: staticcheck
+		chainConf.AddVmWatch(pPkACProvider) //nolint: staticcheck
 	}
 	return pPkACProvider, nil
 }

@@ -365,7 +365,7 @@ func (bc *Blockchain) initChainConf() (err error) {
 
 	// v220_compat Deprecated
 	// register myself as config watcher
-	bc.chainConf.AddWatch(bc)
+	bc.chainConf.AddWatch(bc) //nolint: staticcheck
 
 	return
 }

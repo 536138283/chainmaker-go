@@ -20,7 +20,7 @@ import (
 func NotifyChainConf(block *commonpb.Block, chainConf protocol.ChainConf) (err error) {
 	if block != nil && block.GetTxs() != nil && len(block.GetTxs()) > 0 {
 		if ok, _ := utils.IsNativeTx(block.GetTxs()[0]); ok || utils.HasDPosTxWritesInHeader(block, chainConf) {
-			if err = chainConf.CompleteBlock(block); err != nil {
+			if err = chainConf.CompleteBlock(block); err != nil { //nolint: staticcheck
 				return fmt.Errorf("chainconf block complete, %s", err)
 			}
 		}
