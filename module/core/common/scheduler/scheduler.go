@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker-go/module/core/common"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -84,12 +85,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
 
-	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
+	enableOptimizeChargeGas := common.IsOptimizeChargeGasEnabled(ts.chainConf)
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
 	var senderGroup *SenderGroup
 	var senderCollection *SenderCollection
-	if ts.checkGasEnable() && enableOptimizeChargeGas {
+	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
 		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
@@ -168,7 +169,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	// if the block is not empty, append the charging gas tx
-	if ts.checkGasEnable() && enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
 		ts.log.Debug("append charge gas tx to block ...")
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
 	}
@@ -480,7 +481,7 @@ func (ts *TxScheduler) executeTx(tx *commonPb.Transaction, snapshot protocol.Sna
 		txSimContext.SetTxResult(tx.Result)
 		return txSimContext, protocol.ExecOrderTxTypeNormal, false
 	}
-	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
+	enableOptimizeChargeGas := common.IsOptimizeChargeGasEnabled(ts.chainConf)
 	runVmSuccess := true
 	var txResult *commonPb.Result
 	var err error
@@ -638,7 +639,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		})
 	}
 
-	if ts.checkGasEnable() && !enableOptimizeChargeGas {
+	if !enableOptimizeChargeGas {
 		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contract.Name, method)
 		if err != nil {
 			return result, specialTxType, err
@@ -1100,7 +1101,7 @@ func (ts *TxScheduler) dispatchTxs(
 	senderGroup *SenderGroup,
 	enableConflictsBitWindow bool,
 	conflictsBitWindow *ConflictsBitWindow) {
-	if ts.checkGasEnable() && enableOptimizeChargeGas {
+	if enableOptimizeChargeGas {
 		ts.log.Debugf("before `SenderCollection` dispatch => ")
 		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC)
 		ts.log.Debugf("end `SenderCollection` dispatch => ")
