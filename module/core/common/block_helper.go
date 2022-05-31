@@ -1237,7 +1237,12 @@ func recoverBlockByBatch(
 		}
 
 		batchIds := GetBatchIds(block)
-		txs, err := txPool.GetAllTxsByBatchIds(batchIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
+		txs, err := txPool.GetAllTxsByBatchIds(
+			batchIds,
+			proposerId,
+			block.Header.BlockHeight,
+			int(maxRetryTime*retryInterval))
+
 		if err != nil {
 			return nil, nil, err
 		}

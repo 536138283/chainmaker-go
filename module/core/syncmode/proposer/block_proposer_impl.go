@@ -8,10 +8,11 @@ package proposer
 
 import (
 	"bytes"
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"errors"
 	"sync"
 	"time"
+
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
