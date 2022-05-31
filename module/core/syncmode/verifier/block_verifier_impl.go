@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
-	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"encoding/hex"
 	"fmt"
+
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core/common"
