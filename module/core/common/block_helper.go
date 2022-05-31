@@ -8,12 +8,13 @@ package common
 
 import (
 	"bytes"
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"runtime/debug"
 	"sync"
+
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
@@ -93,7 +94,8 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 	return creatorBlock
 }
 
-func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction, batchIds []string) (
+func (bb *BlockBuilder) GenerateNewBlock(
+	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction, batchIds []string) (
 	*commonPb.Block, []int64, error) {
 	timeLasts := make([]int64, 0)
 	currentHeight, _ := bb.ledgerCache.CurrentHeight()
@@ -186,8 +188,9 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 	}
 
 	if TxPoolType == batch.TxPoolType {
+		var batchIdBytes []byte
 		// set batchIds into additional data
-		batchIdBytes, err := SerializeBatchIds(batchIds)
+		batchIdBytes, err = SerializeBatchIds(batchIds)
 		if err != nil {
 			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
@@ -349,6 +352,7 @@ func FinalizeBlock(
 	}
 	return nil
 }
+
 func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType string, logger protocol.Logger) (
 	[]byte, error) {
 	var rwSetHash []byte
@@ -1068,7 +1072,8 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	return nil
 }
 
-func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) ([]*commonPb.Transaction, []string) {
+func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) (
+	[]*commonPb.Transaction, []string) {
 	proposedBlocks := chain.proposalCache.GetProposedBlocksAt(height)
 	txRetry := make([]*commonPb.Transaction, 0, len(block.Txs))
 	batchRetry := make([]string, 0, len(block.Txs))

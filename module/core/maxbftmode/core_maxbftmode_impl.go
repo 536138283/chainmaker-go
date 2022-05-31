@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package maxbftmode
 
 import (
+	"strings"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/maxbftmode/helper"
@@ -18,7 +20,6 @@ import (
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"strings"
 )
 
 // CoreEngine is a block handle engine.

@@ -7,11 +7,12 @@ package common
 
 import (
 	"bytes"
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
+
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"

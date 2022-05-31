@@ -549,7 +549,7 @@ func TestBlockBuilder_GenerateNewBlock(t *testing.T) {
 				log:             tt.fields.log,
 				storeHelper:     tt.fields.storeHelper,
 			}
-			got, got1, err := bb.GenerateNewBlock(tt.args.proposingHeight, tt.args.preHash, tt.args.txBatch)
+			got, got1, err := bb.GenerateNewBlock(tt.args.proposingHeight, tt.args.preHash, tt.args.txBatch, []string{"abc"})
 			if (err != nil) != tt.wantErr {
 				t.Errorf("GenerateNewBlock() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1411,7 +1411,7 @@ func TestBlockCommitterImpl_syncWithTxPool(t *testing.T) {
 				storeHelper:           tt.fields.storeHelper,
 				blockInterval:         tt.fields.blockInterval,
 			}
-			if got := chain.syncWithTxPool(tt.args.block, tt.args.height); !reflect.DeepEqual(got, tt.want) {
+			if got, _ := chain.syncWithTxPool(tt.args.block, tt.args.height); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("syncWithTxPool() = %v, want %v", got, tt.want)
 			}
 		})
@@ -1879,7 +1879,7 @@ func TestRecoverBlock(t *testing.T) {
 		}
 
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := RecoverBlock(tt.args.block, tt.args.mode, tt.args.chainConf, tt.args.txPool, tt.args.ac, tt.args.netService, tt.args.logger)
+			got, _, err := RecoverBlock(tt.args.block, tt.args.mode, tt.args.chainConf, tt.args.txPool, tt.args.ac, tt.args.netService, tt.args.logger)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("RecoverBlock() error = %v, wantErr %v", err, tt.wantErr)
 				return

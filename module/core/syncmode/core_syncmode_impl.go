@@ -8,6 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package syncmode
 
 import (
+	"strings"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -20,7 +22,6 @@ import (
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"strings"
 )
 
 // CoreEngine is a block handle engine.

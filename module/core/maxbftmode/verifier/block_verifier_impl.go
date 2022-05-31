@@ -7,12 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
+	"fmt"
+	"sync"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"fmt"
-	"sync"
 
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core/common"

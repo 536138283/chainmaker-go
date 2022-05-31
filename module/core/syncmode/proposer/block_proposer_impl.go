@@ -394,14 +394,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	_, rwSetMap, _ := bp.proposalCache.GetProposedBlock(block)
 	bp.log.Debugf("proposing block \n %s", utils.FormatBlock(block))
 
-	cutBlock := new(commonpb.Block)
-	if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
-		common.TxPoolType == batch.TxPoolType {
-		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
-	} else {
-		cutBlock = block
-	}
-
+	cutBlock := bp.getCutBlock(block)
 	bp.msgBus.Publish(msgbus.ProposedBlock,
 		&consensuspb.ProposalBlock{Block: block, TxsRwSet: rwSetMap, CutBlock: cutBlock})
 
@@ -616,4 +609,16 @@ func (bp *BlockProposerImpl) getLastProposeTimeByBlockFinger(blockFinger string)
 		errMsg := "propose repeat time map type is wrong"
 		return 0, errors.New(errMsg)
 	}
+}
+
+func (bp *BlockProposerImpl) getCutBlock(block *commonpb.Block) *commonpb.Block {
+	cutBlock := new(commonpb.Block)
+	if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
+		common.TxPoolType == batch.TxPoolType {
+		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
+	} else {
+		cutBlock = block
+	}
+
+	return cutBlock
 }

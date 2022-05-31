@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"encoding/hex"
 	"fmt"
+
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
 	"github.com/gogo/protobuf/proto"
 
