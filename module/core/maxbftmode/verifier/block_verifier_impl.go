@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"encoding/hex"
 	"fmt"
 
@@ -325,7 +326,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	var err error
 	// txCapacity := v.chainConf.ChainConfig().Block.BlockTxCapacity
 	var txCapacity uint32
-	if common.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity) + 1
 	} else {
 		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)

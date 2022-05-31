@@ -1,4 +1,4 @@
-package common
+package scheduler
 
 import "chainmaker.org/chainmaker/protocol/v2"
 

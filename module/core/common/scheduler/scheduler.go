@@ -18,8 +18,6 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker-go/module/core/common"
-
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/evmutils"
@@ -86,7 +84,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
 
-	enableOptimizeChargeGas := common.IsOptimizeChargeGasEnabled(ts.chainConf)
+	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
 	var senderGroup *SenderGroup
@@ -482,7 +480,7 @@ func (ts *TxScheduler) executeTx(tx *commonPb.Transaction, snapshot protocol.Sna
 		txSimContext.SetTxResult(tx.Result)
 		return txSimContext, protocol.ExecOrderTxTypeNormal, false
 	}
-	enableOptimizeChargeGas := common.IsOptimizeChargeGasEnabled(ts.chainConf)
+	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
 	runVmSuccess := true
 	var txResult *commonPb.Result
 	var err error
