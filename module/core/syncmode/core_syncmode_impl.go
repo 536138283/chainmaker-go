@@ -8,6 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package syncmode
 
 import (
+	"strings"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -15,6 +17,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/syncmode/verifier"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
@@ -129,6 +132,13 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// get the type of tx pool
+	if value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]; ok {
+		common.TxPoolType, _ = value.(string)
+		common.TxPoolType = strings.ToUpper(common.TxPoolType)
+	}
+
 	return core, nil
 }
 

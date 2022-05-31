@@ -8,10 +8,13 @@ package common
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"runtime/debug"
 	"sync"
+
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
@@ -91,7 +94,8 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 	return creatorBlock
 }
 
-func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction) (
+func (bb *BlockBuilder) GenerateNewBlock(
+	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction, batchIds []string) (
 	*commonPb.Block, []int64, error) {
 	timeLasts := make([]int64, 0)
 	currentHeight, _ := bb.ledgerCache.CurrentHeight()
@@ -174,7 +178,24 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 				txsTimeout = append(txsTimeout, tx)
 			}
 		}
-		bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+
+		if TxPoolType == batch.TxPoolType {
+			// retry the timeout 's tx and get the new batchIds
+			batchIds = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
+		} else {
+			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+		}
+	}
+
+	if TxPoolType == batch.TxPoolType {
+		var batchIdBytes []byte
+		// set batchIds into additional data
+		batchIdBytes, err = SerializeBatchIds(batchIds)
+		if err != nil {
+			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
+				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
+		}
+		block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] = batchIdBytes
 	}
 
 	// cache proposed block
@@ -231,9 +252,11 @@ func initNewBlock(
 			TxCount:        0,
 			Signature:      nil,
 		},
-		Dag:            &commonPb.DAG{},
-		Txs:            nil,
-		AdditionalData: nil,
+		Dag: &commonPb.DAG{},
+		Txs: nil,
+		AdditionalData: &commonPb.AdditionalData{
+			ExtraData: make(map[string][]byte),
+		},
 	}
 	if isConfigBlock {
 		block.Header.BlockType = commonPb.BlockType_CONFIG_BLOCK
@@ -329,6 +352,7 @@ func FinalizeBlock(
 	}
 	return nil
 }
+
 func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType string, logger protocol.Logger) (
 	[]byte, error) {
 	var rwSetHash []byte
@@ -1009,9 +1033,17 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	// Remove txs from txpool. Remove will invoke proposeSignal from txpool if pool size > txcount
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	txRetry := chain.syncWithTxPool(lastProposed, height)
-	chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
-	chain.txPool.RetryAndRemoveTxs(txRetry, lastProposed.Txs)
+	txRetry, batchRetry := chain.syncWithTxPool(lastProposed, height)
+
+	if TxPoolType == batch.TxPoolType {
+		batchIds := GetBatchIds(lastProposed)
+		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
+		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
+	} else {
+		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
+		chain.txPool.RetryAndRemoveTxs(txRetry, lastProposed.Txs)
+	}
+
 	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick
 
 	chain.proposalCache.ClearProposedBlockAt(height)
@@ -1040,11 +1072,35 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	return nil
 }
 
-func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) []*commonPb.Transaction {
+func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) (
+	[]*commonPb.Transaction, []string) {
 	proposedBlocks := chain.proposalCache.GetProposedBlocksAt(height)
 	txRetry := make([]*commonPb.Transaction, 0, len(block.Txs))
+	batchRetry := make([]string, 0, len(block.Txs))
 	chain.log.Debugf("has %d blocks in height: %d", len(proposedBlocks), height)
 	keepTxs := make(map[string]struct{}, len(block.Txs))
+	keepBatchIds := make(map[string]struct{}, len(block.Txs))
+
+	if TxPoolType == batch.TxPoolType {
+		batchIds := GetBatchIds(block)
+		for _, batchId := range batchIds {
+			keepBatchIds[batchId] = struct{}{}
+		}
+		for _, b := range proposedBlocks {
+			if bytes.Equal(b.Header.BlockHash, block.Header.BlockHash) {
+				continue
+			}
+
+			retryBatchIds := GetBatchIds(block)
+			for _, retryBatchId := range retryBatchIds {
+				if _, ok := keepBatchIds[retryBatchId]; !ok {
+					batchRetry = append(batchRetry, retryBatchId)
+				}
+			}
+		}
+		return txRetry, batchRetry
+	}
+
 	for _, tx := range block.Txs {
 		keepTxs[tx.Payload.TxId] = struct{}{}
 	}
@@ -1058,7 +1114,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 			}
 		}
 	}
-	return txRetry
+	return txRetry, batchRetry
 }
 
 //nolint: ineffassign, staticcheck
@@ -1112,6 +1168,8 @@ func GetProposerId(
 func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
 	turboBlock.Header = block.Header
 	turboBlock.Dag = block.Dag
+	turboBlock.AdditionalData = block.AdditionalData
+
 	newTxs := make([]*commonPb.Transaction, len(block.Txs))
 	for i := range block.Txs {
 		newPayload := &commonPb.Payload{
@@ -1119,11 +1177,15 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 		}
 
 		newTxs[i] = &commonPb.Transaction{
-			Payload:   newPayload,
-			Sender:    block.Txs[i].Sender,
-			Endorsers: block.Txs[i].Endorsers,
-			Result:    block.Txs[i].Result,
+			Payload: newPayload,
+			Result:  block.Txs[i].Result,
 		}
+
+		if TxPoolType != batch.TxPoolType {
+			newTxs[i].Sender = block.Txs[i].Sender
+			newTxs[i].Endorsers = block.Txs[i].Endorsers
+		}
+
 	}
 	turboBlock.Txs = newTxs
 	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
@@ -1138,9 +1200,86 @@ func RecoverBlock(
 	txPool protocol.TxPool,
 	ac protocol.AccessControlProvider,
 	netService protocol.NetService,
-	logger protocol.Logger) (*commonPb.Block, error) {
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode &&
+	if TxPoolType == batch.TxPoolType {
+		return recoverBlockByBatch(block, mode, chainConf, txPool, ac, netService, logger)
+	}
+
+	return recoverBlock(block, mode, chainConf, txPool, ac, netService, logger)
+}
+
+func recoverBlockByBatch(
+	block *commonPb.Block,
+	mode protocol.VerifyMode,
+	chainConf protocol.ChainConf,
+	txPool protocol.TxPool,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
+
+	if len(block.Txs) != 0 && block.Txs[0].Payload != nil &&
+		mode != protocol.SYNC_VERIFY {
+
+		newBlock := &commonPb.Block{
+			Header:         block.Header,
+			Dag:            block.Dag,
+			Txs:            make([]*commonPb.Transaction, len(block.Txs)),
+			AdditionalData: block.AdditionalData,
+		}
+
+		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
+		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
+
+		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		batchIds := GetBatchIds(block)
+		txs, err := txPool.GetAllTxsByBatchIds(
+			batchIds,
+			proposerId,
+			block.Header.BlockHeight,
+			int(maxRetryTime*retryInterval))
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		txsMap := make(map[string]*commonPb.Transaction)
+		for _, tx := range txs {
+			txsMap[tx.Payload.TxId] = tx
+		}
+
+		for i := range block.Txs {
+			newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
+			newBlock.Txs[i].Result = block.Txs[i].Result
+			logger.Debugf("recover the block[%d], TxId[%s, %s]",
+				newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+		}
+
+		return newBlock, batchIds, nil
+	}
+
+	return &commonPb.Block{
+		Header:         block.Header,
+		Dag:            block.Dag,
+		Txs:            block.Txs,
+		AdditionalData: block.AdditionalData,
+	}, GetBatchIds(block), nil
+}
+
+func recoverBlock(
+	block *commonPb.Block,
+	mode protocol.VerifyMode,
+	chainConf protocol.ChainConf,
+	txPool protocol.TxPool,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
+
+	if IfOpenConsensusMessageTurbo(chainConf) && mode != protocol.SYNC_VERIFY &&
 		len(block.Txs) != 0 && block.Txs[0].Payload != nil {
 
 		newBlock := &commonPb.Block{
@@ -1156,12 +1295,12 @@ func RecoverBlock(
 
 		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		for i := range block.Txs {
@@ -1171,7 +1310,7 @@ func RecoverBlock(
 				newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
 		}
 
-		return newBlock, nil
+		return newBlock, nil, nil
 	}
 
 	// new a block to avoid use the same pointer with consensus.
@@ -1180,5 +1319,28 @@ func RecoverBlock(
 		Dag:            block.Dag,
 		Txs:            block.Txs,
 		AdditionalData: block.AdditionalData,
-	}, nil
+	}, nil, nil
+
+}
+
+func SerializeBatchIds(batchIds []string) ([]byte, error) {
+
+	buffer := &bytes.Buffer{}
+	err := gob.NewEncoder(buffer).Encode(batchIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return buffer.Bytes(), err
+}
+
+func DeserializeBatchIds(data []byte) ([]string, error) {
+
+	batchIds := make([]string, 0)
+	err := gob.NewDecoder(bytes.NewReader(data)).Decode(&batchIds)
+	if err != nil {
+		return nil, err
+	}
+
+	return batchIds, err
 }

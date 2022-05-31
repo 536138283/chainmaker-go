@@ -9,20 +9,20 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220530031730-870de1f7e4aa
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220420114456-4bd051c6e220
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20220420072039-bc207cc67903
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220525085936-feba0b0c0541
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220530062802-4edc8cf478a7
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220525083411-d6c392713cba
 	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220517143546-a82c5a2a4b68
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220526074443-dfe233fbfb0e
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220426061105-482b8e05df81
 	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220517151833-04df69759f7f
 	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220426061931-9011730f7fba
-	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220525014327-d31d59272849
-	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220525014431-21935884ab82
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220531051333-31b6e22cad14
+	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220530062047-b4192b9338f9
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220518091801-8d37c755195b
 	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220527181405-be81673f609d
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220518031830-b44fa083c481
-	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220427143753-b708f33ee6a0
-	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220518031616-fdcf993fe87a
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220530073244-0bd87b83fdd5
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220530072011-9e7b5c90b3b5
+	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220530071955-55028be5268b
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220527100509-2601c9a6b870
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220523105831-d85ec7733a93
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220527114415-d0cc67f922c9

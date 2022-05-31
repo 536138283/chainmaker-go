@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
+
 	"github.com/gogo/protobuf/proto"
 
 	"chainmaker.org/chainmaker-go/module/consensus"
@@ -183,7 +185,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
+	newBlock, batchIds, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		v.log.Errorf("RecoverBlock failed, err:%v", err)
 		return err
@@ -224,7 +226,11 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	// mark transactions in block as pending status in txpool
-	v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	if common.TxPoolType == batch.TxPoolType {
+		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
+	} else {
+		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	}
 
 	isValid = true
 	if protocol.CONSENSUS_VERIFY == mode {
@@ -285,7 +291,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	newBlock, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
+	newBlock, batchIds, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
 		return err
 	}
@@ -325,7 +331,11 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 
 	// mark transactions in block as pending status in txpool
-	v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	if common.TxPoolType == batch.TxPoolType {
+		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
+	} else {
+		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+	}
 
 	isValid = true
 	if protocol.CONSENSUS_VERIFY == mode {
