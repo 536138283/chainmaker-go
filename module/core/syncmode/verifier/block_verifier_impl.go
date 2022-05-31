@@ -365,6 +365,10 @@ func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 			return
 		}
 		v.chainConf.ChainConfig().Block = chainConfig.Block
+		protocol.ParametersValueMaxLength = chainConfig.Block.TxParameterSize * 1024 * 1024
+		if chainConfig.Block.TxParameterSize <= 0 {
+			protocol.ParametersValueMaxLength = protocol.DefaultParametersValueMaxSize * 1024 * 1024
+		}
 		v.log.Infof("[BlockVerifierImpl] receive msg, topic: %s, blockverify[%v]",
 			msg.Topic.String(), v.chainConf.ChainConfig().Block)
 	default:
