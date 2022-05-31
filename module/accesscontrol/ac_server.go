@@ -398,6 +398,9 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(), policyAdmin)
 
+	// for charge gas in optimize mode
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 }
 
 func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId string) {
@@ -560,6 +563,10 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), policySelfConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 		syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), policySelfConfig)
+
+	// for charging gas in optimize mode
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 }
 
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
