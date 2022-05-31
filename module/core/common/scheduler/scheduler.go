@@ -638,7 +638,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		})
 	}
 
-	if !enableOptimizeChargeGas {
+	if ts.checkGasEnable() && !enableOptimizeChargeGas {
 		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contract.Name, method)
 		if err != nil {
 			return result, specialTxType, err
