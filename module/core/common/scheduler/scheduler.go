@@ -89,7 +89,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
 	var senderGroup *SenderGroup
 	var senderCollection *SenderCollection
-	if enableOptimizeChargeGas {
+	if ts.checkGasEnable() && enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
 		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
@@ -1100,7 +1100,7 @@ func (ts *TxScheduler) dispatchTxs(
 	senderGroup *SenderGroup,
 	enableConflictsBitWindow bool,
 	conflictsBitWindow *ConflictsBitWindow) {
-	if enableOptimizeChargeGas {
+	if ts.checkGasEnable() && enableOptimizeChargeGas {
 		ts.log.Debugf("before `SenderCollection` dispatch => ")
 		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC)
 		ts.log.Debugf("end `SenderCollection` dispatch => ")

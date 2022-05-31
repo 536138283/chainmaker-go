@@ -50,12 +50,11 @@ func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf, stor
 	if err != nil {
 		log.Fatalf("compile default state regex error %v", err)
 	}
-	if chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
-		txScheduler.signer, err = initSigner(chainConf.ChainConfig(), localconf.ChainMakerConfig, log)
-		if err != nil {
-			log.Fatalf("init signer of TxScheduler failed: err = %v", err)
-		}
+	txScheduler.signer, err = initSigner(chainConf.ChainConfig(), localconf.ChainMakerConfig, log)
+	if err != nil {
+		log.Fatalf("init signer of TxScheduler failed: err = %v", err)
 	}
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		txScheduler.metricVMRunTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER, "metric_vm_run_time",
 			"VM run time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
