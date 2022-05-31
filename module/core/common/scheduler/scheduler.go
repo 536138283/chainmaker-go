@@ -314,7 +314,7 @@ func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *common
 	//ts.dumpDAG(block.Dag, block.Txs)
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		result, _ := prettyjson.Marshal(txRWSetMap)
-		ts.log.Infof("schedule rwset :%s", result)
+		ts.log.Infof("schedule rwset :%s, dag:%+v", result, block.Dag)
 	}
 	return txRWSetMap
 }
@@ -441,7 +441,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	}
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		result, _ := prettyjson.Marshal(txRWSetMap)
-		ts.log.Infof("simulate with dag rwset :%s", result)
+		ts.log.Infof("simulate with dag rwset :%s, dag: %+v", result, block.Dag)
 	}
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }

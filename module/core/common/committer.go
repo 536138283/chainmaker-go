@@ -9,11 +9,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/gogo/protobuf/proto"

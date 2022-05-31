@@ -697,8 +697,8 @@ func (vb *VerifierBlock) ValidateBlock(
 
 // validateBlock, validate block and transactions
 func (vb *VerifierBlock) ValidateBlockWithRWSets(
-	block, lastBlock *commonPb.Block, hashType string,
-	timeLasts map[string]int64, txRWSetMap map[string]*commonPb.TxRWSet, mode protocol.VerifyMode) (
+	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64,
+	txRWSetMap map[string]*commonPb.TxRWSet, mode protocol.VerifyMode) (
 	map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
 	// 1.block verify
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
