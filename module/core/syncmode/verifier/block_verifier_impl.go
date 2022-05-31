@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
+
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -327,7 +329,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	var err error
 	// txCapacity := uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)
 	var txCapacity uint32
-	if v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity) + 1
 	} else {
 		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)
