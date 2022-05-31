@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker-go/module/core/common"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -18,6 +17,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker-go/module/core/common"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
