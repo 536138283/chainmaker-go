@@ -325,7 +325,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	var err error
 	// txCapacity := v.chainConf.ChainConfig().Block.BlockTxCapacity
 	var txCapacity uint32
-	if v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
+	if v.chainConf.ChainConfig().AccountConfig.EnableGas && v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
 		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity) + 1
 	} else {
 		txCapacity = uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)
