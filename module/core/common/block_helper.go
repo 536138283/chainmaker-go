@@ -975,20 +975,24 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
 		panicErr := recover()
-		if panicErr != nil {
+		if err == nil {
+			// error is nil
+			if panicErr == nil {
+				return
+			}
+			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
+				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+			}
 			chain.log.Errorf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack()))
-			err = fmt.Errorf(fmt.Sprint(panicErr))
-		} else if err == nil {
-			return
+			panic(fmt.Sprintf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack())))
 		}
-
-		// rollback sql
+		// error is not nil
 		if err == commonErrors.ErrBlockHadBeenCommited {
 			chain.log.Warn("cache add block err: ", err)
 		} else {
 			chain.log.Error("cache add block err: ", err)
 		}
-
+		// rollback sql
 		if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
 			chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 		}

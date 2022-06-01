@@ -808,10 +808,11 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 	committer := NewCommitBlock(cbConf)
 
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
+		name      string
+		fields    fields
+		args      args
+		wantErr   bool
+		wantPanic bool
 	}{
 		{
 			name: "test0",
@@ -828,7 +829,8 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 				verifier:        verifier,
 				storeHelper:     storeHelper,
 			},
-			wantErr: true,
+			wantErr:   false,
+			wantPanic: true,
 		},
 		{
 			name: "test1",
@@ -935,7 +937,24 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 				blockchainStore: blockchainStore,
 				snapshotManager: snapshotManager,
 				txPool:          txPool,
-				chainConf:       chainConf,
+				chainConf: func() protocol.ChainConf {
+					chainConf = newMockChainConf(t)
+					chainConfig = &configpb.ChainConfig{
+						Core: &configpb.CoreConfig{
+							ConsensusTurboConfig: &configpb.ConsensusTurboConfig{
+								ConsensusMessageTurbo: true,
+							},
+						},
+						Crypto: &configpb.CryptoConfig{
+							Hash: "SHA256",
+						},
+						Consensus: &configpb.ConsensusConfig{
+							Type: consensus.ConsensusType_SOLO,
+						},
+					}
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
 				ledgerCache: func() protocol.LedgerCache {
 					ledgerCache = newMockLedgerCache(t)
 					ledgerCache.EXPECT().CurrentHeight().AnyTimes()
@@ -970,7 +989,7 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 					return block
 				}(),
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -995,6 +1014,14 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 				storeHelper:           tt.fields.storeHelper,
 				blockInterval:         tt.fields.blockInterval,
 			}
+			if tt.wantPanic {
+				defer func() {
+					if r := recover(); (r != nil) != tt.wantPanic {
+						t.Errorf("AddBlock() panic = %v, wantErr %v", r, tt.wantPanic)
+					}
+				}()
+			}
+
 			if err := chain.AddBlock(tt.args.block); (err != nil) != tt.wantErr {
 				t.Errorf("AddBlock() error = %v, wantErr %v", err, tt.wantErr)
 			}
