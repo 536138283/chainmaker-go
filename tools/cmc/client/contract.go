@@ -41,11 +41,6 @@ func contractNameToAddrCMD() *cobra.Command {
 			var err error
 			var contractName = args[0]
 			switch addressType {
-			case 1:
-				addr, err = evmutils.ZXAddress([]byte(contractName))
-				if err != nil {
-					return err
-				}
 			case 0:
 				addrInt, err := evmutils.MakeAddressFromString(contractName)
 				if err != nil {
@@ -53,7 +48,11 @@ func contractNameToAddrCMD() *cobra.Command {
 				}
 				addrObj := evmutils.BigToAddress(addrInt)
 				addr = hex.EncodeToString(addrObj[:])
-
+			case 1:
+				addr, err = evmutils.ZXAddress([]byte(contractName))
+				if err != nil {
+					return err
+				}
 			default:
 				return fmt.Errorf("unsupported address type %v", addressType)
 			}
