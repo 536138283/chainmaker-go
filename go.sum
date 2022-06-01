@@ -75,6 +75,7 @@ chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220517135801-d1a5621f7e8b/go.mod h
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220518092112-d6152aef9814/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220520033252-36703cdf4f15/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220530061357-7c5cd1ab5018/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
+chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220531051333-31b6e22cad14/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220601073343-3015c97c2728 h1:mU6BaZNOGCD1je3akQ78CsjaGOSG5SDGWojCuuiERJA=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220601073343-3015c97c2728/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/protocol/v2 v2.1.2-0.20220128021940-8fd70a8c2c75/go.mod h1:oR5lqSI3ELuzdcYVHBeV9d6SN8FgfSa/VMRfBWFzK9g=
@@ -92,8 +93,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220530062047-b4192b9338f9 h1:2R
 chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220530062047-b4192b9338f9/go.mod h1:6eJix2VK5teecrtwVA8qHl1EbqS4PLOo0ACsob4ljEk=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff h1:mCtuK+FKGMmVLXZf7WFU1dNfk5msQb79hzbftQEpbTo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220518091801-8d37c755195b h1:Qqtm7OhYYsEN25+grqq1qkaQ0xfEstgFvNEZg0Qf3Ic=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220518091801-8d37c755195b/go.mod h1:WMyVquBx9HzwtR0lObCMsYt8WQSmKgRwnSXdMYtxz1w=
+chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220601081720-f8da79a98a44 h1:Q17VGtJJah8roqRu9ASb/RR09/Qm8k+J7nujmDpazTg=
+chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220601081720-f8da79a98a44/go.mod h1:gQMc0khai7YlSWDzGc6z5GkSkVFEB0Ie3R39bxutISQ=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.1.2-0.20220128063811-9aeb66627e54/go.mod h1:5rNJBk4OPtdtCRF3RZDLai/Qo7AhqOM4PEickD0i2fA=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.0/go.mod h1:H/rkyGcBqlXZQRdFpNByohh0GdQuk9cX2BbX2X16vZY=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.1-0.20220506112701-14febd945b43 h1:4/1WlWvbYld9MtBsTTJ15eJx18lVLe5b7uq2E58ws6g=

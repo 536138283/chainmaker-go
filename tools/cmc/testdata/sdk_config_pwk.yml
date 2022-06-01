@@ -10,7 +10,7 @@ chain_client:
   crypto:
     hash: SHA256
   auth_type: permissionedWithKey
-  # 默认支持TimestampKey，如果开启enableNormalKey则是有NormalKey
+  # 默认支持TimestampKey，如果开启enableNormalKey则使用NormalKey
   enable_normal_key: false
 
   nodes:
