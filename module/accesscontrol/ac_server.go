@@ -92,6 +92,7 @@ var (
 		[]protocol.Role{
 			protocol.RoleClient,
 			protocol.RoleAdmin,
+			protocol.RoleConsensusNode,
 		},
 	)
 
@@ -401,6 +402,9 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	// for charge gas in optimize mode
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+	// for gas admin
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
 }
 
 func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId string) {
@@ -567,6 +571,9 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	// for charging gas in optimize mode
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+	// for gas admin
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
 }
 
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
