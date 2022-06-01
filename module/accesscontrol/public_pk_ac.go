@@ -412,6 +412,12 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// for gas admin
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
+	// for set invoke base gas
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), pubPolicyMajorityAdmin)
+	// move set admin method to chain config module
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
 }
 
 // need to consistent with 2.1.0 for dpos
