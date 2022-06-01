@@ -34,7 +34,7 @@ function start_chainmaker() {
   cd $SCRIPT_PATH
   ./cluster_quick_stop.sh clean
   echo -e "\n\n【generate】 certs and config..."
-  echo -e "\nINFO\n\n\n" | ./prepare_pk.sh $node_count $chain_count
+#  echo -e "\nINFO\n\n\n" | ./prepare_pk.sh $node_count $chain_count
   echo -e "\n\n【build】 release..."
   ./build_release.sh
   echo -e "\n\n【start】 chainmaker..."
@@ -68,7 +68,7 @@ function prepare_cmc() {
   rm -rf testdata
   mkdir testdata
   cp $PROJECT_PATH/tools/cmc/testdata/sdk_config_pk.yml testdata/
-  cp -r $PROJECT_PATH/build/crypto-config/ testdata/
+  cp -r $PROJECT_PATH/build/crypto-config/ testdata/crypto-config
 }
 
 function cmc_test() {
@@ -85,13 +85,26 @@ function cmc_test() {
     --sync-result=true \
     --params="{}"
 
-  ## invoke tx
+ ## invoke tx
   ./cmc client contract user invoke \
     --contract-name=fact \
     --method=save \
     --sdk-conf-path=./testdata/sdk_config_pk.yml \
     --params="{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" \
     --sync-result=true
+
+  sleep 31
+
+#  for ((i=1;i<11;i++))
+#  do
+#    ## invoke tx
+#    ./cmc client contract user invoke \
+#      --contract-name=fact \
+#      --method=save \
+#      --sdk-conf-path=./testdata/sdk_config_pk.yml \
+#      --params="{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" \
+#      --sync-result=true
+#  done
 
   ## query tx
   ./cmc client contract user get \
@@ -108,4 +121,4 @@ function cat_log() {
 start_chainmaker
 prepare_cmc
 cmc_test
-cat_log
+#cat_log

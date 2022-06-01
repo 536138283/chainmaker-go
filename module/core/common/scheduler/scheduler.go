@@ -178,6 +178,11 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
 	}
 
+	if ts.checkCoinbaseEnable() {
+		ts.log.Debug("append coinbase tx to block ...")
+		ts.appendCoinbaseTx(block, snapshot, senderCollection)
+	}
+
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
 		"dag building cost %v, total used %v, tps %v", len(block.Dag.Vertexes), timeCostA,
@@ -905,6 +910,11 @@ func (ts *TxScheduler) checkGasEnable() bool {
 	return false
 }
 
+func (ts *TxScheduler) checkCoinbaseEnable() bool {
+	//TODO：增加coinbase配置
+	return true
+}
+
 func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
 	if !utils.IsNativeContract(contractName) {
 		return true
@@ -1236,6 +1246,24 @@ func (ts *TxScheduler) appendChargeGasTx(
 	ts.appendChargeGasTxToDAG(block, snapshot)
 }
 
+func (ts *TxScheduler) appendCoinbaseTx(
+	block *commonPb.Block,
+	snapshot protocol.Snapshot,
+	senderCollection *SenderCollection) {
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => creaCoinbaseTx() begin ")
+	tx, err := ts.createCoinbaseTx(senderCollection)
+	if err != nil {
+		return
+	}
+
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => executeCoinbaseTx() begin ")
+	txSimContext := ts.executeCoinbaseTx(tx, block, snapshot)
+	tx.Result = txSimContext.GetTxResult()
+
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendCCoinbaseToDAG() begin ")
+	ts.appendCoinbaseToDAG(block, snapshot)
+}
+
 // signTxPayload sign charging tx with node's private key
 func (ts *TxScheduler) signTxPayload(
 	payload *commonPb.Payload) ([]byte, error) {
@@ -1247,6 +1275,11 @@ func (ts *TxScheduler) signTxPayload(
 
 	// using the default hash type of the chain
 	hashType := ts.chainConf.ChainConfig().GetCrypto().Hash
+	ts.log.Infof("hashType=%s,payloadBytes=%s", hashType, payloadBytes)
+	if ts.signer == nil {
+		//TODO:这里为nil，签名失败，但是整体流程成功。
+		return nil, errors.New("ts.signer is nil")
+	}
 	return ts.signer.Sign(hashType, payloadBytes)
 }
 
@@ -1294,6 +1327,66 @@ func (ts *TxScheduler) createChargeGasTx(
 	signingMember, err := ts.signer.GetMember()
 	if err != nil {
 		ts.log.Errorf("createChargeGasTx => GetMember() error: %v", err.Error())
+		return nil, err
+	}
+
+	return &commonPb.Transaction{
+		Payload: payload,
+		Sender: &commonPb.EndorsementEntry{
+			Signer:    signingMember,
+			Signature: signature,
+		},
+		Endorsers: make([]*commonPb.EndorsementEntry, 0),
+		Result:    nil,
+	}, nil
+}
+
+func (ts *TxScheduler) createCoinbaseTx(
+	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
+
+	parameters := make([]*commonPb.KeyValuePair, 0)
+	if senderCollection != nil {
+		// 构造gas参数
+		for address, txCollection := range senderCollection.txsMap {
+			totalGasUsed := int64(0)
+			for _, tx := range txCollection.txs {
+				if tx.Result != nil {
+					totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
+				}
+			}
+			keyValuePair := commonPb.KeyValuePair{
+				Key:   address,
+				Value: []byte(fmt.Sprintf("%d", totalGasUsed)),
+			}
+			parameters = append(parameters, &keyValuePair)
+		}
+	}
+
+	// 构造 Payload
+	payload := &commonPb.Payload{
+		ChainId:        ts.chainConf.ChainConfig().ChainId,
+		TxType:         commonPb.TxType_INVOKE_CONTRACT,
+		TxId:           utils.GetRandTxId(),
+		Timestamp:      time.Now().Unix(),
+		ExpirationTime: time.Now().Add(time.Second * 1).Unix(),
+		ContractName:   syscontract.SystemContract_COINBASE.String(),
+		Method:         syscontract.CoinbaseFunction_RUN_COINBASE.String(),
+		Parameters:     parameters,
+		Sequence:       uint64(0),
+		Limit:          &commonPb.Limit{GasLimit: uint64(0)},
+	}
+
+	// 对 Payload 签名
+	signature, err := ts.signTxPayload(payload)
+	if err != nil {
+		ts.log.Errorf("createCoinbaseTx => signTxPayload() error: %v", err.Error())
+		return nil, err
+	}
+
+	// 构造 Transaction
+	signingMember, err := ts.signer.GetMember()
+	if err != nil {
+		ts.log.Errorf("createCoinbaseTx => GetMember() error: %v", err.Error())
 		return nil, err
 	}
 
@@ -1363,8 +1456,76 @@ func (ts *TxScheduler) executeChargeGasTx(
 	return txSimContext
 }
 
+func (ts *TxScheduler) executeCoinbaseTx(
+	tx *commonPb.Transaction,
+	block *commonPb.Block,
+	snapshot protocol.Snapshot) protocol.TxSimContext {
+
+	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
+	ts.log.Debugf("new tx for charging gas, id = %s", tx.Payload.GetTxId())
+
+	result := &commonPb.Result{
+		Code: commonPb.TxStatusCode_SUCCESS,
+		ContractResult: &commonPb.ContractResult{
+			Code:    uint32(0),
+			Result:  nil,
+			Message: "",
+		},
+		RwSetHash: nil,
+	}
+
+	ts.log.Debugf("executeCoinbaseTx => txSimContext.GetContractByName(`%s`)", tx.Payload.ContractName)
+	contract, err := txSimContext.GetContractByName(tx.Payload.ContractName)
+	if err != nil {
+		ts.log.Errorf("Get contract info by name[%s] error:%s", tx.Payload.ContractName, err)
+		result.ContractResult.Message = err.Error()
+		result.Code = commonPb.TxStatusCode_INVALID_PARAMETER
+		result.ContractResult.Code = 1
+		txSimContext.SetTxResult(result)
+		return txSimContext
+	}
+
+	params := make(map[string][]byte)
+	for _, item := range tx.Payload.Parameters {
+		address := item.Key
+		data := item.Value
+		params[address] = data
+	}
+
+	// this native contract call will never failed
+	contractResultPayload, _, txStatusCode := ts.VmManager.RunContract(contract, tx.Payload.Method, nil,
+		params, txSimContext, 0, tx.Payload.TxType)
+	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
+		panic("running the tx of charging gas will never failed.")
+	}
+	result.Code = txStatusCode
+	result.ContractResult = contractResultPayload
+	ts.log.Debugf("finished tx for charging gas, id = :%s, txStatusCode = %v", tx.Payload.TxId, txStatusCode)
+
+	txSimContext.SetTxResult(result)
+	snapshot.ApplyTxSimContext(
+		txSimContext,
+		protocol.ExecOrderTxTypeChargeGas,
+		true, true)
+
+	return txSimContext
+}
+
 // appendChargeGasTxToDAG append the tx to the DAG with dependencies on all tx.
 func (ts *TxScheduler) appendChargeGasTxToDAG(
+	block *commonPb.Block,
+	snapshot protocol.Snapshot) {
+
+	dagNeighbors := &commonPb.DAG_Neighbor{
+		Neighbors: make([]uint32, 0, snapshot.GetSnapshotSize()-1),
+	}
+	for i := uint32(0); i < uint32(snapshot.GetSnapshotSize()-1); i++ {
+		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
+	}
+	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
+}
+
+func (ts *TxScheduler) appendCoinbaseToDAG(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot) {
 

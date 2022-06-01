@@ -39,6 +39,10 @@ type MockSimContextImpl struct {
 	txResult     *commonPb.Result
 }
 
+func (s *MockSimContextImpl) GetSnapshot() protocol.Snapshot {
+	panic("implement me")
+}
+
 func (s *MockSimContextImpl) GetBlockTimestamp() int64 {
 	panic("implement me")
 }

@@ -85,6 +85,14 @@ var (
 	permissionResourcePolicyRule     string
 	permissionResourcePolicyOrgList  []string
 	permissionResourcePolicyRoleList []string
+
+	minSelfDelegation        int
+	epochValidatorNumber     int
+	epochBlockNumber         int
+	distributionPerBlock     int
+	slashingPerBlock         int
+	distributionFromSlashing int
+	gasExchangeRate          int
 )
 
 const (
@@ -144,6 +152,13 @@ const (
 	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
+	flagMinSelfDelegation                = "min-self-delegation"
+	flagEpochValidatorNumber             = "epoch-validator-number"
+	flagEpochBlockNumber                 = "epoch-block-number"
+	flagDistributionPerBlock             = "distribution-per-block"
+	flagSlashingPerBlock                 = "slashing-per-block"
+	flagDistributionFromSlashing         = "distribution-from-slashing"
+	flagGasExchangeRate                  = "gas-exchange-rate"
 )
 
 // ClientCMD new client series command
@@ -156,6 +171,7 @@ func ClientCMD() *cobra.Command {
 
 	clientCmd.AddCommand(contractCMD())
 	clientCmd.AddCommand(chainConfigCMD())
+	clientCmd.AddCommand(dposConfigCMD())
 	clientCmd.AddCommand(getChainMakerServerVersionCMD())
 	clientCmd.AddCommand(certManageCMD())
 	clientCmd.AddCommand(blockChainsCMD())
@@ -255,6 +271,14 @@ func init() {
 		"chain config permission resource policy org list")
 	flags.StringSliceVar(&permissionResourcePolicyRoleList, flagPermissionResourcePolicyRoleList, []string{},
 		"chain config permission resource policy role list")
+
+	flags.IntVar(&minSelfDelegation, flagMinSelfDelegation, 250000, "the validator minimum staking amount (default 250000)")
+	flags.IntVar(&epochBlockNumber, flagEpochBlockNumber, 32, "the number of blocks contained in a epoch (default 32)")
+	flags.IntVar(&epochValidatorNumber, flagEpochValidatorNumber, 4, "the number of validators in a epoch (default 4)")
+	flags.IntVar(&distributionPerBlock, flagDistributionPerBlock, 100, "amount of reward per block (default 100)")
+	flags.IntVar(&slashingPerBlock, flagSlashingPerBlock, 100, "penalty amount for each less proposed block (default 100)")
+	flags.IntVar(&gasExchangeRate, flagGasExchangeRate, 1, "gas exchange rate")
+
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {

@@ -28,6 +28,7 @@ type txQuerySimContextImpl struct {
 	txWriteKeySql    []*commonPb.TxWrite
 	txWriteKeyDdlSql []*commonPb.TxWrite
 	blockchainStore  protocol.BlockchainStore
+	snapshot         protocol.Snapshot
 	vmManager        protocol.VmManager
 	gasUsed          uint64 // only for callContract
 	currentDepth     int
@@ -47,6 +48,11 @@ func (s *txQuerySimContextImpl) GetBlockTimestamp() int64 {
 		return lastBlock.Header.BlockTimestamp
 	}
 	return 0
+}
+
+func (s *txQuerySimContextImpl) GetSnapshot() protocol.Snapshot {
+	// 该方法这里没有使用，这里snapshot为nil
+	return s.snapshot
 }
 
 type callContractResult struct {
