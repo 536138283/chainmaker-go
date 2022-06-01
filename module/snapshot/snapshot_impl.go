@@ -274,11 +274,17 @@ func (s *SnapshotImpl) Seal() {
 }
 
 // BuildDAG build the block dag according to the read-write table
-func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
+func (s *SnapshotImpl) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet) *commonPb.DAG {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	txCount := uint32(len(s.txTable))
+	var txRWSets []*commonPb.TxRWSet
+	if txRWSetTable == nil {
+		txRWSets = s.txRWSetTable
+	} else {
+		txRWSets = txRWSetTable
+	}
+	txCount := uint32(len(txRWSets))
 	s.log.Infof("start to build DAG for block %d with %d txs", s.blockHeight, txCount)
 	dag := &commonPb.DAG{}
 	if txCount == 0 {
@@ -299,11 +305,11 @@ func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
 	}
 	// build all txs' readKeyDictionary, writeKeyDictionary, readPos(the pos in readKeyDictionary) and
 	// writePos(the pos in writeKeyDictionary)
-	readKeyDict, writeKeyDict, readPos, writePos := s.buildDictAndPos(txCount)
+	readKeyDict, writeKeyDict, readPos, writePos := buildDictAndPos(txRWSets)
 	reachMap := make([]*bitmap.Bitmap, txCount)
 	// build vertexes
 	for i := uint32(0); i < txCount; i++ {
-		directReachMap := s.buildReachMap(i, readKeyDict, writeKeyDict, readPos, writePos, reachMap)
+		directReachMap := buildReachMap(i, txRWSets[i], readKeyDict, writeKeyDict, readPos, writePos, reachMap)
 		dag.Vertexes[i] = &commonPb.DAG_Neighbor{
 			Neighbors: make([]uint32, 0, 16),
 		}
@@ -315,15 +321,15 @@ func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
 	return dag
 }
 
-func (s *SnapshotImpl) buildDictAndPos(txCount uint32) (map[string][]uint32, map[string][]uint32,
+func buildDictAndPos(txRWSetTable []*commonPb.TxRWSet) (map[string][]uint32, map[string][]uint32,
 	map[uint32]map[string]uint32, map[uint32]map[string]uint32) {
 	readKeyDict := make(map[string][]uint32, 1024)
 	writeKeyDict := make(map[string][]uint32, 1024)
 	readPos := make(map[uint32]map[string]uint32)
 	writePos := make(map[uint32]map[string]uint32)
-	for i := uint32(0); i < txCount; i++ {
-		readTableItemForI := s.txRWSetTable[i].TxReads
-		writeTableItemForI := s.txRWSetTable[i].TxWrites
+	for i := uint32(0); i < uint32(len(txRWSetTable)); i++ {
+		readTableItemForI := txRWSetTable[i].TxReads
+		writeTableItemForI := txRWSetTable[i].TxWrites
 		readPos[i] = make(map[string]uint32)
 		writePos[i] = make(map[string]uint32)
 		// put all read key in to readKeyDict and set their pos into readPos and writePos
@@ -347,10 +353,10 @@ func (s *SnapshotImpl) buildDictAndPos(txCount uint32) (map[string][]uint32, map
 	return readKeyDict, writeKeyDict, readPos, writePos
 }
 
-func (s *SnapshotImpl) buildReachMap(i uint32, readKeyDict, writeKeyDict map[string][]uint32,
+func buildReachMap(i uint32, txRWSet *commonPb.TxRWSet, readKeyDict, writeKeyDict map[string][]uint32,
 	readPos, writePos map[uint32]map[string]uint32, reachMap []*bitmap.Bitmap) *bitmap.Bitmap {
-	readTableItemForI := s.txRWSetTable[i].TxReads
-	writeTableItemForI := s.txRWSetTable[i].TxWrites
+	readTableItemForI := txRWSet.TxReads
+	writeTableItemForI := txRWSet.TxWrites
 	allReachForI := &bitmap.Bitmap{}
 	allReachForI.Set(int(i))
 	directReachForI := &bitmap.Bitmap{}

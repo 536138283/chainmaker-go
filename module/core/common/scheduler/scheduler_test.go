@@ -13,6 +13,7 @@ import (
 	"reflect"
 	"regexp"
 	"runtime"
+	"strconv"
 	"testing"
 
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -418,7 +419,7 @@ func TestSchedule(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
-	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).Return(dag)
 
 	txBatch := []*commonPb.Transaction{tx0, tx1}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
@@ -481,7 +482,7 @@ func TestSchedule2(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
-	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).Return(dag)
 
 	txBatch := []*commonPb.Transaction{tx0}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
@@ -544,7 +545,7 @@ func TestSchedule3(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
-	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).Return(dag)
 
 	txBatch := []*commonPb.Transaction{tx0}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
@@ -615,7 +616,7 @@ func TestSchedule4(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
-	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).Return(dag)
 
 	txBatch := []*commonPb.Transaction{tx0, tx1}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
@@ -683,7 +684,7 @@ func TestSchedule5(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
-	snapshot.EXPECT().BuildDAG(gomock.Any()).Return(dag)
+	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).Return(dag)
 
 	txBatch := []*commonPb.Transaction{tx0, tx1}
 	txSet, contractEven, err := scheduler.Schedule(block, txBatch, snapshot)
@@ -694,15 +695,12 @@ func TestSchedule5(t *testing.T) {
 
 func TestSimulateWithDag(t *testing.T) {
 
-	_, _, _, snapshot, scheduler, contractId, block := prepare(t, false, false, 2)
-
-	parameters := make(map[string]string, 8)
-	tx0 := newTx("a0000000000000000000000000000000", contractId, parameters)
-	tx1 := newTx("a0000000000000000000000000000001", contractId, parameters)
-	tx2 := newTx("a0000000000000000000000000000002", contractId, parameters)
-
-	block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
-	block.Dag = &commonPb.DAG{
+	const (
+		txId0 = "a0000000000000000000000000000000"
+		txId1 = "a0000000000000000000000000000001"
+		txId2 = "a0000000000000000000000000000002"
+	)
+	dagNormal := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{
 			{
 				Neighbors: nil,
@@ -715,31 +713,174 @@ func TestSimulateWithDag(t *testing.T) {
 			},
 		},
 	}
+	dagDupVertex := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: nil,
+			},
+			{
+				//malformed dag, should cause error
+				Neighbors: []uint32{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+			},
+			{
+				Neighbors: []uint32{0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1},
+			},
+		},
+	}
+	dagCycle := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{2},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+		},
+	}
+	dagOutOfBound := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{3},
+			},
+		},
+	}
+	dagMissingVertex := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+		},
+	}
+	applyTxSimContextNormal := func(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
+		runVmSuccess bool, applySpecialTx bool) (bool, int) {
+		switch txSimContext.GetTx().Payload.TxId {
+		case txId0:
+			return true, 1
+		case txId1:
+			return true, 2
+		case txId2:
+			return true, 3
+		default:
+			panic("Test shouldn't reach here")
+		}
+	}
+	tests := []struct {
+		name              string
+		dag               *commonPb.DAG
+		applyTxSimContext func(protocol.TxSimContext, protocol.ExecOrderTxType, bool, bool) (bool, int)
+		sealTimes         int
+		wantErr           bool
+	}{
+		{
+			name:              "test0",
+			dag:               dagNormal,
+			applyTxSimContext: applyTxSimContextNormal,
+			sealTimes:         1,
+			wantErr:           false,
+		},
+		{
+			// no error in this test, as it errors in other verification part due to different txRWSet
+			name: "testApplyTxSimContextFailNoError",
+			dag:  dagNormal,
+			applyTxSimContext: func(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
+				runVmSuccess bool, applySpecialTx bool) (bool, int) {
+				switch txSimContext.GetTx().Payload.TxId {
+				case txId0:
+					return true, 1
+				case txId1:
+					return true, 2
+				case txId2:
+					// simulate that tx2 has conflict with others, return false
+					return false, 3
+				default:
+					panic("Test shouldn't reach here")
+				}
+			},
+			sealTimes: 1,
+			wantErr:   false,
+		},
+		{
+			name:              "testDagHasDuplicates",
+			dag:               dagDupVertex,
+			applyTxSimContext: applyTxSimContextNormal,
+			sealTimes:         0,
+			wantErr:           true,
+		},
+		{
+			name:              "testDagHasCycle",
+			dag:               dagCycle,
+			applyTxSimContext: applyTxSimContextNormal,
+			sealTimes:         0,
+			wantErr:           true,
+		},
+		{
+			name:              "testDagHasOutOfBoundIndex",
+			dag:               dagOutOfBound,
+			applyTxSimContext: applyTxSimContextNormal,
+			sealTimes:         0,
+			wantErr:           true,
+		},
+		{
+			name:              "testDagMissesVertex",
+			dag:               dagMissingVertex,
+			applyTxSimContext: applyTxSimContextNormal,
+			sealTimes:         0,
+			wantErr:           true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, snapshot, scheduler, contractId, block := prepare(t, false, false, 2)
 
-	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
-	snapshot.EXPECT().Seal().Return()
-	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 3).AnyTimes()
+			parameters := make(map[string]string, 8)
+			tx0 := newTx(txId0, contractId, parameters)
+			tx1 := newTx(txId1, contractId, parameters)
+			tx2 := newTx(txId2, contractId, parameters)
 
-	txRWSets := make(map[string]*commonPb.Result, len(block.Txs))
-	//
-	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txRWSets)
+			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
+			block.Dag = tt.dag
 
-	txRwSet, result, err := scheduler.SimulateWithDag(block, snapshot)
-	require.Nil(t, err)
-	require.NotNil(t, txRwSet)
-	require.NotNil(t, result)
-	fmt.Println("txRWSet: ", txRwSet)
-	fmt.Println("result: ", result)
+			snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
+			snapshot.EXPECT().Seal().Return().Times(tt.sealTimes)
+			snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(tt.applyTxSimContext)
+			txRWSets := make(map[string]*commonPb.Result, len(block.Txs))
+			snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txRWSets)
+
+			txRwSet, result, err := scheduler.SimulateWithDag(block, snapshot)
+			if tt.wantErr {
+				require.NotNil(t, err)
+				fmt.Println("err: ", err)
+			} else {
+				require.Nil(t, err)
+				require.NotNil(t, txRwSet)
+				require.NotNil(t, result)
+				fmt.Println("txRWSet: ", txRwSet)
+				fmt.Println("result: ", result)
+			}
+		})
+	}
 }
 
 func TestMarshalDag(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{
 			{
+				Neighbors: []uint32{},
+			},
+			{
 				Neighbors: []uint32{0},
 			},
 			{
-				Neighbors: []uint32{0, 1, 2},
+				Neighbors: []uint32{0, 1},
 			},
 		},
 	}
@@ -748,8 +889,23 @@ func TestMarshalDag(t *testing.T) {
 
 	dag2 := &commonPb.DAG{}
 	proto.Unmarshal(mar, dag2)
+	equal, err := utils.IsDagEqual(dag, dag2)
+	require.NoError(t, err)
+	require.Truef(t, equal, "dag:%+v, dag2:%+v, mar:%s(len:%d)", dag, dag2, mar, len(mar))
+	//require.Truef(t, reflect.DeepEqual(dag, dag2), "dag:%+v, dag2:%+v, mar:%s(len:%d)", dag, dag2, mar, len(mar))
+	//DeepEqual false due to empty slice/nil issue
 
-	require.Equal(t, len(dag2.Vertexes), 2)
+	dag = &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{},
+	}
+	mar, _ = proto.Marshal(dag)
+	dag2 = &commonPb.DAG{}
+	proto.Unmarshal(mar, dag2)
+	equal, err = utils.IsDagEqual(dag, dag2)
+	require.NoError(t, err)
+	require.Truef(t, equal, "dag:%+v, dag2:%+v, mar:%s(len:%d)", dag, dag2, mar, len(mar))
+	//require.Truef(t, reflect.DeepEqual(dag, dag2), "dag:%+v, dag2:%+v, mar:%s(len:%d)", dag, dag2, mar, len(mar))
+	//DeepEqual false due to empty slice/nil issue
 }
 
 func Test_errResult(t *testing.T) {
@@ -2233,6 +2389,218 @@ func Test_getSenderHashKey(t *testing.T) {
 			}
 			if !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getSenderHashKey() got = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCheckCycleExists(t *testing.T) {
+	applyTxSimContext := func(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
+		runVmSuccess bool, applySpecialTx bool) (bool, int) {
+		i, _ := strconv.Atoi(txSimContext.GetTx().Payload.TxId)
+		return true, i
+	}
+	dag0 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{2, 6},
+			},
+			{
+				Neighbors: []uint32{3},
+			},
+			{
+				Neighbors: []uint32{4},
+			},
+			{
+				Neighbors: []uint32{5},
+			},
+		},
+	}
+	dag1 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{2, 6},
+			},
+			{
+				Neighbors: []uint32{3},
+			},
+			{
+				Neighbors: []uint32{4},
+			},
+			{
+				Neighbors: []uint32{5, 7},
+			},
+			{
+				Neighbors: []uint32{8},
+			},
+			{
+				Neighbors: []uint32{3},
+			},
+		},
+	}
+	dag2 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{2, 5, 28},
+			},
+			{
+				Neighbors: []uint32{4, 0},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{7},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{10},
+			},
+			{
+				Neighbors: []uint32{14},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{18, 4},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{19, 2},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{26},
+			},
+			{
+				Neighbors: []uint32{2},
+			},
+			{
+				Neighbors: []uint32{26, 1, 3, 5, 14},
+			},
+			{
+				Neighbors: []uint32{16},
+			},
+			{
+				Neighbors: []uint32{23},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{21},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{12},
+			},
+			{
+				Neighbors: []uint32{5},
+			},
+			{
+				Neighbors: []uint32{29, 2, 3},
+			},
+			{
+				Neighbors: []uint32{20, 23, 26},
+			},
+			{
+				Neighbors: []uint32{12},
+			},
+			{
+				Neighbors: []uint32{15},
+			},
+		},
+	}
+	tests := []struct {
+		name    string
+		dag     *commonPb.DAG
+		wantErr bool
+	}{
+		{
+			name:    "test0",
+			dag:     dag0,
+			wantErr: true,
+		},
+		{
+			name:    "test1",
+			dag:     dag1,
+			wantErr: true,
+		},
+		{
+			name:    "test2",
+			dag:     dag2,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, _, _, snapshot, scheduler, contractId, block := prepare(t, false, false, 2)
+
+			parameters := make(map[string]string, 8)
+			txs := make([]*commonPb.Transaction, len(tt.dag.Vertexes))
+			for i := 1; i <= len(tt.dag.Vertexes); i++ {
+				tx := newTx(fmt.Sprintf("%016d", i), contractId, parameters)
+				txs[i-1] = tx
+			}
+
+			block.Txs = txs
+			block.Dag = tt.dag
+
+			snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
+			snapshot.EXPECT().Seal().Return().AnyTimes()
+			snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(applyTxSimContext)
+			txRWSets := make(map[string]*commonPb.Result, len(block.Txs))
+			snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txRWSets)
+
+			txRwSet, result, err := scheduler.SimulateWithDag(block, snapshot)
+			if tt.wantErr {
+				require.NotNil(t, err)
+				fmt.Println("err: ", err)
+			} else {
+				require.Nil(t, err)
+				require.NotNil(t, txRwSet)
+				require.NotNil(t, result)
+				fmt.Println("txRWSet: ", txRwSet)
+				fmt.Println("result: ", result)
 			}
 		})
 	}

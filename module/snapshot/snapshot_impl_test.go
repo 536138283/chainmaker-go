@@ -381,32 +381,33 @@ var snapshot = &SnapshotImpl{
 	log:             &test.GoLogger{},
 }
 
+type fields struct {
+	//lock            sync.RWMutex
+	blockchainStore protocol.BlockchainStore
+	log             protocol.Logger
+	sealed          *uatomic.Bool
+	chainId         string
+	blockTimestamp  int64
+	blockProposer   *acPb.Member
+	blockHeight     uint64
+	blockVersion    uint32
+	preBlockHash    []byte
+	preSnapshot     protocol.Snapshot
+	txRWSetTable    []*commonPb.TxRWSet
+	txTable         []*commonPb.Transaction
+	specialTxTable  []*commonPb.Transaction
+	txResultMap     map[string]*commonPb.Result
+	readTable       map[string]*sv
+	writeTable      map[string]*sv
+	txRoot          []byte
+	dagHash         []byte
+	rwSetHash       []byte
+}
+type args struct {
+	isSql bool
+}
+
 func TestSnapshotImpl_BuildDAG(t *testing.T) {
-	type fields struct {
-		//lock            sync.RWMutex
-		blockchainStore protocol.BlockchainStore
-		log             protocol.Logger
-		sealed          *uatomic.Bool
-		chainId         string
-		blockTimestamp  int64
-		blockProposer   *acPb.Member
-		blockHeight     uint64
-		blockVersion    uint32
-		preBlockHash    []byte
-		preSnapshot     protocol.Snapshot
-		txRWSetTable    []*commonPb.TxRWSet
-		txTable         []*commonPb.Transaction
-		specialTxTable  []*commonPb.Transaction
-		txResultMap     map[string]*commonPb.Result
-		readTable       map[string]*sv
-		writeTable      map[string]*sv
-		txRoot          []byte
-		dagHash         []byte
-		rwSetHash       []byte
-	}
-	type args struct {
-		isSql bool
-	}
 	tests := []struct {
 		name   string
 		fields fields
@@ -502,7 +503,473 @@ func TestSnapshotImpl_BuildDAG(t *testing.T) {
 				dagHash:         tt.fields.dagHash,
 				rwSetHash:       tt.fields.rwSetHash,
 			}
-			if got := s.BuildDAG(tt.args.isSql); !reflect.DeepEqual(got, tt.want) {
+			if got := s.BuildDAG(tt.args.isSql, nil); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BuildDAG() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestReBuildDag(t *testing.T) {
+	tests := []struct {
+		name               string
+		fields             fields
+		args               args
+		blockDagRwSetTable []*commonPb.TxRWSet
+		want               *commonPb.DAG
+	}{
+		{
+			name: "differentOrderOfApply",
+			fields: fields{
+				txRWSetTable: []*commonPb.TxRWSet{
+					{
+						TxId: "3",
+						TxReads: []*commonPb.TxRead{
+							{
+								Key:   []byte("key2"),
+								Value: []byte("value of key2"),
+							},
+						},
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+					{
+						TxId: "1",
+						TxReads: []*commonPb.TxRead{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("value of key1"),
+							},
+						},
+					},
+					{
+						TxId: "2",
+						TxReads: []*commonPb.TxRead{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("value of key1"),
+							},
+						},
+					},
+				},
+				log:    logger.GetLogger("test"),
+				sealed: uatomic.NewBool(false),
+			},
+			blockDagRwSetTable: []*commonPb.TxRWSet{
+				{
+					TxId: "1",
+					TxReads: []*commonPb.TxRead{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "2",
+					TxReads: []*commonPb.TxRead{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "3",
+					TxReads: []*commonPb.TxRead{
+						{
+							Key:   []byte("key2"),
+							Value: []byte("value of key2"),
+						},
+					},
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+			},
+			args: args{
+				isSql: false,
+			},
+			want: &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{0, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "differentOrderOfApply2",
+			fields: fields{
+				txRWSetTable: []*commonPb.TxRWSet{
+					{
+						TxId: "3",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+					{
+						TxId: "1",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+					{
+						TxId: "2",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+				},
+				log:    logger.GetLogger("test"),
+				sealed: uatomic.NewBool(false),
+			},
+			blockDagRwSetTable: []*commonPb.TxRWSet{
+				{
+					TxId: "1",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "2",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "3",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+			},
+			args: args{
+				isSql: false,
+			},
+			want: &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{0},
+					},
+					{
+						Neighbors: []uint32{1},
+					},
+				},
+			},
+		},
+		{
+			name: "differentOrderOfApply3",
+			fields: fields{
+				txRWSetTable: []*commonPb.TxRWSet{
+					{
+						TxId: "3",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+					{
+						TxId: "2",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+					{
+						TxId: "1",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+				},
+				log:    logger.GetLogger("test"),
+				sealed: uatomic.NewBool(false),
+			},
+			blockDagRwSetTable: []*commonPb.TxRWSet{
+				{
+					TxId: "1",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "2",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "3",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+			},
+			args: args{
+				isSql: false,
+			},
+			want: &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{0},
+					},
+					{
+						Neighbors: []uint32{1},
+					},
+				},
+			},
+		},
+		{
+			name: "orderNotMatter",
+			fields: fields{
+				txRWSetTable: []*commonPb.TxRWSet{
+					{
+						TxId: "3",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key3"),
+								Value: []byte("new value of key3"),
+							},
+						},
+					},
+					{
+						TxId: "1",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key2"),
+							},
+						},
+					},
+					{
+						TxId: "2",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key2"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+				},
+				log:    logger.GetLogger("test"),
+				sealed: uatomic.NewBool(false),
+			},
+			blockDagRwSetTable: []*commonPb.TxRWSet{
+				{
+					TxId: "1",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "2",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key2"),
+							Value: []byte("new value of key2"),
+						},
+					},
+				},
+				{
+					TxId: "3",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key3"),
+							Value: []byte("new value of key3"),
+						},
+					},
+				},
+			},
+			args: args{
+				isSql: false,
+			},
+			want: &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{},
+					},
+				},
+			},
+		},
+		{
+			name: "orderNotMatter2",
+			fields: fields{
+				txRWSetTable: []*commonPb.TxRWSet{
+					{
+						TxId: "3",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key3"),
+								Value: []byte("new value of key3"),
+							},
+						},
+					},
+					{
+						TxId: "2",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key2"),
+								Value: []byte("new value of key2"),
+							},
+						},
+					},
+					{
+						TxId: "1",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+				},
+				log:    logger.GetLogger("test"),
+				sealed: uatomic.NewBool(false),
+			},
+			blockDagRwSetTable: []*commonPb.TxRWSet{
+				{
+					TxId: "1",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key1"),
+							Value: []byte("new value of key1"),
+						},
+					},
+				},
+				{
+					TxId: "2",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key2"),
+							Value: []byte("new value of key2"),
+						},
+					},
+				},
+				{
+					TxId: "3",
+					TxWrites: []*commonPb.TxWrite{
+						{
+							Key:   []byte("key3"),
+							Value: []byte("new value of key3"),
+						},
+					},
+				},
+			},
+			args: args{
+				isSql: false,
+			},
+			want: &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &SnapshotImpl{
+				lock:            sync.RWMutex{},
+				blockchainStore: tt.fields.blockchainStore,
+				log:             tt.fields.log,
+				sealed:          tt.fields.sealed,
+				chainId:         tt.fields.chainId,
+				blockTimestamp:  tt.fields.blockTimestamp,
+				blockProposer:   tt.fields.blockProposer,
+				blockHeight:     tt.fields.blockHeight,
+				preBlockHash:    tt.fields.preBlockHash,
+				preSnapshot:     tt.fields.preSnapshot,
+				txRWSetTable:    []*commonPb.TxRWSet{},
+				txTable:         []*commonPb.Transaction{},
+				specialTxTable:  tt.fields.specialTxTable,
+				txResultMap:     map[string]*commonPb.Result{},
+				readTable:       map[string]*sv{},
+				writeTable:      map[string]*sv{},
+				txRoot:          tt.fields.txRoot,
+				dagHash:         tt.fields.dagHash,
+				rwSetHash:       tt.fields.rwSetHash,
+			}
+			for i, t := range tt.fields.txRWSetTable {
+				txSimContext := &MockSimContextImpl{
+					txExecSeq:    int32(i),
+					tx:           &commonPb.Transaction{Payload: &commonPb.Payload{TxId: t.GetTxId()}},
+					txRwSet:      t,
+					currentDepth: 0,
+					txResult:     nil,
+				}
+				s.ApplyTxSimContext(txSimContext, protocol.ExecOrderTxTypeNormal, true, false)
+			}
+			if got := s.BuildDAG(tt.args.isSql, tt.blockDagRwSetTable); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("BuildDAG() = %v, want %v", got, tt.want)
 			}
 		})
