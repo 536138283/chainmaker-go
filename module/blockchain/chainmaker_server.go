@@ -16,16 +16,16 @@ import (
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/engine"
-
 	"chainmaker.org/chainmaker-go/module/net"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/crypto/engine"
 	"chainmaker.org/chainmaker/common/v2/helper"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	localconf "chainmaker.org/chainmaker/localconf/v2"
 	logger "chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/txpool"
 	protocol "chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -375,6 +375,37 @@ func (server *ChainMakerServer) AddTx(chainId string, tx *common.Transaction, so
 		return blockchain.(*Blockchain).txPool.AddTx(tx, source)
 	}
 	return fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
+// GetPoolStatus Returns the max size of config transaction pool and common transaction pool,
+// the num of config transaction in queue and pendingCache,
+// and the the num of common transaction in queue and pendingCache.
+func (server *ChainMakerServer) GetPoolStatus(chainId string) (*txpool.TxPoolStatus, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		return blockchain.(*Blockchain).txPool.GetPoolStatus(), nil
+	}
+	return nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
+// GetTxIdsByTypeAndStage Returns config or common txIds in different stage.
+// txType may be TxType_CONFIG_TX, TxType_COMMON_TX, (TxType_CONFIG_TX|TxType_COMMON_TX)
+// txStage may be TxStage_IN_QUEUE, TxStage_IN_PENDING, (TxStage_IN_QUEUE|TxStage_IN_PENDING)
+func (server *ChainMakerServer) GetTxIdsByTypeAndStage(chainId string, txType, txStage int32) ([]string, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		return blockchain.(*Blockchain).txPool.GetTxIdsByTypeAndStage(txType, txStage), nil
+	}
+	return nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
+// GetTxsInPoolByTxIds Retrieve the transactions by the txIds from the txPool,
+// return transactions in the txPool and txIds not in txPool.
+// default query upper limit is 1w transaction, and error is returned if the limit is exceeded.
+func (server *ChainMakerServer) GetTxsInPoolByTxIds(chainId string,
+	txIds []string) ([]*common.Transaction, []string, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		return blockchain.(*Blockchain).txPool.GetTxsInPoolByTxIds(txIds)
+	}
+	return nil, nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
 }
 
 // GetStore get the store instance of chain which id is the given.

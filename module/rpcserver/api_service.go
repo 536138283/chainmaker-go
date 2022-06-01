@@ -21,6 +21,7 @@ import (
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2/archive"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -475,5 +476,32 @@ func (s *ApiService) GetChainMakerVersion(ctx context.Context, req *configPb.Cha
 	return &configPb.ChainMakerVersionResponse{
 		Code:    int32(0),
 		Version: s.chainMakerServer.Version(),
+	}, nil
+}
+
+func (s *ApiService) GetPoolStatus(ctx context.Context,
+	request *txpoolPb.GetPoolStatusRequest) (*txpoolPb.TxPoolStatus, error) {
+	return s.chainMakerServer.GetPoolStatus(request.ChainId)
+}
+
+func (s *ApiService) GetTxIdsByTypeAndStage(ctx context.Context,
+	request *txpoolPb.GetTxIdsByTypeAndStageRequest) (*txpoolPb.GetTxIdsByTypeAndStageResponse, error) {
+	txIds, err := s.chainMakerServer.GetTxIdsByTypeAndStage(request.ChainId,
+		int32(request.TxType), int32(request.TxStage))
+	if err != nil {
+		return nil, err
+	}
+	return &txpoolPb.GetTxIdsByTypeAndStageResponse{TxIds: txIds}, nil
+}
+
+func (s *ApiService) GetTxsInPoolByTxIds(ctx context.Context,
+	request *txpoolPb.GetTxsInPoolByTxIdsRequest) (*txpoolPb.GetTxsInPoolByTxIdsResponse, error) {
+	txs, txIds, err := s.chainMakerServer.GetTxsInPoolByTxIds(request.ChainId, request.TxIds)
+	if err != nil {
+		return nil, err
+	}
+	return &txpoolPb.GetTxsInPoolByTxIdsResponse{
+		Txs:   txs,
+		TxIds: txIds,
 	}, nil
 }
