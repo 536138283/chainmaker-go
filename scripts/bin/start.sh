@@ -59,7 +59,6 @@ start_docker_vm() {
 
   echo "start docker vm service container:"
   docker run -itd \
-    --net=host \
     -v "$mount_path":/mount \
     -v "$log_path":/log \
     --name DOCKERVM-{org_id} \
