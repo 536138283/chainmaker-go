@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220517144703-b126df4a3ed4
-	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220527175551-62728a125f2d
+	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220601075939-defcaac03a17
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220420070758-a25aa71c7410
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220530031730-870de1f7e4aa
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220420114456-4bd051c6e220
@@ -82,7 +82,7 @@ replace (
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v0.0.0-20220429030713-9efb559f09ad
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v0.0.2
-	github.com/linvon/cuckoo-filter => github.com/GuoxinL/cuckoo-filter v0.4.1
+	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601072123-a5865240ed6f
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v0.0.0-20220520083957-392cb085ba4a
 	google.golang.org/grpc => google.golang.org/grpc v1.26.0

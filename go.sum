@@ -14,8 +14,9 @@ chainmaker.org/chainmaker/common/v2 v2.2.1-0.20220505062121-a5224a85a7f2/go.mod 
 chainmaker.org/chainmaker/common/v2 v2.2.1/go.mod h1:u6iOyNpreVyQdZGYx5CTN2j0zIDp07YVFmXZimPXDb4=
 chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220517134537-3f4e0c3247af/go.mod h1:rVrIKImPQJizGt4lI+ffl3KZ+mgMR4+Y2ReHaDWac3c=
 chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220518091326-42bdf196d002/go.mod h1:PRXqE2rCWIxRfPjKM3/R8fux9kj1jCIBZcG7N3R7XyU=
-chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220527175551-62728a125f2d h1:sMjb8khcV38KhC5eSTWXc0CNVpxeOsht/XPcFwdZDgI=
 chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220527175551-62728a125f2d/go.mod h1:ox05z/BhEJuIoQUgEfU2A1xD02SPFCrKC9Hqmk6W52E=
+chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220601075939-defcaac03a17 h1:i0j7m5Y1oIjuvnDg42Qn7IlzW/XqMOlzUPn+AAh8ycs=
+chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220601075939-defcaac03a17/go.mod h1:QFr99mg6aKZEuG/II188xWAIdUse6H6OAY+5c806Be0=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220420070758-a25aa71c7410 h1:OKzbOhxU4j8AjO6YqoVBTznvgC6dijnD7yZrT0q3DCk=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220420070758-a25aa71c7410/go.mod h1:nQG7iIssrYSRe3y8TDdaRQ0s913BGDuV4aJbjYIScd0=
 chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220530031730-870de1f7e4aa h1:1XCdLQeq9+ISs0uzm71aBSR/h6HWRXNVCvMCZSj7ino=
@@ -148,6 +149,8 @@ chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220531124619-f57bb0f69d02 h1:PKl2vVLD
 chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220531124619-f57bb0f69d02/go.mod h1:MFDbhuAQq9I/Eh82VK4IJQfR46ABZKZBzD+k3P5HQXc=
 chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4 h1:xt2021WpTDYJMpDRahjZDzFVvibs9g876F5c/kNYQW4=
 chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
+chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601072123-a5865240ed6f h1:KxJdl2GXsWG6FeXwrvMoV9C+Qiijvehfg8IY0AzItuc=
+chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601072123-a5865240ed6f/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
 chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4 h1:94Xx45jm7SP6mSbdu3Qsa+YzHrf+I1lQtT0OAbN2gII=
 chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4/go.mod h1:7aC8mnQ0XjdIgSSoZfGGBE8QHMPl7QKbJVSzPavj47Y=
 chainmaker.org/third_party/redisbloom-go v0.0.0-20220429030713-9efb559f09ad h1:0vxTW3EQ3mZaz9vauhwMH5zadrVRijLmZzHeeRhgvFA=
@@ -220,8 +223,6 @@ github.com/BurntSushi/xgb v0.0.0-20160522181843-27f122750802/go.mod h1:IVnqGOEym
 github.com/ChainSafe/go-schnorrkel v0.0.0-20200405005733-88cbf1b4c40d/go.mod h1:URdX5+vg25ts3aCh8H5IFZybJYKWhJHYMTnf+ULtoC4=
 github.com/DataDog/datadog-go v3.2.0+incompatible/go.mod h1:LButxg5PwREeZtORoXG3tL4fMGNddJ+vMq1mwgfaqoQ=
 github.com/DataDog/zstd v1.4.1/go.mod h1:1jcaCB/ufaK+sKp1NBhlGmpz41jOoPQ35bpF36t7BBo=
-github.com/GuoxinL/cuckoo-filter v0.4.1 h1:OSZ7cZeAqF+EeHa93ZqwGW3ootbroh/RNgZfv3yuQmU=
-github.com/GuoxinL/cuckoo-filter v0.4.1/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
 github.com/Jeffail/gabs/v2 v2.5.1/go.mod h1:xCn81vdHKxFUuWWAaD5jCTQDNPBMh5pPs9IJ+NcziBI=
 github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible/go.mod h1:r7JcOSlj0wfOMncg0iLm8Leh48TZaKVeNIfJntJ2wa0=
 github.com/Kubuxu/go-os-helper v0.0.1/go.mod h1:N8B+I7vPCT80IcP58r50u4+gEEcsZETFUpAzWW2ep1Y=
