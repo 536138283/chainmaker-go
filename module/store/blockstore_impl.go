@@ -65,6 +65,9 @@ func NewBlockStoreImpl(chainId string,
 	binLog binlog.BinLoger,
 	logger protocol.Logger) (*BlockStoreImpl, error) {
 	walPath := filepath.Join(storeConfig.StorePath, chainId, logPath)
+	if len(storeConfig.StoreWALFileName) > 0 {
+		walPath = filepath.Join(storeConfig.StorePath, chainId, storeConfig.StoreWALFileName)
+	}
 	writeAsync := storeConfig.LogDBWriteAsync
 	walOpt := &wal.Options{
 		NoSync: writeAsync,
@@ -458,7 +461,7 @@ func (bs *BlockStoreImpl) GetTxRWSet(txId string) (*commonPb.TxRWSet, error) {
 		isArchived bool
 	)
 
-	if rwSet, err = bs.resultDB.GetTxRWSet(txId); err != nil {
+	if rwSet, err = bs.resultDB.GetTxRWSet(txId); err != nil && err != types.ValueNotFoundError {
 		return nil, err
 	}
 
@@ -514,7 +517,7 @@ func (bs *BlockStoreImpl) GetBlockWithRWSets(height int64) (*storePb.BlockWithRW
 	if err != nil {
 		return nil, err
 	} else if block == nil {
-		return nil, nil
+		return nil, types.ValueNotFoundError
 	}
 	var blockWithRWSets storePb.BlockWithRWSet
 	blockWithRWSets.Block = block

@@ -8,7 +8,7 @@ else
   endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=v1.2.6
+VERSION=v1.2.7
 
 AARCH64="aarch64"
 CPU=$(shell uname -m)
@@ -25,7 +25,7 @@ ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.x86_64),)
 	mv module/vm/wasmer/wasmer-go/libwasmer.so.x86_64 module/vm/wasmer/wasmer-go/libwasmer.so
 endif
 endif
-	@cd main && go build -mod=mod -o ../bin/chainmaker
+	@cd main && go mod tidy && go build -mod=mod -o ../bin/chainmaker
 
 package:
 	@cd main && GOPATH=${GOPATH} go build -mod=mod -o ../bin/chainmaker
@@ -144,6 +144,9 @@ ut:
 	cd tools/cmc && go test -cover ./...
 	cd tools/scanner && go test -cover ./...
 	#cd tools/sdk && go test -cover ./...
+
+gomod:
+	git submodule update --init --recursive
 
 lint:
 #	cd common && golangci-lint run ./...

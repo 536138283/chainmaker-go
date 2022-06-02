@@ -9,7 +9,6 @@ package blockkvdb
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"sync"
 
@@ -38,10 +37,6 @@ const (
 
 const (
 	blockDBName = ""
-)
-
-var (
-	ValueNotFoundError = errors.New("value not found")
 )
 
 // BlockKvDB provider a implementation of `blockdb.BlockDB`
@@ -269,7 +264,7 @@ func (b *BlockKvDB) GetHeightByHash(blockHash []byte) (uint64, error) {
 	}
 
 	if heightBytes == nil {
-		return 0, ValueNotFoundError
+		return 0, types.ValueNotFoundError
 	}
 
 	return decodeBlockNumKey(heightBytes), nil
@@ -283,7 +278,7 @@ func (b *BlockKvDB) GetBlockHeaderByHeight(height int64) (*commonPb.BlockHeader,
 	}
 
 	if vBytes == nil {
-		return nil, ValueNotFoundError
+		return nil, types.ValueNotFoundError
 	}
 
 	var blockStoreInfo storePb.SerializedBlock
@@ -329,7 +324,7 @@ func (b *BlockKvDB) GetFilteredBlock(height int64) (*storePb.SerializedBlock, er
 	if err != nil {
 		return nil, err
 	} else if bytes == nil {
-		return nil, nil
+		return nil, types.ValueNotFoundError
 	}
 	var blockStoreInfo storePb.SerializedBlock
 	err = proto.Unmarshal(bytes, &blockStoreInfo)
@@ -372,7 +367,7 @@ func (b *BlockKvDB) GetTxHeight(txId string) (uint64, error) {
 	}
 
 	if vBytes == nil {
-		return 0, ValueNotFoundError
+		return 0, types.ValueNotFoundError
 	}
 
 	return decodeBlockNumKey(vBytes), nil
@@ -390,7 +385,7 @@ func (b *BlockKvDB) GetTx(txId string) (*commonPb.Transaction, error) {
 			return nil, archive.ArchivedTxError
 		}
 
-		return nil, nil
+		return nil, types.ValueNotFoundError
 	}
 
 	var tx commonPb.Transaction
@@ -411,7 +406,7 @@ func (b *BlockKvDB) GetTxWithBlockInfo(txId string) (*commonPb.TransactionInfo, 
 		if erra == nil && isArchived {
 			return nil, archive.ArchivedTxError
 		}
-		return nil, nil
+		return nil, types.ValueNotFoundError
 	}
 
 	var tx commonPb.Transaction
@@ -441,7 +436,7 @@ func (b *BlockKvDB) TxArchived(txId string) (bool, error) {
 	}
 
 	if heightBytes == nil {
-		return false, ValueNotFoundError
+		return false, types.ValueNotFoundError
 	}
 
 	archivedPivot, err := b.GetArchivedPivot()
@@ -479,7 +474,7 @@ func (b *BlockKvDB) Close() {
 
 func (b *BlockKvDB) getBlockByHeightBytes(height []byte) (*commonPb.Block, error) {
 	if height == nil {
-		return nil, nil
+		return nil, types.ValueNotFoundError
 	}
 
 	vBytes, err := b.get(height)

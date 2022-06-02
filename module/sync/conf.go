@@ -20,6 +20,7 @@ type BlockSyncServerConf struct {
 	schedulerTick     time.Duration // The ticker to request block from the peer, unit nanosecond
 	nodeStatusTick    time.Duration // The ticker to request node status from other peers, unit nanosecond
 	dataDetectionTick time.Duration // The ticker to check data in processor
+	blockRequestTime  time.Duration // Block incoming request ignore duration
 
 	blockPoolSize        int64 // Maximum number of blocks to be processed in scheduler
 	batchSizeFromOneNode int64 // The number of blocks received from each node in a request
@@ -37,6 +38,7 @@ func NewBlockSyncServerConf() *BlockSyncServerConf {
 		schedulerTick:        20 * time.Millisecond,
 		dataDetectionTick:    time.Minute,
 		reqTimeThreshold:     3 * time.Second,
+		blockRequestTime:     5 * time.Second,
 	}
 }
 
@@ -74,6 +76,10 @@ func (c *BlockSyncServerConf) SetDataDetectionTicker(n float64) *BlockSyncServer
 }
 func (c *BlockSyncServerConf) SetReqTimeThreshold(n float64) *BlockSyncServerConf {
 	c.reqTimeThreshold = time.Duration(n * float64(time.Second))
+	return c
+}
+func (c *BlockSyncServerConf) SetBlockRequestTime(n float64) *BlockSyncServerConf {
+	c.blockRequestTime = time.Duration(n * float64(time.Second))
 	return c
 }
 func (c *BlockSyncServerConf) print() string {

@@ -7,25 +7,26 @@ SPDX-License-Identifier: Apache-2.0
 package wasmer
 
 import (
+	"fmt"
+	"sync"
+	"sync/atomic"
+	"time"
+
 	"chainmaker.org/chainmaker-go/common/random/uuid"
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/utils"
 	wasm "chainmaker.org/chainmaker-go/wasmer/wasmer-go"
-	"fmt"
-	"sync"
-	"sync/atomic"
-	"time"
 )
 
 const (
-	defaultRefreshTime    = time.Hour * 12        // refresh vmPool time, use for grow or shrink
-	defaultMaxSize        = 100                   // the max pool size for every contract
-	defaultMinSize        = 10                    // the min pool size
-	defaultChangeSize     = 10                    // grow pool size
-	defaultDelayTolerance = 10 					  // if get instance avg time greater than this value, should grow pool
-	defaultApplyThreshold = 100                   // if apply times greater than this value, should grow pool
-	defaultDiscardCount   = 10                    // if wasmer instance invoke error more than N times, should close and discard this instance
+	defaultRefreshTime    = time.Hour * 12 // refresh vmPool time, use for grow or shrink
+	defaultMaxSize        = 1000           // the max pool size for every contract
+	defaultMinSize        = 10             // the min pool size
+	defaultChangeSize     = 10             // grow pool size
+	defaultDelayTolerance = 10             // if get instance avg time greater than this value, should grow pool
+	defaultApplyThreshold = 100            // if apply times greater than this value, should grow pool
+	defaultDiscardCount   = 10             // if wasmer instance invoke error more than N times, should close and discard this instance
 )
 
 // VmPoolManager manages vm pools for all contracts
@@ -33,7 +34,7 @@ type VmPoolManager struct {
 	// chain identifier
 	chainId string
 	// control map operations
-	m sync.Mutex
+	m sync.RWMutex
 	// contractName_contractVersion -> vm pool
 	instanceMap map[string]*vmPool
 	// module log
@@ -116,6 +117,7 @@ func (m *VmPoolManager) NewRuntimeInstance(contractId *commonPb.ContractId, byte
 		pool:    pool,
 		log:     m.log,
 		chainId: m.chainId,
+		vmPoolManager: m,
 	}
 
 	return runtime, nil
@@ -125,7 +127,9 @@ func (m *VmPoolManager) getVmPool(contractId *commonPb.ContractId, byteCode []by
 	var err error
 	key := contractId.ContractName + "_" + contractId.ContractVersion
 
+	m.m.RLock()
 	pool, ok := m.instanceMap[key]
+	m.m.RUnlock()
 	if !ok {
 		m.m.Lock()
 		defer m.m.Unlock()
@@ -332,7 +336,7 @@ func (p *vmPool) shouldGrow() bool {
 
 func (p *vmPool) grow(count int32) {
 	for count > 0 {
-		size := int32(10)
+		size := int32(defaultChangeSize)
 		if count < size {
 			size = count
 		}
@@ -441,25 +445,35 @@ func (p *vmPool) close() {
 
 // close the contract vm pool
 func (m *VmPoolManager) closeAVmPool(contractId *commonPb.ContractId) {
+	m.m.Lock()
+	defer m.m.Unlock()
+
 	key := contractId.ContractName + "_" + contractId.ContractVersion
 	pool, ok := m.instanceMap[key]
 	if ok {
 		m.log.Infof("close pool %s", key)
 		pool.close()
+		delete(m.instanceMap, key)
 	}
 }
 
 // close all contract vm pool
 func (m *VmPoolManager) closeAllVmPool() {
+	m.m.Lock()
+	defer m.m.Unlock()
+
 	for key, pool := range m.instanceMap {
 		m.log.Infof("close pool %s", key)
 		pool.close()
 	}
+	m.instanceMap = make(map[string]*vmPool)
 }
 
 // FIXME: 确认函数名是否多了字符A？@taifu
 // reset a contract vm pool install
 func (m *VmPoolManager) resetAVmPool(contractId *commonPb.ContractId) {
+	m.m.Lock()
+	defer m.m.Unlock()
 
 	key := contractId.ContractName + "_" + contractId.ContractVersion
 	pool, ok := m.instanceMap[key]
@@ -471,6 +485,9 @@ func (m *VmPoolManager) resetAVmPool(contractId *commonPb.ContractId) {
 
 // reset all contract pool instance
 func (m *VmPoolManager) ResetAllPool() {
+	m.m.Lock()
+	defer m.m.Unlock()
+
 	for key, pool := range m.instanceMap {
 		m.log.Infof("reset pool %s", key)
 		pool.reset()

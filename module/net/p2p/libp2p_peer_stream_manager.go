@@ -106,17 +106,19 @@ func (psm *PeerStreamManager) dropPeerStream(pid peer.ID, stream network.Stream)
 }
 
 func (psm *PeerStreamManager) cleanPeerStream(pid peer.ID) {
-	psm.lock.Lock()
-	defer psm.lock.Unlock()
+	psm.lock.RLock()
 	streamPool, ok := psm.peerStreamPoolMap[pid]
+	psm.lock.RUnlock()
 	if !ok {
 		return
 	}
-	delete(psm.peerStreamPoolMap, pid)
 	go func() {
 		streamPool.cleanAndDisable()
 	}()
 
+	psm.lock.Lock()
+	delete(psm.peerStreamPoolMap, pid)
+	psm.lock.Unlock()
 }
 
 func (psm *PeerStreamManager) reset() {

@@ -139,6 +139,7 @@ type blockchainConfig struct {
 type StorageConfig struct {
 	//默认的Leveldb配置，如果每个DB有不同的设置，可以在自己的DB中进行设置
 	StorePath            string `mapstructure:"store_path"`
+	StoreWALFileName     string `mapstructure:"store_wal_file_name"`
 	DbPrefix             string `mapstructure:"db_prefix"`
 	WriteBufferSize      int    `mapstructure:"write_buffer_size"`
 	BloomFilterBits      int    `mapstructure:"bloom_filter_bits"`

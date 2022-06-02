@@ -20,4 +20,5 @@ replace (
 	chainmaker.org/chainmaker-go/protocol => ../../../protocol
 	chainmaker.org/chainmaker-go/store => ../../store
 	chainmaker.org/chainmaker-go/utils => ../../utils
+	chainmaker.org/chainmaker-go/mock => ../../../mock
 )

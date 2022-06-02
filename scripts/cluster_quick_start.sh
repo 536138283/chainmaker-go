@@ -12,7 +12,7 @@ set -e
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
 RELEASE_PATH=${PROJECT_PATH}/build/release
-VERSION=v1.2.6
+VERSION=v1.2.7
 START_TYPE=$1
 
 function split_window() {

@@ -84,3 +84,18 @@ func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string,
 	fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]\n", resp.Code, resp.Message, resp.ContractResult)
 
 }
+
+func invokeContract(client *sdk.ChainClient, contractName, method, txId string, params map[string]string) {
+	resp, err := client.InvokeContract(contractName, method, txId, params, int64(timeout), syncResult)
+	if err != nil {
+		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
+		return
+	}
+
+	if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
+		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]\n", resp.Code, resp.Message)
+		return
+	}
+
+	fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]\n", resp.Code, resp.Message, resp.ContractResult)
+}

@@ -119,24 +119,41 @@ func (lh *LibP2pHost) connHandleLoop() {
 				continue
 			}
 			// disconnected notify
-			conn := lh.connManager.GetConn(u.c.RemotePeer())
-			if conn != nil && conn.RemoteMultiaddr().String() != u.c.RemoteMultiaddr().String() {
-				return
+			// 判断连接是否有多个（单机libp2p可能建立多个地址的连接，例如127.0.0.1 192.168.XXX.XXX）
+			// 如果连接有一个以上，不能删除节点的上层状态
+
+			conn := lh.connManager.GetConns(u.c.RemotePeer())
+			if len(conn) > 1 {
+				// 不止一个连接
+				lh.connManager.RemoveConn(u.c.RemotePeer(), u.c)
+				logger.Infof("[Host] more than one connection, connection disconnected(remote peer-id:%s, remote multi-addr:%s)",
+					u.c.RemotePeer().Pretty(), u.c.RemoteMultiaddr().String())
+			} else {
+				if conn != nil && conn[0].RemoteMultiaddr().String() != u.c.RemoteMultiaddr().String() {
+					logger.Infof("[Host] connection disconnected failed, (remote peer-id:%s, remote multi-addr:%s, connection multi-addr:%s)",
+						u.c.RemotePeer().Pretty(), u.c.RemoteMultiaddr().String(), conn[0].RemoteMultiaddr().String())
+					return
+				}
+				logger.Infof("[Host] connection disconnected(remote peer-id:%s, remote multi-addr:%s)",
+					u.c.RemotePeer().Pretty(), u.c.RemoteMultiaddr().String())
+				pid := u.c.RemotePeer().Pretty()
+				lh.connManager.RemoveConn(u.c.RemotePeer(), u.c)
+				logger.Infof("[Host] remove connection done (remote peer-id:%s)", pid)
+				if lh.removeTlsPeerNotifyC != nil {
+					lh.removeTlsPeerNotifyC <- pid
+					logger.Infof("[Host] remove peer from peer chain id map done (remote peer-id:%s)", pid)
+				}
+				if lh.removeTlsCertIdPeerIdNotifyC != nil {
+					lh.removeTlsCertIdPeerIdNotifyC <- pid
+					logger.Infof("[Host] remove peer from peer cert id map done (remote peer-id:%s)", pid)
+				}
+				if lh.removePeerIdTlsCertNotifyC != nil {
+					lh.removePeerIdTlsCertNotifyC <- pid
+					logger.Infof("[Host] remove peer from peer tls cert map done (remote peer-id:%s)", pid)
+				}
+				lh.peerStreamManager.cleanPeerStream(u.c.RemotePeer())
+				logger.Infof("[Host] remove peer from peer stream manager map done (remote peer-id:%s)", pid)
 			}
-			logger.Infof("[Host] connection disconnected(remote peer-id:%s, remote multi-addr:%s)",
-				u.c.RemotePeer().Pretty(), u.c.RemoteMultiaddr().String())
-			lh.connManager.RemoveConn(u.c.RemotePeer())
-			pid := u.c.RemotePeer().Pretty()
-			if lh.removeTlsPeerNotifyC != nil {
-				lh.removeTlsPeerNotifyC <- pid
-			}
-			if lh.removeTlsCertIdPeerIdNotifyC != nil {
-				lh.removeTlsCertIdPeerIdNotifyC <- pid
-			}
-			if lh.removePeerIdTlsCertNotifyC != nil {
-				lh.removePeerIdTlsCertNotifyC <- pid
-			}
-			lh.peerStreamManager.cleanPeerStream(u.c.RemotePeer())
 		}
 	}
 }

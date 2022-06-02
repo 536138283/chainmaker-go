@@ -741,6 +741,33 @@ func (consensus *ConsensusTBFTImpl) procPrecommit(msg *tbftpb.TBFTMsg) {
 	}
 }
 
+// fetch QC, quickly reach higher round
+func (consensus *ConsensusTBFTImpl) procRoundQC(msg *tbftpb.TBFTMsg) {
+	roundQC := new(tbftpb.RoundQC)
+	mustUnmarshal(msg.Msg, roundQC)
+
+	consensus.logger.Infof("[%s](%d/%d/%s) receive round qc from [%s](%d/%d)",
+		consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+		roundQC.Id, roundQC.Height, roundQC.Round)
+	// receive invalid round qc
+	if roundQC.Height != consensus.Height || roundQC.Round < consensus.Round {
+		consensus.logger.Infof("[%s](%d/%d/%s) receive invalid round qc from [%s](%d/%d)",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+			roundQC.Id, roundQC.Height, roundQC.Round)
+		return
+	}
+	// verify qc
+	if roundQC.Precommits == nil && VerifyRoundQc(consensus.logger, consensus.ac,
+		consensus.validatorSet, roundQC) == nil {
+		consensus.logger.Infof("[%s](%d/%d/%s) verify round qc failed. from [%s](%d/%d)",
+			consensus.Id, consensus.Height, consensus.Round, consensus.Step,
+			roundQC.Id, roundQC.Height, roundQC.Round)
+	}
+	// this is equivalent to completing the consensus process of roundQC.Round
+	// enter new round base on roundQC.Round+1
+	consensus.enterNewRound(consensus.Height, roundQC.Round+1)
+}
+
 func (consensus *ConsensusTBFTImpl) handleConsensusMsg(msg *tbftpb.TBFTMsg) {
 	consensus.Lock()
 	defer consensus.Unlock()
@@ -755,6 +782,11 @@ func (consensus *ConsensusTBFTImpl) handleConsensusMsg(msg *tbftpb.TBFTMsg) {
 	case tbftpb.TBFTMsgType_state:
 		// Async is ok
 		go consensus.gossip.onRecvState(msg)
+	case tbftpb.TBFTMsgType_fetch_roundqc:
+		// Async is ok
+		go consensus.gossip.onRecvFetchQC(msg)
+	case tbftpb.TBFTMsgType_send_roundqc:
+		consensus.procRoundQC(msg)
 	}
 }
 
@@ -865,7 +897,7 @@ func (consensus *ConsensusTBFTImpl) addPrevoteVote(vote *Vote) {
 	}
 	voteSet := consensus.heightRoundVoteSet.prevotes(vote.Round)
 	hash, ok := voteSet.twoThirdsMajority()
-	if !ok {
+	if !ok || vote.Round != consensus.Round {
 		consensus.logger.Debugf("[%s](%d/%d/%s) addVote %v without majority",
 			consensus.Id, consensus.Height, consensus.Round, consensus.Step, vote)
 
@@ -910,7 +942,7 @@ func (consensus *ConsensusTBFTImpl) addPrecommitVote(vote *Vote) {
 
 	voteSet := consensus.heightRoundVoteSet.precommits(vote.Round)
 	hash, ok := voteSet.twoThirdsMajority()
-	if !ok {
+	if !ok || vote.Round != consensus.Round {
 		consensus.logger.Debugf("[%s](%d/%d/%s) addVote %v without majority",
 			consensus.Id, consensus.Height, consensus.Round, consensus.Step, vote)
 
@@ -1208,7 +1240,7 @@ func (consensus *ConsensusTBFTImpl) enterCommit(height int64, round int32) {
 		panic(fmt.Errorf("[%s]-%x, enter commit failed, without majority", consensus.Id, hash))
 	}
 
-	if isNilHash(hash) {
+	if isNilHash(hash) || consensus.Proposal == nil {
 		// consensus.AddTimeout(consensus.CommitTimeout(round), consensus.Height, round+1, tbftpb.Step_NewRound)
 		consensus.enterNewRound(consensus.Height, round+1)
 	} else {

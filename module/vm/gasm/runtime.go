@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker-go/logger"
 	commonPb "chainmaker.org/chainmaker-go/pb/protogo/common"
 	"chainmaker.org/chainmaker-go/protocol"
+	"chainmaker.org/chainmaker-go/utils"
 	"github.com/golang/groupcache/lru"
 )
 
@@ -62,6 +63,21 @@ func getContractDecodedMod(chainId string, contractId *commonPb.ContractId) *was
 	if mod, ok := inst.modCache.Get(modName); ok {
 		return mod.(*wasm.Module)
 	}
+	return nil
+}
+
+func removeContractDecodedMod(chainId string, contractId *commonPb.ContractId) *wasm.Module {
+	mu.Lock()
+	defer mu.Unlock()
+
+	if inst == nil {
+		inst = &wasmModMap{
+			modCache: lru.New(LruCacheSize),
+		}
+	}
+
+	modName := chainId + contractId.ContractName + protocol.ContractStoreSeparator + contractId.ContractVersion
+	inst.modCache.Remove(modName)
 	return nil
 }
 
@@ -152,7 +168,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		if err = mod.BuildIndexSpacesUsingOldNativeFunction(externalMods, baseMod.IndexSpace.Function); err != nil {
 			contractResult.Code = commonPb.ContractResultCode_FAIL
 			contractResult.Message = err.Error()
-			r.Log.Errorf("invoke gasm, failed to build wasm index space using old native function, tx id:%s, " +
+			r.Log.Errorf("invoke gasm, failed to build wasm index space using old native function, tx id:%s, "+
 				"error= %s, bytecode len=%d", tx.GetHeader().TxId, err.Error(), len(byteCode))
 			return
 		}
@@ -162,6 +178,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm,tx id:%s, error= %s", tx.GetHeader().TxId, err.Error())
+		r.removeModByMethod(method, contractId, txContext)
 		return
 	}
 	var paramMarshalBytes []byte
@@ -170,6 +187,7 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm,tx id:%s, failed to call args(), error=", tx.GetHeader().TxId, err.Error())
+		r.removeModByMethod(method, contractId, txContext)
 		return
 	}
 
@@ -178,29 +196,27 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 		ec := serialize.NewEasyCodecWithMap(parameters)
 		paramMarshalBytes = ec.Marshal()
 	} else {
-		msg := fmt.Sprintf("runtime type error, expect gasm:%d, but got %d", uint64(commonPb.RuntimeType_GASM),
-			runtimeSdkType[0])
-		contractResult.Code = commonPb.ContractResultCode_FAIL
-		contractResult.Message = msg
-		r.Log.Errorf(msg)
+		r.runtimeTypeError(contractId, runtimeSdkType, txContext, contractResult)
 		return
 	}
 
 	var allocateSize = uint64(len(paramMarshalBytes))
-	if allocatePtr, _, err := vm.ExecExportedFunction(protocol.ContractAllocateMethod, allocateSize); err != nil {
+	var allocatePtr []uint64
+	if allocatePtr, _, err = vm.ExecExportedFunction(protocol.ContractAllocateMethod, allocateSize); err != nil {
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm, tx id:%s,failed to allocate, error=", tx.GetHeader().TxId, err.Error())
+		r.removeModByMethod(method, contractId, txContext)
 		return
-	} else {
-		copy(vm.Memory[allocatePtr[0]:allocatePtr[0]+allocateSize], paramMarshalBytes)
 	}
+	copy(vm.Memory[allocatePtr[0]:allocatePtr[0]+allocateSize], paramMarshalBytes)
 
 	// run invoke method may modify waciInstance's ExecOrderTxType
 	if ret, retTypes, err := vm.ExecExportedFunction(method); err != nil {
 		contractResult.Code = commonPb.ContractResultCode_FAIL
 		contractResult.Message = err.Error()
 		r.Log.Errorf("invoke gasm, tx id:%s,error=%+v", tx.GetHeader().TxId, err.Error())
+		r.removeModByMethod(method, contractId, txContext)
 	} else {
 		contractResult.ContractEvent = waciInstance.ContractEvent
 		r.Log.Debugf("invoke gasm success, tx id:%s, gas cost %+v,[IGNORE: ret %+v, retTypes %+v]",
@@ -208,19 +224,40 @@ func (r *RuntimeInstance) Invoke(contractId *commonPb.ContractId, method string,
 	}
 	specialTxType = waciInstance.SpecialTxType
 
-	// gasm 无需释放内存, 借助golang自动回收
-	if false {
-		if ret, retTypes, err := vm.ExecExportedFunction(protocol.ContractDeallocateMethod); err != nil {
-			contractResult.Code = commonPb.ContractResultCode_FAIL
-			contractResult.Message = err.Error()
-			r.Log.Errorf("invoke gasm, tx id:%s,error=%+v", tx.GetHeader().TxId, err.Error())
-		} else {
-			r.Log.Debugf("invoke gasm deallocate success,tx id:%s, gas cost %+v,[IGNORE: ret %+v, " +
-				"retTypes %+v]", tx.GetHeader().TxId, vm.Gas, ret, retTypes)
-		}
-	}
+	//// gasm 无需释放内存, 借助golang自动回收
+	//if false {
+	//	if ret, retTypes, err := vm.ExecExportedFunction(protocol.ContractDeallocateMethod); err != nil {
+	//		contractResult.Code = commonPb.ContractResultCode_FAIL
+	//		contractResult.Message = err.Error()
+	//		r.Log.Errorf("invoke gasm, tx id:%s,error=%+v", tx.GetHeader().TxId, err.Error())
+	//	} else {
+	//		r.Log.Debugf("invoke gasm deallocate success,tx id:%s, gas cost %+v,[IGNORE: ret %+v, "+
+	//			"retTypes %+v]", tx.GetHeader().TxId, vm.Gas, ret, retTypes)
+	//	}
+	//}
 	contractResult.GasUsed = int64(vm.Gas)
 	return
+}
+
+func (r *RuntimeInstance) runtimeTypeError(contractId *commonPb.ContractId, runtimeSdkType []uint64,
+	txContext protocol.TxSimContext, contractResult *commonPb.ContractResult) {
+	msg := fmt.Sprintf("runtime type error, expect gasm:%d, but got %d",
+		uint64(commonPb.RuntimeType_GASM), runtimeSdkType[0])
+	contractResult.Code = commonPb.ContractResultCode_FAIL
+	contractResult.Message = msg
+	r.Log.Errorf(msg)
+	if utils.ConvertBlockVersion(txContext.GetBlockVersion()) >= 127 {
+		removeContractDecodedMod(r.ChainId, contractId)
+	}
+}
+
+// removeModByMethod
+func (r *RuntimeInstance) removeModByMethod(method string, contractId *commonPb.ContractId,
+	txContext protocol.TxSimContext) {
+	if method == commonPb.ManageUserContractFunction_INIT_CONTRACT.String() &&
+		utils.ConvertBlockVersion(txContext.GetBlockVersion()) >= 127 {
+		removeContractDecodedMod(r.ChainId, contractId)
+	}
 }
 
 func newBuilder(wasiInstance *wasi.WasiInstance, waciInstance *waci.WaciInstance) *hostfunc.ModuleBuilder {

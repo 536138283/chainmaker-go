@@ -1,3 +1,4 @@
+//go:build !rocksdb
 // +build !rocksdb
 
 /*
@@ -77,7 +78,11 @@ func (m *Factory) newStore(chainId string, storeConfig *localconf.StorageConfig,
 			return nil, err
 		}
 	} else {
-		stateDB, err = statesqldb.NewStateSqlDB(chainId, stateDBConfig.SqlDbConfig, logger)
+		connPoolSize := 90
+		if stateDBConfig.SqlDbConfig.MaxOpenConns > 0 {
+			connPoolSize = stateDBConfig.SqlDbConfig.MaxOpenConns
+		}
+		stateDB, err = statesqldb.NewStateSqlDB(chainId, stateDBConfig.SqlDbConfig, logger, connPoolSize)
 		if err != nil {
 			return nil, err
 		}

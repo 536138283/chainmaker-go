@@ -13,6 +13,7 @@ require (
 	github.com/common-nighthawk/go-figure v0.0.0-20200609044655-c4b36f998cf2
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
+	google.golang.org/protobuf v1.27.1 // indirect
 )
 
 replace (

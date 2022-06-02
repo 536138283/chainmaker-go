@@ -725,6 +725,11 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonpb.Block) (err error) {
 
 	height := block.Header.BlockHeight
 	if err = chain.isBlockLegal(block); err != nil {
+		if err == commonErrors.ErrBlockHadBeenCommited {
+			chain.log.Warnf("block illegal [%d](hash:%x), %s", height, block.Header.BlockHash, err)
+			return err
+		}
+
 		chain.log.Errorf("block illegal [%d](hash:%x), %s", height, block.Header.BlockHash, err)
 		return err
 	}

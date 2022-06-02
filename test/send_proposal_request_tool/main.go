@@ -86,23 +86,23 @@ var (
 )
 
 type Result struct {
-	Code                  commonPb.TxStatusCode           `json:"code"`
-	Message               string                          `json:"message,omitempty"`
-	ContractResultCode    commonPb.ContractResultCode     `json:"contractResultCode"`
-	ContractResultMessage string                          `json:"contractResultMessage,omitempty"`
-	ContractQueryResult   string                          `json:"contractQueryResult"`
-	TxId                  string                          `json:"txId,omitempty"`
-	BlockInfo             *commonPb.BlockInfo             `json:"blockInfo,omitempty"`
-	TransactionInfo       *commonPb.TransactionInfo       `json:"transactionInfo,omitempty"`
-	ChainInfo             *discoveryPb.ChainInfo          `json:"chainInfo,omitempty"`
-	ChainList             *discoveryPb.ChainList          `json:"chainList,omitempty"`
-	ContractInfo          *commonPb.ContractInfo          `json:"contractInfo,omitempty"`
-	MultiSignInfo         *commonPb.MultiSignInfo         `json:"multiSignInfo,omitempty"`
-	PayloadHash           string                          `json:"payloadHash,omitempty"`
-	ShortCert             string                          `json:"shortCert,omitempty"`
-	GovernanceInfo        *consensusPb.GovernanceContract `json:"governanceInfo,omitempty"`
-	HibeExecMsg           string                          `json:"hibe_exec_msg,omitempty"`
-	CertAddress           *evm.Address                    `json:"certAddress,omitempty"`
+	Code                  commonPb.TxStatusCode       `json:"code"`
+	Message               string                      `json:"message,omitempty"`
+	ContractResultCode    commonPb.ContractResultCode `json:"contractResultCode"`
+	ContractResultMessage string                      `json:"contractResultMessage,omitempty"`
+	ContractQueryResult   string                      `json:"contractQueryResult"`
+	TxId                  string                      `json:"txId,omitempty"`
+	BlockInfo             *commonPb.BlockInfo         `json:"blockInfo,omitempty"`
+	TransactionInfo       *commonPb.TransactionInfo   `json:"transactionInfo,omitempty"`
+	ChainInfo             *discoveryPb.ChainInfo      `json:"chainInfo,omitempty"`
+	ChainList             *discoveryPb.ChainList      `json:"chainList,omitempty"`
+	ContractInfo          *commonPb.ContractInfo      `json:"contractInfo,omitempty"`
+	//MultiSignInfo         *commonPb.MultiSignInfo         `json:"multiSignInfo,omitempty"`
+	PayloadHash    string                          `json:"payloadHash,omitempty"`
+	ShortCert      string                          `json:"shortCert,omitempty"`
+	GovernanceInfo *consensusPb.GovernanceContract `json:"governanceInfo,omitempty"`
+	HibeExecMsg    string                          `json:"hibe_exec_msg,omitempty"`
+	CertAddress    *evm.Address                    `json:"certAddress,omitempty"`
 }
 
 type SimpleRPCResult struct {
@@ -217,9 +217,9 @@ func main() {
 
 	mainCmd.AddCommand(ChainConfigGetGovernanceContractCMD())
 
-	mainCmd.AddCommand(MultiSignReqCMD())
-	mainCmd.AddCommand(MultiSignVoteCMD())
-	mainCmd.AddCommand(MultiSignQueryCMD())
+	//mainCmd.AddCommand(MultiSignReqCMD())
+	//mainCmd.AddCommand(MultiSignVoteCMD())
+	//mainCmd.AddCommand(MultiSignQueryCMD())
 
 	mainCmd.AddCommand(HibeDecryptCMD())
 	mainCmd.AddCommand(HibeEncryptCMD())
