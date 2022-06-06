@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	blockVersion230 = uint32(230)
+	blockVersion230 = uint32(2300)
 )
 
 type CommitBlock struct {
