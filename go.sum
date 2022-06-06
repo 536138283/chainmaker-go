@@ -82,15 +82,14 @@ chainmaker.org/chainmaker/utils/v2 v2.2.1-0.20220412132815-f4bbdf8e3521/go.mod h
 chainmaker.org/chainmaker/utils/v2 v2.2.1/go.mod h1:z2HJlhw3ElEtqgCeZrVlC6ajlXb6L2xFPjI1EsFwdcc=
 chainmaker.org/chainmaker/utils/v2 v2.2.2 h1:9wlkNnR3b4zDJTM2WK0WIQegURRF8YawnuXsoLzHXIc=
 chainmaker.org/chainmaker/utils/v2 v2.2.2/go.mod h1:eqUivXBCnTnFC4IFb/mjMAw8VFL1XikyDJ+UQwcojHo=
-chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220520065329-4394c508416c h1:dnVHfls+oF1pMd09r4ZGE1BUgcjzuI8avVB0RtyM8uE=
-chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220520065329-4394c508416c/go.mod h1:n7mRJkH9KJ7cEfyGe+ZYFxOMOBJJNrG9BKWEZbjOcwg=
+chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220601074131-15dd90d2aa02 h1:puBMQlCY/n+kwm3gmkHa7+lI/+x20QZqoNPaREI/ahA=
+chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220601074131-15dd90d2aa02/go.mod h1:n7mRJkH9KJ7cEfyGe+ZYFxOMOBJJNrG9BKWEZbjOcwg=
 chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220524102246-7d975a42079b h1:xOtvHYkcWyc5iVN/7sOYT9f0TXPFUzwW9gySFNuhKS4=
 chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220524102246-7d975a42079b/go.mod h1:qi45/YO5I2Jtk5wkEelQWfdT7ULa+OjoQ18f8gcT64c=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1 h1:0WIsRfy5zzvIp80pa0+ABhVUAZmxiCBel8Y3OBD1ah8=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1/go.mod h1:4YBIWiBD7CEQPq3CQ/i3n2cC59I+ZgpLfZsFAz9vQAg=
 chainmaker.org/chainmaker/vm-native/v2 v2.2.0/go.mod h1:tTWzhpHDu2GgI9HaDMkt/DMtPSqFM3btG9TyGwUPE8A=
 chainmaker.org/chainmaker/vm-native/v2 v2.2.1/go.mod h1:oVN07ITiQu7S7xMaTHHqwlL6atVdUbhKUNyl01mBJLg=
-chainmaker.org/chainmaker/vm-native/v2 v2.2.2-0.20220527123014-a9863d2a21cc h1:u6p029iv4rxX+wXL89rvtPUK/vmtNDpTEk3AsxWs9oI=
 chainmaker.org/chainmaker/vm-native/v2 v2.2.2-0.20220527123014-a9863d2a21cc/go.mod h1:y/nbt1PVvYSeJjgPO2X5fk4eBdLA3YxUlKZOgImIzSE=
 chainmaker.org/chainmaker/vm-native/v2 v2.2.2-0.20220531033736-df16486abc28 h1:GJAskp3uhYJlXxC3KL/lhE+uZkX3q4fEsMVpe0+/cr0=
 chainmaker.org/chainmaker/vm-native/v2 v2.2.2-0.20220531033736-df16486abc28/go.mod h1:y/nbt1PVvYSeJjgPO2X5fk4eBdLA3YxUlKZOgImIzSE=
