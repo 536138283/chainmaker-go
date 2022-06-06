@@ -10,12 +10,13 @@ import (
 	"fmt"
 	"time"
 
-	"chainmaker.org/chainmaker/localconf/v2"
+	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
+	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
+
+	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"github.com/gogo/protobuf/proto"
 )
 
 // ChaseBlockHeight Chase high block
@@ -53,40 +54,40 @@ func ChaseBlockHeight(store protocol.BlockchainStore, filter protocol.TxFilter, 
 	return nil
 }
 
-func GetConf(chainId string) (*config.TxFilterConfig, error) {
+func GetConf(chainId string) (*TxFilterConfig, error) {
 	return ToPbConfig(localconf.ChainMakerConfig.TxFilter, chainId)
 }
 
 // ToPbConfig Convert localconf.TxFilterConfig to config.TxFilterConfig
-func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*config.TxFilterConfig, error) {
-	c := &config.TxFilterConfig{
-		Type: config.TxFilterType(conf.Type),
+func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig, error) {
+	c := &TxFilterConfig{
+		Type: TxFilterType(conf.Type),
 	}
-	switch config.TxFilterType(conf.Type) {
-	case config.TxFilterType_None:
+	switch TxFilterType(conf.Type) {
+	case TxFilterTypeDefault:
 		return c, nil
-	case config.TxFilterType_BirdsNest:
+	case TxFilterTypeBirdsNest:
 		err := CheckBNConfig(conf.BirdsNest, true)
 		if err != StringNil {
 			return nil, errors.New(err)
 		}
-		cuckoo := &common.CuckooConfig{
-			KeyType:       common.KeyType(conf.BirdsNest.Cuckoo.KeyType),
+		cuckoo := &bn.CuckooConfig{
+			KeyType:       bn.KeyType(conf.BirdsNest.Cuckoo.KeyType),
 			TagsPerBucket: conf.BirdsNest.Cuckoo.TagsPerBucket,
 			BitsPerItem:   conf.BirdsNest.Cuckoo.BitsPerItem,
 			MaxNumKeys:    conf.BirdsNest.Cuckoo.MaxNumKeys,
 			TableType:     conf.BirdsNest.Cuckoo.TableType,
 		}
-		rules := &common.RulesConfig{
+		rules := &bn.RulesConfig{
 			AbsoluteExpireTime: conf.BirdsNest.Rules.AbsoluteExpireTime,
 		}
-		snapshot := &common.SnapshotSerializerConfig{
-			Type:        common.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
-			Timed:       &common.TimedSerializeIntervalConfig{Interval: int64(conf.BirdsNest.Snapshot.Timed.Interval)},
-			BlockHeight: &common.BlockHeightSerializeIntervalConfig{Interval: uint64(conf.BirdsNest.Snapshot.Timed.Interval)},
+		snapshot := &bn.SnapshotSerializerConfig{
+			Type:        bn.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
+			Timed:       &bn.TimedSerializeIntervalConfig{Interval: int64(conf.BirdsNest.Snapshot.Timed.Interval)},
+			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: uint64(conf.BirdsNest.Snapshot.Timed.Interval)},
 			Path:        conf.BirdsNest.Snapshot.Path,
 		}
-		c.BirdsNest = &common.BirdsNestConfig{
+		c.BirdsNest = &bn.BirdsNestConfig{
 			Length:   conf.BirdsNest.Length,
 			ChainId:  chainId,
 			Rules:    rules,
@@ -94,37 +95,37 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*config.TxFilter
 			Snapshot: snapshot,
 		}
 		return c, nil
-	case config.TxFilterType_Map:
+	case TxFilterTypeMap:
 		return c, nil
-	case config.TxFilterType_ShardingBirdsNest:
+	case TxFilterTypeShardingBirdsNest:
 		err := CheckShardingBNConfig(conf.ShardingBirdsNest)
 		if err != StringNil {
 			return nil, errors.New(err)
 		}
-		snapshot := &common.SnapshotSerializerConfig{
-			Type:        common.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
-			Timed:       &common.TimedSerializeIntervalConfig{Interval: int64(conf.BirdsNest.Snapshot.Timed.Interval)},
-			BlockHeight: &common.BlockHeightSerializeIntervalConfig{Interval: uint64(conf.BirdsNest.Snapshot.Timed.Interval)},
+		snapshot := &bn.SnapshotSerializerConfig{
+			Type:        bn.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
+			Timed:       &bn.TimedSerializeIntervalConfig{Interval: int64(conf.BirdsNest.Snapshot.Timed.Interval)},
+			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: uint64(conf.BirdsNest.Snapshot.Timed.Interval)},
 			Path:        conf.ShardingBirdsNest.Snapshot.Path,
 		}
-		rules := &common.RulesConfig{
+		rules := &bn.RulesConfig{
 			AbsoluteExpireTime: conf.ShardingBirdsNest.BirdsNest.Rules.AbsoluteExpireTime,
 		}
-		cuckoo := &common.CuckooConfig{
-			KeyType:       common.KeyType(conf.ShardingBirdsNest.BirdsNest.Cuckoo.KeyType),
+		cuckoo := &bn.CuckooConfig{
+			KeyType:       bn.KeyType(conf.ShardingBirdsNest.BirdsNest.Cuckoo.KeyType),
 			TagsPerBucket: conf.ShardingBirdsNest.BirdsNest.Cuckoo.TagsPerBucket,
 			BitsPerItem:   conf.ShardingBirdsNest.BirdsNest.Cuckoo.BitsPerItem,
 			MaxNumKeys:    conf.ShardingBirdsNest.BirdsNest.Cuckoo.MaxNumKeys,
 			TableType:     conf.ShardingBirdsNest.BirdsNest.Cuckoo.TableType,
 		}
-		bn := &common.BirdsNestConfig{
+		bn := &bn.BirdsNestConfig{
 			Length:   conf.ShardingBirdsNest.BirdsNest.Length,
 			ChainId:  chainId,
 			Rules:    rules,
 			Cuckoo:   cuckoo,
-			Snapshot: proto.Clone(snapshot).(*common.SnapshotSerializerConfig),
+			Snapshot: snapshot,
 		}
-		c.ShardingBirdsNest = &common.ShardingBirdsNestConfig{
+		c.ShardingBirdsNest = &sbn.ShardingBirdsNestConfig{
 			ChainId:   chainId,
 			Length:    conf.ShardingBirdsNest.Length,
 			Timeout:   conf.ShardingBirdsNest.Timeout,

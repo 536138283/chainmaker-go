@@ -6,13 +6,11 @@ SPDX-License-Identifier: Apache-2.0
 package shardingbirdsnest
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
 	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -326,7 +324,7 @@ func TestTxFilter_IsExists(t *testing.T) {
 	}
 	type args struct {
 		txId     string
-		ruleType []common.RuleType
+		ruleType []bn.RuleType
 	}
 	tests := []struct {
 		name       string
@@ -486,35 +484,35 @@ func TestTxFilter_IsExists(t *testing.T) {
 
 const TestDir = "./data/tx_filter"
 
-func GetTestDefaultConfig(path string, i int) *common.ShardingBirdsNestConfig {
-	return &common.ShardingBirdsNestConfig{
+func GetTestDefaultConfig(path string, i int) *sbn.ShardingBirdsNestConfig {
+	return &sbn.ShardingBirdsNestConfig{
 		Length:  10,
 		Timeout: 10,
 		ChainId: "chain1",
-		Birdsnest: &common.BirdsNestConfig{
+		Birdsnest: &bn.BirdsNestConfig{
 			ChainId: "chain1",
 			Length:  5,
-			Rules: &common.RulesConfig{
+			Rules: &bn.RulesConfig{
 				AbsoluteExpireTime: 10000,
 			},
-			Cuckoo: &common.CuckooConfig{
-				KeyType:       common.KeyType_KTDefault,
+			Cuckoo: &bn.CuckooConfig{
+				KeyType:       bn.KeyType_KTDefault,
 				TagsPerBucket: 4,
 				BitsPerItem:   9,
 				MaxNumKeys:    10,
 				TableType:     1,
 			},
-			Snapshot: &common.SnapshotSerializerConfig{
-				Type:        common.SerializeIntervalType_Timed,
-				Timed:       &common.TimedSerializeIntervalConfig{Interval: 20},
-				BlockHeight: &common.BlockHeightSerializeIntervalConfig{Interval: 20},
+			Snapshot: &bn.SnapshotSerializerConfig{
+				Type:        bn.SerializeIntervalType_Timed,
+				Timed:       &bn.TimedSerializeIntervalConfig{Interval: 20},
+				BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: 20},
 				Path:        path + strconv.Itoa(i),
 			},
 		},
-		Snapshot: &common.SnapshotSerializerConfig{
-			Type:        common.SerializeIntervalType_Timed,
-			Timed:       &common.TimedSerializeIntervalConfig{Interval: 20},
-			BlockHeight: &common.BlockHeightSerializeIntervalConfig{Interval: 20},
+		Snapshot: &bn.SnapshotSerializerConfig{
+			Type:        bn.SerializeIntervalType_Timed,
+			Timed:       &bn.TimedSerializeIntervalConfig{Interval: 20},
+			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: 20},
 			Path:        path + strconv.Itoa(i),
 		},
 	}
@@ -537,7 +535,7 @@ func (t TestLogger) Debugf(format string, args ...interface{}) {
 }
 
 func (t TestLogger) Debugw(msg string, keysAndValues ...interface{}) {
-	t.T.Log(fmt.Sprintf(msg, keysAndValues...))
+	t.T.Logf(msg, keysAndValues...)
 }
 
 func (t TestLogger) Error(args ...interface{}) {

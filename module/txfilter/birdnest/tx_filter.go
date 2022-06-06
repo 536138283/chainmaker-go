@@ -11,7 +11,6 @@ import (
 
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -24,7 +23,7 @@ type TxFilter struct {
 	l     sync.RWMutex
 }
 
-func (f *TxFilter) ValidateRule(txId string, ruleType ...commonPb.RuleType) error {
+func (f *TxFilter) ValidateRule(txId string, ruleType ...bn.RuleType) error {
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		return nil
@@ -37,11 +36,11 @@ func (f *TxFilter) ValidateRule(txId string, ruleType ...commonPb.RuleType) erro
 }
 
 // New transaction filter init
-func New(config *commonPb.BirdsNestConfig, log protocol.Logger, store protocol.BlockchainStore) (
+func New(config *bn.BirdsNestConfig, log protocol.Logger, store protocol.BlockchainStore) (
 	protocol.TxFilter, error) {
 	// Because it is compatible with Normal type, the transaction ID cannot be converted to time transaction ID, so the
 	// database can be queried directly. Therefore, the transaction ID type is fixed as TimestampKey
-	config.Cuckoo.KeyType = commonPb.KeyType_KTTimestampKey
+	config.Cuckoo.KeyType = bn.KeyType_KTTimestampKey
 
 	initLasts := time.Now()
 	exitC := make(chan struct{})
@@ -78,7 +77,7 @@ func (f *TxFilter) SetHeight(height uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...commonPb.RuleType) (bool, uint64, error) {
+func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...bn.RuleType) (bool, uint64, error) {
 	exists, err := f.IsExists(txId, ruleType...)
 	if err != nil {
 		return false, 0, err
@@ -154,7 +153,7 @@ func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f *TxFilter) IsExists(txId string, ruleType ...commonPb.RuleType) (exists bool, err error) {
+func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (exists bool, err error) {
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		exists, err = f.store.TxExists(txId)
