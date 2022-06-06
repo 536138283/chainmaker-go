@@ -162,8 +162,10 @@ func (s *RPCServer) Start() error {
 		} else {
 			err = s.mixServer.Serve(ca.NewTLSListener(conn, tlsConfig))
 		}
-		if err != nil {
-			s.log.Errorf("grpc Serve failed, %s", err.Error())
+		if err == http.ErrServerClosed {
+			s.log.Info("RPCServer http closed")
+		} else {
+			s.log.Errorf("RPCServer http serve failed, %s", err.Error())
 		}
 	}()
 
