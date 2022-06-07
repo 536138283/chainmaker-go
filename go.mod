@@ -6,7 +6,7 @@ require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220601093135-49f1a82f5679
 	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220601090655-ddcadbaf280f
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220601111005-e5d844eeaff7
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220601111305-fe9e56afffb2
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220607151635-8f39301931e1
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220601112100-272db10da7e4
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.2.0
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220602090304-b643761f502d
@@ -76,7 +76,6 @@ require (
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
-	github.com/tklauser/go-sysconf v0.3.10 // indirect
 )
 
 replace (
