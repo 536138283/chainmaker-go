@@ -336,3 +336,67 @@ func (nf *NetFactory) Apply(opts ...NetOption) error {
 	}
 	return nil
 }
+
+func WithStunClient(clientListenAddr, stunServerAddr, networkType string, enable bool) NetOption {
+	return func(nf *NetFactory) error {
+		switch nf.netType {
+		case protocol.Libp2p:
+			// not supported
+		case protocol.Liquid:
+			n, ok := nf.n.(*liquid.LiquidNet)
+			if !ok {
+				return errors.New("nf.n is not LiquidNet")
+			}
+			n.StunClientConfig().ClientListenAddr = liquid.GenMaAddr(clientListenAddr)
+			n.StunClientConfig().StunServerAddr = liquid.GenMaAddr(stunServerAddr)
+			n.StunClientConfig().NetworkType = networkType
+			n.StunClientConfig().Enable = enable
+		}
+		return nil
+	}
+}
+
+func WithStunServer(enable, twoPublicAddr bool, other string, notifyAddr, localNotify,
+	addr1, addr2, addr3, addr4, networkType string) NetOption {
+	return func(nf *NetFactory) error {
+		switch nf.netType {
+		case protocol.Libp2p:
+			// not supported
+		case protocol.Liquid:
+			n, ok := nf.n.(*liquid.LiquidNet)
+			if !ok {
+				return errors.New("nf.n is not LiquidNet")
+			}
+			n.StunServerConfig().EnableServer = enable
+			n.StunServerConfig().TwoPublicAddress = twoPublicAddr
+			n.StunServerConfig().OtherStunServerAddr = liquid.GenMaAddr(other)
+			n.StunServerConfig().ServerListenAddr1 = liquid.GenMaAddr(addr1)
+			n.StunServerConfig().ServerListenAddr2 = liquid.GenMaAddr(addr2)
+			n.StunServerConfig().NetworkType = networkType
+			if twoPublicAddr {
+				n.StunServerConfig().ServerListenAddr3 = liquid.GenMaAddr(addr3)
+				n.StunServerConfig().ServerListenAddr4 = liquid.GenMaAddr(addr4)
+			} else {
+				n.StunServerConfig().LocalNotifyAddr = localNotify
+				n.StunServerConfig().NotifyAddr = notifyAddr
+			}
+		}
+		return nil
+	}
+}
+
+func WithHolePunch(enable bool) NetOption {
+	return func(nf *NetFactory) error {
+		switch nf.netType {
+		case protocol.Libp2p:
+			// not supported
+		case protocol.Liquid:
+			n, ok := nf.n.(*liquid.LiquidNet)
+			if !ok {
+				return errors.New("nf.n is not LiquidNet")
+			}
+			n.HolePunchConfig().EnablePunch = enable
+		}
+		return nil
+	}
+}
