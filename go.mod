@@ -25,7 +25,7 @@ require (
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220530071955-55028be5268b
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220601092510-ec93c1095f0f
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220523105831-d85ec7733a93
-	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220527114415-d0cc67f922c9
+	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220607092912-c402344e4b7d
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220310130906-fc7031ec25c7
 	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220601095307-415ba71e5474
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.1
@@ -62,7 +62,7 @@ require (
 	go.uber.org/atomic v1.7.0
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
-	google.golang.org/grpc v1.43.0
+	google.golang.org/grpc v1.47.0
 	gorm.io/driver/mysql v1.2.0
 	gorm.io/gorm v1.22.3
 )
