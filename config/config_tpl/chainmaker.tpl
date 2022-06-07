@@ -525,8 +525,8 @@ vm:
   # dockervm_config_path:
   #  Config items of docker runtime service
   runtime_server:
-    # Runtime service port, default 32359
-    port: 32351
+    # Runtime service port, default 32351
+    port: {dockervm_runtime_port}
     # Grpc dialing timeout
     dial_timeout: 10, default size is 10, Uint: s
     # Grpc max send message size, Default size is 4, Unit: MB
@@ -538,7 +538,7 @@ vm:
     # Docker vm contract service host, default 127.0.0.1
     host: 127.0.0.1
     # Docker vm contract service port, default 22351
-    port: 22351
+    port: {dockervm_engine_port}
     # Grpc dialing timeout, default size is 10, Uint: s
     dial_timeout: 10
     # Grpc max send message size, Default size is 4, Unit: MB

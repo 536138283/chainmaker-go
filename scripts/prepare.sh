@@ -12,6 +12,8 @@ NODE_CNT=$1
 CHAIN_CNT=$2
 P2P_PORT=$3
 RPC_PORT=$4
+DOCKER_VM_RUNTIME_PORT=$5
+DOCKER_VM_ENGINE_PORT=$6
 
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
@@ -130,6 +132,8 @@ function generate_config() {
     TRUSTED_PORT=13301
     DOCKER_VM_CONTAINER_NAME_PREFIX="chainmaker-vm-docker-go-container"
     ENABLE_DOCKERVM="false"
+    DOCKER_VM_RUNTIME_PORT=32351
+    DOCKER_VM_ENGINE_PORT=22351
 
     read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
     if  [ ! -z "$tmp" ] ;then

@@ -186,11 +186,10 @@ debug:
   is_cli_open: true
   is_http_open: false
 
-
 vm:
   enable_dockervm: true
-  dockervm_mount_path: ./testdata/org1/docker-go
-  dockervm_log_path: ./testdata/org1/dockervm
+  dockervm_mount_path: ../data/org1/docker-go
+  dockervm_log_path: ../log/org1/dockervm
   start_now: true
   uds_open: false
   #max_send_msg_size: 10
