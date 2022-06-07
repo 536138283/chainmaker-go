@@ -23,6 +23,8 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 	"chainmaker.org/chainmaker/vm/v2"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core"
@@ -98,10 +100,10 @@ func (bc *Blockchain) Init() (err error) {
 			{moduleNameTxPool: bc.initTxPool},
 			// init core engine
 			{moduleNameCore: bc.initCore},
-			// init consensus module
-			{moduleNameConsensus: bc.initConsensus},
 			// init sync service module
 			{moduleNameSync: bc.initSync},
+			// init consensus module
+			{moduleNameConsensus: bc.initConsensus},
 		}
 	}
 
@@ -359,10 +361,12 @@ func (bc *Blockchain) initChainConf() (err error) {
 	bc.initModules[moduleNameChainConf] = struct{}{}
 
 	// register myself as config watcher
-	bc.chainConf.AddWatch(bc)
-	//if localconf.ChainMakerConfig.StorageConfig.StateDbConfig.IsSqlDB() {
-	//	panic("init chain conf fail. sql the future feature")
-	//}
+	bc.msgBus.Register(msgbus.ChainConfig, bc)
+
+	// v220_compat Deprecated
+	// register myself as config watcher
+	bc.chainConf.AddWatch(bc) //nolint: staticcheck
+
 	return
 }
 
@@ -473,7 +477,7 @@ func (bc *Blockchain) initAC() (err error) {
 	//	return
 	//}
 	acFactory := accesscontrol.ACFactory()
-	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog)
+	bc.ac, err = acFactory.NewACProvider(bc.chainConf, nodeConfig.OrgId, bc.store, acLog, bc.msgBus)
 	if err != nil {
 		bc.log.Errorf("new ac provider failed, %s", err.Error())
 		return
@@ -531,7 +535,9 @@ func (bc *Blockchain) initTxPool() (err error) {
 		bc.store,
 		bc.msgBus,
 		bc.chainConf,
+		bc.identity,
 		bc.ac,
+		bc.netService,
 		txPoolLogger,
 		localconf.ChainMakerConfig.MonitorConfig.Enabled,
 		localconf.ChainMakerConfig.TxPoolConfig,
@@ -553,6 +559,7 @@ func (bc *Blockchain) initVM() (err error) {
 		bc.log.Infof("vm module existed, ignore.")
 		return
 	}
+	vmlog := logger.GetLoggerByChain(logger.MODULE_VM, bc.chainId)
 	// init VM
 	if bc.netService == nil {
 		/*
@@ -600,6 +607,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.ac,
 			&soloChainNodesInfoProvider{},
 			bc.chainConf,
+			vmlog,
 		)
 	} else {
 		/*
@@ -647,6 +655,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.ac,
 			bc.netService.GetChainNodesInfoProvider(),
 			bc.chainConf,
+			vmlog,
 		)
 	}
 	bc.initModules[moduleNameVM] = struct{}{}
@@ -689,6 +698,7 @@ func (bc *Blockchain) initCore() (err error) {
 		VmMgr:           bc.vmMgr,
 		ProposalCache:   bc.proposalCache,
 		Subscriber:      bc.eventSubscriber,
+		NetService:      bc.netService,
 		TxFilter:        bc.txFilter,
 	}
 	// 时间戳
@@ -732,6 +742,7 @@ func (bc *Blockchain) initConsensus() (err error) {
 		ChainId:       bc.chainId,
 		NodeId:        id,
 		Ac:            bc.ac,
+		Sync:          bc.syncServer,
 		Core:          bc.coreEngine,
 		ChainConf:     bc.chainConf,
 		NetService:    bc.netService,

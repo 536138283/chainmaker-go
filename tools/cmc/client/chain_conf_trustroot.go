@@ -76,13 +76,12 @@ func removeTrustRootCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
-		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootCrtPath, flagTrustRootOrgId,
+		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootOrgId,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTrustRootOrgId)
-	cmd.MarkFlagRequired(flagTrustRootCrtPath)
 
 	return cmd
 }

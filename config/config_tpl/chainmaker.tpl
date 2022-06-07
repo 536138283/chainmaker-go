@@ -54,7 +54,7 @@ node:
   # fast sync settings
   fast_sync:
     # Enable it or not
-    enabled: false  # [*]
+    enabled: true  # [*]
 
     # The number of blocks that did not perform fast synchronization at the end
     min_full_blocks: 10
@@ -63,6 +63,9 @@ node:
   pkcs11:
     # Enable it or not
     enabled: false  # [*]
+
+    # Type only support pkcs11 and sdf
+    type: pkcs11
 
     # Path for the pkcs11 interface file(.so)
     library: /usr/local/lib64/pkcs11/libupkcs11.so
@@ -119,6 +122,12 @@ net:
     # TLS Certificate file path.
     cert_file: ../config/{org_path}/certs/{net_cert_path}.crt
 
+    # TLS enc private key file path. (only for gmtls1.1)
+    priv_enc_key_file: ../config/{org_path}/certs/{net_cert_path}.enc.key
+
+    # TLS enc Certificate file path.
+    cert_enc_file: ../config/{org_path}/certs/{net_cert_path}.enc.crt
+
   # The blacklist is automatically block the listed seed to connect.
   # blacklist:
       # The addresses in blacklist.
@@ -132,21 +141,34 @@ net:
       #   - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
 
 # Transaction pool settings
-# Other txpool settings can be found in tx_Pool_config.go
+# Other tx_pool settings can be found in tx_Pool_config.go
 txpool:
-  # txpool type, can be single or batch.
-  # By default the txpool type is single.
+  # tx_pool type, can be single, normal, batch.
+  # By default the tx_pool type is single.
+  # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
   pool_type: "single"
 
-  # Max transaction count in txpool.
-  # If txpool is full, the following transactions will be discarded.
+  # Max common transaction count in tx_pool.
+  # If tx_pool is full, the following transactions will be discarded.
   max_txpool_size: 50000
 
-  # Max config transaction count in config txpool.
+  # Max config transaction count in tx_pool.
   max_config_txpool_size: 10
 
-  # Interval of creating a transaction batch, only for batch txpool, in millisecond.
+  # Whether dump config and common transactions in queue when stop node,
+  # and replay transactions when restart node.
+  is_dump_txs_in_queue: true
+
+  # Common transaction queue num, only for normal tx_pool.
+  # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
+  # common_queue_num: 8
+
+  # Interval of creating a transaction batch, only for batch tx_pool, in millisecond.
   # batch_create_timeout: 200
+
+  # The number of transactions contained in a batch, only for batch tx_pool.
+  # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
+  # batch_max_size: 100
 
 # RPC service setting
 rpc:
@@ -161,6 +183,13 @@ rpc:
   # Only valid if tls is enabled.
   # The minium value is 10.
   check_chain_conf_trust_roots_change_interval: 60
+
+  # restful api gateway
+  gateway:
+    # enable restful api
+    enabled: false
+    # max resp body buffer size, unit: M
+    max_resp_body_size: 16
 
   # Rate limit related settings
   # Here we use token bucket to limit rate.
@@ -197,6 +226,12 @@ rpc:
     # RPC TLS public key file path
     cert_file:      ../config/{org_path}/certs/{rpc_cert_path}.crt
 
+    # RPC enc TLS private key file path (only for gmtls1.1)
+    priv_enc_key_file:  ../config/{org_path}/certs/{rpc_cert_path}.enc.key
+
+    # RPC enc TLS public key file path
+    cert_enc_file:      ../config/{org_path}/certs/{rpc_cert_path}.enc.crt
+
   # RPC blacklisted ip addresses
   blacklist:
     addresses:
@@ -206,7 +241,6 @@ rpc:
   max_send_msg_size: 100
   max_recv_msg_size: 100
 
-# Transaction filter settings
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
   # 3 is recommended.
@@ -214,7 +248,7 @@ tx_filter:
   # sharding bird's nest config
   # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
   sharding:
-    # sharding size
+    # sharding number
     length: 5
     # sharding task timeout in seconds
     timeout: 3
@@ -223,12 +257,14 @@ tx_filter:
       # 0 Serialization by height interval
       # 1 Serialization by time interval
       type: 0
-      block_height:
-        # Block height interval
-        interval: 10
       timed:
         # Time interval in seconds
         interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
       # file path
       path: ../data/{org_id}/tx_filter
     # bird's nest config
@@ -246,6 +282,8 @@ tx_filter:
         # absolute expire time = total keys / number of requests per day
         absolute_expire_time: 172800
       cuckoo:
+        # 0 NormalKey; 1 TimestampKey
+        key_type: 1
         # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
         # If you are using a semi-sorted bucket, the default is 4
         # 2 is recommended.
@@ -269,12 +307,14 @@ tx_filter:
       # 0 Serialization by height interval
       # 1 Serialization by time interval
       type: 0
-      block_height:
-        # Block height interval
-        interval: 10
       timed:
         # Time interval in seconds
         interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
       # file path
       path: ../data/{org_id}/tx_filter
     # Transaction filter rules
@@ -288,6 +328,8 @@ tx_filter:
       # absolute expire time = total keys / number of requests per day
       absolute_expire_time: 172800
     cuckoo:
+      # 0 NormalKey; 1 TimestampKey
+      key_type: 1
       # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
       # If you are using a semi-sorted bucket, the default is 4
       # 2 is recommended.
@@ -376,21 +418,14 @@ storage:
     redis_password: abcpass  #redis password
     tx_capacity: 1000000000   #support max transaction capacity
     fp_rate: 0.000000001      #false postive rate
-
-  # RWC config
-  enable_rwc: true   #default false
-
-  # suggest
-  # if block_tx_capacity < 10000,
-  # set rolling_window_cache_capacity greater than block_tx_capacity*1.1 and less than block_tx_capacity*2
-  # if block_tx_capacity > 10000,  set rolling_window_cache_capacity 20000
-  rolling_window_cache_capacity: 200
+  # RWC config               default 1000000
+  rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
 
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0 common write，1 quick write
-  disable_state_cache: false # default false
+
   state_cache_config:
     life_window: 3000000000000   #key/value ttl time, ns
     clean_window: 1000000000

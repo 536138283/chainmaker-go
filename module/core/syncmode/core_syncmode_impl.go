@@ -8,6 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package syncmode
 
 import (
+	"strings"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -15,7 +17,9 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/syncmode/verifier"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -43,6 +47,8 @@ type CoreEngine struct {
 	proposedCache protocol.ProposalCache      // cache proposed block and proposal status
 	log           protocol.Logger             // logger
 	subscriber    *subscriber.EventSubscriber // block subsriber
+
+	netService protocol.NetService
 }
 
 // NewCoreEngine new a core engine.
@@ -56,6 +62,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		proposedCache:   cf.ProposalCache,
 		chainConf:       cf.ChainConf,
 		log:             cf.Log,
+		netService:      cf.NetService,
 	}
 
 	var schedulerFactory scheduler.TxSchedulerFactory
@@ -98,6 +105,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		TxPool:          cf.TxPool,
 		VmMgr:           cf.VmMgr,
 		StoreHelper:     cf.StoreHelper,
+		NetService:      cf.NetService,
 		TxFilter:        cf.TxFilter,
 	}
 	core.BlockVerifier, err = verifier.NewBlockVerifier(verifierConfig, cf.Log)
@@ -124,6 +132,13 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	// get the type of tx pool
+	if value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]; ok {
+		common.TxPoolType, _ = value.(string)
+		common.TxPoolType = strings.ToUpper(common.TxPoolType)
+	}
+
 	return core, nil
 }
 
@@ -166,6 +181,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
 			c.blockProposer.OnReceiveTxPoolSignal(signal)
 		}
+	case msgbus.RwSetVerifyFailTxs:
+		if signal, ok := message.Payload.(*consensuspb.RwSetVerifyFailTxs); ok {
+			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
+		}
 	}
 }
 
@@ -175,14 +194,18 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.VerifyBlock, c)
 	c.msgBus.Register(msgbus.CommitBlock, c)
 	c.msgBus.Register(msgbus.TxPoolSignal, c)
-	c.msgBus.Register(msgbus.BuildProposal, c)
+	//c.msgBus.Register(msgbus.BuildProposal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 
 // Stop, stop core engine
 func (c *CoreEngine) Stop() {
-	defer c.log.Infof("core stoped.")
+	defer c.log.Infof("core stopped.")
 	c.blockProposer.Stop() //nolint: errcheck
+}
+
+func (c *CoreEngine) GetBlockProposer() protocol.BlockProposer {
+	return c.blockProposer
 }
 
 func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
@@ -191,9 +214,6 @@ func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
 
 func (c *CoreEngine) GetBlockVerifier() protocol.BlockVerifier {
 	return c.BlockVerifier
-}
-
-func (c *CoreEngine) DiscardAboveHeight(baseHeight int64) {
 }
 
 func (c *CoreEngine) GetMaxbftHelper() protocol.MaxbftHelper {

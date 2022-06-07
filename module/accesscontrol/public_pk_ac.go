@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -105,12 +107,16 @@ type publicAdminMemberModel struct {
 }
 
 func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-	store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error) {
+	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
+	protocol.AccessControlProvider, error) {
 	pkAcProvider, err := newPkACProvider(chainConf.ChainConfig(), store, log)
 	if err != nil {
 		return nil, err
 	}
-	chainConf.AddWatch(pkAcProvider)
+
+	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
+	//v220_compat Deprecated
+	chainConf.AddWatch(pkAcProvider) //nolint: staticcheck
 	return pkAcProvider, nil
 }
 
@@ -244,25 +250,26 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 	return nil
 }
 
-func (p *pkACProvider) Module() string {
-	return ModuleNameAccessControl
-}
-
-func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
-
-	p.hashType = chainConfig.GetCrypto().GetHash()
-	err := p.initAdminMembers(chainConfig.TrustRoots)
-	if err != nil {
-		return fmt.Errorf("new public AC provider failed: %s", err.Error())
-	}
-
-	err = p.initConsensusMember(chainConfig)
-	if err != nil {
-		return fmt.Errorf("new public AC provider failed: %s", err.Error())
-	}
-	p.memberCache.Clear()
-	return nil
-}
+//func (p *pkACProvider) Module() string {
+//	return ModuleNameAccessControl
+//}
+//
+//
+//func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
+//
+//	p.hashType = chainConfig.GetCrypto().GetHash()
+//	err := p.initAdminMembers(chainConfig.TrustRoots)
+//	if err != nil {
+//		return fmt.Errorf("new public AC provider failed: %s", err.Error())
+//	}
+//
+//	err = p.initConsensusMember(chainConfig)
+//	if err != nil {
+//		return fmt.Errorf("new public AC provider failed: %s", err.Error())
+//	}
+//	p.memberCache.Clear()
+//	return nil
+//}
 
 func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error) {
 	cache := p.getMemberFromCache(pbMember)
@@ -371,8 +378,8 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 		syscontract.ContractQueryFunction_GET_DISABLED_CONTRACT_LIST.String(), pubPolicyForbidden)
 
 	// forbidden charge gas by go sdk
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
+	//p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+	//	syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
 
 	// forbidden refund gas vm by go sdk
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
@@ -405,6 +412,12 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// for gas admin
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
+	// for set invoke base gas
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), pubPolicyMajorityAdmin)
+	// move set admin method to chain config module
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
 }
 
 // need to consistent with 2.1.0 for dpos

@@ -47,6 +47,9 @@ type BlockChainSyncServer struct {
 	processor *Routine // Service that processes block data, adding valid blocks to the chain
 
 	requestCache sync.Map // ignore repeat block sync request when in process
+
+	minLagReachC chan struct{} //If the synced block height reaches the conf.minLabValue put a event to this channel
+	commitBlockC chan struct{} //if a synced block is committed to local ledger put a event to this channel
 }
 
 func NewBlockChainSyncServer(
@@ -70,6 +73,8 @@ func NewBlockChainSyncServer(
 		close:           make(chan bool),
 		log:             log, //logger.GetLoggerByChain(logger.MODULE_SYNC, chainId),
 		requestCache:    sync.Map{},
+		minLagReachC:    make(chan struct{}),
+		commitBlockC:    make(chan struct{}),
 	}
 	return syncServer
 }
@@ -83,7 +88,9 @@ func (sync *BlockChainSyncServer) Start() error {
 	sync.initSyncConfIfRequire()
 	processor := newProcessor(sync, sync.ledgerCache, sync.log)
 	scheduler := newScheduler(sync, sync.ledgerCache,
-		sync.conf.blockPoolSize, sync.conf.timeOut, sync.conf.reqTimeThreshold, sync.conf.batchSizeFromOneNode, sync.log)
+		sync.conf.blockPoolSize, sync.conf.timeOut,
+		sync.conf.reqTimeThreshold, sync.conf.batchSizeFromOneNode,
+		sync.log, sync.minLagReachC, sync.conf.minLagThreshold, sync.conf.minLagThresholdTime)
 	if scheduler == nil {
 		return fmt.Errorf("init scheduler failed")
 	}
@@ -213,9 +220,8 @@ func (sync *BlockChainSyncServer) handleNodeStatusResp(syncMsg *syncPb.SyncMsg, 
 
 func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from string) error {
 	var (
-		err    error
-		loaded bool
-		req    syncPb.BlockSyncReq
+		err error
+		req syncPb.BlockSyncReq
 	)
 
 	if err = proto.Unmarshal(syncMsg.Payload, &req); err != nil {
@@ -225,10 +231,11 @@ func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from s
 	// 针对 `SyncMsg_BLOCK_SYNC_REQ` 消息处理函数，添加处理状态检查，要求同一个 `请求来源 + 高度` 不会重复返回多次数据
 	// create a key-value pair when receive block request, ignore repeat request
 	processKey := fmt.Sprintf("%s_%d", from, req.BlockHeight)
-	if _, loaded = sync.requestCache.LoadOrStore(processKey, nil); loaded {
+	if _, loaded := sync.requestCache.LoadOrStore(processKey, time.Now()); loaded {
+		sync.log.Warnf("received duplicate request to get block [height: %d, batch_size: %d] from "+
+			"node [%s]", req.BlockHeight, req.BatchSize, from)
 		return nil
 	}
-	defer sync.requestCache.Store(processKey, time.Now())
 
 	sync.log.Infof("receive request to get block [height: %d, batch_size: %d] from "+
 		"node [%s]"+"WithRwset [%v]", req.BlockHeight, req.BatchSize, from, req.WithRwset)
@@ -406,6 +413,11 @@ func (sync *BlockChainSyncServer) blockRequestEntrance() {
 	}
 }
 
+// ListenSyncToIdealHeight listen local block height has synced to ideal height
+func (sync *BlockChainSyncServer) ListenSyncToIdealHeight() <-chan struct{} {
+	return sync.minLagReachC
+}
+
 func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) processedBlockStatus {
 	if blk := sync.ledgerCache.GetLastCommittedBlock(); blk != nil && blk.Header.BlockHeight >= block.Header.BlockHeight {
 		sync.log.Infof("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
@@ -464,6 +476,15 @@ func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *common
 	}
 	sync.log.Debugf("AddBlock end, height is: %d ....", block.Header.BlockHeight)
 	return ok
+}
+
+func (sync *BlockChainSyncServer) StopBlockSync() {
+	_ = sync.scheduler.addTask(&StopSyncMsg{})
+	_ = sync.processor.addTask(&StopSyncMsg{})
+}
+
+func (sync *BlockChainSyncServer) StartBlockSync() {
+	_ = sync.scheduler.addTask(&StartSyncMsg{})
 }
 
 func (sync *BlockChainSyncServer) Stop() {

@@ -15,7 +15,7 @@ import (
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 
 	"github.com/spf13/cobra"
 )

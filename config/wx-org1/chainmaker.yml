@@ -42,6 +42,7 @@ node:
   cert_cache_size:   1000
   pkcs11:
     enabled: false
+    type: pkcs11
     library: /usr/local/lib64/pkcs11/libupkcs11.so      # path to the so file of pkcs11 interface
     label: HSM                                          # label for the slot to be used
     password: 11111111                                  # password to logon the HSM

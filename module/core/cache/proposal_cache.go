@@ -230,7 +230,7 @@ func (pc *ProposalCache) KeepProposedBlock(hash []byte, height uint64) []*common
 	return blocks
 }
 
-func (pc *ProposalCache) DiscardAboveHeight(baseHeight uint64) []*commonpb.Block {
+func (pc *ProposalCache) DiscardBlocks(baseHeight uint64) []*commonpb.Block {
 	pc.rwMu.Lock()
 	defer pc.rwMu.Unlock()
 	delBlocks := make([]*commonpb.Block, 0)

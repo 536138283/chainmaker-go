@@ -1,14 +1,15 @@
 /*
 Copyright (C) BABEC. All rights reserved.
-Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
+
+This file is for version compatibility
 */
 package blockchain
 
 import (
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 var _ protocol.Watcher = (*Blockchain)(nil)
@@ -20,6 +21,7 @@ func (bc *Blockchain) Module() string {
 
 // Watch
 func (bc *Blockchain) Watch(_ *configPb.ChainConfig) error {
+	bc.log.Infof("[Blockchain] callback msg")
 	if err := bc.Init(); err != nil {
 		bc.log.Errorf("blockchain init failed when the configuration of blockchain updating, %s", err)
 		return err

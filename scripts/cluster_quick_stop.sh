@@ -15,11 +15,12 @@ ARG1=$1
 
 function cluster_stop() {
     echo "===> Stoping chainmaker cluster"
-
+    # first stop node
+    stop_all
+    # second clean data and log if input clean arg
     if [[ $ARG1 == "clean" ]] ; then
         clean
     fi
-    stop_all
 }
 
 function stop_all() {

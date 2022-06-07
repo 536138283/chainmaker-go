@@ -57,6 +57,9 @@ node:
     # Enable it or not
     enabled: false  # [*]
 
+    # Type only support pkcs11 and sdf
+    type: pkcs11
+
     # Path for the pkcs11 interface file(.so)
     library: /usr/local/lib64/pkcs11/libupkcs11.so
 
@@ -124,20 +127,32 @@ net:
 # Transaction pool settings
 # Other txpool settings can be found in tx_Pool_config.go
 txpool:
-  # txpool type, can be signle or batch.
-  # By default the txpool type is single.
+  # tx_pool type, can be single, normal, batch.
+  # By default the tx_pool type is single.
+  # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
   pool_type: "single"
 
-  # Max transaction count in txpool.
-  # If txpool is full, the following transactions will be discarded.
+  # Max common transaction count in tx_pool.
+  # If tx_pool is full, the following transactions will be discarded.
   max_txpool_size: 50000
 
-  # Max config transaction count in config txpool.
+  # Max config transaction count in tx_pool.
   max_config_txpool_size: 10
 
-  # Interval of creating a transaction batch, only for batch txpool, in millisecond.
+  # Whether dump config and common transactions in queue when stop node,
+  # and replay transactions when restart node.
+  is_dump_txs_in_queue: true
+
+  # Common transaction queue num, only for normal tx_pool.
+  # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
+  # common_queue_num: 8
+
+  # Interval of creating a transaction batch, only for batch tx_pool, in millisecond.
   # batch_create_timeout: 200
 
+  # The number of transactions contained in a batch, only for batch tx_pool.
+  # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
+  # batch_max_size: 100
 
 # RPC service setting
 rpc:
@@ -152,6 +167,13 @@ rpc:
   # Only valid if tls is enabled.
   # The minium value is 10.
   check_chain_conf_trust_roots_change_interval: 60
+
+  # restful api gateway
+  gateway:
+    # enable restful api
+    enabled: false
+    # max resp body buffer size, unit: M
+    max_resp_body_size: 16
 
   # Rate limit related settings
   # Here we use token bucket to limit rate.
@@ -190,7 +212,6 @@ rpc:
   max_send_msg_size: 10
   max_recv_msg_size: 10
 
-# Transaction filter settings
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
   # 3 is recommended.
@@ -198,7 +219,7 @@ tx_filter:
   # sharding bird's nest config
   # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
   sharding:
-    # sharding size
+    # sharding number
     length: 5
     # sharding task timeout in seconds
     timeout: 3
@@ -207,12 +228,14 @@ tx_filter:
       # 0 Serialization by height interval
       # 1 Serialization by time interval
       type: 0
-      block_height:
-        # Block height interval
-        interval: 10
       timed:
         # Time interval in seconds
         interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
       # file path
       path: ../data/{org_id}/tx_filter
     # bird's nest config
@@ -230,6 +253,8 @@ tx_filter:
         # absolute expire time = total keys / number of requests per day
         absolute_expire_time: 172800
       cuckoo:
+        # 0 NormalKey; 1 TimestampKey
+        key_type: 1
         # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
         # If you are using a semi-sorted bucket, the default is 4
         # 2 is recommended.
@@ -253,12 +278,14 @@ tx_filter:
       # 0 Serialization by height interval
       # 1 Serialization by time interval
       type: 0
-      block_height:
-        # Block height interval
-        interval: 10
       timed:
         # Time interval in seconds
         interval: 10
+      block_height:
+        # Block height interval
+        interval: 10
+      # Serialization interval in seconds
+      serialize_interval: 10
       # file path
       path: ../data/{org_id}/tx_filter
     # Transaction filter rules
@@ -272,6 +299,8 @@ tx_filter:
       # absolute expire time = total keys / number of requests per day
       absolute_expire_time: 172800
     cuckoo:
+      # 0 NormalKey; 1 TimestampKey
+      key_type: 1
       # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
       # If you are using a semi-sorted bucket, the default is 4
       # 2 is recommended.
@@ -360,21 +389,16 @@ storage:
     redis_password: abcpass  #redis password
     tx_capacity: 1000000000   #support max transaction capacity
     fp_rate: 0.000000001      #false postive rate
+  # RWC config               default 1000000
+  rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
 
-  # RWC config
-  enable_rwc: true   #default false
-
-  # suggest
-  # if block_tx_capacity < 10000,
-  # set rolling_window_cache_capacity greater than block_tx_capacity*1.1 and less than block_tx_capacity*2
-  # if block_tx_capacity > 10000,  set rolling_window_cache_capacity 20000
-  rolling_window_cache_capacity: 200
 
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0普通写模式，1快速写模式
-  disable_state_cache: false # default false
+  # Whether to disable blockFileDb
+  disable_block_file_db: false
   state_cache_config:
     life_window: 3000000000000   #key/value ttl 时间，单位 ns
     clean_window: 1000000000
@@ -460,6 +484,8 @@ storage:
 vm:
   # Enable docker go virtual machine
   enable_dockervm: {enable_dockervm}
+  # Docker go virtual machine container name
+  dockervm_container_name: {dockervm_container_name}
   # Mount point in chain maker
   dockervm_mount_path: ../data/{org_id}/docker-go
   # Specify log file path
@@ -470,13 +496,13 @@ vm:
   log_level: INFO
   # Unix domain socket open, used for chainmaker and docker manager communication
   uds_open: true
-  # docker vm contract service host, default 127.0.0.1
-  docker_vm_host: 127.0.0.1
-  # docker vm contract service port, default 22351
-  docker_vm_port: {docker_vm_port}
+  # Number of user Ids
+  user_num: 1000
+  # Timeout per transaction, Unit: second
+  time_limit: 8
+  # Max process for contract
+  max_concurrency: 500
   # Grpc max send message size, Default size is 4, Unit: MB
-  max_send_msg_size: 20
+  max_send_msg_size: 10
   # Grpc max receive message size, Default size is 4, Unit: MB
-  max_recv_msg_size: 20
-  # max number of connection created to connect docker vm service
-  max_connection: 5
+  max_recv_msg_size: 10

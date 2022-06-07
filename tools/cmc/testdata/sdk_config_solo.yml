@@ -15,7 +15,7 @@ chain_client:
   retry_limit: 10
   # 同步交易结果模式下，每次轮训交易结果时的等待时间，单位：ms 删除此项或设为<=0则使用默认值 500
   retry_interval: 500
-  # 默认支持TimestampKey，如果开启enableNormalKey则是有NormalKey
+  # 默认支持TimestampKey，如果开启enableNormalKey则使用NormalKey
   enable_normal_key: false
 
   nodes:

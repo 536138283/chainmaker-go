@@ -10,6 +10,8 @@ package accesscontrol
 import (
 	"reflect"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -24,7 +26,7 @@ var acProviderRegistry = map[string]reflect.Type{}
 
 type ACProvider interface {
 	NewACProvider(chainConf protocol.ChainConf, localOrgId string,
-		store protocol.BlockchainStore, log protocol.Logger) (protocol.AccessControlProvider, error)
+		store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error)
 }
 
 func RegisterACProvider(authType string, acp ACProvider) {

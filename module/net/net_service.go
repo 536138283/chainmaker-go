@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package net
 
 import (
+	"encoding/hex"
 	"errors"
 	"strings"
 	"sync"
@@ -16,7 +17,6 @@ import (
 	"chainmaker.org/chainmaker/net-common/common/priorityblocker"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 )
@@ -34,8 +34,6 @@ const (
 	msgBusMsgFlagPrefix        = "msgbus"
 
 	topicSeparator = "::"
-
-	moduleSync = "NetService"
 )
 
 // CreateFlagWithPrefixAndMsgType will join prefix with msg type string.
@@ -51,13 +49,14 @@ var _ protocol.NetService = (*NetService)(nil)
 
 // NetService provide a net service for modules.
 type NetService struct {
-	chainId              string
-	localNet             protocol.Net
-	msgBus               msgbus.MessageBus
-	logger               *rootLog.CMLogger
-	configWatcher        *ConfigWatcher
-	consensusNodeIds     map[string]struct{}
-	consensusNodeIdsLock sync.RWMutex
+	chainId                   string
+	localNet                  protocol.Net
+	msgBus                    msgbus.MessageBus
+	logger                    *rootLog.CMLogger
+	configWatcher             *ConfigWatcher
+	netContractEventSubscribe *NetContractEventSubscribe
+	consensusNodeIds          map[string]struct{}
+	consensusNodeIdsLock      sync.RWMutex
 
 	ac            protocol.AccessControlProvider
 	revokeNodeIds sync.Map // nolint: structcheck,unused // node id of node cert revoked , map[string]struct{}
@@ -295,27 +294,55 @@ func (ns *NetService) Stop() error {
 }
 
 // ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.
-func (ns *NetService) ConfigWatcher() protocol.Watcher {
-	if ns.configWatcher == nil {
-		ns.configWatcher = &ConfigWatcher{ns: ns}
+func (ns *NetService) NetConfigSubscribe() msgbus.Subscriber {
+	if ns.netContractEventSubscribe == nil {
+		ns.netContractEventSubscribe = &NetContractEventSubscribe{ns: ns}
 	}
-	return ns.configWatcher
+	return ns.netContractEventSubscribe
 }
 
-// ConfigWatcher is a implementation of protocol.Watcher.
-type ConfigWatcher struct {
+var _ msgbus.Subscriber = (*NetContractEventSubscribe)(nil)
+
+// NetContractEventSubscribe is a implementation of msgbus.Subscriber
+type NetContractEventSubscribe struct {
 	ns *NetService
 }
 
-// Module
-func (cw *ConfigWatcher) Module() string {
-	return moduleSync
+func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
+	n.ns.logger.Infof("[NetService] receive msg, topic: %s", msg.Topic.String())
+	switch msg.Topic {
+	case msgbus.ChainConfig:
+		n.onMessageChainConfig(msg)
+	case msgbus.CertManageCertsRevoke,
+		msgbus.CertManageCertsFreeze,
+		msgbus.CertManageCertsUnfreeze,
+		msgbus.CertManageCertsAliasUpdate,
+		msgbus.CertManageCertsAliasDelete,
+		msgbus.PubkeyManageAdd,
+		msgbus.PubkeyManageDelete:
+		n.ns.localNet.ReVerifyPeers(n.ns.chainId)
+	}
 }
 
-// Watch
-func (cw *ConfigWatcher) Watch(chainConfig *configPb.ChainConfig) error {
+func (n *NetContractEventSubscribe) OnQuit() {
+	// nothing
+}
+
+func (n *NetContractEventSubscribe) onMessageChainConfig(msg *msgbus.Message) {
+	dataStr, _ := msg.Payload.([]string)
+	dataBytes, err := hex.DecodeString(dataStr[0])
+	if err != nil {
+		n.ns.logger.Error(err)
+		return
+	}
+	chainConfig := &configPb.ChainConfig{}
+	err = proto.Unmarshal(dataBytes, chainConfig)
+	if err != nil {
+		n.ns.logger.Error(err)
+	}
+
 	// refresh chainConfig
-	cw.ns.logger.Infof("[NetService] refreshing chain config...")
+	n.ns.logger.Infof("[NetService] refreshing chain config: %v", chainConfig)
 	// 1.refresh consensus nodeIds
 	// 1.1 get all new nodeIds
 	newConsensusNodeIds := make(map[string]struct{})
@@ -325,52 +352,14 @@ func (cw *ConfigWatcher) Watch(chainConfig *configPb.ChainConfig) error {
 		}
 	}
 	// 1.2 refresh consensus nodeIds
-	cw.ns.consensusNodeIdsLock.Lock()
-	cw.ns.consensusNodeIds = newConsensusNodeIds
-	cw.ns.consensusNodeIdsLock.Unlock()
-	cw.ns.logger.Infof("[NetService] refresh ids of consensus nodes ok ")
+	n.ns.consensusNodeIdsLock.Lock()
+	n.ns.consensusNodeIds = newConsensusNodeIds
+	n.ns.consensusNodeIdsLock.Unlock()
+	n.ns.logger.Infof("[NetService] refresh ids of consensus nodes ok ")
 	// 2.re-verify peers
-	cw.ns.localNet.ReVerifyPeers(cw.ns.chainId)
-	cw.ns.logger.Infof("[NetService] re-verify peers ok")
-	cw.ns.logger.Infof("[NetService] refresh chain config ok")
-	return nil
-}
-
-// VmWatcher return an implementation of protocol.VmWatcher.
-// It is used for refreshing revoked peer which use revoked tls cert.
-func (ns *NetService) VmWatcher() protocol.VmWatcher {
-	if ns.vmWatcher == nil {
-		ns.vmWatcher = &VmWatcher{ns: ns}
-	}
-	return ns.vmWatcher
-}
-
-type VmWatcher struct {
-	ns *NetService
-}
-
-func (v *VmWatcher) Module() string {
-	return moduleSync
-}
-
-func (v *VmWatcher) ContractNames() []string {
-	return []string{syscontract.SystemContract_CERT_MANAGE.String(),
-		syscontract.SystemContract_PUBKEY_MANAGE.String()}
-}
-
-func (v *VmWatcher) Callback(contractName string, _ []byte) error {
-	switch contractName {
-	case syscontract.SystemContract_CERT_MANAGE.String():
-		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
-		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
-		return nil
-	case syscontract.SystemContract_PUBKEY_MANAGE.String():
-		v.ns.logger.Infof("[module: %s] call back, [contractName: %s]", v.Module(), contractName)
-		v.ns.localNet.ReVerifyPeers(v.ns.chainId)
-		return nil
-	default:
-		return nil
-	}
+	n.ns.localNet.ReVerifyPeers(n.ns.chainId)
+	n.ns.logger.Infof("[NetService] re-verify peers ok")
+	n.ns.logger.Infof("[NetService] refresh chain config ok")
 }
 
 // HandleMsgBusSubscriberOnMessage is a handler used for msg-bus subscriber OnMessage method.
@@ -492,6 +481,37 @@ func (cms *ConsensusMsgSubscriber) OnMessage(message *msgbus.Message) {
 }
 
 func (cms *ConsensusMsgSubscriber) OnQuit() {
+	// do nothing
+	//panic("implement me")
+}
+
+// ConsistentMsgSubscriber is a subscriber implementation subscribe consistent msg for msgbus.
+type ConsistentMsgSubscriber struct {
+	netService *NetService
+}
+
+func (cms *ConsistentMsgSubscriber) OnMessage(message *msgbus.Message) {
+	switch message.Topic {
+	case msgbus.SendConsistentMsg:
+		go func() {
+			err := HandleMsgBusSubscriberOnMessage(
+				cms.netService,
+				netPb.NetMsg_CONSISTENT_MSG,
+				"consistent msg",
+				message,
+			)
+			if err != nil {
+				cms.netService.logger.Warnf(
+					"[ConsistentMsgSubscriber] handle message failed, %s",
+					err.Error(),
+				)
+			}
+		}()
+	default:
+	}
+}
+
+func (cms *ConsistentMsgSubscriber) OnQuit() {
 	// do nothing
 	//panic("implement me")
 }
@@ -633,6 +653,40 @@ func (ns *NetService) initBindMsgBus() error {
 		netService: ns,
 	}
 	ns.msgBus.Register(msgbus.SendConsensusMsg, cmSubscriber)
+
+	// for consistent module
+	// receive consistent msg from net then publish to msg-bus
+	consistentMsgHandler := CreateMsgHandlerForMsgBus(
+		ns,
+		msgbus.RecvConsistentMsg,
+		"consistent msg",
+		netPb.NetMsg_CONSISTENT_MSG,
+	)
+	if err := ns.receiveMsgForMsgBus(
+		consistentMsgHandler,
+		CreateFlagWithPrefixAndMsgType(
+			msgBusMsgFlagPrefix,
+			netPb.NetMsg_CONSISTENT_MSG,
+		),
+	); err != nil {
+		return err
+	}
+	if err := ns.receiveMsgForMsgBus(
+		consistentMsgHandler,
+		CreateFlagWithPrefixAndMsgType(
+			msgBusConsensusTopicPrefix,
+			netPb.NetMsg_CONSISTENT_MSG,
+		),
+	); err != nil {
+		return err
+	}
+
+	// subscribe a consistent msg subscriber for receiving consistent msg
+	// from msg-bus then broadcast the msg to consistent nodes.
+	consistentSubscriber := &ConsistentMsgSubscriber{
+		netService: ns,
+	}
+	ns.msgBus.Register(msgbus.SendConsistentMsg, consistentSubscriber)
 
 	// ===========================================
 

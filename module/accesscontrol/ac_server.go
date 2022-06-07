@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
-	"chainmaker.org/chainmaker/common/v2/crypto/pkcs11"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -38,7 +37,7 @@ const (
 
 var notEnoughParticipantsSupportError = "authentication fail: not enough participants support this action"
 
-var p11HandleMap = map[string]*pkcs11.P11Handle{}
+var hsmHandleMap = map[string]interface{}{}
 
 // List of access principals which should not be customized
 var restrainedResourceList = map[string]bool{
@@ -365,6 +364,12 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	// add majority permission for gas enable/disable config under cert mode
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
@@ -541,6 +546,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	// add majority permission for gas enable/disable config under pwk mode
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)

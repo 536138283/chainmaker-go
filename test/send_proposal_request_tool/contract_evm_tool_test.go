@@ -11,7 +11,7 @@ package main
 //	evm "chainmaker.org/chainmaker/common/v2/evmutils"
 //	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 //	"encoding/hex"
-//	"github.com/ethereum/go-ethereum/accounts/abi"
+//	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 //	"github.com/stretchr/testify/require"
 //	"math/big"
 //	"strings"

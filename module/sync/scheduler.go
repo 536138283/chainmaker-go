@@ -37,20 +37,36 @@ type scheduler struct {
 	lastRequest       time.Time             // The last time which block request was sent
 	pendingRecvHeight uint64                // The next block to be processed, all smaller blocks have been processed
 
-	maxPendingBlocks uint64 // The maximum number of blocks allowed to be processed simultaneously
-	// (including: New, Pending, Received);
+	// the maximum number of blocks allowed to be processed simultaneously
+	// (including: New, Pending, Received)
+	maxPendingBlocks    uint64
 	BatchesizeInEachReq uint64        // Number of blocks requested per request
 	peerReqTimeout      time.Duration // The maximum timeout for a node response
-	reqTimeThreshold    time.Duration // When the difference between the height of the node and
+	// When the difference between the height of the node and
 	// the latest height of peers is 1, the time interval for requesting
+	reqTimeThreshold time.Duration
 
 	log    protocol.Logger
 	sender syncSender
 	ledger protocol.LedgerCache
+
+	// the time when the service starts
+	startTime    time.Time
+	minLagReachC chan struct{}
+	// collect more node status for a specified period of time
+	thresholdTime time.Duration
+	// The remaining blocks to be synchronized are carried out by the consensus module
+	thresholdBlocks uint64
+	// indicate stop syncing block function
+	stopSyncBlock bool
 }
 
-func newScheduler(sender syncSender, ledger protocol.LedgerCache,
-	maxNum uint64, timeOut, reqTimeThreshold time.Duration, batchesize uint64, log protocol.Logger) *scheduler {
+func newScheduler(
+	sender syncSender,
+	ledger protocol.LedgerCache, maxNum uint64,
+	timeOut, reqTimeThreshold time.Duration,
+	batchesize uint64, log protocol.Logger,
+	reachC chan struct{}, minLagThreshold uint64, minLagThresholdTime time.Duration) *scheduler {
 
 	currHeight, err := ledger.CurrentHeight()
 	if err != nil {
@@ -72,6 +88,10 @@ func newScheduler(sender syncSender, ledger protocol.LedgerCache,
 		pendingTime:       make(map[uint64]time.Time),
 		receivedBlocks:    make(map[uint64]string),
 		pendingRecvHeight: currHeight + 1,
+
+		thresholdTime:   minLagThresholdTime,
+		thresholdBlocks: minLagThreshold,
+		minLagReachC:    reachC,
 	}
 }
 
@@ -95,6 +115,11 @@ func (sch *scheduler) handler(event queue.Item) (queue.Item, error) {
 	case *DataDetection:
 		sch.log.Debug("receive [DataDetection] msg, start handle...")
 		sch.handleDataDetection()
+	case *StopSyncMsg:
+		sch.log.Debug("receive [StopSyncMsg] msg, start handle...")
+		sch.handleStopSyncMsg()
+	case *StartSyncMsg:
+		sch.handleStartSyncMsg()
 	}
 	return nil, nil
 }
@@ -108,6 +133,7 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 			return
 		}
 	}
+	sch.receiveMajorityBlocks()
 	if sch.isPeerArchivedTooHeight(localCurrBlk.Header.BlockHeight, msg.msg.GetArchivedHeight()) {
 		sch.log.Debugf("coming node[%s], status[height: %d, archivedHeight: %d], archived too height to sync, will ignore it",
 			msg.from, msg.msg.BlockHeight, msg.msg.GetArchivedHeight())
@@ -117,6 +143,26 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 		msg.msg.ArchivedHeight)
 	sch.peers[msg.from] = msg.msg.BlockHeight
 	sch.addPendingBlocksAndUpdatePendingHeight(msg.msg.BlockHeight)
+}
+
+// receiveMajorityBlocks Check that most blocks are synchronized.
+// currTime - startTime > thresholdTime && maxHeight - localHeight <= thresholdBlocks
+func (sch *scheduler) receiveMajorityBlocks() bool {
+	if time.Since(sch.startTime) < sch.thresholdTime {
+		return false
+	}
+	maxHeight := sch.maxHeight()
+	currBlockHeight, _ := sch.ledger.CurrentHeight()
+	if maxHeight-currBlockHeight > sch.thresholdBlocks {
+		return false
+	}
+	select {
+	case sch.minLagReachC <- struct{}{}:
+		sch.log.Infof("has receive majorityBlocks, local node"+
+			" block: %d, max height with peers: %d", currBlockHeight, maxHeight)
+	default:
+	}
+	return true
 }
 
 func (sch *scheduler) addPendingBlocksAndUpdatePendingHeight(peerHeight uint64) {
@@ -150,6 +196,7 @@ func (sch *scheduler) handleDataDetection() {
 			delete(sch.pendingTime, height)
 		}
 	}
+
 	sch.pendingRecvHeight = blk.Header.BlockHeight + 1
 	// `DataDetection` 中不对 `pendingRecvHeight` 高度的状态做状态重置，防止发起重复的数据请求，这部分逻辑由活性检查处理
 	// match pendingRecvHeight to (local commit block height + 1)
@@ -216,6 +263,23 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 	return nil, nil
 }
 
+func (sch *scheduler) handleStopSyncMsg() {
+	sch.stopSyncBlock = true
+	sch.blockStates = make(map[uint64]blockState)
+	sch.pendingTime = make(map[uint64]time.Time)
+	sch.pendingBlocks = make(map[uint64]string)
+	sch.receivedBlocks = make(map[uint64]string)
+}
+
+func (sch *scheduler) handleStartSyncMsg() {
+	// 1. 避免
+	select {
+	case <-sch.minLagReachC:
+	default:
+	}
+	sch.stopSyncBlock = false
+}
+
 func (sch *scheduler) nextHeightToReq() uint64 {
 	var min uint64 = math.MaxUint64
 	for height, status := range sch.blockStates {
@@ -241,6 +305,9 @@ func (sch *scheduler) maxHeight() uint64 {
 }
 
 func (sch *scheduler) isNeedSync() bool {
+	if sch.stopSyncBlock {
+		return false
+	}
 	currHeight, err := sch.ledger.CurrentHeight()
 	if err != nil {
 		panic(err)
@@ -298,6 +365,10 @@ func (sch *scheduler) handleSyncedBlockMsg(msg *SyncedBlockMsg) (queue.Item, err
 	//保证缓存的数据量可控
 	// if len(receivedBlocks) > maxPendingBlocks, do not handle the msg
 	if len(sch.receivedBlocks) > int(sch.maxPendingBlocks) {
+		return nil, nil
+	}
+	// 如果已停止请求服务，将未停止服务前发送请求的到现在才收到的区块数据丢球
+	if sch.stopSyncBlock {
 		return nil, nil
 	}
 	blkBatch := syncPb.SyncBlockBatch{}

@@ -16,14 +16,14 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/evmutils"
+	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/spf13/cobra"
 )
 
@@ -103,10 +103,11 @@ func invokeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
-		flagGasLimit, flagTxId, flagContractAddress,
+		flagGasLimit, flagTxId,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagMethod)
 
 	return cmd
@@ -125,10 +126,10 @@ func invokeContractTimesCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
-		flagContractAddress,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagMethod)
 
 	return cmd
@@ -147,10 +148,11 @@ func getUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagMethod)
 
 	return cmd
@@ -169,11 +171,12 @@ func upgradeUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
-		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash, flagContractAddress,
+		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
 	cmd.MarkFlagRequired(flagRuntimeType)
@@ -195,10 +198,10 @@ func freezeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes, flagTimeout, flagParams,
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
-		flagContractAddress,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
 }
@@ -217,10 +220,10 @@ func unfreezeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes, flagTimeout, flagParams,
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
-		flagContractAddress,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
 }
@@ -239,10 +242,10 @@ func revokeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagOrgId, flagChainId, flagSendTimes, flagTimeout, flagParams,
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
-		flagContractAddress,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
 }
@@ -310,12 +313,12 @@ func createUserContract() error {
 			return err
 		}
 
-		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		contractAbi, err := abi.JSON(bytes.NewReader(abiBytes))
 		if err != nil {
 			return err
 		}
 
-		inputData, err := util.Pack(&contractAbi.Constructor, params)
+		inputData, err := util.Pack(contractAbi, "", params)
 		if err != nil {
 			return err
 		}
@@ -333,6 +336,11 @@ func createUserContract() error {
 			return err
 		}
 		byteCodePath = string(byteCode)
+
+		if _, err := evmutils.StringToAddress(contractName); err != nil {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
 	}
 
 	payload, err := client.CreateContractCreatePayload(
@@ -386,18 +394,7 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
-	}
-	util.PrintPrettyJson(types.TxResponse{
-		TxResponse: resp,
-		ContractResult: &types.ContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
+	fmt.Printf("response: %+v\n", resp)
 	return nil
 }
 
@@ -419,15 +416,8 @@ func invokeUserContract() error {
 		return err
 	}
 
-	if contractAddress != "" {
-		contractName = contractAddress
-	}
-	if contractName == "" {
-		return errors.New("either contract-name or contract-address must be set")
-	}
-
 	var kvs []*common.KeyValuePair
-	var evmMethod *ethabi.Method
+	var evmMethod *abi.ABI
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -435,18 +425,19 @@ func invokeUserContract() error {
 			return err
 		}
 
-		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		contractAbi, err := abi.JSON(bytes.NewReader(abiBytes))
 		if err != nil {
 			return err
 		}
 
-		m, exist := contractAbi.Methods[method]
-		if !exist {
-			return fmt.Errorf("method '%s' not found", method)
-		}
-		evmMethod = &m
+		//m, exist := contractAbi.Methods[method]
+		//if !exist {
+		//	return fmt.Errorf("method '%s' not found", method)
+		//}
+		//evmMethod = &m
+		evmMethod = contractAbi
 
-		inputData, err := util.Pack(evmMethod, params)
+		inputData, err := util.Pack(contractAbi, method, params)
 		if err != nil {
 			return err
 		}
@@ -460,6 +451,11 @@ func invokeUserContract() error {
 				Value: []byte(inputDataHexStr),
 			},
 		}
+
+		if _, err := evmutils.StringToAddress(contractName); err != nil {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
 	} else {
 		if params != "" {
 			kvsMap := make(map[string]string)
@@ -492,15 +488,8 @@ func invokeContractTimes() error {
 	}
 	defer client.Stop()
 
-	if contractAddress != "" {
-		contractName = contractAddress
-	}
-	if contractName == "" {
-		return errors.New("either contract-name or contract-address must be set")
-	}
-
 	var kvs []*common.KeyValuePair
-	var evmMethod *ethabi.Method
+	var evmMethod *abi.ABI
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -508,18 +497,19 @@ func invokeContractTimes() error {
 			return err
 		}
 
-		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		contractAbi, err := abi.JSON(bytes.NewReader(abiBytes))
 		if err != nil {
 			return err
 		}
 
-		m, exist := contractAbi.Methods[method]
-		if !exist {
-			return fmt.Errorf("method '%s' not found", method)
-		}
-		evmMethod = &m
+		//m, exist := contractAbi.Methods[method]
+		//if !exist {
+		//	return fmt.Errorf("method '%s' not found", method)
+		//}
+		//evmMethod = &m
+		evmMethod = contractAbi
 
-		inputData, err := util.Pack(evmMethod, params)
+		inputData, err := util.Pack(contractAbi, method, params)
 		if err != nil {
 			return err
 		}
@@ -533,6 +523,11 @@ func invokeContractTimes() error {
 				Value: []byte(inputDataHexStr),
 			},
 		}
+
+		if _, err := evmutils.StringToAddress(contractName); err != nil {
+			contractName = util.CalcEvmContractName(contractName)
+		}
+		fmt.Printf("EVM contract name in hex: %s\n", contractName)
 	} else {
 		if params != "" {
 			kvsMap := make(map[string]string)
@@ -556,13 +551,6 @@ func getUserContract() error {
 	}
 	defer client.Stop()
 
-	if contractAddress != "" {
-		contractName = contractAddress
-	}
-	if contractName == "" {
-		return errors.New("either contract-name or contract-address must be set")
-	}
-
 	pairs := make(map[string]string)
 	if params != "" {
 		err := json.Unmarshal([]byte(params), &pairs)
@@ -575,7 +563,9 @@ func getUserContract() error {
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}
-	util.PrintPrettyJson(resp)
+
+	fmt.Printf("QUERY contract resp: %+v\n", resp)
+
 	return nil
 }
 
@@ -590,13 +580,6 @@ func upgradeUserContract() error {
 		return err
 	}
 	defer client.Stop()
-
-	if contractAddress != "" {
-		contractName = contractAddress
-	}
-	if contractName == "" {
-		return errors.New("either contract-name or contract-address must be set")
-	}
 
 	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
 		if adminKeyFilePaths != "" {
@@ -637,6 +620,7 @@ func upgradeUserContract() error {
 		}
 	}
 	pairsKv := util.ConvertParameters(pairs)
+	fmt.Printf("upgrade user contract params:%+v\n", pairsKv)
 	payload, err := client.CreateContractUpgradePayload(contractName, version, byteCodePath, common.RuntimeType(rt),
 		pairsKv)
 	if err != nil {
@@ -694,18 +678,9 @@ func upgradeUserContract() error {
 	if err != nil {
 		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
-	}
-	util.PrintPrettyJson(types.TxResponse{
-		TxResponse: resp,
-		ContractResult: &types.ContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
+
+	fmt.Printf("upgrade contract resp: %+v\n", resp)
+
 	return nil
 }
 
@@ -720,13 +695,6 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return err
 	}
 	defer client.Stop()
-
-	if contractAddress != "" {
-		contractName = contractAddress
-	}
-	if contractName == "" {
-		return errors.New("either contract-name or contract-address must be set")
-	}
 
 	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
 		if adminKeyFilePaths != "" {
@@ -822,6 +790,8 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 	if err != nil {
 		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
 	}
-	util.PrintPrettyJson(resp)
+
+	fmt.Printf("%s contract resp: %+v\n", whichOperation, resp)
+
 	return nil
 }

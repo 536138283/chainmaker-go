@@ -8,17 +8,19 @@ package common
 
 import (
 	"bytes"
+	"encoding/gob"
 	"encoding/hex"
 	"fmt"
-	"strings"
+	"runtime/debug"
 	"sync"
-	"sync/atomic"
-	"time"
+
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
+
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
-	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
@@ -27,9 +29,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -43,10 +43,12 @@ var (
 const (
 	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
 	//blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
-	BlockSig = "blockSig"
-	VM       = "vm"
-	TxVerify = "txVerify"
-	TxRoot   = "txRoot"
+	BlockSig            = "blockSig"
+	VM                  = "vm"
+	TxVerify            = "txVerify"
+	TxRoot              = "txRoot"
+	QuickSyncVerifyMode = uint8(1) // quick sync verify mode
+	NormalVerifyMode    = uint8(0) // normal verify mode
 )
 
 type BlockBuilderConf struct {
@@ -92,7 +94,8 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 	return creatorBlock
 }
 
-func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction) (
+func (bb *BlockBuilder) GenerateNewBlock(
+	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction, batchIds []string) (
 	*commonPb.Block, []int64, error) {
 	timeLasts := make([]int64, 0)
 	currentHeight, _ := bb.ledgerCache.CurrentHeight()
@@ -139,7 +142,7 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 	ssLasts := beginDbTick - ssStartTick
 	dbLasts := vmStartTick - beginDbTick
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
-	timeLasts = append(timeLasts, ssLasts, dbLasts, vmLasts)
+	timeLasts = append(timeLasts, dbLasts, ssLasts, vmLasts)
 
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("schedule block(%d,%x) error %s",
@@ -175,7 +178,24 @@ func (bb *BlockBuilder) GenerateNewBlock(proposingHeight uint64, preHash []byte,
 				txsTimeout = append(txsTimeout, tx)
 			}
 		}
-		bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+
+		if TxPoolType == batch.TxPoolType {
+			// retry the timeout 's tx and get the new batchIds
+			batchIds = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
+		} else {
+			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+		}
+	}
+
+	if TxPoolType == batch.TxPoolType {
+		var batchIdBytes []byte
+		// set batchIds into additional data
+		batchIdBytes, err = SerializeBatchIds(batchIds)
+		if err != nil {
+			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
+				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
+		}
+		block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] = batchIdBytes
 	}
 
 	// cache proposed block
@@ -232,9 +252,11 @@ func initNewBlock(
 			TxCount:        0,
 			Signature:      nil,
 		},
-		Dag:            &commonPb.DAG{},
-		Txs:            nil,
-		AdditionalData: nil,
+		Dag: &commonPb.DAG{},
+		Txs: nil,
+		AdditionalData: &commonPb.AdditionalData{
+			ExtraData: make(map[string][]byte),
+		},
 	}
 	if isConfigBlock {
 		block.Header.BlockType = commonPb.BlockType_CONFIG_BLOCK
@@ -330,6 +352,7 @@ func FinalizeBlock(
 	}
 	return nil
 }
+
 func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType string, logger protocol.Logger) (
 	[]byte, error) {
 	var rwSetHash []byte
@@ -569,10 +592,10 @@ func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block,
 // validateBlock, validate block and transactions
 func (vb *VerifierBlock) ValidateBlock(
 	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64, mode protocol.VerifyMode) (
-	map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, map[string]int64, error) {
+	map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
 
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
-		return nil, nil, timeLasts, err
+		return nil, nil, timeLasts, nil, err
 	}
 
 	// verify block sig and also verify identity and auth of block proposer
@@ -581,7 +604,7 @@ func (vb *VerifierBlock) ValidateBlock(
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
 	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+		return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
@@ -589,18 +612,18 @@ func (vb *VerifierBlock) ValidateBlock(
 
 	err := CheckVacuumBlock(block, vb.chainConf.ChainConfig().Consensus.Type)
 	if err != nil {
-		return nil, nil, timeLasts, err
+		return nil, nil, timeLasts, nil, err
 	}
 	// we must new a snapshot for the vacant block,
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
 	snapshotTick := utils.CurrentTimeMillisSeconds()
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
-		return nil, nil, timeLasts, nil
+		return nil, nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
 	if IsTxDuplicate(block.Txs) {
-		return nil, nil, timeLasts, fmt.Errorf("tx duplicate")
+		return nil, nil, timeLasts, nil, fmt.Errorf("tx duplicate")
 	}
 
 	// simulate with DAG, and verify read write set
@@ -615,27 +638,28 @@ func (vb *VerifierBlock) ValidateBlock(
 
 	timeLasts[VM] = vmLasts
 	if err != nil {
-		return nil, nil, timeLasts, fmt.Errorf("simulate %s", err)
+		return nil, nil, timeLasts, nil, fmt.Errorf("simulate %s", err)
 	}
-	if block.Header.TxCount != uint32(len(txRWSetMap)) {
-		return nil, nil, timeLasts, fmt.Errorf("simulate txcount expect %d, got %d",
-			block.Header.TxCount, len(txRWSetMap))
+	if block.Header.TxCount != uint32(len(txRWSetMap)) || block.Header.TxCount != uint32(len(txResultMap)) {
+		return nil, nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got txRWSetMap %d, txResultMap %d",
+			block.Header.TxCount, len(txRWSetMap), len(txResultMap))
 	}
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
 	verifierTxConf := &VerifierTxConfig{
-		Block:       block,
-		TxResultMap: txResultMap,
-		TxRWSetMap:  txRWSetMap,
-		ChainConf:   vb.chainConf,
-		Log:         vb.log,
-		Ac:          vb.ac,
-		TxPool:      vb.txPool,
-		TxFilter:    vb.txFilter,
+		Block:         block,
+		TxResultMap:   txResultMap,
+		TxRWSetMap:    txRWSetMap,
+		ChainConf:     vb.chainConf,
+		Log:           vb.log,
+		Ac:            vb.ac,
+		TxPool:        vb.txPool,
+		ProposalCache: vb.proposalCache,
+		TxFilter:      vb.txFilter,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, err := verifiertx.verifierTxs(block, mode)
+	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, NormalVerifyMode)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
@@ -643,7 +667,7 @@ func (vb *VerifierBlock) ValidateBlock(
 			vb.log.Warn("[Duplicate txs] delete the err txs")
 			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
 		}
-		return nil, nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
+		return nil, nil, timeLasts, rwSetVerifyFailTx, fmt.Errorf("verify failed [%d](%x), %s ",
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
 	//if protocol.CONSENSUS_VERIFY == mode && len(newAddTx) > 0 {
@@ -663,22 +687,22 @@ func (vb *VerifierBlock) ValidateBlock(
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
 	if err != nil {
-		return txRWSetMap, contractEventMap, timeLasts, err
+		return txRWSetMap, contractEventMap, timeLasts, nil, err
 	}
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts[TxRoot] = rootsLast
 
-	return txRWSetMap, contractEventMap, timeLasts, nil
+	return txRWSetMap, contractEventMap, timeLasts, nil, nil
 }
 
 // validateBlock, validate block and transactions
 func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64,
 	txRWSetMap map[string]*commonPb.TxRWSet, mode protocol.VerifyMode) (
-	map[string][]*commonPb.ContractEvent, map[string]int64, error) {
+	map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
 	// 1.block verify
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
-		return nil, timeLasts, err
+		return nil, timeLasts, nil, err
 	}
 	txResultMap := make(map[string]*commonPb.Result)
 	for _, tx := range block.GetTxs() {
@@ -692,7 +716,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
 	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+		return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
@@ -700,17 +724,17 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 
 	err := CheckVacuumBlock(block, vb.chainConf.ChainConfig().Consensus.Type)
 	if err != nil {
-		return nil, timeLasts, err
+		return nil, timeLasts, nil, err
 	}
 	// we must new a snapshot for the vacant block,
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
-		return nil, timeLasts, nil
+		return nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
 	if IsTxDuplicate(block.Txs) {
-		return nil, timeLasts, fmt.Errorf("tx duplicate")
+		return nil, timeLasts, nil, fmt.Errorf("tx duplicate")
 	}
 
 	// simulate with DAG, and verify read write set
@@ -725,24 +749,25 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	timeLasts[VM] = vmLasts
 
 	if block.Header.TxCount != uint32(len(txRWSetMap)) {
-		return nil, timeLasts, fmt.Errorf("simulate txcount expect %d, got %d",
+		return nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
 			block.Header.TxCount, len(txRWSetMap))
 	}
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
 	verifierTxConf := &VerifierTxConfig{
-		Block:       block,
-		TxResultMap: txResultMap,
-		TxRWSetMap:  txRWSetMap,
-		ChainConf:   vb.chainConf,
-		Log:         vb.log,
-		Ac:          vb.ac,
-		TxPool:      vb.txPool,
-		TxFilter:    vb.txFilter,
+		Block:         block,
+		TxResultMap:   txResultMap,
+		TxRWSetMap:    txRWSetMap,
+		ChainConf:     vb.chainConf,
+		Log:           vb.log,
+		Ac:            vb.ac,
+		TxPool:        vb.txPool,
+		TxFilter:      vb.txFilter,
+		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, err := verifiertx.verifierTxs(block, mode)
+	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
 	vb.log.Warnf("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
@@ -751,7 +776,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 			vb.log.Warn("[Duplicate txs] delete the err txs")
 			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
 		}
-		return nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
+		return nil, timeLasts, rwSetVerifyFailTx, fmt.Errorf("verify failed [%d](%x), %s ",
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
 	//if protocol.CONSENSUS_VERIFY == mode && len(newAddTx) > 0 {
@@ -771,12 +796,12 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
 	if err != nil {
-		return contractEventMap, timeLasts, err
+		return contractEventMap, timeLasts, nil, err
 	}
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts[TxRoot] = rootsLast
 
-	return contractEventMap, timeLasts, nil
+	return contractEventMap, timeLasts, nil, nil
 }
 
 //nolint: staticcheck
@@ -809,7 +834,7 @@ type BlockCommitterImpl struct {
 	verifier                protocol.BlockVerifier      // block verifier
 	commonCommit            *CommitBlock
 	metricBlockSize         *prometheus.HistogramVec // metric block size
-	metricBlockHeight       *prometheus.GaugeVec     // metric block height
+	metricBlockCounter      *prometheus.CounterVec   // metric block counter
 	metricTxCounter         *prometheus.CounterVec   // metric transaction counter
 	metricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
 	metricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
@@ -847,20 +872,72 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 		subscriber:      config.Subscriber,
 		verifier:        config.Verifier,
 		storeHelper:     config.StoreHelper,
-		commonCommit: &CommitBlock{
-			store:           config.BlockchainStore,
-			txFilter:        config.TxFilter,
-			log:             log,
-			snapshotManager: config.SnapshotManager,
-			ledgerCache:     config.LedgerCache,
-			chainConf:       config.ChainConf,
-			msgBus:          config.MsgBus,
-		},
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		blockchain.initMetrics()
+		blockchain.metricBlockSize = monitor.NewHistogramVec(
+			monitor.SUBSYSTEM_CORE_COMMITTER,
+			monitor.MetricBlockSize,
+			monitor.HelpCurrentBlockSizeMetric,
+			prometheus.ExponentialBuckets(1024, 2, 12),
+			monitor.ChainId,
+		)
+
+		blockchain.metricBlockCounter = monitor.NewCounterVec(
+			monitor.SUBSYSTEM_CORE_COMMITTER,
+			monitor.MetricBlockCounter,
+			monitor.HelpBlockCountsMetric,
+			monitor.ChainId,
+		)
+
+		blockchain.metricTxCounter = monitor.NewCounterVec(
+			monitor.SUBSYSTEM_CORE_COMMITTER,
+			monitor.MetricTxCounter,
+			monitor.HelpTxCountsMetric,
+			monitor.ChainId,
+		)
+
+		blockchain.metricBlockCommitTime = monitor.NewHistogramVec(
+			monitor.SUBSYSTEM_CORE_COMMITTER,
+			monitor.MetricBlockCommitTime,
+			monitor.HelpBlockCommitTimeMetric,
+			[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
+			monitor.ChainId,
+		)
+
+		blockchain.metricBlockIntervalTime = monitor.NewHistogramVec(
+			monitor.SUBSYSTEM_CORE_COMMITTER,
+			monitor.MetricBlockIntervalTime,
+			monitor.HelpBlockIntervalTimeMetric,
+			[]float64{0.2, 0.5, 1, 2, 5, 10, 20},
+			monitor.ChainId,
+		)
+
+		blockchain.metricTpsGauge = monitor.NewGaugeVec(
+			monitor.SUBSYSTEM_CORE_COMMITTER,
+			monitor.MetricTpsGauge,
+			monitor.HelpTpsGaugeMetric,
+			monitor.ChainId,
+		)
 	}
+
+	cbConf := &CommitBlockConf{
+		Store:                   blockchain.blockchainStore,
+		Log:                     blockchain.log,
+		SnapshotManager:         blockchain.snapshotManager,
+		TxPool:                  blockchain.txPool,
+		LedgerCache:             blockchain.ledgerCache,
+		ChainConf:               blockchain.chainConf,
+		TxFilter:                config.TxFilter,
+		MsgBus:                  blockchain.msgBus,
+		MetricBlockCommitTime:   blockchain.metricBlockCommitTime,
+		MetricBlockIntervalTime: blockchain.metricBlockIntervalTime,
+		MetricBlockCounter:      blockchain.metricBlockCounter,
+		MetricBlockSize:         blockchain.metricBlockSize,
+		MetricTxCounter:         blockchain.metricTxCounter,
+		MetricTpsGauge:          blockchain.metricTpsGauge,
+	}
+	blockchain.commonCommit = NewCommitBlock(cbConf)
 
 	return blockchain, nil
 }
@@ -899,19 +976,23 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
 		panicErr := recover()
 		if err == nil {
-			if panicErr != nil {
-				err = fmt.Errorf(fmt.Sprint(panicErr))
-			} else {
+			// error is nil
+			if panicErr == nil {
 				return
 			}
+			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
+				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+			}
+			chain.log.Errorf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack()))
+			panic(fmt.Sprintf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack())))
 		}
-		// rollback sql
+		// error is not nil
 		if err == commonErrors.ErrBlockHadBeenCommited {
 			chain.log.Warn("cache add block err: ", err)
 		} else {
 			chain.log.Error("cache add block err: ", err)
 		}
-
+		// rollback sql
 		if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
 			chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 		}
@@ -943,7 +1024,6 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		// recover the block for proposer when enable the conensus message turbo function.
 		lastProposed.Header = block.Header
 	}
-
 	// put consensus qc into block
 	lastProposed.AdditionalData = block.AdditionalData
 
@@ -957,9 +1037,17 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	// Remove txs from txpool. Remove will invoke proposeSignal from txpool if pool size > txcount
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	txRetry := chain.syncWithTxPool(lastProposed, height)
-	chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
-	chain.txPool.RetryAndRemoveTxs(txRetry, lastProposed.Txs)
+	txRetry, batchRetry := chain.syncWithTxPool(lastProposed, height)
+
+	if TxPoolType == batch.TxPoolType {
+		batchIds := GetBatchIds(lastProposed)
+		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
+		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
+	} else {
+		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
+		chain.txPool.RetryAndRemoveTxs(txRetry, lastProposed.Txs)
+	}
+
 	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick
 
 	chain.proposalCache.ClearProposedBlockAt(height)
@@ -980,16 +1068,43 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		height, lastProposed.Header.TxCount, lastProposed.Header.BlockHash,
 		checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, pubEvent, filterLasts, otherLasts, elapsed, interval)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		go chain.updateMetrics(blockInfo, elapsed, interval)
+		chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
+		chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
+		chain.metricTpsGauge.WithLabelValues(chain.chainId).
+			Set(float64(lastProposed.Header.TxCount) / (float64(interval) / 1000))
 	}
 	return nil
 }
 
-func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) []*commonPb.Transaction {
+func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) (
+	[]*commonPb.Transaction, []string) {
 	proposedBlocks := chain.proposalCache.GetProposedBlocksAt(height)
 	txRetry := make([]*commonPb.Transaction, 0, len(block.Txs))
+	batchRetry := make([]string, 0, len(block.Txs))
 	chain.log.Debugf("has %d blocks in height: %d", len(proposedBlocks), height)
 	keepTxs := make(map[string]struct{}, len(block.Txs))
+	keepBatchIds := make(map[string]struct{}, len(block.Txs))
+
+	if TxPoolType == batch.TxPoolType {
+		batchIds := GetBatchIds(block)
+		for _, batchId := range batchIds {
+			keepBatchIds[batchId] = struct{}{}
+		}
+		for _, b := range proposedBlocks {
+			if bytes.Equal(b.Header.BlockHash, block.Header.BlockHash) {
+				continue
+			}
+
+			retryBatchIds := GetBatchIds(block)
+			for _, retryBatchId := range retryBatchIds {
+				if _, ok := keepBatchIds[retryBatchId]; !ok {
+					batchRetry = append(batchRetry, retryBatchId)
+				}
+			}
+		}
+		return txRetry, batchRetry
+	}
+
 	for _, tx := range block.Txs {
 		keepTxs[tx.Payload.TxId] = struct{}{}
 	}
@@ -1003,7 +1118,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 			}
 		}
 	}
-	return txRetry
+	return txRetry, batchRetry
 }
 
 //nolint: ineffassign, staticcheck
@@ -1026,26 +1141,90 @@ func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 }
 
 func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {
-	value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]
-	if ok {
-		txPoolType, _ := value.(string)
-		txPoolType = strings.ToUpper(txPoolType)
+	consensusTurboConfig := chainConf.ChainConfig().Core.ConsensusTurboConfig
+	if consensusTurboConfig != nil &&
+		consensusTurboConfig.ConsensusMessageTurbo &&
+		chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_SOLO {
+		return true
+	}
+	return false
+}
 
-		if chainConf.ChainConfig().Core.ConsensusTurboConfig.ConsensusMessageTurbo && txPoolType == batch.TxPoolType {
-			return true
-		}
+func GetProposerId(
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
+	proposer *accesscontrol.Member) (string, error) {
+
+	member, err := ac.NewMember(proposer)
+	if err != nil {
+		return "", err
 	}
 
-	return false
+	certId := member.GetMemberId()
+	proposerId, err := netService.GetNodeUidByCertId(certId)
+	if err != nil {
+		return "", err
+	}
+
+	return proposerId, nil
+}
+
+func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
+	turboBlock.Header = block.Header
+	turboBlock.Dag = block.Dag
+	turboBlock.AdditionalData = block.AdditionalData
+
+	newTxs := make([]*commonPb.Transaction, len(block.Txs))
+	for i := range block.Txs {
+		newPayload := &commonPb.Payload{
+			TxId: block.Txs[i].Payload.TxId,
+		}
+
+		newTxs[i] = &commonPb.Transaction{
+			Payload: newPayload,
+			Result:  block.Txs[i].Result,
+		}
+
+		if TxPoolType != batch.TxPoolType {
+			newTxs[i].Sender = block.Txs[i].Sender
+			newTxs[i].Endorsers = block.Txs[i].Endorsers
+		}
+
+	}
+	turboBlock.Txs = newTxs
+	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+
+	return turboBlock
 }
 
 func RecoverBlock(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,
 	chainConf protocol.ChainConf,
-	txPool protocol.TxPool, logger protocol.Logger) (*commonPb.Block, error) {
+	txPool protocol.TxPool,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if IfOpenConsensusMessageTurbo(chainConf) && protocol.SYNC_VERIFY != mode {
+	if TxPoolType == batch.TxPoolType {
+		return recoverBlockByBatch(block, mode, chainConf, txPool, ac, netService, logger)
+	}
+
+	return recoverBlock(block, mode, chainConf, txPool, ac, netService, logger)
+}
+
+func recoverBlockByBatch(
+	block *commonPb.Block,
+	mode protocol.VerifyMode,
+	chainConf protocol.ChainConf,
+	txPool protocol.TxPool,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
+
+	if len(block.Txs) != 0 && block.Txs[0].Payload != nil &&
+		mode != protocol.SYNC_VERIFY {
+
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
 			Dag:            block.Dag,
@@ -1053,23 +1232,28 @@ func RecoverBlock(
 			AdditionalData: block.AdditionalData,
 		}
 
-		txIds := utils.GetTxIds(block.Txs)
-		txsMap := make(map[string]*commonPb.Transaction)
 		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
 		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
-		for i := uint64(0); i < maxRetryTime; i++ {
-			txsMap, _ = txPool.GetTxsByTxIds(txIds)
-			if len(txsMap) == len(block.Txs) {
-				break
-			}
-			logger.Debugf("txs map is not map with tx count,height[%d],map[%d],txcount[%d],retry[%d]",
-				block.Header.BlockHeight, len(txsMap), block.Header.TxCount, i+1)
-			if i+1 == maxRetryTime {
-				logger.Debugf("get txs by branchId fail,height[%d],map[%d],txcount[%d]",
-					block.Header.BlockHeight, len(txsMap), block.Header.TxCount)
-				return nil, fmt.Errorf("block[%d] verify time out error", block.Header.BlockHeight)
-			}
-			time.Sleep(time.Millisecond * time.Duration(retryInterval))
+
+		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		batchIds := GetBatchIds(block)
+		txs, err := txPool.GetAllTxsByBatchIds(
+			batchIds,
+			proposerId,
+			block.Header.BlockHeight,
+			int(maxRetryTime*retryInterval))
+
+		if err != nil {
+			return nil, nil, err
+		}
+
+		txsMap := make(map[string]*commonPb.Transaction)
+		for _, tx := range txs {
+			txsMap[tx.Payload.TxId] = tx
 		}
 
 		for i := range block.Txs {
@@ -1079,7 +1263,58 @@ func RecoverBlock(
 				newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
 		}
 
-		return newBlock, nil
+		return newBlock, batchIds, nil
+	}
+
+	return &commonPb.Block{
+		Header:         block.Header,
+		Dag:            block.Dag,
+		Txs:            block.Txs,
+		AdditionalData: block.AdditionalData,
+	}, GetBatchIds(block), nil
+}
+
+func recoverBlock(
+	block *commonPb.Block,
+	mode protocol.VerifyMode,
+	chainConf protocol.ChainConf,
+	txPool protocol.TxPool,
+	ac protocol.AccessControlProvider,
+	netService protocol.NetService,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
+
+	if IfOpenConsensusMessageTurbo(chainConf) && mode != protocol.SYNC_VERIFY &&
+		len(block.Txs) != 0 && block.Txs[0].Payload != nil {
+
+		newBlock := &commonPb.Block{
+			Header:         block.Header,
+			Dag:            block.Dag,
+			Txs:            make([]*commonPb.Transaction, len(block.Txs)),
+			AdditionalData: block.AdditionalData,
+		}
+
+		txIds := utils.GetTxIds(block.Txs)
+		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
+		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
+
+		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for i := range block.Txs {
+			newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
+			newBlock.Txs[i].Result = block.Txs[i].Result
+			logger.Debugf("recover the block[%d], TxId[%s, %s]",
+				newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+		}
+
+		return newBlock, nil, nil
 	}
 
 	// new a block to avoid use the same pointer with consensus.
@@ -1088,100 +1323,28 @@ func RecoverBlock(
 		Dag:            block.Dag,
 		Txs:            block.Txs,
 		AdditionalData: block.AdditionalData,
-	}, nil
+	}, nil, nil
+
 }
 
-// metric tx counter key in db
-const dbKeyTxCounter = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricTxCounter
+func SerializeBatchIds(batchIds []string) ([]byte, error) {
 
-// store tx total count
-var metricTxCounter uint64
-
-func (chain *BlockCommitterImpl) initMetrics() {
-	// new metrics
-	chain.metricBlockSize = monitor.NewHistogramVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockSize,
-		monitor.HelpCurrentBlockSizeMetric,
-		prometheus.ExponentialBuckets(1024, 2, 12),
-		monitor.ChainId,
-	)
-	chain.metricBlockHeight = monitor.NewGaugeVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockCounter,
-		monitor.HelpBlockCountsMetric,
-		monitor.ChainId,
-	)
-	chain.metricTxCounter = monitor.NewCounterVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricTxCounter,
-		monitor.HelpTxCountsMetric,
-		monitor.ChainId,
-	)
-	chain.metricBlockCommitTime = monitor.NewHistogramVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockCommitTime,
-		monitor.HelpBlockCommitTimeMetric,
-		[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
-		monitor.ChainId,
-	)
-	chain.metricBlockIntervalTime = monitor.NewHistogramVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockIntervalTime,
-		monitor.HelpBlockIntervalTimeMetric,
-		[]float64{0.2, 0.5, 1, 2, 5, 10, 20},
-		monitor.ChainId,
-	)
-	chain.metricTpsGauge = monitor.NewGaugeVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricTpsGauge,
-		monitor.HelpTpsGaugeMetric,
-		monitor.ChainId,
-	)
-
-	// init metrics
-	localDb := chain.blockchainStore.GetDBHandle("")
-	v, err := localDb.Get([]byte(dbKeyTxCounter))
+	buffer := &bytes.Buffer{}
+	err := gob.NewEncoder(buffer).Encode(batchIds)
 	if err != nil {
-		chain.log.Errorw("localDb.Get metric failed", "err", err)
-		return
+		return nil, err
 	}
-	// ignore brand new node
-	if v != nil {
-		metricTxCounter, err = bytehelper.BytesToUint64(v)
-		if err != nil {
-			chain.log.Errorw("bytehelper.BytesToUint64 failed", "err", err)
-			return
-		}
-		chain.metricTxCounter.WithLabelValues(chain.chainId).Add(float64(metricTxCounter))
-	}
+
+	return buffer.Bytes(), err
 }
 
-func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, interval int64) {
-	raw, err := proto.Marshal(bi)
-	if err != nil {
-		chain.log.Errorw("marshal BlockInfo failed", "err", err)
-		return
-	}
-	chain.metricBlockSize.WithLabelValues(bi.Block.Header.ChainId).Observe(float64(len(raw)))
-	chain.metricBlockHeight.WithLabelValues(bi.Block.Header.ChainId).Set(float64(bi.Block.Header.BlockHeight))
-	chain.metricTxCounter.WithLabelValues(bi.Block.Header.ChainId).Add(float64(bi.Block.Header.TxCount))
-	atomic.AddUint64(&metricTxCounter, uint64(bi.Block.Header.TxCount))
-	chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
-	chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
-	chain.metricTpsGauge.WithLabelValues(chain.chainId).
-		Set(float64(bi.Block.Header.TxCount) / (float64(interval) / 1000))
+func DeserializeBatchIds(data []byte) ([]string, error) {
 
-	// persist counter metrics to local db
-	v, err := bytehelper.Uint64ToBytes(atomic.LoadUint64(&metricTxCounter))
+	batchIds := make([]string, 0)
+	err := gob.NewDecoder(bytes.NewReader(data)).Decode(&batchIds)
 	if err != nil {
-		chain.log.Errorw("bytehelper.Uint64ToBytes failed", "err", err)
-		return
+		return nil, err
 	}
 
-	localDb := chain.blockchainStore.GetDBHandle("")
-	err = localDb.Put([]byte(dbKeyTxCounter), v)
-	if err != nil {
-		chain.log.Errorw("persist metric failed", "err", err)
-	}
+	return batchIds, err
 }
