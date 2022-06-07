@@ -527,8 +527,8 @@ vm:
   runtime_server:
     # Runtime service port, default 32351
     port: {dockervm_runtime_port}
-    # Grpc dialing timeout
-    dial_timeout: 10, default size is 10, Uint: s
+    # Grpc dialing timeout, default size is 10, Uint: s
+    dial_timeout: 10
     # Grpc max send message size, Default size is 4, Unit: MB
     max_send_msg_size: 20
     # Grpc max receive message size, Default size is 4, Unit: MB

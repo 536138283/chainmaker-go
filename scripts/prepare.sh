@@ -12,8 +12,6 @@ NODE_CNT=$1
 CHAIN_CNT=$2
 P2P_PORT=$3
 RPC_PORT=$4
-DOCKER_VM_RUNTIME_PORT=$5
-DOCKER_VM_ENGINE_PORT=$6
 
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
@@ -188,6 +186,8 @@ function generate_config() {
         xsed "s%{trusted_port}%$(($TRUSTED_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{enable_dockervm}%$ENABLE_DOCKERVM%g" node$i/chainmaker.yml
         xsed "s%{dockervm_container_name}%"${DOCKER_VM_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
+        xsed "s%{dockervm_runtime_port}%$(($DOCKER_VM_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{dockervm_engine_port}%$(($DOCKER_VM_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
 
         system=$(uname)
 
