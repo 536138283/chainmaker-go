@@ -16,6 +16,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -164,6 +165,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 		if proposal, ok := message.Payload.(*maxbft.BuildProposal); ok {
 			c.blockProposer.OnReceiveMaxBFTProposal(proposal)
 		}
+	case msgbus.RwSetVerifyFailTxs:
+		if signal, ok := message.Payload.(*consensuspb.RwSetVerifyFailTxs); ok {
+			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
+		}
 	}
 }
 
@@ -174,6 +179,7 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.CommitBlock, c)
 	c.msgBus.Register(msgbus.TxPoolSignal, c)
 	c.msgBus.Register(msgbus.BuildProposal, c)
+	c.msgBus.Register(msgbus.RwSetVerifyFailTxs, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 
