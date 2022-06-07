@@ -7,7 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 
 package client
 
-import "github.com/spf13/cobra"
+import (
+	"encoding/hex"
+	"fmt"
+
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	"chainmaker.org/chainmaker/common/v2/evmutils"
+	"github.com/spf13/cobra"
+)
 
 func contractCMD() *cobra.Command {
 	contractCmd := &cobra.Command{
@@ -18,6 +25,42 @@ func contractCMD() *cobra.Command {
 
 	contractCmd.AddCommand(userContractCMD())
 	contractCmd.AddCommand(systemContractCMD())
+	contractCmd.AddCommand(contractNameToAddrCMD())
 
 	return contractCmd
+}
+
+func contractNameToAddrCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "name-to-addr [contract name]",
+		Short: "contract name to address command",
+		Long:  "contract name to address command",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var addr string
+			var err error
+			var contractName = args[0]
+			switch addressType {
+			case 0:
+				addrInt, err := evmutils.MakeAddressFromString(contractName)
+				if err != nil {
+					return err
+				}
+				addrObj := evmutils.BigToAddress(addrInt)
+				addr = hex.EncodeToString(addrObj[:])
+			case 1:
+				addr, err = evmutils.ZXAddress([]byte(contractName))
+				if err != nil {
+					return err
+				}
+			default:
+				return fmt.Errorf("unsupported address type %v", addressType)
+			}
+
+			util.PrintPrettyJson(addr)
+			return nil
+		},
+	}
+	attachFlags(cmd, []string{flagAddressType})
+	return cmd
 }

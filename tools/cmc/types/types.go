@@ -26,3 +26,13 @@ type BlockWithRWSet struct {
 	*store.BlockWithRWSet
 	Block *Block `json:"block,omitempty"`
 }
+
+type TxResponse struct {
+	*common.TxResponse
+	ContractResult *ContractResult `json:"contract_result"`
+}
+
+type ContractResult struct {
+	*common.ContractResult
+	Result *common.Contract `json:"result"`
+}
