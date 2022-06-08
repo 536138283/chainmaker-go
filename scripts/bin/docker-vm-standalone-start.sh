@@ -10,10 +10,10 @@ MOUNT_PATH=$(pwd)/docker-go
 LOG_LEVEL=INFO
 EXPOSE_PORT=22351
 CONTAINER_NAME=chainmaker-docker-vm
-IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:refactor"
+IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
 
 
-read -r -p "input path to cache contract files and vm config file(must be absolute path, default:'./docker-go'): " tmp
+read -r -p "input path to cache contract files(must be absolute path, default:'./docker-go'): " tmp
 if  [ -n "$tmp" ] ;then
   MOUNT_PATH=$tmp
 fi
@@ -76,6 +76,16 @@ else
   echo "container name use default: 'chainmaker-docker-vm'"
 fi
 
+read -r -p "input vm config file path(use default config(default)): " tmp
+if  [ -n "$tmp" ] ;then
+  DOCKER_VM_CONFIG_FILE=$tmp
+  if [ ! -d $MOUNT_PATH/config  ];then
+    mkdir $MOUNT_PATH/config
+  fi
+  cp $DOCKER_VM_CONFIG_FILE $MOUNT_PATH/config/
+else
+  echo "docker-vm config is nil, use default config"
+fi
 
 exist=$(docker ps -a -f name="$CONTAINER_NAME" --format '{{.Names}}')
 if [ "$exist" ]; then
