@@ -16,6 +16,13 @@ type NetServiceFactory struct {
 }
 
 // NewNetService create a new net service instance.
+// @param net
+// @param chainId
+// @param ac
+// @param chainConf
+// @param opts
+// @return protocol.NetService
+// @return error
 func (nsf *NetServiceFactory) NewNetService(
 	net protocol.Net,
 	chainId string,

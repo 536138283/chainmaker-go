@@ -16,6 +16,7 @@ type NewBlockEvent struct {
 	BlockInfo *commonPb.BlockInfo
 }
 
+// NewContractEvent new contract event
 type NewContractEvent struct {
 	ContractEventInfoList *commonPb.ContractEventInfoList
 }

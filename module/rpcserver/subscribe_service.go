@@ -17,8 +17,8 @@ import (
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
-	utils "chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -28,6 +28,10 @@ const (
 	TRUE = "true"
 )
 
+// SubscribeWS subscribe by WebSocket
+// @param rawTxReq
+// @param server
+// @return error
 func (s *ApiService) SubscribeWS(rawTxReq *commonPb.RawTxRequest, server apiPb.RpcNode_SubscribeWSServer) error {
 	var req commonPb.TxRequest
 

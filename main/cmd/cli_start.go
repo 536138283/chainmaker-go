@@ -30,6 +30,8 @@ import (
 
 var log = logger.GetLogger(logger.MODULE_CLI)
 
+// StartCMD start命令的实现
+// @return *cobra.Command
 func StartCMD() *cobra.Command {
 	startCmd := &cobra.Command{
 		Use:   "start",

@@ -18,7 +18,7 @@ const (
 	moduleSync = "NetService"
 )
 
-// ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.
+// ConfigWatcher return an implementation of protocol.Watcher. It is used for refreshing the config.
 func (ns *NetService) ConfigWatcher() protocol.Watcher {
 	if ns.configWatcher == nil {
 		ns.configWatcher = &ConfigWatcher{ns: ns}
@@ -33,12 +33,12 @@ type ConfigWatcher struct {
 	ns *NetService
 }
 
-// Module
+// Module NetService
 func (cw *ConfigWatcher) Module() string {
 	return moduleSync
 }
 
-// Watch
+// Watch watch chain config
 func (cw *ConfigWatcher) Watch(chainConfig *configPb.ChainConfig) error {
 	// refresh chainConfig
 	cw.ns.logger.Infof("[NetService] refreshing chain config...")
@@ -78,15 +78,23 @@ type VmWatcher struct {
 	ns *NetService
 }
 
+// Module return "NetService"
+// @return string
 func (v *VmWatcher) Module() string {
 	return moduleSync
 }
 
+// ContractNames SystemContract_CERT_MANAGE and SystemContract_PUBKEY_MANAGE
+// @return []string
 func (v *VmWatcher) ContractNames() []string {
 	return []string{syscontract.SystemContract_CERT_MANAGE.String(),
 		syscontract.SystemContract_PUBKEY_MANAGE.String()}
 }
 
+// Callback process callback
+// @param contractName
+// @param _
+// @return error
 func (v *VmWatcher) Callback(contractName string, _ []byte) error {
 	switch contractName {
 	case syscontract.SystemContract_CERT_MANAGE.String():

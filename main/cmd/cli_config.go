@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ConfigCMD config命令
+// @return *cobra.Command
 func ConfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "config",

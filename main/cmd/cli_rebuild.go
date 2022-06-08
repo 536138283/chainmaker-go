@@ -22,6 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// RebuildDbsCMD rebuild-dbs命令的实现
+// @return *cobra.Command
 func RebuildDbsCMD() *cobra.Command {
 	rebuildDbsCmd := &cobra.Command{
 		Use:   "rebuild-dbs",

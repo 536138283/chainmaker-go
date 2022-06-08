@@ -17,6 +17,7 @@ type feedTypeErr struct {
 	op        string
 }
 
+// Subscription subscript interface
 type Subscription interface {
 	Err() <-chan error // returns the error channel
 	Unsubscribe()
@@ -29,6 +30,7 @@ type subImpl struct {
 	err     chan error
 }
 
+// Unsubscribe do unsubscribe
 func (s *subImpl) Unsubscribe() {
 	s.once.Do(func() {
 		s.feed.removeSub(s)
@@ -36,10 +38,13 @@ func (s *subImpl) Unsubscribe() {
 	})
 }
 
+// Err get error
+// @return <-chan
 func (s *subImpl) Err() <-chan error {
 	return s.err
 }
 
+// Feed feed data
 type Feed struct {
 	lock    sync.Mutex
 	subList []reflect.SelectCase
@@ -72,6 +77,9 @@ func (f *Feed) typeCheck(t reflect.Type) bool {
 	return f.subType == t
 }
 
+// Subscribe subscribe data
+// @param channel
+// @return Subscription
 func (f *Feed) Subscribe(channel interface{}) Subscription {
 	val := reflect.ValueOf(channel)
 	typ := val.Type()
@@ -105,6 +113,9 @@ func (f *Feed) removeSub(sub *subImpl) {
 	f.subList = append(f.subList[:index], f.subList[index+1:]...)
 }
 
+// Send send data
+// @param data
+// @return cnt
 func (f *Feed) Send(data interface{}) (cnt int) {
 	val := reflect.ValueOf(data)
 	if !f.typeCheck(val.Type()) {

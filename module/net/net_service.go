@@ -22,8 +22,10 @@ import (
 )
 
 var (
+	// ErrorChainMsgBusBeenBound chain msg bus has been bound
 	ErrorChainMsgBusBeenBound = errors.New("chain msg bus has been bound")
-	ErrorNetNotRunning        = errors.New("net instance is not running")
+	// ErrorNetNotRunning net instance is not running
+	ErrorNetNotRunning = errors.New("net instance is not running")
 )
 
 const (
@@ -52,7 +54,7 @@ type NetService struct {
 	chainId                   string
 	localNet                  protocol.Net
 	msgBus                    msgbus.MessageBus
-	logger                    *rootLog.CMLogger
+	logger                    protocol.Logger
 	configWatcher             *ConfigWatcher
 	netContractEventSubscribe *NetContractEventSubscribe
 	consensusNodeIds          map[string]struct{}
@@ -64,6 +66,10 @@ type NetService struct {
 }
 
 // NewNetService create a new net service instance.
+// @param chainId
+// @param localNet
+// @param ac
+// @return *NetService
 func NewNetService(chainId string, localNet protocol.Net, ac protocol.AccessControlProvider) *NetService {
 	logger := rootLog.GetLoggerByChain(rootLog.MODULE_NET, chainId)
 	ns := &NetService{
@@ -293,7 +299,7 @@ func (ns *NetService) Stop() error {
 	return nil
 }
 
-// ConfigWatcher return a implementation of protocol.Watcher. It is used for refreshing the config.
+// NetConfigSubscribe return an implementation of protocol.Watcher. It is used for refreshing the config.
 func (ns *NetService) NetConfigSubscribe() msgbus.Subscriber {
 	if ns.netContractEventSubscribe == nil {
 		ns.netContractEventSubscribe = &NetContractEventSubscribe{ns: ns}
@@ -303,11 +309,13 @@ func (ns *NetService) NetConfigSubscribe() msgbus.Subscriber {
 
 var _ msgbus.Subscriber = (*NetContractEventSubscribe)(nil)
 
-// NetContractEventSubscribe is a implementation of msgbus.Subscriber
+// NetContractEventSubscribe is an implementation of msgbus.Subscriber
 type NetContractEventSubscribe struct {
 	ns *NetService
 }
 
+// OnMessage process message bus data
+// @param msg
 func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
 	n.ns.logger.Infof("[NetService] receive msg, topic: %s", msg.Topic.String())
 	switch msg.Topic {
@@ -324,6 +332,7 @@ func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
 	}
 }
 
+// OnQuit do nothing
 func (n *NetContractEventSubscribe) OnQuit() {
 	// nothing
 }
@@ -459,6 +468,8 @@ type ConsensusMsgSubscriber struct {
 	netService *NetService
 }
 
+// OnMessage process message bus data
+// @param message
 func (cms *ConsensusMsgSubscriber) OnMessage(message *msgbus.Message) {
 	switch message.Topic {
 	case msgbus.SendConsensusMsg:
@@ -480,6 +491,7 @@ func (cms *ConsensusMsgSubscriber) OnMessage(message *msgbus.Message) {
 	}
 }
 
+// OnQuit nothing
 func (cms *ConsensusMsgSubscriber) OnQuit() {
 	// do nothing
 	//panic("implement me")
@@ -490,6 +502,8 @@ type ConsistentMsgSubscriber struct {
 	netService *NetService
 }
 
+// OnMessage process message bus data
+// @param message
 func (cms *ConsistentMsgSubscriber) OnMessage(message *msgbus.Message) {
 	switch message.Topic {
 	case msgbus.SendConsistentMsg:
@@ -511,6 +525,7 @@ func (cms *ConsistentMsgSubscriber) OnMessage(message *msgbus.Message) {
 	}
 }
 
+// OnQuit do nothing
 func (cms *ConsistentMsgSubscriber) OnQuit() {
 	// do nothing
 	//panic("implement me")
@@ -521,6 +536,8 @@ type TxPoolMsgSubscriber struct {
 	netService *NetService
 }
 
+// OnMessage process message bus data
+// @param message
 func (cms *TxPoolMsgSubscriber) OnMessage(message *msgbus.Message) {
 	switch message.Topic {
 	case msgbus.SendTxPoolMsg:
@@ -542,6 +559,7 @@ func (cms *TxPoolMsgSubscriber) OnMessage(message *msgbus.Message) {
 	}
 }
 
+// OnQuit do nothing
 func (cms *TxPoolMsgSubscriber) OnQuit() {
 	// do nothing
 	//panic("implement me")
@@ -552,6 +570,8 @@ type SyncBlockMsgSubscriber struct {
 	netService *NetService
 }
 
+// OnMessage process message bus data
+// @param message
 func (cms *SyncBlockMsgSubscriber) OnMessage(message *msgbus.Message) {
 	switch message.Topic {
 	case msgbus.SendSyncBlockMsg:
@@ -573,11 +593,18 @@ func (cms *SyncBlockMsgSubscriber) OnMessage(message *msgbus.Message) {
 	}
 }
 
+// OnQuit do nothing
 func (cms *SyncBlockMsgSubscriber) OnQuit() {
 	// do nothing
 	//panic("implement me")
 }
 
+// CreateMsgHandlerForMsgBus create a message handle
+// @param netService
+// @param topic
+// @param logMsgDescription
+// @param msgType
+// @return func(chainId string, node string, data []byte) error
 func CreateMsgHandlerForMsgBus(
 	netService *NetService,
 	topic msgbus.Topic,

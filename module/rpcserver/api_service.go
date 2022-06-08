@@ -479,11 +479,21 @@ func (s *ApiService) GetChainMakerVersion(ctx context.Context, req *configPb.Cha
 	}, nil
 }
 
+// GetPoolStatus get transaction pool status
+// @param ctx
+// @param request
+// @return *txpoolPb.TxPoolStatus
+// @return error
 func (s *ApiService) GetPoolStatus(ctx context.Context,
 	request *txpoolPb.GetPoolStatusRequest) (*txpoolPb.TxPoolStatus, error) {
 	return s.chainMakerServer.GetPoolStatus(request.ChainId)
 }
 
+// GetTxIdsByTypeAndStage get txs by tx type and stage
+// @param ctx
+// @param request
+// @return *txpoolPb.GetTxIdsByTypeAndStageResponse
+// @return error
 func (s *ApiService) GetTxIdsByTypeAndStage(ctx context.Context,
 	request *txpoolPb.GetTxIdsByTypeAndStageRequest) (*txpoolPb.GetTxIdsByTypeAndStageResponse, error) {
 	txIds, err := s.chainMakerServer.GetTxIdsByTypeAndStage(request.ChainId,
@@ -494,6 +504,11 @@ func (s *ApiService) GetTxIdsByTypeAndStage(ctx context.Context,
 	return &txpoolPb.GetTxIdsByTypeAndStageResponse{TxIds: txIds}, nil
 }
 
+// GetTxsInPoolByTxIds get tx from tx pool by tx ids
+// @param ctx
+// @param request
+// @return *txpoolPb.GetTxsInPoolByTxIdsResponse
+// @return error
 func (s *ApiService) GetTxsInPoolByTxIds(ctx context.Context,
 	request *txpoolPb.GetTxsInPoolByTxIdsRequest) (*txpoolPb.GetTxsInPoolByTxIdsResponse, error) {
 	txs, txIds, err := s.chainMakerServer.GetTxsInPoolByTxIds(request.ChainId, request.TxIds)

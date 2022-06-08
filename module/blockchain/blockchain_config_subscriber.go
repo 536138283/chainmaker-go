@@ -4,6 +4,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package blockchain
 
 import (
@@ -29,6 +30,7 @@ func (bc *Blockchain) OnMessage(msg *msgbus.Message) {
 	}
 }
 
+// OnQuit nothing
 func (bc *Blockchain) OnQuit() {
 	// nothing for implement interface msgbus.Subscriber
 }

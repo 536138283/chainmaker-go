@@ -54,6 +54,8 @@ func (bc *Blockchain) Start() error {
 	return nil
 }
 
+// StartForRebuildDbs start rebuild dbs
+// @return error
 func (bc *Blockchain) StartForRebuildDbs() error {
 	// start all module
 	// start sequence：

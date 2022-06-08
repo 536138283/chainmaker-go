@@ -15,7 +15,7 @@ import (
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 )
 
-// Start all the modules.
+// RebuildDbs Start all the modules.
 func (bc *Blockchain) RebuildDbs() {
 	fmt.Printf("###########################")
 	fmt.Printf("###start rebuild-dbs....###")

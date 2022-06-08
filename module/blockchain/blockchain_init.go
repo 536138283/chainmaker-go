@@ -112,7 +112,7 @@ func (bc *Blockchain) Init() (err error) {
 	return bc.initExtModules(extModules)
 }
 
-// Init all the modules.
+// InitForRebuildDbs Init all the modules.
 func (bc *Blockchain) InitForRebuildDbs() (err error) {
 	baseModules := []map[string]func() error{
 		// init Subscriber

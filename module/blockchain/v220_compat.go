@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 This file is for version compatibility
 */
+
 package blockchain
 
 import (
@@ -14,12 +15,12 @@ import (
 
 var _ protocol.Watcher = (*Blockchain)(nil)
 
-// Module
+// Module "BlockChain"
 func (bc *Blockchain) Module() string {
 	return "BlockChain"
 }
 
-// Watch
+// Watch watch chain config
 func (bc *Blockchain) Watch(_ *configPb.ChainConfig) error {
 	bc.log.Infof("[Blockchain] callback msg")
 	if err := bc.Init(); err != nil {
