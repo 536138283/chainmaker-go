@@ -13,23 +13,24 @@ import (
 	"fmt"
 	"runtime/debug"
 	"sync"
-
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
-
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	"sync/atomic"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
+	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -834,13 +835,16 @@ type BlockCommitterImpl struct {
 	verifier                protocol.BlockVerifier      // block verifier
 	commonCommit            *CommitBlock
 	metricBlockSize         *prometheus.HistogramVec // metric block size
-	metricBlockCounter      *prometheus.CounterVec   // metric block counter
+	metricBlockHeight       *prometheus.GaugeVec     // metric block height
 	metricTxCounter         *prometheus.CounterVec   // metric transaction counter
 	metricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
 	metricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
 	metricTpsGauge          *prometheus.GaugeVec     // metric real-time transaction per second (TPS)
 	storeHelper             conf.StoreHelper
 	blockInterval           int64
+
+	mTxCount     uint64 // store tx total count for persistent
+	mBlockHeight uint64 // store latest block height for persistent
 }
 
 type BlockCommitterConfig struct {
@@ -872,72 +876,20 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 		subscriber:      config.Subscriber,
 		verifier:        config.Verifier,
 		storeHelper:     config.StoreHelper,
+		commonCommit: &CommitBlock{
+			store:           config.BlockchainStore,
+			txFilter:        config.TxFilter,
+			log:             log,
+			snapshotManager: config.SnapshotManager,
+			ledgerCache:     config.LedgerCache,
+			chainConf:       config.ChainConf,
+			msgBus:          config.MsgBus,
+		},
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		blockchain.metricBlockSize = monitor.NewHistogramVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockSize,
-			monitor.HelpCurrentBlockSizeMetric,
-			prometheus.ExponentialBuckets(1024, 2, 12),
-			monitor.ChainId,
-		)
-
-		blockchain.metricBlockCounter = monitor.NewCounterVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockCounter,
-			monitor.HelpBlockCountsMetric,
-			monitor.ChainId,
-		)
-
-		blockchain.metricTxCounter = monitor.NewCounterVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricTxCounter,
-			monitor.HelpTxCountsMetric,
-			monitor.ChainId,
-		)
-
-		blockchain.metricBlockCommitTime = monitor.NewHistogramVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockCommitTime,
-			monitor.HelpBlockCommitTimeMetric,
-			[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
-			monitor.ChainId,
-		)
-
-		blockchain.metricBlockIntervalTime = monitor.NewHistogramVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockIntervalTime,
-			monitor.HelpBlockIntervalTimeMetric,
-			[]float64{0.2, 0.5, 1, 2, 5, 10, 20},
-			monitor.ChainId,
-		)
-
-		blockchain.metricTpsGauge = monitor.NewGaugeVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricTpsGauge,
-			monitor.HelpTpsGaugeMetric,
-			monitor.ChainId,
-		)
+		blockchain.initMetrics()
 	}
-
-	cbConf := &CommitBlockConf{
-		Store:                   blockchain.blockchainStore,
-		Log:                     blockchain.log,
-		SnapshotManager:         blockchain.snapshotManager,
-		TxPool:                  blockchain.txPool,
-		LedgerCache:             blockchain.ledgerCache,
-		ChainConf:               blockchain.chainConf,
-		TxFilter:                config.TxFilter,
-		MsgBus:                  blockchain.msgBus,
-		MetricBlockCommitTime:   blockchain.metricBlockCommitTime,
-		MetricBlockIntervalTime: blockchain.metricBlockIntervalTime,
-		MetricBlockCounter:      blockchain.metricBlockCounter,
-		MetricBlockSize:         blockchain.metricBlockSize,
-		MetricTxCounter:         blockchain.metricTxCounter,
-		MetricTpsGauge:          blockchain.metricTpsGauge,
-	}
-	blockchain.commonCommit = NewCommitBlock(cbConf)
 
 	return blockchain, nil
 }
@@ -1068,10 +1020,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		height, lastProposed.Header.TxCount, lastProposed.Header.BlockHash,
 		checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, pubEvent, filterLasts, otherLasts, elapsed, interval)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
-		chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
-		chain.metricTpsGauge.WithLabelValues(chain.chainId).
-			Set(float64(lastProposed.Header.TxCount) / (float64(interval) / 1000))
+		go chain.updateMetrics(blockInfo, elapsed, interval)
 	}
 	return nil
 }
@@ -1347,4 +1296,125 @@ func DeserializeBatchIds(data []byte) ([]string, error) {
 	}
 
 	return batchIds, err
+}
+
+// metric tx counter key in db
+const dbKeyTxCounterPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricTxCounter
+
+// metric block height
+const dbKeyBlockHeightPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricBlockCounter
+
+func (chain *BlockCommitterImpl) initMetrics() {
+	// new metrics
+	chain.metricBlockSize = monitor.NewHistogramVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockSize,
+		monitor.HelpCurrentBlockSizeMetric,
+		prometheus.ExponentialBuckets(1024, 2, 12),
+		monitor.ChainId,
+	)
+	chain.metricBlockHeight = monitor.NewGaugeVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockCounter,
+		monitor.HelpBlockCountsMetric,
+		monitor.ChainId,
+	)
+	chain.metricTxCounter = monitor.NewCounterVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricTxCounter,
+		monitor.HelpTxCountsMetric,
+		monitor.ChainId,
+	)
+	chain.metricBlockCommitTime = monitor.NewHistogramVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockCommitTime,
+		monitor.HelpBlockCommitTimeMetric,
+		[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
+		monitor.ChainId,
+	)
+	chain.metricBlockIntervalTime = monitor.NewHistogramVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockIntervalTime,
+		monitor.HelpBlockIntervalTimeMetric,
+		[]float64{0.2, 0.5, 1, 2, 5, 10, 20},
+		monitor.ChainId,
+	)
+	chain.metricTpsGauge = monitor.NewGaugeVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricTpsGauge,
+		monitor.HelpTpsGaugeMetric,
+		monitor.ChainId,
+	)
+
+	localDb := chain.blockchainStore.GetDBHandle("")
+	// init tx counter metric
+	txCountBz, err := localDb.Get([]byte(dbKeyTxCounterPrefix + chain.chainId))
+	if err == nil {
+		// ignore brand new node
+		if txCountBz != nil {
+			chain.mTxCount, err = bytehelper.BytesToUint64(txCountBz)
+			if err == nil {
+				chain.metricTxCounter.WithLabelValues(chain.chainId).Add(float64(chain.mTxCount))
+			} else {
+				chain.log.Errorw("bytehelper.BytesToUint64 failed", "err", err)
+			}
+		}
+	} else {
+		chain.log.Errorw("localDb.Get metric failed", "err", err)
+	}
+
+	// init block height metric
+	blockHeightBz, err := localDb.Get([]byte(dbKeyBlockHeightPrefix + chain.chainId))
+	if err == nil {
+		// ignore brand new node
+		if blockHeightBz != nil {
+			chain.mBlockHeight, err = bytehelper.BytesToUint64(blockHeightBz)
+			if err == nil {
+				chain.metricBlockHeight.WithLabelValues(chain.chainId).Set(float64(chain.mBlockHeight))
+			} else {
+				chain.log.Errorw("bytehelper.BytesToUint64 failed", "err", err)
+			}
+		}
+	} else {
+		chain.log.Errorw("localDb.Get metric failed", "err", err)
+	}
+}
+
+func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, interval int64) {
+	raw, err := proto.Marshal(bi)
+	if err != nil {
+		chain.log.Errorw("marshal BlockInfo failed", "err", err)
+	}
+	chain.metricBlockSize.WithLabelValues(bi.Block.Header.ChainId).Observe(float64(len(raw)))
+	chain.metricBlockHeight.WithLabelValues(bi.Block.Header.ChainId).Set(float64(bi.Block.Header.BlockHeight))
+	atomic.StoreUint64(&chain.mBlockHeight, bi.Block.Header.BlockHeight)
+	chain.metricTxCounter.WithLabelValues(bi.Block.Header.ChainId).Add(float64(bi.Block.Header.TxCount))
+	atomic.AddUint64(&chain.mTxCount, uint64(bi.Block.Header.TxCount))
+	chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
+	chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
+	chain.metricTpsGauge.WithLabelValues(chain.chainId).
+		Set(float64(bi.Block.Header.TxCount) / (float64(interval) / 1000))
+
+	// persist metrics to local db
+	localDb := chain.blockchainStore.GetDBHandle("")
+
+	txCountBz, err := bytehelper.Uint64ToBytes(atomic.LoadUint64(&chain.mTxCount))
+	if err == nil {
+		err = localDb.Put([]byte(dbKeyTxCounterPrefix+chain.chainId), txCountBz)
+		if err != nil {
+			chain.log.Errorw("persist metric failed", "err", err)
+		}
+	} else {
+		chain.log.Errorw("bytehelper.Uint64ToBytes failed", "err", err)
+	}
+
+	blockHeightBz, err := bytehelper.Uint64ToBytes(atomic.LoadUint64(&chain.mBlockHeight))
+	if err == nil {
+		err = localDb.Put([]byte(dbKeyBlockHeightPrefix+chain.chainId), blockHeightBz)
+		if err != nil {
+			chain.log.Errorw("persist metric failed", "err", err)
+		}
+	} else {
+		chain.log.Errorw("bytehelper.Uint64ToBytes failed", "err", err)
+	}
 }
