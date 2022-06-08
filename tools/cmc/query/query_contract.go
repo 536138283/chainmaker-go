@@ -1,3 +1,8 @@
+/*
+Copyright (C) The chainmaker-go Authors
+
+SPDX-License-Identifier: Apache-2.0
+*/
 // Package query
 /**
 * @ClassName query_contract.go
@@ -46,7 +51,6 @@ func newQueryContractByNameOnChainCMD() *cobra.Command {
 			//// 1.Chain Client
 			cc, err := sdk.NewChainClient(
 				sdk.WithConfPath(sdkConfPath),
-				sdk.WithChainClientChainId(chainId),
 			)
 			if err != nil {
 				return err
@@ -71,7 +75,7 @@ func newQueryContractByNameOnChainCMD() *cobra.Command {
 		},
 	}
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
+		flagSdkConfPath,
 	})
 	util.AttachFlags(cmd, flags, []string{
 		flagEnableCertHash,
@@ -90,7 +94,6 @@ func newQueryContractListOnChainCMD() *cobra.Command {
 			//// 1.Chain Client
 			cc, err := sdk.NewChainClient(
 				sdk.WithConfPath(sdkConfPath),
-				sdk.WithChainClientChainId(chainId),
 			)
 			if err != nil {
 				return err
@@ -115,7 +118,7 @@ func newQueryContractListOnChainCMD() *cobra.Command {
 		},
 	}
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
+		flagSdkConfPath,
 	})
 	util.AttachFlags(cmd, flags, []string{
 		flagEnableCertHash,
@@ -134,7 +137,6 @@ func newQueryDisableNativeContractListOnChainCMD() *cobra.Command {
 			//// 1.Chain Client
 			cc, err := sdk.NewChainClient(
 				sdk.WithConfPath(sdkConfPath),
-				sdk.WithChainClientChainId(chainId),
 			)
 			if err != nil {
 				return err
@@ -159,7 +161,7 @@ func newQueryDisableNativeContractListOnChainCMD() *cobra.Command {
 		},
 	}
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
+		flagSdkConfPath,
 	})
 	util.AttachFlags(cmd, flags, []string{
 		flagEnableCertHash,
