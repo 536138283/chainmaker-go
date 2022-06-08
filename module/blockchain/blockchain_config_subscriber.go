@@ -47,12 +47,10 @@ func (bc *Blockchain) updateChainConfig(msg *msgbus.Message) {
 	if err != nil {
 		bc.log.Error(err)
 		panic(err)
-		return
 	}
 	err = proto.Unmarshal(dataBytes, cfg)
 	if err != nil {
 		bc.log.Error(err)
 		panic(err)
-		return
 	}
 }
