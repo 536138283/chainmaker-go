@@ -688,23 +688,15 @@ func TestNewBlockCommitter(t *testing.T) {
 					subscriber:      nil,
 					verifier:        verifier,
 					storeHelper:     storeHelper,
+					commonCommit: &CommitBlock{
+						store:           blockchainStore,
+						log:             log,
+						snapshotManager: snapshotManager,
+						ledgerCache:     ledgerCache,
+						chainConf:       chainConf,
+						msgBus:          msgBus,
+					},
 				}
-
-				cbConf := &CommitBlockConf{
-					Store:                 blockchain.blockchainStore,
-					Log:                   blockchain.log,
-					SnapshotManager:       blockchain.snapshotManager,
-					TxPool:                blockchain.txPool,
-					LedgerCache:           blockchain.ledgerCache,
-					ChainConf:             blockchain.chainConf,
-					MsgBus:                blockchain.msgBus,
-					MetricBlockCommitTime: blockchain.metricBlockCommitTime,
-					MetricBlockCounter:    blockchain.metricBlockCounter,
-					MetricBlockSize:       blockchain.metricBlockSize,
-					MetricTxCounter:       blockchain.metricTxCounter,
-				}
-
-				blockchain.commonCommit = NewCommitBlock(cbConf)
 				return blockchain
 			}(),
 			wantErr: false,
@@ -739,7 +731,7 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 		verifier              protocol.BlockVerifier
 		commonCommit          *CommitBlock
 		metricBlockSize       *prometheus.HistogramVec
-		metricBlockCounter    *prometheus.CounterVec
+		metricBlockHeight     *prometheus.GaugeVec
 		metricTxCounter       *prometheus.CounterVec
 		metricBlockCommitTime *prometheus.HistogramVec
 		storeHelper           conf.StoreHelper
@@ -795,17 +787,14 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 	log.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
 	log.EXPECT().Warn(gomock.Any()).AnyTimes()
 
-	cbConf := &CommitBlockConf{
-		Store:           blockchainStore,
-		Log:             log,
-		SnapshotManager: snapshotManager,
-		TxPool:          txPool,
-		LedgerCache:     ledgerCache,
-		ChainConf:       chainConf,
-		MsgBus:          msgBus,
+	committer := &CommitBlock{
+		store:           blockchainStore,
+		log:             log,
+		snapshotManager: snapshotManager,
+		ledgerCache:     ledgerCache,
+		chainConf:       chainConf,
+		msgBus:          msgBus,
 	}
-
-	committer := NewCommitBlock(cbConf)
 
 	tests := []struct {
 		name      string
@@ -1008,7 +997,7 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 				verifier:              tt.fields.verifier,
 				commonCommit:          tt.fields.commonCommit,
 				metricBlockSize:       tt.fields.metricBlockSize,
-				metricBlockCounter:    tt.fields.metricBlockCounter,
+				metricBlockHeight:     tt.fields.metricBlockHeight,
 				metricTxCounter:       tt.fields.metricTxCounter,
 				metricBlockCommitTime: tt.fields.metricBlockCommitTime,
 				storeHelper:           tt.fields.storeHelper,
@@ -1044,7 +1033,7 @@ func TestBlockCommitterImpl_isBlockLegal(t *testing.T) {
 		verifier              protocol.BlockVerifier
 		commonCommit          *CommitBlock
 		metricBlockSize       *prometheus.HistogramVec
-		metricBlockCounter    *prometheus.CounterVec
+		metricBlockHeight     *prometheus.GaugeVec
 		metricTxCounter       *prometheus.CounterVec
 		metricBlockCommitTime *prometheus.HistogramVec
 		storeHelper           conf.StoreHelper
@@ -1081,7 +1070,7 @@ func TestBlockCommitterImpl_isBlockLegal(t *testing.T) {
 				verifier:              newMockBlockVerifier(t),
 				commonCommit:          nil,
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           newMockStoreHelper(t),
@@ -1112,7 +1101,7 @@ func TestBlockCommitterImpl_isBlockLegal(t *testing.T) {
 				verifier:              newMockBlockVerifier(t),
 				commonCommit:          nil,
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           newMockStoreHelper(t),
@@ -1158,7 +1147,7 @@ func TestBlockCommitterImpl_isBlockLegal(t *testing.T) {
 				verifier:              newMockBlockVerifier(t),
 				commonCommit:          nil,
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           newMockStoreHelper(t),
@@ -1205,7 +1194,7 @@ func TestBlockCommitterImpl_isBlockLegal(t *testing.T) {
 				verifier:              newMockBlockVerifier(t),
 				commonCommit:          nil,
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           newMockStoreHelper(t),
@@ -1243,7 +1232,7 @@ func TestBlockCommitterImpl_isBlockLegal(t *testing.T) {
 				verifier:              tt.fields.verifier,
 				commonCommit:          tt.fields.commonCommit,
 				metricBlockSize:       tt.fields.metricBlockSize,
-				metricBlockCounter:    tt.fields.metricBlockCounter,
+				metricBlockHeight:     tt.fields.metricBlockHeight,
 				metricTxCounter:       tt.fields.metricTxCounter,
 				metricBlockCommitTime: tt.fields.metricBlockCommitTime,
 				storeHelper:           tt.fields.storeHelper,
@@ -1271,7 +1260,7 @@ func TestBlockCommitterImpl_syncWithTxPool(t *testing.T) {
 		verifier              protocol.BlockVerifier
 		commonCommit          *CommitBlock
 		metricBlockSize       *prometheus.HistogramVec
-		metricBlockCounter    *prometheus.CounterVec
+		metricBlockHeight     *prometheus.GaugeVec
 		metricTxCounter       *prometheus.CounterVec
 		metricBlockCommitTime *prometheus.HistogramVec
 		storeHelper           conf.StoreHelper
@@ -1308,7 +1297,7 @@ func TestBlockCommitterImpl_syncWithTxPool(t *testing.T) {
 				verifier:              newMockBlockVerifier(t),
 				commonCommit:          nil,
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           newMockStoreHelper(t),
@@ -1346,7 +1335,7 @@ func TestBlockCommitterImpl_syncWithTxPool(t *testing.T) {
 				verifier:              newMockBlockVerifier(t),
 				commonCommit:          nil,
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           newMockStoreHelper(t),
@@ -1393,7 +1382,7 @@ func TestBlockCommitterImpl_syncWithTxPool(t *testing.T) {
 				verifier:              newMockBlockVerifier(t),
 				commonCommit:          nil,
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           newMockStoreHelper(t),
@@ -1432,7 +1421,7 @@ func TestBlockCommitterImpl_syncWithTxPool(t *testing.T) {
 				verifier:              tt.fields.verifier,
 				commonCommit:          tt.fields.commonCommit,
 				metricBlockSize:       tt.fields.metricBlockSize,
-				metricBlockCounter:    tt.fields.metricBlockCounter,
+				metricBlockHeight:     tt.fields.metricBlockHeight,
 				metricTxCounter:       tt.fields.metricTxCounter,
 				metricBlockCommitTime: tt.fields.metricBlockCommitTime,
 				storeHelper:           tt.fields.storeHelper,
@@ -1460,7 +1449,7 @@ func TestBlockCommitterImpl_checkLastProposedBlock(t *testing.T) {
 		verifier              protocol.BlockVerifier
 		commonCommit          *CommitBlock
 		metricBlockSize       *prometheus.HistogramVec
-		metricBlockCounter    *prometheus.CounterVec
+		metricBlockHeight     *prometheus.GaugeVec
 		metricTxCounter       *prometheus.CounterVec
 		metricBlockCommitTime *prometheus.HistogramVec
 		storeHelper           conf.StoreHelper
@@ -1516,7 +1505,7 @@ func TestBlockCommitterImpl_checkLastProposedBlock(t *testing.T) {
 					log: newMockLogger(t),
 				},
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           nil,
@@ -1576,7 +1565,7 @@ func TestBlockCommitterImpl_checkLastProposedBlock(t *testing.T) {
 					log: newMockLogger(t),
 				},
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           nil,
@@ -1626,7 +1615,7 @@ func TestBlockCommitterImpl_checkLastProposedBlock(t *testing.T) {
 					log: newMockLogger(t),
 				},
 				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
+				metricBlockHeight:     nil,
 				metricTxCounter:       nil,
 				metricBlockCommitTime: nil,
 				storeHelper:           nil,
@@ -1657,7 +1646,7 @@ func TestBlockCommitterImpl_checkLastProposedBlock(t *testing.T) {
 				verifier:              tt.fields.verifier,
 				commonCommit:          tt.fields.commonCommit,
 				metricBlockSize:       tt.fields.metricBlockSize,
-				metricBlockCounter:    tt.fields.metricBlockCounter,
+				metricBlockHeight:     tt.fields.metricBlockHeight,
 				metricTxCounter:       tt.fields.metricTxCounter,
 				metricBlockCommitTime: tt.fields.metricBlockCommitTime,
 				storeHelper:           tt.fields.storeHelper,
