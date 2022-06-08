@@ -148,6 +148,21 @@ func (server *ChainMakerServer) initNet() error {
 		net.WithBlackNodeIds(localconf.ChainMakerConfig.NetConfig.BlackList.NodeIds...),
 		net.WithMsgCompression(localconf.ChainMakerConfig.DebugConfig.UseNetMsgCompression),
 		net.WithInsecurity(localconf.ChainMakerConfig.DebugConfig.IsNetInsecurity),
+		net.WithStunClient(localconf.ChainMakerConfig.NetConfig.StunClient.ListenAddr,
+			localconf.ChainMakerConfig.NetConfig.StunClient.StunServerAddr,
+			localconf.ChainMakerConfig.NetConfig.StunClient.NetworkType,
+			localconf.ChainMakerConfig.NetConfig.StunClient.Enabled),
+		net.WithStunServer(localconf.ChainMakerConfig.NetConfig.StunServer.Enabled,
+			localconf.ChainMakerConfig.NetConfig.StunServer.TwoPublicAddress,
+			localconf.ChainMakerConfig.NetConfig.StunServer.OtherStunServerAddr,
+			localconf.ChainMakerConfig.NetConfig.StunServer.LocalNotifyAddr,
+			localconf.ChainMakerConfig.NetConfig.StunServer.OtherNotifyAddr,
+			localconf.ChainMakerConfig.NetConfig.StunServer.ListenAddr1,
+			localconf.ChainMakerConfig.NetConfig.StunServer.ListenAddr2,
+			localconf.ChainMakerConfig.NetConfig.StunServer.ListenAddr3,
+			localconf.ChainMakerConfig.NetConfig.StunServer.ListenAddr4,
+			localconf.ChainMakerConfig.NetConfig.StunServer.NetworkType),
+		net.WithHolePunch(localconf.ChainMakerConfig.NetConfig.EnablePunch),
 	)
 	if err != nil {
 		errMsg := fmt.Sprintf("new net failed, %s", err.Error())
