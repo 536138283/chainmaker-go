@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"testing"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
 	mbusmock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
 	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -18,7 +17,6 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 
 	"github.com/golang/mock/gomock"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 func TestCommitBlock_CommitBlock(t *testing.T) {
@@ -82,18 +80,16 @@ func TestCommitBlock_CommitBlock(t *testing.T) {
 	log.Infof("init block(%d,%s)", block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 	store.EXPECT().PutBlock(block, txRWSets).Return(nil)
 
-	cbConf := &CommitBlockConf{
-		Store:           store,
-		Log:             log,
-		SnapshotManager: snapshotManager,
-		LedgerCache:     ledgerCache,
-		ChainConf:       chainConf,
-		MsgBus:          msgbus,
-	}
-
 	conEventMap := make(map[string][]*commonpb.ContractEvent)
 
-	commiter := NewCommitBlock(cbConf)
+	commiter := &CommitBlock{
+		store:           store,
+		log:             log,
+		snapshotManager: snapshotManager,
+		ledgerCache:     ledgerCache,
+		chainConf:       chainConf,
+		msgBus:          msgbus,
+	}
 	_, _, _, _, _, _, _, err := commiter.CommitBlock(block, txRWSetMap, conEventMap)
 	if err != nil {
 		panic(err)
@@ -132,97 +128,6 @@ func createNewTestBlock(height uint64) *commonpb.Block {
 	txs[0] = tx
 	block.Txs = txs
 	return block
-}
-
-func TestCommitBlock_MonitorCommit(t *testing.T) {
-	type fields struct {
-		store                 protocol.BlockchainStore
-		log                   protocol.Logger
-		snapshotManager       protocol.SnapshotManager
-		ledgerCache           protocol.LedgerCache
-		chainConf             protocol.ChainConf
-		msgBus                msgbus.MessageBus
-		metricBlockSize       *prometheus.HistogramVec
-		metricBlockCounter    *prometheus.CounterVec
-		metricTxCounter       *prometheus.CounterVec
-		metricBlockCommitTime *prometheus.HistogramVec
-	}
-	type args struct {
-		bi *commonpb.BlockInfo
-	}
-	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		wantErr bool
-	}{
-		{
-			name: "test0",
-			fields: fields{
-				store:                 newMockBlockchainStore(t),
-				log:                   newMockLogger(t),
-				snapshotManager:       newMockSnapshotManager(t),
-				ledgerCache:           newMockLedgerCache(t),
-				chainConf:             newMockChainConf(t),
-				msgBus:                msgbus.NewMessageBus(),
-				metricBlockSize:       nil,
-				metricBlockCounter:    nil,
-				metricTxCounter:       nil,
-				metricBlockCommitTime: nil,
-			},
-			args: args{
-				bi: &commonpb.BlockInfo{
-					Block:     createBlock(0),
-					RwsetList: RearrangeRWSet(createBlock(0), map[string]*commonpb.TxRWSet{}),
-				},
-			},
-			wantErr: false,
-		},
-		//{
-		//	name:    "test1", // TODO monitor
-		//	fields:  fields{
-		//		store:                 newMockBlockchainStore(t),
-		//		log:                   newMockLogger(t),
-		//		snapshotManager:       newMockSnapshotManager(t),
-		//		ledgerCache:           newMockLedgerCache(t),
-		//		chainConf:             newMockChainConf(t),
-		//		msgBus:                msgbus.NewMessageBus(),
-		//		metricBlockSize:       nil,
-		//		metricBlockCounter:    nil,
-		//		metricTxCounter:       nil,
-		//		metricBlockCommitTime: nil,
-		//	},
-		//	args:    args{
-		//		bi: &commonpb.BlockInfo{
-		//			Block: func() *commonpb.Block {
-		//				localconf.ChainMakerConfig.MonitorConfig.Enabled = true
-		//
-		//				block := createBlock(0)
-		//				return block
-		//			}(),
-		//			RwsetList: RearrangeRWSet(createBlock(0), map[string]*commonpb.TxRWSet{}),
-		//		},
-		//	},
-		//	wantErr: false,
-		//},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			cb := &CommitBlock{
-				store:                 tt.fields.store,
-				log:                   tt.fields.log,
-				snapshotManager:       tt.fields.snapshotManager,
-				ledgerCache:           tt.fields.ledgerCache,
-				chainConf:             tt.fields.chainConf,
-				msgBus:                tt.fields.msgBus,
-				metricBlockSize:       tt.fields.metricBlockSize,
-				metricBlockCounter:    tt.fields.metricBlockCounter,
-				metricTxCounter:       tt.fields.metricTxCounter,
-				metricBlockCommitTime: tt.fields.metricBlockCommitTime,
-			}
-			cb.MonitorCommit(tt.args.bi)
-		})
-	}
 }
 
 func TestNotifyChainConf(t *testing.T) {
