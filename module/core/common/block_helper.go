@@ -1384,7 +1384,6 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 	raw, err := proto.Marshal(bi)
 	if err != nil {
 		chain.log.Errorw("marshal BlockInfo failed", "err", err)
-		return
 	}
 	chain.metricBlockSize.WithLabelValues(bi.Block.Header.ChainId).Observe(float64(len(raw)))
 	chain.metricBlockHeight.WithLabelValues(bi.Block.Header.ChainId).Set(float64(bi.Block.Header.BlockHeight))
@@ -1401,7 +1400,7 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 
 	txCountBz, err := bytehelper.Uint64ToBytes(atomic.LoadUint64(&chain.mTxCount))
 	if err == nil {
-		err := localDb.Put([]byte(dbKeyTxCounterPrefix+chain.chainId), txCountBz)
+		err = localDb.Put([]byte(dbKeyTxCounterPrefix+chain.chainId), txCountBz)
 		if err != nil {
 			chain.log.Errorw("persist metric failed", "err", err)
 		}
@@ -1411,7 +1410,7 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 
 	blockHeightBz, err := bytehelper.Uint64ToBytes(atomic.LoadUint64(&chain.mBlockHeight))
 	if err == nil {
-		err := localDb.Put([]byte(dbKeyBlockHeightPrefix+chain.chainId), blockHeightBz)
+		err = localDb.Put([]byte(dbKeyBlockHeightPrefix+chain.chainId), blockHeightBz)
 		if err != nil {
 			chain.log.Errorw("persist metric failed", "err", err)
 		}
