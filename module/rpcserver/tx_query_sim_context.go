@@ -15,7 +15,6 @@ import (
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/vm/v2"
 )
 
 // Storage interface for smart contracts, implement TxSimContext
@@ -346,30 +345,22 @@ func (s *txQuerySimContextImpl) GetContractBytecode(name string) ([]byte, error)
 
 // GetCrossInfo get contract call link information
 func (s *txQuerySimContextImpl) GetCrossInfo() uint64 {
-	return s.crossInfo
+	return 0
 }
 
 // HasUsed judge whether the specified common.RuntimeType has appeared in the previous depth
 // in the current cross-link
 func (s *txQuerySimContextImpl) HasUsed(runtimeType commonPb.RuntimeType) bool {
-	callContractCtx := vm.NewCallContractContext(s.crossInfo)
-	return callContractCtx.HasUsed(runtimeType)
+	return false
 }
 
 // RecordRuntimeTypeIntoCrossInfo record the new contract call information to the top of crossInfo
-func (s *txQuerySimContextImpl) RecordRuntimeTypeIntoCrossInfo(runtimeType commonPb.RuntimeType) {
-	callContractCtx := vm.NewCallContractContext(s.crossInfo)
-	callContractCtx.AddLayer(runtimeType)
-	s.crossInfo = callContractCtx.GetCtxBitmap()
-}
+func (s *txQuerySimContextImpl) RecordRuntimeTypeIntoCrossInfo(runtimeType commonPb.RuntimeType) {}
 
 // RemoveRuntimeTypeFromCrossInfo remove the top-level information from the crossInfo
-func (s *txQuerySimContextImpl) RemoveRuntimeTypeFromCrossInfo() {
-	callContractCtx := vm.NewCallContractContext(s.crossInfo)
-	callContractCtx.ClearLatestLayer()
-	s.crossInfo = callContractCtx.GetCtxBitmap()
-}
+func (s *txQuerySimContextImpl) RemoveRuntimeTypeFromCrossInfo() {}
 
+// GetTxRWMapByContractName returns tx RWMap by contract name
 func (s *txQuerySimContextImpl) GetTxRWMapByContractName(contractName string) (
 	map[string]*commonPb.TxRead, map[string]*commonPb.TxWrite) {
 	txReads := make(map[string]*commonPb.TxRead)
