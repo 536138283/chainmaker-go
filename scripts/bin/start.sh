@@ -38,7 +38,7 @@ eval $(parse_yaml "$config_file" "chainmaker_")
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
 start_docker_vm() {
-  image_name="chainmakerofficial/chainmaker-vm-docker-go:refactor"
+  image_name="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
 
   container_name=DOCKERVM-{org_id}
   echo "start docker vm service container: $container_name"
