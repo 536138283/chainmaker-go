@@ -62,7 +62,11 @@ func init() {
 	vm.RegisterVmProvider(
 		"DOCKERGO",
 		func(chainId string, configs map[string]interface{}) (protocol.VmInstancesManager, error) {
-			return dockergo.NewInstancesManager(chainId, logger.GetLoggerByChain(logger.MODULE_VM, chainId), localconf.ChainMakerConfig.VMConfig), nil
+			return dockergo.NewInstancesManager(
+				chainId,
+				logger.GetLoggerByChain(logger.MODULE_VM, chainId),
+				localconf.ChainMakerConfig.VMConfig,
+			), nil
 		})
 
 	// consensus

@@ -18,6 +18,7 @@ import (
 )
 
 // Storage interface for smart contracts, implement TxSimContext
+// nolint: unused, structcheck
 type txQuerySimContextImpl struct {
 	crossInfo        uint64
 	tx               *commonPb.Transaction
