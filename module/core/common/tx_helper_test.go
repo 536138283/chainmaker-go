@@ -981,7 +981,7 @@ func TestValidateTxRules(t *testing.T) {
 			args: args{
 				filter: func() protocol.TxFilter {
 					filter := mock.NewMockTxFilter(gomock.NewController(t))
-					filter.EXPECT().ValidateRule(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(txId string, ruleType ...commonpb.RuleType) error {
+					filter.EXPECT().ValidateRule(gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(func(txId string, ruleType ...bn.RuleType) error {
 						if []byte(txId)[63]%2 == 1 {
 							return nil
 						}

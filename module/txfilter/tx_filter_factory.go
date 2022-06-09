@@ -8,12 +8,13 @@ package txfilter
 import (
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
+
 	mapimpl "chainmaker.org/chainmaker-go/module/txfilter/map"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/birdnest"
 	"chainmaker.org/chainmaker-go/module/txfilter/defau1t"
 	"chainmaker.org/chainmaker-go/module/txfilter/shardingbirdsnest"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -32,20 +33,20 @@ func Factory() *txFilterFactory {
 }
 
 // NewTxFilter new transaction filter
-func (cf *txFilterFactory) NewTxFilter(conf *config.TxFilterConfig, log protocol.Logger,
+func (cf *txFilterFactory) NewTxFilter(conf *filtercommon.TxFilterConfig, log protocol.Logger,
 	store protocol.BlockchainStore) (protocol.TxFilter, error) {
 	if conf == nil {
 		log.Warn("txfilter conf is nil, use default type: store")
 		return defau1t.New(store), nil
 	}
 	switch conf.Type {
-	case config.TxFilterType_None:
+	case filtercommon.TxFilterTypeDefault:
 		return defau1t.New(store), nil
-	case config.TxFilterType_BirdsNest:
+	case filtercommon.TxFilterTypeBirdsNest:
 		return birdnest.New(conf.BirdsNest, log, store)
-	case config.TxFilterType_Map:
+	case filtercommon.TxFilterTypeMap:
 		return mapimpl.New(), nil
-	case config.TxFilterType_ShardingBirdsNest:
+	case filtercommon.TxFilterTypeShardingBirdsNest:
 		return shardingbirdsnest.New(conf.ShardingBirdsNest, log, store)
 	default:
 		log.Warnf("txfilter type: %v not support, use default type: store", conf.Type)

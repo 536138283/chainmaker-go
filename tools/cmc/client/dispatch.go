@@ -11,29 +11,29 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/types"
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
-
-	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdkPbCommon "chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
-func Dispatch(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	evmMethod *abi.ABI, limit *sdkPbCommon.Limit) {
+func Dispatch(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId string, kvs []*common.KeyValuePair,
+	abi *abi.ABI, limit *common.Limit) {
 	var (
 		wgSendReq sync.WaitGroup
 	)
 
 	for i := 0; i < concurrency; i++ {
 		wgSendReq.Add(1)
-		go runInvokeContract(client, contractName, method, kvs, &wgSendReq, evmMethod, limit)
+		go runInvokeContract(client, contractName, rawMethodName, evmMethodId, kvs, &wgSendReq, abi, limit)
 	}
 
 	wgSendReq.Wait()
 }
-func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
 	evmMethod *abi.ABI) {
 	var (
 		wgSendReq sync.WaitGroup
@@ -46,12 +46,19 @@ func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*
 	wgSendReq.Wait()
 }
 
-func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	wg *sync.WaitGroup, evmMethod *abi.ABI, limit *sdkPbCommon.Limit) {
+func runInvokeContract(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId string,
+	kvs []*common.KeyValuePair, wg *sync.WaitGroup, abi *abi.ABI, limit *common.Limit) {
 
 	defer func() {
 		wg.Done()
 	}()
+
+	var methodStr string
+	if abi != nil {
+		methodStr = evmMethodId
+	} else {
+		methodStr = rawMethodName
+	}
 
 	for i := 0; i < totalCntPerGoroutine; i++ {
 		if client.IsEnableNormalKey() {
@@ -60,31 +67,37 @@ func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs
 			txId = utils.GetTimestampTxId()
 		}
 
-		resp, err := client.InvokeContractWithLimit(contractName, method, txId, kvs, timeout, syncResult, limit)
+		resp, err := client.InvokeContractWithLimit(contractName, methodStr, txId, kvs, timeout, syncResult, limit)
 		if err != nil {
 			fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 			return
 		}
 
-		if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
-			fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
+		if resp.Code != common.TxStatusCode_SUCCESS {
+			util.PrintPrettyJson(resp)
 			return
 		}
 
-		if evmMethod != nil && resp.ContractResult != nil {
-			output, err := evmMethod.Unpack(method, resp.ContractResult.Result)
+		if abi != nil && resp.ContractResult != nil {
+			output, err := abi.Unpack(rawMethodName, resp.ContractResult.Result)
 			if err != nil {
 				fmt.Println(err)
 				return
 			}
-			resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
+			util.PrintPrettyJson(types.EvmTxResponse{
+				TxResponse: resp,
+				ContractResult: &types.EvmContractResult{
+					ContractResult: resp.ContractResult,
+					Result:         fmt.Sprintf("%v", output),
+				},
+			})
+		} else {
+			util.PrintPrettyJson(resp)
 		}
-
-		util.PrintPrettyJson(resp)
 	}
 }
 
-func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
 	wg *sync.WaitGroup, evmMethod *abi.ABI) {
 
 	defer func() {
@@ -98,7 +111,7 @@ func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string,
 		return
 	}
 
-	if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
+	if resp.Code != common.TxStatusCode_SUCCESS {
 		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
 		return
 	}
@@ -116,27 +129,41 @@ func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string,
 		resp.ContractResult, txId)
 }
 
-func invokeContract(client *sdk.ChainClient, contractName, method, txId string, kvs []*sdkPbCommon.KeyValuePair,
-	evmABI *abi.ABI, limit *sdkPbCommon.Limit) {
-	resp, err := client.InvokeContractWithLimit(contractName, method, txId, kvs, timeout, syncResult, limit)
+func invokeContract(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId, txId string,
+	kvs []*common.KeyValuePair, abi *abi.ABI, limit *common.Limit) {
+
+	var methodStr string
+	if abi != nil {
+		methodStr = evmMethodId
+	} else {
+		methodStr = rawMethodName
+	}
+
+	resp, err := client.InvokeContractWithLimit(contractName, methodStr, txId, kvs, timeout, syncResult, limit)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 		return
 	}
 
-	if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
-		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
+	if resp.Code != common.TxStatusCode_SUCCESS {
+		util.PrintPrettyJson(resp)
 		return
 	}
 
-	if evmABI != nil && resp.ContractResult != nil {
-		output, err := evmABI.Unpack(method, resp.ContractResult.Result)
+	if abi != nil && resp.ContractResult != nil {
+		output, err := abi.Unpack(rawMethodName, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
+		util.PrintPrettyJson(types.EvmTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.EvmContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         fmt.Sprintf("%v", output),
+			},
+		})
+	} else {
+		util.PrintPrettyJson(resp)
 	}
-
-	util.PrintPrettyJson(resp)
 }

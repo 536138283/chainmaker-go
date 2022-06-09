@@ -9,8 +9,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"chainmaker.org/chainmaker/common/v2/birdsnest"
+
 	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"github.com/linvon/cuckoo-filter"
 )
 
@@ -86,11 +87,11 @@ func CheckSnapshot(c localconf.SnapshotSerializerConfig) string {
 		return ErrStrSnapshotPathCannotBeNil
 	}
 	switch c.Type {
-	case int(common.SerializeIntervalType_Height):
+	case int(birdsnest.SerializeIntervalType_Height):
 		if c.BlockHeight.Interval <= 0 {
 			return ErrStrSnapshotSerializeIntervalMustBeGreaterThan0
 		}
-	case int(common.SerializeIntervalType_Timed):
+	case int(birdsnest.SerializeIntervalType_Timed):
 		if c.Timed.Interval <= 0 {
 			return ErrStrSnapshotSerializeIntervalMustBeGreaterThan0
 		}
@@ -101,7 +102,7 @@ func CheckSnapshot(c localconf.SnapshotSerializerConfig) string {
 }
 
 func checkCuckooConfig(c localconf.CuckooConfig) string {
-	if _, ok := common.KeyType_name[c.KeyType]; !ok {
+	if _, ok := birdsnest.KeyType_name[birdsnest.KeyType(c.KeyType)]; !ok {
 		return fmt.Sprintf(ErrStrCuckooKeyTypeNotSupport, c.KeyType)
 	}
 	if !(c.TableType == cuckoo.TableTypeSingle || c.TableType == cuckoo.TableTypePacked) {

@@ -15,7 +15,6 @@ import (
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
 	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -32,7 +31,7 @@ type TxFilter struct {
 	l     sync.RWMutex
 }
 
-func (f *TxFilter) ValidateRule(txId string, ruleType ...common.RuleType) error {
+func (f *TxFilter) ValidateRule(txId string, ruleType ...bn.RuleType) error {
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		return nil
@@ -45,11 +44,11 @@ func (f *TxFilter) ValidateRule(txId string, ruleType ...common.RuleType) error 
 }
 
 // New transaction filter init
-func New(config *common.ShardingBirdsNestConfig, log protocol.Logger, store protocol.BlockchainStore) (
+func New(config *sbn.ShardingBirdsNestConfig, log protocol.Logger, store protocol.BlockchainStore) (
 	protocol.TxFilter, error) {
 	// Because it is compatible with Normal type, the transaction ID cannot be converted to time transaction ID, so the
 	// database can be queried directly. Therefore, the transaction ID type is fixed as TimestampKey
-	config.Birdsnest.Cuckoo.KeyType = common.KeyType_KTTimestampKey
+	config.Birdsnest.Cuckoo.KeyType = bn.KeyType_KTTimestampKey
 
 	initLasts := time.Now()
 	exitC := make(chan struct{})
@@ -90,7 +89,7 @@ func (f *TxFilter) SetHeight(height uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...common.RuleType) (exists bool, height uint64,
+func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...bn.RuleType) (exists bool, height uint64,
 	err error) {
 	isExists, err := f.IsExists(txId, ruleType...)
 	if err != nil {
@@ -178,7 +177,7 @@ func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f *TxFilter) IsExists(txId string, ruleType ...common.RuleType) (bool, error) {
+func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (bool, error) {
 	start := time.Now()
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
