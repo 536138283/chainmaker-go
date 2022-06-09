@@ -153,12 +153,12 @@ chainmaker.org/chainmaker/vm/v2 v2.1.2-0.20220214092036-64a91f6bc44d/go.mod h1:W
 chainmaker.org/chainmaker/vm/v2 v2.2.1/go.mod h1:vUeL3FZRizqN7ZHp5q7ycuyDq/vmeBsuw6aNtIGm87E=
 chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220531124619-f57bb0f69d02 h1:PKl2vVLDAhXNmX96TwcWaXHyAwZz42sTUhho2P17Gco=
 chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220531124619-f57bb0f69d02/go.mod h1:MFDbhuAQq9I/Eh82VK4IJQfR46ABZKZBzD+k3P5HQXc=
-chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4 h1:xt2021WpTDYJMpDRahjZDzFVvibs9g876F5c/kNYQW4=
-chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
+chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220507023220-88f2a60cb489 h1:sySUOPq+diGiUhmzNLTzoPRQi38hf8ZQZbvjngdpFr4=
+chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220507023220-88f2a60cb489/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601084543-8591df469f8f h1:t6MhCO1N6GDmHj2pS3zBiAyqvrvwUBT8GlS4W9UPa5w=
 chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601084543-8591df469f8f/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
-chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4 h1:94Xx45jm7SP6mSbdu3Qsa+YzHrf+I1lQtT0OAbN2gII=
-chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4/go.mod h1:7aC8mnQ0XjdIgSSoZfGGBE8QHMPl7QKbJVSzPavj47Y=
+chainmaker.org/third_party/goleveldb v1.0.1-0.20220507023041-7cd1cad083a4 h1:azk/48l8KJxMfpgPthGGHQEdALQzlYnNgnTh0l1CRoo=
+chainmaker.org/third_party/goleveldb v1.0.1-0.20220507023041-7cd1cad083a4/go.mod h1:7aC8mnQ0XjdIgSSoZfGGBE8QHMPl7QKbJVSzPavj47Y=
 chainmaker.org/third_party/q-tls-common v1.0.0 h1:lp4v/aPRqM63vkZTAcGEOEfUOB7ouci0bU9R9+2AHYY=
 chainmaker.org/third_party/q-tls-common v1.0.0/go.mod h1:3QHGT4coGjNeYQamQwCxdQx04Zf8WMB0FCQN8eaedog=
 chainmaker.org/third_party/qtls-go1-15 v1.0.0 h1:Uj6zzrtEOqen6wSyWDqODCWOfbKYn9Wo70dA1I1HRok=

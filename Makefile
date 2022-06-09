@@ -93,6 +93,7 @@ lint:
 
 gomod:
 	cd scripts && ./gomod_update.sh
+	cd scripts && ./gomod_replace.sh
 
 test-deploy:
 	cd scripts/test/ && ./quick_deploy.sh
