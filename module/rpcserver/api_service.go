@@ -324,6 +324,19 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
 		defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
 	}
+
+	//merge new resourcePolicy with default ones
+	{
+		//new policy
+		chainConfig.ChainConfig().GetResourcePolicies()
+
+		//old policy
+		blockchain, err := s.chainMakerServer.GetBlockchain(chainId)
+		if err == nil {
+			blockchain.GetAccessControl().GetHashAlg()
+		}
+	}
+
 	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas)
 	txResult := runtimeInstance.Invoke(&commonPb.Contract{
 		Name: tx.Payload.ContractName,
