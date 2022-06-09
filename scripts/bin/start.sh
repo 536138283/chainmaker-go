@@ -82,6 +82,7 @@ start_docker_vm() {
   enable_docker_vm=$chainmaker_vm_enable_dockervm
   enable_uds=$chainmaker_vm_uds_open
   start_now=$chainmaker_vm_start_now
+  docker_vm_log_level=$chainmaker_vm_log_level
   if [[ $enable_docker_vm = "true" &&  $start_now != "false" ]]
   then
     if [[ $enable_uds = "true" ]]
@@ -90,6 +91,8 @@ start_docker_vm() {
 
       docker run -itd \
       -e CHAIN_RPC_PROTOCOL="0" \
+      -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$docker_vm_log_level" \
+      -e DOCKERVM_SANDBOX_LOG_LEVEL="$docker_vm_log_level" \
       -v "$mount_path":/mount \
       -v "$log_path":/log \
       --name DOCKERVM-{org_id} \
@@ -97,6 +100,7 @@ start_docker_vm() {
     else
       # $enable_uds = "false"
       echo "docker vm protocol: tcp"
+
         runtime_server_port=$chainmaker_vm_runtime_server_port
         contract_engine_port=$chainmaker_vm_contract_engine_port
         contract_engine_timeout=$chainmaker_vm_contract_engine_dial_timeout
@@ -115,6 +119,8 @@ start_docker_vm() {
         -e MAX_SEND_MSG_SIZE="$contract_engine_max_send_size" \
         -e MAX_RECV_MSG_SIZE="$contract_engine_max_recv_size" \
         -e MAX_CONN_TIMEOUT="$contract_engine_timeout" \
+        -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$docker_vm_log_level" \
+        -e DOCKERVM_SANDBOX_LOG_LEVEL="$docker_vm_log_level" \
         --name DOCKERVM-{org_id} \
         --privileged $image_name
     fi

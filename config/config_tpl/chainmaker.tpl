@@ -518,11 +518,15 @@ vm:
   # Specify log file path
   dockervm_log_path: ../log/{org_id}/docker-go
   # Start docker vm right now
-  start_now: true
+  start_now: {start_dockervm_now}
   # Unix domain socket open, used for chainmaker and docker manager communication
   uds_open: false
   # If use a customized VM configuration file, supplement it; else, do not configure
   # dockervm_config_path:
+  # Whether to print log at terminal
+  log_in_console: false
+  # Log level
+  log_level: {dockervm_log_level}
   #  Config items of docker runtime service
   runtime_server:
     # Runtime service port, default 32351
