@@ -378,3 +378,14 @@ func (pp *permissionedPkACProvider) GetValidEndorsements(principal protocol.Prin
 func (pp *permissionedPkACProvider) newNodeMember(member *pbac.Member) (protocol.Member, error) {
 	return pp.acService.newNodePkMember(member, pp.consensusMember)
 }
+
+func (p *permissionedPkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
+	var policyMap = make(map[string]*pbac.Policy)
+	for k, v := range permissionedPkResourcePolicy {
+		policyMap[k] = newPbPolicyFromPolicy(v)
+	}
+	for k, v := range permissionedPkExpResourcePolicy {
+		policyMap[k] = newPbPolicyFromPolicy(v)
+	}
+	return policyMap, nil
+}

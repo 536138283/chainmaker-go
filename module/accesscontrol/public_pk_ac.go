@@ -96,6 +96,8 @@ type pkACProvider struct {
 	resourceNamePolicyMap *sync.Map
 
 	exceptionalPolicyMap *sync.Map
+
+	consensusType consensus.ConsensusType
 }
 
 type publicAdminMemberModel struct {
@@ -109,6 +111,7 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	if err != nil {
 		return nil, err
 	}
+	pkAcProvider.consensusType = chainConf.ChainConfig().Consensus.Type
 	chainConf.AddWatch(pkAcProvider)
 	return pkAcProvider, nil
 }
@@ -558,4 +561,24 @@ func (p *pkACProvider) GetValidEndorsements(principal protocol.Principal) ([]*co
 		roleList[roleRaw] = true
 	}
 	return p.getValidEndorsements(orgList, roleList, endorsements), nil
+}
+
+func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
+	var policyMap = make(map[string]*pbac.Policy)
+	if p.consensusType == consensus.ConsensusType_DPOS {
+		for k, v := range pkResourcePolicyForDPOS {
+			policyMap[k] = newPbPolicyFromPolicy(v)
+		}
+		for k, v := range pkExpResourcePolicyForDPOS {
+			policyMap[k] = newPbPolicyFromPolicy(v)
+		}
+	} else {
+		for k, v := range pkResourcePolicy {
+			policyMap[k] = newPbPolicyFromPolicy(v)
+		}
+		for k, v := range pkExpResourcePolicy {
+			policyMap[k] = newPbPolicyFromPolicy(v)
+		}
+	}
+	return policyMap, nil
 }
