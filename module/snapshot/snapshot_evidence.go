@@ -22,7 +22,7 @@ type SnapshotEvidence struct {
 	log      protocol.Logger
 }
 
-func (s *SnapshotEvidence) GetKeys(txExecSeq int, Keys []*protogo.BatchKey) ([]*protogo.BatchKey, error) {
+func (s *SnapshotEvidence) GetKeys(txExecSeq int, keys []*protogo.BatchKey) ([]*protogo.BatchKey, error) {
 	//TODO implement me
 	panic("implement me")
 }
