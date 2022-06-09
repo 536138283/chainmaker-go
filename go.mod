@@ -11,7 +11,7 @@ require (
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.2.0
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220602090304-b643761f502d
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220601110618-0cd95ef35486
-	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220607072324-27d0d63f7b41
+	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220607115425-03689a750027
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220607065325-81b19abf90a7
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220601102651-293b88d0a08d
 	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220601104819-7fa7eb01b444
@@ -27,10 +27,10 @@ require (
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220607132427-8ae4e2c281a9
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220527114415-d0cc67f922c9
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220310130906-fc7031ec25c7
-	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220607073108-4f71ba6f693f
+	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220608181509-3b41c40e61f1
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220607094042-3ca5fa0b052d
+	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220608183956-8a08189c4d3c
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
