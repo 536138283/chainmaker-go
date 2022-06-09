@@ -27,12 +27,22 @@ type BlockWithRWSet struct {
 	Block *Block `json:"block,omitempty"`
 }
 
-type TxResponse struct {
+type CreateUpgradeContractTxResponse struct {
 	*common.TxResponse
-	ContractResult *ContractResult `json:"contract_result"`
+	ContractResult *CreateUpgradeContractContractResult `json:"contract_result"`
 }
 
-type ContractResult struct {
+type CreateUpgradeContractContractResult struct {
 	*common.ContractResult
 	Result *common.Contract `json:"result"`
+}
+
+type EvmTxResponse struct {
+	*common.TxResponse
+	ContractResult *EvmContractResult `json:"contract_result"`
+}
+
+type EvmContractResult struct {
+	*common.ContractResult
+	Result string `json:"result"`
 }

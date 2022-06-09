@@ -394,9 +394,9 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	util.PrintPrettyJson(types.TxResponse{
+	util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
 		TxResponse: resp,
-		ContractResult: &types.ContractResult{
+		ContractResult: &types.CreateUpgradeContractContractResult{
 			ContractResult: resp.ContractResult,
 			Result:         &contract,
 		},
@@ -430,7 +430,8 @@ func invokeUserContract() error {
 	}
 
 	var kvs []*common.KeyValuePair
-	var evmMethod *abi.ABI
+	var contractAbi *abi.ABI
+	var evmMethodId string
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -438,17 +439,10 @@ func invokeUserContract() error {
 			return err
 		}
 
-		contractAbi, err := abi.JSON(bytes.NewReader(abiBytes))
+		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
 		if err != nil {
 			return err
 		}
-
-		//m, exist := contractAbi.Methods[method]
-		//if !exist {
-		//	return fmt.Errorf("method '%s' not found", method)
-		//}
-		//evmMethod = &m
-		evmMethod = contractAbi
 
 		inputData, err := util.Pack(contractAbi, method, params)
 		if err != nil {
@@ -456,7 +450,7 @@ func invokeUserContract() error {
 		}
 
 		inputDataHexStr := hex.EncodeToString(inputData)
-		method = inputDataHexStr[0:8]
+		evmMethodId = inputDataHexStr[0:8]
 
 		kvs = []*common.KeyValuePair{
 			{
@@ -481,9 +475,9 @@ func invokeUserContract() error {
 	}
 
 	if txId != "" {
-		invokeContract(cc, contractName, method, txId, kvs, evmMethod, limit)
+		invokeContract(cc, contractName, method, evmMethodId, txId, kvs, contractAbi, limit)
 	} else {
-		Dispatch(cc, contractName, method, kvs, evmMethod, limit)
+		Dispatch(cc, contractName, method, evmMethodId, kvs, contractAbi, limit)
 	}
 	return nil
 }
@@ -704,9 +698,9 @@ func upgradeUserContract() error {
 	if err != nil {
 		return err
 	}
-	util.PrintPrettyJson(types.TxResponse{
+	util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
 		TxResponse: resp,
-		ContractResult: &types.ContractResult{
+		ContractResult: &types.CreateUpgradeContractContractResult{
 			ContractResult: resp.ContractResult,
 			Result:         &contract,
 		},
