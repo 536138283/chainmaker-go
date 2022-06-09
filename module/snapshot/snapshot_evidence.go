@@ -14,11 +14,17 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/vm-docker-go/v2/pb_sdk/protogo"
 )
 
 type SnapshotEvidence struct {
 	delegate *SnapshotImpl
 	log      protocol.Logger
+}
+
+func (s *SnapshotEvidence) GetKeys(txExecSeq int, Keys []*protogo.BatchKey) ([]*protogo.BatchKey, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *SnapshotEvidence) GetPreSnapshot() protocol.Snapshot {
