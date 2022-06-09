@@ -36,6 +36,7 @@ const ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT = "admin orgId & key list length n
 
 var (
 	errAdminOrgIdKeyCertIsEmpty = errors.New("admin orgId or key or cert list is empty")
+	noConstructorErrMsg         = "contract does not have a constructor"
 )
 
 type UserContract struct {
@@ -317,7 +318,9 @@ func createUserContract() error {
 
 		inputData, err := util.Pack(contractAbi, "", params)
 		if err != nil {
-			return err
+			if err.Error() != noConstructorErrMsg {
+				return err
+			}
 		}
 
 		inputDataHexStr := hex.EncodeToString(inputData)
