@@ -15,6 +15,7 @@ import (
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/vm-docker-go/v2/pb_sdk/protogo"
 )
 
 // Storage interface for smart contracts, implement TxSimContext
@@ -34,6 +35,11 @@ type txQuerySimContextImpl struct {
 	rowCache         map[int32]interface{}
 	blockVersion     uint32
 	keyIndex         int
+}
+
+func (s *txQuerySimContextImpl) GetKeys(keys []*protogo.BatchKey) ([]*protogo.BatchKey, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *txQuerySimContextImpl) PutIntoReadSet(contractName string, key []byte, value []byte) {
