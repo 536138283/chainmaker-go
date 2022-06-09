@@ -15,11 +15,10 @@ type Panic struct {
 }
 
 func GetPanic(msgs []string) *Panic {
-	panic := &Panic{
+	return &Panic{
 		Message: msgs[0][7:],
 		Stack:   strings.Join(msgs[3:], "\n"),
 	}
-	return panic
 }
 
 func (p *Panic) Replace(msg string) string {

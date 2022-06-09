@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 package defau1t
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/common/v2/birdsnest"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -15,7 +15,7 @@ type TxFilter struct {
 	store protocol.BlockchainStore
 }
 
-func (f TxFilter) ValidateRule(_ string, _ ...common.RuleType) error {
+func (f TxFilter) ValidateRule(_ string, _ ...birdsnest.RuleType) error {
 	return nil
 }
 
@@ -38,7 +38,7 @@ func (f TxFilter) SetHeight(_ uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f TxFilter) IsExistsAndReturnHeight(txId string, _ ...common.RuleType) (bool, uint64, error) {
+func (f TxFilter) IsExistsAndReturnHeight(txId string, _ ...birdsnest.RuleType) (bool, uint64, error) {
 	return f.store.TxExistsInFullDB(txId)
 }
 
@@ -58,7 +58,7 @@ func (f TxFilter) AddsAndSetHeight(_ []string, _ uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f TxFilter) IsExists(txId string, _ ...common.RuleType) (bool, error) {
+func (f TxFilter) IsExists(txId string, _ ...birdsnest.RuleType) (bool, error) {
 	return f.store.TxExists(txId)
 }
 

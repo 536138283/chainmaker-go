@@ -12,12 +12,12 @@ import (
 	"fmt"
 	"sync"
 
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
-
+	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
@@ -111,7 +111,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 
 	if verifyMode != QuickSyncVerifyMode {
 		if mode == protocol.CONSENSUS_VERIFY {
-			isExist, err = filter.IsExists(tx.Payload.TxId, commonpb.RuleType_AbsoluteExpireTime)
+			isExist, err = filter.IsExists(tx.Payload.TxId, bn.RuleType_AbsoluteExpireTime)
 		} else {
 			isExist, err = filter.IsExists(tx.Payload.TxId)
 		}
@@ -448,7 +448,7 @@ func ValidateTxRules(filter protocol.TxFilter, txs []*commonpb.Transaction) (
 
 func validateTxIds(filter protocol.TxFilter, ids []string) (errorIdIndexes []int) {
 	for i, id := range ids {
-		err := filter.ValidateRule(id, commonpb.RuleType_AbsoluteExpireTime)
+		err := filter.ValidateRule(id, bn.RuleType_AbsoluteExpireTime)
 		if err != nil {
 			errorIdIndexes = append(errorIdIndexes, i)
 		}
