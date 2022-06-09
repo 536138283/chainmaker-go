@@ -112,7 +112,7 @@ start_docker_vm() {
         docker run -itd \
         -v "$mount_path":/mount \
         -v "$log_path":/log \
-        -p "$EXPOSE_PORT":"$EXPOSE_PORT" \
+        --net=host \
         -e CHAIN_RPC_PROTOCOL="1" \
         -e CHAIN_RPC_PORT="$contract_engine_port" \
         -e SANDBOX_RPC_PORT="$runtime_server_port" \
