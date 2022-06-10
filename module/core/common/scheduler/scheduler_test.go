@@ -185,7 +185,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
-		Crypto: &crypto,
+		Crypto:   &crypto,
 		Contract: &contractConf,
 		Core: &configpb.CoreConfig{
 			EnableSenderGroup:        enableSenderGroup,
