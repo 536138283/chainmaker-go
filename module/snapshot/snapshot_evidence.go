@@ -13,8 +13,8 @@ import (
 
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	pb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/vm-docker-go/v2/pb_sdk/protogo"
 )
 
 type SnapshotEvidence struct {
@@ -22,7 +22,7 @@ type SnapshotEvidence struct {
 	log      protocol.Logger
 }
 
-func (s *SnapshotEvidence) GetKeys(txExecSeq int, keys []*protogo.BatchKey) ([]*protogo.BatchKey, error) {
+func (s *SnapshotEvidence) GetKeys(txExecSeq int, keys []*pb.BatchKey) ([]*pb.BatchKey, error) {
 	//TODO implement me
 	panic("implement me")
 }

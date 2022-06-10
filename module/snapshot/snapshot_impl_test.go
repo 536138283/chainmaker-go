@@ -20,9 +20,9 @@ import (
 	"chainmaker.org/chainmaker/logger/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	pb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
-	"chainmaker.org/chainmaker/vm-docker-go/v2/pb_sdk/protogo"
 	uatomic "go.uber.org/atomic"
 	uberAtomic "go.uber.org/atomic"
 )
@@ -38,7 +38,7 @@ type MockSimContextImpl struct {
 	txResult     *commonPb.Result
 }
 
-func (s *MockSimContextImpl) GetKeys(keys []*protogo.BatchKey) ([]*protogo.BatchKey, error) {
+func (s *MockSimContextImpl) GetKeys(keys []*pb.BatchKey) ([]*pb.BatchKey, error) {
 	//TODO implement me
 	panic("implement me")
 }
