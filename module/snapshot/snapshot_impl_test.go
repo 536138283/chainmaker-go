@@ -13,15 +13,14 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
-
-	"chainmaker.org/chainmaker/logger/v2"
-
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker/logger/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	uatomic "go.uber.org/atomic"
@@ -37,6 +36,11 @@ type MockSimContextImpl struct {
 	txRwSet      *commonPb.TxRWSet
 	currentDepth int
 	txResult     *commonPb.Result
+}
+
+func (s *MockSimContextImpl) GetKeys(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *MockSimContextImpl) GetBlockTimestamp() int64 {

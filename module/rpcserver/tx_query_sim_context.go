@@ -14,6 +14,7 @@ import (
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -34,6 +35,11 @@ type txQuerySimContextImpl struct {
 	rowCache         map[int32]interface{}
 	blockVersion     uint32
 	keyIndex         int
+}
+
+func (s *txQuerySimContextImpl) GetKeys(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *txQuerySimContextImpl) PutIntoReadSet(contractName string, key []byte, value []byte) {
