@@ -157,7 +157,7 @@ function generate_config() {
     if  [ ! -z "$enable_dockervm" ]; then
       if  [ $enable_dockervm == "YES" ]; then
           ENABLE_DOCKERVM="true"
-          echo "enable docker vm"
+        #   echo "enable docker vm"
             
           read -p "start docker vm with chain (Y(default)|N)" start_now
           if  [ ! -z "$start_now" ] ;then

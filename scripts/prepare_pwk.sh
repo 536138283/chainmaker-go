@@ -132,6 +132,10 @@ function generate_config() {
     TRUSTED_PORT=13301
     DOCKER_VM_CONTAINER_NAME_PREFIX="chainmaker-vm-docker-go-container"
     ENABLE_DOCKERVM="false"
+    DOCKER_VM_RUNTIME_PORT=32351
+    DOCKER_VM_ENGINE_PORT=22351
+    DOCKER_VM_LOG_LEVEL="INFO"
+    START_DOCKER_VM_START_NOW="true"
 
     read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
     if  [ ! -z "$tmp" ] ;then
@@ -161,12 +165,32 @@ function generate_config() {
     fi
 
     read -p "enable docker vm (YES|NO(default))" enable_dockervm
-        if  [ ! -z "$enable_dockervm" ]; then
-          if  [ $enable_dockervm == "YES" ]; then
-              ENABLE_DOCKERVM="true"
-              echo "enable docker vm"
+    if  [ ! -z "$enable_dockervm" ]; then
+      if  [ $enable_dockervm == "YES" ]; then
+          ENABLE_DOCKERVM="true"
+        #   echo "enable docker vm"
+            
+          read -p "start docker vm with chain (Y(default)|N)" start_now
+          if  [ ! -z "$start_now" ] ;then
+              if [ $start_now == "Y" ] || [ $start_now == "y" ] || [ $start_now == "yes" ] || [ $start_now == "YES" ]; then
+                  START_DOCKER_VM_START_NOW="true"
+              elif [ $start_now == "N" ] || [ $start_now == "n" ] || [ $start_now == "NO" ] || [ $start_now == "no" ]; then
+                  START_DOCKER_VM_START_NOW="false"
+              else
+                  echo "unknown input [" $start_now "], so use default"
+              fi
           fi
-        fi
+            
+          read -p "input docker vm log level (DEBUG|INFO(default)|WARN|ERROR): " dockervm_log_level
+          if  [ ! -z "$dockervm_log_level" ] ;then
+          if  [ $dockervm_log_level == "DEBUG" ] || [ $dockervm_log_level == "INFO" ] || [ $dockervm_log_level == "WARN" ] || [ $dockervm_log_level == "ERROR" ];then
+              DOCKER_VM_LOG_LEVEL=$dockervm_log_level
+          else
+              echo "unknown dockervm log level [" $dockervm_log_level "], so use default"
+          fi
+          fi
+      fi
+    fi
 
     cd "${BUILD_PATH}"
     if [ -d config ]; then
@@ -194,6 +218,10 @@ function generate_config() {
         xsed "s%{trusted_port}%$(($TRUSTED_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{enable_dockervm}%$ENABLE_DOCKERVM%g" node$i/chainmaker.yml
         xsed "s%{dockervm_container_name}%"${DOCKER_VM_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
+        xsed "s%{dockervm_runtime_port}%$(($DOCKER_VM_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{dockervm_engine_port}%$(($DOCKER_VM_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{dockervm_log_level}%$DOCKER_VM_LOG_LEVEL%g" node$i/chainmaker.yml
+        xsed "s%{start_dockervm_now}%$START_DOCKER_VM_START_NOW%g" node$i/chainmaker.yml
 
         system=$(uname)
 
