@@ -266,6 +266,7 @@ func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
 	return nil
 }
 
+// NewMember creates a member from pb Member
 func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error) {
 	cache := p.getMemberFromCache(pbMember)
 	if cache != nil {
@@ -471,6 +472,7 @@ func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePol
 	return true
 }
 
+// LookUpPolicy returns corresponding policy configured for the given resource name
 func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
@@ -480,6 +482,7 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	return pbPolicy, nil
 }
 
+// LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
 func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
 	pol, ok := p.exceptionalPolicyMap.Load(resourceName)
 	if !ok {
@@ -534,10 +537,12 @@ func (p *pkACProvider) VerifyPrincipal(principal protocol.Principal) (bool, erro
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
+//GetMemberStatus get the status information of the member
 func (p *pkACProvider) GetMemberStatus(member *pbac.Member) (pbac.MemberStatus, error) {
 	return pbac.MemberStatus_NORMAL, nil
 }
 
+//VerifyRelatedMaterial verify the member's relevant identity material
 func (p *pkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 	return true, nil
 }
@@ -563,6 +568,7 @@ func (p *pkACProvider) GetValidEndorsements(principal protocol.Principal) ([]*co
 	return p.getValidEndorsements(orgList, roleList, endorsements), nil
 }
 
+//GetAllPolicy returns all default policies
 func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	if p.consensusType == consensus.ConsensusType_DPOS {
