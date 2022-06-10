@@ -14,7 +14,7 @@ import (
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	pb "chainmaker.org/chainmaker/pb-go/v2/vm"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -37,7 +37,7 @@ type txQuerySimContextImpl struct {
 	keyIndex         int
 }
 
-func (s *txQuerySimContextImpl) GetKeys(keys []*pb.BatchKey) ([]*pb.BatchKey, error) {
+func (s *txQuerySimContextImpl) GetKeys(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	//TODO implement me
 	panic("implement me")
 }

@@ -16,7 +16,7 @@ import (
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	pb "chainmaker.org/chainmaker/pb-go/v2/vm"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"go.uber.org/atomic"
 )
@@ -160,15 +160,15 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 }
 
 // GetKeys from snapshot
-func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*pb.BatchKey) ([]*pb.BatchKey, error) {
+func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	var (
 		done              bool
 		err               error
-		writeSetValues    []*pb.BatchKey
-		readSetValues     []*pb.BatchKey
-		emptyWriteSetKeys []*pb.BatchKey
-		emptyReadSetKeys  []*pb.BatchKey
-		value             []*pb.BatchKey
+		writeSetValues    []*vmPb.BatchKey
+		readSetValues     []*vmPb.BatchKey
+		emptyWriteSetKeys []*vmPb.BatchKey
+		emptyReadSetKeys  []*vmPb.BatchKey
+		value             []*vmPb.BatchKey
 	)
 	// get key before txExecSeq
 	snapshotSize := s.GetSnapshotSize()
@@ -202,14 +202,14 @@ func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*pb.BatchKey) ([]*pb.BatchK
 	return append(objects, append(value, append(readSetValues, writeSetValues...)...)...), nil
 }
 
-func (s *SnapshotImpl) getObjects(keys []*pb.BatchKey) ([]*pb.BatchKey, error) {
+func (s *SnapshotImpl) getObjects(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	var contractName string
 	if len(keys) > 0 {
 		contractName = keys[0].ContractName
 	}
 	// index keys
-	indexKeys := make(map[int]*pb.BatchKey, len(keys))
-	res := make([]*pb.BatchKey, len(keys))
+	indexKeys := make(map[int]*vmPb.BatchKey, len(keys))
+	res := make([]*vmPb.BatchKey, len(keys))
 	inputKeys := make([][]byte, len(keys))
 	for i, key := range keys {
 		indexKeys[i] = key
@@ -231,10 +231,10 @@ func (s *SnapshotImpl) getObjects(keys []*pb.BatchKey) ([]*pb.BatchKey, error) {
 }
 
 // getBatchFromWriteSet  getBatchFromWriteSet
-func (s *SnapshotImpl) getBatchFromWriteSet(keys []*pb.BatchKey) ([]*pb.BatchKey,
-	[]*pb.BatchKey, bool) {
-	txWrites := make([]*pb.BatchKey, len(keys))
-	emptyTxWrite := make([]*pb.BatchKey, len(keys))
+func (s *SnapshotImpl) getBatchFromWriteSet(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey,
+	[]*vmPb.BatchKey, bool) {
+	txWrites := make([]*vmPb.BatchKey, len(keys))
+	emptyTxWrite := make([]*vmPb.BatchKey, len(keys))
 	for _, key := range keys {
 		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
 		if sv, ok := s.writeTable[finalKey]; ok {
@@ -252,10 +252,10 @@ func (s *SnapshotImpl) getBatchFromWriteSet(keys []*pb.BatchKey) ([]*pb.BatchKey
 }
 
 // getBatchFromReadSet  getBatchFromReadSet
-func (s *SnapshotImpl) getBatchFromReadSet(keys []*pb.BatchKey) ([]*pb.BatchKey,
-	[]*pb.BatchKey, bool) {
-	txReads := make([]*pb.BatchKey, len(keys))
-	emptyTxReadsKeys := make([]*pb.BatchKey, len(keys))
+func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey,
+	[]*vmPb.BatchKey, bool) {
+	txReads := make([]*vmPb.BatchKey, len(keys))
+	emptyTxReadsKeys := make([]*vmPb.BatchKey, len(keys))
 	for _, key := range keys {
 		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
 		if sv, ok := s.readTable[finalKey]; ok {
