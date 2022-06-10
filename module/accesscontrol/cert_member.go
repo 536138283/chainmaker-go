@@ -49,22 +49,27 @@ type certificateMember struct {
 	isCompressed bool
 }
 
+// GetMemberId returns the identity of this member (non-uniqueness)
 func (cm *certificateMember) GetMemberId() string {
 	return cm.id
 }
 
+// GetOrgId returns the organization id which this member belongs to
 func (cm *certificateMember) GetOrgId() string {
 	return cm.orgId
 }
 
+// GetRole returns roles of this member
 func (cm *certificateMember) GetRole() protocol.Role {
 	return cm.role
 }
 
+// GetUid returns the identity of this member (unique)
 func (cm *certificateMember) GetUid() string {
 	return hex.EncodeToString(cm.cert.SubjectKeyId)
 }
 
+// Verify verifies a signature over some message using this member
 func (cm *certificateMember) Verify(hashType string, msg []byte, sig []byte) error {
 	hashAlgo, err := bcx509.GetHashFromSignatureAlgorithm(cm.cert.SignatureAlgorithm)
 	if err != nil {
@@ -83,6 +88,7 @@ func (cm *certificateMember) Verify(hashType string, msg []byte, sig []byte) err
 	return nil
 }
 
+// GetMember returns Member
 func (cm *certificateMember) GetMember() (*pbac.Member, error) {
 	if cm.isCompressed {
 		id, err := utils.GetCertificateIdFromDER(cm.cert.Raw, cm.hashType)
