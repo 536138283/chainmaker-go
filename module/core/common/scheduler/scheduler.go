@@ -69,7 +69,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 	txBatchSize := len(txBatch)
-	ts.log.Infof("schedule tx batch start, height:%v, size:%d", block.Header.BlockHeight, txBatchSize)
+	ts.log.Infof("schedule tx batch start, block_number = %v, size = %d", block.Header.BlockHeight, txBatchSize)
 
 	var goRoutinePool *ants.Pool
 	var err error
@@ -82,10 +82,11 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	timeoutC := time.After(ScheduleTimeout * time.Second)
 	startTime := time.Now()
+
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
 
-	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
+	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
 	var senderGroup *SenderGroup
@@ -170,7 +171,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	// if the block is not empty, append the charging gas tx
-	if ts.checkGasEnable() && enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
 		ts.log.Debug("append charge gas tx to block ...")
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
 	}
@@ -479,7 +480,6 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
-
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
 	ts.log.Debugf("tx.Result = %v", tx.Result)
@@ -488,7 +488,7 @@ func (ts *TxScheduler) executeTx(
 		txSimContext.SetTxResult(tx.Result)
 		return txSimContext, protocol.ExecOrderTxTypeNormal, false
 	}
-	enableOptimizeChargeGas := ts.chainConf.ChainConfig().Core.EnableOptimizeChargeGas
+	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
 	runVmSuccess := true
 	var txResult *commonPb.Result
 	var err error
@@ -633,9 +633,9 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		return errResult(result, err)
 	}
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE && contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO {
-		byteCode, err = txSimContext.GetContractBytecode(contractName)
+		byteCode, err = txSimContext.GetContractBytecode(contract.Name)
 		if err != nil {
-			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contractName, err)
+			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
 			return errResult(result, err)
 		}
 	} else {
@@ -647,12 +647,12 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 	}
 
 	if ts.checkGasEnable() && !enableOptimizeChargeGas {
-		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contractName, method)
+		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contract.Name, method)
 		if err != nil {
 			return result, specialTxType, err
 		}
 
-		_, err = ts.chargeGasLimit(accountMangerContract, tx, txSimContext, contractName, method, pk, result)
+		_, err = ts.chargeGasLimit(accountMangerContract, tx, txSimContext, contract.Name, method, pk, result)
 		if err != nil {
 			ts.log.Errorf("charge gas limit err is %v", err)
 			result.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
@@ -668,6 +668,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
+	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
 		if !ts.checkNativeFilter(contract.Name, method) {
@@ -696,7 +697,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 			if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
 				contractResultPayload); err != nil {
 				ts.log.Errorf("refund gas err is %v", err)
-				if txSimContext.GetBlockVersion() >= 2300 {
+				if txSimContext.GetBlockVersion() >= 230 {
 					result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 					result.Message = err.Error()
 					result.ContractResult.Code = uint32(1)
@@ -718,6 +719,7 @@ func errResult(result *commonPb.Result, err error) (*commonPb.Result, protocol.E
 	result.ContractResult.Code = 1
 	return result, protocol.ExecOrderTxTypeNormal, err
 }
+
 func (ts *TxScheduler) parseParameter(
 	parameterPairs []*commonPb.KeyValuePair,
 	checkParamsNum bool) (map[string][]byte, error) {
