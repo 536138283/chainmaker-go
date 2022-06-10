@@ -46,22 +46,27 @@ type pkMember struct {
 	hashType string
 }
 
+// GetMemberId returns the identity of this member (non-uniqueness)
 func (pm *pkMember) GetMemberId() string {
 	return pm.id
 }
 
+// GetOrgId returns the organization id which this member belongs to
 func (pm *pkMember) GetOrgId() string {
 	return pm.orgId
 }
 
+// GetRole returns roles of this member
 func (pm *pkMember) GetRole() protocol.Role {
 	return pm.role
 }
 
+// GetUid returns the identity of this member (unique)
 func (pm *pkMember) GetUid() string {
 	return pm.uid
 }
 
+// Verify verifies a signature over some message using this member
 func (pm *pkMember) Verify(hashType string, msg []byte, sig []byte) error {
 
 	hash, ok := bccrypto.HashAlgoMap[hashType]
@@ -81,6 +86,7 @@ func (pm *pkMember) Verify(hashType string, msg []byte, sig []byte) error {
 	return nil
 }
 
+// GetMember returns Member
 func (pm *pkMember) GetMember() (*pbac.Member, error) {
 	memberInfo, err := pm.pk.String()
 	if err != nil {

@@ -68,3 +68,16 @@ func newPolicyFromPb(input *pbac.Policy) *policy {
 
 	return p
 }
+
+func newPbPolicyFromPolicy(input *policy) *pbac.Policy {
+	p := &pbac.Policy{
+		Rule:     string(input.rule),
+		OrgList:  input.orgList,
+		RoleList: nil,
+	}
+
+	for _, role := range input.roleList {
+		p.RoleList = append(p.RoleList, string(role))
+	}
+	return p
+}
