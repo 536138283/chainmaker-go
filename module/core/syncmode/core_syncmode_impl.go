@@ -194,6 +194,7 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.VerifyBlock, c)
 	c.msgBus.Register(msgbus.CommitBlock, c)
 	c.msgBus.Register(msgbus.TxPoolSignal, c)
+	c.msgBus.Register(msgbus.RwSetVerifyFailTxs, c)
 	//c.msgBus.Register(msgbus.BuildProposal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
