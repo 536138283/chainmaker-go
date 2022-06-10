@@ -129,39 +129,3 @@ func newTxSchedulerEvidence(vmMgr protocol.VmManager, chainConf protocol.ChainCo
 	}
 	return txSchedulerEvidence
 }
-
-// init a signer with node private key
-func initSigner(
-	chainConfig *config.ChainConfig,
-	cmConfig *localconf.CMConfig,
-	log protocol.Logger) (protocol.SigningMember, error) {
-	var err error
-	var signingMember protocol.SigningMember
-	nodeConfig := cmConfig.NodeConfig
-
-	switch chainConfig.AuthType {
-	case protocol.PermissionedWithCert, protocol.Identity:
-		signingMember, err = accesscontrol.InitCertSigningMember(
-			chainConfig,
-			nodeConfig.OrgId,
-			nodeConfig.PrivKeyFile,
-			nodeConfig.PrivKeyPassword,
-			nodeConfig.CertFile)
-		if err != nil {
-			return nil, fmt.Errorf("InitCertSigningMember failed: err = %v", err)
-		}
-	case protocol.PermissionedWithKey, protocol.Public:
-		signingMember, err = accesscontrol.InitPKSigningMember(
-			chainConfig.Crypto.Hash,
-			nodeConfig.OrgId,
-			nodeConfig.PrivKeyFile,
-			nodeConfig.PrivKeyPassword)
-		if err != nil {
-			return nil, fmt.Errorf("InitPKSigningMember failed: err = %v", err)
-		}
-	default:
-		return nil, fmt.Errorf("unknown auth type: %v", chainConfig.AuthType)
-	}
-
-	return signingMember, nil
-}
