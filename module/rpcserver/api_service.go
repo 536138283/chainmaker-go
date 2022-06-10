@@ -498,9 +498,7 @@ func (s *ApiService) withDefaultResourcePolicy(result []byte, chainId string) []
 	oldPolicyMap, err2 := blockchain.GetAccessControl().GetAllPolicy()
 	if err1 == nil && err2 == nil {
 		for _, newPolicy := range newPolicies {
-			if _, ok := oldPolicyMap[newPolicy.ResourceName]; ok {
-				oldPolicyMap[newPolicy.ResourceName] = newPolicy.Policy
-			}
+			oldPolicyMap[newPolicy.ResourceName] = newPolicy.Policy
 		}
 		for k, v := range oldPolicyMap {
 			resourcePolicies = append(resourcePolicies, &configPb.ResourcePolicy{
