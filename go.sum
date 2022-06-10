@@ -57,6 +57,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220606105827-5d393effd214/go.mo
 chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220607123324-549fe5120356/go.mod h1:CycGCqlfKqlYb7a8lNyZZxO31QVLvkRGoGxMQPm/e1U=
 chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220609101924-0d32ed8d2053 h1:lchEqIQi2aSuDC++4UXa5juFOW7mZ4Lyad81Y3CuULQ=
 chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220609101924-0d32ed8d2053/go.mod h1:CycGCqlfKqlYb7a8lNyZZxO31QVLvkRGoGxMQPm/e1U=
+chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220610060515-62a187be45da h1:FBqO+9Y7T16tsPOA2l5Vo1PbyT91bKKTGDQhdTWH67g=
+chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220610060515-62a187be45da/go.mod h1:CycGCqlfKqlYb7a8lNyZZxO31QVLvkRGoGxMQPm/e1U=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0 h1:8TNEw1XtWBZkjqoNgcc9qoD/0xFkSb0SDXyzM2rQxjo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
 chainmaker.org/chainmaker/sdk-go/v2 v2.2.1-0.20220520064232-296dc75ebfae h1:qqFoMJ0qioavFLkNk1/K9mdKZ+E+BUHvbv4sgTmgVvs=
