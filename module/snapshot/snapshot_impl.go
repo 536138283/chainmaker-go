@@ -12,14 +12,13 @@ import (
 	"strings"
 	"sync"
 
+	"chainmaker.org/chainmaker/common/v2/bitmap"
 	"chainmaker.org/chainmaker/localconf/v2"
-
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"go.uber.org/atomic"
-
-	"chainmaker.org/chainmaker/common/v2/bitmap"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"go.uber.org/atomic"
 )
 
 // The record value is written by the SEQ corresponding to TX
@@ -158,6 +157,119 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 	}
 
 	return s.blockchainStore.ReadObject(contractName, key)
+}
+
+// GetKeys from snapshot
+func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
+	var (
+		done              bool
+		err               error
+		writeSetValues    []*vmPb.BatchKey
+		readSetValues     []*vmPb.BatchKey
+		emptyWriteSetKeys []*vmPb.BatchKey
+		emptyReadSetKeys  []*vmPb.BatchKey
+		value             []*vmPb.BatchKey
+	)
+	// get key before txExecSeq
+	snapshotSize := s.GetSnapshotSize()
+
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+	if txExecSeq > snapshotSize || txExecSeq < 0 {
+		txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
+	}
+
+	if writeSetValues, emptyWriteSetKeys, done = s.getBatchFromWriteSet(keys); done {
+		return writeSetValues, nil
+	}
+
+	if readSetValues, emptyReadSetKeys, done = s.getBatchFromReadSet(emptyWriteSetKeys); done {
+		return append(readSetValues, writeSetValues...), nil
+	}
+
+	iter := s.preSnapshot
+	for iter != nil {
+		if value, err = iter.GetKeys(-1, emptyReadSetKeys); err == nil {
+			return append(value, append(readSetValues, writeSetValues...)...), nil
+		}
+		iter = iter.GetPreSnapshot()
+	}
+
+	objects, err := s.getObjects(emptyReadSetKeys)
+	if err != nil {
+		return nil, err
+	}
+	return append(objects, append(value, append(readSetValues, writeSetValues...)...)...), nil
+}
+
+func (s *SnapshotImpl) getObjects(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
+	var contractName string
+	if len(keys) > 0 {
+		contractName = keys[0].ContractName
+	}
+	// index keys
+	indexKeys := make(map[int]*vmPb.BatchKey, len(keys))
+	res := make([]*vmPb.BatchKey, len(keys))
+	inputKeys := make([][]byte, len(keys))
+	for i, key := range keys {
+		indexKeys[i] = key
+		inputKeys = append(inputKeys, protocol.GetKeyStr(key.Key, key.Field))
+	}
+
+	readObjects, err := s.blockchainStore.ReadObjects(contractName, inputKeys)
+	if err != nil {
+		return nil, err
+	}
+
+	// construct keys from read objects and index keys
+	for i, value := range readObjects {
+		key := indexKeys[i]
+		key.Value = value
+		res = append(res, key)
+	}
+	return res, nil
+}
+
+// getBatchFromWriteSet  getBatchFromWriteSet
+func (s *SnapshotImpl) getBatchFromWriteSet(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey,
+	[]*vmPb.BatchKey, bool) {
+	txWrites := make([]*vmPb.BatchKey, len(keys))
+	emptyTxWrite := make([]*vmPb.BatchKey, len(keys))
+	for _, key := range keys {
+		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
+		if sv, ok := s.writeTable[finalKey]; ok {
+			key.Value = sv.value
+			txWrites = append(txWrites, key)
+		} else {
+			emptyTxWrite = append(emptyTxWrite, key)
+		}
+	}
+
+	if len(emptyTxWrite) == 0 {
+		return txWrites, nil, true
+	}
+	return txWrites, emptyTxWrite, false
+}
+
+// getBatchFromReadSet  getBatchFromReadSet
+func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey,
+	[]*vmPb.BatchKey, bool) {
+	txReads := make([]*vmPb.BatchKey, len(keys))
+	emptyTxReadsKeys := make([]*vmPb.BatchKey, len(keys))
+	for _, key := range keys {
+		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
+		if sv, ok := s.readTable[finalKey]; ok {
+			key.Value = sv.value
+			txReads = append(txReads, key)
+		} else {
+			emptyTxReadsKeys = append(emptyTxReadsKeys, key)
+		}
+	}
+
+	if len(emptyTxReadsKeys) == 0 {
+		return txReads, nil, true
+	}
+	return txReads, emptyTxReadsKeys, false
 }
 
 // ApplyTxSimContext add TxSimContext to the snapshot, return current applied tx num whether success of not

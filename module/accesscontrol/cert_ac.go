@@ -555,6 +555,7 @@ func (cp *certACProvider) GetHashAlg() string {
 	return cp.acService.hashType
 }
 
+// NewMember creates a member from pb Member
 func (cp *certACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error) {
 
 	var memberTmp *pbac.Member
@@ -647,14 +648,17 @@ func (cp *certACProvider) CreatePrincipal(resourceName string, endorsements []*c
 	return cp.acService.createPrincipal(resourceName, endorsements, message)
 }
 
+// LookUpPolicy returns corresponding policy configured for the given resource name
 func (cp *certACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	return cp.acService.lookUpPolicy(resourceName)
 }
 
+// LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
 func (cp *certACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
 	return cp.acService.lookUpExceptionalPolicy(resourceName)
 }
 
+//GetMemberStatus get the status information of the member
 func (cp *certACProvider) GetMemberStatus(pbMember *pbac.Member) (pbac.MemberStatus, error) {
 
 	member, err := cp.NewMember(pbMember)
@@ -678,6 +682,7 @@ func (cp *certACProvider) GetMemberStatus(pbMember *pbac.Member) (pbac.MemberSta
 	return pbac.MemberStatus_NORMAL, nil
 }
 
+//VerifyRelatedMaterial verify the member's relevant identity material
 func (cp *certACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 
 	if verifyType != pbac.VerifyType_CRL {
@@ -1157,4 +1162,16 @@ func (cp *certACProvider) GetValidEndorsements(principal protocol.Principal) ([]
 		roleList[roleRaw] = true
 	}
 	return cp.acService.getValidEndorsements(orgList, roleList, endorsements), nil
+}
+
+//GetAllPolicy returns all default policies
+func (p *certACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
+	var policyMap = make(map[string]*pbac.Policy)
+	for k, v := range defaultResourcePolicy {
+		policyMap[k] = newPbPolicyFromPolicy(v)
+	}
+	for k, v := range defaultExpResourcePolicy {
+		policyMap[k] = newPbPolicyFromPolicy(v)
+	}
+	return policyMap, nil
 }

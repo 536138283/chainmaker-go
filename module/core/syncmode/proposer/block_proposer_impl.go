@@ -69,6 +69,12 @@ type BlockProposerImpl struct {
 	storeHelper  conf.StoreHelper
 }
 
+// OnReceiveRwSetVerifyFailTxs @Description:
+func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
+	//TODO implement me
+	panic("implement me")
+}
+
 type BlockProposerConfig struct {
 	ChainId         string
 	TxPool          protocol.TxPool

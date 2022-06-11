@@ -16,20 +16,20 @@ require (
 	chainmaker.org/chainmaker/net-common v1.1.1
 	chainmaker.org/chainmaker/net-libp2p v1.1.1
 	chainmaker.org/chainmaker/net-liquid v1.0.2
-	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220607022950-903a61e6baf7
-	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220607023259-e44a6702c658
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220610130509-c60ae43cb8a5
+	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220610132334-904790e2009e
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.1-0.20220520064232-296dc75ebfae
-	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220517141657-3661434d5387
+	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220608071832-b05cc8f6586d
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.2-0.20220505075429-1188accd427f
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.2-0.20220505075645-d8a19c71df31
 	chainmaker.org/chainmaker/utils/v2 v2.2.2
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220601074131-15dd90d2aa02
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220610133513-3f231938ade2
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220524102246-7d975a42079b
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
 	chainmaker.org/chainmaker/vm-native/v2 v2.2.2-0.20220531033736-df16486abc28
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220511025424-a3cda7f42c9c
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220530090320-3fd5ccd1d191
+	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220610101324-53617d232096
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -47,6 +47,7 @@ require (
 	github.com/hokaccha/go-prettyjson v0.0.0-20201222001619-a42f9ac2ec8e
 	github.com/holiman/uint256 v1.2.0
 	github.com/hpcloud/tail v1.0.0
+	github.com/kr/pretty v0.2.1 // indirect
 	github.com/linvon/cuckoo-filter v0.4.0
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/mitchellh/mapstructure v1.4.2
