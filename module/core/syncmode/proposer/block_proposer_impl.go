@@ -12,8 +12,9 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
+
+	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
@@ -67,12 +68,6 @@ type BlockProposerImpl struct {
 
 	blockBuilder *common.BlockBuilder
 	storeHelper  conf.StoreHelper
-}
-
-// OnReceiveRwSetVerifyFailTxs @Description:
-func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
-	//TODO implement me
-	panic("implement me")
 }
 
 type BlockProposerConfig struct {
