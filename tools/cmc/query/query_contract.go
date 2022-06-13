@@ -125,7 +125,6 @@ func newQueryDisableNativeContractListOnChainCMD() *cobra.Command {
 		Use:   "disable",
 		Short: "query on-chain disable native contract list",
 		Long:  "query on-chain disable native contract list",
-		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 1.Chain Client
 			cc, err := sdk.NewChainClient(
