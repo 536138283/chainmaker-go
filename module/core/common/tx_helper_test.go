@@ -751,7 +751,7 @@ func TestVerifierTx_verifyTx(t *testing.T) {
 				stat: &VerifyStat{
 					TotalCount: 20,
 				},
-				block: nil,
+				block: block0,
 				mode:  protocol.SYNC_VERIFY,
 			},
 			want:    nil,
