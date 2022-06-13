@@ -209,8 +209,8 @@ func (s *SnapshotImpl) getObjects(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, erro
 	}
 	// index keys
 	indexKeys := make(map[int]*vmPb.BatchKey, len(keys))
-	res := make([]*vmPb.BatchKey, len(keys))
-	inputKeys := make([][]byte, len(keys))
+	res := make([]*vmPb.BatchKey, 0, len(keys))
+	inputKeys := make([][]byte, 0, len(keys))
 	for i, key := range keys {
 		indexKeys[i] = key
 		inputKeys = append(inputKeys, protocol.GetKeyStr(key.Key, key.Field))
@@ -233,8 +233,8 @@ func (s *SnapshotImpl) getObjects(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, erro
 // getBatchFromWriteSet  getBatchFromWriteSet
 func (s *SnapshotImpl) getBatchFromWriteSet(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey,
 	[]*vmPb.BatchKey, bool) {
-	txWrites := make([]*vmPb.BatchKey, len(keys))
-	emptyTxWrite := make([]*vmPb.BatchKey, len(keys))
+	txWrites := make([]*vmPb.BatchKey, 0, len(keys))
+	emptyTxWrite := make([]*vmPb.BatchKey, 0, len(keys))
 	for _, key := range keys {
 		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
 		if sv, ok := s.writeTable[finalKey]; ok {
@@ -254,8 +254,8 @@ func (s *SnapshotImpl) getBatchFromWriteSet(keys []*vmPb.BatchKey) ([]*vmPb.Batc
 // getBatchFromReadSet  getBatchFromReadSet
 func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey,
 	[]*vmPb.BatchKey, bool) {
-	txReads := make([]*vmPb.BatchKey, len(keys))
-	emptyTxReadsKeys := make([]*vmPb.BatchKey, len(keys))
+	txReads := make([]*vmPb.BatchKey, 0, len(keys))
+	emptyTxReadsKeys := make([]*vmPb.BatchKey, 0, len(keys))
 	for _, key := range keys {
 		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
 		if sv, ok := s.readTable[finalKey]; ok {
