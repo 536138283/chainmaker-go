@@ -45,6 +45,7 @@ const (
 	//blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
 	BlockSig            = "blockSig"
 	VM                  = "vm"
+	DagVerify           = "dag"
 	TxVerify            = "txVerify"
 	TxRoot              = "txRoot"
 	QuickSyncVerifyMode = uint8(1) // quick sync verify mode
@@ -570,6 +571,12 @@ func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
 	return verifyBlock
 }
 
+// SetTxScheduler sets the txScheduler of VerifierBlock
+// only used for test
+func (v *VerifierBlock) SetTxScheduler(txScheduler protocol.TxScheduler) {
+	v.txScheduler = txScheduler
+}
+
 func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block, error) { //nolint: staticcheck
 	currentHeight, _ := vb.ledgerCache.CurrentHeight()
 	if currentHeight >= block.Header.BlockHeight {
@@ -619,6 +626,10 @@ func (vb *VerifierBlock) ValidateBlock(
 	snapshotTick := utils.CurrentTimeMillisSeconds()
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
+		if len(block.Dag.Vertexes) != 0 {
+			return nil, nil, timeLasts, nil, fmt.Errorf("no txs in block[%x] but dag has vertex",
+				block.Header.BlockHash)
+		}
 		return nil, nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
@@ -643,6 +654,14 @@ func (vb *VerifierBlock) ValidateBlock(
 	if block.Header.TxCount != uint32(len(txRWSetMap)) || block.Header.TxCount != uint32(len(txResultMap)) {
 		return nil, nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got txRWSetMap %d, txResultMap %d",
 			block.Header.TxCount, len(txRWSetMap), len(txResultMap))
+	}
+	// rebuild dag and verify with block.Dag
+	startDAGTick := utils.CurrentTimeMillisSeconds()
+	err = vb.CompareDag(block, snapshot, txRWSetMap)
+	dagLasts := utils.CurrentTimeMillisSeconds() - startDAGTick
+	timeLasts[DagVerify] = dagLasts
+	if err != nil {
+		return nil, nil, timeLasts, nil, fmt.Errorf("compare dag %s", err)
 	}
 
 	// 2.transaction verify
@@ -730,6 +749,10 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
 	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
+		if len(block.Dag.Vertexes) != 0 {
+			return nil, timeLasts, nil, fmt.Errorf("no txs in block[%x] but dag has vertex",
+				block.Header.BlockHash)
+		}
 		return nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
@@ -751,6 +774,14 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	if block.Header.TxCount != uint32(len(txRWSetMap)) {
 		return nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
 			block.Header.TxCount, len(txRWSetMap))
+	}
+	// rebuild dag and verify with block.Dag
+	startDAGTick := utils.CurrentTimeMillisSeconds()
+	err = vb.CompareDag(block, snapshot, txRWSetMap)
+	dagLasts := utils.CurrentTimeMillisSeconds() - startDAGTick
+	timeLasts[DagVerify] = dagLasts
+	if err != nil {
+		return nil, timeLasts, nil, fmt.Errorf("compare dag %s", err)
 	}
 
 	// 2.transaction verify
@@ -813,6 +844,28 @@ func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
 	}
 	// check if this block pre hash is equal with last block hash
 	return IsPreHashValid(block, lastBlockHash)
+}
+
+func (vb *VerifierBlock) CompareDag(block *commonPb.Block,
+	snapshot protocol.Snapshot, txRWSetMap map[string]*commonPb.TxRWSet) error {
+	txRWSetTable := make([]*commonPb.TxRWSet, len(block.Txs))
+	for txIndex, tx := range block.Txs {
+		txRWSet, ok := txRWSetMap[tx.Payload.GetTxId()]
+		if !ok {
+			return fmt.Errorf("no rwset of tx[%s]", tx.Payload.GetTxId())
+		}
+		txRWSetTable[txIndex] = txRWSet
+	}
+	dag := snapshot.BuildDAG(vb.chainConf.ChainConfig().Contract.EnableSqlSupport, txRWSetTable)
+	equal, err := utils.IsDagEqual(block.Dag, dag)
+	if err != nil {
+		return err
+	}
+	if !equal {
+		vb.log.Warnf("compare block dag %+v with simulate dag %+v", block.Dag, dag)
+		return fmt.Errorf("simulate dag not equal to block dag")
+	}
+	return nil
 }
 
 // BlockCommitterImpl implements BlockCommitter interface.
