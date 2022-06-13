@@ -83,7 +83,6 @@ func newQueryContractListOnChainCMD() *cobra.Command {
 		Use:   "list",
 		Short: "query on-chain contract list",
 		Long:  "query on-chain contract list",
-		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// 1.Chain Client
 			cc, err := sdk.NewChainClient(
@@ -141,10 +140,12 @@ func newQueryDisableNativeContractListOnChainCMD() *cobra.Command {
 			}
 
 			// 2.Query contracct list on-chain
-			var contractList interface{}
-			contractList, err = cc.GetDisabledNativeContractList()
+			contractList, err := cc.GetDisabledNativeContractList()
 			if err != nil {
 				return err
+			}
+			if contractList == nil {
+				contractList = []string{}
 			}
 			output, err := prettyjson.Marshal(contractList)
 			if err != nil {
