@@ -42,6 +42,7 @@ import (
 const (
 	ScheduleTimeout        = 10
 	ScheduleWithDagTimeout = 20
+	blockVersion2300       = uint32(2300)
 )
 
 // TxScheduler transaction scheduler structure
@@ -162,7 +163,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)
-	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport)
+	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, nil)
 
 	// Execute special tx sequentially, and add to dag
 	if len(snapshot.GetSpecialTxTable()) > 0 {
@@ -338,6 +339,12 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		startTime  = time.Now()
 		txRWSetMap = make(map[string]*commonPb.TxRWSet)
 	)
+	if block.Header.BlockVersion >= blockVersion2300 && len(block.Txs) != len(block.Dag.Vertexes) {
+		ts.log.Warnf("found dag size mismatch txs length in "+
+			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
+		return nil, nil, fmt.Errorf("found dag size mismatch txs length in "+
+			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
+	}
 	if len(block.Txs) == 0 {
 		ts.log.Debugf("no txs in block[%x] when simulate", block.Header.BlockHash)
 		return txRWSetMap, snapshot.GetTxResultMap(), nil
@@ -350,13 +357,13 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	// Construct the adjacency list of dag, which describes the subsequent adjacency transactions of all transactions
 	dag := block.Dag
-	txIndexBatch, dagRemain, reverseDagRemain := ts.initSimulateDagGraph(dag)
-
-	txBatchSize := len(block.Dag.Vertexes)
-	if txBatchSize == 0 {
-		ts.log.Error("found empty block when simulating txs")
-		return nil, nil, fmt.Errorf("found empty block when simulating txs")
+	txIndexBatch, dagRemain, reverseDagRemain, err := ts.initSimulateDag(dag)
+	if err != nil {
+		ts.log.Warnf("initialize simulate dag error:%s", err)
+		return nil, nil, err
 	}
+
+	txBatchSize := len(dag.Vertexes)
 	runningTxC := make(chan int, txBatchSize)
 	doneTxC := make(chan int, txBatchSize)
 
@@ -364,7 +371,6 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	finishC := make(chan bool)
 
 	var goRoutinePool *ants.Pool
-	var err error
 	if goRoutinePool, err = ants.NewPool(len(block.Txs), ants.WithPreAlloc(true)); err != nil {
 		return nil, nil, err
 	}
@@ -390,8 +396,9 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 					applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 						runVmSuccess, true)
 					if !applyResult {
-						ts.log.Debugf("failed to apply snapshot for tx id:%s ", tx.Payload.TxId)
-						runningTxC <- txIndex
+						ts.log.Debugf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
+						// apply fails in verification, make it done rather than retry it
+						doneTxC <- txIndex
 					} else {
 						ts.log.Debugf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
 							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
@@ -446,17 +453,29 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
 
-func (ts *TxScheduler) initSimulateDagGraph(dag *commonPb.DAG) ([]int, map[int]dagNeighbors, map[int]dagNeighbors) {
+func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
+	[]int, map[int]dagNeighbors, map[int]dagNeighbors, error) {
 	dagRemain := make(map[int]dagNeighbors)
 	reverseDagRemain := make(map[int]dagNeighbors)
 	var txIndexBatch []int
 	for txIndex, neighbors := range dag.Vertexes {
+		if neighbors == nil {
+			return nil, nil, nil, fmt.Errorf("dag has nil neighbor")
+		}
 		if len(neighbors.Neighbors) == 0 {
 			txIndexBatch = append(txIndexBatch, txIndex)
 			continue
 		}
 		dn := make(dagNeighbors)
-		for _, neighbor := range neighbors.Neighbors {
+		for index, neighbor := range neighbors.Neighbors {
+			if index > 0 {
+				if neighbors.Neighbors[index-1] >= neighbor {
+					return nil, nil, nil, fmt.Errorf("dag neighbors not strict increasing, neighbors: %v", neighbors.Neighbors)
+				}
+			}
+			if int(neighbor) >= txIndex {
+				return nil, nil, nil, fmt.Errorf("dag has neighbor >= txIndex, txIndex: %d, neighbor: %d", txIndex, neighbor)
+			}
 			dn[int(neighbor)] = true
 			if _, ok := reverseDagRemain[int(neighbor)]; !ok {
 				reverseDagRemain[int(neighbor)] = make(dagNeighbors)
@@ -465,7 +484,7 @@ func (ts *TxScheduler) initSimulateDagGraph(dag *commonPb.DAG) ([]int, map[int]d
 		}
 		dagRemain[txIndex] = dn
 	}
-	return txIndexBatch, dagRemain, reverseDagRemain
+	return txIndexBatch, dagRemain, reverseDagRemain, nil
 }
 
 func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *ConflictsBitWindow, txExecType TxExecType) {
@@ -696,7 +715,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 			if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
 				contractResultPayload); err != nil {
 				ts.log.Errorf("refund gas err is %v", err)
-				if txSimContext.GetBlockVersion() >= 2300 {
+				if txSimContext.GetBlockVersion() >= blockVersion2300 {
 					result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 					result.Message = err.Error()
 					result.ContractResult.Code = uint32(1)
