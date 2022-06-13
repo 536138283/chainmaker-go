@@ -135,7 +135,7 @@ func (s *SnapshotEvidence) Seal() {
 // change during the execution, then the execution result of the transaction is determined.
 // We need to ensure that when validating the DAG, there is no possibility that the execution of other
 // transactions will affect the dependence of the current transaction
-func (s *SnapshotEvidence) BuildDAG(isSql bool) *commonPb.DAG {
+func (s *SnapshotEvidence) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet) *commonPb.DAG {
 	if s.delegate == nil {
 		return nil
 	}
