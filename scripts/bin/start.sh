@@ -9,6 +9,7 @@
 export LD_LIBRARY_PATH=$(dirname $PWD)/lib:$LD_LIBRARY_PATH
 export PATH=$(dirname $PWD)/lib:$PATH
 export WASMER_BACKTRACE=1
+ulimit -n 655360
 
 config_file="../config/{org_id}/chainmaker.yml"
 
@@ -17,7 +18,7 @@ FORCE_CLEAN=$1
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
 start_docker_vm() {
-  image_name="chainmakerofficial/chainmaker-vm-docker-go:v2.2.2"
+  image_name="chainmakerofficial/chainmaker-vm-docker-go:v2.2.3"
 
   container_name=DOCKERVM-{org_id}
   echo "start docker vm service container: $container_name"
