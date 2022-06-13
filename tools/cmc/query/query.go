@@ -36,6 +36,7 @@ func NewQueryOnChainCMD() *cobra.Command {
 	cmd.AddCommand(newQueryBlockByHashOnChainCMD())
 	cmd.AddCommand(newQueryBlockByTxIdOnChainCMD())
 	cmd.AddCommand(newQueryArchivedHeightOnChainCMD())
+	cmd.AddCommand(newQueryContractOnChainCMD())
 
 	return cmd
 }
