@@ -81,21 +81,8 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 	txHashs := make([][]byte, 0)
 	txHashs = append(txHashs, txHash)
-	txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
-	require.Nil(t, err)
-	b1.Header.TxRoot = txRoot
 
-	dagHash, err := utils.CalcDagHash(hashType, b1.Dag)
-	require.Nil(t, err)
-	b1.Header.DagHash = dagHash
-
-	rwSetRoot, err := utils.CalcRWSetRoot(hashType, txs)
-	require.Nil(t, err)
-	b1.Header.RwSetRoot = rwSetRoot
-
-	blockHash, err := utils.CalcBlockHash("SHA256", b1)
-	require.Nil(t, err)
-	b1.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b1, txHashs)
 
 	//member := mock.NewMockMember(ctl)
 	//member.EXPECT().GetMemberId().Return("123").AnyTimes()
@@ -373,9 +360,6 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	require.Nil(t, err)
 
 	for block, ok := range testDagBlocks(t, b1) {
-		if block.Header.TxCount != 1 {
-			continue
-		}
 		err = verifier.VerifyBlockWithRwSets(block, rwSet, protocol.CONSENSUS_VERIFY)
 		if ok {
 			require.Nil(t, err)
@@ -542,12 +526,7 @@ func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
 
 	// empty dag
 	b2.Dag = &commonpb.DAG{}
-	dagHash, err := utils.CalcDagHash(hashType, b2.Dag)
-	require.Nil(t, err)
-	b2.Header.DagHash = dagHash
-	blockHash, err := utils.CalcBlockHash("SHA256", b2)
-	require.Nil(t, err)
-	b2.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b2, nil)
 
 	b3 := &commonpb.Block{
 		Header: &commonpb.BlockHeader{
@@ -574,16 +553,8 @@ func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
 	// 0 tx block and dag of 1 vertex
 	b3.Txs = []*commonpb.Transaction{}
 	txHashs := make([][]byte, 0)
-	txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
-	require.Nil(t, err)
-	b3.Header.TxRoot = txRoot
-	rwSetRoot, err := utils.CalcRWSetRoot(hashType, b3.Txs)
-	require.Nil(t, err)
-	b3.Header.RwSetRoot = rwSetRoot
-	b3.Header.TxCount = uint32(len(b3.Txs))
-	blockHash, err = utils.CalcBlockHash("SHA256", b3)
-	require.Nil(t, err)
-	b3.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b3, txHashs)
+
 	b4 := &commonpb.Block{
 		Header: &commonpb.BlockHeader{
 			BlockVersion:   b1.Header.BlockVersion,
@@ -607,17 +578,33 @@ func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
 		AdditionalData: b1.AdditionalData,
 	}
 	b4.Dag = b2.Dag
-	b4.Header.DagHash = b2.Header.DagHash
 	b4.Txs = b3.Txs
-	b4.Header.TxRoot = b3.Header.TxRoot
-	b4.Header.RwSetRoot = b3.Header.RwSetRoot
-	b4.Header.TxCount = b3.Header.TxCount
-	blockHash, err = utils.CalcBlockHash("SHA256", b4)
-	require.Nil(t, err)
-	b4.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b4, txHashs)
 	m := make(map[*commonpb.Block]bool)
 	m[b2] = false
 	m[b3] = false
 	m[b4] = false
 	return m
+}
+
+func fillHashesOfBlock(t *testing.T, b *commonpb.Block, txHashs [][]byte) {
+	b.Header.TxCount = uint32(len(b.Txs))
+
+	if txHashs != nil {
+		txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
+		require.Nil(t, err)
+		b.Header.TxRoot = txRoot
+	}
+
+	dagHash, err := utils.CalcDagHash(hashType, b.Dag)
+	require.Nil(t, err)
+	b.Header.DagHash = dagHash
+
+	rwSetRoot, err := utils.CalcRWSetRoot(hashType, b.Txs)
+	require.Nil(t, err)
+	b.Header.RwSetRoot = rwSetRoot
+
+	blockHash, err := utils.CalcBlockHash("SHA256", b)
+	require.Nil(t, err)
+	b.Header.BlockHash = blockHash
 }
