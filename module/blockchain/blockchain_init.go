@@ -16,14 +16,13 @@ import (
 	"chainmaker.org/chainmaker-go/module/txfilter"
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	"chainmaker.org/chainmaker/chainconf/v2"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	"chainmaker.org/chainmaker/vm/v2"
-
-	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
@@ -674,7 +673,7 @@ func (bc *Blockchain) initCore() (err error) {
 		bc.log.Infof("core engine module existed, ignore.")
 		return
 	}
-	var log = logger.GetLogger(logger.MODULE_SNAPSHOT)
+	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, bc.chainId)
 	// create snapshot manager
 	var snapshotFactory snapshot.Factory
 	if bc.chainConf.ChainConfig().Snapshot != nil && bc.chainConf.ChainConfig().Snapshot.EnableEvidence {
