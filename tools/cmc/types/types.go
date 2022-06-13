@@ -46,3 +46,13 @@ type EvmContractResult struct {
 	*common.ContractResult
 	Result string `json:"result"`
 }
+
+type TxResponse struct {
+	*common.TxResponse
+	ContractResult *ContractResult `json:"contract_result"`
+}
+
+type ContractResult struct {
+	*common.ContractResult
+	Result *common.Contract `json:"result"`
+}
