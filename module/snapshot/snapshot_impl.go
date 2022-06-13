@@ -305,11 +305,11 @@ func (s *SnapshotImpl) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet) *c
 	}
 	// build all txs' readKeyDictionary, writeKeyDictionary, readPos(the pos in readKeyDictionary) and
 	// writePos(the pos in writeKeyDictionary)
-	readKeyDict, writeKeyDict, readPos, writePos := buildDictAndPos(txRWSets)
+	readKeyDict, writeKeyDict, readPos, writePos := s.buildDictAndPos(txRWSets)
 	reachMap := make([]*bitmap.Bitmap, txCount)
 	// build vertexes
 	for i := uint32(0); i < txCount; i++ {
-		directReachMap := buildReachMap(i, txRWSets[i], readKeyDict, writeKeyDict, readPos, writePos, reachMap)
+		directReachMap := s.buildReachMap(i, txRWSets[i], readKeyDict, writeKeyDict, readPos, writePos, reachMap)
 		dag.Vertexes[i] = &commonPb.DAG_Neighbor{
 			Neighbors: make([]uint32, 0, 16),
 		}
@@ -321,7 +321,7 @@ func (s *SnapshotImpl) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet) *c
 	return dag
 }
 
-func buildDictAndPos(txRWSetTable []*commonPb.TxRWSet) (map[string][]uint32, map[string][]uint32,
+func (s *SnapshotImpl) buildDictAndPos(txRWSetTable []*commonPb.TxRWSet) (map[string][]uint32, map[string][]uint32,
 	map[uint32]map[string]uint32, map[uint32]map[string]uint32) {
 	readKeyDict := make(map[string][]uint32, 1024)
 	writeKeyDict := make(map[string][]uint32, 1024)
@@ -353,7 +353,7 @@ func buildDictAndPos(txRWSetTable []*commonPb.TxRWSet) (map[string][]uint32, map
 	return readKeyDict, writeKeyDict, readPos, writePos
 }
 
-func buildReachMap(i uint32, txRWSet *commonPb.TxRWSet, readKeyDict, writeKeyDict map[string][]uint32,
+func (s *SnapshotImpl) buildReachMap(i uint32, txRWSet *commonPb.TxRWSet, readKeyDict, writeKeyDict map[string][]uint32,
 	readPos, writePos map[uint32]map[string]uint32, reachMap []*bitmap.Bitmap) *bitmap.Bitmap {
 	readTableItemForI := txRWSet.TxReads
 	writeTableItemForI := txRWSet.TxWrites

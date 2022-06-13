@@ -42,6 +42,7 @@ import (
 const (
 	ScheduleTimeout        = 10
 	ScheduleWithDagTimeout = 20
+	blockVersion2300       = uint32(2300)
 )
 
 // TxScheduler transaction scheduler structure
@@ -338,7 +339,9 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		startTime  = time.Now()
 		txRWSetMap = make(map[string]*commonPb.TxRWSet)
 	)
-	if len(block.Txs) != len(block.Dag.Vertexes) {
+	if block.Header.BlockVersion >= blockVersion2300 && len(block.Txs) != len(block.Dag.Vertexes) {
+		ts.log.Warnf("found dag size mismatch txs length in "+
+			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
 		return nil, nil, fmt.Errorf("found dag size mismatch txs length in "+
 			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
 	}
@@ -354,8 +357,9 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	// Construct the adjacency list of dag, which describes the subsequent adjacency transactions of all transactions
 	dag := block.Dag
-	txIndexBatch, dagRemain, reverseDagRemain, err := ts.initSimulateDagGraph(dag)
+	txIndexBatch, dagRemain, reverseDagRemain, err := ts.initSimulateDag(dag)
 	if err != nil {
+		ts.log.Warnf("initialize simulate dag error:%s", err)
 		return nil, nil, err
 	}
 
@@ -449,7 +453,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
 
-func (ts *TxScheduler) initSimulateDagGraph(dag *commonPb.DAG) (
+func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 	[]int, map[int]dagNeighbors, map[int]dagNeighbors, error) {
 	dagRemain := make(map[int]dagNeighbors)
 	reverseDagRemain := make(map[int]dagNeighbors)
@@ -711,7 +715,7 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 			if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
 				contractResultPayload); err != nil {
 				ts.log.Errorf("refund gas err is %v", err)
-				if txSimContext.GetBlockVersion() >= 2300 {
+				if txSimContext.GetBlockVersion() >= blockVersion2300 {
 					result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 					result.Message = err.Error()
 					result.ContractResult.Code = uint32(1)

@@ -168,7 +168,7 @@ func (s *SnapshotEvidence) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet
 		for i := 0; i < txCount; i++ {
 			// build DAG based on directReach bitmap
 			dag.Vertexes[i] = &commonPb.DAG_Neighbor{
-				Neighbors: []uint32{},
+				Neighbors: nil,
 			}
 		}
 	}
