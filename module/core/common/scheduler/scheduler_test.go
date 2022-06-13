@@ -152,7 +152,7 @@ func newBlock() *commonPb.Block {
 			BlockHeight:    0,
 			PreBlockHash:   nil,
 			BlockHash:      nil,
-			BlockVersion:   1,
+			BlockVersion:   2300,
 			DagHash:        nil,
 			RwSetRoot:      nil,
 			TxRoot:         nil,
