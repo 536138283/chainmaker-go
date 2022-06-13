@@ -1,27 +1,21 @@
 /*
-Copyright (C) The chainmaker-go Authors
+Copyright (C) The ChainMaker Authors
 
 SPDX-License-Identifier: Apache-2.0
+
+@Description 该文件中实现了 合约相关命令行查询功能具体包括：
+	1.按合约名字查询合约对象
+	2.查询所有的合约列表
+	3.查询被禁用的系统合约
 */
-// Package query
-/**
-* @ClassName query_contract.go
-* @Author yangshihong.diamchain.com
-* @Version 1.0.0
-* @Description 该文件中实现了 合约相关命令行查询功能具体包括：
-*	1.按合约名字查询合约对象
-*	2.查询所有的合约列表
-*	3.查询被禁用的系统合约
-* @CreateTime 2022年05月25日 19:47:00
-* @Company: www.diamchain.com
- */
 
 package query
 
 import (
+	"fmt"
+
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	"fmt"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
@@ -48,7 +42,7 @@ func newQueryContractByNameOnChainCMD() *cobra.Command {
 		Long:  "query on-chain contract info by contract name",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//// 1.Chain Client
+			// 1.Chain Client
 			cc, err := sdk.NewChainClient(
 				sdk.WithConfPath(sdkConfPath),
 			)
@@ -60,7 +54,7 @@ func newQueryContractByNameOnChainCMD() *cobra.Command {
 				return err
 			}
 
-			//// 2.Query contracct info on-chain
+			// 2.Query contracct info on-chain
 			var contractInfo interface{}
 			contractInfo, err = cc.GetContractInfo(args[0])
 			if err != nil {
@@ -91,7 +85,7 @@ func newQueryContractListOnChainCMD() *cobra.Command {
 		Long:  "query on-chain contract list",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//// 1.Chain Client
+			// 1.Chain Client
 			cc, err := sdk.NewChainClient(
 				sdk.WithConfPath(sdkConfPath),
 			)
@@ -103,7 +97,7 @@ func newQueryContractListOnChainCMD() *cobra.Command {
 				return err
 			}
 
-			//// 2.Query contracct list on-chain
+			// 2.Query contracct list on-chain
 			var contractList interface{}
 			contractList, err = cc.GetContractList()
 			if err != nil {
@@ -134,7 +128,7 @@ func newQueryDisableNativeContractListOnChainCMD() *cobra.Command {
 		Long:  "query on-chain disable native contract list",
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			//// 1.Chain Client
+			// 1.Chain Client
 			cc, err := sdk.NewChainClient(
 				sdk.WithConfPath(sdkConfPath),
 			)
@@ -146,7 +140,7 @@ func newQueryDisableNativeContractListOnChainCMD() *cobra.Command {
 				return err
 			}
 
-			//// 2.Query contracct list on-chain
+			// 2.Query contracct list on-chain
 			var contractList interface{}
 			contractList, err = cc.GetDisabledNativeContractList()
 			if err != nil {
