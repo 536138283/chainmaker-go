@@ -59,6 +59,7 @@ func TestNewCoreEngine(t *testing.T) {
 		Crypto: &configpb.CryptoConfig{
 			Hash: "SHA256",
 		},
+		AuthType: protocol.Identity,
 	}
 	chainConf.EXPECT().AddWatch(gomock.Any()).AnyTimes().Return()
 	chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
