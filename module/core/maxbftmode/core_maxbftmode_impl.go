@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package maxbftmode
 
 import (
+	"fmt"
 	"strings"
 
 	"chainmaker.org/chainmaker-go/module/core/common"
@@ -159,6 +160,9 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 		}
 	case msgbus.RwSetVerifyFailTxs:
 		if signal, ok := message.Payload.(*consensuspb.RwSetVerifyFailTxs); ok {
+			c.log.DebugDynamic(func() string {
+				return fmt.Sprintf("received consensus rw set verify fail txs block height:%d", signal.BlockHeight)
+			})
 			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
 		}
 	}
