@@ -197,6 +197,10 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
 		if protocol.CONSENSUS_VERIFY == mode {
+			v.log.DebugDynamic(func() string {
+				return fmt.Sprintf("publish verfiy failed rw set txs, block height:%d, err: %s",
+					newBlock.Header.BlockHeight, err.Error())
+			})
 			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap, rwSetVerifyFailTx))
 		}
 
@@ -301,6 +305,10 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
 		if protocol.CONSENSUS_VERIFY == mode {
+			v.log.DebugDynamic(func() string {
+				return fmt.Sprintf("publish verfiy failed rw set txs, block height:%d, err: %s",
+					newBlock.Header.BlockHeight, err.Error())
+			})
 			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, isValid, txRWSetMap, rwSetVerifyFailTx))
 		}
 
