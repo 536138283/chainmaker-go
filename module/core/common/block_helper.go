@@ -11,7 +11,6 @@ import (
 	"encoding/gob"
 	"encoding/hex"
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -927,26 +926,21 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
 		panicErr := recover()
-		if err == nil {
-			// error is nil
-			if panicErr == nil {
+		if panicErr != nil {
+			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
+				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+			}
+			panic("add block err: " + err.Error())
+		}
+		if err != nil {
+			if err == commonErrors.ErrBlockHadBeenCommited {
+				chain.log.Warn("cache add block fail, err: ", err)
 				return
 			}
 			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
 				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+				panic("add block err: " + err.Error())
 			}
-			chain.log.Errorf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack()))
-			panic(fmt.Sprintf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack())))
-		}
-		// error is not nil
-		if err == commonErrors.ErrBlockHadBeenCommited {
-			chain.log.Warn("cache add block err: ", err)
-		} else {
-			chain.log.Error("cache add block err: ", err)
-		}
-		// rollback sql
-		if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
-			chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 		}
 	}()
 
