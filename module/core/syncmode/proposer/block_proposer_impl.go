@@ -324,6 +324,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		totalTimes          int   // loop count
 		fetchBatch          []*commonpb.Transaction
 		batchIds            []string
+		fetchBatches        [][]*commonpb.Transaction // record the order about transaction in tx pool
 	)
 	// 根据TxFilter时间规则过滤交易，如果剩余的交易为0，则再次从交易池拉取交易，重复执行
 	// The transaction is filtered according to txFilter time rule. If the remaining transaction is 0, the transaction
@@ -333,8 +334,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		totalTimes++
 		// retrieve tx batch from tx pool
 		fetchFirst := utils.CurrentTimeMillisSeconds()
-
-		fetchBatch, batchIds = bp.txPool.FetchTxBatch(height)
+		batchIds, fetchBatch, fetchBatches = bp.getFetchBatchFromPool(height)
 		fetchLasts += utils.CurrentTimeMillisSeconds() - fetchFirst
 		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
 			height, len(fetchBatch)))
@@ -347,14 +347,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
 		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
 		if len(removeTxs) > 0 {
-			// don't remove tx when is batchTx pool
-			if common.TxPoolType == batch.TxPoolType {
-				// remove and get new batchIds
-				batchIds = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
-
-			} else {
-				bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
-			}
+			batchIds, fetchBatches, fetchBatch =
+				bp.removeTx(height, batchIds, removeTxs, fetchBatch, fetchBatches)
 
 			bp.log.Warnf("remove the overtime transactions, total:%d, remain:%d, remove:%d",
 				len(fetchBatch), len(remainTxs), len(removeTxs))
@@ -380,17 +374,36 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		// and put other txs back to txpool.
 		txRetry := fetchBatch[txCapacity:]
 		fetchBatch = fetchBatch[:txCapacity]
-		bp.txPool.RetryAndRemoveTxs(txRetry, nil)
+
+		if common.TxPoolType != batch.TxPoolType {
+			bp.txPool.RetryAndRemoveTxs(txRetry, nil)
+		} else {
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, txRetry)
+			fetchBatch = getFetchBatch(fetchBatches)
+		}
+
 		bp.log.Warnf("txbatch oversize expect <= %d, got %d", txCapacity, len(fetchBatch))
 	}
 
-	block, timeLasts, err := bp.generateNewBlock(height, preHash, fetchBatch, batchIds)
+	block, timeLasts, err := bp.generateNewBlock(
+		height,
+		preHash,
+		fetchBatch,
+		batchIds,
+		fetchBatches)
+
 	if err != nil {
 		// rollback sql
 		if sqlErr := bp.storeHelper.RollBack(block, bp.blockchainStore); sqlErr != nil {
 			bp.log.Errorf("block [%d] rollback sql failed: %s", height, sqlErr)
 		}
-		bp.txPool.RetryAndRemoveTxs(fetchBatch, nil) // put txs back to txpool
+
+		if common.TxPoolType != batch.TxPoolType {
+			bp.txPool.RetryAndRemoveTxs(fetchBatch, nil) // put txs back to txpool
+		} else {
+			bp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
+		}
+
 		bp.log.Warnf("generate new block failed, %s", err.Error())
 		return nil
 	}
@@ -553,6 +566,12 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
  * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
  */
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
+
+	if common.TxPoolType == batch.TxPoolType {
+		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
+		return
+	}
+
 	height := rwSetVerifyFailTxs.BlockHeight
 	block := bp.proposalCache.GetSelfProposedBlockAt(height)
 
@@ -583,14 +602,6 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		if _, ok := txsMap[tx.Payload.TxId]; !ok {
 			retryTxs = append(retryTxs, tx)
 		}
-	}
-
-	if common.TxPoolType == batch.TxPoolType {
-		batchIds := common.GetBatchIds(block)
-		bp.txPool.RemoveTxsInTxBatches(batchIds, removeTxs)
-		bp.proposalCache.ClearProposedBlockAt(height)
-
-		return
 	}
 
 	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
@@ -630,4 +641,42 @@ func (bp *BlockProposerImpl) getCutBlock(block *commonpb.Block) *commonpb.Block 
 	}
 
 	return cutBlock
+}
+
+func (bp *BlockProposerImpl) getFetchBatchFromPool(
+	height uint64) ([]string, []*commonpb.Transaction, [][]*commonpb.Transaction) {
+	if common.TxPoolType == batch.TxPoolType {
+		batchIds, fetchBatches := bp.txPool.FetchTxBatches(height)
+
+		fetchBatch := getFetchBatch(fetchBatches)
+
+		return batchIds, fetchBatch, fetchBatches
+	}
+
+	return nil, bp.txPool.FetchTxs(height), nil
+}
+
+func getFetchBatch(fetchBatches [][]*commonpb.Transaction) []*commonpb.Transaction {
+
+	fetchBatch := make([]*commonpb.Transaction, 0)
+	for _, v := range fetchBatches {
+		fetchBatch = append(fetchBatch, v...)
+	}
+
+	return fetchBatch
+}
+
+func (bp *BlockProposerImpl) removeTx(
+	height uint64, batchIds []string, removeTxs, fetchBatch []*commonpb.Transaction,
+	fetchBatches [][]*commonpb.Transaction) ([]string, [][]*commonpb.Transaction, []*commonpb.Transaction) {
+	// don't remove tx when is batchTx pool
+	if common.TxPoolType == batch.TxPoolType {
+		// remove and get new batchIds
+		batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
+		fetchBatch = getFetchBatch(fetchBatches)
+
+		return batchIds, fetchBatches, fetchBatch
+	}
+	bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+	return batchIds, fetchBatches, fetchBatch
 }

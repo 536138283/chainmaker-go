@@ -69,7 +69,7 @@ func TestProposeStatusChange(t *testing.T) {
 	}
 
 	identity.EXPECT().GetMember().AnyTimes()
-	txPool.EXPECT().FetchTxBatch(gomock.Any()).Return(txs, nil).AnyTimes()
+	txPool.EXPECT().FetchTxs(gomock.Any()).Return(txs).AnyTimes()
 	txPool.EXPECT().GetPoolStatus().Return(&txpoolpb.TxPoolStatus{}).AnyTimes()
 	//msgBus.EXPECT().Publish(gomock.Any(), gomock.Any())
 	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any()).AnyTimes()
