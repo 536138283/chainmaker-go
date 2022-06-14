@@ -1470,3 +1470,96 @@ func newMockSnapshot(t *testing.T) *mock.MockSnapshot {
 	snapshot := mock.NewMockSnapshot(ctrl)
 	return snapshot
 }
+
+func newMockMessageBus(t *testing.T) *mbusmock.MockMessageBus {
+	ctrl := gomock.NewController(t)
+	messageBus := mbusmock.NewMockMessageBus(ctrl)
+	return messageBus
+}
+
+//func TestBlockProposerImpl_startProposingLoop(t *testing.T) {
+//	type fields struct {
+//		chainId                string
+//		txPool                 protocol.TxPool
+//		txScheduler            protocol.TxScheduler
+//		snapshotManager        protocol.SnapshotManager
+//		identity               protocol.SigningMember
+//		ledgerCache            protocol.LedgerCache
+//		msgBus                 msgbus.MessageBus
+//		ac                     protocol.AccessControlProvider
+//		blockchainStore        protocol.BlockchainStore
+//		txFilter               protocol.TxFilter
+//		isProposer             bool
+//		idle                   bool
+//		proposeTimer           *time.Timer
+//		txPoolSignalC          chan *txpoolpb.TxPoolSignal
+//		exitC                  chan bool
+//		proposalCache          protocol.ProposalCache
+//		chainConf              protocol.ChainConf
+//		log                    protocol.Logger
+//		finishProposeC         chan bool
+//		metricBlockPackageTime *prometheus.HistogramVec
+//		blockBuilder           *common.BlockBuilder
+//		storeHelper            conf.StoreHelper
+//	}
+//
+//	tests := []struct {
+//		name    string
+//		fields  fields
+//		wantErr bool
+//	}{
+//		{
+//			name: "test0",
+//			fields: fields{
+//				chainId:         "chain1",
+//				txPool:          newMockTxPool(t),
+//				txScheduler:     newMockTxScheduler(t),
+//				snapshotManager: newMockSnapshotManager(t),
+//				ledgerCache:     newMockLedgerCache(t),
+//				msgBus: func() msgbus.MessageBus {
+//					msgBus := newMockMessageBus(t)
+//					msgBus.EXPECT().Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true}).AnyTimes()
+//					return msgBus
+//				}(),
+//				ac:              newMockAccessControlProvider(t),
+//				blockchainStore: newMockBlockchainStore(t),
+//				isProposer:      false,
+//				idle:            false,
+//				proposeTimer:    time.NewTimer(5 * time.Second),
+//				txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
+//				log:             newMockLogger(t),
+//			},
+//			wantErr: false,
+//		},
+//	}
+//
+//	for _, tt := range tests {
+//		t.Run(tt.name, func(t *testing.T) {
+//			bp := &BlockProposerImpl{
+//				chainId:                tt.fields.chainId,
+//				txPool:                 tt.fields.txPool,
+//				txScheduler:            tt.fields.txScheduler,
+//				snapshotManager:        tt.fields.snapshotManager,
+//				identity:               tt.fields.identity,
+//				ledgerCache:            tt.fields.ledgerCache,
+//				msgBus:                 tt.fields.msgBus,
+//				ac:                     tt.fields.ac,
+//				blockchainStore:        tt.fields.blockchainStore,
+//				txFilter:               tt.fields.txFilter,
+//				isProposer:             tt.fields.isProposer,
+//				idle:                   tt.fields.idle,
+//				proposeTimer:           tt.fields.proposeTimer,
+//				txPoolSignalC:          tt.fields.txPoolSignalC,
+//				exitC:                  tt.fields.exitC,
+//				proposalCache:          tt.fields.proposalCache,
+//				chainConf:              tt.fields.chainConf,
+//				log:                    tt.fields.log,
+//				finishProposeC:         tt.fields.finishProposeC,
+//				metricBlockPackageTime: tt.fields.metricBlockPackageTime,
+//				blockBuilder:           tt.fields.blockBuilder,
+//				storeHelper:            tt.fields.storeHelper,
+//			}
+//			bp.startProposingLoop()
+//		})
+//	}
+//}

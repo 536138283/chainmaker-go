@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220607072052-653ff1f72ed5
-	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220608022037-9f3c18096b4c
+	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220613031013-8d4698a6dbde
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220601111005-e5d844eeaff7
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220607151635-8f39301931e1
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220601112100-272db10da7e4
@@ -15,7 +15,8 @@ require (
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220613040127-5b976891c91e
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220601102651-293b88d0a08d
 	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220601104819-7fa7eb01b444
-	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220610063945-4a6f77d1301b
+	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220613130954-7ffdbae6aad2
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220613030828-d51522abe6f8
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220610035509-2a64fd68b649
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220601081720-f8da79a98a44
 	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220527181405-be81673f609d
@@ -67,7 +68,6 @@ require (
 )
 
 require (
-	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220613130954-7ffdbae6aad2 // indirect
 	chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect

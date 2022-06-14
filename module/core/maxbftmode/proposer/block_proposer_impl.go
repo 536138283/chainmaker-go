@@ -47,13 +47,13 @@ type BlockProposerImpl struct {
 	blockchainStore protocol.BlockchainStore
 	txFilter        protocol.TxFilter // Verify the transaction rules with TxFilter
 
-	//isProposer   bool        // whether current node can propose block now
-	idle bool // whether current node is proposing or not
-	//proposeTimer *time.Timer // timer controls the proposing periods
+	isProposer   bool        // whether current node can propose block now
+	idle         bool        // whether current node is proposing or not
+	proposeTimer *time.Timer // timer controls the proposing periods
 
 	//canProposeC   chan bool                   // channel to handle propose status change from consensus module
-	//txPoolSignalC chan *txpoolpb.TxPoolSignal // channel to handle propose signal from tx pool
-	exitC         chan bool // channel to stop proposing loop
+	txPoolSignalC chan *txpoolpb.TxPoolSignal // channel to handle propose signal from tx pool
+	exitC         chan bool                   // channel to stop proposing loop
 	proposalCache protocol.ProposalCache
 
 	chainConf protocol.ChainConf // chain config
@@ -93,13 +93,13 @@ const (
 
 func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol.BlockProposer, error) {
 	blockProposerImpl := &BlockProposerImpl{
-		chainId: config.ChainId,
-		//isProposer:      false, // not proposer when initialized
+		chainId:         config.ChainId,
+		isProposer:      false, // not proposer when initialized
 		idle:            true,
 		msgBus:          config.MsgBus,
 		blockchainStore: config.BlockchainStore,
 		//canProposeC:     make(chan bool),
-		//txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
+		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
 		exitC:           make(chan bool),
 		txPool:          config.TxPool,
 		snapshotManager: config.SnapshotManager,
@@ -123,7 +123,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 	}
 
 	// start propose timer
-	//blockProposerImpl.proposeTimer = time.NewTimer(blockProposerImpl.getDuration())
+	blockProposerImpl.proposeTimer = time.NewTimer(blockProposerImpl.getDuration())
 	//if !blockProposerImpl.isSelfProposer() {
 	//	blockProposerImpl.proposeTimer.Stop()
 	//}
@@ -160,7 +160,38 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 func (bp *BlockProposerImpl) Start() error {
 	defer bp.log.Info("block proposer starts")
 
+	go bp.startProposingLoop()
+
 	return nil
+}
+
+// Start, start proposing loop
+func (bp *BlockProposerImpl) startProposingLoop() {
+	for {
+		select {
+		case <-bp.proposeTimer.C:
+			poolStatus := bp.txPool.GetPoolStatus()
+			if poolStatus.ConfigTxNumInQueue != 0 || poolStatus.CommonTxNumInQueue != 0 {
+				bp.log.DebugDynamic(func() string {
+					return "publish msgbus proposeTimer propose blocks propose true"
+				})
+				go bp.msgBus.Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true})
+			}
+			bp.proposeTimer.Reset(bp.getDuration())
+		case signal := <-bp.txPoolSignalC:
+			if signal.SignalType != txpoolpb.SignalType_BLOCK_PROPOSE {
+				break
+			}
+			bp.log.DebugDynamic(func() string {
+				return "publish msgbus tx pool signal propose blocks propose true"
+			})
+			go bp.msgBus.Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true})
+		case <-bp.exitC:
+			bp.proposeTimer.Stop()
+			bp.log.Info("block proposer loop stopped")
+			return
+		}
+	}
 }
 
 // Stop, stop proposing loop
@@ -428,8 +459,8 @@ func (bp *BlockProposerImpl) setIdle() {
 //		bp.proposeTimer.Reset(bp.getDuration())
 //	}
 //}
-//
-//// isSelfProposer, return if this node is consensus proposer
+
+// isSelfProposer, return if this node is consensus proposer
 //func (bp *BlockProposerImpl) isSelfProposer() bool {
 //	bp.proposerMu.RLock()
 //	defer bp.proposerMu.RUnlock()
