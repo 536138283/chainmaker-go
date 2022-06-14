@@ -333,6 +333,11 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			TxIds:       rwSetVerifyFailTxIds,
 			BlockHeight: block.Header.BlockHeight,
 		}
+		vt.log.DebugDynamic(func() string {
+			return fmt.Sprintf("collected verfiy failed rw set txs, count %d, "+
+				"block height:%d, err: %s", len(rwSetVerifyFailTxIds),
+				block.Header.BlockHeight, err.Error())
+		})
 		return nil, nil, nil, rwSetVerifyFailTx, err
 	}
 

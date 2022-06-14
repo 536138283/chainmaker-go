@@ -9,6 +9,7 @@ package proposer
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -555,6 +556,10 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
 	height := rwSetVerifyFailTxs.BlockHeight
 	block := bp.proposalCache.GetSelfProposedBlockAt(height)
+
+	bp.log.DebugDynamic(func() string {
+		return fmt.Sprintf("remove rw set verify failed txs, block height:%d", height)
+	})
 
 	if block == nil {
 		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
