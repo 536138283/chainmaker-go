@@ -406,7 +406,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			result.RwSetHash = rwsetHash
 
 			hash, err := utils.CalcTxHashWithVersion(
-				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(protocol.DefaultBlockVersion))
+				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(block.Header.BlockVersion))
 			if err != nil {
 				vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
 				return nil, nil, nil, err

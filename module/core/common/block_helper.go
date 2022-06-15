@@ -300,7 +300,7 @@ func FinalizeBlock(
 		go func(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, x int) {
 			defer wg.Done()
 			var err error
-			txHashes[x], err = getTxHash(tx, rwSet, hashType, logger)
+			txHashes[x], err = getTxHash(tx, rwSet, hashType, block.Header, logger)
 			if err != nil {
 				errs = append(errs, err)
 			}
@@ -355,7 +355,7 @@ func FinalizeBlock(
 	return nil
 }
 
-func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType string, logger protocol.Logger) (
+func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType string, blockHeader *commonPb.BlockHeader, logger protocol.Logger) (
 	[]byte, error) {
 	var rwSetHash []byte
 	rwSetHash, err := utils.CalcRWSetHash(hashType, rwSet)
@@ -379,7 +379,7 @@ func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType strin
 	// calculate complete tx hash, include tx.Header, tx.Payload, tx.Result
 	var txHash []byte
 	txHash, err = utils.CalcTxHashWithVersion(
-		hashType, tx, int(protocol.DefaultBlockVersion))
+		hashType, tx, int(blockHeader.BlockVersion))
 	if err != nil {
 		return nil, err
 	}
