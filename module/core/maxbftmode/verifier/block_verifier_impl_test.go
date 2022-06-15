@@ -82,21 +82,8 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 	txHashs := make([][]byte, 0)
 	txHashs = append(txHashs, txHash)
-	txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
-	require.Nil(t, err)
-	b1.Header.TxRoot = txRoot
 
-	dagHash, err := utils.CalcDagHash(hashType, b1.Dag)
-	require.Nil(t, err)
-	b1.Header.DagHash = dagHash
-
-	rwSetRoot, err := utils.CalcRWSetRoot(hashType, txs)
-	require.Nil(t, err)
-	b1.Header.RwSetRoot = rwSetRoot
-
-	blockHash, err := utils.CalcBlockHash("SHA256", b1)
-	require.Nil(t, err)
-	b1.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b1, txHashs)
 
 	//member := mock.NewMockMember(ctl)
 	//member.EXPECT().GetMemberId().Return("123").AnyTimes()
@@ -114,6 +101,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	snapshot.EXPECT().Seal().AnyTimes()
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
+	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(b1.Dag)
 
 	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 
@@ -124,7 +112,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	txScheduler.EXPECT().SimulateWithDag(gomock.Any(), gomock.Any()).Return(rwSetmap, txResultMap, nil).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
-		Type: consensus.ConsensusType_TBFT,
+		Type: consensus.ConsensusType_MAXBFT,
 	}
 	block := configpb.BlockConfig{
 		TxTimestampVerify: false,
@@ -189,9 +177,19 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 	conf.ChainConf.ChainConfig().AuthType = protocol.Identity
 	verifier.verifierBlock = common.NewVerifierBlock(conf)
+	verifier.verifierBlock.SetTxScheduler(conf.TxScheduler)
 
 	err = verifier.VerifyBlock(b1, protocol.CONSENSUS_VERIFY)
 	require.Nil(t, err)
+
+	for block, ok := range testDagBlocks(t, b1) {
+		err = verifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
+		if ok {
+			require.Nil(t, err)
+		} else {
+			require.NotNil(t, err)
+		}
+	}
 }
 
 func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
@@ -286,6 +284,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshot.EXPECT().Seal().AnyTimes()
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
+	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(b1.Dag)
 	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
@@ -295,7 +294,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	txScheduler.EXPECT().SimulateWithDag(gomock.Any(), gomock.Any()).Return(rwSetmap, txResultMap, nil).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
-		Type: consensus.ConsensusType_TBFT,
+		Type: consensus.ConsensusType_MAXBFT,
 	}
 	block := configpb.BlockConfig{
 		TxTimestampVerify: false,
@@ -363,6 +362,15 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 
 	err = verifier.VerifyBlockWithRwSets(b1, rwSet, protocol.CONSENSUS_VERIFY)
 	require.Nil(t, err)
+
+	for block, ok := range testDagBlocks(t, b1) {
+		err = verifier.VerifyBlockWithRwSets(block, rwSet, protocol.CONSENSUS_VERIFY)
+		if ok {
+			require.Nil(t, err)
+		} else {
+			require.NotNil(t, err)
+		}
+	}
 }
 
 func Test_DispatchTask(t *testing.T) {
@@ -494,4 +502,113 @@ func createNewTestBlockWithoutProposer(height uint64) *commonpb.Block {
 	txs[0] = tx
 	block.Txs = txs
 	return block
+}
+
+func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
+	b2 := &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockVersion:   b1.Header.BlockVersion,
+			BlockType:      b1.Header.BlockType,
+			ChainId:        b1.Header.ChainId,
+			BlockHeight:    b1.Header.BlockHeight,
+			BlockHash:      b1.Header.BlockHash,
+			PreBlockHash:   b1.Header.PreBlockHash,
+			PreConfHeight:  b1.Header.PreConfHeight,
+			TxCount:        b1.Header.TxCount,
+			TxRoot:         b1.Header.TxRoot,
+			DagHash:        b1.Header.DagHash,
+			RwSetRoot:      b1.Header.RwSetRoot,
+			BlockTimestamp: b1.Header.BlockTimestamp,
+			ConsensusArgs:  b1.Header.ConsensusArgs,
+			Proposer:       b1.Header.Proposer,
+			Signature:      b1.Header.Signature,
+		},
+		Dag:            b1.Dag,
+		Txs:            b1.Txs,
+		AdditionalData: b1.AdditionalData,
+	}
+
+	// empty dag
+	b2.Dag = &commonpb.DAG{}
+	fillHashesOfBlock(t, b2, nil)
+
+	b3 := &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockVersion:   b1.Header.BlockVersion,
+			BlockType:      b1.Header.BlockType,
+			ChainId:        b1.Header.ChainId,
+			BlockHeight:    b1.Header.BlockHeight,
+			BlockHash:      b1.Header.BlockHash,
+			PreBlockHash:   b1.Header.PreBlockHash,
+			PreConfHeight:  b1.Header.PreConfHeight,
+			TxCount:        b1.Header.TxCount,
+			TxRoot:         b1.Header.TxRoot,
+			DagHash:        b1.Header.DagHash,
+			RwSetRoot:      b1.Header.RwSetRoot,
+			BlockTimestamp: b1.Header.BlockTimestamp,
+			ConsensusArgs:  b1.Header.ConsensusArgs,
+			Proposer:       b1.Header.Proposer,
+			Signature:      b1.Header.Signature,
+		},
+		Dag:            b1.Dag,
+		Txs:            b1.Txs,
+		AdditionalData: b1.AdditionalData,
+	}
+	// 0 tx block and dag of 1 vertex
+	b3.Txs = []*commonpb.Transaction{}
+	txHashs := make([][]byte, 0)
+	fillHashesOfBlock(t, b3, txHashs)
+
+	b4 := &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			BlockVersion:   b1.Header.BlockVersion,
+			BlockType:      b1.Header.BlockType,
+			ChainId:        b1.Header.ChainId,
+			BlockHeight:    b1.Header.BlockHeight,
+			BlockHash:      b1.Header.BlockHash,
+			PreBlockHash:   b1.Header.PreBlockHash,
+			PreConfHeight:  b1.Header.PreConfHeight,
+			TxCount:        b1.Header.TxCount,
+			TxRoot:         b1.Header.TxRoot,
+			DagHash:        b1.Header.DagHash,
+			RwSetRoot:      b1.Header.RwSetRoot,
+			BlockTimestamp: b1.Header.BlockTimestamp,
+			ConsensusArgs:  b1.Header.ConsensusArgs,
+			Proposer:       b1.Header.Proposer,
+			Signature:      b1.Header.Signature,
+		},
+		Dag:            b1.Dag,
+		Txs:            b1.Txs,
+		AdditionalData: b1.AdditionalData,
+	}
+	b4.Dag = b2.Dag
+	b4.Txs = b3.Txs
+	fillHashesOfBlock(t, b4, txHashs)
+	m := make(map[*commonpb.Block]bool)
+	m[b2] = false
+	m[b3] = false
+	m[b4] = true
+	return m
+}
+
+func fillHashesOfBlock(t *testing.T, b *commonpb.Block, txHashs [][]byte) {
+	b.Header.TxCount = uint32(len(b.Txs))
+
+	if txHashs != nil {
+		txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
+		require.Nil(t, err)
+		b.Header.TxRoot = txRoot
+	}
+
+	dagHash, err := utils.CalcDagHash(hashType, b.Dag)
+	require.Nil(t, err)
+	b.Header.DagHash = dagHash
+
+	rwSetRoot, err := utils.CalcRWSetRoot(hashType, b.Txs)
+	require.Nil(t, err)
+	b.Header.RwSetRoot = rwSetRoot
+
+	blockHash, err := utils.CalcBlockHash("SHA256", b)
+	require.Nil(t, err)
+	b.Header.BlockHash = blockHash
 }
