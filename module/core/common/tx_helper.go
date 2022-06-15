@@ -392,29 +392,57 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		startOthersTicker := utils.CurrentTimeMillisSeconds()
 		rwSet := vt.txRWSetMap[tx.Payload.TxId]
 		result := vt.txResultMap[tx.Payload.TxId]
-		rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
-		if err != nil {
-			vt.log.Warnf("calc rwset hash error (tx:%s), %s", tx.Payload.TxId, err)
-			return nil, nil, nil, err
+
+		if TxPoolType == batch.TxPoolType {
+			// recover result
+			tx.Result = result
+
+			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
+			if err != nil {
+				vt.log.Warnf("calc rwset hash error (tx:%s), rwSet: %v, %s",
+					tx.Payload.TxId, rwSet, err)
+				return nil, nil, nil, err
+			}
+			result.RwSetHash = rwsetHash
+
+			hash, err := utils.CalcTxHashWithVersion(
+				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(protocol.DefaultBlockVersion))
+			if err != nil {
+				vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
+				return nil, nil, nil, err
+			}
+
+			txHashes = append(txHashes, hash)
+
+		} else {
+			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
+			if err != nil {
+				vt.log.Warnf("calc rwset hash error (tx:%s), rwSet: %v, %s",
+					tx.Payload.TxId, rwSet, err)
+				return nil, nil, nil, err
+			}
+			if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
+				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
+				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				continue
+			}
+			result.RwSetHash = rwsetHash
+			// verify if rwset hash is equal
+			if err = VerifyTxResult(tx, result); err != nil {
+				vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
+				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				continue
+			}
+			hash, err := utils.CalcTxHashWithVersion(
+				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(protocol.DefaultBlockVersion))
+			if err != nil {
+				vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
+				return nil, nil, nil, err
+			}
+
+			txHashes = append(txHashes, hash)
 		}
-		if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
-			vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
-			continue
-		}
-		result.RwSetHash = rwsetHash
-		// verify if rwset hash is equal
-		if err = VerifyTxResult(tx, result); err != nil {
-			vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
-			continue
-		}
-		hash, err := utils.CalcTxHash(vt.chainConf.ChainConfig().Crypto.Hash, tx)
-		if err != nil {
-			vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
-			return nil, nil, nil, err
-		}
-		txHashes = append(txHashes, hash)
+
 		stat.OthersLasts += utils.CurrentTimeMillisSeconds() - startOthersTicker
 	}
 
@@ -472,10 +500,10 @@ func IntegersContains(array []int, val int) bool {
 	return false
 }
 
-func GetBatchIds(block *commonpb.Block) []string {
+func GetBatchIds(block *commonpb.Block) ([]string, []uint32) {
 	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
 
-	batchIds, _ := DeserializeBatchIds(batchIdsByte)
+	txBatchInfo, _ := DeserializeTxBatchInfo(batchIdsByte)
 
-	return batchIds
+	return txBatchInfo.BatchIds, txBatchInfo.Index
 }

@@ -8,10 +8,8 @@ package common
 
 import (
 	"bytes"
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
-	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -96,8 +94,10 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 }
 
 func (bb *BlockBuilder) GenerateNewBlock(
-	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction, batchIds []string) (
+	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction,
+	batchIds []string, fetchBatches [][]*commonPb.Transaction) (
 	*commonPb.Block, []int64, error) {
+
 	timeLasts := make([]int64, 0)
 	currentHeight, _ := bb.ledgerCache.CurrentHeight()
 	lastBlock := bb.findLastBlockFromCache(proposingHeight, preHash, currentHeight)
@@ -182,7 +182,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
-			batchIds = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
+			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
 		} else {
 			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
@@ -191,7 +191,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 	if TxPoolType == batch.TxPoolType {
 		var batchIdBytes []byte
 		// set batchIds into additional data
-		batchIdBytes, err = SerializeBatchIds(batchIds)
+		batchIdBytes, err = SerializeTxBatchInfo(batchIds, block.Txs, fetchBatches, bb.log)
 		if err != nil {
 			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
@@ -377,7 +377,8 @@ func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType strin
 	tx.Result.RwSetHash = rwSetHash
 	// calculate complete tx hash, include tx.Header, tx.Payload, tx.Result
 	var txHash []byte
-	txHash, err = utils.CalcTxHash(hashType, tx)
+	txHash, err = utils.CalcTxHashWithVersion(
+		hashType, tx, int(protocol.DefaultBlockVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -927,26 +928,21 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
 		panicErr := recover()
-		if err == nil {
-			// error is nil
-			if panicErr == nil {
+		if panicErr != nil {
+			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
+				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+			}
+			panic("add block err: " + err.Error())
+		}
+		if err != nil {
+			if err == commonErrors.ErrBlockHadBeenCommited {
+				chain.log.Warn("cache add block fail, err: ", err)
 				return
 			}
 			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
 				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+				panic("add block err: " + err.Error())
 			}
-			chain.log.Errorf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack()))
-			panic(fmt.Sprintf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack())))
-		}
-		// error is not nil
-		if err == commonErrors.ErrBlockHadBeenCommited {
-			chain.log.Warn("cache add block err: ", err)
-		} else {
-			chain.log.Error("cache add block err: ", err)
-		}
-		// rollback sql
-		if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
-			chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 		}
 	}()
 
@@ -992,7 +988,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	txRetry, batchRetry := chain.syncWithTxPool(lastProposed, height)
 
 	if TxPoolType == batch.TxPoolType {
-		batchIds := GetBatchIds(lastProposed)
+		batchIds, _ := GetBatchIds(lastProposed)
 		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
 		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
 	} else {
@@ -1035,7 +1031,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	keepBatchIds := make(map[string]struct{}, len(block.Txs))
 
 	if TxPoolType == batch.TxPoolType {
-		batchIds := GetBatchIds(block)
+		batchIds, _ := GetBatchIds(block)
 		for _, batchId := range batchIds {
 			keepBatchIds[batchId] = struct{}{}
 		}
@@ -1044,7 +1040,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 				continue
 			}
 
-			retryBatchIds := GetBatchIds(block)
+			retryBatchIds, _ := GetBatchIds(block)
 			for _, retryBatchId := range retryBatchIds {
 				if _, ok := keepBatchIds[retryBatchId]; !ok {
 					batchRetry = append(batchRetry, retryBatchId)
@@ -1123,6 +1119,11 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 	turboBlock.Dag = block.Dag
 	turboBlock.AdditionalData = block.AdditionalData
 
+	if TxPoolType == batch.TxPoolType {
+		logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+		return turboBlock
+	}
+
 	newTxs := make([]*commonPb.Transaction, len(block.Txs))
 	for i := range block.Txs {
 		newPayload := &commonPb.Payload{
@@ -1130,13 +1131,10 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 		}
 
 		newTxs[i] = &commonPb.Transaction{
-			Payload: newPayload,
-			Result:  block.Txs[i].Result,
-		}
-
-		if TxPoolType != batch.TxPoolType {
-			newTxs[i].Sender = block.Txs[i].Sender
-			newTxs[i].Endorsers = block.Txs[i].Endorsers
+			Payload:   newPayload,
+			Result:    block.Txs[i].Result,
+			Sender:    block.Txs[i].Sender,
+			Endorsers: block.Txs[i].Endorsers,
 		}
 
 	}
@@ -1171,13 +1169,12 @@ func recoverBlockByBatch(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if len(block.Txs) != 0 && block.Txs[0].Payload != nil &&
-		mode != protocol.SYNC_VERIFY {
+	if len(block.Txs) == 0 && block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
 
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
 			Dag:            block.Dag,
-			Txs:            make([]*commonPb.Transaction, len(block.Txs)),
+			Txs:            make([]*commonPb.Transaction, block.Header.TxCount),
 			AdditionalData: block.AdditionalData,
 		}
 
@@ -1189,7 +1186,16 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		batchIds := GetBatchIds(block)
+		batchIds, indexes := GetBatchIds(block)
+		if len(batchIds) == 0 {
+			return &commonPb.Block{
+				Header:         block.Header,
+				Dag:            block.Dag,
+				Txs:            block.Txs,
+				AdditionalData: block.AdditionalData,
+			}, batchIds, nil
+		}
+
 		txs, err := txPool.GetAllTxsByBatchIds(
 			batchIds,
 			proposerId,
@@ -1200,27 +1206,25 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		txsMap := make(map[string]*commonPb.Transaction)
+		newTxs := make([]*commonPb.Transaction, 0)
 		for _, tx := range txs {
-			txsMap[tx.Payload.TxId] = tx
+			newTxs = append(newTxs, tx...)
 		}
 
-		for i := range block.Txs {
-			newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
-			newBlock.Txs[i].Result = block.Txs[i].Result
-			logger.Debugf("recover the block[%d], TxId[%s, %s]",
-				newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+		for i, v := range indexes {
+			newBlock.Txs[i] = newTxs[int(v)]
 		}
 
 		return newBlock, batchIds, nil
 	}
 
+	batchIds, _ := GetBatchIds(block)
 	return &commonPb.Block{
 		Header:         block.Header,
 		Dag:            block.Dag,
 		Txs:            block.Txs,
 		AdditionalData: block.AdditionalData,
-	}, GetBatchIds(block), nil
+	}, batchIds, nil
 }
 
 func recoverBlock(
@@ -1276,26 +1280,49 @@ func recoverBlock(
 
 }
 
-func SerializeBatchIds(batchIds []string) ([]byte, error) {
+func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
+	fetchBatches [][]*commonPb.Transaction, logger protocol.Logger) ([]byte, error) {
 
-	buffer := &bytes.Buffer{}
-	err := gob.NewEncoder(buffer).Encode(batchIds)
+	fetchTxs := make([]*commonPb.Transaction, 0)
+	for _, fetchBatch := range fetchBatches {
+		fetchTxs = append(fetchTxs, fetchBatch...)
+	}
+
+	txIndex := make(map[string]uint32)
+	for index, tx := range fetchTxs {
+		txIndex[tx.Payload.TxId] = uint32(index)
+	}
+
+	txBatchInfo := &commonPb.TxBatchInfo{
+		BatchIds: batchIds,
+		Index:    make([]uint32, 0),
+	}
+
+	indexes := make([]uint32, 0)
+	for _, tx := range txs {
+		if index, ok := txIndex[tx.Payload.TxId]; ok {
+			indexes = append(indexes, index)
+		}
+	}
+
+	txBatchInfo.Index = indexes
+	buffer, err := proto.Marshal(txBatchInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return buffer.Bytes(), err
+	return buffer, err
 }
 
-func DeserializeBatchIds(data []byte) ([]string, error) {
+func DeserializeTxBatchInfo(data []byte) (*commonPb.TxBatchInfo, error) {
 
-	batchIds := make([]string, 0)
-	err := gob.NewDecoder(bytes.NewReader(data)).Decode(&batchIds)
+	txBatchInfo := new(commonPb.TxBatchInfo)
+	err := proto.Unmarshal(data, txBatchInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return batchIds, err
+	return txBatchInfo, nil
 }
 
 // metric tx counter key in db
