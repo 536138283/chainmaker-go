@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package txfilter transaction filter factory test
 package txfilter
 
 import (
@@ -10,16 +12,15 @@ import (
 	"strconv"
 	"testing"
 
-	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
-	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
-	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-
 	"chainmaker.org/chainmaker-go/module/txfilter/birdnest"
 	"chainmaker.org/chainmaker-go/module/txfilter/defau1t"
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	mapimpl "chainmaker.org/chainmaker-go/module/txfilter/map"
 	"chainmaker.org/chainmaker-go/module/txfilter/shardingbirdsnest"
+	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
+	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"github.com/golang/mock/gomock"
