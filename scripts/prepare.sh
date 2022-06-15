@@ -154,7 +154,7 @@ function generate_config() {
     DOCKER_VM_CONTAINER_NAME_PREFIX="chainmaker-vm-docker-go-container"
     ENABLE_DOCKERVM="false"
     DOCKER_VM_LOG_LEVEL="INFO"
-    START_DOCKER_VM_START_NOW="true"
+    START_DOCKER_VM_NOW="true"
     DOCKER_VM_TRANSPORT_PROTOCOL="false" # tcp: false, uds: true
 
     read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
@@ -183,15 +183,15 @@ function generate_config() {
           read -p "start docker vm with chain (Y(default)|N)" start_now
           if  [ ! -z "$start_now" ]; then
               if [ $start_now == "Y" ] || [ $start_now == "y" ] || [ $start_now == "yes" ] || [ $start_now == "YES" ]; then
-                  START_DOCKER_VM_START_NOW="true"
+                  START_DOCKER_VM_NOW="true"
               elif [ $start_now == "N" ] || [ $start_now == "n" ] || [ $start_now == "NO" ] || [ $start_now == "no" ]; then
-                  START_DOCKER_VM_START_NOW="false"
+                  START_DOCKER_VM_NOW="false"
               else
                   echo "unknown input [" $start_now "], so use default"
               fi
           fi
 
-          if [ $START_DOCKER_VM_START_NOW == "true" ]; then
+          if [ $START_DOCKER_VM_NOW == "true" ]; then
                 read -p "dockervm transport protocol (uds|tcp(default))" transport_protocol
                 if [ ! -z "$transport_protocol" ]; then
                     if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
@@ -246,7 +246,7 @@ function generate_config() {
         xsed "s%{dockervm_runtime_port}%$(($DOCKER_VM_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{dockervm_engine_port}%$(($DOCKER_VM_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{dockervm_log_level}%$DOCKER_VM_LOG_LEVEL%g" node$i/chainmaker.yml
-        xsed "s%{start_dockervm_now}%$START_DOCKER_VM_START_NOW%g" node$i/chainmaker.yml
+        xsed "s%{start_dockervm_now}%$START_DOCKER_VM_NOW%g" node$i/chainmaker.yml
         xsed "s%{dockervm_uds_open}%$DOCKER_VM_TRANSPORT_PROTOCOL%g" node$i/chainmaker.yml
 
         system=$(uname)
