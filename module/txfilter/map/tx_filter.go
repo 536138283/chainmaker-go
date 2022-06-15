@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package map transaction filter implementation
 package mapimpl
 
 import (
@@ -13,10 +15,11 @@ import (
 
 // TxFilter sync.Map transaction filter
 type TxFilter struct {
-	height uint64
-	m      sync.Map
+	height uint64   // blcok height
+	m      sync.Map // m Thread-safe map
 }
 
+// ValidateRule validate rules
 func (f *TxFilter) ValidateRule(_ string, _ ...bn.RuleType) error {
 	return nil
 }

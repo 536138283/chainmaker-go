@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package shardingbirdsnest transaction filter mplementation test
 package shardingbirdsnest
 
 import (

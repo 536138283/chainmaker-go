@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package txfilter transaction filter factory
 package txfilter
 
 import (
@@ -40,13 +42,13 @@ func (cf *txFilterFactory) NewTxFilter(conf *filtercommon.TxFilterConfig, log pr
 		return defau1t.New(store), nil
 	}
 	switch conf.Type {
-	case filtercommon.TxFilterTypeDefault:
+	case filtercommon.TxFilterTypeDefault: // default txfilter
 		return defau1t.New(store), nil
-	case filtercommon.TxFilterTypeBirdsNest:
+	case filtercommon.TxFilterTypeBirdsNest: // bird's nest txfilter
 		return birdnest.New(conf.BirdsNest, log, store)
-	case filtercommon.TxFilterTypeMap:
+	case filtercommon.TxFilterTypeMap: // map txfilter
 		return mapimpl.New(), nil
-	case filtercommon.TxFilterTypeShardingBirdsNest:
+	case filtercommon.TxFilterTypeShardingBirdsNest: // sharding bird's nest txfilter
 		return shardingbirdsnest.New(conf.ShardingBirdsNest, log, store)
 	default:
 		log.Warnf("txfilter type: %v not support, use default type: store", conf.Type)

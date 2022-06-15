@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package birdnest transaction filter implementation
 package birdnest
 
 import (
@@ -16,14 +18,16 @@ import (
 
 // TxFilter bn.BirdsNestImpl transaction filter
 type TxFilter struct {
-	log   protocol.Logger
-	bn    *bn.BirdsNestImpl
-	store protocol.BlockchainStore
-	exitC chan struct{}
-	l     sync.RWMutex
+	log   protocol.Logger          // log Log output protocol.Logger
+	bn    *bn.BirdsNestImpl        // bn Bird's Nest implementation
+	store protocol.BlockchainStore // store block store protocol.BlockchainStore
+	exitC chan struct{}            // exitC Exit channel
+	l     sync.RWMutex             // l read write lock
 }
 
+// ValidateRule validate rules
 func (f *TxFilter) ValidateRule(txId string, ruleType ...bn.RuleType) error {
+	// Convert the transaction ID to TimestampKey
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		return nil
@@ -44,6 +48,7 @@ func New(config *bn.BirdsNestConfig, log protocol.Logger, store protocol.Blockch
 
 	initLasts := time.Now()
 	exitC := make(chan struct{})
+	// New bird's nest
 	birdsNest, err := bn.NewBirdsNest(config, exitC, bn.LruStrategy, filtercommon.NewLogger(log))
 	if err != nil {
 		log.Errorf("new filter fail, error: %v", err)
@@ -56,6 +61,7 @@ func New(config *bn.BirdsNestConfig, log protocol.Logger, store protocol.Blockch
 		bn:    birdsNest,
 		exitC: exitC,
 	}
+	// chase block height
 	err = filtercommon.ChaseBlockHeight(store, txFilter, log)
 	if err != nil {
 		return nil, err
@@ -87,6 +93,7 @@ func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...bn.RuleType)
 
 // Add txId to transaction filter
 func (f *TxFilter) Add(txId string) error {
+	// Convert the transaction ID to TimestampKey
 	timestampKey, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		return nil
@@ -99,30 +106,27 @@ func (f *TxFilter) Add(txId string) error {
 // Adds batch Add txId
 func (f *TxFilter) Adds(txIds []string) error {
 	start := time.Now()
+	// Convert the transaction ID to TimestampKey
 	timestampKeys, _ := bn.ToTimestampKeysAndNormalKeys(txIds)
 	if len(timestampKeys) > 0 {
+		f.l.Lock()
 		err := f.bn.Adds(timestampKeys)
+		f.l.Unlock()
 		if err != nil {
 			f.log.Warnf("filter adds fail, txid size: %v, error: %v", len(txIds), err)
 		}
+		f.addsPrintInfo(txIds, start)
+		return nil
 	}
-	f.l.Lock()
-	err := f.bn.Adds(timestampKeys)
-	f.l.Unlock()
-	if err != nil {
-		f.log.Errorf("filter adds fail, txid size: %v, error: %v", len(txIds), err)
-		return err
-	}
-
-	f.addsPrintInfo(txIds, start)
+	f.log.Warnf("no time-type transaction")
 	return nil
 }
 
+// addsPrintInfo Output logs after adding transactions
 // index 1 cuckoo size
 // index 2 current index
 // index 3 total cuckoo size
 // index 4 total space occupied by cuckoo
-
 func (f *TxFilter) addsPrintInfo(txIds []string, start time.Time) {
 	info := f.bn.Info()
 	f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc(
@@ -135,14 +139,17 @@ func (f *TxFilter) addsPrintInfo(txIds []string, start time.Time) {
 // AddsAndSetHeight batch add tx id and set height
 func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 	start := time.Now()
+	// Convert the transaction ID to TimestampKey
 	timestampKeys, _ := bn.ToTimestampKeysAndNormalKeys(txIds)
 	if len(timestampKeys) <= 0 {
+		// Update block height if there is no time to transaction ID
 		f.SetHeight(height)
 		f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("adds and set height, no timestamp keys height: %d",
 			height))
 		return nil
 	}
 	f.l.Lock()
+	// Add the time transaction ID into the Bird's Nest transaction filter and update the height
 	err := f.bn.AddsAndSetHeight(timestampKeys, height)
 	f.l.Unlock()
 	if err != nil {
@@ -154,8 +161,10 @@ func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 
 // IsExists Check whether TxId exists in the transaction filter
 func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (exists bool, err error) {
+	// Convert the transaction ID to TimestampKey
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
+		// If the transaction ID is not a time type, query whether the database exists
 		exists, err = f.store.TxExists(txId)
 		if err != nil {
 			f.log.Errorf("filter check exists, query from db fail, normal txid: %v, error:%v", txId, err)
@@ -165,6 +174,7 @@ func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (exists bool, 
 	}
 	f.l.RLock()
 	defer f.l.RUnlock()
+	// If the transaction ID is of the time type, the transaction filter exists
 	contains, err := f.bn.Contains(key, ruleType...)
 	if err != nil {
 		f.log.Errorf("filter check exists, query from filter fail, txid: %v, error: %v", txId, err)
@@ -181,6 +191,7 @@ func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (exists bool, 
 			return false, nil
 		}
 	}
+	// True positive
 	return contains, nil
 }
 

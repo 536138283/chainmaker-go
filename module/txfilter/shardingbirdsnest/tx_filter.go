@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package shardingbirdsnest transaction filter mplementation
 package shardingbirdsnest
 
 import (
@@ -24,13 +26,14 @@ const (
 
 // TxFilter Sharding transaction filter
 type TxFilter struct {
-	log   protocol.Logger
-	bn    *sbn.ShardingBirdsNest
-	store protocol.BlockchainStore
-	exitC chan struct{}
-	l     sync.RWMutex
+	log   protocol.Logger          // log Log output protocol.Logger
+	bn    *sbn.ShardingBirdsNest   // bn Sharding Bird's Nest implementation
+	store protocol.BlockchainStore // store block store protocol.BlockchainStore
+	exitC chan struct{}            // exitC Exit channel
+	l     sync.RWMutex             // l read write lock
 }
 
+// ValidateRule validate rules
 func (f *TxFilter) ValidateRule(txId string, ruleType ...bn.RuleType) error {
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
@@ -101,6 +104,7 @@ func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...bn.RuleType)
 // Add txId to transaction filter
 func (f *TxFilter) Add(txId string) error {
 	start := time.Now()
+	// Convert the transaction ID to TimestampKey
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		return nil
@@ -119,6 +123,7 @@ func (f *TxFilter) Add(txId string) error {
 // Adds batch Add txId
 func (f *TxFilter) Adds(txIds []string) error {
 	start := time.Now()
+	// Convert the transaction ID to TimestampKey
 	timestampKeys, _ := bn.ToTimestampKeysAndNormalKeys(txIds)
 	if len(timestampKeys) <= 0 {
 		return nil
@@ -159,6 +164,7 @@ func (f *TxFilter) addsPrintInfo(txIds []string, start time.Time) {
 // AddsAndSetHeight batch add tx id and set height
 func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 	start := time.Now()
+	// Convert the transaction ID to TimestampKey
 	timestampKeys, _ := bn.ToTimestampKeysAndNormalKeys(txIds)
 	if len(timestampKeys) <= 0 {
 		f.SetHeight(height)
@@ -179,6 +185,7 @@ func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 // IsExists Check whether TxId exists in the transaction filter
 func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (bool, error) {
 	start := time.Now()
+	// Convert the transaction ID to TimestampKey
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		var exists bool

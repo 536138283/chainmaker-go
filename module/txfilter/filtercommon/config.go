@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package filtercommon transaction filter common config
 package filtercommon
 
 import (
@@ -10,12 +12,14 @@ import (
 	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
 )
 
+// TxFilterType Transaction filter type
 type TxFilterType int32
 
 const (
-	TxFilterTypeDefault           TxFilterType = 0
-	TxFilterTypeBirdsNest         TxFilterType = 1
-	TxFilterTypeMap               TxFilterType = 2
+	TxFilterTypeDefault   TxFilterType = 0 // TxFilterTypeDefault Default transaction filter type
+	TxFilterTypeBirdsNest TxFilterType = 1 // TxFilterTypeBirdsNest Bird's Nest transaction filter type
+	TxFilterTypeMap       TxFilterType = 2 // TxFilterTypeMap Map transaction filter type
+	// TxFilterTypeShardingBirdsNest Sharding Bird's Nest transaction filter type
 	TxFilterTypeShardingBirdsNest TxFilterType = 3
 )
 

@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package defau1t transaction filter implementation
 package defau1t
 
 import (
@@ -12,9 +14,10 @@ import (
 
 // TxFilter protocol.BlockchainStore transaction filter
 type TxFilter struct {
-	store protocol.BlockchainStore
+	store protocol.BlockchainStore // store block store
 }
 
+// ValidateRule validate transaction rules
 func (f TxFilter) ValidateRule(_ string, _ ...birdsnest.RuleType) error {
 	return nil
 }

@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package filtercommon transaction filter common tools
 package filtercommon
 
 import (
@@ -22,6 +24,7 @@ import (
 // ChaseBlockHeight Chase high block
 func ChaseBlockHeight(store protocol.BlockchainStore, filter protocol.TxFilter, log protocol.Logger) error {
 	cost := time.Now()
+	// get last block
 	lastBlock, err := store.GetLastBlock()
 	if err != nil {
 		log.Errorf("query last block from db fail, error: %v", err)
@@ -29,18 +32,22 @@ func ChaseBlockHeight(store protocol.BlockchainStore, filter protocol.TxFilter, 
 	}
 	log.Infof("chase block start,filter height: %v, block height: %v", filter.GetHeight(),
 		lastBlock.Header.BlockHeight)
+	// Loop query filter block height to the last block height added to the transaction filter
 	for height := filter.GetHeight() + 1; height <= lastBlock.Header.BlockHeight; height++ {
 		var block *common.Block
 		if height != lastBlock.Header.BlockHeight {
+			// Query a block if the current height is not equal to the last block height
 			block, err = store.GetBlock(height)
 			if err != nil {
 				log.Errorf("query block from db fail, height: %v, error: %v", height, err)
 				return err
 			}
 		} else {
+			// The last block is assigned if the current height is equal to the last block height
 			block = lastBlock
 		}
 		ids := utils.GetTxIds(block.Txs)
+		// Add to the transaction filter
 		err = filter.AddsAndSetHeight(ids, block.Header.BlockHeight)
 		if err != nil {
 			log.Errorf("chase block add fail, height: %v, keys: %v, error: %v", block.Header.BlockHeight, len(ids), err)
@@ -54,6 +61,7 @@ func ChaseBlockHeight(store protocol.BlockchainStore, filter protocol.TxFilter, 
 	return nil
 }
 
+// GetConf Get the configuration of the transaction filter
 func GetConf(chainId string) (*TxFilterConfig, error) {
 	return ToPbConfig(localconf.ChainMakerConfig.TxFilter, chainId)
 }
@@ -65,8 +73,11 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 	}
 	switch TxFilterType(conf.Type) {
 	case TxFilterTypeDefault:
+		// Returns if the default transaction filter is specified in the configuration file
 		return c, nil
 	case TxFilterTypeBirdsNest:
+		// Returns the Bird's Nest transaction filter if specified in the configuration file
+		// Check the Bird's Nest configuration
 		err := CheckBNConfig(conf.BirdsNest, true)
 		if err != StringNil {
 			return nil, errors.New(err)
@@ -96,8 +107,11 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 		}
 		return c, nil
 	case TxFilterTypeMap:
+		// Returns the map transaction filter if specified in the configuration file
 		return c, nil
 	case TxFilterTypeShardingBirdsNest:
+		// Returns the Sharding Bird's Nest transaction filter if specified in the configuration file
+		// Check the Bird's Nest configuration
 		err := CheckShardingBNConfig(conf.ShardingBirdsNest)
 		if err != StringNil {
 			return nil, errors.New(err)
@@ -118,7 +132,7 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 			MaxNumKeys:    conf.ShardingBirdsNest.BirdsNest.Cuckoo.MaxNumKeys,
 			TableType:     conf.ShardingBirdsNest.BirdsNest.Cuckoo.TableType,
 		}
-		bn := &bn.BirdsNestConfig{
+		bidsNest := &bn.BirdsNestConfig{
 			Length:   conf.ShardingBirdsNest.BirdsNest.Length,
 			ChainId:  chainId,
 			Rules:    rules,
@@ -129,7 +143,7 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 			ChainId:   chainId,
 			Length:    conf.ShardingBirdsNest.Length,
 			Timeout:   conf.ShardingBirdsNest.Timeout,
-			Birdsnest: bn,
+			Birdsnest: bidsNest,
 			Snapshot:  snapshot,
 		}
 		return c, nil
@@ -138,35 +152,39 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 	}
 }
 
-//func ToLocalhost(conf config.TxFilterConfig) localconf.TxFilterConfig {
-//	return localconf.TxFilterConfig{}
-//}
-
+// TxFilterLogger protocol.Logger wrapper
 type TxFilterLogger struct {
-	log protocol.Logger
+	log protocol.Logger // log
 }
 
+// Debugf debug sprintf
 func (t TxFilterLogger) Debugf(format string, args ...interface{}) {
 	t.log.DebugDynamic(LoggingFixLengthFunc(format, args...))
 }
 
+// Errorf error sprintf
 func (t TxFilterLogger) Errorf(format string, args ...interface{}) {
 	t.log.Errorf(format, args...)
 }
 
+// Infof info sprintf
 func (t TxFilterLogger) Infof(format string, args ...interface{}) {
 	t.log.Infof(format, args...)
 }
 
+// NewLogger new logger by protocol.Logger
 func NewLogger(log protocol.Logger) *TxFilterLogger {
 	return &TxFilterLogger{log: log}
 }
 
+// LoggingFixLengthFunc The string length is fixed to avoid outputting a large number of logs
 func LoggingFixLengthFunc(format string, args ...interface{}) func() string {
 	return func() string {
 		return LoggingFixLength(format, args...)
 	}
 }
+
+// LoggingFixLength The string length is fixed to avoid outputting a large number of logs
 func LoggingFixLength(format string, args ...interface{}) string {
 	str := fmt.Sprintf(format, args...)
 	if len(str) > 1024 {
