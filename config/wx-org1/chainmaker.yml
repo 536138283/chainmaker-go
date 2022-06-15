@@ -312,6 +312,6 @@ vm:
   max_send_msg_size: 10
   max_recv_msg_size: 10
   docker_vm_host: 127.0.0.1
-  docker_vm_port: 22359
+  docker_vm_port: 22351
   max_connection: 1
 

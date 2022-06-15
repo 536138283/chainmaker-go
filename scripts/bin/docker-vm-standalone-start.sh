@@ -9,6 +9,7 @@ LOG_PATH=$(pwd)/log
 MOUNT_PATH=$(pwd)/docker-go
 LOG_LEVEL=INFO
 EXPOSE_PORT=22351
+RUNTIME_PORT=32351
 CONTAINER_NAME=chainmaker-docker-vm
 IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
 
@@ -68,6 +69,14 @@ if  [ -n "$tmp" ] ;then
   fi
 fi
 
+read -r -p "input runtime port(default 32351): " tmp
+if  [ -n "$tmp" ] ;then
+  if [[ $tmp =~ ^[0-9]+$ ]] ;then
+      RUNTIME_PORT=$tmp
+  else
+    echo "unknown expose port [" $tmp "], so use 32351"
+  fi
+fi
 
 read -r -p "input container name(default 'chainmaker-docker-vm'): " tmp
 if  [ -n "$tmp" ] ;then
@@ -98,7 +107,8 @@ echo "start docker vm container"
 docker run -itd --rm \
   -v "$MOUNT_PATH":/mount \
   -v "$LOG_PATH":/log \
-  -p "$EXPOSE_PORT":22359 \
+  -p "$EXPOSE_PORT":22351 \
+  -e SANDBOX_RPC_PORT="$RUNTIME_PORT" \
   --name "$CONTAINER_NAME" \
   --privileged $IMAGE_NAME
 
