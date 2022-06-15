@@ -10,8 +10,9 @@ package rpcserver
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"

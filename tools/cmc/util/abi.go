@@ -7,9 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package util
 
 import (
-	"encoding/json"
-
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
+	"chainmaker.org/chainmaker/common/v2/json"
 )
 
 // Param list

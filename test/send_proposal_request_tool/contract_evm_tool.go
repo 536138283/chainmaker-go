@@ -9,7 +9,6 @@ package main
 
 import (
 	"encoding/hex"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -17,6 +16,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	evm "chainmaker.org/chainmaker/common/v2/evmutils"

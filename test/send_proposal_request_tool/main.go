@@ -9,12 +9,13 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"strings"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker/common/v2/crypto"

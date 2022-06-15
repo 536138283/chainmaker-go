@@ -3,14 +3,16 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package common
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 

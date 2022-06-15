@@ -8,8 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 package client
 
 import (
-	"encoding/json"
 	"fmt"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 

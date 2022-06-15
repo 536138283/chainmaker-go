@@ -8,9 +8,10 @@ SPDX-License-Identifier: Apache-2.0
 package native_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"testing"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
