@@ -355,7 +355,11 @@ func FinalizeBlock(
 	return nil
 }
 
-func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType string, blockHeader *commonPb.BlockHeader, logger protocol.Logger) (
+func getTxHash(tx *commonPb.Transaction,
+	rwSet *commonPb.TxRWSet,
+	hashType string,
+	blockHeader *commonPb.BlockHeader,
+	logger protocol.Logger) (
 	[]byte, error) {
 	var rwSetHash []byte
 	rwSetHash, err := utils.CalcRWSetHash(hashType, rwSet)
