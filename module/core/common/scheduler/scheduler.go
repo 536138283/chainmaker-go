@@ -178,7 +178,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
-		"dag building cost %v, total used %v, tps %v\n", len(block.Dag.Vertexes), timeCostA,
+		"dag building cost %v, total used %v, tps %v", len(block.Dag.Vertexes), timeCostA,
 		timeCostB-timeCostA, timeCostB, float64(len(block.Dag.Vertexes))/(float64(timeCostB)/1e9))
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
@@ -248,7 +248,7 @@ func (ts *TxScheduler) initOptimizeTools(
 	var conflictsBitWindow *ConflictsBitWindow
 	enableConflictsBitWindow := ts.chainConf.ChainConfig().Core.EnableConflictsBitWindow
 
-	ts.log.Infof("enable conflicts bit window: [%t]\n", enableConflictsBitWindow)
+	ts.log.Infof("enable conflicts bit window: [%t]", enableConflictsBitWindow)
 
 	if AdjustWindowSize*MinAdjustTimes > txBatchSize {
 		enableConflictsBitWindow = false
@@ -437,7 +437,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	<-ts.scheduleFinishC
 	snapshot.Seal()
 	timeUsed := time.Since(startTime)
-	ts.log.Infof("simulate with dag finished, size %d, time used %v, tps %v\n", len(block.Txs),
+	ts.log.Infof("simulate with dag finished, size %d, time used %v, tps %v", len(block.Txs),
 		timeUsed, float64(len(block.Txs))/(float64(timeUsed)/1e9))
 
 	// Return the read and write set after the scheduled execution
@@ -516,7 +516,8 @@ func (ts *TxScheduler) executeTx(
 	ts.log.Debugf("run vm start for tx:%s", tx.Payload.GetTxId())
 	if txResult, specialTxType, err = ts.runVM(tx, txSimContext, enableOptimizeChargeGas); err != nil {
 		runVmSuccess = false
-		ts.log.Errorf("failed to run vm for tx id:%s, tx result:%+v, error:%+v",
+		//合约运行失败是常态，不需要ERROR级别的日志，Warn级别就行了
+		ts.log.Warnf("failed to run vm for tx id:%s, tx result:%+v, error:%+v",
 			tx.Payload.GetTxId(), txResult, err)
 	}
 	ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ", tx.Payload.TxId, runVmSuccess, txResult)
