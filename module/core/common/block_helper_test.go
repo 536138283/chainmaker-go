@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"chainmaker.org/chainmaker/protocol/v2"
 	"fmt"
 	"testing"
 
@@ -2106,12 +2107,12 @@ func TestName(t *testing.T) {
 }
 
 func Test3(t *testing.T) {
-	hash, err := utils.CalcTxHash("SHA256", &commonpb.Transaction{
+	hash, err := utils.CalcTxHashWithVersion("SHA256", &commonpb.Transaction{
 		Payload:   &commonpb.Payload{TxId: "123"},
 		Sender:    nil,
 		Endorsers: nil,
 		Result:    nil,
-	})
+	}, int(protocol.DefaultBlockVersion))
 	if err != nil {
 		panic(err)
 	}

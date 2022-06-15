@@ -69,7 +69,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	tx.Result.RwSetHash, err = utils.CalcRWSetHash(hashType, rwSetmap[tx.Payload.TxId])
 	require.Nil(t, err)
 
-	txHash, err := utils.CalcTxHash(hashType, tx)
+	txHash, err := utils.CalcTxHashWithVersion(hashType, tx, int(protocol.DefaultBlockVersion))
 	require.Nil(t, err)
 
 	b0 := createNewTestBlockWithoutProposer(0)
@@ -232,7 +232,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	tx.Result.RwSetHash, err = utils.CalcRWSetHash(hashType, rwSetmap[tx.Payload.TxId])
 	require.Nil(t, err)
 
-	txHash, err := utils.CalcTxHash(hashType, tx)
+	txHash, err := utils.CalcTxHashWithVersion(hashType, tx, int(protocol.DefaultBlockVersion))
 	require.Nil(t, err)
 
 	b0 := createNewTestBlockWithoutProposer(0)
