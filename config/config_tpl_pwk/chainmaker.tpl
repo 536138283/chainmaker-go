@@ -156,7 +156,7 @@ txpool:
   # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
   # batch_max_size: 100
 
- # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
+  # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
   # batch_create_timeout: 200
 
 # RPC service setting
