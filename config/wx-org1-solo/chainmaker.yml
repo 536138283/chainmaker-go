@@ -187,27 +187,14 @@ debug:
   is_http_open: false
 
 vm:
-  enable_dockervm: true
-  dockervm_mount_path: ../data/org1/docker-go
+  enable_dockervm: false
+  dockervm_mount_path: ../data/org1/docker-go     # mount point in chain maker
   dockervm_log_path: ../log/org1/dockervm
-  start_now: true
-  uds_open: false
-  #max_send_msg_size: 10
-  #max_recv_msg_size: 10
-  #max_connection: 1
-  # dockervm_config_path: #
-  runtime_server:
-    port: 32459
-    dial_timeout: 10
-    max_send_msg_size: 20
-    max_recv_msg_size: 20
-  contract_engine:
-    #host: 127.0.0.1
-    #host: 0.0.0.0
-    port: 32359
-    dial_timeout: 10
-    max_send_msg_size: 20
-    max_recv_msg_size: 20
-    max_connection: 5
-
-
+  log_in_console: false
+  log_level: INFO
+  uds_open: false                             # default is unix domain socket connection
+  max_send_msg_size: 20
+  max_recv_msg_size: 20
+  docker_vm_host: 127.0.0.1
+  docker_vm_port: 22359
+  max_connection: 1
