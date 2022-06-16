@@ -162,7 +162,7 @@ func (sync *BlockChainSyncServer) initSyncConfIfRequire() {
 
 func (sync *BlockChainSyncServer) blockSyncMsgHandler(from string, msg []byte, msgType netPb.NetMsg_MsgType) error {
 	if atomic.LoadInt32(&sync.start) != 1 {
-		return commonErrors.ErrSyncServiceHasStoped
+		return commonErrors.ErrSyncServiceHasStopped
 	}
 	if msgType != netPb.NetMsg_SYNC_BLOCK_MSG {
 		return nil
