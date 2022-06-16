@@ -113,9 +113,11 @@ var pkExpResourcePolicy = map[string]*policy{
 
 	// disable trust root add & delete for public mode
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(): pubPolicyMajorityAdmin,
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(): pubPolicyMajorityAdmin,
+	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
+		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(): policySelfConfig,
 
 	// disable contract access for public mode
 	syscontract.SystemContract_CONTRACT_MANAGE.String() + "-" +
