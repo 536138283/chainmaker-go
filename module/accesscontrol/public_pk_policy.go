@@ -75,11 +75,11 @@ var pkExpResourcePolicy = map[string]*policy{
 		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(): pubPolicyForbidden,
 
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(): pubPolicyMajorityAdmin,
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(): pubPolicyMajorityAdmin,
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(): pubPolicyMajorityAdmin,
 
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(): pubPolicyForbidden,
@@ -180,11 +180,11 @@ var pkExpResourcePolicyForDPOS = map[string]*policy{
 		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(): pubPolicyForbidden,
 
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(): pubPolicyMajorityAdmin,
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(): pubPolicyMajorityAdmin,
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(): pubPolicyForbidden,
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(): pubPolicyMajorityAdmin,
 
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(): pubPolicyForbidden,
