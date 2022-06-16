@@ -435,9 +435,13 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 	mode protocol.VerifyMode) (isRepeat bool) {
 	b, txRwSet, _ := v.proposalCache.GetProposedBlock(block)
 	// Return not repeat if SQL is not enabled or if it is not solo
-	if b == nil ||
-		!v.chainConf.ChainConfig().Contract.EnableSqlSupport ||
-		consensuspb.ConsensusType_SOLO == v.chainConf.ChainConfig().Consensus.Type {
+	if b == nil {
+		return false
+	}
+	if !v.chainConf.ChainConfig().Contract.EnableSqlSupport {
+		return false
+	}
+	if consensuspb.ConsensusType_SOLO == v.chainConf.ChainConfig().Consensus.Type {
 		return false
 	}
 
