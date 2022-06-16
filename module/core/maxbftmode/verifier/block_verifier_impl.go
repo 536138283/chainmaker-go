@@ -429,9 +429,11 @@ func parseVerifyResult(block *commonpb.Block, isValid bool,
 	} else {
 		verifyResult.Msg = "FAIL"
 		verifyResult.Code = consensuspb.VerifyResult_FAIL
-		verifyResult.RwSetVerifyFailTxs = &consensuspb.RwSetVerifyFailTxs{
-			TxIds:       rwSetVerifyFailTxs.TxIds,
-			BlockHeight: rwSetVerifyFailTxs.BlockHeight,
+		if rwSetVerifyFailTxs != nil {
+			verifyResult.RwSetVerifyFailTxs = &consensuspb.RwSetVerifyFailTxs{
+				TxIds:       rwSetVerifyFailTxs.TxIds,
+				BlockHeight: rwSetVerifyFailTxs.BlockHeight,
+			}
 		}
 	}
 	return verifyResult
