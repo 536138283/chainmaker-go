@@ -113,7 +113,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 	return v, nil
 }
 
-// VerifyBlock, to check if block is valid
+// VerifyBlock to check if block is valid
 func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (err error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err = utils.IsEmptyBlock(block); err != nil {
@@ -138,7 +138,6 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	if isRepeat {
 		return nil
 	}
-
 	var contractEventMap map[string][]*commonpb.ContractEvent
 
 	// avoid to recover the committed block.
@@ -465,9 +464,15 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 	mode protocol.VerifyMode) (isRepeat bool, err error) {
 	b, txRwSet, eventMap := v.proposalCache.GetProposedBlock(block)
+	if b == nil {
+		return false, nil
+	}
 	isSqlDb := v.chainConf.ChainConfig().Contract.EnableSqlSupport
+	if !isSqlDb {
+		return false, nil
+	}
 	isSolo := consensuspb.ConsensusType_SOLO == v.chainConf.ChainConfig().Consensus.Type
-	if b == nil || !isSqlDb || isSolo {
+	if isSolo {
 		return false, nil
 	}
 	// the block has verified before
