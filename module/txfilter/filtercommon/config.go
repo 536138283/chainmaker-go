@@ -16,9 +16,12 @@ import (
 type TxFilterType int32
 
 const (
-	TxFilterTypeDefault   TxFilterType = 0 // TxFilterTypeDefault Default transaction filter type
-	TxFilterTypeBirdsNest TxFilterType = 1 // TxFilterTypeBirdsNest Bird's Nest transaction filter type
-	TxFilterTypeMap       TxFilterType = 2 // TxFilterTypeMap Map transaction filter type
+	// TxFilterTypeDefault Default transaction filter type
+	TxFilterTypeDefault TxFilterType = 0
+	// TxFilterTypeBirdsNest Bird's Nest transaction filter type
+	TxFilterTypeBirdsNest TxFilterType = 1
+	// TxFilterTypeMap Map transaction filter type
+	TxFilterTypeMap TxFilterType = 2
 	// TxFilterTypeShardingBirdsNest Sharding Bird's Nest transaction filter type
 	TxFilterTypeShardingBirdsNest TxFilterType = 3
 )

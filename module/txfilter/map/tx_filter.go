@@ -15,8 +15,10 @@ import (
 
 // TxFilter sync.Map transaction filter
 type TxFilter struct {
-	height uint64   // blcok height
-	m      sync.Map // m Thread-safe map
+	// blcok height
+	height uint64
+	// m Thread-safe map
+	m sync.Map
 }
 
 // ValidateRule validate rules

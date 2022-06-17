@@ -14,7 +14,8 @@ import (
 
 // TxFilter protocol.BlockchainStore transaction filter
 type TxFilter struct {
-	store protocol.BlockchainStore // store block store
+	// store block store
+	store protocol.BlockchainStore
 }
 
 // ValidateRule validate transaction rules
