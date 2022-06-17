@@ -489,11 +489,15 @@ vm:
   # Specify log file path
   dockervm_log_path: ../log/{org_id}/docker-go
   # Start docker vm right now
+  # 1. false: docker vm will not be started when starting the chain. docker vm needs to be started separately
+  # 2. true: when starting the chain, the script will start the docker vm first
   start_now: {start_dockervm_now}
   # Unix domain socket open, used for chainmaker and docker manager communication
-  uds_open: false
+  # 1. false: docker vm uses TCP to communicate with chain
+  # 2. true: docker vm uses unix domain socket to communicate with chain
+  uds_open: {dockervm_uds_open}
   # If use a customized VM configuration file, supplement it; else, do not configure
-  # dockervm_config_path:
+  # dockervm_config_path: /config_path/vm.yml
   # Whether to print log at terminal
   log_in_console: false
   # Log level
@@ -522,4 +526,5 @@ vm:
     max_recv_msg_size: 20
     # Max number of connection created to connect docker vm service
     max_connection: 5
+
 
