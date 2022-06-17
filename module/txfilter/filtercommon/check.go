@@ -18,11 +18,16 @@ import (
 )
 
 var (
-	StringNil       = ""            // StringNil If the error string is not equal to StringNil then you need to returnup
-	ErrStrSharding  = "sharding."   // ErrStrSharding Error string prefix "sharding."
-	ErrStrBirdsNest = "brids_nest." // ErrStrBirdsNest Error string prefix "brids_nest."
-	ErrStrCuckoo    = "cuckoo."     // ErrStrCuckoo Error string prefix "cuckoo."
-	ErrStrSnapshot  = "snapshot."   // snapshot. Error string prefix snapshot.
+	// StringNil If the error string is not equal to StringNil then you need to returnup
+	StringNil = ""
+	// ErrStrSharding Error string prefix "sharding."
+	ErrStrSharding = "sharding."
+	// ErrStrBirdsNest Error string prefix "brids_nest."
+	ErrStrBirdsNest = "brids_nest."
+	// ErrStrCuckoo Error string prefix "cuckoo."
+	ErrStrCuckoo = "cuckoo."
+	// snapshot. Error string prefix snapshot.
+	ErrStrSnapshot = "snapshot."
 
 	// ErrStrInvalidShardingTimeoutMustBeGreaterThan1 Invalid sharding timeout must be greater than 1
 	ErrStrInvalidShardingTimeoutMustBeGreaterThan1 = ErrStrSharding + "timeout must be greater than 1"
