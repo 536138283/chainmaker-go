@@ -323,12 +323,14 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			return nil, nil, nil, err
 		}
 		if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
+			vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
 			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
 			continue
 		}
 		result.RwSetHash = rwsetHash
 		// verify if rwset hash is equal
 		if err = VerifyTxResult(tx, result, vt.chainConf.ChainConfig().Crypto.Hash); err != nil {
+			vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
 			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
 			continue
 		}
