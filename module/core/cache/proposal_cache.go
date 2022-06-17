@@ -118,6 +118,9 @@ func (pc *ProposalCache) SetProposedBlock(b *commonpb.Block, rwSetMap map[string
 	}
 	height := b.Header.BlockHeight
 	currentHeight, err := pc.ledgerCache.CurrentHeight()
+	if err != nil {
+		return err
+	}
 	if err == nil && currentHeight >= height && height != 0 {
 		// this height has committed, ignore this block
 		return fmt.Errorf("block with invalid height, currentHeight: %d, blockHeight: %d", currentHeight, height)

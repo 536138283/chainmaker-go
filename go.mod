@@ -5,16 +5,16 @@ go 1.16
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220607072052-653ff1f72ed5
 	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220610113539-987118ad2d41
-	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220601111005-e5d844eeaff7
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220607151635-8f39301931e1
-	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220601112100-272db10da7e4
+	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220610095238-45e9f4508c70
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220610094831-8b89e7685a21
+	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220610093828-3152e5d6c804
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.2.0
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220602090304-b643761f502d
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220601110618-0cd95ef35486
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220610092941-4ba205a9b69d
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220610092515-91f118b0e1f1
 	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220607115425-03689a750027
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220613040127-5b976891c91e
-	chainmaker.org/chainmaker/net-common v1.1.2-0.20220601102651-293b88d0a08d
-	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220601104819-7fa7eb01b444
+	chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585
+	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220615062125-702578551b39
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220617081650-cc775e8ce4db
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220617081619-c86df10c4607
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220601081720-f8da79a98a44
@@ -66,7 +66,7 @@ require (
 )
 
 require (
-	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220613130954-7ffdbae6aad2
+	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220609031411-3e1c47ac7cfb
 	chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
