@@ -202,6 +202,8 @@ type accessControlService struct {
 
 	exceptionalPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
 
+	lastestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
+
 	//local cache for member
 	memberCache *concurrentlru.Cache
 
@@ -227,6 +229,7 @@ func initAccessControlService(hashType, authType string,
 		orgList:               &sync.Map{},
 		resourceNamePolicyMap: &sync.Map{},
 		exceptionalPolicyMap:  &sync.Map{},
+		lastestPolicyMap:      &sync.Map{},
 		memberCache:           concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		dataStore:             store,
 		log:                   log,
@@ -588,12 +591,14 @@ func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.R
 	case protocol.PermissionedWithKey:
 		acs.createDefaultResourcePolicyForPK(localOrgId)
 	}
+	lastestPolicyMap := &sync.Map{}
 	for _, resourcePolicy := range resourcePolicies {
 		if acs.validateResourcePolicy(resourcePolicy) {
 			policy := newPolicyFromPb(resourcePolicy.Policy)
-			acs.resourceNamePolicyMap.Store(resourcePolicy.ResourceName, policy)
+			lastestPolicyMap.Store(resourcePolicy.ResourceName, policy)
 		}
 	}
+	acs.lastestPolicyMap = lastestPolicyMap
 }
 
 func (acs *accessControlService) checkResourcePolicyOrgList(policy *pbac.Policy) bool {
@@ -783,6 +788,9 @@ func (acs *accessControlService) createPrincipalForTargetOrg(resourceName string
 }
 
 func (acs *accessControlService) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
+	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
+		return p.(*policy), nil
+	}
 	p, ok := acs.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
 		if p, ok = acs.exceptionalPolicyMap.Load(resourceName); !ok {
@@ -1103,19 +1111,22 @@ func buildOrgListRoleListOfPolicyForVerifyPrincipal(p *policy) (map[string]bool,
 }
 
 func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy, error) {
-	p, ok := acs.resourceNamePolicyMap.Load(resourceName)
-	if !ok {
-		return nil, fmt.Errorf("policy not found for resource %s", resourceName)
+	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
 	}
-	pbPolicy := p.(*policy).GetPbPolicy()
-	return pbPolicy, nil
+	if p, ok := acs.resourceNamePolicyMap.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+	}
+	return nil, fmt.Errorf("policy not found for resource %s", resourceName)
 }
 
 func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
-	p, ok := acs.exceptionalPolicyMap.Load(resourceName)
-	if !ok {
-		return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
+	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
 	}
-	pbPolicy := p.(*policy).GetPbPolicy()
-	return pbPolicy, nil
+	if p, ok := acs.exceptionalPolicyMap.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+
+	}
+	return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
 }
