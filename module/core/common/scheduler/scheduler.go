@@ -516,8 +516,8 @@ func (ts *TxScheduler) executeTx(
 	ts.log.Debugf("run vm start for tx:%s", tx.Payload.GetTxId())
 	if txResult, specialTxType, err = ts.runVM(tx, txSimContext, enableOptimizeChargeGas); err != nil {
 		runVmSuccess = false
-		ts.log.Errorf("failed to run vm for tx id:%s, tx result:%+v, error:%+v",
-			tx.Payload.GetTxId(), txResult, err)
+		ts.log.Errorf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
+			tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
 	}
 	ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ", tx.Payload.TxId, runVmSuccess, txResult)
 	txSimContext.SetTxResult(txResult)
