@@ -95,7 +95,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		txFilter:      config.TxFilter,
 	}
 
-	verifierConf := &common.VerifierBlockConf{
+	verifyConf := &common.VerifierBlockConf{
 		ChainConf:       config.ChainConf,
 		Log:             log,
 		LedgerCache:     config.LedgerCache,
@@ -109,7 +109,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 		TxScheduler:     config.TxScheduler,
 		TxFilter:        config.TxFilter,
 	}
-	v.verifierBlock = common.NewVerifierBlock(verifierConf)
+	v.verifierBlock = common.NewVerifierBlock(verifyConf)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_VERIFIER, "metric_block_verify_time",
@@ -487,33 +487,36 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 	if b == nil {
 		return false
 	}
-	if !v.chainConf.ChainConfig().Contract.EnableSqlSupport {
-		return false
-	}
-	if consensuspb.ConsensusType_SOLO == v.chainConf.ChainConfig().Consensus.Type {
-		return false
-	}
+	isSqlDb := v.chainConf.ChainConfig().Contract.EnableSqlSupport
+	if consensuspb.ConsensusType_SOLO != v.chainConf.ChainConfig().Consensus.Type || isSqlDb {
+		elapsed := utils.CurrentTimeMillisSeconds() - startTick
+		// the block has verified before
+		v.log.Infof("verify success repeat [%d](%x), total: %d", block.Header.BlockHeight, block.Header.BlockHash, elapsed)
+		if protocol.CONSENSUS_VERIFY == mode {
+			// consensus mode, publish verify result to message bus
+			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, true, txRwSet, nil))
+		}
+		lastBlock, _ := v.proposalCache.GetProposedBlockByHashAndHeight(
+			block.Header.PreBlockHash, block.Header.BlockHeight-1)
+		if lastBlock == nil {
+			v.log.Debugf(
+				"no pre-block be found, preHeight:%d, preBlockHash:%x",
+				block.Header.BlockHeight-1,
+				block.Header.PreBlockHash,
+			)
+			return true
+		}
+		cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
+		if len(cutBlocks) > 0 {
+			v.log.Infof(
+				"cut block block hash: %s, height: %v",
+				hex.EncodeToString(lastBlock.Header.BlockHash),
+				lastBlock.Header.BlockHeight,
+			)
+			v.cutBlocks(cutBlocks, lastBlock)
+		}
 
-	// the block has verified before
-	v.log.Infof("verify success repeat [%d](%x), total: %d", block.Header.BlockHeight,
-		block.Header.BlockHash, utils.CurrentTimeMillisSeconds()-startTick)
-	if protocol.CONSENSUS_VERIFY == mode {
-		// consensus mode, publish verify result to message bus
-		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, true, txRwSet, nil))
-	}
-	lastBlock, _ := v.proposalCache.GetProposedBlockByHashAndHeight(
-		block.Header.PreBlockHash, block.Header.BlockHeight-1)
-	if lastBlock == nil {
-		v.log.Debugf("no pre-block be found, preHeight:%d, preBlockHash:%x", block.Header.BlockHeight-1,
-			block.Header.PreBlockHash)
 		return true
 	}
-	// Remove proposed block in height except the specific block
-	cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
-	if len(cutBlocks) > 0 {
-		v.log.Infof("cut block block hash: %s, height: %v", hex.EncodeToString(lastBlock.Header.BlockHash),
-			lastBlock.Header.BlockHeight)
-		v.cutBlocks(cutBlocks, lastBlock)
-	}
-	return true
+	return false
 }
