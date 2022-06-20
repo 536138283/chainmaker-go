@@ -30,6 +30,7 @@ var (
 	pedersenNegMethod string
 )
 
+// BulletproofsCMD new bullet proofs command
 func BulletproofsCMD() *cobra.Command {
 	bulletproofsCmd := &cobra.Command{
 		Use:   "bulletproofs",

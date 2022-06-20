@@ -4,6 +4,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package hibe
 
 import (
@@ -41,6 +42,7 @@ var (
 	// updatePrvKeyCMD flags
 )
 
+// HibeCMD new ChainMaker hibe command
 func HibeCMD() *cobra.Command {
 	hibeCmd := &cobra.Command{
 		Use:   "hibe",

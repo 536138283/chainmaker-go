@@ -71,6 +71,7 @@ func signContractMgmtPayloadCMD() *cobra.Command {
 	return contractCmd
 }
 
+// LOAD_FILE_ERROR_FORMAT define LOAD_FILE_ERROR_FORMAT error fmt
 const LOAD_FILE_ERROR_FORMAT = "Load file %s error: %s"
 
 func signPayload() error {
@@ -178,6 +179,7 @@ func sign(msg []byte) (*sdkPbCommon.EndorsementEntry, error) {
 	//}, nil
 }
 
+// ParseCert parse cert from cert PEM
 func ParseCert(crtPEM []byte) (*bcx509.Certificate, error) {
 	certBlock, _ := pem.Decode(crtPEM)
 	if certBlock == nil {
@@ -192,6 +194,7 @@ func ParseCert(crtPEM []byte) (*bcx509.Certificate, error) {
 	return cert, nil
 }
 
+// SignTx sign tx(msg) by privateKey and cert
 func SignTx(privateKey crypto.PrivateKey, cert *bcx509.Certificate, msg []byte) ([]byte, error) {
 	var opts crypto.SignOpts
 	hashalgo, err := bcx509.GetHashFromSignatureAlgorithm(cert.SignatureAlgorithm)

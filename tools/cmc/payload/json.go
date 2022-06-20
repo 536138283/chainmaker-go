@@ -14,7 +14,7 @@ import (
 	sdkPbCommon "chainmaker.org/chainmaker/pb-go/v2/common"
 
 	"github.com/gogo/protobuf/proto"
-	"github.com/hokaccha/go-prettyjson"
+	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 

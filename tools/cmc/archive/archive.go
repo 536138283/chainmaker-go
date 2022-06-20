@@ -59,6 +59,7 @@ const (
 	flagStartBlockHeight = "start-block-height"
 )
 
+// NewArchiveCMD new archive blockchain data and restore blockchain data command
 func NewArchiveCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archive",

@@ -16,12 +16,14 @@ const (
 	KArchivedblockheight = "archived_block_height"
 )
 
+// Sysinfo define system info db model
 type Sysinfo struct {
 	BaseModel
 	K string `gorm:"unique;type:varchar(64) NOT NULL"`
 	V string `gorm:"type:varchar(64) NOT NULL"`
 }
 
+// GetArchivedBlockHeight get archived block height from db
 func GetArchivedBlockHeight(db *gorm.DB) (uint64, error) {
 	var sysinfo Sysinfo
 	err := db.First(&sysinfo, "k = ?", KArchivedblockheight).Error
@@ -38,6 +40,7 @@ func GetArchivedBlockHeight(db *gorm.DB) (uint64, error) {
 	return strconv.ParseUint(sysinfo.V, 10, 64)
 }
 
+// UpdateArchivedBlockHeight update archived block height in db
 func UpdateArchivedBlockHeight(db *gorm.DB, archivedBlockHeight uint64) error {
 	return db.Model(&Sysinfo{}).Where("k = ?", KArchivedblockheight).
 		Update("v", archivedBlockHeight).Error

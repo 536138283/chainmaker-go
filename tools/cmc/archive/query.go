@@ -11,15 +11,14 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/hokaccha/go-prettyjson"
-	"github.com/spf13/cobra"
-	"gorm.io/gorm"
-
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/store"
+	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/spf13/cobra"
+	"gorm.io/gorm"
 )
 
 func newQueryOffChainCMD() *cobra.Command {

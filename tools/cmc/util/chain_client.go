@@ -35,6 +35,7 @@ func CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtPath, userTlsKeyPa
 	return cc, DealChainClientCertHash(cc, true)
 }
 
+// CreateChainClientWithConfPath create chain client with sdk config file path & whether enable cert hash
 func CreateChainClientWithConfPath(sdkConfPath string, enableCertHash bool) (*sdk.ChainClient, error) {
 	cc, err := sdk.NewChainClient(
 		sdk.WithConfPath(sdkConfPath),
@@ -46,6 +47,10 @@ func CreateChainClientWithConfPath(sdkConfPath string, enableCertHash bool) (*sd
 	return cc, DealChainClientCertHash(cc, enableCertHash)
 }
 
+// AttachAndRequiredFlags attach command flags and make them required
+// instructs the various shell completion implementations to
+// prioritize the named flag when performing completion,
+// and causes your command to report an error if invoked without the flag.
 func AttachAndRequiredFlags(cmd *cobra.Command, flags *pflag.FlagSet, names []string) {
 	cmdFlags := cmd.Flags()
 	for _, name := range names {
@@ -57,6 +62,8 @@ func AttachAndRequiredFlags(cmd *cobra.Command, flags *pflag.FlagSet, names []st
 	}
 }
 
+// AttachFlags attach command flags
+// will add the flag to the FlagSet
 func AttachFlags(cmd *cobra.Command, flags *pflag.FlagSet, names []string) {
 	cmdFlags := cmd.Flags()
 	for _, name := range names {

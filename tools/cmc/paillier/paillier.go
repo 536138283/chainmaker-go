@@ -3,6 +3,7 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package paillier
 
 import (
@@ -22,6 +23,7 @@ var (
 	paillierKeyFileName string
 )
 
+// PaillierCMD new ChainMaker paillier command
 func PaillierCMD() *cobra.Command {
 	paillierCmd := &cobra.Command{
 		Use:   "paillier",

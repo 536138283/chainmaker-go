@@ -11,7 +11,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/c-bata/go-prompt"
+	prompt "github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 )
 
@@ -24,6 +24,7 @@ var exitCmd = &cobra.Command{
 	},
 }
 
+// NewConsoleCMD new Open a console to interact with ChainMaker daemon command
 func NewConsoleCMD(rootCmd *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "console",

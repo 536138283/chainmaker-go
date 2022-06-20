@@ -26,6 +26,7 @@ const (
 	flagTxIds       = "tx-ids"
 )
 
+// NewTxPoolCMD new txpool command
 func NewTxPoolCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "txpool",

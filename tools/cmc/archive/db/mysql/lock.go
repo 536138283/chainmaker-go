@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// DefaultLockLeaseAge define default db locker lease age
 const DefaultLockLeaseAge = 10 * time.Second
 
 type lock struct {
@@ -30,6 +31,7 @@ type dbLocker struct {
 	leaseAge time.Duration
 }
 
+// NewDbLocker new db locker
 func NewDbLocker(db *gorm.DB, holder string, lease time.Duration) *dbLocker {
 	return &dbLocker{
 		db:       db,

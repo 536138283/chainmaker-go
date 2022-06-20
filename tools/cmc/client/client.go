@@ -145,6 +145,7 @@ const (
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
 )
 
+// ClientCMD new client series command
 func ClientCMD() *cobra.Command {
 	clientCmd := &cobra.Command{
 		Use:   "client",

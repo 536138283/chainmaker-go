@@ -21,16 +21,23 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	protocol "chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
 )
 
+// CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT define CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT error fmt
 const CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT = "checkProposalRequestResp failed, %s"
+
+// SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT define SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT error fmt
 const SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT = "SendContractManageRequest failed, %s"
+
+// ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT define ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT error fmt
 const ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT = "admin orgId & key & cert list length not equal, " +
 	"[keys len: %d]/[certs len:%d]"
+
+// ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT define ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT error fmt
 const ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT = "admin orgId & key list length not equal, " +
 	"[keys len: %d]/[org-ids len:%d]"
 
@@ -39,6 +46,7 @@ var (
 	noConstructorErrMsg         = "contract does not have a constructor"
 )
 
+// UserContract define user contract
 type UserContract struct {
 	ContractName string
 	Method       string

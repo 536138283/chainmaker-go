@@ -23,6 +23,7 @@ var (
 	name string
 )
 
+// KeyCMD new ChainMaker key command
 func KeyCMD() *cobra.Command {
 	keyCmd := &cobra.Command{
 		Use:   "key",

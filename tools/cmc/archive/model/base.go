@@ -9,6 +9,7 @@ import (
 	"database/sql"
 )
 
+// BaseModel define base db model
 type BaseModel struct {
 	ID        int64        `gorm:"primaryKey;column:Fid;type:int unsigned NOT NULL AUTO_INCREMENT"`
 	CreatedAt sql.NullTime `gorm:"index;column:Fcreate_time;type:timestamp"`

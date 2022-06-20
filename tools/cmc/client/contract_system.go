@@ -22,6 +22,7 @@ import (
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
+// DEFAULT_TIMEOUT define default timeout in ms
 const DEFAULT_TIMEOUT = 5000 // ms
 
 func systemContractCMD() *cobra.Command {

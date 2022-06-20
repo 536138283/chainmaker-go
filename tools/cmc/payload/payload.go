@@ -27,6 +27,7 @@ var (
 	sdkConfPath   string
 )
 
+// NewPayloadCMD new tx payload command
 func NewPayloadCMD() *cobra.Command {
 	payloadCmd := &cobra.Command{
 		Use:   "payload",

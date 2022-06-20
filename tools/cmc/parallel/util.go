@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
-	"chainmaker.org/chainmaker/utils/v2"
+	utils "chainmaker.org/chainmaker/utils/v2"
 	"errors"
 	"fmt"
 	"strings"

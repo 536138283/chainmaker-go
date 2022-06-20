@@ -38,6 +38,7 @@ var (
 	sans = []string{"localhost", "chainmaker.org", "127.0.0.1"}
 )
 
+// CertCMD new ChainMaker cert command
 func CertCMD() *cobra.Command {
 	certCmd := &cobra.Command{
 		Use:   "cert",
