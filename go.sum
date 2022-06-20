@@ -135,6 +135,8 @@ chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220614130955-ab6a4c7c9d8a h
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220614130955-ab6a4c7c9d8a/go.mod h1:r/E8i2fGZcxeGxhPmUt7yfnRSecjsIT3PJ0msVkXRQc=
 chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220607092912-c402344e4b7d h1:n68MgJYfw1MDU+XX85uTG8Tqsrm8aQBlFxSnLIKuYzM=
 chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220607092912-c402344e4b7d/go.mod h1:bK4RxyycTZxD3ZOWEuoYCPbpWRaQ2lf1zGwGAK1F19g=
+chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220620083659-3475c9faf5be h1:uHK0gjwz95sD9RuhwOlbRJCZhx2QfAXCzC/Uk+bp4rY=
+chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220620083659-3475c9faf5be/go.mod h1:bK4RxyycTZxD3ZOWEuoYCPbpWRaQ2lf1zGwGAK1F19g=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220310130906-fc7031ec25c7 h1:e1mW0GBVgn2QBhNtsGPsgxJtngkHQilZvuUiJTAae90=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220310130906-fc7031ec25c7/go.mod h1:HTmHWUCr1sEH0Y3cCcIumxOJXn1S8gQtGoT+Z9u82lY=
 chainmaker.org/chainmaker/vm-native/v2 v2.1.2-0.20220214074706-de3ae8c9453e/go.mod h1:PnFx10VT+j0G2pDSYd6zybD1z39vxlo0tM5dR82DeAI=
