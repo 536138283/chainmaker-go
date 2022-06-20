@@ -170,6 +170,14 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		if sqlErr := v.storeHelper.RollBack(newBlock, v.blockchainStore); sqlErr != nil {
 			v.log.Errorf("block [%d] rollback sql failed: %s", newBlock.Header.BlockHeight, sqlErr)
 		}
+
+		// clear snapshot when verify fail
+		if snapErr := v.snapshotManager.ClearSnapshot(block); snapErr != nil {
+			snapErr = fmt.Errorf("clear snapshot fail[%d](hash:%x), err: %s",
+				block.Header.BlockHeight, block.Header.BlockHash, snapErr.Error())
+			v.log.Error(snapErr)
+		}
+
 		return err
 	}
 
