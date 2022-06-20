@@ -6,7 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 package shardingbirdsnest
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 
@@ -537,7 +536,7 @@ func (t TestLogger) Debugf(format string, args ...interface{}) {
 }
 
 func (t TestLogger) Debugw(msg string, keysAndValues ...interface{}) {
-	t.T.Log(fmt.Sprintf(msg, keysAndValues...))
+	t.T.Logf(msg, keysAndValues...)
 }
 
 func (t TestLogger) Error(args ...interface{}) {
