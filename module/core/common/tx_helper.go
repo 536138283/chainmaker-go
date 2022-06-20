@@ -52,24 +52,24 @@ type RwSetVerifyFailTx struct {
 }
 
 // 判断相同分支上是否存在交易重复（防止双花）
-func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) bool {
+func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) (bool, error) {
 	hash := preBlockHash
 
 	for i := uint64(1); i <= 3; i++ {
 		b, _ := proposalCache.GetProposedBlockByHashAndHeight(hash, height-i)
 		if b == nil || b.Header == nil {
-			return false
+			return false, nil
 		}
 
-		for _, v := range b.Txs {
-			if v.Payload.TxId == txId {
-				return true
+		for _, tx := range b.Txs {
+			if tx.Payload.TxId == txId {
+				return true, fmt.Errorf("found the same tx[%s], height: %d", txId, b.Header.BlockHeight)
 			}
 		}
 		hash = b.Header.PreBlockHash
 	}
 
-	return false
+	return false, nil
 }
 
 func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transaction,
@@ -79,11 +79,11 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	mode protocol.VerifyMode, verifyMode uint8) error {
 
 	if TxPoolType == batch.TxPoolType {
-		if consensuspb.ConsensusType_MAXBFT == consensusType &&
-			IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash) {
+		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
+		if consensuspb.ConsensusType_MAXBFT == consensusType && isExit {
 
-			err := fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d",
-				tx.Payload.TxId, block.Header.BlockHeight)
+			err = fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d, exit:%s",
+				tx.Payload.TxId, block.Header.BlockHeight, err.Error())
 			return err
 		}
 
@@ -93,11 +93,11 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 
 	txInPool, existTx := txsRet[tx.Payload.TxId]
 	if existTx {
-		if consensuspb.ConsensusType_MAXBFT == consensusType &&
-			IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash) {
+		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
+		if consensuspb.ConsensusType_MAXBFT == consensusType && isExit {
 
-			err := fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d",
-				tx.Payload.TxId, block.Header.BlockHeight)
+			err = fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d, exit:%s",
+				tx.Payload.TxId, block.Header.BlockHeight, err.Error())
 			return err
 		}
 

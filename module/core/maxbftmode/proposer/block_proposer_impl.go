@@ -171,6 +171,10 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 		select {
 		case <-bp.proposeTimer.C:
 			poolStatus := bp.txPool.GetPoolStatus()
+			if poolStatus == nil {
+				bp.log.Warnf("pool status is nil")
+				return
+			}
 			if poolStatus.ConfigTxNumInQueue != 0 || poolStatus.CommonTxNumInQueue != 0 {
 				bp.log.DebugDynamic(func() string {
 					return "publish msgbus proposeTimer propose blocks propose true"
@@ -276,11 +280,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	if common.TxPoolType == batch.TxPoolType {
 		dupTxs := make([]*commonpb.Transaction, 0)
 		finalBatch := make([]*commonpb.Transaction, len(fetchBatch))
-		for _, v := range fetchBatch {
-			if common.IfExitInSameBranch(height, v.Payload.TxId, bp.proposalCache, preHash) {
-				dupTxs = append(dupTxs, v)
+		for _, tx := range fetchBatch {
+			if isExit, _ := common.IfExitInSameBranch(height, tx.Payload.TxId, bp.proposalCache, preHash); isExit {
+				dupTxs = append(dupTxs, tx)
 			} else {
-				finalBatch = append(finalBatch, v)
+				finalBatch = append(finalBatch, tx)
 			}
 		}
 
