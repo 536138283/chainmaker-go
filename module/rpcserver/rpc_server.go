@@ -29,6 +29,7 @@ import (
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	"github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 // RPCServer struct define
@@ -362,11 +363,16 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 	opts = append(opts, grpc.MaxSendMsgSize(localconf.ChainMakerConfig.RpcConfig.MaxSendMsgSize))
 	opts = append(opts, grpc.MaxRecvMsgSize(localconf.ChainMakerConfig.RpcConfig.MaxRecvMsgSize))
 
-	//params := grpc.KeepaliveParams(keepalive.ServerParameters{
-	//	Time:    10 * time.Second,
-	//	Timeout: 10 * time.Second,
-	//})
-	//opts = append(opts, params)
+	// keep alive
+	var kaep = keepalive.EnforcementPolicy{
+		MinTime:             2 * time.Second, // If a client pings more than once every 2 seconds, terminate the connection
+		PermitWithoutStream: true,            // Allow pings even when there are no active streams
+	}
+	var kasp = keepalive.ServerParameters{
+		Time:    5 * time.Second, // Ping the client if it is idle for 5 seconds to ensure the connection is still active
+		Timeout: 1 * time.Second, // Wait 1 second for the ping ack before assuming the connection is dead
+	}
+	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep), grpc.KeepaliveParams(kasp))
 
 	server := grpc.NewServer(opts...)
 
