@@ -42,13 +42,17 @@ func (cf *txFilterFactory) NewTxFilter(conf *filtercommon.TxFilterConfig, log pr
 		return defau1t.New(store), nil
 	}
 	switch conf.Type {
-	case filtercommon.TxFilterTypeDefault: // default txfilter
+	// default txfilter
+	case filtercommon.TxFilterTypeDefault:
 		return defau1t.New(store), nil
-	case filtercommon.TxFilterTypeBirdsNest: // bird's nest txfilter
+		// bird's nest txfilter
+	case filtercommon.TxFilterTypeBirdsNest:
 		return birdnest.New(conf.BirdsNest, log, store)
-	case filtercommon.TxFilterTypeMap: // map txfilter
+		// map txfilter
+	case filtercommon.TxFilterTypeMap:
 		return mapimpl.New(), nil
-	case filtercommon.TxFilterTypeShardingBirdsNest: // sharding bird's nest txfilter
+		// sharding bird's nest txfilter
+	case filtercommon.TxFilterTypeShardingBirdsNest:
 		return shardingbirdsnest.New(conf.ShardingBirdsNest, log, store)
 	default:
 		log.Warnf("txfilter type: %v not support, use default type: store", conf.Type)

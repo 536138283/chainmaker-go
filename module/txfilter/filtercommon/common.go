@@ -154,7 +154,8 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 
 // TxFilterLogger protocol.Logger wrapper
 type TxFilterLogger struct {
-	log protocol.Logger // log
+	// log
+	log protocol.Logger
 }
 
 // Debugf debug sprintf
@@ -170,6 +171,11 @@ func (t TxFilterLogger) Errorf(format string, args ...interface{}) {
 // Infof info sprintf
 func (t TxFilterLogger) Infof(format string, args ...interface{}) {
 	t.log.Infof(format, args...)
+}
+
+// Infof info sprintf
+func (t TxFilterLogger) Warnf(format string, args ...interface{}) {
+	t.log.Warnf(format, args...)
 }
 
 // NewLogger new logger by protocol.Logger

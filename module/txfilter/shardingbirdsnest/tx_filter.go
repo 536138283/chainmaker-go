@@ -26,11 +26,16 @@ const (
 
 // TxFilter Sharding transaction filter
 type TxFilter struct {
-	log   protocol.Logger          // log Log output protocol.Logger
-	bn    *sbn.ShardingBirdsNest   // bn Sharding Bird's Nest implementation
-	store protocol.BlockchainStore // store block store protocol.BlockchainStore
-	exitC chan struct{}            // exitC Exit channel
-	l     sync.RWMutex             // l read write lock
+	// log Log output protocol.Logger
+	log protocol.Logger
+	// bn Sharding Bird's Nest implementation
+	bn *sbn.ShardingBirdsNest
+	// store block store protocol.BlockchainStore
+	store protocol.BlockchainStore
+	// exitC Exit channel
+	exitC chan struct{}
+	// l read write lock
+	l sync.RWMutex
 }
 
 // ValidateRule validate rules
@@ -200,6 +205,16 @@ func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (bool, error) 
 	defer f.l.RUnlock()
 	contains, err := f.bn.Contains(key, ruleType...)
 	if err != nil {
+		// If not, query DB
+		if err == bn.ErrKeyTimeIsNotInTheFilterRange {
+			var exists bool
+			exists, err = f.store.TxExists(txId)
+			if err != nil {
+				f.log.Errorf("filter check exists, query from db fail, normal txid: %v, error:%v", txId, err)
+				return false, err
+			}
+			return exists, err
+		}
 		f.log.Errorf("filter check exists, query from filter fail, txid: %v, error:%v", txId, err)
 		return false, err
 	}
