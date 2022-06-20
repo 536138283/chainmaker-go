@@ -26,6 +26,7 @@ const (
 	addPermissionResourceEnum = iota + 1
 	updatePermissionResourceEnum
 	deletePermissionResourceEnum
+	listPermissionResourceEnum
 )
 
 func permissionResourceCMD() *cobra.Command {
@@ -37,6 +38,7 @@ func permissionResourceCMD() *cobra.Command {
 	cmd.AddCommand(addPermissionResourceCMD())
 	cmd.AddCommand(updatePermissionResourceCMD())
 	cmd.AddCommand(deletePermissionResourceCMD())
+	cmd.AddCommand(listPermissionResourceCMD())
 	return cmd
 }
 
@@ -103,6 +105,28 @@ func deletePermissionResourceCMD() *cobra.Command {
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
 		flagSdkConfPath, flagPermissionResourceName,
+	})
+
+	return cmd
+}
+
+func listPermissionResourceCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "list",
+		Short: "list chain config permission resource",
+		Long:  "list chain config permission resource",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return doPermissionResourceOperation(listPermissionResourceEnum)
+		},
+	}
+
+	util.AttachFlags(cmd, flags, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath, flagOrgId,
+		flagChainId, flagTimeout, flagSyncResult, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
+	})
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath,
 	})
 
 	return cmd
@@ -176,6 +200,18 @@ func doPermissionResourceOperation(crud int) error {
 		if err != nil {
 			return err
 		}
+	case listPermissionResourceEnum:
+		permissionList, err := client.GetChainConfigPermissionList()
+		if err != nil {
+			return fmt.Errorf("get chain config failed, %s", err.Error())
+		}
+
+		output, err := prettyjson.Marshal(permissionList)
+		if err != nil {
+			return err
+		}
+		fmt.Println(string(output))
+		return nil
 	default:
 		return errors.New("invalid permission resource operation")
 	}
