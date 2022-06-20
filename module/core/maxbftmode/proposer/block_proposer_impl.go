@@ -248,6 +248,20 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 			height, len(fetchBatch)))
 		if len(fetchBatch) == 0 {
 			bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("no txs in tx pool, proposing block stoped"))
+
+			// fetch Tx from other block
+			proposedBlocks := bp.proposalCache.GetProposedBlocksAt(height)
+			if len(proposedBlocks) != 0 {
+				proposedBlock, err := bp.fetchFromProposalCache(proposedBlocks)
+				if err != nil {
+					return nil, err
+				}
+
+				if proposedBlock != nil {
+					return proposedBlock, nil
+				}
+			}
+
 			break
 		}
 		// validate txFilter rules
@@ -255,16 +269,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
 		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
 		if len(removeTxs) > 0 {
-			// don't remove tx when is batchTx pool
-			if common.TxPoolType == batch.TxPoolType {
-				// remove and get new batchIds
-				batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
-				fetchBatch = getFetchBatch(fetchBatches)
-
-			} else {
-				bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
-			}
-
+			batchIds, fetchBatch = bp.removeTx(height, batchIds, removeTxs, fetchBatch)
 			bp.log.Warnf("remove the overtime transactions, total:%d, remain:%d, remove:%d",
 				len(fetchBatch), len(remainTxs), len(removeTxs))
 		}
@@ -277,22 +282,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	}
 	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
-	if common.TxPoolType == batch.TxPoolType {
-		dupTxs := make([]*commonpb.Transaction, 0)
-		finalBatch := make([]*commonpb.Transaction, len(fetchBatch))
-		for _, tx := range fetchBatch {
-			if isExit, _ := common.IfExitInSameBranch(height, tx.Payload.TxId, bp.proposalCache, preHash); isExit {
-				dupTxs = append(dupTxs, tx)
-			} else {
-				finalBatch = append(finalBatch, tx)
-			}
-		}
-
-		if len(dupTxs) != 0 {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
-			fetchBatch = getFetchBatch(fetchBatches)
-		}
-	}
+	batchIds, fetchBatch = bp.fetchBatchWithoutDupTxInSameBranch(height, preHash, batchIds, fetchBatch)
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
@@ -646,6 +636,78 @@ func (bp *BlockProposerImpl) getFetchBatchFromPool(
 	}
 
 	return nil, bp.txPool.FetchTxs(height), nil
+}
+
+func (bp *BlockProposerImpl) fetchFromProposalCache(
+	proposedBlocks []*commonpb.Block) (*consensuspb.ProposalBlock, error) {
+	for _, proposedBlock := range proposedBlocks {
+		if proposedBlock.Header.TxCount != 0 {
+			proposer, err := bp.identity.GetMember()
+			if err != nil {
+				return nil, fmt.Errorf("identity serialize failed, %s", err)
+			}
+
+			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(proposedBlock)
+
+			proposedBlock.Header.Proposer = proposer
+			proposedBlock.Header.BlockTimestamp = utils.CurrentTimeSeconds()
+
+			cutBlock := new(commonpb.Block)
+			if common.IfOpenConsensusMessageTurbo(bp.chainConf) {
+				cutBlock = common.GetTurboBlock(proposedBlock, cutBlock, bp.log)
+			} else {
+				cutBlock = proposedBlock
+			}
+
+			bp.msgBus.Publish(msgbus.ProposedBlock,
+				&consensuspb.ProposalBlock{Block: proposedBlock, TxsRwSet: txsRwSet, CutBlock: cutBlock})
+
+			return &consensuspb.ProposalBlock{Block: proposedBlock, TxsRwSet: txsRwSet, CutBlock: cutBlock}, nil
+		}
+	}
+	return nil, nil
+}
+
+func (bp *BlockProposerImpl) removeTx(
+	height uint64, batchIds []string, removeTxs, fetchBatch []*commonpb.Transaction) (
+	[]string, []*commonpb.Transaction) {
+	// don't remove tx when is batchTx pool
+	if common.TxPoolType == batch.TxPoolType {
+		// remove and get new batchIds
+		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
+		newFetchBatch := getFetchBatch(fetchBatches)
+
+		return newBatchIds, newFetchBatch
+
+	}
+	bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+	return batchIds, fetchBatch
+
+}
+
+func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(
+	height uint64, preHash []byte, batchIds []string, fetchBatch []*commonpb.Transaction) (
+	[]string, []*commonpb.Transaction) {
+	if common.TxPoolType == batch.TxPoolType {
+		dupTxs := make([]*commonpb.Transaction, 0)
+		finalBatch := make([]*commonpb.Transaction, len(fetchBatch))
+		for _, tx := range fetchBatch {
+			if isExit, _ := common.IfExitInSameBranch(height, tx.Payload.TxId, bp.proposalCache, preHash); isExit {
+				dupTxs = append(dupTxs, tx)
+			} else {
+				finalBatch = append(finalBatch, tx)
+			}
+		}
+
+		if len(dupTxs) != 0 {
+			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
+			newFetchBatch := getFetchBatch(fetchBatches)
+
+			return newBatchIds, newFetchBatch
+		}
+	}
+
+	return batchIds, fetchBatch
 }
 
 func getFetchBatch(fetchBatches [][]*commonpb.Transaction) []*commonpb.Transaction {
