@@ -1121,9 +1121,6 @@ func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy
 }
 
 func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
-	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
-		return p.(*policy).GetPbPolicy(), nil
-	}
 	if p, ok := acs.exceptionalPolicyMap.Load(resourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 

@@ -814,7 +814,7 @@ func (p *pkACProvider) GetValidEndorsements(principal protocol.Principal) ([]*co
 	return p.getValidEndorsements(orgList, roleList, endorsements), nil
 }
 
-//GetAllPolicy returns all policies
+//GetAllPolicy returns all default policies
 func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.resourceNamePolicyMap.Range(func(key, value interface{}) bool {

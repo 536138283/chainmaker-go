@@ -319,7 +319,7 @@ func (pp *permissionedPkACProvider) newNodeMember(member *pbac.Member) (protocol
 	return pp.acService.newNodePkMember(member, pp.consensusMember)
 }
 
-//GetAllPolicy returns all policies
+//GetAllPolicy returns all default policies
 func (p *permissionedPkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.acService.resourceNamePolicyMap.Range(func(key, value interface{}) bool {

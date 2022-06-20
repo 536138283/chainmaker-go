@@ -987,7 +987,7 @@ func (cp *certACProvider) GetValidEndorsements(principal protocol.Principal) ([]
 	return cp.acService.getValidEndorsements(orgList, roleList, endorsements), nil
 }
 
-//GetAllPolicy returns all policies
+//GetAllPolicy returns all default policies
 func (p *certACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.acService.resourceNamePolicyMap.Range(func(key, value interface{}) bool {
