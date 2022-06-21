@@ -204,18 +204,19 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	ctl := gomock.NewController(t)
-	var chainId = "Chain1"
-
-	msgBus := msgbus.NewMessageBus()
-	txScheduler := mock.NewMockTxScheduler(ctl)
-	snapshotMgr := mock.NewMockSnapshotManager(ctl)
-	ledgerCache := cache.NewLedgerCache(chainId)
-	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
-	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
-	chainConf := mock.NewMockChainConf(ctl)
-	ac := mock.NewMockAccessControlProvider(ctl)
-	txpool := mock.NewMockTxPool(ctl)
-	netService := mock.NewMockNetService(ctl)
+	var (
+		chainId             = "Chain1"
+		msgBus              = msgbus.NewMessageBus()
+		txScheduler         = mock.NewMockTxScheduler(ctl)
+		snapshotMgr         = mock.NewMockSnapshotManager(ctl)
+		ledgerCache         = cache.NewLedgerCache(chainId)
+		blockchainStoreImpl = mock.NewMockBlockchainStore(ctl)
+		proposedCache       = cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
+		chainConf           = mock.NewMockChainConf(ctl)
+		ac                  = mock.NewMockAccessControlProvider(ctl)
+		txpool              = mock.NewMockTxPool(ctl)
+		netService          = mock.NewMockNetService(ctl)
+	)
 
 	tx := createNewTestTx()
 	txs := make([]*commonpb.Transaction, 1)
