@@ -245,6 +245,13 @@ func (scm *signingCertMember) Sign(hashType string, msg []byte) ([]byte, error) 
 	})
 }
 
+// NewCertSigningMember 基于传入的参数新建一个SigningMember
+// @param hashType
+// @param member
+// @param privateKeyPem
+// @param password
+// @return protocol.SigningMember
+// @return error
 func NewCertSigningMember(hashType string, member *pbac.Member, privateKeyPem,
 	password string) (protocol.SigningMember, error) {
 

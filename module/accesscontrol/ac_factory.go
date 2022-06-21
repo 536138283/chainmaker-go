@@ -18,6 +18,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// AcFactory 构造AC模块的工厂
 type AcFactory struct {
 }
 

@@ -16,10 +16,10 @@ import (
 )
 
 func init() {
-	RegisterACProvider(protocol.PermissionedWithCert, NilCertACProvider)
-	RegisterACProvider(protocol.Identity, NilCertACProvider)
-	RegisterACProvider(protocol.PermissionedWithKey, NilPermissionedPkACProvider)
-	RegisterACProvider(protocol.Public, NilPkACProvider)
+	RegisterACProvider(protocol.PermissionedWithCert, nilCertACProvider)
+	RegisterACProvider(protocol.Identity, nilCertACProvider)
+	RegisterACProvider(protocol.PermissionedWithKey, nilPermissionedPkACProvider)
+	RegisterACProvider(protocol.Public, nilPkACProvider)
 }
 
 var acProviderRegistry = map[string]reflect.Type{}
