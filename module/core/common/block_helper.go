@@ -8,28 +8,27 @@ package common
 
 import (
 	"bytes"
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
-	"runtime/debug"
 	"sync"
-
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
-
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	"sync/atomic"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
+	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -96,8 +95,10 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 }
 
 func (bb *BlockBuilder) GenerateNewBlock(
-	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction, batchIds []string) (
+	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction,
+	batchIds []string, fetchBatches [][]*commonPb.Transaction) (
 	*commonPb.Block, []int64, error) {
+
 	timeLasts := make([]int64, 0)
 	currentHeight, _ := bb.ledgerCache.CurrentHeight()
 	lastBlock := bb.findLastBlockFromCache(proposingHeight, preHash, currentHeight)
@@ -182,7 +183,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
-			batchIds = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
+			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
 		} else {
 			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
@@ -191,7 +192,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 	if TxPoolType == batch.TxPoolType {
 		var batchIdBytes []byte
 		// set batchIds into additional data
-		batchIdBytes, err = SerializeBatchIds(batchIds)
+		batchIdBytes, err = SerializeTxBatchInfo(batchIds, block.Txs, fetchBatches, bb.log)
 		if err != nil {
 			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
@@ -299,7 +300,7 @@ func FinalizeBlock(
 		go func(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, x int) {
 			defer wg.Done()
 			var err error
-			txHashes[x], err = getTxHash(tx, rwSet, hashType, logger)
+			txHashes[x], err = getTxHash(tx, rwSet, hashType, block.Header, logger)
 			if err != nil {
 				errs = append(errs, err)
 			}
@@ -354,7 +355,11 @@ func FinalizeBlock(
 	return nil
 }
 
-func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType string, logger protocol.Logger) (
+func getTxHash(tx *commonPb.Transaction,
+	rwSet *commonPb.TxRWSet,
+	hashType string,
+	blockHeader *commonPb.BlockHeader,
+	logger protocol.Logger) (
 	[]byte, error) {
 	var rwSetHash []byte
 	rwSetHash, err := utils.CalcRWSetHash(hashType, rwSet)
@@ -377,7 +382,8 @@ func getTxHash(tx *commonPb.Transaction, rwSet *commonPb.TxRWSet, hashType strin
 	tx.Result.RwSetHash = rwSetHash
 	// calculate complete tx hash, include tx.Header, tx.Payload, tx.Result
 	var txHash []byte
-	txHash, err = utils.CalcTxHash(hashType, tx)
+	txHash, err = utils.CalcTxHashWithVersion(
+		hashType, tx, int(blockHeader.BlockVersion))
 	if err != nil {
 		return nil, err
 	}
@@ -887,13 +893,16 @@ type BlockCommitterImpl struct {
 	verifier                protocol.BlockVerifier      // block verifier
 	commonCommit            *CommitBlock
 	metricBlockSize         *prometheus.HistogramVec // metric block size
-	metricBlockCounter      *prometheus.CounterVec   // metric block counter
+	metricBlockHeight       *prometheus.GaugeVec     // metric block height
 	metricTxCounter         *prometheus.CounterVec   // metric transaction counter
 	metricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
 	metricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
 	metricTpsGauge          *prometheus.GaugeVec     // metric real-time transaction per second (TPS)
 	storeHelper             conf.StoreHelper
 	blockInterval           int64
+
+	mTxCount     uint64 // store tx total count for persistent
+	mBlockHeight uint64 // store latest block height for persistent
 }
 
 type BlockCommitterConfig struct {
@@ -925,72 +934,20 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 		subscriber:      config.Subscriber,
 		verifier:        config.Verifier,
 		storeHelper:     config.StoreHelper,
+		commonCommit: &CommitBlock{
+			store:           config.BlockchainStore,
+			txFilter:        config.TxFilter,
+			log:             log,
+			snapshotManager: config.SnapshotManager,
+			ledgerCache:     config.LedgerCache,
+			chainConf:       config.ChainConf,
+			msgBus:          config.MsgBus,
+		},
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		blockchain.metricBlockSize = monitor.NewHistogramVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockSize,
-			monitor.HelpCurrentBlockSizeMetric,
-			prometheus.ExponentialBuckets(1024, 2, 12),
-			monitor.ChainId,
-		)
-
-		blockchain.metricBlockCounter = monitor.NewCounterVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockCounter,
-			monitor.HelpBlockCountsMetric,
-			monitor.ChainId,
-		)
-
-		blockchain.metricTxCounter = monitor.NewCounterVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricTxCounter,
-			monitor.HelpTxCountsMetric,
-			monitor.ChainId,
-		)
-
-		blockchain.metricBlockCommitTime = monitor.NewHistogramVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockCommitTime,
-			monitor.HelpBlockCommitTimeMetric,
-			[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
-			monitor.ChainId,
-		)
-
-		blockchain.metricBlockIntervalTime = monitor.NewHistogramVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricBlockIntervalTime,
-			monitor.HelpBlockIntervalTimeMetric,
-			[]float64{0.2, 0.5, 1, 2, 5, 10, 20},
-			monitor.ChainId,
-		)
-
-		blockchain.metricTpsGauge = monitor.NewGaugeVec(
-			monitor.SUBSYSTEM_CORE_COMMITTER,
-			monitor.MetricTpsGauge,
-			monitor.HelpTpsGaugeMetric,
-			monitor.ChainId,
-		)
+		blockchain.initMetrics()
 	}
-
-	cbConf := &CommitBlockConf{
-		Store:                   blockchain.blockchainStore,
-		Log:                     blockchain.log,
-		SnapshotManager:         blockchain.snapshotManager,
-		TxPool:                  blockchain.txPool,
-		LedgerCache:             blockchain.ledgerCache,
-		ChainConf:               blockchain.chainConf,
-		TxFilter:                config.TxFilter,
-		MsgBus:                  blockchain.msgBus,
-		MetricBlockCommitTime:   blockchain.metricBlockCommitTime,
-		MetricBlockIntervalTime: blockchain.metricBlockIntervalTime,
-		MetricBlockCounter:      blockchain.metricBlockCounter,
-		MetricBlockSize:         blockchain.metricBlockSize,
-		MetricTxCounter:         blockchain.metricTxCounter,
-		MetricTpsGauge:          blockchain.metricTpsGauge,
-	}
-	blockchain.commonCommit = NewCommitBlock(cbConf)
 
 	return blockchain, nil
 }
@@ -1028,26 +985,21 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
 		panicErr := recover()
-		if err == nil {
-			// error is nil
-			if panicErr == nil {
+		if panicErr != nil {
+			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
+				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+			}
+			panic("add block err: " + err.Error())
+		}
+		if err != nil {
+			if err == commonErrors.ErrBlockHadBeenCommited {
+				chain.log.Warn("cache add block fail, err: ", err)
 				return
 			}
 			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
 				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
+				panic("add block err: " + err.Error())
 			}
-			chain.log.Errorf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack()))
-			panic(fmt.Sprintf("SYSTEM ACTION PANIC: %v, stack: %v", panicErr, string(debug.Stack())))
-		}
-		// error is not nil
-		if err == commonErrors.ErrBlockHadBeenCommited {
-			chain.log.Warn("cache add block err: ", err)
-		} else {
-			chain.log.Error("cache add block err: ", err)
-		}
-		// rollback sql
-		if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
-			chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 		}
 	}()
 
@@ -1093,7 +1045,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	txRetry, batchRetry := chain.syncWithTxPool(lastProposed, height)
 
 	if TxPoolType == batch.TxPoolType {
-		batchIds := GetBatchIds(lastProposed)
+		batchIds, _ := GetBatchIds(lastProposed)
 		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
 		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
 	} else {
@@ -1121,10 +1073,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		height, lastProposed.Header.TxCount, lastProposed.Header.BlockHash,
 		checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, pubEvent, filterLasts, otherLasts, elapsed, interval)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
-		chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
-		chain.metricTpsGauge.WithLabelValues(chain.chainId).
-			Set(float64(lastProposed.Header.TxCount) / (float64(interval) / 1000))
+		go chain.updateMetrics(blockInfo, elapsed, interval)
 	}
 	return nil
 }
@@ -1139,7 +1088,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	keepBatchIds := make(map[string]struct{}, len(block.Txs))
 
 	if TxPoolType == batch.TxPoolType {
-		batchIds := GetBatchIds(block)
+		batchIds, _ := GetBatchIds(block)
 		for _, batchId := range batchIds {
 			keepBatchIds[batchId] = struct{}{}
 		}
@@ -1148,7 +1097,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 				continue
 			}
 
-			retryBatchIds := GetBatchIds(block)
+			retryBatchIds, _ := GetBatchIds(block)
 			for _, retryBatchId := range retryBatchIds {
 				if _, ok := keepBatchIds[retryBatchId]; !ok {
 					batchRetry = append(batchRetry, retryBatchId)
@@ -1227,6 +1176,11 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 	turboBlock.Dag = block.Dag
 	turboBlock.AdditionalData = block.AdditionalData
 
+	if TxPoolType == batch.TxPoolType {
+		logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+		return turboBlock
+	}
+
 	newTxs := make([]*commonPb.Transaction, len(block.Txs))
 	for i := range block.Txs {
 		newPayload := &commonPb.Payload{
@@ -1234,13 +1188,10 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 		}
 
 		newTxs[i] = &commonPb.Transaction{
-			Payload: newPayload,
-			Result:  block.Txs[i].Result,
-		}
-
-		if TxPoolType != batch.TxPoolType {
-			newTxs[i].Sender = block.Txs[i].Sender
-			newTxs[i].Endorsers = block.Txs[i].Endorsers
+			Payload:   newPayload,
+			Result:    block.Txs[i].Result,
+			Sender:    block.Txs[i].Sender,
+			Endorsers: block.Txs[i].Endorsers,
 		}
 
 	}
@@ -1275,13 +1226,12 @@ func recoverBlockByBatch(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if len(block.Txs) != 0 && block.Txs[0].Payload != nil &&
-		mode != protocol.SYNC_VERIFY {
+	if len(block.Txs) == 0 && block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
 
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
 			Dag:            block.Dag,
-			Txs:            make([]*commonPb.Transaction, len(block.Txs)),
+			Txs:            make([]*commonPb.Transaction, block.Header.TxCount),
 			AdditionalData: block.AdditionalData,
 		}
 
@@ -1293,7 +1243,16 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		batchIds := GetBatchIds(block)
+		batchIds, indexes := GetBatchIds(block)
+		if len(batchIds) == 0 {
+			return &commonPb.Block{
+				Header:         block.Header,
+				Dag:            block.Dag,
+				Txs:            block.Txs,
+				AdditionalData: block.AdditionalData,
+			}, batchIds, nil
+		}
+
 		txs, err := txPool.GetAllTxsByBatchIds(
 			batchIds,
 			proposerId,
@@ -1304,27 +1263,25 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		txsMap := make(map[string]*commonPb.Transaction)
+		newTxs := make([]*commonPb.Transaction, 0)
 		for _, tx := range txs {
-			txsMap[tx.Payload.TxId] = tx
+			newTxs = append(newTxs, tx...)
 		}
 
-		for i := range block.Txs {
-			newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
-			newBlock.Txs[i].Result = block.Txs[i].Result
-			logger.Debugf("recover the block[%d], TxId[%s, %s]",
-				newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+		for i, v := range indexes {
+			newBlock.Txs[i] = newTxs[int(v)]
 		}
 
 		return newBlock, batchIds, nil
 	}
 
+	batchIds, _ := GetBatchIds(block)
 	return &commonPb.Block{
 		Header:         block.Header,
 		Dag:            block.Dag,
 		Txs:            block.Txs,
 		AdditionalData: block.AdditionalData,
-	}, GetBatchIds(block), nil
+	}, batchIds, nil
 }
 
 func recoverBlock(
@@ -1380,24 +1337,168 @@ func recoverBlock(
 
 }
 
-func SerializeBatchIds(batchIds []string) ([]byte, error) {
+func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
+	fetchBatches [][]*commonPb.Transaction, logger protocol.Logger) ([]byte, error) {
 
-	buffer := &bytes.Buffer{}
-	err := gob.NewEncoder(buffer).Encode(batchIds)
+	fetchTxs := make([]*commonPb.Transaction, 0)
+	for _, fetchBatch := range fetchBatches {
+		fetchTxs = append(fetchTxs, fetchBatch...)
+	}
+
+	txIndex := make(map[string]uint32)
+	for index, tx := range fetchTxs {
+		txIndex[tx.Payload.TxId] = uint32(index)
+	}
+
+	txBatchInfo := &commonPb.TxBatchInfo{
+		BatchIds: batchIds,
+		Index:    make([]uint32, 0),
+	}
+
+	indexes := make([]uint32, 0)
+	for _, tx := range txs {
+		if index, ok := txIndex[tx.Payload.TxId]; ok {
+			indexes = append(indexes, index)
+		}
+	}
+
+	txBatchInfo.Index = indexes
+	buffer, err := proto.Marshal(txBatchInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return buffer.Bytes(), err
+	return buffer, err
 }
 
-func DeserializeBatchIds(data []byte) ([]string, error) {
+func DeserializeTxBatchInfo(data []byte) (*commonPb.TxBatchInfo, error) {
 
-	batchIds := make([]string, 0)
-	err := gob.NewDecoder(bytes.NewReader(data)).Decode(&batchIds)
+	txBatchInfo := new(commonPb.TxBatchInfo)
+	err := proto.Unmarshal(data, txBatchInfo)
 	if err != nil {
 		return nil, err
 	}
 
-	return batchIds, err
+	return txBatchInfo, nil
+}
+
+// metric tx counter key in db
+const dbKeyTxCounterPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricTxCounter
+
+// metric block height
+const dbKeyBlockHeightPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricBlockCounter
+
+func (chain *BlockCommitterImpl) initMetrics() {
+	// new metrics
+	chain.metricBlockSize = monitor.NewHistogramVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockSize,
+		monitor.HelpCurrentBlockSizeMetric,
+		prometheus.ExponentialBuckets(1024, 2, 12),
+		monitor.ChainId,
+	)
+	chain.metricBlockHeight = monitor.NewGaugeVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockCounter,
+		monitor.HelpBlockCountsMetric,
+		monitor.ChainId,
+	)
+	chain.metricTxCounter = monitor.NewCounterVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricTxCounter,
+		monitor.HelpTxCountsMetric,
+		monitor.ChainId,
+	)
+	chain.metricBlockCommitTime = monitor.NewHistogramVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockCommitTime,
+		monitor.HelpBlockCommitTimeMetric,
+		[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
+		monitor.ChainId,
+	)
+	chain.metricBlockIntervalTime = monitor.NewHistogramVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricBlockIntervalTime,
+		monitor.HelpBlockIntervalTimeMetric,
+		[]float64{0.2, 0.5, 1, 2, 5, 10, 20},
+		monitor.ChainId,
+	)
+	chain.metricTpsGauge = monitor.NewGaugeVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricTpsGauge,
+		monitor.HelpTpsGaugeMetric,
+		monitor.ChainId,
+	)
+
+	localDb := chain.blockchainStore.GetDBHandle("")
+	// init tx counter metric
+	txCountBz, err := localDb.Get([]byte(dbKeyTxCounterPrefix + chain.chainId))
+	if err == nil {
+		// ignore brand new node
+		if txCountBz != nil {
+			chain.mTxCount, err = bytehelper.BytesToUint64(txCountBz)
+			if err == nil {
+				chain.metricTxCounter.WithLabelValues(chain.chainId).Add(float64(chain.mTxCount))
+			} else {
+				chain.log.Errorw("bytehelper.BytesToUint64 failed", "err", err)
+			}
+		}
+	} else {
+		chain.log.Errorw("localDb.Get metric failed", "err", err)
+	}
+
+	// init block height metric
+	blockHeightBz, err := localDb.Get([]byte(dbKeyBlockHeightPrefix + chain.chainId))
+	if err == nil {
+		// ignore brand new node
+		if blockHeightBz != nil {
+			chain.mBlockHeight, err = bytehelper.BytesToUint64(blockHeightBz)
+			if err == nil {
+				chain.metricBlockHeight.WithLabelValues(chain.chainId).Set(float64(chain.mBlockHeight))
+			} else {
+				chain.log.Errorw("bytehelper.BytesToUint64 failed", "err", err)
+			}
+		}
+	} else {
+		chain.log.Errorw("localDb.Get metric failed", "err", err)
+	}
+}
+
+func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, interval int64) {
+	raw, err := proto.Marshal(bi)
+	if err != nil {
+		chain.log.Errorw("marshal BlockInfo failed", "err", err)
+	}
+	chain.metricBlockSize.WithLabelValues(bi.Block.Header.ChainId).Observe(float64(len(raw)))
+	chain.metricBlockHeight.WithLabelValues(bi.Block.Header.ChainId).Set(float64(bi.Block.Header.BlockHeight))
+	atomic.StoreUint64(&chain.mBlockHeight, bi.Block.Header.BlockHeight)
+	chain.metricTxCounter.WithLabelValues(bi.Block.Header.ChainId).Add(float64(bi.Block.Header.TxCount))
+	atomic.AddUint64(&chain.mTxCount, uint64(bi.Block.Header.TxCount))
+	chain.metricBlockCommitTime.WithLabelValues(chain.chainId).Observe(float64(elapsed) / 1000)
+	chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
+	chain.metricTpsGauge.WithLabelValues(chain.chainId).
+		Set(float64(bi.Block.Header.TxCount) / (float64(interval) / 1000))
+
+	// persist metrics to local db
+	localDb := chain.blockchainStore.GetDBHandle("")
+
+	txCountBz, err := bytehelper.Uint64ToBytes(atomic.LoadUint64(&chain.mTxCount))
+	if err == nil {
+		err = localDb.Put([]byte(dbKeyTxCounterPrefix+chain.chainId), txCountBz)
+		if err != nil {
+			chain.log.Errorw("persist metric failed", "err", err)
+		}
+	} else {
+		chain.log.Errorw("bytehelper.Uint64ToBytes failed", "err", err)
+	}
+
+	blockHeightBz, err := bytehelper.Uint64ToBytes(atomic.LoadUint64(&chain.mBlockHeight))
+	if err == nil {
+		err = localDb.Put([]byte(dbKeyBlockHeightPrefix+chain.chainId), blockHeightBz)
+		if err != nil {
+			chain.log.Errorw("persist metric failed", "err", err)
+		}
+	} else {
+		chain.log.Errorw("bytehelper.Uint64ToBytes failed", "err", err)
+	}
 }

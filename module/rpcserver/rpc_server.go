@@ -33,6 +33,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/tmc/grpc-websocket-proxy/wsproxy"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 )
 
 // RPCServer struct define
@@ -162,8 +163,10 @@ func (s *RPCServer) Start() error {
 		} else {
 			err = s.mixServer.Serve(ca.NewTLSListener(conn, tlsConfig))
 		}
-		if err != nil {
-			s.log.Errorf("grpc Serve failed, %s", err.Error())
+		if err == http.ErrServerClosed {
+			s.log.Info("RPCServer http closed")
+		} else {
+			s.log.Errorf("RPCServer http serve failed, %s", err.Error())
 		}
 	}()
 
@@ -179,11 +182,28 @@ func (s *RPCServer) RegisterHandler() error {
 	return nil
 }
 
+// stopGrpcServer - stop grpc server gracefully with timeout
+func (s *RPCServer) stopGrpcServer() {
+	stopped := make(chan struct{})
+	go func() {
+		s.grpcServer.GracefulStop()
+		close(stopped)
+	}()
+
+	t := time.NewTimer(10 * time.Second)
+	defer t.Stop()
+	select {
+	case <-t.C:
+		s.grpcServer.Stop()
+	case <-stopped:
+	}
+}
+
 // Stop - stop RPCServer
 func (s *RPCServer) Stop() {
 	s.isShutdown = true
 	s.cancel()
-	s.grpcServer.GracefulStop()
+	s.stopGrpcServer()
 	s.log.Info("RPCServer is stopped!")
 }
 
@@ -196,7 +216,7 @@ func (s *RPCServer) Restart(reason string) error {
 	s.log.Info("RPCServer is beginning to restart")
 
 	s.cancel()
-	s.grpcServer.GracefulStop()
+	s.stopGrpcServer()
 	_ = s.mixServer.Shutdown(s.ctx)
 
 	s.grpcServer, err = newGrpc(s.chainMakerServer)
@@ -382,6 +402,17 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 
 	opts = append(opts, grpc.MaxSendMsgSize(localconf.ChainMakerConfig.RpcConfig.MaxSendMsgSize))
 	opts = append(opts, grpc.MaxRecvMsgSize(localconf.ChainMakerConfig.RpcConfig.MaxRecvMsgSize))
+
+	// keep alive
+	var kaep = keepalive.EnforcementPolicy{
+		MinTime:             2 * time.Second, // If a client pings more than once every 2 seconds, terminate the connection
+		PermitWithoutStream: true,            // Allow pings even when there are no active streams
+	}
+	var kasp = keepalive.ServerParameters{
+		Time:    5 * time.Second, // Ping the client if it is idle for 5 seconds to ensure the connection is still active
+		Timeout: 1 * time.Second, // Wait 1 second for the ping ack before assuming the connection is dead
+	}
+	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep), grpc.KeepaliveParams(kasp))
 
 	server := grpc.NewServer(opts...)
 

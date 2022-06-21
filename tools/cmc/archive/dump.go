@@ -30,6 +30,8 @@ const (
 	archiveBlockRequestTimeout = 20 // 20s
 )
 
+// newDumpCMD dump blockchain data to off-chain storage (mysql) and delete on-chain data
+// @return *cobra.Command
 func newDumpCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dump",
@@ -256,6 +258,10 @@ func archiveBlockOnChain(cc *sdk.ChainClient, height uint64) error {
 	return util.CheckProposalRequestResp(resp, false)
 }
 
+// calcTargetHeightByTime Calculate target block height by timestamp
+// @param t
+// @return uint64
+// @return error
 func calcTargetHeightByTime(t time.Time) (uint64, error) {
 	targetTs := t.Unix()
 	cc, err := util.CreateChainClient(sdkConfPath, chainId, "", "", "", "", "")

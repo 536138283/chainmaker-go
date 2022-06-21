@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// exitCmd Exit console
 var exitCmd = &cobra.Command{
 	Use:   "exit",
 	Short: "Exit console",
@@ -24,6 +25,7 @@ var exitCmd = &cobra.Command{
 	},
 }
 
+// NewConsoleCMD new Open a console to interact with ChainMaker daemon command
 func NewConsoleCMD(rootCmd *cobra.Command) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "console",

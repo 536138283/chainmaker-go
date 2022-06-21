@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package address 关于用户地址的相关命令
 package address
 
 import (
@@ -15,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newPK2AddrCMD get address from public key file or pem string
+// @return *cobra.Command
 func newPK2AddrCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pk-to-addr [public key file path / pem string]",
@@ -42,34 +45,12 @@ func newPK2AddrCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-			default:
-				return fmt.Errorf("unsupported address type %s", addressType)
-			}
-
-			output, err := prettyjson.Marshal(addr)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(output))
-			return nil
-		},
-	}
-	util.AttachFlags(cmd, flags, []string{flagAddressType})
-	return cmd
-}
-
-func newHex2AddrCMD() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "hex-to-addr [hex string]",
-		Short: "get address from hex string",
-		Long:  "get address from hex string",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			var addr string
-			var err error
-			switch addressType {
-			case addressTypeZXL:
-				addr, err = sdk.GetZXAddressFromPKHex(args[0])
+			case addressTypeCM:
+				hash, ok := hashAlgoMap[hashType]
+				if !ok {
+					return fmt.Errorf("unsupported hash type %d", hashType)
+				}
+				addr, err = sdk.GetCMAddressFromPKPEM(keyPemStr, hash)
 				if err != nil {
 					return err
 				}
@@ -85,10 +66,56 @@ func newHex2AddrCMD() *cobra.Command {
 			return nil
 		},
 	}
-	util.AttachFlags(cmd, flags, []string{flagAddressType})
+	util.AttachFlags(cmd, flags, []string{flagAddressType, flagHashType})
 	return cmd
 }
 
+// newHex2AddrCMD get address from hex string
+// @return *cobra.Command
+func newHex2AddrCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "hex-to-addr [hex string]",
+		Short: "get address from hex string",
+		Long:  "get address from hex string",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			var addr string
+			var err error
+			switch addressType {
+			case addressTypeZXL:
+				addr, err = sdk.GetZXAddressFromPKHex(args[0])
+				if err != nil {
+					return err
+				}
+			case addressTypeCM:
+				hash, ok := hashAlgoMap[hashType]
+				if !ok {
+					return fmt.Errorf("unsupported hash type %d", hashType)
+				}
+
+				addr, err = sdk.GetCMAddressFromPKHex(args[0], hash)
+				if err != nil {
+					return err
+				}
+
+			default:
+				return fmt.Errorf("unsupported address type %s", addressType)
+			}
+
+			output, err := prettyjson.Marshal(addr)
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(output))
+			return nil
+		},
+	}
+	util.AttachFlags(cmd, flags, []string{flagAddressType, flagHashType})
+	return cmd
+}
+
+// newCert2AddrCMD get address from cert file or pem string
+// @return *cobra.Command
 func newCert2AddrCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cert-to-addr [hex string]",
@@ -108,6 +135,18 @@ func newCert2AddrCMD() *cobra.Command {
 					}
 				} else {
 					addr, err = sdk.GetZXAddressFromCertPEM(args[0])
+					if err != nil {
+						return err
+					}
+				}
+			case addressTypeCM:
+				if isFile {
+					addr, err = sdk.GetCMAddressFromCertPath(args[0])
+					if err != nil {
+						return err
+					}
+				} else {
+					addr, err = sdk.GetCMAddressFromCertPEM(args[0])
 					if err != nil {
 						return err
 					}

@@ -255,14 +255,18 @@ func (sync *BlockChainSyncServer) sendInfos(req *syncPb.BlockSyncReq, from strin
 				return err
 			}
 			if blkRwInfo == nil {
-				return fmt.Errorf("GetBlockWithRWSets get block height: [%d] is nil", req.BlockHeight+i)
+				sync.log.Warnf("GetBlockWithRWSets get block height: [%d] is nil", req.BlockHeight+i)
+				continue
 			}
 		} else {
 			if blk, err = sync.blockChainStore.GetBlock(req.BlockHeight + i); err != nil {
 				sync.log.Debugf("[SyncMsg_BLOCK_SYNC_RESP] get block without reset with err: %s", err.Error())
 				return err
 			}
-
+			if blk == nil {
+				sync.log.Warnf("GetBlock get block height: [%d] is nil", req.BlockHeight+i)
+				continue
+			}
 			blkRwInfo = &storePb.BlockWithRWSet{
 				Block:    blk,
 				TxRWSets: nil,

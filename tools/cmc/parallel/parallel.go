@@ -5,6 +5,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package parallel 并发处理，主要用于压测的场景
 package parallel
 
 import (
@@ -144,6 +145,8 @@ type Statistician struct {
 	nodeTotalReqCount     []int
 }
 
+// ParallelCMD parallel sub command
+// @return *cobra.Command
 func ParallelCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "parallel",
@@ -378,13 +381,17 @@ func (s *Statistician) Start() {
 	}
 }
 
+// PrintDetails print statistics results
+// @param all
 func (s *Statistician) PrintDetails(all bool) {
 	nowCount := atomic.LoadInt32(&s.totalCount)
 	nowTime := time.Now()
 
 	detail := s.statisticsResults(&numberResults{count: int(s.totalCount), successCount: s.successCount,
-		max: s.maxSuccessElapsed, min: s.minSuccessElapsed, sum: s.sumSuccessElapsed, nodeSuccessCount: s.nodeSuccessReqCount,
-		nodeCount: s.nodeTotalReqCount, nodeMin: s.nodeMinSuccessElapsed, nodeMax: s.nodeMaxSuccessElapsed, nodeSum: s.nodeSumSuccessElapsed}, all, nowTime)
+		max: s.maxSuccessElapsed, min: s.minSuccessElapsed, sum: s.sumSuccessElapsed,
+		nodeSuccessCount: s.nodeSuccessReqCount,
+		nodeCount:        s.nodeTotalReqCount, nodeMin: s.nodeMinSuccessElapsed,
+		nodeMax: s.nodeMaxSuccessElapsed, nodeSum: s.nodeSumSuccessElapsed}, all, nowTime)
 	s.lastIndex = int(nowCount)
 	s.lastStartTime = time.Now()
 
@@ -449,6 +456,7 @@ func (s *Statistician) statisticsResults(ret *numberResults, all bool, nowTime t
 	return detail
 }
 
+// Thread for multi-thread object
 type Thread struct {
 	id            int
 	loopNum       int
@@ -464,6 +472,8 @@ type Thread struct {
 	index  int
 }
 
+// Init init thread data
+// @return error
 func (t *Thread) Init() error {
 	var err error
 	t.index = t.id % len(hosts)
@@ -486,6 +496,7 @@ func (t *Thread) Init() error {
 	return nil
 }
 
+// Start thread start
 func (t *Thread) Start() {
 	infos, err := t.getPairInfos()
 	if err != nil {
@@ -543,6 +554,7 @@ func (t *Thread) getPairInfos() ([]*KeyValuePair, error) {
 	return ps, nil
 }
 
+// Stop thread stop
 func (t *Thread) Stop() {
 	t.conn.Close()
 }
@@ -577,10 +589,13 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, erro
 	}
 }
 
+// Handler do multi-thread operation action
 type Handler interface {
-	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int, ps []*KeyValuePair) error
+	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int,
+		ps []*KeyValuePair) error
 }
 
+// invokeHandler contract invoke handler
 type invokeHandler struct {
 	threadId int
 }
@@ -606,7 +621,8 @@ type InvokerMsg struct {
 	pairs        []*commonPb.KeyValuePair
 }
 
-func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int, ps []*KeyValuePair) error {
+func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
+	userCrtPath string, loopId int, ps []*KeyValuePair) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
@@ -650,7 +666,8 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 		if totalRandomSentTxs == 1 {
 			rate = 0
 		}
-		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n", totalSentTxs, totalRandomSentTxs-1, rate, string(j))
+		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
+			totalSentTxs, totalRandomSentTxs-1, rate, string(j))
 	}
 
 	// 支持evm
@@ -687,11 +704,13 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	return nil
 }
 
+// queryHandler contract query handler
 type queryHandler struct {
 	threadId int
 }
 
-func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int, ps []*KeyValuePair) error {
+func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
+	userCrtPath string, loopId int, ps []*KeyValuePair) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
@@ -734,11 +753,13 @@ func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey,
 	return nil
 }
 
+// createContractHandler create contract handler
 type createContractHandler struct {
 	threadId int
 }
 
-func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int, ps []*KeyValuePair) error {
+func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
+	userCrtPath string, loopId int, ps []*KeyValuePair) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)
@@ -788,11 +809,13 @@ func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.Pr
 	return nil
 }
 
+// upgradeContractHandler upgrade contract handler
 type upgradeContractHandler struct {
 	threadId int
 }
 
-func (h *upgradeContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int, ps []*KeyValuePair) error {
+func (h *upgradeContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
+	userCrtPath string, loopId int, ps []*KeyValuePair) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)
@@ -831,39 +854,18 @@ func (h *upgradeContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.P
 
 func GenerateUpgradeContractPayload(contractName, version string, runtimeType commonPb.RuntimeType, bytecode []byte,
 	initParameters []*commonPb.KeyValuePair) (*commonPb.Payload, error) {
-	var pairs []*commonPb.KeyValuePair
-	pairs = append(pairs, &commonPb.KeyValuePair{
-		Key:   syscontract.UpgradeContract_CONTRACT_NAME.String(),
-		Value: []byte(contractName),
-	})
-	pairs = append(pairs, &commonPb.KeyValuePair{
-		Key:   syscontract.UpgradeContract_CONTRACT_VERSION.String(),
-		Value: []byte(version),
-	})
-	pairs = append(pairs, &commonPb.KeyValuePair{
-		Key:   syscontract.UpgradeContract_CONTRACT_RUNTIME_TYPE.String(),
-		Value: []byte(runtimeType.String()),
-	})
-	pairs = append(pairs, &commonPb.KeyValuePair{
-		Key:   syscontract.UpgradeContract_CONTRACT_BYTECODE.String(),
-		Value: bytecode,
-	})
-	for _, kv := range initParameters {
-		pairs = append(pairs, kv)
+	payload, err := utils.GenerateInstallContractPayload(contractName, version, runtimeType, bytecode, initParameters)
+	if err != nil {
+		return nil, err
 	}
-	payload := &commonPb.Payload{
-		ContractName: syscontract.SystemContract_CONTRACT_MANAGE.String(),
-		Method:       syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(),
-		Parameters:   pairs,
-		TxType:       commonPb.TxType_INVOKE_CONTRACT,
-	}
+	payload.Method = syscontract.ContractManageFunction_UPGRADE_CONTRACT.String()
 	return payload, nil
 }
 
-func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *InvokerMsg,
-	orgId, userCrtPath string, payload *commonPb.Payload, endorsers []*commonPb.EndorsementEntry) (*commonPb.TxResponse, error) {
+func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *InvokerMsg, orgId, userCrtPath string,
+	payload *commonPb.Payload, endorsers []*commonPb.EndorsementEntry) (*commonPb.TxResponse, error) {
 
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(time.Duration(requestTimeout)*time.Second)))
+	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(requestTimeout)*time.Second))
 	defer cancel()
 
 	// 构造Sender

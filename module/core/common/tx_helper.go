@@ -12,14 +12,12 @@ import (
 	"fmt"
 	"sync"
 
-	"chainmaker.org/chainmaker/common/v2/json"
-
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
-
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
+	"chainmaker.org/chainmaker/common/v2/json"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
@@ -54,24 +52,24 @@ type RwSetVerifyFailTx struct {
 }
 
 // 判断相同分支上是否存在交易重复（防止双花）
-func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) bool {
+func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) (bool, error) {
 	hash := preBlockHash
 
 	for i := uint64(1); i <= 3; i++ {
 		b, _ := proposalCache.GetProposedBlockByHashAndHeight(hash, height-i)
 		if b == nil || b.Header == nil {
-			return false
+			return false, nil
 		}
 
-		for _, v := range b.Txs {
-			if v.Payload.TxId == txId {
-				return true
+		for _, tx := range b.Txs {
+			if tx.Payload.TxId == txId {
+				return true, fmt.Errorf("found the same tx[%s], height: %d", txId, b.Header.BlockHeight)
 			}
 		}
 		hash = b.Header.PreBlockHash
 	}
 
-	return false
+	return false, nil
 }
 
 func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transaction,
@@ -81,11 +79,11 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	mode protocol.VerifyMode, verifyMode uint8) error {
 
 	if TxPoolType == batch.TxPoolType {
-		if consensuspb.ConsensusType_MAXBFT == consensusType &&
-			IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash) {
+		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
+		if consensuspb.ConsensusType_MAXBFT == consensusType && isExit {
 
-			err := fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d",
-				tx.Payload.TxId, block.Header.BlockHeight)
+			err = fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d, exit:%s",
+				tx.Payload.TxId, block.Header.BlockHeight, err.Error())
 			return err
 		}
 
@@ -95,11 +93,11 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 
 	txInPool, existTx := txsRet[tx.Payload.TxId]
 	if existTx {
-		if consensuspb.ConsensusType_MAXBFT == consensusType &&
-			IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash) {
+		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
+		if consensuspb.ConsensusType_MAXBFT == consensusType && isExit {
 
-			err := fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d",
-				tx.Payload.TxId, block.Header.BlockHeight)
+			err = fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d, exit:%s",
+				tx.Payload.TxId, block.Header.BlockHeight, err.Error())
 			return err
 		}
 
@@ -335,6 +333,11 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			TxIds:       rwSetVerifyFailTxIds,
 			BlockHeight: block.Header.BlockHeight,
 		}
+		vt.log.DebugDynamic(func() string {
+			return fmt.Sprintf("collected verfiy failed rw set txs, count %d, "+
+				"block height:%d, err: %s", len(rwSetVerifyFailTxIds),
+				block.Header.BlockHeight, err.Error())
+		})
 		return nil, nil, nil, rwSetVerifyFailTx, err
 	}
 
@@ -389,29 +392,57 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		startOthersTicker := utils.CurrentTimeMillisSeconds()
 		rwSet := vt.txRWSetMap[tx.Payload.TxId]
 		result := vt.txResultMap[tx.Payload.TxId]
-		rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
-		if err != nil {
-			vt.log.Warnf("calc rwset hash error (tx:%s), %s", tx.Payload.TxId, err)
-			return nil, nil, nil, err
+
+		if TxPoolType == batch.TxPoolType {
+			// recover result
+			tx.Result = result
+
+			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
+			if err != nil {
+				vt.log.Warnf("calc rwset hash error (tx:%s), rwSet: %v, %s",
+					tx.Payload.TxId, rwSet, err)
+				return nil, nil, nil, err
+			}
+			result.RwSetHash = rwsetHash
+
+			hash, err := utils.CalcTxHashWithVersion(
+				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(block.Header.BlockVersion))
+			if err != nil {
+				vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
+				return nil, nil, nil, err
+			}
+
+			txHashes = append(txHashes, hash)
+
+		} else {
+			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
+			if err != nil {
+				vt.log.Warnf("calc rwset hash error (tx:%s), rwSet: %v, %s",
+					tx.Payload.TxId, rwSet, err)
+				return nil, nil, nil, err
+			}
+			if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
+				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
+				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				continue
+			}
+			result.RwSetHash = rwsetHash
+			// verify if rwset hash is equal
+			if err = VerifyTxResult(tx, result); err != nil {
+				vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
+				vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
+				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				continue
+			}
+			hash, err := utils.CalcTxHashWithVersion(
+				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(block.Header.BlockVersion))
+			if err != nil {
+				vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
+				return nil, nil, nil, err
+			}
+
+			txHashes = append(txHashes, hash)
 		}
-		if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
-			vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
-			continue
-		}
-		result.RwSetHash = rwsetHash
-		// verify if rwset hash is equal
-		if err = VerifyTxResult(tx, result); err != nil {
-			vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-			rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
-			continue
-		}
-		hash, err := utils.CalcTxHash(vt.chainConf.ChainConfig().Crypto.Hash, tx)
-		if err != nil {
-			vt.log.Warnf("calc txhash error (tx:%s), %s", tx.Payload.TxId, err)
-			return nil, nil, nil, err
-		}
-		txHashes = append(txHashes, hash)
 		stat.OthersLasts += utils.CurrentTimeMillisSeconds() - startOthersTicker
 	}
 
@@ -469,10 +500,10 @@ func IntegersContains(array []int, val int) bool {
 	return false
 }
 
-func GetBatchIds(block *commonpb.Block) []string {
+func GetBatchIds(block *commonpb.Block) ([]string, []uint32) {
 	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
 
-	batchIds, _ := DeserializeBatchIds(batchIdsByte)
+	txBatchInfo, _ := DeserializeTxBatchInfo(batchIdsByte)
 
-	return batchIds
+	return txBatchInfo.BatchIds, txBatchInfo.Index
 }

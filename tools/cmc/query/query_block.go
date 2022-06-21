@@ -14,7 +14,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	"github.com/hokaccha/go-prettyjson"
+	prettyjson "github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 

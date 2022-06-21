@@ -3,21 +3,26 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package map transaction filter implementation
 package mapimpl
 
 import (
 	"sync"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
 )
 
 // TxFilter sync.Map transaction filter
 type TxFilter struct {
+	// blcok height
 	height uint64
-	m      sync.Map
+	// m Thread-safe map
+	m sync.Map
 }
 
-func (f *TxFilter) ValidateRule(_ string, _ ...common.RuleType) error {
+// ValidateRule validate rules
+func (f *TxFilter) ValidateRule(_ string, _ ...bn.RuleType) error {
 	return nil
 }
 
@@ -37,7 +42,7 @@ func (f *TxFilter) SetHeight(height uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f *TxFilter) IsExistsAndReturnHeight(txId string, _ ...common.RuleType) (bool, uint64, error) {
+func (f *TxFilter) IsExistsAndReturnHeight(txId string, _ ...bn.RuleType) (bool, uint64, error) {
 	exists, err := f.IsExists(txId)
 	if err != nil {
 		return false, 0, err
@@ -70,7 +75,7 @@ func (f *TxFilter) AddsAndSetHeight(txId []string, height uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f *TxFilter) IsExists(txId string, _ ...common.RuleType) (bool, error) {
+func (f *TxFilter) IsExists(txId string, _ ...bn.RuleType) (bool, error) {
 	_, ok := f.m.Load(txId)
 	return ok, nil
 }

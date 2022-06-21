@@ -9,8 +9,9 @@ LOG_PATH=$(pwd)/log
 MOUNT_PATH=$(pwd)/docker-go
 LOG_LEVEL=INFO
 EXPOSE_PORT=22351
+RUNTIME_PORT=32351
 CONTAINER_NAME=chainmaker-docker-vm
-IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.2.1"
+IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
 
 
 read -r -p "input path to cache contract files(must be absolute path, default:'./docker-go'): " tmp
@@ -68,6 +69,14 @@ if  [ -n "$tmp" ] ;then
   fi
 fi
 
+read -r -p "input runtime port(default 32351): " tmp
+if  [ -n "$tmp" ] ;then
+  if [[ $tmp =~ ^[0-9]+$ ]] ;then
+      RUNTIME_PORT=$tmp
+  else
+    echo "unknown expose port [" $tmp "], so use 32351"
+  fi
+fi
 
 read -r -p "input container name(default 'chainmaker-docker-vm'): " tmp
 if  [ -n "$tmp" ] ;then
@@ -76,6 +85,16 @@ else
   echo "container name use default: 'chainmaker-docker-vm'"
 fi
 
+read -r -p "input vm config file path(use default config(default)): " tmp
+if  [ -n "$tmp" ] ;then
+  DOCKER_VM_CONFIG_FILE=$tmp
+  if [ ! -d $MOUNT_PATH/config  ];then
+    mkdir $MOUNT_PATH/config
+  fi
+  cp $DOCKER_VM_CONFIG_FILE $MOUNT_PATH/config/
+else
+  echo "docker-vm config is nil, use default config"
+fi
 
 exist=$(docker ps -a -f name="$CONTAINER_NAME" --format '{{.Names}}')
 if [ "$exist" ]; then
@@ -84,21 +103,12 @@ if [ "$exist" ]; then
 fi
 
 echo "start docker vm container"
-# env params:
-# ENV_ENABLE_UDS=false
-# ENV_USER_NUM=100
-# ENV_TX_TIME_LIMIT=2
-# ENV_LOG_LEVEL=INFO
-# ENV_LOG_IN_CONSOLE=false
-# ENV_MAX_CONCURRENCY=50
-# ENV_VM_SERVICE_PORT=22359
-# ENV_ENABLE_PPROF=
-# ENV_PPROF_PORT=
+
 docker run -itd --rm \
-  -e ENV_LOG_IN_CONSOLE=false -e ENV_LOG_LEVEL="$LOG_LEVEL" \
-  -e ENV_USER_NUM=1000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
+  -v "$MOUNT_PATH":/mount \
   -v "$LOG_PATH":/log \
-  -p "$EXPOSE_PORT":22359 \
+  -p "$EXPOSE_PORT":22351 \
+  -e SANDBOX_RPC_PORT="$RUNTIME_PORT" \
   --name "$CONTAINER_NAME" \
   --privileged $IMAGE_NAME
 

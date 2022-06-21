@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// genOpeningCMD Bulletproofs generate opening command
+// @return *cobra.Command
 func genOpeningCMD() *cobra.Command {
 	genOpeningCmd := &cobra.Command{
 		Use:   "genOpening",

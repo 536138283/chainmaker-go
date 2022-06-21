@@ -23,6 +23,7 @@ var (
 	name string
 )
 
+// KeyCMD new ChainMaker key command
 func KeyCMD() *cobra.Command {
 	keyCmd := &cobra.Command{
 		Use:   "key",
@@ -33,6 +34,8 @@ func KeyCMD() *cobra.Command {
 	return keyCmd
 }
 
+// genCMD Generate the private key of the specified crypto algorithm.
+// @return *cobra.Command
 func genCMD() *cobra.Command {
 	genCmd := &cobra.Command{
 		Use:   "gen",

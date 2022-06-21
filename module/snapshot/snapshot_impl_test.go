@@ -183,6 +183,22 @@ func (s *MockSimContextImpl) SetStateKvHandle(index int32, rows protocol.StateIt
 	panic("impl me")
 }
 
+func (s *MockSimContextImpl) GetTxRWMapByContractName(contractName string) (map[string]*commonPb.TxRead, map[string]*commonPb.TxWrite) {
+	panic("impl me")
+}
+func (s *MockSimContextImpl) GetCrossInfo() uint64 {
+	panic("impl me")
+}
+func (s *MockSimContextImpl) HasUsed(runtimeType commonPb.RuntimeType) bool {
+	panic("impl me")
+}
+func (s *MockSimContextImpl) RecordRuntimeTypeIntoCrossInfo(runtimeType commonPb.RuntimeType) {
+	panic("impl me")
+}
+func (s *MockSimContextImpl) RemoveRuntimeTypeFromCrossInfo() {
+	panic("impl me")
+}
+
 func TestKey(t *testing.T) {
 	s0 := "你好"
 	b0 := []byte(s0)

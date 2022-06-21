@@ -8,7 +8,10 @@ SPDX-License-Identifier: Apache-2.0
 package blockchain
 
 import (
+	"encoding/hex"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"github.com/gogo/protobuf/proto"
 )
 
 var _ msgbus.Subscriber = (*Blockchain)(nil)
@@ -18,6 +21,7 @@ func (bc *Blockchain) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
 		bc.log.Infof("[Blockchain] receive msg, topic: %s", msg.Topic.String())
+		bc.updateChainConfig(msg)
 		if err := bc.Init(); err != nil {
 			bc.log.Errorf("blockchain init failed when the configuration of blockchain updating, %s", err)
 			return
@@ -33,4 +37,22 @@ func (bc *Blockchain) OnMessage(msg *msgbus.Message) {
 // OnQuit nothing
 func (bc *Blockchain) OnQuit() {
 	// nothing for implement interface msgbus.Subscriber
+}
+
+func (bc *Blockchain) updateChainConfig(msg *msgbus.Message) {
+	cfg := bc.chainConf.ChainConfig()
+	dataStr, ok := msg.Payload.([]string)
+	if !ok {
+		return
+	}
+	dataBytes, err := hex.DecodeString(dataStr[0])
+	if err != nil {
+		bc.log.Error(err)
+		panic(err)
+	}
+	err = proto.Unmarshal(dataBytes, cfg)
+	if err != nil {
+		bc.log.Error(err)
+		panic(err)
+	}
 }

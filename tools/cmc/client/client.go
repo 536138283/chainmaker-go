@@ -5,6 +5,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package client, operations about chain maker client can do
 package client
 
 import (
@@ -23,23 +24,24 @@ var (
 	sdkConfPath string // SDK配置路径
 
 	// 合约参数
-	abiFilePath    string
-	contractName   string
-	version        string
-	byteCodePath   string
-	runtimeType    string
-	timeout        int64
-	sendTimes      int
-	method         string
-	params         string
-	orgId          string
-	chainId        string
-	syncResult     bool
-	enableCertHash bool
-	blockHeight    uint64
-	withRWSet      bool
-	isAgree        bool
-	txId           string
+	abiFilePath     string
+	contractName    string
+	contractAddress string
+	version         string
+	byteCodePath    string
+	runtimeType     string
+	timeout         int64
+	sendTimes       int
+	method          string
+	params          string
+	orgId           string
+	chainId         string
+	syncResult      bool
+	enableCertHash  bool
+	blockHeight     uint64
+	withRWSet       bool
+	isAgree         bool
+	txId            string
 
 	adminKeyFilePaths string
 	adminCrtFilePaths string
@@ -91,6 +93,7 @@ const (
 	flagSdkConfPath                      = "sdk-conf-path"
 	flagAbiFilePath                      = "abi-file-path"
 	flagContractName                     = "contract-name"
+	flagContractAddress                  = "contract-address"
 	flagVersion                          = "version"
 	flagMethod                           = "method"
 	flagParams                           = "params"
@@ -143,6 +146,7 @@ const (
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
 )
 
+// ClientCMD new client series command
 func ClientCMD() *cobra.Command {
 	clientCmd := &cobra.Command{
 		Use:   "client",
@@ -176,6 +180,7 @@ func init() {
 	// 用户合约
 	flags.StringVar(&abiFilePath, flagAbiFilePath, "", "specify user EVM contract abi file path, eg: /home/abi.json")
 	flags.StringVar(&contractName, flagContractName, "", "specify user contract name, eg: counter-go-1")
+	flags.StringVar(&contractAddress, flagContractAddress, "", "specify user contract address")
 	flags.StringVar(&version, flagVersion, "", "specify user contract version, eg: 1.0.0")
 	flags.StringVar(&byteCodePath, flagByteCodePath, "", "specify user contract byte code path")
 	flags.StringVar(&runtimeType, flagRuntimeType, "", "specify user contract runtime type, such as: "+
@@ -263,6 +268,8 @@ func attachFlags(cmd *cobra.Command, names []string) {
 	}
 }
 
+// getChainMakerServerVersionCMD a command about get chainmaker server version
+// @return *cobra.Command
 func getChainMakerServerVersionCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cmversion",
@@ -284,6 +291,8 @@ func getChainMakerServerVersionCMD() *cobra.Command {
 	return cmd
 }
 
+// getChainMakerServerVersion query ChainMaker server version
+// @return error
 func getChainMakerServerVersion() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)

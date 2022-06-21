@@ -11,6 +11,13 @@ import (
 )
 
 func (bp *BlockProposerImpl) generateNewBlock(proposingHeight uint64, preHash []byte,
-	txBatch []*commonpb.Transaction, batchIds []string) (*commonpb.Block, []int64, error) {
-	return bp.blockBuilder.GenerateNewBlock(proposingHeight, preHash, txBatch, batchIds)
+	txBatch []*commonpb.Transaction, batchIds []string, fetchBatches [][]*commonpb.Transaction) (
+	*commonpb.Block, []int64, error) {
+
+	return bp.blockBuilder.GenerateNewBlock(
+		proposingHeight,
+		preHash,
+		txBatch,
+		batchIds,
+		fetchBatches)
 }

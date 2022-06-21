@@ -15,6 +15,8 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 )
 
+// blockChainsCMD blockchains sub command
+// @return *cobra.Command
 func blockChainsCMD() *cobra.Command {
 	chainConfigCmd := &cobra.Command{
 		Use:   "blockchains",
@@ -25,6 +27,8 @@ func blockChainsCMD() *cobra.Command {
 	return chainConfigCmd
 }
 
+// checkNewBlockchainsCMD check ChainMaker server local config has changed
+// @return *cobra.Command
 func checkNewBlockchainsCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "checknew",

@@ -24,11 +24,13 @@ func init() {
 
 var acProviderRegistry = map[string]reflect.Type{}
 
+// ACProvider is an interface of ac initialize for different ac implementation
 type ACProvider interface {
 	NewACProvider(chainConf protocol.ChainConf, localOrgId string,
 		store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error)
 }
 
+// RegisterACProvider registers a ACProvider to global ac registry
 func RegisterACProvider(authType string, acp ACProvider) {
 	_, found := acProviderRegistry[authType]
 	if found {
@@ -37,6 +39,7 @@ func RegisterACProvider(authType string, acp ACProvider) {
 	acProviderRegistry[authType] = reflect.TypeOf(acp)
 }
 
+// NewACProviderByMemberType returns a ACProvider by authType
 func NewACProviderByMemberType(authType string) ACProvider {
 	t, found := acProviderRegistry[authType]
 	if !found {

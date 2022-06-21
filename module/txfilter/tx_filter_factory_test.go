@@ -3,6 +3,8 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
+// Package txfilter transaction filter factory test
 package txfilter
 
 import (
@@ -12,11 +14,13 @@ import (
 
 	"chainmaker.org/chainmaker-go/module/txfilter/birdnest"
 	"chainmaker.org/chainmaker-go/module/txfilter/defau1t"
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	mapimpl "chainmaker.org/chainmaker-go/module/txfilter/map"
 	"chainmaker.org/chainmaker-go/module/txfilter/shardingbirdsnest"
+	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
+	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"github.com/golang/mock/gomock"
@@ -24,7 +28,7 @@ import (
 
 func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 	type args struct {
-		conf  *config.TxFilterConfig
+		conf  *filtercommon.TxFilterConfig
 		log   protocol.Logger
 		store protocol.BlockchainStore
 	}
@@ -62,8 +66,8 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 		{
 			name: "test1",
 			args: args{
-				conf: &config.TxFilterConfig{
-					Type:      config.TxFilterType_None,
+				conf: &filtercommon.TxFilterConfig{
+					Type:      filtercommon.TxFilterTypeDefault,
 					BirdsNest: defaultConf.Birdsnest,
 				},
 				log:   log,
@@ -77,8 +81,8 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 		{
 			name: "test2",
 			args: args{
-				conf: &config.TxFilterConfig{
-					Type:      config.TxFilterType_BirdsNest,
+				conf: &filtercommon.TxFilterConfig{
+					Type:      filtercommon.TxFilterTypeBirdsNest,
 					BirdsNest: defaultConf.Birdsnest,
 				},
 				log:   log,
@@ -97,8 +101,8 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 		{
 			name: "test3",
 			args: args{
-				conf: &config.TxFilterConfig{
-					Type:              config.TxFilterType_Map,
+				conf: &filtercommon.TxFilterConfig{
+					Type:              filtercommon.TxFilterTypeMap,
 					BirdsNest:         defaultConf.Birdsnest,
 					ShardingBirdsNest: defaultConf,
 				},
@@ -114,8 +118,8 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 		{
 			name: "test4",
 			args: args{
-				conf: &config.TxFilterConfig{
-					Type:              config.TxFilterType_ShardingBirdsNest,
+				conf: &filtercommon.TxFilterConfig{
+					Type:              filtercommon.TxFilterTypeShardingBirdsNest,
 					BirdsNest:         defaultConf.Birdsnest,
 					ShardingBirdsNest: defaultConf,
 				},
@@ -135,7 +139,7 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 		{
 			name: "test5",
 			args: args{
-				conf: &config.TxFilterConfig{
+				conf: &filtercommon.TxFilterConfig{
 					Type:              5,
 					BirdsNest:         defaultConf.Birdsnest,
 					ShardingBirdsNest: defaultConf,
@@ -217,35 +221,35 @@ func createBlockByHash(height uint64, hash []byte) *commonpb.Block {
 	return block
 }
 
-func GetTestDefaultConfig(path string, i int) *commonpb.ShardingBirdsNestConfig {
-	return &commonpb.ShardingBirdsNestConfig{
+func GetTestDefaultConfig(path string, i int) *sbn.ShardingBirdsNestConfig {
+	return &sbn.ShardingBirdsNestConfig{
 		Length:  10,
 		Timeout: 10,
 		ChainId: "chain1",
-		Birdsnest: &commonpb.BirdsNestConfig{
+		Birdsnest: &bn.BirdsNestConfig{
 			ChainId: "chain1",
 			Length:  5,
-			Rules: &commonpb.RulesConfig{
+			Rules: &bn.RulesConfig{
 				AbsoluteExpireTime: 10000,
 			},
-			Cuckoo: &commonpb.CuckooConfig{
-				KeyType:       commonpb.KeyType_KTDefault,
+			Cuckoo: &bn.CuckooConfig{
+				KeyType:       bn.KeyType_KTDefault,
 				TagsPerBucket: 4,
 				BitsPerItem:   9,
 				MaxNumKeys:    10,
 				TableType:     1,
 			},
-			Snapshot: &commonpb.SnapshotSerializerConfig{
-				Type:        commonpb.SerializeIntervalType_Timed,
-				Timed:       &commonpb.TimedSerializeIntervalConfig{Interval: 20},
-				BlockHeight: &commonpb.BlockHeightSerializeIntervalConfig{Interval: 20},
+			Snapshot: &bn.SnapshotSerializerConfig{
+				Type:        bn.SerializeIntervalType_Timed,
+				Timed:       &bn.TimedSerializeIntervalConfig{Interval: 20},
+				BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: 20},
 				Path:        path + strconv.Itoa(i),
 			},
 		},
-		Snapshot: &commonpb.SnapshotSerializerConfig{
-			Type:        commonpb.SerializeIntervalType_Timed,
-			Timed:       &commonpb.TimedSerializeIntervalConfig{Interval: 20},
-			BlockHeight: &commonpb.BlockHeightSerializeIntervalConfig{Interval: 20},
+		Snapshot: &bn.SnapshotSerializerConfig{
+			Type:        bn.SerializeIntervalType_Timed,
+			Timed:       &bn.TimedSerializeIntervalConfig{Interval: 20},
+			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: 20},
 			Path:        path + strconv.Itoa(i),
 		},
 	}

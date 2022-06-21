@@ -185,10 +185,15 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 		Hash: "SHA256",
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
-	chainConfig := &configpb.ChainConfig{Crypto: &crypto, Contract: &contractConf, Core: &configpb.CoreConfig{
-		EnableSenderGroup:        enableSenderGroup,
-		EnableConflictsBitWindow: enableConflictsBitWindow,
-	}}
+	chainConfig := &configpb.ChainConfig{
+		Crypto:   &crypto,
+		Contract: &contractConf,
+		Core: &configpb.CoreConfig{
+			EnableSenderGroup:        enableSenderGroup,
+			EnableConflictsBitWindow: enableConflictsBitWindow,
+		},
+		AuthType: protocol.Identity,
+	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 	//chainConf :=
 

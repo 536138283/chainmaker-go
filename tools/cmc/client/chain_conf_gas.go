@@ -22,6 +22,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// enableOrDisableGasCMD enable or disable gas feature
+// @return *cobra.Command
 func enableOrDisableGasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gas",

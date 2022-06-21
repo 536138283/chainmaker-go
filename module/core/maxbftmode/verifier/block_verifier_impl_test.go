@@ -69,7 +69,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	tx.Result.RwSetHash, err = utils.CalcRWSetHash(hashType, rwSetmap[tx.Payload.TxId])
 	require.Nil(t, err)
 
-	txHash, err := utils.CalcTxHash(hashType, tx)
+	txHash, err := utils.CalcTxHashWithVersion(hashType, tx, int(protocol.DefaultBlockVersion))
 	require.Nil(t, err)
 
 	b0 := createNewTestBlockWithoutProposer(0)
@@ -82,21 +82,8 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 	txHashs := make([][]byte, 0)
 	txHashs = append(txHashs, txHash)
-	txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
-	require.Nil(t, err)
-	b1.Header.TxRoot = txRoot
 
-	dagHash, err := utils.CalcDagHash(hashType, b1.Dag)
-	require.Nil(t, err)
-	b1.Header.DagHash = dagHash
-
-	rwSetRoot, err := utils.CalcRWSetRoot(hashType, txs)
-	require.Nil(t, err)
-	b1.Header.RwSetRoot = rwSetRoot
-
-	blockHash, err := utils.CalcBlockHash("SHA256", b1)
-	require.Nil(t, err)
-	b1.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b1, txHashs)
 
 	//member := mock.NewMockMember(ctl)
 	//member.EXPECT().GetMemberId().Return("123").AnyTimes()
@@ -246,7 +233,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	tx.Result.RwSetHash, err = utils.CalcRWSetHash(hashType, rwSetmap[tx.Payload.TxId])
 	require.Nil(t, err)
 
-	txHash, err := utils.CalcTxHash(hashType, tx)
+	txHash, err := utils.CalcTxHashWithVersion(hashType, tx, int(protocol.DefaultBlockVersion))
 	require.Nil(t, err)
 
 	b0 := createNewTestBlockWithoutProposer(0)

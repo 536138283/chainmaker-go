@@ -208,6 +208,7 @@ func (pp *permissionedPkACProvider) refineEndorsements(endorsements []*common.En
 	return refinedEndorsement
 }
 
+// NewMember creates a member from pb Member
 func (pp *permissionedPkACProvider) NewMember(member *pbac.Member) (protocol.Member, error) {
 	return pp.acService.newPkMember(member, pp.adminMember, pp.consensusMember)
 }
@@ -237,14 +238,17 @@ func (pp *permissionedPkACProvider) CreatePrincipal(resourceName string, endorse
 	return pp.acService.createPrincipal(resourceName, endorsements, message)
 }
 
+// LookUpPolicy returns corresponding policy configured for the given resource name
 func (pp *permissionedPkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	return pp.acService.lookUpPolicy(resourceName)
 }
 
+// LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
 func (pp *permissionedPkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
 	return pp.acService.lookUpExceptionalPolicy(resourceName)
 }
 
+//GetMemberStatus get the status information of the member
 func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.MemberStatus, error) {
 	if _, err := pp.newNodeMember(member); err != nil {
 		pp.acService.log.Infof("get member status: %s", err.Error())
@@ -253,6 +257,7 @@ func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.M
 	return pbac.MemberStatus_NORMAL, nil
 }
 
+//VerifyRelatedMaterial verify the member's relevant identity material
 func (pp *permissionedPkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 	return true, nil
 }
@@ -312,4 +317,22 @@ func (pp *permissionedPkACProvider) GetValidEndorsements(principal protocol.Prin
 
 func (pp *permissionedPkACProvider) newNodeMember(member *pbac.Member) (protocol.Member, error) {
 	return pp.acService.newNodePkMember(member, pp.consensusMember)
+}
+
+//GetAllPolicy returns all default policies
+func (p *permissionedPkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
+	var policyMap = make(map[string]*pbac.Policy)
+	p.acService.resourceNamePolicyMap.Range(func(key, value interface{}) bool {
+		k, _ := key.(string)
+		v, _ := value.(*policy)
+		policyMap[k] = newPbPolicyFromPolicy(v)
+		return true
+	})
+	p.acService.exceptionalPolicyMap.Range(func(key, value interface{}) bool {
+		k, _ := key.(string)
+		v, _ := value.(*policy)
+		policyMap[k] = newPbPolicyFromPolicy(v)
+		return true
+	})
+	return policyMap, nil
 }

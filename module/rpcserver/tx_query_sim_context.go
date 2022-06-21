@@ -18,7 +18,9 @@ import (
 )
 
 // Storage interface for smart contracts, implement TxSimContext
+// nolint: unused, structcheck
 type txQuerySimContextImpl struct {
+	crossInfo        uint64
 	tx               *commonPb.Transaction
 	txResult         *commonPb.Result
 	txReadKeyMap     map[string]*commonPb.TxRead
@@ -340,4 +342,38 @@ func (s *txQuerySimContextImpl) GetContractByName(name string) (*commonPb.Contra
 //GetContractBytecode get contract bytecode
 func (s *txQuerySimContextImpl) GetContractBytecode(name string) ([]byte, error) {
 	return s.blockchainStore.GetContractBytecode(name)
+}
+
+// GetCrossInfo get contract call link information
+func (s *txQuerySimContextImpl) GetCrossInfo() uint64 {
+	return 0
+}
+
+// HasUsed judge whether the specified common.RuntimeType has appeared in the previous depth
+// in the current cross-link
+func (s *txQuerySimContextImpl) HasUsed(runtimeType commonPb.RuntimeType) bool {
+	return false
+}
+
+// RecordRuntimeTypeIntoCrossInfo record the new contract call information to the top of crossInfo
+func (s *txQuerySimContextImpl) RecordRuntimeTypeIntoCrossInfo(runtimeType commonPb.RuntimeType) {}
+
+// RemoveRuntimeTypeFromCrossInfo remove the top-level information from the crossInfo
+func (s *txQuerySimContextImpl) RemoveRuntimeTypeFromCrossInfo() {}
+
+// GetTxRWMapByContractName returns tx RWMap by contract name
+func (s *txQuerySimContextImpl) GetTxRWMapByContractName(contractName string) (
+	map[string]*commonPb.TxRead, map[string]*commonPb.TxWrite) {
+	txReads := make(map[string]*commonPb.TxRead)
+	txWrites := make(map[string]*commonPb.TxWrite)
+
+	// TODO: impl me
+	// for current := s.currentDepth; current >= 0; current-- {
+	// 	if txRWSetWithContract, ok := s.txRWSetWithDepth[current][contractName]; ok {
+	// 		txReads = mergeTxReadSet(txRWSetWithContract.txReadKeyMap, txReads)
+	// 		txWrites = mergeTxWriteSet(txRWSetWithContract.txWriteKeyMap, txWrites)
+	// 	}
+	// }
+
+	return txReads, txWrites
 }

@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// upgradeContractCMD upgrade contract
+// @return *cobra.Command
 func upgradeContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   upgradeContractStr,

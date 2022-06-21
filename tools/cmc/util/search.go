@@ -5,6 +5,7 @@
 
 package util
 
+// SearchInt64 binary search int64
 func SearchInt64(n int64, f func(int64) (bool, error)) (int64, error) {
 	// Define f(-1) == false and f(n) == true.
 	// Invariant: f(i-1) == false, f(j) == true.
@@ -27,6 +28,7 @@ func SearchInt64(n int64, f func(int64) (bool, error)) (int64, error) {
 	return i, nil
 }
 
+// SearchU64 binary search uint64
 func SearchU64(n uint64, f func(uint64) (bool, error)) (uint64, error) {
 	// Define f(n) == true.
 	// Invariant: f(i-1) == false, f(j) == true.

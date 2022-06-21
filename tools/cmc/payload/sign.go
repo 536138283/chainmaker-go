@@ -27,6 +27,8 @@ var (
 	signOutput string
 )
 
+// signCMD Sign pb file command
+// @return *cobra.Command
 func signCMD() *cobra.Command {
 	signCmd := &cobra.Command{
 		Use:   "sign",
@@ -47,6 +49,8 @@ func signCMD() *cobra.Command {
 	return signCmd
 }
 
+// signSystemContractPayloadCMD sign payload
+// @return *cobra.Command
 func signSystemContractPayloadCMD() *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "config",
@@ -59,6 +63,8 @@ func signSystemContractPayloadCMD() *cobra.Command {
 	return configCmd
 }
 
+// signContractMgmtPayloadCMD sign payload
+// @return *cobra.Command
 func signContractMgmtPayloadCMD() *cobra.Command {
 	contractCmd := &cobra.Command{
 		Use:   "contract",
@@ -71,6 +77,7 @@ func signContractMgmtPayloadCMD() *cobra.Command {
 	return contractCmd
 }
 
+// LOAD_FILE_ERROR_FORMAT define LOAD_FILE_ERROR_FORMAT error fmt
 const LOAD_FILE_ERROR_FORMAT = "Load file %s error: %s"
 
 func signPayload() error {
@@ -178,6 +185,7 @@ func sign(msg []byte) (*sdkPbCommon.EndorsementEntry, error) {
 	//}, nil
 }
 
+// ParseCert parse cert from cert PEM
 func ParseCert(crtPEM []byte) (*bcx509.Certificate, error) {
 	certBlock, _ := pem.Decode(crtPEM)
 	if certBlock == nil {
@@ -192,6 +200,7 @@ func ParseCert(crtPEM []byte) (*bcx509.Certificate, error) {
 	return cert, nil
 }
 
+// SignTx sign tx(msg) by privateKey and cert
 func SignTx(privateKey crypto.PrivateKey, cert *bcx509.Certificate, msg []byte) ([]byte, error) {
 	var opts crypto.SignOpts
 	hashalgo, err := bcx509.GetHashFromSignatureAlgorithm(cert.SignatureAlgorithm)

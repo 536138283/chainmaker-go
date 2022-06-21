@@ -9,17 +9,13 @@ package client
 
 import (
 	"fmt"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
 )
 
+// updateBlockConfigCMD update block config sub command
+// @return *cobra.Command
 func updateBlockConfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "block",
@@ -32,6 +28,8 @@ func updateBlockConfigCMD() *cobra.Command {
 	return cmd
 }
 
+// updateBlockIntervalCMD update block interval
+// @return *cobra.Command
 func updateBlockIntervalCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "updateblockinterval",
@@ -54,9 +52,6 @@ func updateBlockIntervalCMD() *cobra.Command {
 }
 
 func updateBlockInterval() error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
@@ -65,30 +60,9 @@ func updateBlockInterval() error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 	chainConfig, err := client.GetChainConfig()
 	if err != nil {
@@ -106,40 +80,9 @@ func updateBlockInterval() error {
 		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
 	}
 
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				adminOrgs[i],
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				"",
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		}
+	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
 	}
 
 	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
@@ -154,6 +97,8 @@ func updateBlockInterval() error {
 	return nil
 }
 
+// updateTxParameterSizeCMD update txparameter size
+// @return *cobra.Command
 func updateTxParameterSizeCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "updatetxparametersize",
@@ -176,9 +121,6 @@ func updateTxParameterSizeCMD() *cobra.Command {
 }
 
 func updateTxParameterSize() error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
@@ -187,30 +129,9 @@ func updateTxParameterSize() error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 	chainConfig, err := client.GetChainConfig()
 	if err != nil {
@@ -228,40 +149,9 @@ func updateTxParameterSize() error {
 		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
 	}
 
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				adminOrgs[i],
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				"",
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		}
+	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
 	}
 
 	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)

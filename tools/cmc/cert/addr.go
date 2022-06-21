@@ -25,6 +25,8 @@ import (
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
+// addrCMD get addr from cert
+// @return *cobra.Command
 func addrCMD() *cobra.Command {
 	addrCmd := &cobra.Command{
 		Use:   "addr",
@@ -70,6 +72,8 @@ func getAddr() error {
 	return nil
 }
 
+// certToUserAddrInStake get user addr feature of the DPoS from cert
+// @return *cobra.Command
 func certToUserAddrInStake() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "userAddr",
@@ -128,6 +132,10 @@ func certToUserAddrInStake() *cobra.Command {
 	return cmd
 }
 
+// getPubkeyFromCert get public key from a pem format certificate
+// @param certContent
+// @return []byte
+// @return error
 func getPubkeyFromCert(certContent []byte) ([]byte, error) {
 	block, _ := pem.Decode(certContent)
 	if block == nil {

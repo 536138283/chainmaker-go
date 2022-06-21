@@ -14,6 +14,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newQueryArchivedHeightOnChainCMD query on-chain archived height
+// @return *cobra.Command
 func newQueryArchivedHeightOnChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archived-height",

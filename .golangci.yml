@@ -15,6 +15,7 @@ run:
     - evm-go
     - gasm-go
     - wasmer-go
+    - parallel
 linters:
   disable-all: true
   enable:
@@ -116,6 +117,10 @@ issues:
         - errcheck
         - lll
         - funlen
+    - path: tools/cmc
+      linters:
+        - errcheck
+        - govet
     - linters:
         - revive
       text: "stutters"

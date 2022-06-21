@@ -9,6 +9,8 @@ package parallel
 
 import "github.com/spf13/cobra"
 
+// queryCMD query contract
+// @return *cobra.Command
 func queryCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",

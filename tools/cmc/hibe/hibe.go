@@ -4,6 +4,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package hibe
 
 import (
@@ -41,6 +42,7 @@ var (
 	// updatePrvKeyCMD flags
 )
 
+// HibeCMD new ChainMaker hibe command
 func HibeCMD() *cobra.Command {
 	hibeCmd := &cobra.Command{
 		Use:   "hibe",
@@ -72,11 +74,13 @@ func initHibeCMD() *cobra.Command {
 	return setupHibeCmd
 }
 
+// getParamsCMD getParams storage path
+// @return *cobra.Command
 func getParamsCMD() *cobra.Command {
 	getParamsCmd := &cobra.Command{
 		Use:   "getParams",
-		Short: "getParams storage path ",
-		Long:  "getParams storage path ",
+		Short: "getParams storage path",
+		Long:  "getParams storage path",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return getParams()
 		},
@@ -89,6 +93,8 @@ func getParamsCMD() *cobra.Command {
 	return getParamsCmd
 }
 
+// genPrvKeyCMD generates a key for an Id using the master key
+// @return *cobra.Command
 func genPrvKeyCMD() *cobra.Command {
 	genPrivateKeyCmd := &cobra.Command{
 		Use:   "genPrvKey",
@@ -207,6 +213,7 @@ func getParams() error {
 }
 
 // TODO 此函数太大需要拆解
+//nolint:gocyclo
 func genPrivateKey() error {
 	err := hibe.ValidateId(orgId)
 	if err != nil {

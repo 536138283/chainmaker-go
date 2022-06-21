@@ -55,6 +55,7 @@ const (
 	flagRole           = "role"
 )
 
+// NewPubkeyCMD new public key management command
 func NewPubkeyCMD() *cobra.Command {
 	pkCmd := &cobra.Command{
 		Use:   "pubkey",
@@ -81,6 +82,7 @@ func NewPubkeyCMD() *cobra.Command {
 	return pkCmd
 }
 
+// AddPKCmd new add pubkey info command
 func AddPKCmd() *cobra.Command {
 	addPKCmd := &cobra.Command{
 		Use:   "add",
@@ -108,6 +110,7 @@ func AddPKCmd() *cobra.Command {
 	return addPKCmd
 }
 
+// DelPKCmd new del pubkey info command
 func DelPKCmd() *cobra.Command {
 	delPKCmd := &cobra.Command{
 		Use:   "del",
@@ -133,6 +136,7 @@ func DelPKCmd() *cobra.Command {
 	return delPKCmd
 }
 
+// QueryPKCmd new query pubkey info command
 func QueryPKCmd() *cobra.Command {
 	queryPKCmd := &cobra.Command{
 		Use:   "query",
@@ -323,6 +327,7 @@ func cliQueryPubKey() error {
 	return nil
 }
 
+// CreateClientWithConfig create chain client with config file path
 func CreateClientWithConfig() (*sdk.ChainClient, error) {
 	chainClient, err := sdk.NewChainClient(sdk.WithConfPath(sdkConfPath),
 		sdk.WithChainClientOrgId(orgId), sdk.WithChainClientChainId(chainId))

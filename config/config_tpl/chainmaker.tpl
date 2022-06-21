@@ -155,22 +155,22 @@ txpool:
   # Max config transaction count in tx_pool.
   max_config_txpool_size: 10
 
-  # Whether dump config and common transactions in queue when stop node,
-  # and replay transactions when restart node.
+  # Whether dump unpacked config and common transactions in queue when stop node,
+  # and replay these transactions when restart node.
   is_dump_txs_in_queue: true
 
   # Common transaction queue num, only for normal tx_pool.
   # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
   # common_queue_num: 8
 
-  # Interval of creating a transaction batch, only for batch tx_pool, in millisecond.
-  # batch_create_timeout: 200
-
-  # The number of transactions contained in a batch, only for batch tx_pool.
+  # The number of transactions contained in a batch, for normal and batch tx_pool.
   # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
   # batch_max_size: 100
 
-# RPC service setting
+  # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
+  # batch_create_timeout: 200
+
+ # RPC service setting
 rpc:
   # RPC type, can only be grpc now
   provider: grpc  # [*]
@@ -238,8 +238,8 @@ rpc:
       # - "127.0.0.1"
 
   # RPC server max send/receive message size in MB
-  max_send_msg_size: 10
-  max_recv_msg_size: 10
+  max_send_msg_size: 100
+  max_recv_msg_size: 100
 
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
@@ -517,20 +517,42 @@ vm:
   dockervm_mount_path: ../data/{org_id}/docker-go
   # Specify log file path
   dockervm_log_path: ../log/{org_id}/docker-go
+  # Start docker vm right now
+  # 1. false: docker vm will not be started when starting the chain. docker vm needs to be started separately
+  # 2. true: when starting the chain, the script will start the docker vm first
+  start_now: {start_dockervm_now}
+  # Unix domain socket open, used for chainmaker and docker manager communication
+  # 1. false: docker vm uses TCP to communicate with chain
+  # 2. true: docker vm uses unix domain socket to communicate with chain
+  uds_open: {dockervm_uds_open}
+  # If use a customized VM configuration file, supplement it; else, do not configure
+  # dockervm_config_path: /config_path/vm.yml
   # Whether to print log at terminal
   log_in_console: false
   # Log level
-  log_level: INFO
-  # Unix domain socket open, used for chainmaker and docker manager communication
-  uds_open: true
-  # docker vm contract service host, default 127.0.0.1
-  docker_vm_host: 127.0.0.1
-  # docker vm contract service port, default 22351
-  docker_vm_port: {docker_vm_port}
-  # Grpc max send message size, Default size is 4, Unit: MB
-  max_send_msg_size: 20
-  # Grpc max receive message size, Default size is 4, Unit: MB
-  max_recv_msg_size: 20
-  # max number of connection created to connect docker vm service
-  max_connection: 5
+  log_level: {dockervm_log_level}
+  #  Config items of docker runtime service
+  runtime_server:
+    # Runtime service port, default 32351
+    port: {dockervm_runtime_port}
+    # Grpc dialing timeout, default size is 10, Uint: s
+    dial_timeout: 10
+    # Grpc max send message size, Default size is 4, Unit: MB
+    max_send_msg_size: 20
+    # Grpc max receive message size, Default size is 4, Unit: MB
+    max_recv_msg_size: 20
+  # Config itrms of contract engine service
+  contract_engine:
+    # Docker vm contract service host, default 127.0.0.1
+    host: 127.0.0.1
+    # Docker vm contract service port, default 22351
+    port: {dockervm_engine_port}
+    # Grpc dialing timeout, default size is 10, Uint: s
+    dial_timeout: 10
+    # Grpc max send message size, Default size is 4, Unit: MB
+    max_send_msg_size: 20
+    # Grpc max receive message size, Default size is 4, Unit: MB
+    max_recv_msg_size: 20
+    # Max number of connection created to connect docker vm service
+    max_connection: 5
 

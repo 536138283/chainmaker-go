@@ -24,11 +24,13 @@ type AcFactory struct {
 var once sync.Once
 var acInstance *AcFactory
 
+// ACFactory is a singleton to init ac instance
 func ACFactory() *AcFactory {
 	once.Do(func() { acInstance = new(AcFactory) })
 	return acInstance
 }
 
+// NewACProvider return a AccessControlProvider accord to specific AuthType and ConsensusType
 func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
 	protocol.AccessControlProvider, error) {

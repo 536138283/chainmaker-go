@@ -9,7 +9,7 @@ package console
 import (
 	"testing"
 
-	"github.com/c-bata/go-prompt"
+	prompt "github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 	"github.com/stretchr/testify/assert"
 )
