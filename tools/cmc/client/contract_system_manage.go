@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
@@ -104,10 +103,6 @@ func contractAccessQueryCMD() *cobra.Command {
 }
 
 func grantOrRevokeContractAccess(which int) error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
@@ -115,26 +110,9 @@ func grantOrRevokeContractAccess(which int) error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 
 	var (

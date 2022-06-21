@@ -14,16 +14,12 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -42,8 +38,8 @@ const ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT = "admin orgId & key list length n
 	"[keys len: %d]/[org-ids len:%d]"
 
 var (
-	errAdminOrgIdKeyCertIsEmpty = errors.New("admin orgId or key or cert list is empty")
-	noConstructorErrMsg         = "contract does not have a constructor"
+	//errAdminOrgIdKeyCertIsEmpty = errors.New("admin orgId or key or cert list is empty")
+	noConstructorErrMsg = "contract does not have a constructor"
 )
 
 // UserContract define user contract
@@ -277,10 +273,6 @@ func revokeUserContractCMD() *cobra.Command {
 }
 
 func createUserContract() error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
@@ -288,30 +280,9 @@ func createUserContract() error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 
 	rt, ok := common.RuntimeType_value[runtimeType]
@@ -382,33 +353,10 @@ func createUserContract() error {
 		payload = client.AttachGasLimit(payload, limit)
 	}
 
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		var e *common.EndorsementEntry
-		var err error
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err = sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err = sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				adminOrgs[i],
-				payload,
-			)
-		} else {
-			e, err = sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				"",
-				payload,
-			)
-		}
-		if err != nil {
-			return err
-		}
-		endorsementEntrys[i] = e
+	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
 	}
-
 	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {
 		return err
@@ -607,10 +555,6 @@ func getUserContract() error {
 }
 
 func upgradeUserContract() error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
@@ -625,30 +569,9 @@ func upgradeUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 
 	rt, ok := common.RuntimeType_value[runtimeType]
@@ -675,42 +598,10 @@ func upgradeUserContract() error {
 		payload = client.AttachGasLimit(payload, limit)
 	}
 
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				adminOrgs[i],
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				"",
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		}
+	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
 	}
-
 	// 发送更新合约请求
 	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {
@@ -737,10 +628,6 @@ func upgradeUserContract() error {
 }
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
@@ -755,30 +642,9 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 
 	var (
@@ -803,42 +669,10 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return fmt.Errorf("create cert manage %s payload failed, %s", whichOperation, err.Error())
 	}
 
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				adminOrgs[i],
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				"",
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		}
+	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
 	}
-
 	// 发送创建合约请求
 	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {

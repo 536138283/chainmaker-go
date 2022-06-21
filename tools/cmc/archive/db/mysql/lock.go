@@ -23,7 +23,10 @@ type lock struct {
 	ExpiredAt time.Time    `gorm:"type:timestamp;not null"`
 	Holder    string       `gorm:"unique;not null"`
 }
-
+type Locker interface {
+	Lock()
+	UnLock()
+}
 type dbLocker struct {
 	db       *gorm.DB
 	stopCh   chan struct{}
@@ -32,7 +35,7 @@ type dbLocker struct {
 }
 
 // NewDbLocker new db locker
-func NewDbLocker(db *gorm.DB, holder string, lease time.Duration) *dbLocker {
+func NewDbLocker(db *gorm.DB, holder string, lease time.Duration) Locker {
 	return &dbLocker{
 		db:       db,
 		stopCh:   make(chan struct{}),
