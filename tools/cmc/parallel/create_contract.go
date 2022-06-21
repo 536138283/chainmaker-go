@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// createContractCMD create contract
+// @return *cobra.Command
 func createContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   createContractStr,

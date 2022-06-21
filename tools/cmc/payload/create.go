@@ -25,6 +25,8 @@ var (
 	createOutput string
 )
 
+// createCMD Create pb file command
+// @return *cobra.Command
 func createCMD() *cobra.Command {
 	createCmd := &cobra.Command{
 		Use:   "create",
@@ -41,6 +43,8 @@ func createCMD() *cobra.Command {
 	return createCmd
 }
 
+// createConfigUpdatePayloadCMD create Config Update Payload
+// @return *cobra.Command
 func createConfigUpdatePayloadCMD() *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "config",
@@ -58,6 +62,8 @@ func createConfigUpdatePayloadCMD() *cobra.Command {
 	return configCmd
 }
 
+// createContractMgmtPayloadCMD create contract manage payload
+// @return *cobra.Command
 func createContractMgmtPayloadCMD() *cobra.Command {
 	contractCmd := &cobra.Command{
 		Use:   "contract",

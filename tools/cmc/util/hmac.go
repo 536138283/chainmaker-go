@@ -12,6 +12,7 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
 )
 
+// SM3 sum of data in SM3, returns sum hex
 func SM3(data []byte) (string, error) {
 	bz, err := hash.Get(crypto.HASH_TYPE_SM3, data)
 	if err != nil {

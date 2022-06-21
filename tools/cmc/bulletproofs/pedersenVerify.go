@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// pedersenVerifyCMD Bulletproofs pedersenVerify command
+// @return *cobra.Command
 func pedersenVerifyCMD() *cobra.Command {
 	pedersenVerifyCmd := &cobra.Command{
 		Use:   "pedersenVerify",

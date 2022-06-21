@@ -13,6 +13,7 @@ import (
 	"gorm.io/gorm"
 )
 
+// DefaultLockLeaseAge define default db locker lease age
 const DefaultLockLeaseAge = 10 * time.Second
 
 type lock struct {
@@ -22,7 +23,10 @@ type lock struct {
 	ExpiredAt time.Time    `gorm:"type:timestamp;not null"`
 	Holder    string       `gorm:"unique;not null"`
 }
-
+type Locker interface {
+	Lock()
+	UnLock()
+}
 type dbLocker struct {
 	db       *gorm.DB
 	stopCh   chan struct{}
@@ -30,7 +34,8 @@ type dbLocker struct {
 	leaseAge time.Duration
 }
 
-func NewDbLocker(db *gorm.DB, holder string, lease time.Duration) *dbLocker {
+// NewDbLocker new db locker
+func NewDbLocker(db *gorm.DB, holder string, lease time.Duration) Locker {
 	return &dbLocker{
 		db:       db,
 		stopCh:   make(chan struct{}),
@@ -39,6 +44,7 @@ func NewDbLocker(db *gorm.DB, holder string, lease time.Duration) *dbLocker {
 	}
 }
 
+// Lock make a lock
 func (locker *dbLocker) Lock() {
 	for {
 		err := locker.cleanExpired()
@@ -65,6 +71,7 @@ func (locker *dbLocker) Lock() {
 	locker.startLease()
 }
 
+// UnLock unlock
 func (locker *dbLocker) UnLock() {
 	locker.stopLease()
 	locker.db.Where("holder = ?", locker.holder).Delete(&lock{})

@@ -12,6 +12,7 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
+// CheckProposalRequestResp check *common.TxResponse is success
 func CheckProposalRequestResp(resp *common.TxResponse, needContractResult bool) error {
 	if resp.Code != common.TxStatusCode_SUCCESS {
 		if resp.Message == "" {

@@ -3,6 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package query query block chain
 package query
 
 import (
@@ -24,6 +25,7 @@ const (
 	flagWithRWSet      = "with-rw-set"
 )
 
+// NewQueryOnChainCMD new query on-chain blockchain data command
 func NewQueryOnChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",

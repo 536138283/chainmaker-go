@@ -26,6 +26,7 @@ const (
 	flagTxIds       = "tx-ids"
 )
 
+// NewTxPoolCMD new txpool command
 func NewTxPoolCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "txpool",
@@ -50,6 +51,8 @@ func init() {
 	flags.StringSliceVar(&txIds, flagTxIds, []string{}, "tx id list. --tx-ids=\"abc,xyz\"")
 }
 
+// newGetPoolStatusCMD get tx pool status
+// @return *cobra.Command
 func newGetPoolStatusCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
@@ -78,6 +81,8 @@ func newGetPoolStatusCMD() *cobra.Command {
 	return cmd
 }
 
+// newGetTxIdsByTypeAndStageCMD get txids by type and stage
+// @return *cobra.Command
 func newGetTxIdsByTypeAndStageCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "txids",
@@ -110,6 +115,8 @@ func newGetTxIdsByTypeAndStageCMD() *cobra.Command {
 	return cmd
 }
 
+// newGetTxsInPoolByTxIdsCMD get txs in pool by tx ids
+// @return *cobra.Command
 func newGetTxsInPoolByTxIdsCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "txs",

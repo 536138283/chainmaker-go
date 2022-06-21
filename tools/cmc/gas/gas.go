@@ -27,6 +27,7 @@ const (
 	flagAmount            = "amount"
 )
 
+// NewGasManageCMD new gas management command
 func NewGasManageCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gas",

@@ -9,15 +9,10 @@ package client
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
@@ -29,6 +24,8 @@ const (
 	listPermissionResourceEnum
 )
 
+// permissionResourceCMD chain config permission resource operation
+// @return *cobra.Command
 func permissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "permission",
@@ -42,6 +39,8 @@ func permissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// addPermissionResourceCMD add chain config permission resource
+// @return *cobra.Command
 func addPermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -65,6 +64,8 @@ func addPermissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// updatePermissionResourceCMD update chain config permission resource
+// @return *cobra.Command
 func updatePermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -88,6 +89,8 @@ func updatePermissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// deletePermissionResourceCMD delete chain config permission resource
+// @return *cobra.Command
 func deletePermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
@@ -110,6 +113,8 @@ func deletePermissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// listPermissionResourceCMD query chain config permission resource list
+// @return *cobra.Command
 func listPermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",
@@ -133,46 +138,16 @@ func listPermissionResourceCMD() *cobra.Command {
 }
 
 func doPermissionResourceOperation(crud int) error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
 		return err
 	}
 	defer client.Stop()
-
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if len(adminKeys) == 0 {
-			return errAdminOrgIdKeyCertIsEmpty
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
-
 	var payload *common.Payload
 	switch crud {
 	case addPermissionResourceEnum:
@@ -216,42 +191,10 @@ func doPermissionResourceOperation(crud int) error {
 		return errors.New("invalid permission resource operation")
 	}
 
-	endorsers := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return err
-			}
-
-			endorsers[i] = e
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				adminOrgs[i],
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsers[i] = e
-		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				"",
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsers[i] = e
-		}
+	endorsers, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
 	}
-
 	// send
 	resp, err := client.SendChainConfigUpdateRequest(payload, endorsers, timeout, syncResult)
 	if err != nil {

@@ -11,7 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
@@ -28,6 +27,8 @@ const (
 	updateTrustRoot
 )
 
+// configTrustRootCMD trust root command
+// @return *cobra.Command
 func configTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trustroot",
@@ -41,6 +42,8 @@ func configTrustRootCMD() *cobra.Command {
 	return cmd
 }
 
+// addTrustRootCMD add trust root ca cert
+// @return *cobra.Command
 func addTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -64,6 +67,8 @@ func addTrustRootCMD() *cobra.Command {
 	return cmd
 }
 
+// removeTrustRootCMD remove trust root ca cert
+// @return *cobra.Command
 func removeTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
@@ -86,6 +91,8 @@ func removeTrustRootCMD() *cobra.Command {
 	return cmd
 }
 
+// updateTrustRootCMD update trust root ca cert
+// @return *cobra.Command
 func updateTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -109,12 +116,7 @@ func updateTrustRootCMD() *cobra.Command {
 	return cmd
 }
 
-// nolint: gocyclo
 func configTrustRoot(op int) error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
@@ -122,33 +124,9 @@ func configTrustRoot(op int) error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if len(adminKeys) == 0 {
-			return errAdminOrgIdKeyCertIsEmpty
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 
 	var trustRootBytes []string

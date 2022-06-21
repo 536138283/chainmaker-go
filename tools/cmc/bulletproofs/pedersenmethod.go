@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// pedersenNegCMD Bulletproofs pedersenNegCMD command
+// @return *cobra.Command
 func pedersenNegCMD() *cobra.Command {
 	negCmd := &cobra.Command{
 		Use:   "neg",

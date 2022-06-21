@@ -18,6 +18,7 @@ const (
 	prefixBlockInfoTable = "t_block_info"
 )
 
+// BlockInfo define block info db model
 type BlockInfo struct {
 	BaseModel
 	ChainID        string `gorm:"column:Fchain_id;type:varchar(64) NOT NULL"`
@@ -59,6 +60,7 @@ func DbName(chainId string) string {
 	return fmt.Sprintf("%s_%s", prefixDbName, chainId)
 }
 
+// CreateBlockInfoTableIfNotExists create table `tableName` if not exists
 func CreateBlockInfoTableIfNotExists(db *gorm.DB, tableName string) error {
 	if !db.Migrator().HasTable(tableName) {
 		if !db.Migrator().HasTable(&blockInfoNew{}) {
@@ -72,6 +74,7 @@ func CreateBlockInfoTableIfNotExists(db *gorm.DB, tableName string) error {
 	return nil
 }
 
+// InsertBlockInfo insert block info into db
 func InsertBlockInfo(db *gorm.DB, chainId string, blkHeight uint64, blkWithRWSet []byte, hmac string) error {
 	return db.Table(BlockInfoTableNameByBlockHeight(blkHeight)).Create(&BlockInfo{
 		ChainID:        chainId,
@@ -82,6 +85,7 @@ func InsertBlockInfo(db *gorm.DB, chainId string, blkHeight uint64, blkWithRWSet
 	}).Error
 }
 
+// RowsPerBlockInfoTable returns rows per block info table
 func RowsPerBlockInfoTable() uint64 {
 	return rowsPerBlockInfoTable
 }

@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package address 关于用户地址的相关命令
 package address
 
 import (
@@ -15,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// newPK2AddrCMD get address from public key file or pem string
+// @return *cobra.Command
 func newPK2AddrCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "pk-to-addr [public key file path / pem string]",
@@ -67,6 +70,8 @@ func newPK2AddrCMD() *cobra.Command {
 	return cmd
 }
 
+// newHex2AddrCMD get address from hex string
+// @return *cobra.Command
 func newHex2AddrCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "hex-to-addr [hex string]",
@@ -109,6 +114,8 @@ func newHex2AddrCMD() *cobra.Command {
 	return cmd
 }
 
+// newCert2AddrCMD get address from cert file or pem string
+// @return *cobra.Command
 func newCert2AddrCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cert-to-addr [hex string]",

@@ -19,12 +19,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// ParamMultiSign define multi sign param
 type ParamMultiSign struct {
 	Key    string
 	Value  string
 	IsFile bool
 }
 
+// systemContractMultiSignCMD system contract multi sign command
+// @return *cobra.Command
 func systemContractMultiSignCMD() *cobra.Command {
 	systemContractMultiSignCmd := &cobra.Command{
 		Use:   "multi-sign",
@@ -39,6 +42,8 @@ func systemContractMultiSignCMD() *cobra.Command {
 	return systemContractMultiSignCmd
 }
 
+// multiSignReqCMD multi sign req
+// @return *cobra.Command
 func multiSignReqCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "req",
@@ -61,6 +66,8 @@ func multiSignReqCMD() *cobra.Command {
 	return cmd
 }
 
+// multiSignVoteCMD multi sign vote
+// @return *cobra.Command
 func multiSignVoteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vote",
@@ -84,6 +91,8 @@ func multiSignVoteCMD() *cobra.Command {
 	return cmd
 }
 
+// multiSignQueryCMD multi sign query
+// @return *cobra.Command
 func multiSignQueryCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",

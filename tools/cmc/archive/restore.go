@@ -26,6 +26,8 @@ const (
 	restoreBlockRequestTimeout = 20 // 20s
 )
 
+// newRestoreCMD restore blockchain data from off-chain storage (mysql database)
+// @return *cobra.Command
 func newRestoreCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "restore",
@@ -106,6 +108,11 @@ func validateRestore(archivedBlkHeightOnChain, restoreStartBlkHeight uint64) err
 	return nil
 }
 
+// restoreBlock read block data from database and write into peer storage
+// @param cc
+// @param db
+// @param height
+// @return error
 func restoreBlock(cc *sdk.ChainClient, db *gorm.DB, height uint64) error {
 	tx := db.Begin()
 	if tx.Error != nil {
@@ -160,6 +167,10 @@ func restoreBlock(cc *sdk.ChainClient, db *gorm.DB, height uint64) error {
 	return tx.Commit().Error
 }
 
+// restoreBlockOnChain
+// @param cc
+// @param fullBlock
+// @return error
 func restoreBlockOnChain(cc *sdk.ChainClient, fullBlock []byte) error {
 	var (
 		err                error

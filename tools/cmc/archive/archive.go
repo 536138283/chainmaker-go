@@ -3,6 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package archive 对节点的区块链数据进行归档相关的操作
 package archive
 
 import (
@@ -59,6 +60,7 @@ const (
 	flagStartBlockHeight = "start-block-height"
 )
 
+// NewArchiveCMD new archive blockchain data and restore blockchain data command
 func NewArchiveCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archive",

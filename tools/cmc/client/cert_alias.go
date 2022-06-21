@@ -32,6 +32,8 @@ var (
 	newCertPath string
 )
 
+// certAliasCMD cert alias sub command
+// @return *cobra.Command
 func certAliasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "certalias",
@@ -44,6 +46,8 @@ func certAliasCMD() *cobra.Command {
 	return cmd
 }
 
+// updateCertByAliasCMD update cert by alias
+// @return *cobra.Command
 func updateCertByAliasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -129,6 +133,8 @@ func updateCertByAliasCMD() *cobra.Command {
 	return cmd
 }
 
+// deleteCertAliasCMD delete cert alias
+// @return *cobra.Command
 func deleteCertAliasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
@@ -209,6 +215,8 @@ func deleteCertAliasCMD() *cobra.Command {
 	return cmd
 }
 
+// queryCertAliasCMD query cert alias
+// @return *cobra.Command
 func queryCertAliasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",

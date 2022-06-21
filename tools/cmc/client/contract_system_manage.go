@@ -2,7 +2,6 @@ package client
 
 import (
 	"fmt"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
@@ -14,20 +13,24 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// systemContractManageCMD system contract manage command
+// @return *cobra.Command
 func systemContractManageCMD() *cobra.Command {
-	systemContractMultiSignCmd := &cobra.Command{
+	systemContractMgrCmd := &cobra.Command{
 		Use:   "manage",
 		Short: "system contract manage command",
 		Long:  "system contract manage command",
 	}
 
-	systemContractMultiSignCmd.AddCommand(contractAccessGrantCMD())
-	systemContractMultiSignCmd.AddCommand(contractAccessRevokeCMD())
-	systemContractMultiSignCmd.AddCommand(contractAccessQueryCMD())
+	systemContractMgrCmd.AddCommand(contractAccessGrantCMD())
+	systemContractMgrCmd.AddCommand(contractAccessRevokeCMD())
+	systemContractMgrCmd.AddCommand(contractAccessQueryCMD())
 
-	return systemContractMultiSignCmd
+	return systemContractMgrCmd
 }
 
+// contractAccessGrantCMD contract access grant
+// @return *cobra.Command
 func contractAccessGrantCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "access-grant",
@@ -51,6 +54,8 @@ func contractAccessGrantCMD() *cobra.Command {
 	return cmd
 }
 
+// contractAccessRevokeCMD contract access revoke
+// @return *cobra.Command
 func contractAccessRevokeCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "access-revoke",
@@ -74,6 +79,8 @@ func contractAccessRevokeCMD() *cobra.Command {
 	return cmd
 }
 
+// contractAccessQueryCMD contract access query
+// @return *cobra.Command
 func contractAccessQueryCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "access-query",
@@ -96,10 +103,6 @@ func contractAccessQueryCMD() *cobra.Command {
 }
 
 func grantOrRevokeContractAccess(which int) error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
@@ -107,26 +110,9 @@ func grantOrRevokeContractAccess(which int) error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
 
 	var (

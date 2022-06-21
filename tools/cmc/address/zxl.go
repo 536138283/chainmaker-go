@@ -42,6 +42,7 @@ eg. --address-type=zxl`)
 eg. --address-type=0`)
 }
 
+// NewAddressCMD new address parse command
 func NewAddressCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "address",

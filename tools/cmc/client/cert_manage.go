@@ -25,6 +25,8 @@ const (
 	operationUnfreeze = "unfreeze"
 )
 
+// certManageCMD cert manage sub command
+// @return *cobra.Command
 func certManageCMD() *cobra.Command {
 	chainConfigCmd := &cobra.Command{
 		Use:   "certmanage",
@@ -37,6 +39,8 @@ func certManageCMD() *cobra.Command {
 	return chainConfigCmd
 }
 
+// freezeCertCMD freeze a cert
+// @return *cobra.Command
 func freezeCertCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "freeze",
@@ -62,6 +66,8 @@ func freezeCertCMD() *cobra.Command {
 	return cmd
 }
 
+// unfreezeCertCMD unfreeze a cert
+// @return *cobra.Command
 func unfreezeCertCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unfreeze",
@@ -87,6 +93,8 @@ func unfreezeCertCMD() *cobra.Command {
 	return cmd
 }
 
+// revokeCertCMD revoke a cert
+// @return *cobra.Command
 func revokeCertCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "revoke",
@@ -112,6 +120,9 @@ func revokeCertCMD() *cobra.Command {
 	return cmd
 }
 
+// freezeOrUnfreezeCert
+// @param which 1: frozen, 2: unfrozen
+// @return error
 func freezeOrUnfreezeCert(which int) error {
 	var adminKeys, adminCrts []string
 
@@ -187,6 +198,8 @@ func freezeOrUnfreezeCert(which int) error {
 	return nil
 }
 
+// revokeCert use CRL to revoke cert
+// @return error
 func revokeCert() error {
 	var adminKeys, adminCrts []string
 

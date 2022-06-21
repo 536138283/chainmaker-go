@@ -17,9 +17,10 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	"chainmaker.org/chainmaker/utils/v2"
+	utils "chainmaker.org/chainmaker/utils/v2"
 )
 
+// Dispatch dispatch tx
 func Dispatch(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId string, kvs []*common.KeyValuePair,
 	abi *abi.ABI, limit *common.Limit) {
 	var (
@@ -33,6 +34,8 @@ func Dispatch(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId 
 
 	wgSendReq.Wait()
 }
+
+// DispatchTimes dispatch tx in times
 func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
 	evmMethod *abi.ABI) {
 	var (

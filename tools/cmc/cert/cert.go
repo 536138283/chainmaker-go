@@ -5,6 +5,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package cert 与数字证书有关的操作命令
 package cert
 
 import (
@@ -38,6 +39,7 @@ var (
 	sans = []string{"localhost", "chainmaker.org", "127.0.0.1"}
 )
 
+// CertCMD new ChainMaker cert command
 func CertCMD() *cobra.Command {
 	certCmd := &cobra.Command{
 		Use:   "cert",
@@ -54,11 +56,13 @@ func CertCMD() *cobra.Command {
 	return certCmd
 }
 
+// caCMD Create certificate authority certificate
+// @return *cobra.Command
 func caCMD() *cobra.Command {
 	caCmd := &cobra.Command{
 		Use:   "ca",
-		Short: "Create certificate authority crtificate",
-		Long:  "Create certificate authority crtificate",
+		Short: "Create certificate authority certificate",
+		Long:  "Create certificate authority certificate",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return createCACertificate()
 		},
@@ -72,6 +76,8 @@ func caCMD() *cobra.Command {
 	return caCmd
 }
 
+// csrCMD Create certificate request
+// @return *cobra.Command
 func csrCMD() *cobra.Command {
 	csrCmd := &cobra.Command{
 		Use:   "csr",
@@ -90,6 +96,8 @@ func csrCMD() *cobra.Command {
 	return csrCmd
 }
 
+// issueCMD Issue certificate
+// @return *cobra.Command
 func issueCMD() *cobra.Command {
 	issueCmd := &cobra.Command{
 		Use:   "issue",
@@ -136,6 +144,10 @@ func issueCertificate() error {
 		ExpireYear: expireYear, Sans: sans})
 }
 
+// loadPrivateKey read path file content, create private key instance
+// @param path
+// @return crypto.PrivateKey
+// @return error
 func loadPrivateKey(path string) (crypto.PrivateKey, error) {
 	raw, err := ioutil.ReadFile(path)
 	if err != nil {
@@ -144,6 +156,8 @@ func loadPrivateKey(path string) (crypto.PrivateKey, error) {
 	return asym.PrivateKeyFromPEM(raw, nil)
 }
 
+// createCertCrlCMD create a cert CRL and write to crlPath
+// @return *cobra.Command
 func createCertCrlCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "crl",
