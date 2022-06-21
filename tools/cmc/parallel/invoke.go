@@ -9,6 +9,8 @@ package parallel
 
 import "github.com/spf13/cobra"
 
+// invokeCMD invoke contract
+// @return *cobra.Command
 func invokeCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   invokerMethod,

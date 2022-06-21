@@ -15,7 +15,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
@@ -27,6 +27,9 @@ const (
 	updateNodeOrg
 )
 
+// configConsensueNodeOrgCMD consensus node org management
+//用于管理Consensus下的Org
+// @return *cobra.Command
 func configConsensueNodeOrgCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "consensusnodeorg",
@@ -40,6 +43,8 @@ func configConsensueNodeOrgCMD() *cobra.Command {
 	return cmd
 }
 
+// addConsensusNodeOrgCMD add consensus node org
+// @return *cobra.Command
 func addConsensusNodeOrgCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -63,6 +68,8 @@ func addConsensusNodeOrgCMD() *cobra.Command {
 	return cmd
 }
 
+// removeConsensusNodeOrgCMD remove consensus node org
+// @return *cobra.Command
 func removeConsensusNodeOrgCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
@@ -85,6 +92,8 @@ func removeConsensusNodeOrgCMD() *cobra.Command {
 	return cmd
 }
 
+// updateConsensusNodeOrgCMD update consensus node org
+// @return *cobra.Command
 func updateConsensusNodeOrgCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",

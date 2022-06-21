@@ -3,6 +3,7 @@
 //
 // SPDX-License-Identifier: Apache-2.0
 
+// Package archive 对节点的区块链数据进行归档相关的操作
 package archive
 
 import (

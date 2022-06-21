@@ -10,12 +10,12 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 
 	"github.com/gogo/protobuf/proto"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
@@ -26,6 +26,8 @@ type ParamMultiSign struct {
 	IsFile bool
 }
 
+// systemContractMultiSignCMD system contract multi sign command
+// @return *cobra.Command
 func systemContractMultiSignCMD() *cobra.Command {
 	systemContractMultiSignCmd := &cobra.Command{
 		Use:   "multi-sign",
@@ -40,6 +42,8 @@ func systemContractMultiSignCMD() *cobra.Command {
 	return systemContractMultiSignCmd
 }
 
+// multiSignReqCMD multi sign req
+// @return *cobra.Command
 func multiSignReqCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "req",
@@ -62,6 +66,8 @@ func multiSignReqCMD() *cobra.Command {
 	return cmd
 }
 
+// multiSignVoteCMD multi sign vote
+// @return *cobra.Command
 func multiSignVoteCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "vote",
@@ -85,6 +91,8 @@ func multiSignVoteCMD() *cobra.Command {
 	return cmd
 }
 
+// multiSignQueryCMD multi sign query
+// @return *cobra.Command
 func multiSignQueryCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",

@@ -10,10 +10,12 @@ import (
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
+// newQueryArchivedHeightOnChainCMD query on-chain archived height
+// @return *cobra.Command
 func newQueryArchivedHeightOnChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archived-height",

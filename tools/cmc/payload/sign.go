@@ -27,6 +27,8 @@ var (
 	signOutput string
 )
 
+// signCMD Sign pb file command
+// @return *cobra.Command
 func signCMD() *cobra.Command {
 	signCmd := &cobra.Command{
 		Use:   "sign",
@@ -47,6 +49,8 @@ func signCMD() *cobra.Command {
 	return signCmd
 }
 
+// signSystemContractPayloadCMD sign payload
+// @return *cobra.Command
 func signSystemContractPayloadCMD() *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "config",
@@ -59,6 +63,8 @@ func signSystemContractPayloadCMD() *cobra.Command {
 	return configCmd
 }
 
+// signContractMgmtPayloadCMD sign payload
+// @return *cobra.Command
 func signContractMgmtPayloadCMD() *cobra.Command {
 	contractCmd := &cobra.Command{
 		Use:   "contract",

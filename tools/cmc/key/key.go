@@ -34,6 +34,8 @@ func KeyCMD() *cobra.Command {
 	return keyCmd
 }
 
+// genCMD Generate the private key of the specified crypto algorithm.
+// @return *cobra.Command
 func genCMD() *cobra.Command {
 	genCmd := &cobra.Command{
 		Use:   "gen",

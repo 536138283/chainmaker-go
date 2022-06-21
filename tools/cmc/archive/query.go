@@ -16,11 +16,13 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/store"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 	"gorm.io/gorm"
 )
 
+// newQueryOffChainCMD query off-chain blockchain data
+// @return *cobra.Command
 func newQueryOffChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",
@@ -37,6 +39,8 @@ func newQueryOffChainCMD() *cobra.Command {
 	return cmd
 }
 
+// newQueryTxOffChainCMD query off-chain tx by txid
+// @return *cobra.Command
 func newQueryTxOffChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "tx [txid]",
@@ -118,6 +122,8 @@ func newQueryTxOffChainCMD() *cobra.Command {
 	return cmd
 }
 
+// newQueryBlockByHeightOffChainCMD  query off-chain block by height
+// @return *cobra.Command
 func newQueryBlockByHeightOffChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "block-by-height [height]",
@@ -181,6 +187,8 @@ func newQueryBlockByHeightOffChainCMD() *cobra.Command {
 	return cmd
 }
 
+// newQueryBlockByHashOffChainCMD query off-chain block by block hash
+// @return *cobra.Command
 func newQueryBlockByHashOffChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "block-by-hash [block hash in hex]",
@@ -252,6 +260,8 @@ func newQueryBlockByHashOffChainCMD() *cobra.Command {
 	return cmd
 }
 
+// newQueryBlockByTxIdOffChainCMD query off-chain block by txid
+// @return *cobra.Command
 func newQueryBlockByTxIdOffChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "block-by-txid [txid]",
@@ -323,6 +333,8 @@ func newQueryBlockByTxIdOffChainCMD() *cobra.Command {
 	return cmd
 }
 
+// newQueryArchivedHeightOffChainCMD query off-chain archived height
+// @return *cobra.Command
 func newQueryArchivedHeightOffChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archived-height",

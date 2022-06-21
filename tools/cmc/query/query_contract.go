@@ -16,10 +16,12 @@ import (
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
+// newQueryContractOnChainCMD query on-chain contract data
+// @return *cobra.Command
 func newQueryContractOnChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "contract",

@@ -11,10 +11,12 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
+// chainConfigCMD chain config command
+// @return *cobra.Command
 func chainConfigCMD() *cobra.Command {
 	chainConfigCmd := &cobra.Command{
 		Use:   "chainconfig",
@@ -32,6 +34,8 @@ func chainConfigCMD() *cobra.Command {
 	return chainConfigCmd
 }
 
+// queryChainConfigCMD query current chain config
+// @return *cobra.Command
 func queryChainConfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "query",

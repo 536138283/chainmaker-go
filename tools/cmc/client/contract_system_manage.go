@@ -7,27 +7,31 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
+// systemContractManageCMD system contract manage command
+// @return *cobra.Command
 func systemContractManageCMD() *cobra.Command {
-	systemContractMultiSignCmd := &cobra.Command{
+	systemContractMgrCmd := &cobra.Command{
 		Use:   "manage",
 		Short: "system contract manage command",
 		Long:  "system contract manage command",
 	}
 
-	systemContractMultiSignCmd.AddCommand(contractAccessGrantCMD())
-	systemContractMultiSignCmd.AddCommand(contractAccessRevokeCMD())
-	systemContractMultiSignCmd.AddCommand(contractAccessQueryCMD())
+	systemContractMgrCmd.AddCommand(contractAccessGrantCMD())
+	systemContractMgrCmd.AddCommand(contractAccessRevokeCMD())
+	systemContractMgrCmd.AddCommand(contractAccessQueryCMD())
 
-	return systemContractMultiSignCmd
+	return systemContractMgrCmd
 }
 
+// contractAccessGrantCMD contract access grant
+// @return *cobra.Command
 func contractAccessGrantCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "access-grant",
@@ -51,6 +55,8 @@ func contractAccessGrantCMD() *cobra.Command {
 	return cmd
 }
 
+// contractAccessRevokeCMD contract access revoke
+// @return *cobra.Command
 func contractAccessRevokeCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "access-revoke",
@@ -74,6 +80,8 @@ func contractAccessRevokeCMD() *cobra.Command {
 	return cmd
 }
 
+// contractAccessQueryCMD contract access query
+// @return *cobra.Command
 func contractAccessQueryCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "access-query",

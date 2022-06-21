@@ -15,7 +15,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
@@ -27,6 +27,9 @@ const (
 	updateNodeId
 )
 
+// configConsensueNodeIdCMD consensus node id management sub command
+//用于管理Consensus下Org下的NodeId
+// @return *cobra.Command
 func configConsensueNodeIdCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "consensusnodeid",
@@ -40,6 +43,8 @@ func configConsensueNodeIdCMD() *cobra.Command {
 	return cmd
 }
 
+// addConsensusNodeIdCMD add consensus node id command
+// @return *cobra.Command
 func addConsensusNodeIdCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -63,6 +68,8 @@ func addConsensusNodeIdCMD() *cobra.Command {
 	return cmd
 }
 
+// removeConsensusNodeIdCMD remove consensus node id command
+// @return *cobra.Command
 func removeConsensusNodeIdCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
@@ -86,6 +93,8 @@ func removeConsensusNodeIdCMD() *cobra.Command {
 	return cmd
 }
 
+// updateConsensusNodeIdCMD update consensus node id command
+// @return *cobra.Command
 func updateConsensusNodeIdCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -110,6 +119,9 @@ func updateConsensusNodeIdCMD() *cobra.Command {
 	return cmd
 }
 
+// configConsensusNodeId update ChainConfig.Consensus
+// @param op 0:add;1remove;2:update
+// @return error
 func configConsensusNodeId(op int) error {
 	var adminKeys []string
 	var adminCrts []string

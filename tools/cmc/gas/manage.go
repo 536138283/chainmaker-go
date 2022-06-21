@@ -13,18 +13,20 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
+// newSetGasAdminCMD set gas admin, set self as an admin if [address] not set
+// @return *cobra.Command
 func newSetGasAdminCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "set-admin [address]",
-		Short: "set gas admin, set self as a admin if [address] not set",
-		Long:  "set gas admin, set self as a admin if [address] not set",
+		Short: "set gas admin, set self as an admin if [address] not set",
+		Long:  "set gas admin, set self as an admin if [address] not set",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			//// 1.Chain Client
@@ -107,6 +109,8 @@ func newSetGasAdminCMD() *cobra.Command {
 	return cmd
 }
 
+// newGetGasAdminCMD get gas admin
+// @return *cobra.Command
 func newGetGasAdminCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get-admin",
@@ -146,6 +150,8 @@ func newGetGasAdminCMD() *cobra.Command {
 	return cmd
 }
 
+// newRechargeGasCMD recharge gas for account
+// @return *cobra.Command
 func newRechargeGasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "recharge",
@@ -199,6 +205,8 @@ func newRechargeGasCMD() *cobra.Command {
 	return cmd
 }
 
+// newGetGasBalanceCMD get gas balance of account, get self balance if --address not set
+// @return *cobra.Command
 func newGetGasBalanceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get-balance",
@@ -253,6 +261,8 @@ func newGetGasBalanceCMD() *cobra.Command {
 	return cmd
 }
 
+// newRefundGasCMD refund gas for account
+// @return *cobra.Command
 func newRefundGasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "refund",
@@ -300,6 +310,8 @@ func newRefundGasCMD() *cobra.Command {
 	return cmd
 }
 
+// newFrozenGasAccountCMD frozen gas account
+// @return *cobra.Command
 func newFrozenGasAccountCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "frozen",
@@ -347,6 +359,8 @@ func newFrozenGasAccountCMD() *cobra.Command {
 	return cmd
 }
 
+// newUnfrozenGasAccountCMD unfrozen gas account
+// @return *cobra.Command
 func newUnfrozenGasAccountCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unfrozen",
@@ -394,6 +408,8 @@ func newUnfrozenGasAccountCMD() *cobra.Command {
 	return cmd
 }
 
+// newGetGasAccountStatusCMD get gas account status, get self gas account status if --address not set
+// @return *cobra.Command
 func newGetGasAccountStatusCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "account-status",

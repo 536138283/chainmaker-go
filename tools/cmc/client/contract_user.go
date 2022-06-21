@@ -21,7 +21,7 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
@@ -53,6 +53,8 @@ type UserContract struct {
 	Params       map[string]string
 }
 
+// userContractCMD user contract command
+// @return *cobra.Command
 func userContractCMD() *cobra.Command {
 	userContractCmd := &cobra.Command{
 		Use:   "user",
@@ -72,6 +74,8 @@ func userContractCMD() *cobra.Command {
 	return userContractCmd
 }
 
+// createUserContractCMD create user contract command
+// @return *cobra.Command
 func createUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -98,6 +102,8 @@ func createUserContractCMD() *cobra.Command {
 	return cmd
 }
 
+// invokeUserContractCMD invoke user contract command
+// @return *cobra.Command
 func invokeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "invoke",
@@ -120,6 +126,10 @@ func invokeUserContractCMD() *cobra.Command {
 
 	return cmd
 }
+
+// invokeContractTimesCMD invoke contract and set invoke times
+//多次的并发调用指定合约方法
+// @return *cobra.Command
 func invokeContractTimesCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "invoke-times",
@@ -143,6 +153,8 @@ func invokeContractTimesCMD() *cobra.Command {
 	return cmd
 }
 
+// getUserContractCMD get user contract info command
+// @return *cobra.Command
 func getUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "get",
@@ -165,6 +177,8 @@ func getUserContractCMD() *cobra.Command {
 	return cmd
 }
 
+// upgradeUserContractCMD upgrade user contract command
+// @return *cobra.Command
 func upgradeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade",
@@ -190,6 +204,8 @@ func upgradeUserContractCMD() *cobra.Command {
 	return cmd
 }
 
+// freezeUserContractCMD freeze user contract command
+// @return *cobra.Command
 func freezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "freeze",
@@ -212,6 +228,8 @@ func freezeUserContractCMD() *cobra.Command {
 	return cmd
 }
 
+// unfreezeUserContractCMD unfreeze user contract command
+// @return *cobra.Command
 func unfreezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unfreeze",
@@ -234,6 +252,8 @@ func unfreezeUserContractCMD() *cobra.Command {
 	return cmd
 }
 
+// revokeUserContractCMD revoke user contract command
+// @return *cobra.Command
 func revokeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "revoke",

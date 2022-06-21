@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// nodeIdCMD Get node id of node cert
+// @return *cobra.Command
 func nodeIdCMD() *cobra.Command {
 	nodeIdCmd := &cobra.Command{
 		Use:   "nid",

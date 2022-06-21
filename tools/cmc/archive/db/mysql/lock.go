@@ -41,6 +41,7 @@ func NewDbLocker(db *gorm.DB, holder string, lease time.Duration) *dbLocker {
 	}
 }
 
+// Lock make a lock
 func (locker *dbLocker) Lock() {
 	for {
 		err := locker.cleanExpired()
@@ -67,6 +68,7 @@ func (locker *dbLocker) Lock() {
 	locker.startLease()
 }
 
+// UnLock unlock
 func (locker *dbLocker) UnLock() {
 	locker.stopLease()
 	locker.db.Where("holder = ?", locker.holder).Delete(&lock{})

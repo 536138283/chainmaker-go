@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// contractCMD contract command
+// @return *cobra.Command
 func contractCMD() *cobra.Command {
 	contractCmd := &cobra.Command{
 		Use:   "contract",
@@ -30,6 +32,8 @@ func contractCMD() *cobra.Command {
 	return contractCmd
 }
 
+// contractNameToAddrCMD calculate contract name to address
+// @return *cobra.Command
 func contractNameToAddrCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "name-to-addr [contract name]",

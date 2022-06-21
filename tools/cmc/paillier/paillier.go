@@ -35,6 +35,8 @@ func PaillierCMD() *cobra.Command {
 	return paillierCmd
 }
 
+// genKeyCMD "generates paillier private public key
+// @return *cobra.Command
 func genKeyCMD() *cobra.Command {
 	genKeyCmd := &cobra.Command{
 		Use:   "genKey",

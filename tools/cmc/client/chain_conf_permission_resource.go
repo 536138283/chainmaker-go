@@ -15,10 +15,10 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
@@ -29,6 +29,8 @@ const (
 	listPermissionResourceEnum
 )
 
+// permissionResourceCMD chain config permission resource operation
+// @return *cobra.Command
 func permissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "permission",
@@ -42,6 +44,8 @@ func permissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// addPermissionResourceCMD add chain config permission resource
+// @return *cobra.Command
 func addPermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -65,6 +69,8 @@ func addPermissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// updatePermissionResourceCMD update chain config permission resource
+// @return *cobra.Command
 func updatePermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -88,6 +94,8 @@ func updatePermissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// deletePermissionResourceCMD delete chain config permission resource
+// @return *cobra.Command
 func deletePermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "delete",
@@ -110,6 +118,8 @@ func deletePermissionResourceCMD() *cobra.Command {
 	return cmd
 }
 
+// listPermissionResourceCMD query chain config permission resource list
+// @return *cobra.Command
 func listPermissionResourceCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "list",

@@ -5,6 +5,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
+// Package client, operations about chain maker client can do
 package client
 
 import (
@@ -267,6 +268,8 @@ func attachFlags(cmd *cobra.Command, names []string) {
 	}
 }
 
+// getChainMakerServerVersionCMD a command about get chainmaker server version
+// @return *cobra.Command
 func getChainMakerServerVersionCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "cmversion",
@@ -288,6 +291,8 @@ func getChainMakerServerVersionCMD() *cobra.Command {
 	return cmd
 }
 
+// getChainMakerServerVersion query ChainMaker server version
+// @return error
 func getChainMakerServerVersion() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)

@@ -14,12 +14,14 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
 )
 
+// updateBlockConfigCMD update block config sub command
+// @return *cobra.Command
 func updateBlockConfigCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "block",
@@ -32,6 +34,8 @@ func updateBlockConfigCMD() *cobra.Command {
 	return cmd
 }
 
+// updateBlockIntervalCMD update block interval
+// @return *cobra.Command
 func updateBlockIntervalCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "updateblockinterval",
@@ -154,6 +158,8 @@ func updateBlockInterval() error {
 	return nil
 }
 
+// updateTxParameterSizeCMD update txparameter size
+// @return *cobra.Command
 func updateTxParameterSizeCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "updatetxparametersize",

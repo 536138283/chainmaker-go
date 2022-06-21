@@ -11,10 +11,11 @@ import (
 	"fmt"
 	"os"
 
-	prompt "github.com/c-bata/go-prompt"
+	"github.com/c-bata/go-prompt"
 	"github.com/spf13/cobra"
 )
 
+// exitCmd Exit console
 var exitCmd = &cobra.Command{
 	Use:   "exit",
 	Short: "Exit console",

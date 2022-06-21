@@ -14,7 +14,7 @@ import (
 	sdkPbCommon "chainmaker.org/chainmaker/pb-go/v2/common"
 
 	"github.com/gogo/protobuf/proto"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
@@ -22,6 +22,8 @@ var (
 	jsonInput string
 )
 
+// jsonCMD Parse to json command
+// @return *cobra.Command
 func jsonCMD() *cobra.Command {
 	jsonCmd := &cobra.Command{
 		Use:   "tojson",
@@ -38,6 +40,8 @@ func jsonCMD() *cobra.Command {
 	return jsonCmd
 }
 
+// printConfigUpdatePayloadCMD print json format config
+// @return *cobra.Command
 func printConfigUpdatePayloadCMD() *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "config",
@@ -50,6 +54,8 @@ func printConfigUpdatePayloadCMD() *cobra.Command {
 	return configCmd
 }
 
+// printContractMgmtPayloadCMD print json format contract manage payload
+// @return *cobra.Command
 func printContractMgmtPayloadCMD() *cobra.Command {
 	configCmd := &cobra.Command{
 		Use:   "contract",

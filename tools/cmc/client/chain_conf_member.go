@@ -23,6 +23,8 @@ const (
 	removeTrustMember
 )
 
+// configTrustMemberCMD trust member command
+// @return *cobra.Command
 func configTrustMemberCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trustmember",
@@ -35,6 +37,8 @@ func configTrustMemberCMD() *cobra.Command {
 	return cmd
 }
 
+// addTrustMemberCMD add trust member
+// @return *cobra.Command
 func addTrustMemberCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -60,6 +64,8 @@ func addTrustMemberCMD() *cobra.Command {
 	return cmd
 }
 
+// removeTrustMemberCMD remove trust member ca cert
+// @return *cobra.Command
 func removeTrustMemberCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",

@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// proveCMD Bulletproofs prove command
+// @return *cobra.Command
 func proveCMD() *cobra.Command {
 	proveCmd := &cobra.Command{
 		Use:   "prove",

@@ -16,7 +16,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
@@ -28,6 +28,8 @@ const (
 	updateTrustRoot
 )
 
+// configTrustRootCMD trust root command
+// @return *cobra.Command
 func configTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "trustroot",
@@ -41,6 +43,8 @@ func configTrustRootCMD() *cobra.Command {
 	return cmd
 }
 
+// addTrustRootCMD add trust root ca cert
+// @return *cobra.Command
 func addTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "add",
@@ -64,6 +68,8 @@ func addTrustRootCMD() *cobra.Command {
 	return cmd
 }
 
+// removeTrustRootCMD remove trust root ca cert
+// @return *cobra.Command
 func removeTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "remove",
@@ -86,6 +92,8 @@ func removeTrustRootCMD() *cobra.Command {
 	return cmd
 }
 
+// updateTrustRootCMD update trust root ca cert
+// @return *cobra.Command
 func updateTrustRootCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update",
