@@ -89,6 +89,7 @@ func newScheduler(
 		receivedBlocks:    make(map[uint64]string),
 		pendingRecvHeight: currHeight + 1,
 
+		startTime:       time.Now(),
 		thresholdTime:   minLagThresholdTime,
 		thresholdBlocks: minLagThreshold,
 		minLagReachC:    reachC,
@@ -147,22 +148,31 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 
 // receiveMajorityBlocks Check that most blocks are synchronized.
 // currTime - startTime > thresholdTime && maxHeight - localHeight <= thresholdBlocks
-func (sch *scheduler) receiveMajorityBlocks() bool {
+func (sch *scheduler) receiveMajorityBlocks() {
+	// 当节点刚启动后，需要一段时间同步其它节点的状态
 	if time.Since(sch.startTime) < sch.thresholdTime {
-		return false
+		return
 	}
+
+	// 如果同步服务已经停止，不用再发送信号
+	if sch.stopSyncBlock {
+		return
+	}
+
+	// 查看是否已达到区块同步的阈值范围
 	maxHeight := sch.maxHeight()
 	currBlockHeight, _ := sch.ledger.CurrentHeight()
 	if maxHeight-currBlockHeight > sch.thresholdBlocks {
-		return false
+		return
 	}
+
+	//达到阈值的同步范围
 	select {
 	case sch.minLagReachC <- struct{}{}:
 		sch.log.Infof("has receive majorityBlocks, local node"+
 			" block: %d, max height with peers: %d", currBlockHeight, maxHeight)
 	default:
 	}
-	return true
 }
 
 func (sch *scheduler) addPendingBlocksAndUpdatePendingHeight(peerHeight uint64) {
@@ -272,7 +282,7 @@ func (sch *scheduler) handleStopSyncMsg() {
 }
 
 func (sch *scheduler) handleStartSyncMsg() {
-	// 1. 避免
+	// 1. 避免channel为空时发生阻塞
 	select {
 	case <-sch.minLagReachC:
 	default:
