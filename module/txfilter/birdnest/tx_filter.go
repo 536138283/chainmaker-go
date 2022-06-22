@@ -34,13 +34,13 @@ type TxFilter struct {
 }
 
 // ValidateRule validate rules
-func (f *TxFilter) ValidateRule(txId string, ruleType ...bn.RuleType) error {
+func (f *TxFilter) ValidateRule(txId string, ruleType ...common.RuleType) error {
 	// Convert the transaction ID to TimestampKey
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		return nil
 	}
-	err = f.bn.ValidateRule(key, ruleType...)
+	err = f.bn.ValidateRule(key, convertRuleType(ruleType)...)
 	if err != nil {
 		return err
 	}
@@ -183,7 +183,7 @@ func (f *TxFilter) IsExists(txId string, ruleType ...common.RuleType) (exists bo
 	f.l.RLock()
 	defer f.l.RUnlock()
 	// If the transaction ID is of the time type, the transaction filter exists
-	contains, err := f.bn.Contains(key, ruleType...)
+	contains, err := f.bn.Contains(key, convertRuleType(ruleType)...)
 	if err != nil {
 		// If not, query DB
 		if err == bn.ErrKeyTimeIsNotInTheFilterRange {
@@ -215,4 +215,11 @@ func (f *TxFilter) IsExists(txId string, ruleType ...common.RuleType) (exists bo
 // Close transaction filter
 func (f *TxFilter) Close() {
 	close(f.exitC)
+}
+func convertRuleType(ruleType []common.RuleType) []bn.RuleType {
+	bnRuleType := make([]bn.RuleType, len(ruleType))
+	for i, r := range ruleType {
+		bnRuleType[i] = (bn.RuleType)(r)
+	}
+	return bnRuleType
 }

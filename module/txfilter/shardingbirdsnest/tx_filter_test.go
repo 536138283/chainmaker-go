@@ -13,6 +13,7 @@ import (
 
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
 	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -326,7 +327,7 @@ func TestTxFilter_IsExists(t *testing.T) {
 	}
 	type args struct {
 		txId     string
-		ruleType []bn.RuleType
+		ruleType []common.RuleType
 	}
 	tests := []struct {
 		name       string

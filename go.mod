@@ -3,27 +3,27 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220601093135-49f1a82f5679
+	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220607072052-653ff1f72ed5
 	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220621121723-440f87bf25bd
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220420070758-a25aa71c7410
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220420114456-4bd051c6e220
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.0.0-20220420072039-bc207cc67903
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220602085258-a0e3a94e67d5
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.1
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220610092515-91f118b0e1f1
-	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220615040355-97ca5754a1eb
+	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220622062829-9955bb0c359a
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220616100243-4fa06732e9a3
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585
-	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220610084257-d720400089e4
+	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220622055711-9172ea25f312
 	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220609031411-3e1c47ac7cfb
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220617081650-cc775e8ce4db
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220621122141-d136370aa6d1
-	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220616062219-1f80af699445
+	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220622063223-d3795ac73af0
 	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220527181405-be81673f609d
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220621131403-9487ec165329
-	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220530072011-9e7b5c90b3b5
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220622060622-abe9576722d3
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220621132803-3cb4dbfc3e64
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220615103110-6849a8ada870
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220601071506-dd01ec670925
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220622040323-b9dd2a7420ef
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220527114415-d0cc67f922c9
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220310130906-fc7031ec25c7
 	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220617091652-9b1d69633ae1
@@ -67,12 +67,12 @@ require (
 
 require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220621094854-96d966b704d5
+	chainmaker.org/chainmaker/libp2p-pubsub v1.1.2-0.20220622061825-287ec59dd9a8 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
 )
 

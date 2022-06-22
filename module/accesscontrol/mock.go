@@ -11,16 +11,18 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/protocol/v2/test"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/logger/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
-var mockAcLogger = logger.GetLogger(logger.MODULE_ACCESS)
+var mockAcLogger = &test.GoLogger{}
 
+// MockAccessControl Mock一个AccessControlProvider
+// @return protocol.AccessControlProvider
 func MockAccessControl() protocol.AccessControlProvider {
 	certAc := &certACProvider{
 		acService: &accessControlService{
@@ -44,6 +46,9 @@ func MockAccessControl() protocol.AccessControlProvider {
 	return certAc
 }
 
+// MockAccessControlWithHash Mock一个AccessControlProvider
+// @param hashAlg
+// @return protocol.AccessControlProvider
 func MockAccessControlWithHash(hashAlg string) protocol.AccessControlProvider {
 	certAc := &certACProvider{
 		acService: &accessControlService{
@@ -67,6 +72,12 @@ func MockAccessControlWithHash(hashAlg string) protocol.AccessControlProvider {
 	return certAc
 }
 
+// MockSignWithMultipleNodes Mock一个多用户的背书签名
+// @param msg
+// @param signers
+// @param hashType
+// @return []*commonPb.EndorsementEntry
+// @return error
 func MockSignWithMultipleNodes(msg []byte, signers []protocol.SigningMember, hashType string) (
 	[]*commonPb.EndorsementEntry, error) {
 	var ret []*commonPb.EndorsementEntry
@@ -87,6 +98,14 @@ func MockSignWithMultipleNodes(msg []byte, signers []protocol.SigningMember, has
 	return ret, nil
 }
 
+// NewAccessControlWithChainConfig 构造一个AccessControlProvider
+// @param chainConfig
+// @param localOrgId
+// @param store
+// @param log
+// @param msgBus
+// @return protocol.AccessControlProvider
+// @return error
 func NewAccessControlWithChainConfig(chainConfig protocol.ChainConf, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
 	protocol.AccessControlProvider, error) {

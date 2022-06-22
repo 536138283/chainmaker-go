@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
 func TestInit(t *testing.T) {
@@ -40,7 +40,7 @@ func TestTxFilter_IsExistsAndReturnHeight(t *testing.T) {
 	}
 	type args struct {
 		in0 string
-		in1 []bn.RuleType
+		in1 []common.RuleType
 	}
 	tests := []struct {
 		name    string
@@ -229,7 +229,7 @@ func TestTxFilter_IsExists(t *testing.T) {
 	}
 	type args struct {
 		txId string
-		in1  []bn.RuleType
+		in1  []common.RuleType
 	}
 	tests := []struct {
 		name    string

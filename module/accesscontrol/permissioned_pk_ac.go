@@ -29,7 +29,7 @@ import (
 
 var _ protocol.AccessControlProvider = (*permissionedPkACProvider)(nil)
 
-var NilPermissionedPkACProvider ACProvider = (*permissionedPkACProvider)(nil)
+var nilPermissionedPkACProvider ACProvider = (*permissionedPkACProvider)(nil)
 
 type permissionedPkACProvider struct {
 	acService *accessControlService

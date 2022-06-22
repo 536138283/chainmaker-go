@@ -52,7 +52,8 @@ type RwSetVerifyFailTx struct {
 }
 
 // 判断相同分支上是否存在交易重复（防止双花）
-func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) (bool, error) {
+func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) (
+	bool, error) {
 	hash := preBlockHash
 
 	for i := uint64(1); i <= 3; i++ {

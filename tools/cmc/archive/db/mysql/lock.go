@@ -23,6 +23,8 @@ type lock struct {
 	ExpiredAt time.Time    `gorm:"type:timestamp;not null"`
 	Holder    string       `gorm:"unique;not null"`
 }
+
+// Locker db lock
 type Locker interface {
 	Lock()
 	UnLock()

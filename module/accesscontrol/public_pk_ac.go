@@ -31,15 +31,15 @@ import (
 
 var _ protocol.AccessControlProvider = (*pkACProvider)(nil)
 
-var NilPkACProvider ACProvider = (*pkACProvider)(nil)
+var nilPkACProvider ACProvider = (*pkACProvider)(nil)
 
 const (
-	//admin trust orgId
+	//AdminPublicKey admin trust orgId
 	AdminPublicKey = "public"
-	// chainconfig the DPoS of orgId
+	//DposOrgId chainconfig the DPoS of orgId
 	DposOrgId = "dpos_org_id"
 
-	// chainconfig orgId for permission consensus, such as tbft
+	//PermissionConsensusOrgId chainconfig orgId for permission consensus, such as tbft
 	PermissionConsensusOrgId = "public"
 )
 

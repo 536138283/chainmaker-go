@@ -12,17 +12,21 @@ import (
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/crypto/hash"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	mock2 "chainmaker.org/chainmaker/common/v2/msgbus/mock"
 	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/golang/mock/gomock"
+	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
 )
 
@@ -191,19 +195,18 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	ctl := gomock.NewController(t)
-	var (
-		chainId             = "Chain1"
-		msgBus              = msgbus.NewMessageBus()
-		txScheduler         = mock.NewMockTxScheduler(ctl)
-		snapshotMgr         = mock.NewMockSnapshotManager(ctl)
-		ledgerCache         = cache.NewLedgerCache(chainId)
-		blockchainStoreImpl = mock.NewMockBlockchainStore(ctl)
-		proposedCache       = cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
-		chainConf           = mock.NewMockChainConf(ctl)
-		ac                  = mock.NewMockAccessControlProvider(ctl)
-		txpool              = mock.NewMockTxPool(ctl)
-		netService          = mock.NewMockNetService(ctl)
-	)
+	var chainId = "Chain1"
+
+	msgBus := msgbus.NewMessageBus()
+	txScheduler := mock.NewMockTxScheduler(ctl)
+	snapshotMgr := mock.NewMockSnapshotManager(ctl)
+	ledgerCache := cache.NewLedgerCache(chainId)
+	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
+	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
+	chainConf := mock.NewMockChainConf(ctl)
+	ac := mock.NewMockAccessControlProvider(ctl)
+	txpool := mock.NewMockTxPool(ctl)
+	netService := mock.NewMockNetService(ctl)
 
 	tx := createNewTestTx()
 	txs := make([]*commonpb.Transaction, 1)
@@ -361,9 +364,6 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	require.Nil(t, err)
 
 	for block, ok := range testDagBlocks(t, b1) {
-		if block.Header.TxCount != 1 {
-			continue
-		}
 		err = verifier.VerifyBlockWithRwSets(block, rwSet, protocol.CONSENSUS_VERIFY)
 		if ok {
 			require.Nil(t, err)
@@ -530,12 +530,7 @@ func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
 
 	// empty dag
 	b2.Dag = &commonpb.DAG{}
-	dagHash, err := utils.CalcDagHash(hashType, b2.Dag)
-	require.Nil(t, err)
-	b2.Header.DagHash = dagHash
-	blockHash, err := utils.CalcBlockHash("SHA256", b2)
-	require.Nil(t, err)
-	b2.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b2, nil)
 
 	b3 := &commonpb.Block{
 		Header: &commonpb.BlockHeader{
@@ -562,16 +557,8 @@ func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
 	// 0 tx block and dag of 1 vertex
 	b3.Txs = []*commonpb.Transaction{}
 	txHashs := make([][]byte, 0)
-	txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
-	require.Nil(t, err)
-	b3.Header.TxRoot = txRoot
-	rwSetRoot, err := utils.CalcRWSetRoot(hashType, b3.Txs)
-	require.Nil(t, err)
-	b3.Header.RwSetRoot = rwSetRoot
-	b3.Header.TxCount = uint32(len(b3.Txs))
-	blockHash, err = utils.CalcBlockHash("SHA256", b3)
-	require.Nil(t, err)
-	b3.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b3, txHashs)
+
 	b4 := &commonpb.Block{
 		Header: &commonpb.BlockHeader{
 			BlockVersion:   b1.Header.BlockVersion,
@@ -595,17 +582,351 @@ func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
 		AdditionalData: b1.AdditionalData,
 	}
 	b4.Dag = b2.Dag
-	b4.Header.DagHash = b2.Header.DagHash
 	b4.Txs = b3.Txs
-	b4.Header.TxRoot = b3.Header.TxRoot
-	b4.Header.RwSetRoot = b3.Header.RwSetRoot
-	b4.Header.TxCount = b3.Header.TxCount
-	blockHash, err = utils.CalcBlockHash("SHA256", b4)
-	require.Nil(t, err)
-	b4.Header.BlockHash = blockHash
+	fillHashesOfBlock(t, b4, txHashs)
 	m := make(map[*commonpb.Block]bool)
 	m[b2] = false
 	m[b3] = false
 	m[b4] = false
 	return m
+}
+
+func fillHashesOfBlock(t *testing.T, b *commonpb.Block, txHashs [][]byte) {
+	b.Header.TxCount = uint32(len(b.Txs))
+
+	if txHashs != nil {
+		txRoot, err := hash.GetMerkleRoot(hashType, txHashs)
+		require.Nil(t, err)
+		b.Header.TxRoot = txRoot
+	}
+
+	dagHash, err := utils.CalcDagHash(hashType, b.Dag)
+	require.Nil(t, err)
+	b.Header.DagHash = dagHash
+
+	rwSetRoot, err := utils.CalcRWSetRoot(hashType, b.Txs)
+	require.Nil(t, err)
+	b.Header.RwSetRoot = rwSetRoot
+
+	blockHash, err := utils.CalcBlockHash("SHA256", b)
+	require.Nil(t, err)
+	b.Header.BlockHash = blockHash
+}
+
+func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
+	c := gomock.NewController(t)
+	type fields struct {
+		chainId               string
+		msgBus                msgbus.MessageBus
+		txScheduler           protocol.TxScheduler
+		snapshotManager       protocol.SnapshotManager
+		ledgerCache           protocol.LedgerCache
+		blockchainStore       protocol.BlockchainStore
+		reentrantLocks        *common.ReentrantLocks
+		proposalCache         protocol.ProposalCache
+		chainConf             protocol.ChainConf
+		ac                    protocol.AccessControlProvider
+		log                   protocol.Logger
+		txPool                protocol.TxPool
+		txFilter              protocol.TxFilter
+		verifierBlock         *common.VerifierBlock
+		storeHelper           conf.StoreHelper
+		metricBlockVerifyTime *prometheus.HistogramVec
+	}
+	type args struct {
+		block     *commonpb.Block
+		startTick int64
+		mode      protocol.VerifyMode
+	}
+	tests := []struct {
+		name         string
+		fields       fields
+		args         args
+		wantIsRepeat bool
+	}{
+		{
+			name: "正常流 1. proposed is nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(nil, nil, nil)
+					return proposalCache
+				}(),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: false,
+		},
+		{
+			name: "正常流 2.1 proposed is not nil, sole, sql true, lastBlock is nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(), gomock.Any()).
+						Return(nil, nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: true,
+		},
+		{
+			name: "正常流 2.2 proposed is not nil, sole, sql true, lastBlock is not nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(), gomock.Any()).
+						Return(getBlock(), nil)
+					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
+						Return(nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: true,
+		},
+		{
+			name: "正常流 3.1 proposed is not nil, not sole, sql true, lastBlock is nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(), gomock.Any()).
+						Return(nil, nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_TBFT, true, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: true,
+		},
+		{
+			name: "正常流 3.2 proposed is not nil, not sole, sql true, lastBlock is not nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(), gomock.Any()).
+						Return(getBlock(), nil)
+					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
+						Return(nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_TBFT, true, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: true,
+		},
+		{
+			name: "正常流 4.1 proposed is not nil, sole, sql false, lastBlock is nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_SOLO, false, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: false,
+		},
+		{
+			name: "正常流 4.2 proposed is not nil, sole, sql false, lastBlock is not nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_SOLO, false, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: false,
+		},
+		{
+			name: "正常流 5.1 proposed is not nil, sole, sql false, lastBlock is nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(), gomock.Any()).
+						Return(nil, nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: true,
+		},
+		{
+			name: "正常流 5.2 proposed is not nil, sole, sql false, lastBlock is not nil",
+			fields: fields{
+				proposalCache: func() protocol.ProposalCache {
+					proposalCache := mock.NewMockProposalCache(c)
+					proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(getBlock(), nil, nil)
+					proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(), gomock.Any()).
+						Return(getBlock(), nil)
+					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
+						Return(nil)
+					return proposalCache
+				}(),
+				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
+				msgBus:    getMb(c),
+				log: func() protocol.Logger {
+					logger := mock.NewMockLogger(c)
+					logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+					logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+					return logger
+				}(),
+			},
+			args: args{
+				block:     getBlock(),
+				startTick: 1,
+				mode:      protocol.CONSENSUS_VERIFY,
+			},
+			wantIsRepeat: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			v := &BlockVerifierImpl{
+				chainId:               tt.fields.chainId,
+				msgBus:                tt.fields.msgBus,
+				txScheduler:           tt.fields.txScheduler,
+				snapshotManager:       tt.fields.snapshotManager,
+				ledgerCache:           tt.fields.ledgerCache,
+				blockchainStore:       tt.fields.blockchainStore,
+				reentrantLocks:        tt.fields.reentrantLocks,
+				proposalCache:         tt.fields.proposalCache,
+				chainConf:             tt.fields.chainConf,
+				ac:                    tt.fields.ac,
+				log:                   tt.fields.log,
+				txPool:                tt.fields.txPool,
+				txFilter:              tt.fields.txFilter,
+				verifierBlock:         tt.fields.verifierBlock,
+				storeHelper:           tt.fields.storeHelper,
+				metricBlockVerifyTime: tt.fields.metricBlockVerifyTime,
+			}
+			gotIsRepeat := v.verifyRepeat(tt.args.block, tt.args.startTick, tt.args.mode)
+			if gotIsRepeat != tt.wantIsRepeat {
+				t.Errorf("verifyRepeat() = %v, want %v", gotIsRepeat, tt.wantIsRepeat)
+			}
+		})
+	}
+}
+
+func getMb(c *gomock.Controller) msgbus.MessageBus {
+	messageBus := mock2.NewMockMessageBus(c)
+	messageBus.EXPECT().Publish(gomock.Any(), gomock.Any()).AnyTimes()
+	return messageBus
+}
+
+func getBlock() *commonpb.Block {
+	return &commonpb.Block{Header: &commonpb.BlockHeader{
+		BlockHeight: 56744,
+		BlockHash:   []byte("fdasfdasfdsa"),
+	}}
+}
+
+func getCc(csus consensus.ConsensusType, sql bool, c *gomock.Controller) protocol.ChainConf {
+	cc := mock.NewMockChainConf(c)
+	cc.EXPECT().ChainConfig().AnyTimes().Return(&config.ChainConfig{
+		Consensus: &config.ConsensusConfig{
+			Type: csus,
+		},
+		Contract: &config.ContractConfig{
+			EnableSqlSupport: sql,
+		},
+	})
+	return cc
 }
