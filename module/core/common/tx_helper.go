@@ -306,13 +306,15 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			}
 			txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
 			if err1 != nil {
-				vt.log.Errorf("VerifyTx => verifyTx(...) failed, err = %v", err1)
+				vt.log.Errorf("verify tx failed, block height:%d, err:%v", block.Header.BlockHeight, err1)
 				err = err1
 
 				if rwSetVerifyFailTxIdsIncr != nil {
 					failTxLock.Lock()
 					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, rwSetVerifyFailTxIdsIncr...)
 					failTxLock.Unlock()
+					vt.log.Errorf("verify tx failed, block height:%d, rw set verify failed tx ids:%v, err:%v",
+						block.Header.BlockHeight, rwSetVerifyFailTxIds, err1)
 				}
 				return
 			}
