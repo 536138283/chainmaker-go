@@ -21,7 +21,7 @@ const (
 	TypeDefault = single.TxPoolType
 )
 
-// nolint: typecheck
+// Provider provide protocol.TxPool implement
 type Provider func(
 	nodeId string,
 	chainId string,
@@ -38,10 +38,16 @@ type Provider func(
 
 var txPoolProviders = make(map[string]Provider)
 
+// RegisterTxPoolProvider register tx pool provider
+// @param t
+// @param f
 func RegisterTxPoolProvider(t string, f Provider) {
 	txPoolProviders[strings.ToUpper(t)] = f
 }
 
+// GetTxPoolProvider get provider by name
+// @param t
+// @return Provider
 func GetTxPoolProvider(t string) Provider {
 	provider, ok := txPoolProviders[strings.ToUpper(t)]
 	if !ok {

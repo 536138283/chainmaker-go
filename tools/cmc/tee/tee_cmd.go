@@ -37,6 +37,8 @@ var (
 	teeFlags *pflag.FlagSet
 )
 
+// NewTeeCMD trust execute environment command
+// @return *cobra.Command
 func NewTeeCMD() *cobra.Command {
 	teeCmd := &cobra.Command{
 		Use:   "tee",

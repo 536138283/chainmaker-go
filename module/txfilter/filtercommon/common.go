@@ -173,7 +173,7 @@ func (t TxFilterLogger) Infof(format string, args ...interface{}) {
 	t.log.Infof(format, args...)
 }
 
-// Infof info sprintf
+// Warnf warning sprintf
 func (t TxFilterLogger) Warnf(format string, args ...interface{}) {
 	t.log.Warnf(format, args...)
 }
