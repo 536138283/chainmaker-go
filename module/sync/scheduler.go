@@ -173,7 +173,6 @@ func (sch *scheduler) receiveMajorityBlocks() {
 			" block: %d, max height with peers: %d", currBlockHeight, maxHeight)
 	default:
 	}
-	return
 }
 
 func (sch *scheduler) addPendingBlocksAndUpdatePendingHeight(peerHeight uint64) {
