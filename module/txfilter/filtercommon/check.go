@@ -26,7 +26,7 @@ var (
 	ErrStrBirdsNest = "brids_nest."
 	// ErrStrCuckoo Error string prefix "cuckoo."
 	ErrStrCuckoo = "cuckoo."
-	// snapshot. Error string prefix snapshot.
+	// ErrStrSnapshot snapshot. Error string prefix snapshot.
 	ErrStrSnapshot = "snapshot."
 
 	// ErrStrInvalidShardingTimeoutMustBeGreaterThan1 Invalid sharding timeout must be greater than 1

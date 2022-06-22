@@ -5,6 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 
 This file is for version compatibility
 */
+
 package accesscontrol
 
 import (
@@ -22,6 +23,9 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/gogo/protobuf/proto"
 )
+
+// ModuleNameAccessControl  "Access Control"
+const ModuleNameAccessControl = "Access Control"
 
 var _ protocol.Watcher = (*pkACProvider)(nil)
 

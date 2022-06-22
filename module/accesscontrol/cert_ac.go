@@ -31,8 +31,6 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
-const ModuleNameAccessControl = "Access Control"
-
 type certACProvider struct {
 	acService *accessControlService
 
@@ -59,8 +57,16 @@ type trustMemberCached struct {
 
 var _ protocol.AccessControlProvider = (*certACProvider)(nil)
 
-var NilCertACProvider ACProvider = (*certACProvider)(nil)
+var nilCertACProvider ACProvider = (*certACProvider)(nil)
 
+// NewACProvider 构造一个AccessControlProvider
+// @param chainConf
+// @param localOrgId
+// @param store
+// @param log
+// @param msgBus
+// @return protocol.AccessControlProvider
+// @return error
 func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
 	protocol.AccessControlProvider, error) {
@@ -448,6 +454,10 @@ func (cp *certACProvider) GetHashAlg() string {
 	return cp.acService.hashType
 }
 
+// NewMember 基于参数Member构建Member接口的实例
+// @param pbMember
+// @return protocol.Member
+// @return error
 func (cp *certACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error) {
 
 	var memberTmp *pbac.Member
@@ -526,7 +536,7 @@ func (cp *certACProvider) ValidateResourcePolicy(resourcePolicy *config.Resource
 }
 
 // CreatePrincipalForTargetOrg creates a principal for "SELF" type principal,
-// which needs to convert SELF to a sepecific organization id in one authentication
+// which needs to convert SELF to a specific organization id in one authentication
 func (cp *certACProvider) CreatePrincipalForTargetOrg(resourceName string,
 	endorsements []*common.EndorsementEntry, message []byte,
 	targetOrgId string) (protocol.Principal, error) {

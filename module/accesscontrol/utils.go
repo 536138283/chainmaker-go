@@ -60,6 +60,14 @@ func pubkeyHash(pubkey []byte) string {
 	return strPkHash
 }
 
+// InitCertSigningMember 初始化一个证书签名的用户
+// @param chainConfig
+// @param localOrgId
+// @param localPrivKeyFile
+// @param localPrivKeyPwd
+// @param localCertFile
+// @return protocol.SigningMember
+// @return error
 func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 	localPrivKeyFile, localPrivKeyPwd, localCertFile string) (
 	protocol.SigningMember, error) {
@@ -128,6 +136,13 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 	return nil, nil
 }
 
+// InitPKSigningMember 初始化一个公钥模式的用户
+// @param hashType
+// @param localOrgId
+// @param localPrivKeyFile
+// @param localPrivKeyPwd
+// @return protocol.SigningMember
+// @return error
 func InitPKSigningMember(hashType,
 	localOrgId, localPrivKeyFile, localPrivKeyPwd string) (protocol.SigningMember, error) {
 
