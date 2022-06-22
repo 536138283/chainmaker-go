@@ -53,7 +53,7 @@ function start_normal() {
     do
         if [ -d $file ]; then
             echo "START ==> " $RELEASE_PATH/$file
-            cd $file/bin && ./start.sh && cd - > /dev/null
+            cd $file/bin && ./start.sh -f && cd - > /dev/null
         fi
     done
 }
