@@ -28,10 +28,12 @@ type netMsg struct {
 	bz      []byte
 }
 
+//MockSender simulation of the network service
 type MockSender struct {
 	msgs []string
 }
 
+//NewMockSender create a MockSender instance
 func NewMockSender() *MockSender {
 	return &MockSender{}
 }
@@ -45,11 +47,13 @@ func (m *MockSender) sendMsg(msgType syncPb.SyncMsg_MsgType, msg []byte, to stri
 	return nil
 }
 
+//MockVerifyAndCommit mock the validation and commit functionality of the sync service
 type MockVerifyAndCommit struct {
 	cache       protocol.LedgerCache
 	receiveItem []*commonPb.Block
 }
 
+//NewMockVerifyAndCommit create a MockVerifyAndCommit instance
 func NewMockVerifyAndCommit(cache protocol.LedgerCache) *MockVerifyAndCommit {
 	return &MockVerifyAndCommit{cache: cache}
 }
