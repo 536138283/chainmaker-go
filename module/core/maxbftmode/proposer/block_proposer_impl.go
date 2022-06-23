@@ -277,22 +277,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	}
 	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
-	if common.TxPoolType == batch.TxPoolType {
-		dupTxs := make([]*commonpb.Transaction, 0)
-		finalBatch := make([]*commonpb.Transaction, len(fetchBatch))
-		for _, tx := range fetchBatch {
-			if isExit, _ := common.IfExitInSameBranch(height, tx.Payload.TxId, bp.proposalCache, preHash); isExit {
-				dupTxs = append(dupTxs, tx)
-			} else {
-				finalBatch = append(finalBatch, tx)
-			}
-		}
-
-		if len(dupTxs) != 0 {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
-			fetchBatch = getFetchBatch(fetchBatches)
-		}
-	}
+	// remove the dup tx in the same branch
+	batchIds, fetchBatch = bp.removeDupTxInSameBranch(height, preHash, batchIds, fetchBatch, fetchBatches)
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
@@ -648,11 +634,43 @@ func (bp *BlockProposerImpl) getFetchBatchFromPool(
 	return nil, bp.txPool.FetchTxs(height), nil
 }
 
+func (bp *BlockProposerImpl) removeDupTxInSameBranch(
+	height uint64, preHash []byte, batchIds []string,
+	fetchBatch []*commonpb.Transaction, fetchBatches [][]*commonpb.Transaction) (
+	[]string, []*commonpb.Transaction) {
+	if common.TxPoolType == batch.TxPoolType {
+		dupTxs := make([]*commonpb.Transaction, 0)
+		for _, tx := range fetchBatch {
+			if isExit, _ := common.IfExitInSameBranch(
+				height, tx.Payload.TxId, bp.proposalCache, preHash); isExit {
+				dupTxs = append(dupTxs, tx)
+			}
+		}
+
+		if len(dupTxs) != 0 {
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
+			fetchBatch = getFetchBatch(fetchBatches)
+		}
+
+	} else {
+		finalBatch := make([]*commonpb.Transaction, 0)
+		for _, tx := range fetchBatch {
+			if isExit, _ := common.IfExitInSameBranch(
+				height, tx.Payload.TxId, bp.proposalCache, preHash); !isExit {
+				finalBatch = append(finalBatch, tx)
+			}
+		}
+		fetchBatch = finalBatch
+	}
+
+	return batchIds, fetchBatch
+}
+
 func getFetchBatch(fetchBatches [][]*commonpb.Transaction) []*commonpb.Transaction {
 
 	fetchBatch := make([]*commonpb.Transaction, 0)
-	for _, v := range fetchBatches {
-		fetchBatch = append(fetchBatch, v...)
+	for _, txs := range fetchBatches {
+		fetchBatch = append(fetchBatch, txs...)
 	}
 
 	return fetchBatch
