@@ -73,7 +73,7 @@ start_docker_vm() {
   echo "start docker vm service container:"
   docker run -itd \
     -e ENV_LOG_IN_CONSOLE="$log_in_console" -e ENV_LOG_LEVEL="$log_level" -e ENV_ENABLE_UDS=true \
-    -e ENV_USER_NUM=1000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
+    -e ENV_USER_NUM=10000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
     -v "$mount_path":/mount \
     -v "$log_path":/log \
     --name DOCKERVM-{org_id} \
