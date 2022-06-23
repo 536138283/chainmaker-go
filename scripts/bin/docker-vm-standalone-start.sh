@@ -96,7 +96,7 @@ echo "start docker vm container"
 # ENV_PPROF_PORT=
 docker run -itd --rm \
   -e ENV_LOG_IN_CONSOLE=false -e ENV_LOG_LEVEL="$LOG_LEVEL" \
-  -e ENV_USER_NUM=1000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
+  -e ENV_USER_NUM=10000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
   -v "$LOG_PATH":/log \
   -p "$EXPOSE_PORT":22359 \
   --name "$CONTAINER_NAME" \
