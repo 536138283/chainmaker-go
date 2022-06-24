@@ -120,12 +120,23 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 	return v, nil
 }
 
-// VerifyBlock to check if block is valid
 func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (err error) {
+	_, err = v.verifyBlock(block, mode)
+	return err
+}
+
+func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
+	mode protocol.VerifyMode) (consensusPb *consensuspb.VerifyResult, err error) {
+	return v.verifyBlock(block, mode)
+}
+
+// VerifyBlock to check if block is valid
+func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (
+	consensusPb *consensuspb.VerifyResult, err error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err = utils.IsEmptyBlock(block); err != nil {
 		v.log.Error(err)
-		return err
+		return nil, err
 	}
 
 	v.log.Debugf("verify receive [%d](%x,%d,%d), from sync %d",
@@ -133,34 +144,36 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	// avoid concurrent verify, only one block hash can be verified at the same time
 	if !v.reentrantLocks.Lock(string(block.Header.BlockHash)) {
 		v.log.Warnf("block(%d,%x) concurrent verify, yield", block.Header.BlockHeight, block.Header.BlockHash)
-		return commonErrors.ErrConcurrentVerify
+		return nil, commonErrors.ErrConcurrentVerify
 	}
 	defer v.reentrantLocks.Unlock(string(block.Header.BlockHash))
 
 	// No duplicate verify
 	isRepeat, err := v.verifyRepeat(block, startTick, mode)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if isRepeat {
-		return nil
+		return nil, nil
 	}
 	var contractEventMap map[string][]*commonpb.ContractEvent
 
 	// avoid to recover the committed block.
 	lastBlock, err := v.verifierBlock.FetchLastBlock(block)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	startPoolTick := utils.CurrentTimeMillisSeconds()
 	newBlock, batchIds, err := common.RecoverBlock(block, mode, v.chainConf, v.txPool, v.ac, v.netService, v.log)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
 
 	txRWSetMap, contractEventMap, timeLasts, rwSetVerifyFailTx, err := v.validateBlock(newBlock, lastBlock, mode)
+
+	verifyResult := &consensuspb.VerifyResult{}
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
@@ -169,14 +182,15 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 				return fmt.Sprintf("publish verfiy failed rw set txs, "+
 					"block height:%d, err: %s", newBlock.Header.BlockHeight, err.Error())
 			})
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, true, txRWSetMap, rwSetVerifyFailTx))
+			verifyResult = parseVerifyResult(newBlock, true, txRWSetMap, rwSetVerifyFailTx)
+			v.msgBus.Publish(msgbus.VerifyResult, verifyResult)
 		}
 
 		// rollback sql
 		if sqlErr := v.storeHelper.RollBack(newBlock, v.blockchainStore); sqlErr != nil {
 			v.log.Errorf("block [%d] rollback sql failed: %s", newBlock.Header.BlockHeight, sqlErr)
 		}
-		return err
+		return verifyResult, err
 	}
 
 	// sync mode, need to verify consensus vote signature
@@ -185,7 +199,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		if err = v.verifyVoteSig(newBlock); err != nil {
 			v.log.Warnf("verify failed [%d](%x), votesig %s",
 				newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
-			return err
+			return nil, err
 		}
 	}
 	consensusCheckUsed := utils.CurrentTimeMillisSeconds() - beginConsensCheck
@@ -194,7 +208,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	// solo need this，too！！！
 	v.log.Debugf("set proposed block(%d,%x)", newBlock.Header.BlockHeight, newBlock.Header.BlockHash)
 	if err = v.proposalCache.SetProposedBlock(newBlock, txRWSetMap, contractEventMap, false); err != nil {
-		return err
+		return nil, err
 	}
 
 	// mark transactions in block as pending status in txpool
@@ -205,7 +219,8 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	if protocol.CONSENSUS_VERIFY == mode {
-		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, true, txRWSetMap, nil))
+		verifyResult = parseVerifyResult(newBlock, true, txRWSetMap, nil)
+		v.msgBus.Publish(msgbus.VerifyResult, verifyResult)
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	v.log.Infof("verify success [%d,%x]"+
@@ -218,7 +233,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
 	block = newBlock
-	return nil
+	return verifyResult, nil
 }
 
 // VerifyBlockWithRwSets to check if block is valid
