@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
@@ -103,7 +105,7 @@ func getBlockByHeightCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
-		flagSdkConfPath, flagOrgId, flagChainId, flagBlockHeight, flagWithRWSet,
+		flagSdkConfPath, flagOrgId, flagChainId, flagBlockHeight, flagWithRWSet, flagTruncateValue,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
@@ -185,14 +187,17 @@ func getBlockByHeight() error {
 			return err
 		}
 	}
-
-	resp, err := client.GetBlockByHeight(blockHeight, withRWSet)
+	var resp *common.BlockInfo
+	if truncateValue {
+		resp, err = client.GetBlockByHeightTruncate(blockHeight, withRWSet)
+	} else {
+		resp, err = client.GetBlockByHeight(blockHeight, withRWSet)
+	}
 	if err != nil {
 		return fmt.Errorf("get block by height failed, %s", err.Error())
 	}
-
-	fmt.Printf("get block by height resp: %+v\n", resp)
-
+	blockJson, _ := prettyjson.Marshal(resp)
+	fmt.Println(string(blockJson))
 	return nil
 }
 

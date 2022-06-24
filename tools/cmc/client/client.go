@@ -40,6 +40,7 @@ var (
 	enableCertHash  bool
 	blockHeight     uint64
 	withRWSet       bool
+	truncateValue   bool
 	isAgree         bool
 	txId            string
 
@@ -102,6 +103,7 @@ const (
 	flagEnableCertHash                   = "enable-cert-hash"
 	flagBlockHeight                      = "block-height"
 	flagWithRWSet                        = "with-rw-set"
+	flagTruncateValue                    = "truncate-value"
 	flagIsAgree                          = "is-agree"
 	flagTxId                             = "tx-id"
 	flagByteCodePath                     = "byte-code-path"
@@ -195,6 +197,7 @@ func init() {
 	flags.BoolVar(&syncResult, flagSyncResult, false, "whether wait the result of the transaction, default false")
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash, default true")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet, default true")
+	flags.BoolVar(&truncateValue, flagTruncateValue, false, "enable truncate value, default false")
 	flags.Uint64Var(&blockHeight, flagBlockHeight, 0, "specify block height, default 0")
 	flags.StringVar(&txId, flagTxId, "", "specify tx id")
 	flags.BoolVar(&isAgree, flagIsAgree, true, "specify multi sign vote choice")
