@@ -713,8 +713,8 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(
 func getFetchBatch(fetchBatches [][]*commonpb.Transaction) []*commonpb.Transaction {
 
 	fetchBatch := make([]*commonpb.Transaction, 0)
-	for _, v := range fetchBatches {
-		fetchBatch = append(fetchBatch, v...)
+	for _, txs := range fetchBatches {
+		fetchBatch = append(fetchBatch, txs...)
 	}
 
 	return fetchBatch

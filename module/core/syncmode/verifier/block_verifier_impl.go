@@ -122,6 +122,13 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 	return v, nil
 }
 
+// VerifyBlockSync only maxbft use this method
+func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
+	mode protocol.VerifyMode) (*consensuspb.VerifyResult, error) {
+	//TODO implement me
+	panic("only maxbft use this method")
+}
+
 // VerifyBlock to check if block is valid
 func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (err error) {
 

@@ -9,22 +9,22 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.0.0-20220622085907-c02d8bfb235c
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220610093828-3152e5d6c804
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.2.0
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220610092941-4ba205a9b69d
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220623125953-afff62e34077
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220610092515-91f118b0e1f1
 	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220607115425-03689a750027
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220613040127-5b976891c91e
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585
 	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220615062125-702578551b39
-	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220613130954-7ffdbae6aad2
-	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220617081650-cc775e8ce4db
-	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220617081619-c86df10c4607
+	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220623110820-5fec9d464701
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220623085444-d4d73acef506
+	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220624024205-63cef29be2bf
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220620071744-d26b882f044a
 	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220527181405-be81673f609d
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220615023117-bf60806a19fb
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220615023228-9b7cfb66a2d0
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220615023405-f4c61edd4757
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220613093507-2bd9879ad69c
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220622040323-b9dd2a7420ef
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220623100409-7fe0fba00a7d
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220620083659-3475c9faf5be
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.1.1-0.20220310130906-fc7031ec25c7
 	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220617091652-9b1d69633ae1
@@ -88,5 +88,5 @@ replace (
 	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.0.0
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v0.0.0-20220520083957-392cb085ba4a
-	google.golang.org/grpc => google.golang.org/grpc v1.26.0
+// google.golang.org/grpc => google.golang.org/grpc v1.26.0
 )
