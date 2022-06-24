@@ -88,5 +88,5 @@ replace (
 	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.0.0
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v0.0.0-20220520083957-392cb085ba4a
-	google.golang.org/grpc => google.golang.org/grpc v1.26.0
+// google.golang.org/grpc => google.golang.org/grpc v1.26.0
 )
