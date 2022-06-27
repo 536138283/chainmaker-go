@@ -750,6 +750,7 @@ func (bc *Blockchain) initConsensus() (err error) {
 		LedgerCache:   bc.ledgerCache,
 		ProposalCache: bc.proposalCache,
 		MsgBus:        bc.msgBus,
+		Logger:        logger.GetLoggerByChain(logger.MODULE_CONSENSUS, bc.chainId),
 	}
 	provider := consensus.GetConsensusProvider(bc.chainConf.ChainConfig().Consensus.Type)
 	bc.consensus, err = provider(config)
