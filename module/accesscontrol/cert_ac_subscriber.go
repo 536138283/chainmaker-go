@@ -14,6 +14,10 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
@@ -42,6 +46,8 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 		cp.onMessageCertAliasDelete(msg)
 	case msgbus.CertManageCertsAliasUpdate:
 		cp.onMessageCertAliasUpdate(msg)
+	case msgbus.MaxbftChainconfigInEpoch:
+		cp.onMessageMaxbftChainconfigInEpoch(msg)
 	}
 
 }
@@ -60,25 +66,7 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	chainConfig := &config.ChainConfig{}
 	_ = proto.Unmarshal(dataBytes, chainConfig)
 
-	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
-	err = cp.initTrustRootsForUpdatingChainConfig(chainConfig, cp.localOrg.id)
-	if err != nil {
-		cp.acService.log.Error(err)
-		return
-	}
-
-	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
-
-	cp.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
-	cp.opts.KeyUsages[0] = x509.ExtKeyUsageAny
-
-	cp.acService.memberCache.Clear()
-	cp.certCache.Clear()
-	err = cp.initTrustMembers(chainConfig.TrustMembers)
-	if err != nil {
-		cp.acService.log.Error(err)
-		return
-	}
+	cp.messageChainConfig(chainConfig, false)
 }
 
 func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
@@ -89,6 +77,10 @@ func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
 	cp.acService.log.Debugf("freeze certs: %s", certList)
 	certBlock, rest := pem.Decode([]byte(certList))
 	for certBlock != nil {
+		if cp.consensusType == consensus.ConsensusType_MAXBFT && isConsensusCert(certBlock.Bytes) {
+			cp.acService.log.Debugf("freeze certs delay for maxbft in epoch: %s")
+			continue
+		}
 		cp.frozenList.Store(string(certBlock.Bytes), true)
 		certBlock, rest = pem.Decode(rest)
 	}
@@ -104,6 +96,10 @@ func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 	cp.acService.log.Debugf("unfreeze cert hashes: %s, certs: %s", hashes, certList)
 	certBlock, rest := pem.Decode([]byte(certList))
 	for certBlock != nil {
+		if cp.consensusType == consensus.ConsensusType_MAXBFT && isConsensusCert(certBlock.Bytes) {
+			cp.acService.log.Debugf("unfreeze cert delay for maxbft in epoch: %s")
+			continue
+		}
 		_, ok := cp.frozenList.Load(string(certBlock.Bytes))
 		if ok {
 			cp.frozenList.Delete(string(certBlock.Bytes))
@@ -121,6 +117,10 @@ func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 			}
 			if cert == nil {
 				cp.acService.log.Warnf("cert id [%s] does not exist in local storage", hash)
+				continue
+			}
+			if cp.consensusType == consensus.ConsensusType_MAXBFT && isConsensusCert(cert) {
+				cp.acService.log.Debugf("unfreeze cert(hash) delay for maxbft in epoch: %s")
 				continue
 			}
 			_, ok := cp.frozenList.Load(string(cert))
@@ -147,6 +147,10 @@ func (cp *certACProvider) onMessageCertRevoke(msg *msgbus.Message) {
 			err = fmt.Errorf("update CRL failed: %v", err)
 			cp.acService.log.Error(err)
 		}
+		//if cp.consensusType == consensus.ConsensusType_MAXBFT && isConsensusCert(certBlock.Bytes) {
+		//	cp.acService.log.Debugf("unfreeze cert(hash) delay for maxbft in epoch: %s")
+		//	continue
+		//}
 		cp.crl.Store(string(aki), crl)
 	}
 }
@@ -162,6 +166,17 @@ func (cp *certACProvider) onMessageCertDelete(msg *msgbus.Message) {
 		bin, err := hex.DecodeString(string(hash))
 		if err != nil {
 			cp.acService.log.Warnf("decode error for certhash: %s", string(hash))
+		}
+		if cp.consensusType == consensus.ConsensusType_MAXBFT {
+			cert, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(hash))
+			if err != nil {
+				cp.acService.log.Errorf("fail to load compressed certificate from local storage [%s]", hash)
+				continue
+			}
+			if cert != nil && isConsensusCert(cert) {
+				cp.acService.log.Warnf("cert id [%s] does not exist in local storage", hash)
+				continue
+			}
 		}
 		_, ok := cp.certCache.Get(string(bin))
 		if ok {
@@ -195,5 +210,44 @@ func (cp *certACProvider) onMessageCertAliasUpdate(msg *msgbus.Message) {
 	if ok {
 		cp.acService.log.Infof("remove alias from certcache: %s", string(name))
 		cp.certCache.Remove(string(name))
+	}
+}
+
+// onMessageMaxbftChainconfigInEpoch update ac for maxbft
+/*
+	1. if not maxbft, return
+	2. update consensusType if change (not effective now, need consensus module support)
+	3. refresh trustroots
+	4. refresh trustmembers
+	5. refresh freezeList
+	6. refresh crlList
+*/
+func (cp *certACProvider) onMessageMaxbftChainconfigInEpoch(msg *msgbus.Message) {
+	configBytes, ok := msg.Payload.([]byte)
+	if !ok {
+		cp.acService.log.Error("payload is not []byte")
+		return
+	}
+	epochConfig := &maxbft.GovernanceContract{}
+	if err := proto.Unmarshal(configBytes, epochConfig); err != nil {
+		cp.acService.log.Error(err)
+		return
+	}
+
+	if err := cp.initTrustRootsForUpdatingChainConfig(epochConfig.ChainConfig, cp.localOrg.id); err != nil {
+		cp.acService.log.Error(err)
+		return
+	}
+
+	cp.acService.hashType = epochConfig.ChainConfig.GetCrypto().GetHash()
+
+	cp.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
+	cp.opts.KeyUsages[0] = x509.ExtKeyUsageAny
+
+	cp.acService.memberCache.Clear()
+	cp.certCache.Clear()
+	if err := cp.initTrustMembers(epochConfig.ChainConfig.TrustMembers); err != nil {
+		cp.acService.log.Error(err)
+		return
 	}
 }
