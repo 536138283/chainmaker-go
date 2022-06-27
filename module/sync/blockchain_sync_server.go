@@ -299,7 +299,7 @@ func (sync *BlockChainSyncServer) sendMsg(msgType syncPb.SyncMsg_MsgType, msg []
 		return err
 	}
 	if err = sync.net.SendMsg(bs, netPb.NetMsg_SYNC_BLOCK_MSG, to); err != nil {
-		sync.log.Error(err)
+		sync.log.Warnf("send [%s] message to %s error: %v", netPb.NetMsg_SYNC_BLOCK_MSG.String(), to, err)
 		return err
 	}
 	return nil
