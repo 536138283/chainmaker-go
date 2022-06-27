@@ -168,7 +168,7 @@ txpool:
   # batch_max_size: 100
 
   # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
-  # batch_create_timeout: 200
+  # batch_create_timeout: 50
 
  # RPC service setting
 rpc:

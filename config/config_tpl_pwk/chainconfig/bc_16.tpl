@@ -51,8 +51,8 @@ block:
   # Max block size, in MB
   block_size: 10
 
-  # The interval of block proposing attempts
-  block_interval: 2000
+  # The interval of block proposing attempts, in millisecond
+  block_interval: 10
 
 # Core settings
 core:
