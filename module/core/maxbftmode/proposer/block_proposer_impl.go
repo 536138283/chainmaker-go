@@ -690,12 +690,9 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(
 	[]string, []*commonpb.Transaction) {
 	if common.TxPoolType == batch.TxPoolType {
 		dupTxs := make([]*commonpb.Transaction, 0)
-		finalBatch := make([]*commonpb.Transaction, len(fetchBatch))
 		for _, tx := range fetchBatch {
 			if isExit, _ := common.IfExitInSameBranch(height, tx.Payload.TxId, bp.proposalCache, preHash); isExit {
 				dupTxs = append(dupTxs, tx)
-			} else {
-				finalBatch = append(finalBatch, tx)
 			}
 		}
 
@@ -705,6 +702,15 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(
 
 			return newBatchIds, newFetchBatch
 		}
+	} else {
+		finalBatch := make([]*commonpb.Transaction, 0)
+		for _, tx := range fetchBatch {
+			if isExit, _ := common.IfExitInSameBranch(
+				height, tx.Payload.TxId, bp.proposalCache, preHash); !isExit {
+				finalBatch = append(finalBatch, tx)
+			}
+		}
+		fetchBatch = finalBatch
 	}
 
 	return batchIds, fetchBatch
