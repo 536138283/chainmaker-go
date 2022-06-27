@@ -189,7 +189,7 @@ func getBlockByHeight() error {
 	}
 	var resp *common.BlockInfo
 	if truncateValue {
-		resp, err = client.GetBlockByHeightTruncate(blockHeight, withRWSet)
+		resp, err = client.GetBlockByHeightTruncate(blockHeight, withRWSet, 1000, "truncate")
 	} else {
 		resp, err = client.GetBlockByHeight(blockHeight, withRWSet)
 	}
@@ -219,13 +219,31 @@ func getTxByTxId() error {
 			return err
 		}
 	}
-
-	resp, err := client.GetTxByTxId(txId)
+	var resp *common.TransactionInfoWithRWSet
+	if truncateValue {
+		resp, err = client.GetTxByTxIdTruncate(txId, withRWSet, 1000, "truncate")
+	} else {
+		if withRWSet {
+			resp, err = client.GetTxWithRWSetByTxId(txId)
+		} else {
+			tx, err := client.GetTxByTxId(txId)
+			if err != nil {
+				return fmt.Errorf("get tx by txid failed, %s", err.Error())
+			}
+			resp = &common.TransactionInfoWithRWSet{
+				Transaction:    tx.Transaction,
+				BlockHeight:    tx.BlockHeight,
+				BlockHash:      tx.BlockHash,
+				TxIndex:        tx.TxIndex,
+				BlockTimestamp: tx.BlockTimestamp,
+			}
+		}
+	}
 	if err != nil {
-		return fmt.Errorf("get block by height failed, %s", err.Error())
+		return fmt.Errorf("get tx by txid failed, %s", err.Error())
 	}
 
-	fmt.Printf("get block by height resp: %+v\n", resp)
+	fmt.Printf("get tx by txid resp: %+v\n", resp)
 
 	return nil
 }
