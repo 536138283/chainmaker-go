@@ -26,17 +26,24 @@ const bufferSize = 128
 
 // Routine Provide hosting of the service in goroutine
 type Routine struct {
-	name       string          // The name of the hosted service
-	handle     handleFunc      // Processing of the hosted service
-	queryState getServiceState // get state in the service
+	// The name of the hosted service
+	name string
+	// Processing of the hosted service
+	handle handleFunc
+	// get state in the service
+	queryState getServiceState
 	log        protocol.Logger
-
-	start int32                // The flag which detects whether the service is started
-	queue *queue.PriorityQueue // A queue to store tasks
-	out   chan queue.Item      // Outputs the execution results of the task
-	stop  chan struct{}        // Notify whether the service has stopped
+	// The flag which detects whether the service is started
+	start int32
+	// A queue to store tasks
+	queue *queue.PriorityQueue
+	// Outputs the execution results of the task
+	out chan queue.Item
+	// Notify whether the service has stopped
+	stop chan struct{}
 }
 
+//NewRoutine create a Routine instance
 func NewRoutine(name string, handle handleFunc, queryState getServiceState, log protocol.Logger) *Routine {
 	return &Routine{
 		name:       name,
@@ -50,6 +57,7 @@ func NewRoutine(name string, handle handleFunc, queryState getServiceState, log 
 	}
 }
 
+//begin start a background coroutine to loop to get event
 func (r *Routine) begin() error {
 	if !atomic.CompareAndSwapInt32(&r.start, 0, 1) {
 		return commonErrors.ErrSyncServiceHasStarted
@@ -58,6 +66,10 @@ func (r *Routine) begin() error {
 	return nil
 }
 
+//loop to get those items that are placed in the queue sorted by priority
+//and pass item to the registered hander for processing
+//if the handler returns a non-null event item, put it to the out channel
+//because there may be other handlers that need to get this event item to handle
 func (r *Routine) loop() {
 	for {
 		items, err := r.queue.Get(1)
