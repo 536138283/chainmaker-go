@@ -1014,7 +1014,7 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 				storeHelper:           tt.fields.storeHelper,
 				metricBlockVerifyTime: tt.fields.metricBlockVerifyTime,
 			}
-			gotIsRepeat := v.verifyRepeat(tt.args.block, tt.args.startTick, tt.args.mode)
+			_, gotIsRepeat := v.verifyRepeat(tt.args.block, tt.args.startTick, tt.args.mode)
 			if gotIsRepeat != tt.wantIsRepeat {
 				t.Errorf("verifyRepeat() = %v, want %v", gotIsRepeat, tt.wantIsRepeat)
 			}
