@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220607072052-653ff1f72ed5
-	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220624095533-b04a5a2bd72f
+	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220628075759-63a51ef9d0a8
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220627022047-25a7aa363587
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220627094307-7a3332566039
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220627022126-47a55dacbaaf
@@ -64,6 +64,7 @@ require (
 	google.golang.org/grpc v1.47.0
 	gorm.io/driver/mysql v1.2.0
 	gorm.io/gorm v1.22.3
+
 )
 
 require (
