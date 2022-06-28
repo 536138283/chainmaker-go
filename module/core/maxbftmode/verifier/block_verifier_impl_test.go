@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -709,9 +708,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(nil)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(nil)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -741,9 +740,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(),
-						gomock.Any()).Return(errTest)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(),
+					//	gomock.Any()).Return(errTest)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -800,9 +799,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(nil)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(nil)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_TBFT, true, c),
@@ -832,9 +831,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(errTest)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(errTest)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_TBFT, true, c),
@@ -941,9 +940,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(nil)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(nil)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -973,9 +972,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(errTest)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(errTest)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -1015,19 +1014,13 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 				storeHelper:           tt.fields.storeHelper,
 				metricBlockVerifyTime: tt.fields.metricBlockVerifyTime,
 			}
-			gotIsRepeat, err := v.verifyRepeat(tt.args.block, tt.args.startTick, tt.args.mode)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("verifyRepeat() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			gotIsRepeat := v.verifyRepeat(tt.args.block, tt.args.startTick, tt.args.mode)
 			if gotIsRepeat != tt.wantIsRepeat {
 				t.Errorf("verifyRepeat() = %v, want %v", gotIsRepeat, tt.wantIsRepeat)
 			}
 		})
 	}
 }
-
-var errTest = errors.New("test")
 
 func getBlock() *commonpb.Block {
 	return &commonpb.Block{Header: &commonpb.BlockHeader{
