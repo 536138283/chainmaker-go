@@ -17,6 +17,8 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 )
 
+const CONSENSUS = "consensus"
+
 func (cp *certACProvider) messageChainConfig(chainConfig *config.ChainConfig, fromMaxBFT bool) {
 	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
 	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
@@ -50,8 +52,9 @@ func (cp *certACProvider) messageChainConfig(chainConfig *config.ChainConfig, fr
 	}
 }
 
+// nolint: unused
 func (cp *certACProvider) isConsensusAKI(aki string) {
-	//获取epochconfig共识节点，并检查aki是否为对应证书
+	//检查aki是否对应共识节点，需要获取共识节点证书列表
 	//func (cp *certACProvider) checkCRL(certChain []*bcx509.Certificate) error {
 	//	if len(certChain) < 1 {
 	//	return fmt.Errorf("given certificate chain is empty")
@@ -75,7 +78,7 @@ func isConsensusCert(raw interface{}) bool {
 	switch certInfo := raw.(type) {
 	case *bcx509.Certificate:
 		if len(certInfo.Subject.OrganizationalUnit) != 0 &&
-			certInfo.Subject.OrganizationalUnit[0] == "consensus" {
+			certInfo.Subject.OrganizationalUnit[0] == CONSENSUS {
 			return true
 		}
 	case []byte:
@@ -84,7 +87,7 @@ func isConsensusCert(raw interface{}) bool {
 			return false
 		}
 		if len(cert.Subject.OrganizationalUnit) != 0 &&
-			cert.Subject.OrganizationalUnit[0] == "consensus" {
+			cert.Subject.OrganizationalUnit[0] == CONSENSUS {
 			return true
 		}
 	}
