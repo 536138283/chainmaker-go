@@ -94,7 +94,7 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsRevoke, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasDelete, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
-	msgBus.Register(msgbus.MaxbftChainconfigInEpoch, certACProvider)
+	msgBus.Register(msgbus.MaxbftEpochConf, certACProvider)
 
 	cp.consensusType = chainConf.ChainConfig().Consensus.Type
 	if cp.consensusType == consensus.ConsensusType_MAXBFT {
