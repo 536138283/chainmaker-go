@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220607072052-653ff1f72ed5
-	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220624095533-b04a5a2bd72f
+	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220628075759-63a51ef9d0a8
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220627022047-25a7aa363587
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220628073744-eed7782b9681
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220627022126-47a55dacbaaf
@@ -20,9 +20,9 @@ require (
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220624031534-fc03d5638a5b
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220620071744-d26b882f044a
 	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220527181405-be81673f609d
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220615023117-bf60806a19fb
-	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220615023228-9b7cfb66a2d0
-	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220615023405-f4c61edd4757
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220628073721-28a6cd138945
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628084354-ae67ef8607d5
+	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220628073826-5966065caa90
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220613093507-2bd9879ad69c
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.3-0.20220623100409-7fe0fba00a7d
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220627074934-938e05f7646e
@@ -64,6 +64,7 @@ require (
 	google.golang.org/grpc v1.47.0
 	gorm.io/driver/mysql v1.2.0
 	gorm.io/gorm v1.22.3
+
 )
 
 require (
