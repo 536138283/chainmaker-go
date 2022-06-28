@@ -2,7 +2,11 @@ package accesscontrol
 
 import (
 	"crypto/x509"
+	"encoding/pem"
 	"fmt"
+
+	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	"github.com/gogo/protobuf/proto"
@@ -10,7 +14,7 @@ import (
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	systemPb "chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 )
 
 func (cp *certACProvider) messageChainConfig(chainConfig *config.ChainConfig, fromMaxBFT bool) {
@@ -88,7 +92,7 @@ func isConsensusCert(raw interface{}) bool {
 }
 
 func (cp *certACProvider) loadMaxBFTEpochConfig() error {
-	contractName := systemPb.SystemContract_GOVERNANCE.String()
+	contractName := syscontract.SystemContract_GOVERNANCE.String()
 	bz, err := cp.store.ReadObject(contractName, []byte(contractName))
 	if err != nil {
 		return fmt.Errorf("get contractName=%s from db failed, reason: %s", contractName, err)
@@ -98,4 +102,66 @@ func (cp *certACProvider) loadMaxBFTEpochConfig() error {
 		return fmt.Errorf("unmarshal contractName=%s failed, reason: %s", contractName, err)
 	}
 	return nil
+}
+
+// onMessageMaxbftChainconfigInEpoch update ac for maxbft
+/*
+	1. if not maxbft, return
+	2. update consensusType if change (not effective now, need consensus module support)
+	3. refresh trustroots
+	4. refresh trustmembers
+	5. refresh freezeList
+	6. refresh crlList
+*/
+func (cp *certACProvider) onMessageMaxbftChainconfigInEpoch(msg *msgbus.Message) {
+	configBytes, ok := msg.Payload.([]byte)
+	if !ok {
+		cp.acService.log.Error("payload is not []byte")
+		return
+	}
+	epochConfig := &maxbft.GovernanceContract{}
+	if err := proto.Unmarshal(configBytes, epochConfig); err != nil {
+		cp.acService.log.Error(err)
+		return
+	}
+
+	//update chainconfig
+	cp.messageChainConfig(epochConfig.ChainConfig, true)
+
+	//update frozenList
+	if len(epochConfig.CertFrozenList) != 0 {
+		var certIDs []string
+		if err := json.Unmarshal(epochConfig.CertFrozenList, &certIDs); err != nil {
+			cp.acService.log.Errorf("unmarshal frozen certificate list failed: %v", err)
+			return
+		}
+		for _, certID := range certIDs {
+			certBytes, err := cp.acService.dataStore.
+				ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(certID))
+			if err != nil {
+				cp.acService.log.Errorf("load frozen certificate failed: %s", certID)
+				return
+			}
+			if certBytes == nil {
+				cp.acService.log.Errorf("load frozen certificate failed: empty certificate [%s]", certID)
+				return
+			}
+
+			certBlock, _ := pem.Decode(certBytes)
+			cp.frozenList.Store(string(certBlock.Bytes), true)
+		}
+	}
+
+	//update crl
+	if len(epochConfig.CRL) != 0 {
+		var crlAKIs []string
+		if err := json.Unmarshal(epochConfig.CRL, &crlAKIs); err != nil {
+			cp.acService.log.Errorf("fail to Unmarshal CRL list: %v", err)
+			return
+		}
+		if err := cp.storeCrls(crlAKIs); err != nil {
+			cp.acService.log.Errorf("fail to update CRL list: %v", err)
+			return
+		}
+	}
 }
