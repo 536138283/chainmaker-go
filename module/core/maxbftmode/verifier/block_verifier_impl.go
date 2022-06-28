@@ -127,13 +127,13 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 }
 
 func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
-	mode protocol.VerifyMode) (consensusPb *consensuspb.VerifyResult, err error) {
+	mode protocol.VerifyMode) (result *consensuspb.VerifyResult, err error) {
 	return v.verifyBlock(block, mode)
 }
 
 // VerifyBlock to check if block is valid
 func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (
-	consensusPb *consensuspb.VerifyResult, err error) {
+	result *consensuspb.VerifyResult, err error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err = utils.IsEmptyBlock(block); err != nil {
 		v.log.Error(err)
@@ -150,9 +150,9 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	defer v.reentrantLocks.Unlock(string(block.Header.BlockHash))
 
 	// No duplicate verify
-	isRepeat := v.verifyRepeat(block, startTick, mode)
+	result, isRepeat := v.verifyRepeat(block, startTick, mode)
 	if isRepeat {
-		return nil, nil
+		return result, nil
 	}
 	var contractEventMap map[string][]*commonpb.ContractEvent
 
@@ -230,7 +230,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
-	block = newBlock
+
 	return verifyResult, nil
 }
 
@@ -256,7 +256,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 	defer v.reentrantLocks.Unlock(string(block.Header.BlockHash))
 	// No duplicate verify
-	isRepeat := v.verifyRepeat(block, startTick, mode)
+	_, isRepeat := v.verifyRepeat(block, startTick, mode)
 	if isRepeat {
 		return nil
 	}
@@ -493,29 +493,30 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 
 // verifyRepeat to check if the block has verified before
 func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
-	mode protocol.VerifyMode) (isRepeat bool) {
+	mode protocol.VerifyMode) (result *consensuspb.VerifyResult, isRepeat bool) {
 	b, txRwSet, _ := v.proposalCache.GetProposedBlock(block)
 	if b == nil {
-		return false
+		return nil, false
 	}
 	if consensuspb.ConsensusType_SOLO != v.chainConf.ChainConfig().Consensus.Type ||
 		v.chainConf.ChainConfig().Contract.EnableSqlSupport {
 		elapsed := utils.CurrentTimeMillisSeconds() - startTick
 		// the block has verified before
-		v.log.Infof("verify success repeat [%d](%x), total: %d", block.Header.BlockHeight, block.Header.BlockHash, elapsed)
+		v.log.Infof("verify success repeat [%d](%x), total: %d", b.Header.BlockHeight, b.Header.BlockHash, elapsed)
 		if protocol.CONSENSUS_VERIFY == mode {
 			// consensus mode, publish verify result to message bus
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(block, true, txRwSet, nil))
+			result = parseVerifyResult(b, true, txRwSet, nil)
+			v.msgBus.Publish(msgbus.VerifyResult, result)
 		}
 		lastBlock, _ := v.proposalCache.GetProposedBlockByHashAndHeight(
-			block.Header.PreBlockHash, block.Header.BlockHeight-1)
+			b.Header.PreBlockHash, b.Header.BlockHeight-1)
 		if lastBlock == nil {
 			v.log.Debugf(
 				"no pre-block be found, preHeight:%d, preBlockHash:%x",
-				block.Header.BlockHeight-1,
-				block.Header.PreBlockHash,
+				b.Header.BlockHeight-1,
+				b.Header.PreBlockHash,
 			)
-			return true
+			return result, true
 		}
 		cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
 		if len(cutBlocks) > 0 {
@@ -527,7 +528,7 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 			v.cutBlocks(cutBlocks, lastBlock)
 		}
 
-		return true
+		return result, true
 	}
-	return false
+	return nil, false
 }

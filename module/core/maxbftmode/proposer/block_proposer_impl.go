@@ -686,7 +686,7 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(
 		}
 
 		if len(dupTxs) != 0 {
-			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
+			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, dupTxs)
 			newFetchBatch := getFetchBatch(fetchBatches)
 
 			return newBatchIds, newFetchBatch
