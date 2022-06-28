@@ -120,6 +120,7 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 	return v, nil
 }
 
+// VerifyBlock to check if block is valid
 func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (err error) {
 	_, err = v.verifyBlock(block, mode)
 	return err
@@ -355,8 +356,8 @@ func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) erro
 
 func (v *BlockVerifierImpl) validateBlock(block,
 	lastBlock *commonpb.Block, mode protocol.VerifyMode) (map[string]*commonpb.TxRWSet,
-	map[string][]*commonpb.ContractEvent, map[string]int64, *common.RwSetVerifyFailTx, error) {
-
+	map[string][]*commonpb.ContractEvent,
+	map[string]int64, *common.RwSetVerifyFailTx, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make(map[string]int64)
 	var err error

@@ -88,3 +88,28 @@ func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 	}
 	return nil
 }
+
+func (m *ManagerEvidence) ClearSnapshot(block *commonPb.Block) error {
+	m.delegate.lock.Lock()
+	defer m.delegate.lock.Unlock()
+
+	m.log.Infof("clear snapshot@%s at height %d", block.Header.ChainId, block.Header.BlockHeight)
+
+	// 计算需要删除的区块指纹
+	deleteFp := utils.CalcBlockFingerPrintWithoutTx(block)
+	deleteFpEx := calcNotConsensusFingerPrint(block)
+
+	delete(m.snapshots, deleteFp)
+
+	// 删除未共识的区块指纹
+	if _, ok := m.snapshots[deleteFpEx]; ok {
+		delete(m.snapshots, deleteFpEx)
+		m.log.Infof("delete snapshot@%s %v & %v at height %d",
+			block.Header.ChainId, deleteFp, deleteFpEx, block.Header.BlockHeight)
+	} else {
+		m.log.Infof("delete snapshot@%s %v at height %d",
+			block.Header.ChainId, deleteFp, block.Header.BlockHeight)
+	}
+
+	return nil
+}
