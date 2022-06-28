@@ -123,8 +123,10 @@ chainmaker.org/chainmaker/third_party/tikv-client-go v0.0.0-20220506082915-18800
 chainmaker.org/chainmaker/third_party/tikv-client-go v0.0.0-20220506082915-1880021310da/go.mod h1:4p7sVvFNr4ial54U7I/yiFpw/6eNlG9ct1lccbsll5U=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220628073721-28a6cd138945 h1:DKrdZulc7uocQuHCKa/1CKm/od/sGOUq5lNnQzwFDvo=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220628073721-28a6cd138945/go.mod h1:HovIwIyEi/TS0R2hwzK4nNMpD8dnszUWOKWU6q+ZY0E=
-chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628073628-7fbb1f26dcb1 h1:wvR3Irjgv2N1EEXKOqeqkx9/O8bmGKHJtWYylC3QF28=
-chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628073628-7fbb1f26dcb1/go.mod h1:fai/CVtLgcKmzB9+XlXemTCr6ce9b+naTGo99KnJAkg=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628081322-95672f3ce1ed h1:NcBr98arsXiQQlsQrOsGDFr9Mhdm+P0unF9Q7eWMLVA=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628081322-95672f3ce1ed/go.mod h1:fai/CVtLgcKmzB9+XlXemTCr6ce9b+naTGo99KnJAkg=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628084354-ae67ef8607d5 h1:FvPT8LAev7vjer+llls4maeLc3q01+2bxK/aFbAGnIM=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628084354-ae67ef8607d5/go.mod h1:fai/CVtLgcKmzB9+XlXemTCr6ce9b+naTGo99KnJAkg=
 chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220628073826-5966065caa90 h1:glaUVuBMLAUdh6R9qgOabimiEVNRsbbWbbApQBQklG4=
 chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220628073826-5966065caa90/go.mod h1:wIuobkU1ovDeMshBmQ4O0FMYp6pjs1HYk9UbK82b2YQ=
 chainmaker.org/chainmaker/utils/v2 v2.1.1-0.20220128023017-5bf8279342f1/go.mod h1:ki0dyNMHhwzWFI+mwrnJ22xCr94ASj6evV5CLlQdL90=
