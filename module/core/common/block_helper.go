@@ -1072,7 +1072,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 			return err
 		}
 		if governance != nil {
-			chain.msgBus.PublishSafe(msgbus.MaxbftChainconfigInEpoch, governance)
+			chain.msgBus.PublishSafe(msgbus.MaxbftEpochConf, governance)
 		}
 	}
 

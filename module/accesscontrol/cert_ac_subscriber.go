@@ -43,7 +43,7 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 		cp.onMessageCertAliasDelete(msg)
 	case msgbus.CertManageCertsAliasUpdate:
 		cp.onMessageCertAliasUpdate(msg)
-	case msgbus.MaxbftChainconfigInEpoch:
+	case msgbus.MaxbftEpochConf:
 		cp.onMessageMaxbftChainconfigInEpoch(msg)
 	}
 
