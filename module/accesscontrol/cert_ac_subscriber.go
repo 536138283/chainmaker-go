@@ -8,11 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
-	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"strings"
+
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 
@@ -42,6 +43,8 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 		cp.onMessageCertAliasDelete(msg)
 	case msgbus.CertManageCertsAliasUpdate:
 		cp.onMessageCertAliasUpdate(msg)
+	case msgbus.MaxbftChainconfigInEpoch:
+		cp.onMessageMaxbftChainconfigInEpoch(msg)
 	}
 
 }
@@ -60,25 +63,7 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	chainConfig := &config.ChainConfig{}
 	_ = proto.Unmarshal(dataBytes, chainConfig)
 
-	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
-	err = cp.initTrustRootsForUpdatingChainConfig(chainConfig, cp.localOrg.id)
-	if err != nil {
-		cp.acService.log.Error(err)
-		return
-	}
-
-	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
-
-	cp.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
-	cp.opts.KeyUsages[0] = x509.ExtKeyUsageAny
-
-	cp.acService.memberCache.Clear()
-	cp.certCache.Clear()
-	err = cp.initTrustMembers(chainConfig.TrustMembers)
-	if err != nil {
-		cp.acService.log.Error(err)
-		return
-	}
+	cp.messageChainConfig(chainConfig, false)
 }
 
 func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
@@ -89,6 +74,10 @@ func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
 	cp.acService.log.Debugf("freeze certs: %s", certList)
 	certBlock, rest := pem.Decode([]byte(certList))
 	for certBlock != nil {
+		if cp.consensusType == consensus.ConsensusType_MAXBFT && isConsensusCert(certBlock.Bytes) {
+			cp.acService.log.Debugf("freeze certs delay for maxbft in epoch: %s")
+			continue
+		}
 		cp.frozenList.Store(string(certBlock.Bytes), true)
 		certBlock, rest = pem.Decode(rest)
 	}
@@ -104,6 +93,10 @@ func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 	cp.acService.log.Debugf("unfreeze cert hashes: %s, certs: %s", hashes, certList)
 	certBlock, rest := pem.Decode([]byte(certList))
 	for certBlock != nil {
+		if cp.consensusType == consensus.ConsensusType_MAXBFT && isConsensusCert(certBlock.Bytes) {
+			cp.acService.log.Debugf("unfreeze cert delay for maxbft in epoch: %s")
+			continue
+		}
 		_, ok := cp.frozenList.Load(string(certBlock.Bytes))
 		if ok {
 			cp.frozenList.Delete(string(certBlock.Bytes))
