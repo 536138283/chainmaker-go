@@ -149,10 +149,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	defer v.reentrantLocks.Unlock(string(block.Header.BlockHash))
 
 	// No duplicate verify
-	isRepeat, err := v.verifyRepeat(block, startTick, mode)
-	if err != nil {
-		return nil, err
-	}
+	isRepeat := v.verifyRepeat(block, startTick, mode)
 	if isRepeat {
 		return nil, nil
 	}
@@ -258,10 +255,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 	defer v.reentrantLocks.Unlock(string(block.Header.BlockHash))
 	// No duplicate verify
-	isRepeat, err := v.verifyRepeat(block, startTick, mode)
-	if err != nil {
-		return err
-	}
+	isRepeat := v.verifyRepeat(block, startTick, mode)
 	if isRepeat {
 		return nil
 	}
@@ -498,10 +492,10 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 
 // verifyRepeat to check if the block has verified before
 func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
-	mode protocol.VerifyMode) (isRepeat bool, err error) {
-	b, txRwSet, eventMap := v.proposalCache.GetProposedBlock(block)
+	mode protocol.VerifyMode) (isRepeat bool) {
+	b, txRwSet, _ := v.proposalCache.GetProposedBlock(block)
 	if b == nil {
-		return false, nil
+		return false
 	}
 	if consensuspb.ConsensusType_SOLO != v.chainConf.ChainConfig().Consensus.Type ||
 		v.chainConf.ChainConfig().Contract.EnableSqlSupport {
@@ -520,7 +514,7 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 				block.Header.BlockHeight-1,
 				block.Header.PreBlockHash,
 			)
-			return true, nil
+			return true
 		}
 		cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
 		if len(cutBlocks) > 0 {
@@ -531,9 +525,8 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 			)
 			v.cutBlocks(cutBlocks, lastBlock)
 		}
-		err = v.proposalCache.SetProposedBlock(
-			block, txRwSet, eventMap, v.proposalCache.IsProposedAt(block.Header.BlockHeight))
-		return true, err
+
+		return true
 	}
-	return false, nil
+	return false
 }
