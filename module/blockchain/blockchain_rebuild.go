@@ -16,7 +16,7 @@ import (
 )
 
 // Start all the modules.
-func (bc *Blockchain) RebuildDbs() {
+func (bc *Blockchain) RebuildDbs(needVerify bool) {
 	fmt.Printf("###########################")
 	fmt.Printf("###start rebuild-dbs....###")
 	fmt.Printf("###########################")
@@ -57,16 +57,18 @@ func (bc *Blockchain) RebuildDbs() {
 		}
 		preHash = block.GetHeader().BlockHash
 
-		if err := bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1); err != nil {
-			if err == commonErrors.ErrBlockHadBeenCommited {
-				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
+		if needVerify {
+			if err := bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1); err != nil {
+				if err == commonErrors.ErrBlockHadBeenCommited {
+					bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
+				} else {
+					fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
+					bc.log.Infof("block[%d] verify success.", block.Header.BlockHeight)
+				}
 			} else {
 				fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
 				bc.log.Infof("block[%d] verify success.", block.Header.BlockHeight)
 			}
-		} else {
-			fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
-			bc.log.Infof("block[%d] verify success.", block.Header.BlockHeight)
 		}
 
 		//time.Sleep(500*time.Millisecond)
