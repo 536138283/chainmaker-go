@@ -99,6 +99,9 @@ type pkACProvider struct {
 	resourceNamePolicyMap *sync.Map
 
 	exceptionalPolicyMap *sync.Map
+
+	resourceNamePolicyMap220 *sync.Map
+	exceptionalPolicyMap220  *sync.Map
 }
 
 type publicAdminMemberModel struct {
@@ -123,22 +126,26 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 func newPkACProvider(chainConfig *config.ChainConfig,
 	store protocol.BlockchainStore, log protocol.Logger) (*pkACProvider, error) {
 	pkAcProvider := &pkACProvider{
-		adminNum:              0,
-		hashType:              chainConfig.Crypto.Hash,
-		authType:              chainConfig.AuthType,
-		adminMember:           &sync.Map{},
-		consensusMember:       &sync.Map{},
-		memberCache:           concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
-		log:                   log,
-		dataStore:             store,
-		resourceNamePolicyMap: &sync.Map{},
-		exceptionalPolicyMap:  &sync.Map{},
+		adminNum:                 0,
+		hashType:                 chainConfig.Crypto.Hash,
+		authType:                 chainConfig.AuthType,
+		adminMember:              &sync.Map{},
+		consensusMember:          &sync.Map{},
+		memberCache:              concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		log:                      log,
+		dataStore:                store,
+		resourceNamePolicyMap:    &sync.Map{},
+		exceptionalPolicyMap:     &sync.Map{},
+		resourceNamePolicyMap220: &sync.Map{},
+		exceptionalPolicyMap220:  &sync.Map{},
 	}
 
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
 		pkAcProvider.createDefaultResourcePolicyForDPoS()
+		pkAcProvider.createDefaultResourcePolicyForDPoS_220()
 	} else {
 		pkAcProvider.createDefaultResourcePolicy()
+		pkAcProvider.createDefaultResourcePolicy_220()
 	}
 
 	err := pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
