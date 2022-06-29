@@ -399,6 +399,50 @@ func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
 	}
 }
 
+/*
+ * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
+ */
+func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
+	if common.TxPoolType == batch.TxPoolType {
+		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
+		return
+	}
+	height := rwSetVerifyFailTxs.BlockHeight
+	block := bp.proposalCache.GetSelfProposedBlockAt(height)
+
+	if block == nil {
+		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
+		txs := make([]*commonpb.Transaction, 0)
+		for _, v := range txsRet {
+			txs = append(txs, v)
+		}
+		bp.txPool.RetryAndRemoveTxs(nil, txs)
+		return
+	}
+
+	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
+	for _, tx := range block.Txs {
+		for _, txId := range rwSetVerifyFailTxs.TxIds {
+			if tx.Payload.TxId == txId {
+				txsMap[txId] = tx
+				removeTxs = append(removeTxs, tx)
+				break
+			}
+		}
+	}
+
+	for _, tx := range block.Txs {
+		if _, ok := txsMap[tx.Payload.TxId]; !ok {
+			retryTxs = append(retryTxs, tx)
+		}
+	}
+
+	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
+	bp.proposalCache.ClearProposedBlockAt(height)
+}
+
 // yieldProposing, to yield proposing handle
 func (bp *BlockProposerImpl) yieldProposing() bool {
 	// signal finish propose only if proposer is not idle
@@ -572,57 +616,6 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFTSync(height uint64, preHash []
 	//	return false, err
 	//}
 	return true, nil
-}
-
-/*
- * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
- */
-func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
-
-	if common.TxPoolType == batch.TxPoolType {
-		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
-		return
-	}
-
-	height := rwSetVerifyFailTxs.BlockHeight
-	block := bp.proposalCache.GetSelfProposedBlockAt(height)
-
-	bp.log.DebugDynamic(func() string {
-		return fmt.Sprintf("remove rw set verify failed txs, block height:%d", height)
-	})
-
-	if block == nil {
-		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
-		txs := make([]*commonpb.Transaction, 0)
-		for _, v := range txsRet {
-			txs = append(txs, v)
-		}
-		bp.txPool.RetryAndRemoveTxs(nil, txs)
-		return
-	}
-
-	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
-	for _, tx := range block.Txs {
-		for _, txId := range rwSetVerifyFailTxs.TxIds {
-			if tx.Payload.TxId == txId {
-				txsMap[txId] = tx
-				removeTxs = append(removeTxs, tx)
-				break
-			}
-		}
-	}
-
-	for _, tx := range block.Txs {
-		if _, ok := txsMap[tx.Payload.TxId]; !ok {
-			retryTxs = append(retryTxs, tx)
-		}
-	}
-
-	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
-	bp.proposalCache.ClearProposedBlockAt(height)
-
 }
 
 func (bp *BlockProposerImpl) getFetchBatchFromPool(

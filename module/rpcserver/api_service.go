@@ -294,7 +294,6 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		resp.TxId = tx.Payload.TxId
 		return resp
 	}
-
 	resp.Code = commonPb.TxStatusCode_SUCCESS
 	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
 	resp.ContractResult = txResult
@@ -325,6 +324,7 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
 		defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
 	}
+
 	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas, s.log)
 	txResult := runtimeInstance.Invoke(&commonPb.Contract{
 		Name: tx.Payload.ContractName,
