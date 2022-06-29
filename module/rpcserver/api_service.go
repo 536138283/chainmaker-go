@@ -13,8 +13,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
@@ -28,7 +26,6 @@ import (
 	"chainmaker.org/chainmaker/store/v2/archive"
 	"chainmaker.org/chainmaker/utils/v2"
 	native "chainmaker.org/chainmaker/vm-native/v2"
-	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/time/rate"
 )
@@ -297,12 +294,6 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		resp.TxId = tx.Payload.TxId
 		return resp
 	}
-
-	if tx.Payload.Method == syscontract.ChainConfigFunction_GET_CHAIN_CONFIG.String() ||
-		tx.Payload.Method == syscontract.ChainConfigFunction_GET_CHAIN_CONFIG_AT.String() {
-		txResult.Result = s.withDefaultResourcePolicy(txResult.Result, chainId)
-	}
-
 	resp.Code = commonPb.TxStatusCode_SUCCESS
 	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
 	resp.ContractResult = txResult
@@ -513,34 +504,4 @@ func (s *ApiService) GetTxsInPoolByTxIds(ctx context.Context,
 		Txs:   txs,
 		TxIds: txIds,
 	}, nil
-}
-
-// withDefaultResourcePolicy - add default resource policy when query
-func (s *ApiService) withDefaultResourcePolicy(result []byte, chainId string) []byte {
-	chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)
-
-	//merge new resourcePolicy with default settings
-	var resourcePolicies []*configPb.ResourcePolicy
-	newPolicies := chainConfig.ChainConfig().GetResourcePolicies()
-	blockchain, err1 := s.chainMakerServer.GetBlockchain(chainId)
-	oldPolicyMap, err2 := blockchain.GetAccessControl().GetAllPolicy()
-	if err1 == nil && err2 == nil {
-		for _, newPolicy := range newPolicies {
-			oldPolicyMap[newPolicy.ResourceName] = newPolicy.Policy
-		}
-		for k, v := range oldPolicyMap {
-			resourcePolicies = append(resourcePolicies, &configPb.ResourcePolicy{
-				ResourceName: k,
-				Policy:       v,
-			})
-		}
-		chaincfg := &configPb.ChainConfig{}
-		if err := proto.Unmarshal(result, chaincfg); err == nil {
-			chaincfg.ResourcePolicies = resourcePolicies
-			if rs, err := proto.Marshal(chaincfg); err == nil {
-				return rs
-			}
-		}
-	}
-	return result
 }
