@@ -18,6 +18,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
@@ -48,6 +52,14 @@ type certACProvider struct {
 
 	//third-party trusted members
 	trustMembers *sync.Map
+
+	store protocol.BlockchainStore
+
+	//consensus type
+	consensusType consensus.ConsensusType
+
+	//GovernanceContract
+	maxbftEpochConfig *maxbft.GovernanceContract
 }
 
 type trustMemberCached struct {
@@ -82,6 +94,14 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsRevoke, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasDelete, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
+	msgBus.Register(msgbus.MaxbftEpochConf, certACProvider)
+
+	certACProvider.consensusType = chainConf.ChainConfig().Consensus.Type
+	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
+		if err := certACProvider.loadMaxBFTEpochConfig(); err != nil {
+			return nil, err
+		}
+	}
 
 	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)   //nolint: staticcheck
@@ -101,6 +121,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 		},
 		localOrg:     nil,
 		trustMembers: &sync.Map{},
+		store:        store,
 	}
 
 	err := certACProvider.initTrustMembers(chainConfig.TrustMembers)
