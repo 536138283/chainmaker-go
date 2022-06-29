@@ -479,6 +479,10 @@ func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
  * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
  */
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
+	if common.TxPoolType == batch.TxPoolType {
+		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
+		return
+	}
 	height := rwSetVerifyFailTxs.BlockHeight
 	block := bp.proposalCache.GetSelfProposedBlockAt(height)
 
