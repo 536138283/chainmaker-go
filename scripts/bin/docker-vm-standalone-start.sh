@@ -105,8 +105,6 @@ fi
 echo "start docker vm container"
 
 docker run -itd --rm \
-  -e ENV_LOG_IN_CONSOLE=false -e ENV_LOG_LEVEL="$LOG_LEVEL" \
-  -e ENV_USER_NUM=10000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
   -v "$MOUNT_PATH":/mount \
   -v "$LOG_PATH":/log \
   -p "$EXPOSE_PORT":22351 \
