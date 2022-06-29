@@ -204,6 +204,9 @@ type accessControlService struct {
 
 	lastestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
 
+	resourceNamePolicyMap220 *sync.Map
+	exceptionalPolicyMap220  *sync.Map
+
 	//local cache for member
 	memberCache *concurrentlru.Cache
 
@@ -225,16 +228,18 @@ type memberCached struct {
 func initAccessControlService(hashType, authType string,
 	store protocol.BlockchainStore, log protocol.Logger) *accessControlService {
 	acService := &accessControlService{
-		orgNum:                0,
-		orgList:               &sync.Map{},
-		resourceNamePolicyMap: &sync.Map{},
-		exceptionalPolicyMap:  &sync.Map{},
-		lastestPolicyMap:      &sync.Map{},
-		memberCache:           concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
-		dataStore:             store,
-		log:                   log,
-		hashType:              hashType,
-		authType:              authType,
+		orgNum:                   0,
+		orgList:                  &sync.Map{},
+		resourceNamePolicyMap:    &sync.Map{},
+		exceptionalPolicyMap:     &sync.Map{},
+		lastestPolicyMap:         &sync.Map{},
+		resourceNamePolicyMap220: &sync.Map{},
+		exceptionalPolicyMap220:  &sync.Map{},
+		memberCache:              concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		dataStore:                store,
+		log:                      log,
+		hashType:                 hashType,
+		authType:                 authType,
 	}
 	return acService
 }
@@ -788,6 +793,13 @@ func (acs *accessControlService) createPrincipalForTargetOrg(resourceName string
 }
 
 func (acs *accessControlService) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+	resourceName = policyResourceName
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpPolicyByResourceName220(resourceName)
+	}
+
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
 		return p.(*policy), nil
 	}
@@ -1111,6 +1123,12 @@ func buildOrgListRoleListOfPolicyForVerifyPrincipal(p *policy) (map[string]bool,
 }
 
 func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpPolicy220(policyResourceName)
+	}
+
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
@@ -1121,6 +1139,12 @@ func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy
 }
 
 func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpExceptionalPolicy220(policyResourceName)
+	}
+
 	if p, ok := acs.exceptionalPolicyMap.Load(resourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 

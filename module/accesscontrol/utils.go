@@ -12,6 +12,7 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"strconv"
 	"strings"
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
@@ -200,4 +201,21 @@ func cryptoEngineOption(cert *bcx509.Certificate) error {
 		return fmt.Errorf("failed to parse public key, err = %s", err.Error())
 	}
 	return nil
+}
+
+// getBlockVersionAndResourceName return blockVersion and resourceName
+func getBlockVersionAndResourceName(resourceNameWithPrefix string) (blockVersion uint32, resourceName string) {
+	blockVersionAndResourceName := strings.Split(resourceNameWithPrefix, ":")
+	if len(blockVersionAndResourceName) == 2 {
+		version, err := strconv.ParseUint(blockVersionAndResourceName[0], 10, 32)
+		if err != nil {
+			blockVersion = 0
+		}
+		blockVersion = uint32(version)
+		resourceName = blockVersionAndResourceName[1]
+	} else if len(blockVersionAndResourceName) == 1 {
+		resourceName = blockVersionAndResourceName[0]
+	}
+
+	return blockVersion, resourceName
 }
