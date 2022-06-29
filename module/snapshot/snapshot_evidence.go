@@ -13,12 +13,18 @@ import (
 
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 type SnapshotEvidence struct {
 	delegate *SnapshotImpl
 	log      protocol.Logger
+}
+
+func (s *SnapshotEvidence) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *SnapshotEvidence) GetPreSnapshot() protocol.Snapshot {
