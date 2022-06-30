@@ -16,35 +16,41 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// KVStoreHelper kv store helper struct
 type KVStoreHelper struct {
 	chainId string
 }
 
+// NewKVStoreHelper new kv store helper
 func NewKVStoreHelper(chainId string) *KVStoreHelper {
 	return &KVStoreHelper{chainId: chainId}
 }
 
-// KVDB do nothing
+// RollBack KVDB do nothing
 func (kv *KVStoreHelper) RollBack(block *commonpb.Block, blockchainStore protocol.BlockchainStore) error {
 	return nil
 }
 
-// KVDB do nothing
+// BeginDbTransaction KVDB do nothing
 func (kv *KVStoreHelper) BeginDbTransaction(blockchainStore protocol.BlockchainStore, txKey string) {
 }
 
+// GetPoolCapacity get pool capacity
 func (kv *KVStoreHelper) GetPoolCapacity() int {
 	return runtime.NumCPU() * 4
 }
 
+// SQLStoreHelper sql store helper stuct
 type SQLStoreHelper struct {
 	chainId string
 }
 
+// NewSQLStoreHelper new sql store helper
 func NewSQLStoreHelper(chainId string) *SQLStoreHelper {
 	return &SQLStoreHelper{chainId: chainId}
 }
 
+// RollBack db transaction roll back func
 func (sql *SQLStoreHelper) RollBack(block *commonpb.Block, blockchainStore protocol.BlockchainStore) error {
 	txKey := block.GetTxKey()
 	err := blockchainStore.RollbackDbTransaction(txKey)
@@ -71,11 +77,13 @@ func (sql *SQLStoreHelper) RollBack(block *commonpb.Block, blockchainStore proto
 	return nil
 }
 
+// BeginDbTransaction begin db transaction
 func (sql *SQLStoreHelper) BeginDbTransaction(blockchainStore protocol.BlockchainStore, txKey string) {
 	// TODO: handle error
 	blockchainStore.BeginDbTransaction(txKey) //nolint: errcheck
 }
 
+// GetPoolCapacity get pool capacity
 func (sql *SQLStoreHelper) GetPoolCapacity() int {
 	return 1
 }

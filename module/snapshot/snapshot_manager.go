@@ -13,12 +13,14 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// ManagerImpl manager implement
 type ManagerImpl struct {
 	snapshots map[utils.BlockFingerPrint]*SnapshotImpl
 	delegate  *ManagerDelegate
 	log       protocol.Logger
 }
 
+// storeAndLinkSnapshotImpl store and link snapshot implement
 func (m *ManagerImpl) storeAndLinkSnapshotImpl(snapshotImpl *SnapshotImpl,
 	prevFingerPrint *utils.BlockFingerPrint, fingerPrint *utils.BlockFingerPrint) {
 	// 存储当前指纹的snapshot
@@ -30,7 +32,7 @@ func (m *ManagerImpl) storeAndLinkSnapshotImpl(snapshotImpl *SnapshotImpl,
 	}
 }
 
-// When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
+// NewSnapshot When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
 func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
@@ -52,6 +54,7 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 	return snapshotImpl
 }
 
+// NotifyBlockCommitted notify to block committed
 func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
@@ -102,6 +105,7 @@ func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 	return nil
 }
 
+// calcNotConsensusFingerPrint calc not consensus fingerprint
 func calcNotConsensusFingerPrint(block *commonPb.Block) utils.BlockFingerPrint {
 	if block == nil {
 		return ""

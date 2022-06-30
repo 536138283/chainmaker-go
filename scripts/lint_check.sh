@@ -31,10 +31,10 @@ else
    lint_check "module/accesscontrol" 5
    lint_check "module/blockchain" 15
   lint_check "module/consensus" 15
-#  lint_check "module/core" 15
+  lint_check "module/core" 15
   lint_check "module/net" 12
   lint_check "module/rpcserver" 4
-#  lint_check "module/snapshot" 15
+  lint_check "module/snapshot" 15
 #  lint_check "module/sync" 15
   lint_check "module/txfilter" 15
   lint_check "module/subscriber" 10

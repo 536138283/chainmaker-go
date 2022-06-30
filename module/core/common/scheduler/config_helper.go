@@ -2,6 +2,7 @@ package scheduler
 
 import "chainmaker.org/chainmaker/protocol/v2"
 
+// IsOptimizeChargeGasEnabled is optimized charge gas enable
 func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
 	enableGas := false
 	enableOptimizeChargeGas := false

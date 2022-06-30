@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// TxSchedulerFactory tx scheduler factory
 type TxSchedulerFactory struct {
 }
 

@@ -28,39 +28,57 @@ type sv struct {
 	value []byte
 }
 
+// SnapshotImpl snapshot implement
 type SnapshotImpl struct {
-	lock            sync.RWMutex
+	// lock used by snapshot implement
+	lock sync.RWMutex
+	// blockchain store used by snapshot implement
 	blockchainStore protocol.BlockchainStore
-	log             protocol.Logger
+	// logger used by snapshot implement
+	log protocol.Logger
 	// If the snapshot has been sealed, the results of subsequent vm execution will not be added to the snapshot
 	sealed *atomic.Bool
-
-	chainId        string
+	// chain id
+	chainId string
+	// block timestamp
 	blockTimestamp int64
-	blockProposer  *accesscontrol.Member
-	blockHeight    uint64
-	blockVersion   uint32
-	preBlockHash   []byte
-
+	// block proposer
+	blockProposer *accesscontrol.Member
+	// block height
+	blockHeight uint64
+	// block version
+	blockVersion uint32
+	// pre block hash
+	preBlockHash []byte
+	// prepare snapshot
 	preSnapshot protocol.Snapshot
 
 	// applied data, please lock it before using
-	txRWSetTable   []*commonPb.TxRWSet
-	txTable        []*commonPb.Transaction
+	txRWSetTable []*commonPb.TxRWSet
+	// transaction list named tx table
+	txTable []*commonPb.Transaction
+	// transaction list named special tx table
 	specialTxTable []*commonPb.Transaction
-	txResultMap    map[string]*commonPb.Result
-	readTable      map[string]*sv
-	writeTable     map[string]*sv
-
-	txRoot    []byte
-	dagHash   []byte
+	// tx result map
+	txResultMap map[string]*commonPb.Result
+	// read table used by snapshot implement
+	readTable map[string]*sv
+	// write table used by snapshot implement
+	writeTable map[string]*sv
+	// snapshot tx root
+	txRoot []byte
+	// dag hash
+	dagHash []byte
+	// rw set hash
 	rwSetHash []byte
 }
 
+// GetPreSnapshot get prepare snapshot
 func (s *SnapshotImpl) GetPreSnapshot() protocol.Snapshot {
 	return s.preSnapshot
 }
 
+// SetPreSnapshot set prepare snapshot
 func (s *SnapshotImpl) SetPreSnapshot(snapshot protocol.Snapshot) {
 	s.preSnapshot = snapshot
 }
@@ -98,6 +116,7 @@ func (s *SnapshotImpl) GetTxRWSetTable() []*commonPb.TxRWSet {
 		s.log.DebugDynamic(func() string {
 
 			info := "rwset: "
+			// range tx rw set table to make rw set info
 			for i, txRWSet := range s.txRWSetTable {
 				info += fmt.Sprintf("read set for tx id:[%s], count [%d]<", s.txTable[i].Payload.TxId, len(txRWSet.TxReads))
 				//for _, txRead := range txRWSet.TxReads {
@@ -140,6 +159,8 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 	if txExecSeq > snapshotSize || txExecSeq < 0 {
 		txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
 	}
+
+	// construct key by contract name with key
 	finalKey := constructKey(contractName, key)
 	if sv, ok := s.writeTable[finalKey]; ok {
 		return sv.value, nil
@@ -404,6 +425,7 @@ func (s *SnapshotImpl) buildReachMap(i uint32, txRWSet *commonPb.TxRWSet, readKe
 	return directReachForI
 }
 
+// constructKey construct key
 func constructKey(contractName string, key []byte) string {
 	var builder strings.Builder
 	builder.WriteString(contractName)

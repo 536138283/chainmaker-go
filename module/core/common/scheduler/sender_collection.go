@@ -15,6 +15,7 @@ type SenderCollection struct {
 	txsMap map[string]*TxCollection
 }
 
+// TxCollection tx collection struct
 type TxCollection struct {
 	// public key to generate address
 	publicKey crypto.PublicKey
@@ -32,6 +33,7 @@ func (g *TxCollection) String() string {
 		pubKeyStr, g.accountBalance, g.totalGasUsed, len(g.txs))
 }
 
+// NewSenderCollection new sender collection
 func NewSenderCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
@@ -102,6 +104,7 @@ func getSenderTxCollection(
 	return txCollectionMap
 }
 
+// Clear clear addr in txs map
 func (s SenderCollection) Clear() {
 	for addr := range s.txsMap {
 		delete(s.txsMap, addr)
