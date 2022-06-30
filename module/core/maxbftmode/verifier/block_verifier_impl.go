@@ -476,7 +476,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 		txMap[tx.Payload.TxId] = struct{}{}
 	}
 	for _, blockToCut := range blocksToCut {
-		v.log.Infof("cut block block hash: %s, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
+		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
 		for _, txToCut := range blockToCut.Txs {
 			if _, ok := txMap[txToCut.Payload.TxId]; ok {
 				// this transaction is kept, do NOT cut it.
@@ -521,7 +521,7 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 		cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
 		if len(cutBlocks) > 0 {
 			v.log.Infof(
-				"cut block block hash: %s, height: %v",
+				"received block hash: %s, height: %v",
 				hex.EncodeToString(lastBlock.Header.BlockHash),
 				lastBlock.Header.BlockHeight,
 			)
