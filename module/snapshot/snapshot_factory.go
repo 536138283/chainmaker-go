@@ -14,9 +14,11 @@ import (
 
 //var log = logger.GetLogger(logger.MODULE_SNAPSHOT)
 
+// Factory snapshot factory
 type Factory struct {
 }
 
+// NewSnapshotManager new snapshot manager
 func (f *Factory) NewSnapshotManager(blockchainStore protocol.BlockchainStore,
 	log protocol.Logger) protocol.SnapshotManager {
 	log.Debugf("use the common Snapshot.")
@@ -30,6 +32,7 @@ func (f *Factory) NewSnapshotManager(blockchainStore protocol.BlockchainStore,
 	}
 }
 
+// NewSnapshotEvidenceMgr new snapshot evidence manager
 func (f *Factory) NewSnapshotEvidenceMgr(blockchainStore protocol.BlockchainStore,
 	log protocol.Logger) protocol.SnapshotManager {
 	log.Debugf("use the evidence Snapshot.")

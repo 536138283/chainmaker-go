@@ -13,13 +13,14 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// ManagerEvidence manager evidence
 type ManagerEvidence struct {
 	delegate  *ManagerDelegate
 	snapshots map[utils.BlockFingerPrint]*SnapshotEvidence
 	log       protocol.Logger
 }
 
-// When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
+// NewSnapshot When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
 func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
@@ -51,6 +52,7 @@ func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb
 	return evidenceSnapshot
 }
 
+// NotifyBlockCommitted notify to block committed
 func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()

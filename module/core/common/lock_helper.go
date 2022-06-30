@@ -8,14 +8,16 @@ package common
 
 import "sync"
 
-const LOCKED = "LOCKED" // LOCKED mark
+// LOCKED mark
+const LOCKED = "LOCKED"
 
-// reentrantLocks, avoid the same block hash
+// ReentrantLocks avoid the same block hash
 type ReentrantLocks struct {
 	ReentrantLocks map[string]interface{}
 	Mu             sync.Mutex
 }
 
+// Lock used by ReentrantLocks
 func (l *ReentrantLocks) Lock(key string) bool {
 	l.Mu.Lock()
 	defer l.Mu.Unlock()
@@ -26,6 +28,7 @@ func (l *ReentrantLocks) Lock(key string) bool {
 	return false
 }
 
+// Unlock used by ReentrantLocks
 func (l *ReentrantLocks) Unlock(key string) bool {
 	l.Mu.Lock()
 	defer l.Mu.Unlock()

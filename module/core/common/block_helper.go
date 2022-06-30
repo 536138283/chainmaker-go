@@ -32,51 +32,80 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var (
-	//proposeRepeatTimer *time.Timer //timer controls the propose repeat interval
-	//ProposeRepeatTimerMap = make(map[string]*time.Timer)
+// ProposeRepeatTimerMap proposer repeat timer map
+var ProposeRepeatTimerMap sync.Map
 
-	ProposeRepeatTimerMap sync.Map
-)
+//proposeRepeatTimer *time.Timer //timer controls the propose repeat interval
+//ProposeRepeatTimerMap = make(map[string]*time.Timer)
 
 const (
-	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
-	//blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
-	BlockSig            = "blockSig"
-	VM                  = "vm"
-	DagVerify           = "dag"
-	TxVerify            = "txVerify"
-	TxRoot              = "txRoot"
-	QuickSyncVerifyMode = uint8(1) // quick sync verify mode
-	NormalVerifyMode    = uint8(0) // normal verify mode
+	// DEFAULTDURATION default proposal duration, millis seconds
+	DEFAULTDURATION = 1000
+	// BlockSig block sig
+	BlockSig = "blockSig"
+	// VM vm
+	VM = "vm"
+	// DagVerify dag verify
+	DagVerify = "dag"
+	// TxVerify tx verify
+	TxVerify = "txVerify"
+	// TxRoot tx root
+	TxRoot = "txRoot"
+	// QuickSyncVerifyMode quick sync verify mode
+	QuickSyncVerifyMode = uint8(1)
+	// NormalVerifyMode normal verify mode
+	NormalVerifyMode = uint8(0)
 )
 
+// BlockBuilderConf block builder config
 type BlockBuilderConf struct {
-	ChainId         string                   // chain id, to identity this chain
-	TxPool          protocol.TxPool          // tx pool provides tx batch
-	TxScheduler     protocol.TxScheduler     // scheduler orders tx batch into DAG form and returns a block
-	SnapshotManager protocol.SnapshotManager // snapshot manager
-	Identity        protocol.SigningMember   // identity manager
-	LedgerCache     protocol.LedgerCache     // ledger cache
-	ProposalCache   protocol.ProposalCache
-	ChainConf       protocol.ChainConf // chain config
-	Log             protocol.Logger
-	StoreHelper     conf.StoreHelper
+	// chain id, to identity this chain
+	ChainId string
+	// tx pool provides tx batch
+	TxPool protocol.TxPool
+	// scheduler orders tx batch into DAG form and returns a block
+	TxScheduler protocol.TxScheduler
+	// snapshot manager
+	SnapshotManager protocol.SnapshotManager
+	// identity manager
+	Identity protocol.SigningMember
+	// ledger cache
+	LedgerCache protocol.LedgerCache
+	// proposer cache
+	ProposalCache protocol.ProposalCache
+	// chain config
+	ChainConf protocol.ChainConf
+	// logger user by BlockBuilderConf
+	Log protocol.Logger
+	// store helper user by BlockBuilderConf
+	StoreHelper conf.StoreHelper
 }
 
+// BlockBuilder block builder
 type BlockBuilder struct {
-	chainId         string                   // chain id, to identity this chain
-	txPool          protocol.TxPool          // tx pool provides tx batch
-	txScheduler     protocol.TxScheduler     // scheduler orders tx batch into DAG form and returns a block
-	snapshotManager protocol.SnapshotManager // snapshot manager
-	identity        protocol.SigningMember   // identity manager
-	ledgerCache     protocol.LedgerCache     // ledger cache
-	proposalCache   protocol.ProposalCache
-	chainConf       protocol.ChainConf // chain config
-	log             protocol.Logger
-	storeHelper     conf.StoreHelper
+	// chain id, to identity this chain
+	chainId string
+	// tx pool provides tx batch
+	txPool protocol.TxPool
+	// scheduler orders tx batch into DAG form and returns a block
+	txScheduler protocol.TxScheduler
+	// snapshot manager
+	snapshotManager protocol.SnapshotManager
+	// identity manager
+	identity protocol.SigningMember
+	// ledger cache
+	ledgerCache protocol.LedgerCache
+	// propose cache
+	proposalCache protocol.ProposalCache
+	// chain config
+	chainConf protocol.ChainConf
+	// logger used by BlockBuilder
+	log protocol.Logger
+	// store used by BlockBuilder
+	storeHelper conf.StoreHelper
 }
 
+// NewBlockBuilder new block builder
 func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 	creatorBlock := &BlockBuilder{
 		chainId:         conf.ChainId,
@@ -94,6 +123,7 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 	return creatorBlock
 }
 
+// GenerateNewBlock generate new block, return block, timeList used by all steps, or error
 func (bb *BlockBuilder) GenerateNewBlock(
 	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction,
 	batchIds []string, fetchBatches [][]*commonPb.Transaction) (
@@ -140,9 +170,11 @@ func (bb *BlockBuilder) GenerateNewBlock(
 
 	vmStartTick := utils.CurrentTimeMillisSeconds()
 	txRWSetMap, contractEventMap, err := bb.txScheduler.Schedule(block, validatedTxs, snapshot)
-
+	// calc schedule use time
 	ssLasts := beginDbTick - ssStartTick
+	// calc db use time
 	dbLasts := vmStartTick - beginDbTick
+	// calc vm use time
 	vmLasts := utils.CurrentTimeMillisSeconds() - vmStartTick
 	timeLasts = append(timeLasts, dbLasts, ssLasts, vmLasts)
 
@@ -165,6 +197,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 		aclFailTxs,
 		bb.chainConf.ChainConfig().Crypto.Hash,
 		bb.log)
+	// calc finalize use ime
 	finalizeLasts := utils.CurrentTimeMillisSeconds() - finalizeStartTick
 	if err != nil {
 		return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
@@ -185,6 +218,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 			// retry the timeout 's tx and get the new batchIds
 			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
 		} else {
+			// retry txs timeout in tx pool
 			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
 	}
@@ -205,11 +239,13 @@ func (bb *BlockBuilder) GenerateNewBlock(
 	if err = bb.proposalCache.SetProposedBlock(block, txRWSetMap, contractEventMap, true); err != nil {
 		return block, timeLasts, err
 	}
+	// set propose cache at block height
 	bb.proposalCache.SetProposedAt(block.Header.BlockHeight)
 
 	return block, timeLasts, nil
 }
 
+// findLastBlockFromCache find last block from propose cache
 func (bb *BlockBuilder) findLastBlockFromCache(proposingHeight uint64, preHash []byte,
 	currentHeight uint64) *commonPb.Block {
 	var lastBlock *commonPb.Block
@@ -221,6 +257,7 @@ func (bb *BlockBuilder) findLastBlockFromCache(proposingHeight uint64, preHash [
 	return lastBlock
 }
 
+// initNewBlock init new block
 func initNewBlock(
 	lastBlock *commonPb.Block,
 	identity protocol.SigningMember,
@@ -237,7 +274,9 @@ func initNewBlock(
 		preConfHeight = lastBlock.Header.BlockHeight
 	}
 
+	// construct block
 	block := &commonPb.Block{
+		// construct block header
 		Header: &commonPb.BlockHeader{
 			ChainId:        chainId,
 			BlockHeight:    lastBlock.Header.BlockHeight + 1,
@@ -266,6 +305,7 @@ func initNewBlock(
 	return block, nil
 }
 
+// FinalizeBlock finalize block
 func FinalizeBlock(
 	block *commonPb.Block,
 	txRWSetMap map[string]*commonPb.TxRWSet,
@@ -312,10 +352,12 @@ func FinalizeBlock(
 		return errs[0]
 	}
 	wg.Add(3)
+	// use 3 goroutines, do GetMerkleRoot, CalcRWSetRoot, CalcDagHash func
 	//calc tx root
 	go func() {
 		defer wg.Done()
 		var err error
+		// get merkle root
 		block.Header.TxRoot, err = hash.GetMerkleRoot(hashType, txHashes)
 		if err != nil {
 			logger.Warnf("get tx merkle root error %s", err)
@@ -329,6 +371,7 @@ func FinalizeBlock(
 	go func() {
 		defer wg.Done()
 		var err error
+		// calc rw set root
 		block.Header.RwSetRoot, err = utils.CalcRWSetRoot(hashType, block.Txs)
 		if err != nil {
 			logger.Warnf("get rwset merkle root error %s", err)
@@ -341,6 +384,7 @@ func FinalizeBlock(
 		// DagDigest
 		var dagHash []byte
 		var err error
+		// calc dag hash
 		dagHash, err = utils.CalcDagHash(hashType, block.Dag)
 		if err != nil {
 			logger.Warnf("get dag hash error %s", err)
@@ -355,6 +399,7 @@ func FinalizeBlock(
 	return nil
 }
 
+// getTxHash get tx hash
 func getTxHash(tx *commonPb.Transaction,
 	rwSet *commonPb.TxRWSet,
 	hashType string,
@@ -390,7 +435,7 @@ func getTxHash(tx *commonPb.Transaction,
 	return txHash, nil
 }
 
-// IsTxCountValid, to check if txcount in block is valid
+// IsTxCountValid to check if txcount in block is valid
 func IsTxCountValid(block *commonPb.Block) error {
 	if block.Header.TxCount != uint32(len(block.Txs)) {
 		return fmt.Errorf("txcount expect %d, got %d", block.Header.TxCount, len(block.Txs))
@@ -398,7 +443,7 @@ func IsTxCountValid(block *commonPb.Block) error {
 	return nil
 }
 
-// IsHeightValid, to check if block height is valid
+// IsHeightValid to check if block height is valid
 func IsHeightValid(block *commonPb.Block, currentHeight uint64) error {
 	if currentHeight+1 != block.Header.BlockHeight {
 		return fmt.Errorf("height expect %d, got %d", currentHeight+1, block.Header.BlockHeight)
@@ -406,7 +451,7 @@ func IsHeightValid(block *commonPb.Block, currentHeight uint64) error {
 	return nil
 }
 
-// IsPreHashValid, to check if block.preHash equals with last block hash
+// IsPreHashValid to check if block.preHash equals with last block hash
 func IsPreHashValid(block *commonPb.Block, preHash []byte) error {
 	if !bytes.Equal(preHash, block.Header.PreBlockHash) {
 		return fmt.Errorf("prehash expect %x, got %x", preHash, block.Header.PreBlockHash)
@@ -414,7 +459,7 @@ func IsPreHashValid(block *commonPb.Block, preHash []byte) error {
 	return nil
 }
 
-// IsBlockHashValid, to check if block hash equals with result calculated from block
+// IsBlockHashValid to check if block hash equals with result calculated from block
 func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 	hash, err := utils.CalcBlockHash(hashType, block)
 	if err != nil {
@@ -426,7 +471,7 @@ func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 	return nil
 }
 
-// IsTxDuplicate, to check if there is duplicated transactions in one block
+// IsTxDuplicate to check if there is duplicated transactions in one block
 func IsTxDuplicate(txs []*commonPb.Transaction) bool {
 	txSet := make(map[string]struct{})
 	exist := struct{}{}
@@ -440,7 +485,7 @@ func IsTxDuplicate(txs []*commonPb.Transaction) bool {
 	return len(txSet) < len(txs)
 }
 
-// IsMerkleRootValid, to check if block merkle root equals with simulated merkle root
+// IsMerkleRootValid to check if block merkle root equals with simulated merkle root
 func IsMerkleRootValid(block *commonPb.Block, txHashes [][]byte, hashType string) error {
 	txRoot, err := hash.GetMerkleRoot(hashType, txHashes)
 	if err != nil || !bytes.Equal(txRoot, block.Header.TxRoot) {
@@ -450,7 +495,7 @@ func IsMerkleRootValid(block *commonPb.Block, txHashes [][]byte, hashType string
 	return nil
 }
 
-// IsDagHashValid, to check if block dag equals with simulated block dag
+// IsDagHashValid to check if block dag equals with simulated block dag
 func IsDagHashValid(block *commonPb.Block, hashType string) error {
 	dagHash, err := utils.CalcDagHash(hashType, block.Dag)
 	if err != nil || !bytes.Equal(dagHash, block.Header.DagHash) {
@@ -459,7 +504,7 @@ func IsDagHashValid(block *commonPb.Block, hashType string) error {
 	return nil
 }
 
-// IsRWSetHashValid, to check if read write set is valid
+// IsRWSetHashValid to check if read write set is valid
 func IsRWSetHashValid(block *commonPb.Block, hashType string) error {
 	rwSetRoot, err := utils.CalcRWSetRoot(hashType, block.Txs)
 	if err != nil {
@@ -481,6 +526,7 @@ func IsRWSetHashValid(block *commonPb.Block, hashType string) error {
 //	return []byte(chainConf.ChainConfig().Version)
 //}
 
+// VerifyHeight verify height
 func VerifyHeight(height uint64, ledgerCache protocol.LedgerCache) error {
 	currentHeight, err := ledgerCache.CurrentHeight()
 	if err != nil {
@@ -492,6 +538,7 @@ func VerifyHeight(height uint64, ledgerCache protocol.LedgerCache) error {
 	return nil
 }
 
+// CheckBlockDigests check block dig
 func CheckBlockDigests(block *commonPb.Block, txHashes [][]byte, hashType string, log protocol.Logger) error {
 	if err := IsMerkleRootValid(block, txHashes, hashType); err != nil {
 		log.Error(err)
@@ -510,6 +557,7 @@ func CheckBlockDigests(block *commonPb.Block, txHashes [][]byte, hashType string
 	return nil
 }
 
+// CheckVacuumBlock check vacuum block
 func CheckVacuumBlock(block *commonPb.Block, consensusType consensus.ConsensusType) error {
 	if block.Header.TxCount == 0 {
 		if utils.CanProposeEmptyBlock(consensusType) {
@@ -523,37 +571,65 @@ func CheckVacuumBlock(block *commonPb.Block, consensusType consensus.ConsensusTy
 	return nil
 }
 
+// VerifierBlockConf verifier block config
 type VerifierBlockConf struct {
-	ChainConf       protocol.ChainConf
-	Log             protocol.Logger
-	LedgerCache     protocol.LedgerCache
-	Ac              protocol.AccessControlProvider
+	// chain config
+	ChainConf protocol.ChainConf
+	// log
+	Log protocol.Logger
+	// ledger cache
+	LedgerCache protocol.LedgerCache
+	// access control provider
+	Ac protocol.AccessControlProvider
+	// snapshot manager
 	SnapshotManager protocol.SnapshotManager
-	VmMgr           protocol.VmManager
-	TxPool          protocol.TxPool
+	// vm manager
+	VmMgr protocol.VmManager
+	// tx pool
+	TxPool protocol.TxPool
+	// blockchain store
 	BlockchainStore protocol.BlockchainStore
-	ProposalCache   protocol.ProposalCache // proposal cache
-	StoreHelper     conf.StoreHelper
-	TxScheduler     protocol.TxScheduler
-	TxFilter        protocol.TxFilter
+	// proposal cache
+	ProposalCache protocol.ProposalCache
+	// store helper
+	StoreHelper conf.StoreHelper
+	// tx scheduler
+	TxScheduler protocol.TxScheduler
+	// tx filter
+	TxFilter protocol.TxFilter
 }
 
+// VerifierBlock verifier block
 type VerifierBlock struct {
-	chainConf       protocol.ChainConf
-	log             protocol.Logger
-	ledgerCache     protocol.LedgerCache
-	ac              protocol.AccessControlProvider
+	// chain config
+	chainConf protocol.ChainConf
+	// log
+	log protocol.Logger
+	// ledger cache
+	ledgerCache protocol.LedgerCache
+	// access control provider
+	ac protocol.AccessControlProvider
+	// snapshot manager
 	snapshotManager protocol.SnapshotManager
-	vmMgr           protocol.VmManager
-	txScheduler     protocol.TxScheduler
-	txPool          protocol.TxPool
+	// vm manager
+	vmMgr protocol.VmManager
+	// tx scheduler
+	txScheduler protocol.TxScheduler
+	// tx pool
+	txPool protocol.TxPool
+	// blockchain store
 	blockchainStore protocol.BlockchainStore
-	proposalCache   protocol.ProposalCache // proposal cache
-	storeHelper     conf.StoreHelper
-	txFilter        protocol.TxFilter
+	// proposal cache
+	proposalCache protocol.ProposalCache
+	// store helper
+	storeHelper conf.StoreHelper
+	// tx filter
+	txFilter protocol.TxFilter
 }
 
+// NewVerifierBlock new verifier block
 func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
+	// construct verifier block
 	verifyBlock := &VerifierBlock{
 		chainConf:       conf.ChainConf,
 		log:             conf.Log,
@@ -569,6 +645,7 @@ func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
 		txFilter:        conf.TxFilter,
 	}
 	var schedulerFactory scheduler.TxSchedulerFactory
+	// set verifyBlock txScheduler by NewTxScheduler func
 	verifyBlock.txScheduler = schedulerFactory.NewTxScheduler(
 		verifyBlock.vmMgr,
 		verifyBlock.chainConf,
@@ -579,10 +656,11 @@ func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
 
 // SetTxScheduler sets the txScheduler of VerifierBlock
 // only used for test
-func (v *VerifierBlock) SetTxScheduler(txScheduler protocol.TxScheduler) {
-	v.txScheduler = txScheduler
+func (vb *VerifierBlock) SetTxScheduler(txScheduler protocol.TxScheduler) {
+	vb.txScheduler = txScheduler
 }
 
+// FetchLastBlock fetch last block
 func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block, error) { //nolint: staticcheck
 	currentHeight, _ := vb.ledgerCache.CurrentHeight()
 	if currentHeight >= block.Header.BlockHeight {
@@ -602,7 +680,7 @@ func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block,
 	return lastBlock, nil
 }
 
-// validateBlock, validate block and transactions
+// ValidateBlock validate block and transactions
 func (vb *VerifierBlock) ValidateBlock(
 	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64, mode protocol.VerifyMode) (
 	map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
@@ -720,7 +798,7 @@ func (vb *VerifierBlock) ValidateBlock(
 	return txRWSetMap, contractEventMap, timeLasts, nil, nil
 }
 
-// validateBlock, validate block and transactions
+// ValidateBlockWithRWSets validate block and transactions
 func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64,
 	txRWSetMap map[string]*commonPb.TxRWSet, mode protocol.VerifyMode) (
@@ -774,6 +852,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	//	return nil, nil, timeLasts, fmt.Errorf("simulate %s", err)
 	//}
 
+	// calc vm use time
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts[VM] = vmLasts
 
@@ -835,13 +914,14 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	if err != nil {
 		return contractEventMap, timeLasts, nil, err
 	}
+	// calc root use time
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts[TxRoot] = rootsLast
 
 	return contractEventMap, timeLasts, nil, nil
 }
 
-//nolint: staticcheck
+// CheckPreBlock check prepare block nolint: staticcheck
 func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
 	err error, lastBlockHash []byte, proposedHeight uint64) error {
 
@@ -852,6 +932,7 @@ func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
 	return IsPreHashValid(block, lastBlockHash)
 }
 
+// CompareDag compare dag
 func (vb *VerifierBlock) CompareDag(block *commonPb.Block,
 	snapshot protocol.Snapshot, txRWSetMap map[string]*commonPb.TxRWSet) error {
 	txRWSetTable := make([]*commonPb.TxRWSet, len(block.Txs))
@@ -879,47 +960,81 @@ func (vb *VerifierBlock) CompareDag(block *commonPb.Block,
 type BlockCommitterImpl struct {
 	chainId string // chain id, to identity this chain
 	// Store is a block store that will only fetch data locally
-	blockchainStore protocol.BlockchainStore // blockchain store
-	snapshotManager protocol.SnapshotManager // snapshot manager
-	txPool          protocol.TxPool          // transaction pool
-	chainConf       protocol.ChainConf       // chain config
-
-	ledgerCache             protocol.LedgerCache        // ledger cache
-	proposalCache           protocol.ProposalCache      // proposal cache
-	log                     protocol.Logger             // logger
-	msgBus                  msgbus.MessageBus           // message bus
-	mu                      sync.Mutex                  // lock, to avoid concurrent block commit
-	subscriber              *subscriber.EventSubscriber // subscriber
-	verifier                protocol.BlockVerifier      // block verifier
-	commonCommit            *CommitBlock
-	metricBlockSize         *prometheus.HistogramVec // metric block size
-	metricBlockHeight       *prometheus.GaugeVec     // metric block height
-	metricTxCounter         *prometheus.CounterVec   // metric transaction counter
-	metricBlockCommitTime   *prometheus.HistogramVec // metric block commit time
-	metricBlockIntervalTime *prometheus.HistogramVec // metric block interval time
-	metricTpsGauge          *prometheus.GaugeVec     // metric real-time transaction per second (TPS)
-	storeHelper             conf.StoreHelper
-	blockInterval           int64
-
-	mTxCount     uint64 // store tx total count for persistent
-	mBlockHeight uint64 // store latest block height for persistent
+	// blockchain store
+	blockchainStore protocol.BlockchainStore
+	// snapshot manager
+	snapshotManager protocol.SnapshotManager
+	// transaction pool
+	txPool protocol.TxPool
+	// chain config
+	chainConf protocol.ChainConf
+	// ledger cache
+	ledgerCache protocol.LedgerCache
+	// proposal cache
+	proposalCache protocol.ProposalCache
+	// logger
+	log protocol.Logger
+	// message bus
+	msgBus msgbus.MessageBus
+	// lock, to avoid concurrent block commit
+	mu sync.Mutex
+	// subscriber
+	subscriber *subscriber.EventSubscriber
+	// block verifier
+	verifier protocol.BlockVerifier
+	// common commit
+	commonCommit *CommitBlock
+	// metric block size
+	metricBlockSize *prometheus.HistogramVec
+	// metric block height
+	metricBlockHeight *prometheus.GaugeVec
+	// metric transaction counter
+	metricTxCounter *prometheus.CounterVec
+	// metric block commit time
+	metricBlockCommitTime *prometheus.HistogramVec
+	// metric block interval time
+	metricBlockIntervalTime *prometheus.HistogramVec
+	// metric real-time transaction per second (TPS)
+	metricTpsGauge *prometheus.GaugeVec
+	// store helper
+	storeHelper conf.StoreHelper
+	// block interval
+	blockInterval int64
+	// store tx total count for persistent
+	mTxCount uint64
+	// store latest block height for persistent
+	mBlockHeight uint64
 }
 
+// BlockCommitterConfig block committer config
 type BlockCommitterConfig struct {
-	ChainId         string
+	// chain id
+	ChainId string
+	// blockchain store
 	BlockchainStore protocol.BlockchainStore
+	// snapshot manager
 	SnapshotManager protocol.SnapshotManager
-	TxPool          protocol.TxPool
-	LedgerCache     protocol.LedgerCache
-	ProposedCache   protocol.ProposalCache
-	ChainConf       protocol.ChainConf
-	MsgBus          msgbus.MessageBus
-	Subscriber      *subscriber.EventSubscriber
-	Verifier        protocol.BlockVerifier
-	StoreHelper     conf.StoreHelper
-	TxFilter        protocol.TxFilter
+	// tx pool
+	TxPool protocol.TxPool
+	// ledger cache
+	LedgerCache protocol.LedgerCache
+	// proposed cache
+	ProposedCache protocol.ProposalCache
+	// chain config
+	ChainConf protocol.ChainConf
+	// message bus
+	MsgBus msgbus.MessageBus
+	// event subscriber
+	Subscriber *subscriber.EventSubscriber
+	// block verifier
+	Verifier protocol.BlockVerifier
+	// store helper
+	StoreHelper conf.StoreHelper
+	// tx filter
+	TxFilter protocol.TxFilter
 }
 
+// NewBlockCommitter new block committer
 func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protocol.BlockCommitter, error) {
 	blockchain := &BlockCommitterImpl{
 		chainId:         config.ChainId,
@@ -945,6 +1060,7 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 		},
 	}
 
+	// if local monitor config enable is ture, the blockchain init metrics
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		blockchain.initMetrics()
 	}
@@ -952,6 +1068,7 @@ func NewBlockCommitter(config BlockCommitterConfig, log protocol.Logger) (protoc
 	return blockchain, nil
 }
 
+// isBlockLegal check block legal
 func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 	lastBlock := chain.ledgerCache.GetLastCommittedBlock()
 	if lastBlock == nil {
@@ -982,6 +1099,7 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 	return nil
 }
 
+// AddBlock add block
 func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
 		panicErr := recover()
@@ -1078,6 +1196,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	return nil
 }
 
+// syncWithTxPool sync with tx pool
 func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) (
 	[]*commonPb.Transaction, []string) {
 	proposedBlocks := chain.proposalCache.GetProposedBlocksAt(height)
@@ -1123,7 +1242,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	return txRetry, batchRetry
 }
 
-//nolint: ineffassign, staticcheck
+// checkLastProposedBlock check last propose block nolint: ineffassign, staticcheck
 func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 	*commonPb.Block, map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, error) {
 	err := chain.verifier.VerifyBlock(block, protocol.SYNC_VERIFY)
@@ -1142,6 +1261,7 @@ func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 	return lastProposed, rwSetMap, conEventMap, nil
 }
 
+// IfOpenConsensusMessageTurbo check the consensus message turbo status
 func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {
 	consensusTurboConfig := chainConf.ChainConfig().Core.ConsensusTurboConfig
 	if consensusTurboConfig != nil &&
@@ -1152,6 +1272,7 @@ func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {
 	return false
 }
 
+// GetProposerId get proposer id
 func GetProposerId(
 	ac protocol.AccessControlProvider,
 	netService protocol.NetService,
@@ -1171,6 +1292,7 @@ func GetProposerId(
 	return proposerId, nil
 }
 
+// GetTurboBlock get turbo block
 func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
 	turboBlock.Header = block.Header
 	turboBlock.Dag = block.Dag
@@ -1201,6 +1323,7 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 	return turboBlock
 }
 
+// RecoverBlock recover block
 func RecoverBlock(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,
@@ -1217,6 +1340,7 @@ func RecoverBlock(
 	return recoverBlock(block, mode, chainConf, txPool, ac, netService, logger)
 }
 
+// recoverBlockByBatch recover block by batch
 func recoverBlockByBatch(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,
@@ -1284,6 +1408,7 @@ func recoverBlockByBatch(
 	}, batchIds, nil
 }
 
+// recoverBlock recover block
 func recoverBlock(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,
@@ -1337,6 +1462,7 @@ func recoverBlock(
 
 }
 
+// SerializeTxBatchInfo serialize tx batch info
 func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
 	fetchBatches [][]*commonPb.Transaction, logger protocol.Logger) ([]byte, error) {
 
@@ -1371,6 +1497,7 @@ func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
 	return buffer, err
 }
 
+// DeserializeTxBatchInfo deserialize tx batch info
 func DeserializeTxBatchInfo(data []byte) (*commonPb.TxBatchInfo, error) {
 
 	txBatchInfo := new(commonPb.TxBatchInfo)
@@ -1388,6 +1515,7 @@ const dbKeyTxCounterPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.Me
 // metric block height
 const dbKeyBlockHeightPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricBlockCounter
 
+// initMetrics init metrics
 func (chain *BlockCommitterImpl) initMetrics() {
 	// new metrics
 	chain.metricBlockSize = monitor.NewHistogramVec(
@@ -1464,6 +1592,7 @@ func (chain *BlockCommitterImpl) initMetrics() {
 	}
 }
 
+// updateMetrics update metrics
 func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, interval int64) {
 	raw, err := proto.Marshal(bi)
 	if err != nil {

@@ -21,14 +21,20 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// TxPoolType tx pool type
 var TxPoolType string
 
+// VerifyBlockBatch verify block batch struct
 type VerifyBlockBatch struct {
-	txs       []*commonpb.Transaction
+	// transaction list
+	txs []*commonpb.Transaction
+	// new add transaction list
 	newAddTxs []*commonpb.Transaction
-	txHash    [][]byte
+	// tx hash
+	txHash [][]byte
 }
 
+// NewVerifyBlockBatch new verify block batch
 func NewVerifyBlockBatch(txs, newAddTxs []*commonpb.Transaction, txHash [][]byte) VerifyBlockBatch {
 	return VerifyBlockBatch{
 		txs:       txs,
@@ -37,7 +43,7 @@ func NewVerifyBlockBatch(txs, newAddTxs []*commonpb.Transaction, txHash [][]byte
 	}
 }
 
-// verifyStat, statistic for verify steps
+// VerifyStat statistic for verify steps
 type VerifyStat struct {
 	TotalCount  int
 	DBLasts     int64
@@ -46,12 +52,13 @@ type VerifyStat struct {
 	SigCount    int
 }
 
+// RwSetVerifyFailTx rw set verify fail tx struct
 type RwSetVerifyFailTx struct {
 	TxIds       []string
 	BlockHeight uint64
 }
 
-// 判断相同分支上是否存在交易重复（防止双花）
+// IfExitInSameBranch 判断相同分支上是否存在交易重复（防止双花）
 func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) (
 	bool, error) {
 	hash := preBlockHash
@@ -73,6 +80,7 @@ func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.Propo
 	return false, nil
 }
 
+// ValidateTx validate tx, return error
 func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transaction,
 	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
 	consensusType consensuspb.ConsensusType, filter protocol.TxFilter,
@@ -118,6 +126,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 		}
 	}
 
+	// calc db use time
 	stat.DBLasts += utils.CurrentTimeMillisSeconds() - startDBTicker
 	if err != nil || isExist {
 		err = fmt.Errorf("tx duplicate in DB (tx:%s) error: %v", tx.Payload.TxId, err)
@@ -130,6 +139,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 		err = fmt.Errorf("acl error (tx:%s), %s", tx.Payload.TxId, err.Error())
 		return err
 	}
+	// calc sig use time
 	stat.SigLasts += utils.CurrentTimeMillisSeconds() - startSigTicker
 	// tx valid and put into txpool
 	newAddTxs = append(newAddTxs, tx) //nolint
@@ -137,6 +147,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	return nil
 }
 
+// TxVerifyResultsMerge tx verify results merge
 func TxVerifyResultsMerge(resultTasks map[int]VerifyBlockBatch,
 	verifyBatchs map[int][]*commonpb.Transaction) ([][]byte, []*commonpb.Transaction, []*commonpb.Transaction, error) {
 
@@ -161,11 +172,13 @@ func TxVerifyResultsMerge(resultTasks map[int]VerifyBlockBatch,
 	return txHashes, txNewAdd, nil, nil
 }
 
+// RearrangeRWSet rearrange rw set
 func RearrangeRWSet(block *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) []*commonpb.TxRWSet {
 	rwSet := make([]*commonpb.TxRWSet, 0)
 	if rwSetMap == nil {
 		return rwSet
 	}
+	// range block txs to collect rw set
 	for _, tx := range block.Txs {
 		if set, ok := rwSetMap[tx.Payload.TxId]; ok {
 			rwSet = append(rwSet, set)
@@ -174,12 +187,14 @@ func RearrangeRWSet(block *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet
 	return rwSet
 }
 
-// IsTxRequestValid, to check if transaction request payload is valid
+// IsTxRequestValid to check if transaction request payload is valid
 func IsTxRequestValid(tx *commonpb.Transaction, txInPool *commonpb.Transaction) error {
+	// calc unsigned tx bytes by tx in pool
 	poolTxRawBytes, err := utils.CalcUnsignedTxBytes(txInPool)
 	if err != nil {
 		return fmt.Errorf("calc pool tx bytes error (tx:%s), %s", tx.Payload.TxId, err.Error())
 	}
+	// calc unsigned tx bytes by tx
 	txRawBytes, err := utils.CalcUnsignedTxBytes(tx)
 	if err != nil {
 		return fmt.Errorf("calc req tx bytes error (tx:%s), %s", tx.Payload.TxId, err.Error())
@@ -191,7 +206,7 @@ func IsTxRequestValid(tx *commonpb.Transaction, txInPool *commonpb.Transaction) 
 	return nil
 }
 
-// VerifyTxResult, to check if transaction result is valid,
+// VerifyTxResult to check if transaction result is valid,
 // compare result simulate in this node with executed in other node
 func VerifyTxResult(tx *commonpb.Transaction, result *commonpb.Result) error {
 	// verify if result is equal
@@ -214,7 +229,7 @@ func VerifyTxResult(tx *commonpb.Transaction, result *commonpb.Result) error {
 	return nil
 }
 
-// IsTxRWSetValid, to check if transaction read write set is valid
+// IsTxRWSetValid to check if transaction read write set is valid
 func IsTxRWSetValid(block *commonpb.Block, tx *commonpb.Transaction, rwSet *commonpb.TxRWSet, result *commonpb.Result,
 	rwsetHash []byte) error {
 	if rwSet == nil || result == nil {
@@ -229,31 +244,53 @@ func IsTxRWSetValid(block *commonpb.Block, tx *commonpb.Transaction, rwSet *comm
 	return nil
 }
 
+// VerifierTx verifier tx
 type VerifierTx struct {
-	block         *commonpb.Block
-	txRWSetMap    map[string]*commonpb.TxRWSet
-	txResultMap   map[string]*commonpb.Result
-	log           protocol.Logger
-	txFilter      protocol.TxFilter
-	txPool        protocol.TxPool
-	ac            protocol.AccessControlProvider
-	chainConf     protocol.ChainConf
+	// block
+	block *commonpb.Block
+	// tx rw set map
+	txRWSetMap map[string]*commonpb.TxRWSet
+	// tx result map
+	txResultMap map[string]*commonpb.Result
+	// log
+	log protocol.Logger
+	// tx filter
+	txFilter protocol.TxFilter
+	// tx pool
+	txPool protocol.TxPool
+	// access control provider
+	ac protocol.AccessControlProvider
+	// chain config
+	chainConf protocol.ChainConf
+	// proposal cache
 	proposalCache protocol.ProposalCache
 }
 
+// VerifierTxConfig verifier tx config
 type VerifierTxConfig struct {
-	Block         *commonpb.Block
-	TxRWSetMap    map[string]*commonpb.TxRWSet
-	TxResultMap   map[string]*commonpb.Result
-	Log           protocol.Logger
-	TxFilter      protocol.TxFilter
-	TxPool        protocol.TxPool
-	Ac            protocol.AccessControlProvider
-	ChainConf     protocol.ChainConf
+	// block
+	Block *commonpb.Block
+	// tx rw set map
+	TxRWSetMap map[string]*commonpb.TxRWSet
+	// tx result map
+	TxResultMap map[string]*commonpb.Result
+	// log
+	Log protocol.Logger
+	// tx filter
+	TxFilter protocol.TxFilter
+	// tx pool
+	TxPool protocol.TxPool
+	// access control provider
+	Ac protocol.AccessControlProvider
+	// chain config
+	ChainConf protocol.ChainConf
+	// proposal cache
 	ProposalCache protocol.ProposalCache
 }
 
+// NewVerifierTx new verifier tx
 func NewVerifierTx(conf *VerifierTxConfig) *VerifierTx {
+	// construct verifier tx
 	return &VerifierTx{
 		block:         conf.Block,
 		txRWSetMap:    conf.TxRWSetMap,
@@ -267,7 +304,7 @@ func NewVerifierTx(conf *VerifierTxConfig) *VerifierTx {
 	}
 }
 
-// VerifyTxs verify transactions in block
+// verifierTxs verify transactions in block
 // include if transaction is double spent, transaction signature
 func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
 	[][]byte, []*commonpb.Transaction,
@@ -289,11 +326,13 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			txsRet, _ = vt.txPool.GetTxsByTxIds(txIds)
 		}
 	}
+	// calc pool use time
 	poolLasts := utils.CurrentTimeMillisSeconds() - poolStart
 
 	var err error
 	startTicker := utils.CurrentTimeMillisSeconds()
 
+	// collect rw set verify failed txs
 	var failTxLock sync.Mutex
 	rwSetVerifyFailTxIds := make([]string, 0)
 	for i := 0; i < waitCount; i++ {
@@ -327,8 +366,9 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 		}()
 	}
 	wg.Wait()
+	// calc verify txs time
 	concurrentLasts := utils.CurrentTimeMillisSeconds() - startTicker
-
+	// if rw set verify fail tx ids exists, return rwSetVerifyFailTx and error
 	if len(rwSetVerifyFailTxIds) > 0 {
 		rwSetVerifyFailTx := &RwSetVerifyFailTx{
 			TxIds:       rwSetVerifyFailTxIds,
@@ -347,6 +387,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	if err != nil {
 		return txHashes, txNewAdd, errTxs, nil, err
 	}
+	// calc result use time
 	resultLasts := utils.CurrentTimeMillisSeconds() - resultStart
 
 	for i, stat := range stats {
@@ -361,6 +402,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	return txHashes, txNewAdd, nil, nil, nil
 }
 
+// verifyTx verify tx, return tx hashs, tx list, rw set verify failed tx tds, error
 func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*commonpb.Transaction,
 	stat *VerifyStat, block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
 	[][]byte, []*commonpb.Transaction, []string, error) {
@@ -381,6 +423,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		if mode == protocol.CONSENSUS_VERIFY {
 			if vt.chainConf.ChainConfig().Block.TxTimestampVerify {
 				currentTime := utils.CurrentTimeSeconds()
+				// tx timeout deal, return err message
 				if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
 					errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current timestamp:%d",
 						tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
@@ -397,7 +440,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		if TxPoolType == batch.TxPoolType {
 			// recover result
 			tx.Result = result
-
+			// calc rw set hash
 			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
 			if err != nil {
 				vt.log.Warnf("calc rwset hash error (tx:%s), rwSet: %v, %s",
@@ -405,7 +448,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 				return nil, nil, nil, err
 			}
 			result.RwSetHash = rwsetHash
-
+			// calc tx hash with version
 			hash, err := utils.CalcTxHashWithVersion(
 				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(block.Header.BlockVersion))
 			if err != nil {
@@ -416,12 +459,14 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			txHashes = append(txHashes, hash)
 
 		} else {
+			// calc rw set hash
 			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
 			if err != nil {
 				vt.log.Warnf("calc rwset hash error (tx:%s), rwSet: %v, %s",
 					tx.Payload.TxId, rwSet, err)
 				return nil, nil, nil, err
 			}
+			// check rw set
 			if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
 				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
 				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
@@ -431,10 +476,10 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			// verify if rwset hash is equal
 			if err = VerifyTxResult(tx, result); err != nil {
 				vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-				vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
 				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
 				continue
 			}
+			// calc tx hash with version
 			hash, err := utils.CalcTxHashWithVersion(
 				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(block.Header.BlockVersion))
 			if err != nil {
@@ -444,9 +489,10 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 
 			txHashes = append(txHashes, hash)
 		}
+		// calc other use time
 		stat.OthersLasts += utils.CurrentTimeMillisSeconds() - startOthersTicker
 	}
-
+	// if rw set verify fail tx ids has existed, return rwSetVerifyFailTxIds, error
 	if len(rwSetVerifyFailTxIds) > 0 {
 		vt.log.Warn(commonErr.WarnRwSetVerifyFailTxs.Message)
 		return nil, nil, rwSetVerifyFailTxIds, commonErr.WarnRwSetVerifyFailTxs
@@ -482,6 +528,7 @@ func ValidateTxRules(filter protocol.TxFilter, txs []*commonpb.Transaction) (
 	return removeTxs, remainTxs
 }
 
+// validateTxIds validate tx ids
 func validateTxIds(filter protocol.TxFilter, ids []string) (errorIdIndexes []int) {
 	for i, id := range ids {
 		err := filter.ValidateRule(id, commonpb.RuleType_AbsoluteExpireTime)
@@ -492,6 +539,7 @@ func validateTxIds(filter protocol.TxFilter, ids []string) (errorIdIndexes []int
 	return
 }
 
+// IntegersContains integers contains
 func IntegersContains(array []int, val int) bool {
 	for i := 0; i < len(array); i++ {
 		if array[i] == val {
@@ -501,6 +549,7 @@ func IntegersContains(array []int, val int) bool {
 	return false
 }
 
+// GetBatchIds get batch ids
 func GetBatchIds(block *commonpb.Block) ([]string, []uint32) {
 	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
 

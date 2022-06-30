@@ -41,23 +41,34 @@ import (
 )
 
 const (
-	ScheduleTimeout        = 10
+	// ScheduleTimeout schedule timeout
+	ScheduleTimeout = 10
+	// ScheduleWithDagTimeout  schedule with dag timeout
 	ScheduleWithDagTimeout = 20
-	blockVersion2300       = uint32(2300)
+	// blockVersion2300 block version 2.3.0
+	blockVersion2300 = uint32(2300)
 )
 
 // TxScheduler transaction scheduler structure
 type TxScheduler struct {
-	lock            sync.Mutex
-	VmManager       protocol.VmManager
+	// lock
+	lock sync.Mutex
+	// vm manager
+	VmManager protocol.VmManager
+	// schedule finish channel
 	scheduleFinishC chan bool
-	log             protocol.Logger
-	chainConf       protocol.ChainConf // chain config
-
+	// logger
+	log protocol.Logger
+	// chain config
+	chainConf protocol.ChainConf
+	// metric vm runtime
 	metricVMRunTime *prometheus.HistogramVec
-	StoreHelper     conf.StoreHelper
-	keyReg          *regexp.Regexp
-	signer          protocol.SigningMember
+	// store helper
+	StoreHelper conf.StoreHelper
+	// regexp
+	keyReg *regexp.Regexp
+	// signing member
+	signer protocol.SigningMember
 }
 
 // Transaction dependency in adjacency table representation
@@ -244,6 +255,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	}
 }
 
+// initOptimizeTools init optimize tools
 func (ts *TxScheduler) initOptimizeTools(
 	txBatch []*commonPb.Transaction) (bool, *ConflictsBitWindow) {
 	txBatchSize := len(txBatch)
@@ -287,7 +299,7 @@ func (ts *TxScheduler) sendTxBySenderGroup(conflictsBitWindow *ConflictsBitWindo
 	}
 }
 
-// apply the read/write set to txSimContext,
+// handleApplyResult apply the read/write set to txSimContext,
 // and adjust the go routine size
 func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSenderGroup bool,
 	conflictsBitWindow *ConflictsBitWindow, senderGroup *SenderGroup, goRoutinePool *ants.Pool,
@@ -305,6 +317,7 @@ func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSe
 	}
 }
 
+// getTxRWSetTable get tx rw set table, return tx rw set map
 func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *commonPb.Block) map[string]*commonPb.TxRWSet {
 	txRWSetMap := make(map[string]*commonPb.TxRWSet)
 	block.Txs = snapshot.GetTxTable()
@@ -322,6 +335,7 @@ func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *common
 	return txRWSetMap
 }
 
+// getContractEventMap get contract event map
 func (ts *TxScheduler) getContractEventMap(block *commonPb.Block) map[string][]*commonPb.ContractEvent {
 	contractEventMap := make(map[string][]*commonPb.ContractEvent)
 	for _, tx := range block.Txs {
@@ -448,6 +462,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			txRWSetMap[txRWSet.TxId] = txRWSet
 		}
 	}
+
+	// local conf config logger rw set log
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		result, _ := prettyjson.Marshal(txRWSetMap)
 		ts.log.Infof("simulate with dag rwset :%s, dag: %+v", result, block.Dag)
@@ -455,6 +471,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
 
+// initSimulateDag init simulate dag
 func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 	[]int, map[int]dagNeighbors, map[int]dagNeighbors, error) {
 	dagRemain := make(map[int]dagNeighbors)
@@ -489,6 +506,7 @@ func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 	return txIndexBatch, dagRemain, reverseDagRemain, nil
 }
 
+// adjustPoolSize adjust pool size
 func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *ConflictsBitWindow, txExecType TxExecType) {
 	newPoolSize := conflictsBitWindow.Enqueue(txExecType, pool.Cap())
 	if newPoolSize == -1 {
@@ -497,6 +515,7 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 	pool.Tune(newPoolSize)
 }
 
+// executeTx execute tx
 func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
@@ -586,6 +605,7 @@ func (ts *TxScheduler) simulateSpecialTxs(dag *commonPb.DAG, snapshot protocol.S
 	<-scheduleFinishC
 }
 
+// shrinkDag shrink dag
 func (ts *TxScheduler) shrinkDag(txIndex int, dagRemain map[int]dagNeighbors,
 	reverseDagRemain map[int]dagNeighbors) []int {
 	var txIndexBatch []int
@@ -600,6 +620,7 @@ func (ts *TxScheduler) shrinkDag(txIndex int, dagRemain map[int]dagNeighbors,
 	return txIndexBatch
 }
 
+// Halt halt
 func (ts *TxScheduler) Halt() {
 	ts.scheduleFinishC <- true
 }
@@ -983,11 +1004,13 @@ func wholeCertInfo(txSimContext protocol.TxSimContext, certHash string) (*common
 	}, nil
 }
 
+// SenderGroup sender group
 type SenderGroup struct {
 	txsMap     map[[32]byte][]*commonPb.Transaction
 	doneTxKeyC chan [32]byte
 }
 
+// NewSenderGroup new sender group
 func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
 	return &SenderGroup{
 		txsMap:     getSenderTxsMap(txBatch),

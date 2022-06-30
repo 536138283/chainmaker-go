@@ -17,12 +17,14 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// ManagerDelegate manager delegate struct
 type ManagerDelegate struct {
 	lock            sync.Mutex
 	blockchainStore protocol.BlockchainStore
 	log             protocol.Logger
 }
 
+// calcSnapshotFingerPrint calc snapshot fingerprint
 func (m *ManagerDelegate) calcSnapshotFingerPrint(snapshot *SnapshotImpl) utils.BlockFingerPrint {
 	if snapshot == nil {
 		return ""
@@ -36,6 +38,8 @@ func (m *ManagerDelegate) calcSnapshotFingerPrint(snapshot *SnapshotImpl) utils.
 	return utils.CalcFingerPrint(chainId, blockHeight, blockTimestamp, blockProposerBytes, preBlockHash,
 		snapshot.txRoot, snapshot.dagHash, snapshot.rwSetHash)
 }
+
+// calcSnapshotFingerPrintWithoutTx calc snapshot fingerprint without tx
 func (m *ManagerDelegate) calcSnapshotFingerPrintWithoutTx(snapshot *SnapshotImpl) utils.BlockFingerPrint {
 	if snapshot == nil {
 		return ""
@@ -49,6 +53,8 @@ func (m *ManagerDelegate) calcSnapshotFingerPrintWithoutTx(snapshot *SnapshotImp
 	return utils.CalcFingerPrint(chainId, blockHeight, blockTimestamp, blockProposerBytes, preBlockHash,
 		nil, nil, nil)
 }
+
+// makeSnapshotImpl make snapshot implement
 func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block) *SnapshotImpl {
 	// If the corresponding Snapshot does not exist, create one
 	txCount := len(block.Txs) // as map init size
