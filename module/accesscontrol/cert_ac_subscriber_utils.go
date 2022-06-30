@@ -117,14 +117,9 @@ func (cp *certACProvider) loadMaxBFTEpochConfig() error {
 	6. refresh crlList
 */
 func (cp *certACProvider) onMessageMaxbftChainconfigInEpoch(msg *msgbus.Message) {
-	configBytes, ok := msg.Payload.([]byte)
+	epochConfig, ok := msg.Payload.(*maxbft.GovernanceContract)
 	if !ok {
-		cp.acService.log.Error("payload is not []byte")
-		return
-	}
-	epochConfig := &maxbft.GovernanceContract{}
-	if err := proto.Unmarshal(configBytes, epochConfig); err != nil {
-		cp.acService.log.Error(err)
+		cp.acService.log.Error("payload is not *maxbft.GovernanceContract")
 		return
 	}
 
