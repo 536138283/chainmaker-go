@@ -272,49 +272,9 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 
 	if selfProposedBlock != nil {
-
-		if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
-			blockFinger := utils.CalcBlockFingerPrint(selfProposedBlock)
-			timeNow, err := bp.getLastProposeTimeByBlockFinger(string(blockFinger))
-
-			if err != nil {
-				bp.log.Errorf("proposer fail, get last propose time by hash err %s", err.Error())
-				return nil
-			}
-
-			if timeNow == 0 {
-				return nil
-			}
-
-			if utils.CurrentTimeMillisSeconds()-timeNow >= 1000 {
-				// Repeat propose block if node has proposed before at the same height
-				bp.proposalCache.SetProposedAt(height)
-				_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
-
-				cutBlock := new(commonpb.Block)
-				if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
-					common.TxPoolType == batch.TxPoolType {
-					cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.log)
-				} else {
-					cutBlock = selfProposedBlock
-				}
-
-				bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: selfProposedBlock,
-					TxsRwSet: txsRwSet, CutBlock: cutBlock})
-				bp.log.Infof("proposer success repeat [%d](txs:%d,hash:%x)",
-					selfProposedBlock.Header.BlockHeight, selfProposedBlock.Header.TxCount,
-					selfProposedBlock.Header.BlockHash)
-			}
+		if needPropose := bp.dealProposalRequestByProposalCache(height, selfProposedBlock, preHash); !needPropose {
 			return nil
-
 		}
-		bp.proposalCache.ClearTheBlock(selfProposedBlock)
-		// Note: It is not possible to re-add the transactions in the deleted block to txpool; because some
-		// transactions may be included in other blocks to be confirmed, and it is impossible to quickly exclude
-		// these pending transactions that have been entered into the block. Comprehensive considerations,
-		// directly discard this block is the optimal choice. This processing method may only cause partial
-		// transaction loss at the current node, but it can be solved by rebroadcasting on the client side.
-		bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
 	}
 
 	var (
@@ -676,4 +636,66 @@ func (bp *BlockProposerImpl) removeTx(
 	}
 	bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
 	return batchIds, fetchBatches, fetchBatch
+}
+
+func (bp *BlockProposerImpl) dealProposalRequestByProposalCache(
+	height uint64, selfProposedBlock *commonpb.Block, preHash []byte) (needPropose bool) {
+
+	if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
+
+		// when this block has some wrong tx and could not to reach an agreement.
+		// we need to clear the old proposal cache when the old block's tx timeout.
+		// we need to remove these txs from tx pool.
+		if utils.CurrentTimeMillisSeconds()-selfProposedBlock.Header.BlockTimestamp >=
+			int64(bp.chainConf.ChainConfig().Block.TxTimeout) {
+
+			bp.proposalCache.ClearTheBlock(selfProposedBlock)
+			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+
+			return true
+		}
+
+		blockFinger := utils.CalcBlockFingerPrint(selfProposedBlock)
+		timeNow, err := bp.getLastProposeTimeByBlockFinger(string(blockFinger))
+
+		if err != nil {
+			bp.log.Errorf("proposer fail, get last propose time by hash err %s", err.Error())
+			return false
+		}
+
+		if timeNow == 0 {
+			return false
+		}
+
+		if utils.CurrentTimeMillisSeconds()-timeNow >= 1000 {
+			// Repeat propose block if node has proposed before at the same height
+			bp.proposalCache.SetProposedAt(height)
+			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
+
+			cutBlock := new(commonpb.Block)
+			if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
+				common.TxPoolType == batch.TxPoolType {
+				cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.log)
+			} else {
+				cutBlock = selfProposedBlock
+			}
+
+			bp.msgBus.Publish(msgbus.ProposedBlock, &consensuspb.ProposalBlock{Block: selfProposedBlock,
+				TxsRwSet: txsRwSet, CutBlock: cutBlock})
+			bp.log.Infof("proposer success repeat [%d](txs:%d,hash:%x)",
+				selfProposedBlock.Header.BlockHeight, selfProposedBlock.Header.TxCount,
+				selfProposedBlock.Header.BlockHash)
+		}
+		return false
+
+	}
+	bp.proposalCache.ClearTheBlock(selfProposedBlock)
+	// Note: It is not possible to re-add the transactions in the deleted block to txpool; because some
+	// transactions may be included in other blocks to be confirmed, and it is impossible to quickly exclude
+	// these pending transactions that have been entered into the block. Comprehensive considerations,
+	// directly discard this block is the optimal choice. This processing method may only cause partial
+	// transaction loss at the current node, but it can be solved by rebroadcasting on the client side.
+	bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+
+	return true
 }
