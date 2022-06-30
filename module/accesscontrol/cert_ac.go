@@ -138,6 +138,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	}
 
 	certACProvider.acService.initResourcePolicy(chainConfig.ResourcePolicies, localOrgId)
+	certACProvider.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, localOrgId)
 
 	certACProvider.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	certACProvider.opts.KeyUsages[0] = x509.ExtKeyUsageAny

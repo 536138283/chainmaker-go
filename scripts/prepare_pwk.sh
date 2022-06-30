@@ -194,7 +194,7 @@ function generate_config() {
       if  [ $enable_dockervm == "YES" ]; then
           ENABLE_DOCKERVM="true"
         #   echo "enable docker vm"
-            
+
           read -p "start docker vm with chain (Y(default)|N)" start_now
           if  [ ! -z "$start_now" ] ;then
               if [ $start_now == "Y" ] || [ $start_now == "y" ] || [ $start_now == "yes" ] || [ $start_now == "YES" ]; then
@@ -205,7 +205,7 @@ function generate_config() {
                   echo "unknown input [" $start_now "], so use default"
               fi
           fi
-            
+
           if [ $START_DOCKER_VM_NOW == "true" ]; then
                 read -p "dockervm transport protocol (uds|tcp(default))" transport_protocol
                 if [ ! -z "$transport_protocol" ]; then

@@ -179,7 +179,7 @@ function generate_config() {
     if  [ ! -z "$enable_dockervm" ]; then
       if  [ $enable_dockervm == "YES" ]; then
           ENABLE_DOCKERVM="true"
-            
+
           read -p "start docker vm with chain (Y(default)|N)" start_now
           if  [ ! -z "$start_now" ]; then
               if [ $start_now == "Y" ] || [ $start_now == "y" ] || [ $start_now == "yes" ] || [ $start_now == "YES" ]; then

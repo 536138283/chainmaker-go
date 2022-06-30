@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
@@ -77,7 +78,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
 	consensusType consensuspb.ConsensusType, filter protocol.TxFilter,
 	chainId string, ac protocol.AccessControlProvider, proposalCache protocol.ProposalCache,
-	mode protocol.VerifyMode, verifyMode uint8) error {
+	mode protocol.VerifyMode, verifyMode uint8, options ...string) error {
 
 	if TxPoolType == batch.TxPoolType {
 		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
@@ -126,7 +127,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	stat.SigCount++
 	startSigTicker := utils.CurrentTimeMillisSeconds()
 	// if tx in txpool, means tx has already validated. tx noIt in txpool, need to validate.
-	if err = utils.VerifyTxWithoutPayload(tx, chainId, ac); err != nil {
+	if err = utils.VerifyTxWithoutPayload(tx, chainId, ac, options...); err != nil {
 		err = fmt.Errorf("acl error (tx:%s), %s", tx.Payload.TxId, err.Error())
 		return err
 	}
@@ -373,9 +374,11 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 	for _, tx := range txs {
 		// tx must in txpool when open consensus message turbo
 		if !IfOpenConsensusMessageTurbo(vt.chainConf) {
+			blockVersion := strconv.Itoa(int(vt.block.Header.BlockVersion))
 			if err := ValidateTx(txsRet, tx, stat, newAddTxs, block,
 				vt.chainConf.ChainConfig().Consensus.Type,
-				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac, vt.proposalCache, mode, verifyMode); err != nil {
+				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac,
+				vt.proposalCache, mode, verifyMode, blockVersion); err != nil {
 				return nil, nil, nil, err
 			}
 		}
