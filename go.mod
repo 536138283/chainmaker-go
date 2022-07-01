@@ -14,8 +14,8 @@ require (
 	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220607115425-03689a750027
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220613040127-5b976891c91e
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585
-	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220617101646-d2003757fea1
-	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220623110820-5fec9d464701
+	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220701093702-c6fd18e07c2e
+	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220701093732-4980d6f9b9fd
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220629095211-4ae3dcfd9822
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220628032755-cebcbb60be67
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220630033703-4b5aa2b89287
@@ -79,6 +79,7 @@ require (
 replace (
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v0.0.0-20220429030713-9efb559f09ad
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4
+	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v0.0.0-20220629104649-989834ad81c4
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.0
 	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601084543-8591df469f8f
 	github.com/lucas-clemente/quic-go v0.26.0 => chainmaker.org/third_party/quic-go v1.0.0
