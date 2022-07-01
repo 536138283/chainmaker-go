@@ -20,8 +20,8 @@ chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220628084133-47574edae904/go.mod 
 chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220628084133-47574edae904/go.mod h1:8MnHhYrOjjASJCUtL7HHrhidFg3EazOqYHWm6+F4vqo=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220627035228-9da92176f1cf h1:TI2inY/xhv0GYmriItXuXAjDmbmyHuxGI95PGyzxQk4=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220627035228-9da92176f1cf/go.mod h1:aTNbzcLGiZcFPkdLUbkyLdn1F/VPLGNzcvp9SpujwTQ=
-chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220630074801-f2a2a45ad069 h1:AYrRG5z/gI4Z3o4aZfMHAZQoonEcKnWu59QOi+5mMAw=
-chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220630074801-f2a2a45ad069/go.mod h1:0TejuDLtuHUdYMH64qEbN9/IMWK0++0SI7Gnv1ATlvE=
+chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220630123831-214169efb9d6 h1:B88aGGWR91H6WjMiofpuL/J0rUpwaF+j6OiC11vK91U=
+chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220630123831-214169efb9d6/go.mod h1:0TejuDLtuHUdYMH64qEbN9/IMWK0++0SI7Gnv1ATlvE=
 chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220627035329-5bf132e435c7 h1:ywqhWvbWd8ida1kTlXz4pNBnVItjCE+3VGyMllD2vfc=
 chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220627035329-5bf132e435c7/go.mod h1:eEq/5k3Zf9DPZz7NrEYFNY4Pf7f/+XLVIo61T2EJMS4=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.2.1-0.20220627031024-6cfa4d15e05e h1:y3oNh3SCxijjDP8u4FjWLAigP64gZ6tDjuZS/sVjuuA=
@@ -89,8 +89,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220628032755-cebcbb60be67/go.mo
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff h1:mCtuK+FKGMmVLXZf7WFU1dNfk5msQb79hzbftQEpbTo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220628073555-f001b77ab57e h1:LWvEaDByha+cHPRC6Ke8Lzr/daoUk+mULjyABPKhWaM=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220628073555-f001b77ab57e/go.mod h1:MUJ5iRJgZJuCOp01DfldLUIyTl08Ge4EhD8UOLd8/ps=
+chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220630033703-4b5aa2b89287 h1:VPR8eVjUPFLEb7kjrV8Pr9uIn6YdWyDUbeqmsoPGIHw=
+chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220630033703-4b5aa2b89287/go.mod h1:MUJ5iRJgZJuCOp01DfldLUIyTl08Ge4EhD8UOLd8/ps=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.0/go.mod h1:H/rkyGcBqlXZQRdFpNByohh0GdQuk9cX2BbX2X16vZY=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.2-0.20220628072606-5915bec9e840 h1:w/h1apN1vaufeXYb7VkiQPTDAnhNib3Dr8+uOdIe374=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.2-0.20220628072606-5915bec9e840/go.mod h1:LO9aK8tRE+WautVVJ6BOHnH5Q+LvKeBYX4Vocmy8G1I=
@@ -106,8 +106,8 @@ chainmaker.org/chainmaker/store-tikv/v2 v2.2.2-0.20220628082917-7cd73d9d46de/go.
 chainmaker.org/chainmaker/store/v2 v2.2.0/go.mod h1:KTCAh2P9K6zQJff3awtQXYO+Vd6+Zpwm2fha0SPwSH0=
 chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220628083247-821a4a6ea69b h1:WUIflu7VKHau6xxJLOWUHnJ/IHyBNYaGL6IZlUImT8k=
 chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220628083247-821a4a6ea69b/go.mod h1:85HtTMV/5Dre6JWHSqjJQEOggS+/6u3xDcflhQ08ed4=
-chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220628075325-fb406ec9a192 h1:cjAkeMRBQsAcLXDy/w4pF+APk3+DDFlgBbTitPO545w=
-chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220628075325-fb406ec9a192/go.mod h1:HovIwIyEi/TS0R2hwzK4nNMpD8dnszUWOKWU6q+ZY0E=
+chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220629094509-5b951c2d2800 h1:aSeWigso56AbIs+LVpMxRScNs9aFlC4KuELrCuysBqc=
+chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220629094509-5b951c2d2800/go.mod h1:HovIwIyEi/TS0R2hwzK4nNMpD8dnszUWOKWU6q+ZY0E=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628084354-ae67ef8607d5 h1:FvPT8LAev7vjer+llls4maeLc3q01+2bxK/aFbAGnIM=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220628084354-ae67ef8607d5/go.mod h1:fai/CVtLgcKmzB9+XlXemTCr6ce9b+naTGo99KnJAkg=
 chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220628075300-8ab8ef76f043 h1:zd42xlR7ckenaNYfA39SHgLnpNXYe4gujkDr+iL88PU=
