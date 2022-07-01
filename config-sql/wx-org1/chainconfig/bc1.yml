@@ -30,6 +30,13 @@ core:
   tx_scheduler_timeout: 10 #  [0, 60] 交易调度器从交易池拿到交易后, 进行调度的时间
   tx_scheduler_validate_timeout: 10 # [0, 60] 交易调度器从区块中拿到交易后, 进行验证的超时时间
 
+# gas account config
+account_config:
+  enable_gas: false
+  gas_count: 0
+  gas_admin_address: "ZXff78ca3b84e3f5f91ff18b45fc1ecfda2d5990db"
+  default_gas: 0
+
 #共识配置
 consensus:
   # 共识类型(0-SOLO,1-TBFT,2-MBFT,3-HOTSTUFF,4-RAFT,10-POW)
