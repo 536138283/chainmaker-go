@@ -8,17 +8,20 @@ package cmd
 
 import (
 	"fmt"
+	"io/ioutil"
 	_ "net/http/pprof"
 	"os"
 	"path"
+	"path/filepath"
 	"strconv"
 	"time"
 
+	"chainmaker.org/chainmaker-go/module/blockchain"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/helper"
+	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/store/v2/conf"
 	"github.com/mitchellh/mapstructure"
-
-	"chainmaker.org/chainmaker-go/module/blockchain"
-	"chainmaker.org/chainmaker/localconf/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -29,21 +32,26 @@ func RebuildDbsCMD() *cobra.Command {
 		Long:  "RebuildDbs ChainMaker",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			initLocalConfig(cmd)
-			backupDbs(rebuildChainId, needVerify)
+			backupDbs(rebuildChainId)
 			rebuildDbsStart()
 			fmt.Println("ChainMaker exit")
 			return nil
 		},
 	}
-	attachFlags(rebuildDbsCmd, []string{flagNameOfConfigFilepath, flagNameOfChainId, flagNameOfNeedVerify})
+	attachFlags(rebuildDbsCmd, []string{flagNameOfConfigFilepath, flagNameOfChainId})
 	return rebuildDbsCmd
 }
 
-func backupDbs(chainId string, needVerify bool) {
+func backupDbs(chainId string) {
 	timeS := strconv.FormatInt(time.Now().UnixNano(), 10)
 	localconf.ChainMakerConfig.StorageConfig["back_path"] = timeS
 	localconf.ChainMakerConfig.StorageConfig["rebuild_chainId"] = chainId
-	localconf.ChainMakerConfig.StorageConfig["need_verify"] = needVerify
+
+	if err := setNodeId(); err != nil {
+		fmt.Println("set node id failed")
+		panic(err)
+	}
+
 	config := &conf.StorageConfig{}
 	errThenExit(mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config))
 
@@ -116,8 +124,8 @@ func rebuildDbsStart() {
 
 	// init chainmaker server
 	chainMakerServer := blockchain.NewChainMakerServer()
+
 	chainId, _ := localconf.ChainMakerConfig.StorageConfig["rebuild_chainId"].(string)
-	needVerify, _ := localconf.ChainMakerConfig.StorageConfig["need_verify"].(bool)
 	if err := chainMakerServer.InitForRebuildDbs(chainId); err != nil {
 		log.Errorf("chainmaker server init failed, %s", err.Error())
 		return
@@ -143,7 +151,7 @@ func rebuildDbsStart() {
 	go handleExitSignal(errorC)
 
 	// start blockchains in separate go routines
-	if err := chainMakerServer.StartForRebuildDbs(needVerify); err != nil {
+	if err := chainMakerServer.StartForRebuildDbs(); err != nil {
 		log.Errorf("chainmaker server startup failed, %s", err.Error())
 		return
 	}
@@ -173,4 +181,33 @@ func rebuildDbsStart() {
 	chainMakerServer.Stop()
 	log.Info("All is stopped!")
 
+}
+
+func setNodeId() error {
+	// load tls keys and cert path
+	var err error
+	keyPath := localconf.ChainMakerConfig.NetConfig.TLSConfig.PrivKeyFile
+	if !filepath.IsAbs(keyPath) {
+		keyPath, err = filepath.Abs(keyPath)
+		if err != nil {
+			return err
+		}
+	}
+	log.Infof("load net tls key file path: %s", keyPath)
+
+	file, err := ioutil.ReadFile(keyPath)
+	if err != nil {
+		return err
+	}
+	privateKey, err := asym.PrivateKeyFromPEM(file, nil)
+	if err != nil {
+		return err
+	}
+	nodeId, err := helper.CreateLibp2pPeerIdWithPrivateKey(privateKey)
+	if err != nil {
+		return err
+	}
+	localconf.ChainMakerConfig.SetNodeId(nodeId)
+
+	return nil
 }

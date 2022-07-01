@@ -308,13 +308,13 @@ func startBlockchain(chain *Blockchain) {
 	}
 	log.Infof("[Core] start blockchain[%s] success", chain.chainId)
 }
-func startBlockchainForRebuildDbs(chain *Blockchain, needVerify bool) {
+func startBlockchainForRebuildDbs(chain *Blockchain) {
 	if err := chain.StartForRebuildDbs(); err != nil {
 		log.Errorf("[Core] start blockchain[%s] rebuild-dbs failed, %s", chain.chainId, err.Error())
 		os.Exit(-1)
 	}
 	log.Infof("[Core] start blockchain[%s] rebuild-dbs success", chain.chainId)
-	chain.RebuildDbs(needVerify)
+	chain.RebuildDbs()
 }
 
 // Start ChainMakerServer.
@@ -341,7 +341,7 @@ func (server *ChainMakerServer) Start() error {
 }
 
 // Start ChainMakerServer for rebuild dbs.
-func (server *ChainMakerServer) StartForRebuildDbs(needVerify bool) error {
+func (server *ChainMakerServer) StartForRebuildDbs() error {
 	// 1) start Net
 	//if err := server.net.Start(); err != nil {
 	//	log.Errorf("[Net] start failed, %s", err.Error())
@@ -351,7 +351,7 @@ func (server *ChainMakerServer) StartForRebuildDbs(needVerify bool) error {
 	// 2) start blockchains
 	server.blockchains.Range(func(_, value interface{}) bool {
 		chain, _ := value.(*Blockchain)
-		go startBlockchainForRebuildDbs(chain, needVerify)
+		go startBlockchainForRebuildDbs(chain)
 		return true
 	})
 

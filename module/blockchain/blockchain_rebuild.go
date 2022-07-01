@@ -16,16 +16,16 @@ import (
 )
 
 // Start all the modules.
-func (bc *Blockchain) RebuildDbs(needVerify bool) {
+func (bc *Blockchain) RebuildDbs() {
 	fmt.Printf("###########################")
 	fmt.Printf("###start rebuild-dbs....###")
 	fmt.Printf("###########################")
 	bc.log.Infof("###########################")
 	bc.log.Infof("###start rebuild-dbs....###")
 	bc.log.Infof("###########################")
-	lastBlock, err := bc.oldStore.GetLastBlock()
-	if err != nil {
-		bc.log.Errorf("get lastblockerr(%s)", err.Error())
+	lastBlock, err1 := bc.oldStore.GetLastBlock()
+	if err1 != nil {
+		bc.log.Errorf("get lastblockerr(%s)", err1.Error())
 	} else {
 		bc.log.Infof("lastBlock=%d", lastBlock.Header.BlockHeight)
 	}
@@ -43,9 +43,9 @@ func (bc *Blockchain) RebuildDbs(needVerify bool) {
 		}
 	}
 	for i = 1; i <= height; i++ {
-		block, err := bc.oldStore.GetBlock(i)
-		if err != nil {
-			bc.log.Errorf("get block %d err(%s)", i, err.Error())
+		block, err2 := bc.oldStore.GetBlock(i)
+		if err2 != nil {
+			bc.log.Errorf("get block %d err(%s)", i, err2.Error())
 		}
 		bc.log.Debugf("block %d hash is %x", i, block.GetHeader().BlockHash)
 		bc.log.Debugf("block %d prehash is %x", i, block.GetHeader().PreBlockHash)
@@ -57,23 +57,21 @@ func (bc *Blockchain) RebuildDbs(needVerify bool) {
 		}
 		preHash = block.GetHeader().BlockHash
 
-		if needVerify {
-			if err := bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1); err != nil {
-				if err == commonErrors.ErrBlockHadBeenCommited {
-					bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
-				} else {
-					fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
-					bc.log.Infof("block[%d] verify success.", block.Header.BlockHeight)
-				}
+		if err3 := bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1); err3 != nil {
+			if err3 == commonErrors.ErrBlockHadBeenCommited {
+				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			} else {
 				fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
 				bc.log.Infof("block[%d] verify success.", block.Header.BlockHeight)
 			}
+		} else {
+			fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
+			bc.log.Infof("block[%d] verify success.", block.Header.BlockHeight)
 		}
 
 		//time.Sleep(500*time.Millisecond)
-		if err := bc.coreEngine.GetBlockCommitter().AddBlock(block); err != nil {
-			if err == commonErrors.ErrBlockHadBeenCommited {
+		if err4 := bc.coreEngine.GetBlockCommitter().AddBlock(block); err4 != nil {
+			if err4 == commonErrors.ErrBlockHadBeenCommited {
 				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			} else {
 				fmt.Printf("block[%d] rebuild success.", block.Header.BlockHeight)
