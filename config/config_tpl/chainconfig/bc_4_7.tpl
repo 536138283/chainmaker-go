@@ -95,6 +95,13 @@ core:
     # Retry interval of fetching transaction in txpool by txid, in ms.
     # retry_interval: 20
 
+# gas account config
+account_config:
+  enable_gas: false
+  gas_count: 0
+  gas_admin_address: "ZXff78ca3b84e3f5f91ff18b45fc1ecfda2d5990db"
+  default_gas: 0
+
 # snapshot settings
 # snapshot:
   # Enable the evidence snapshot or not.
