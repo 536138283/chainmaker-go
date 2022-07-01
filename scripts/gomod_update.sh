@@ -18,7 +18,7 @@ go get chainmaker.org/chainmaker/common/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-maxbft/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-dpos/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-raft/v2@${BRANCH}
-go get chainmaker.org/chainmaker/consensus-solo/v2@v2.2.0
+go get chainmaker.org/chainmaker/consensus-solo/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-tbft/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-utils/v2@${BRANCH}
 go get chainmaker.org/chainmaker/localconf/v2@${BRANCH}
@@ -37,7 +37,7 @@ go get chainmaker.org/chainmaker/vm-docker-go/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-native/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-evm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-gasm/v2@v2.2.1
-go get chainmaker.org/chainmaker/vm-wasmer/v2@v2.2.1
+go get chainmaker.org/chainmaker/vm-wasmer/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-wxvm/v2@v2.2.1
 go get chainmaker.org/chainmaker/vm/v2@${BRANCH}
 
