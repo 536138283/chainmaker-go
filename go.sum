@@ -53,11 +53,11 @@ chainmaker.org/chainmaker/net-common v1.1.2-0.20220601102651-293b88d0a08d/go.mod
 chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585 h1:YmDfmpx1v7Eg3zmrO3uJOhlRxGi6aTMlNvrFR9FYMso=
 chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585/go.mod h1:6GkfC9TBNG18kKp6MLE/3Sm5CEstL6ETfRCkYQ608/c=
 chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220610084257-d720400089e4/go.mod h1:meq0HlywCBKAh9Hbe2ATyt0LYGUmVFuDtDzZB9cXdBs=
-chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220617101646-d2003757fea1 h1:I9Pb958gZNKzYyy+4eE+Cr8e3PRlUvGofir1pUUx4hw=
-chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220617101646-d2003757fea1/go.mod h1:4Jk4dTVzLm3npcZoGxQeIyto/lBsZIR7ocD3Msl+Jp4=
+chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220701093702-c6fd18e07c2e h1:FVo6e1QfDtrLIg7KBM3jEneLz/yxxSASqhDh5FPTls4=
+chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220701093702-c6fd18e07c2e/go.mod h1:hRUdnz+WY9bT5f8NFE8yWIJDPH3/w653BSd19Q2jqoE=
 chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220609031411-3e1c47ac7cfb/go.mod h1:SlDfr4TL1hkN1Q9El+Bz4unFBqNTdgr2qOS43A8HrKE=
-chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220623110820-5fec9d464701 h1:OarMLZxYpPGKKsocA1peWN6vngNkKRJM9MBtHwfXzzw=
-chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220623110820-5fec9d464701/go.mod h1:SlDfr4TL1hkN1Q9El+Bz4unFBqNTdgr2qOS43A8HrKE=
+chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220701093732-4980d6f9b9fd h1:9BD7Pdr5g8zEgu0+wuSXIVAmoJL6yrrES4Lw3qsEHw0=
+chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220701093732-4980d6f9b9fd/go.mod h1:SlDfr4TL1hkN1Q9El+Bz4unFBqNTdgr2qOS43A8HrKE=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.0/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220418083449-5ddd619fd3f6/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.1-0.20220419123031-1f6cae2792f2/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=
@@ -146,6 +146,8 @@ chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4 h1:
 chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220506101147-b3714597ecc4/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601084543-8591df469f8f h1:t6MhCO1N6GDmHj2pS3zBiAyqvrvwUBT8GlS4W9UPa5w=
 chainmaker.org/third_party/cuckoo-filter v0.0.0-20220601084543-8591df469f8f/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
+chainmaker.org/third_party/go-conn-security-multistream v0.0.0-20220629104649-989834ad81c4 h1:HS4NpeWexPkjUXhhXUAvMi4QMyhNnoJ+s3YQPj2tst0=
+chainmaker.org/third_party/go-conn-security-multistream v0.0.0-20220629104649-989834ad81c4/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
 chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4 h1:94Xx45jm7SP6mSbdu3Qsa+YzHrf+I1lQtT0OAbN2gII=
 chainmaker.org/third_party/goleveldb v1.0.1-0.20220428044327-8b6a49e187b4/go.mod h1:7aC8mnQ0XjdIgSSoZfGGBE8QHMPl7QKbJVSzPavj47Y=
 chainmaker.org/third_party/q-tls-common v1.0.0 h1:lp4v/aPRqM63vkZTAcGEOEfUOB7ouci0bU9R9+2AHYY=
@@ -974,8 +976,6 @@ github.com/libp2p/go-buffer-pool v0.0.2/go.mod h1:MvaB6xw5vOrDl8rYZGLFdKAuk/hRoR
 github.com/libp2p/go-cidranger v1.1.0 h1:ewPN8EZ0dd1LSnrtuwd4709PXVcITVeuwbag38yPW7c=
 github.com/libp2p/go-cidranger v1.1.0/go.mod h1:KWZTfSr+r9qEo9OkI9/SIEeAtw+NNoU0dXIXt15Okic=
 github.com/libp2p/go-conn-security-multistream v0.1.0/go.mod h1:aw6eD7LOsHEX7+2hJkDxw1MteijaVcI+/eP2/x3J1xc=
-github.com/libp2p/go-conn-security-multistream v0.2.0 h1:uNiDjS58vrvJTg9jO6bySd1rMKejieG7v45ekqHbZ1M=
-github.com/libp2p/go-conn-security-multistream v0.2.0/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
 github.com/libp2p/go-eventbus v0.1.0/go.mod h1:vROgu5cs5T7cv7POWlWxBaVLxfSegC5UGQf8A2eEmx4=
 github.com/libp2p/go-eventbus v0.2.1 h1:VanAdErQnpTioN2TowqNcOijf6YwhuODe4pPKSDpxGc=
 github.com/libp2p/go-eventbus v0.2.1/go.mod h1:jc2S4SoEVPP48H9Wpzm5aiGwUCBMfGhVhhBjyhhCJs8=
