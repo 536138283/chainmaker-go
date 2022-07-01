@@ -94,6 +94,7 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 	}
 
 	ppacProvider.acService.initResourcePolicy(chainConfig.ResourcePolicies, localOrgId)
+	ppacProvider.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, localOrgId)
 
 	return ppacProvider, nil
 }

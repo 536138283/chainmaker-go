@@ -25,6 +25,8 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	systemPb "chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -1063,6 +1065,17 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	// synchronize new block height to consensus and sync module
 	chain.msgBus.PublishSafe(msgbus.BlockInfo, blockInfo)
 
+	if chain.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MAXBFT {
+		governance, err := chain.getGovernanceFromBlock(block)
+		if err != nil {
+			err = fmt.Errorf("get governance from block failed. error: %+v", err)
+			return err
+		}
+		if governance != nil {
+			chain.msgBus.PublishSafe(msgbus.MaxbftEpochConf, governance)
+		}
+	}
+
 	curTime := utils.CurrentTimeMillisSeconds()
 	elapsed := curTime - startTick
 	interval := curTime - chain.blockInterval
@@ -1140,6 +1153,33 @@ func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 			fmt.Errorf("block not verified [%d](hash:%x)", block.Header.BlockHeight, block.Header.BlockHash)
 	}
 	return lastProposed, rwSetMap, conEventMap, nil
+}
+
+func (chain *BlockCommitterImpl) getGovernanceFromBlock(block *commonPb.Block) (*maxbft.GovernanceContract, error) {
+	var (
+		err  error
+		args = new(consensus.BlockHeaderConsensusArgs)
+	)
+	if err = proto.Unmarshal(block.Header.ConsensusArgs, args); err != nil {
+		err = fmt.Errorf("unmarshal consensus args failed. error:%+v", err)
+		return nil, err
+	}
+
+	// get the governanceContract from the txWrite
+	contractName := systemPb.SystemContract_GOVERNANCE.String()
+	if args.ConsensusData == nil || len(args.ConsensusData.TxWrites) == 0 ||
+		args.ConsensusData.TxWrites[0].ContractName != contractName {
+		// there is no governance contract information in the block, need not to switch epoch
+		return nil, nil
+	}
+
+	// get governance contract from the block, to get the configurations of the next epoch
+	governanceContract := new(maxbft.GovernanceContract)
+	if err = proto.Unmarshal(args.ConsensusData.TxWrites[0].GetValue(), governanceContract); err != nil {
+		err = fmt.Errorf("unmarshal txWrites value failed. error:%+v", err)
+		return nil, err
+	}
+	return governanceContract, nil
 }
 
 func IfOpenConsensusMessageTurbo(chainConf protocol.ChainConf) bool {

@@ -188,6 +188,14 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		if sqlErr := v.storeHelper.RollBack(newBlock, v.blockchainStore); sqlErr != nil {
 			v.log.Errorf("block [%d] rollback sql failed: %s", newBlock.Header.BlockHeight, sqlErr)
 		}
+
+		// clear snapshot when verify fail
+		if snapErr := v.snapshotManager.ClearSnapshot(block); snapErr != nil {
+			snapErr = fmt.Errorf("clear snapshot fail[%d](hash:%x), err: %s",
+				block.Header.BlockHeight, block.Header.BlockHash, snapErr.Error())
+			v.log.Error(snapErr)
+		}
+
 		return err
 	}
 
@@ -471,7 +479,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 		txMap[tx.Payload.TxId] = struct{}{}
 	}
 	for _, blockToCut := range blocksToCut {
-		v.log.Infof("cut block block hash: %s, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
+		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
 		for _, txToCut := range blockToCut.Txs {
 			if _, ok := txMap[txToCut.Payload.TxId]; ok {
 				// this transaction is kept, do NOT cut it.
@@ -516,7 +524,7 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 		cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
 		if len(cutBlocks) > 0 {
 			v.log.Infof(
-				"cut block block hash: %s, height: %v",
+				"received block hash: %s, height: %v",
 				hex.EncodeToString(lastBlock.Header.BlockHash),
 				lastBlock.Header.BlockHeight,
 			)

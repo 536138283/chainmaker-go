@@ -18,6 +18,11 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/vm/v2"
+
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/evmutils"
@@ -25,16 +30,11 @@ import (
 
 	"github.com/hokaccha/go-prettyjson"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 	"chainmaker.org/chainmaker/vm-native/v2/accountmgr"
-	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/panjf2000/ants/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -1295,13 +1295,22 @@ func (ts *TxScheduler) createChargeGasTx(
 		return nil, err
 	}
 
+	endorser := &commonPb.EndorsementEntry{
+		Signer: &accesscontrol.Member{
+			OrgId:      signingMember.OrgId,
+			MemberInfo: signingMember.MemberInfo,
+			MemberType: signingMember.MemberType,
+		},
+		Signature: signature,
+	}
+
 	return &commonPb.Transaction{
 		Payload: payload,
 		Sender: &commonPb.EndorsementEntry{
 			Signer:    signingMember,
 			Signature: signature,
 		},
-		Endorsers: make([]*commonPb.EndorsementEntry, 0),
+		Endorsers: []*commonPb.EndorsementEntry{endorser},
 		Result:    nil,
 	}, nil
 }

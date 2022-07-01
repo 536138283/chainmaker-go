@@ -108,6 +108,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
+	snapshotMgr.EXPECT().ClearSnapshot(gomock.Any()).AnyTimes().Return(nil)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()
