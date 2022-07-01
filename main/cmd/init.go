@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package cmd
 
 import (
-	"chainmaker.org/chainmaker/localconf/v2"
 	"fmt"
 	"os"
 
+	"chainmaker.org/chainmaker/localconf/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -23,7 +23,6 @@ const (
 
 var (
 	rebuildChainId string
-	needVerify     bool
 )
 
 func initLocalConfig(cmd *cobra.Command) {
