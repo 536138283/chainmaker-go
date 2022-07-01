@@ -686,14 +686,10 @@ func (vb *VerifierBlock) ValidateBlock(
 		TxFilter:      vb.txFilter,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, NormalVerifyMode)
+	txHashes, _, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, NormalVerifyMode)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
-		if len(errTxs) > 0 {
-			vb.log.Warn("[Duplicate txs] delete the err txs")
-			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
-		}
 		return nil, nil, timeLasts, rwSetVerifyFailTx, fmt.Errorf("verify failed [%d](%x), %s ",
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
@@ -806,15 +802,11 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, errTxs, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
+	txHashes, _, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
 	vb.log.Warnf("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
-		if len(errTxs) > 0 {
-			vb.log.Warn("[Duplicate txs] delete the err txs")
-			vb.txPool.RetryAndRemoveTxs(nil, errTxs)
-		}
 		return nil, timeLasts, rwSetVerifyFailTx, fmt.Errorf("verify failed [%d](%x), %s ",
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
@@ -1306,6 +1298,12 @@ func recoverBlockByBatch(
 		newTxs := make([]*commonPb.Transaction, 0)
 		for _, tx := range txs {
 			newTxs = append(newTxs, tx...)
+		}
+
+		if len(newTxs) != int(block.Header.TxCount) {
+			return nil, nil,
+			fmt.Errorf("GetAllTxsByBatchIds fail,height: %d, want count: %d, got count: %d",
+				block.Header.BlockHeight, block.Header.TxCount, len(newTxs))
 		}
 
 		for i, v := range indexes {

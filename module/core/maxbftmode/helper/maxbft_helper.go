@@ -7,9 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package helper
 
 import (
+	"chainmaker.org/chainmaker-go/module/core/common"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 )
 
 type maxBftHelper struct {
@@ -31,9 +33,19 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 	if len(delBlocks) == 0 {
 		return
 	}
+
+	if common.TxPoolType == batch.TxPoolType {
+		for _, delBlock := range delBlocks {
+			batchIds, _ := common.GetBatchIds(delBlock)
+			hp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
+		}
+		return
+	}
+
 	txs := make([]*commonpb.Transaction, 0, 100)
 	for _, blk := range delBlocks {
 		txs = append(txs, blk.Txs...)
 	}
+
 	hp.txPool.RetryAndRemoveTxs(txs, nil)
 }

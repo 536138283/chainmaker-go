@@ -324,7 +324,6 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	if !utils.CanProposeEmptyBlock(bp.chainConf.ChainConfig().Consensus.Type) && len(fetchBatch) == 0 {
 		// can not propose empty block and tx batch is empty, then yield proposing.
 		bp.log.Debugf("no txs in tx pool, proposing block stopped")
-		bp.txPool.RetryAndRemoveTxs(nil, fetchBatch)
 		return nil
 	}
 
@@ -650,6 +649,11 @@ func (bp *BlockProposerImpl) dealProposalRequestByProposalCache(
 			int64(bp.chainConf.ChainConfig().Block.TxTimeout) {
 
 			bp.proposalCache.ClearTheBlock(selfProposedBlock)
+			if common.TxPoolType == batch.TxPoolType {
+				batchIds, _ := common.GetBatchIds(selfProposedBlock)
+				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
+			}
+
 			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
 
 			return true
@@ -695,6 +699,13 @@ func (bp *BlockProposerImpl) dealProposalRequestByProposalCache(
 	// these pending transactions that have been entered into the block. Comprehensive considerations,
 	// directly discard this block is the optimal choice. This processing method may only cause partial
 	// transaction loss at the current node, but it can be solved by rebroadcasting on the client side.
+
+	if common.TxPoolType == batch.TxPoolType {
+		batchIds, _ := common.GetBatchIds(selfProposedBlock)
+		bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
+		return true
+	}
+
 	bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
 
 	return true

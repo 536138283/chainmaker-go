@@ -139,19 +139,18 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 }
 
 func TxVerifyResultsMerge(resultTasks map[int]VerifyBlockBatch,
-	verifyBatchs map[int][]*commonpb.Transaction) ([][]byte, []*commonpb.Transaction, []*commonpb.Transaction, error) {
+	verifyBatchs map[int][]*commonpb.Transaction) ([][]byte, []*commonpb.Transaction, error) {
 
-	errTxs := make([]*commonpb.Transaction, 0)
 	txHashes := make([][]byte, 0)
 	txNewAdd := make([]*commonpb.Transaction, 0)
 	if len(resultTasks) < len(verifyBatchs) {
-		return nil, nil, errTxs, fmt.Errorf("tx verify error, batch num mismatch, received: %d,expected:%d",
+		return nil, nil, fmt.Errorf("tx verify error, batch num mismatch, received: %d,expected:%d",
 			len(resultTasks), len(verifyBatchs))
 	}
 	for i := 0; i < len(resultTasks); i++ {
 		batch := resultTasks[i]
 		if len(batch.txs) != len(batch.txHash) {
-			return nil, nil, errTxs,
+			return nil, nil,
 				fmt.Errorf("tx verify error, txs in batch mismatch, received: %d, expected:%d",
 					len(batch.txHash), len(batch.txs))
 		}
@@ -159,7 +158,7 @@ func TxVerifyResultsMerge(resultTasks map[int]VerifyBlockBatch,
 		txNewAdd = append(txNewAdd, batch.newAddTxs...)
 
 	}
-	return txHashes, txNewAdd, nil, nil
+	return txHashes, txNewAdd, nil
 }
 
 func RearrangeRWSet(block *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) []*commonpb.TxRWSet {
@@ -271,8 +270,7 @@ func NewVerifierTx(conf *VerifierTxConfig) *VerifierTx {
 // VerifyTxs verify transactions in block
 // include if transaction is double spent, transaction signature
 func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
-	[][]byte, []*commonpb.Transaction,
-	[]*commonpb.Transaction, *RwSetVerifyFailTx, error) {
+	[][]byte, []*commonpb.Transaction, *RwSetVerifyFailTx, error) {
 
 	verifyBatch := utils.DispatchTxVerifyTask(block.Txs)
 	resultTasks := make(map[int]VerifyBlockBatch)
@@ -342,13 +340,13 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 				"block height:%d, err: %s", len(rwSetVerifyFailTxIds),
 				block.Header.BlockHeight, err.Error())
 		})
-		return nil, nil, nil, rwSetVerifyFailTx, err
+		return nil, nil, rwSetVerifyFailTx, err
 	}
 
 	resultStart := utils.CurrentTimeMillisSeconds()
-	txHashes, txNewAdd, errTxs, err := TxVerifyResultsMerge(resultTasks, verifyBatch)
+	txHashes, txNewAdd, err := TxVerifyResultsMerge(resultTasks, verifyBatch)
 	if err != nil {
-		return txHashes, txNewAdd, errTxs, nil, err
+		return txHashes, txNewAdd, nil, err
 	}
 	resultLasts := utils.CurrentTimeMillisSeconds() - resultStart
 
@@ -361,7 +359,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 
 	vt.log.Infof("verify txs,height: [%d] (pool:%d,txVerify:%d,results:%d)",
 		block.Header.BlockHeight, poolLasts, concurrentLasts, resultLasts)
-	return txHashes, txNewAdd, nil, nil, nil
+	return txHashes, txNewAdd, nil, nil
 }
 
 func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*commonpb.Transaction,

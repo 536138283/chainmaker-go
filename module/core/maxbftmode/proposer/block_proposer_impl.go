@@ -233,7 +233,13 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 				selfProposedBlock.Header.BlockHash, preHash))
 
 			bp.proposalCache.ClearTheBlock(selfProposedBlock)
-			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+
+			if common.TxPoolType == batch.TxPoolType {
+				batchIds, _ := common.GetBatchIds(selfProposedBlock)
+				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
+			} else {
+				bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+			}
 		}
 	}
 	var (

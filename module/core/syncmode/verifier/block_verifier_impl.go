@@ -473,6 +473,11 @@ func parseVerifyResult(block *commonpb.Block, isValid bool,
 }
 
 func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
+	if common.TxPoolType == batch.TxPoolType {
+		v.cutBlocksForBatchPool(blocksToCut, blockToKeep)
+		return
+	}
+
 	cutTxs := make([]*commonpb.Transaction, 0)
 	txMap := make(map[string]interface{})
 	for _, tx := range blockToKeep.Txs {
@@ -492,6 +497,34 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	if len(cutTxs) > 0 {
 		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
 	}
+}
+
+func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
+
+	keepBatchIdsMap := make(map[string]interface{})
+	batchIds, _ := common.GetBatchIds(blockToKeep)
+	for _, batchId := range batchIds {
+		keepBatchIdsMap[batchId] = struct{}{}
+	}
+
+	finalCutBatchIds := make([]string, 0)
+	for _, blockToCut := range blocksToCut {
+		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
+		cutBatchIds, _ := common.GetBatchIds(blockToCut)
+		for _, cutBatchId := range cutBatchIds {
+			if _, ok := keepBatchIdsMap[cutBatchId]; ok {
+				// this transaction is kept, do NOT cut it.
+				continue
+			}
+			v.log.Debugf("cut tx batchId: %s", cutBatchId)
+			finalCutBatchIds = append(finalCutBatchIds, cutBatchId)
+		}
+	}
+
+	if len(finalCutBatchIds) > 0 {
+		v.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
+	}
+
 }
 
 // verifyRepeat to check if the block has verified before
