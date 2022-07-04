@@ -30,7 +30,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var hashType = "SHA256"
+var (
+	hashType = "SHA256"
+	log      = logger.GetLoggerByChain(logger.MODULE_CORE, "Chain1")
+)
 
 func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	ctl := gomock.NewController(t)
@@ -41,7 +44,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	snapshotMgr := mock.NewMockSnapshotManager(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
 	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
-	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
+	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache, log)
 	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	txpool := mock.NewMockTxPool(ctl)
@@ -203,7 +206,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshotMgr := mock.NewMockSnapshotManager(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
 	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
-	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
+	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache, log)
 	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	txpool := mock.NewMockTxPool(ctl)

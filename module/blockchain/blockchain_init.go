@@ -440,7 +440,7 @@ func (bc *Blockchain) initCache() (err error) {
 	// cache the lasted config block
 	bc.ledgerCache = cache.NewLedgerCache(bc.chainId)
 	bc.ledgerCache.SetLastCommittedBlock(bc.lastBlock)
-	bc.proposalCache = cache.NewProposalCache(bc.chainConf, bc.ledgerCache)
+	bc.proposalCache = cache.NewProposalCache(bc.chainConf, bc.ledgerCache, bc.log)
 	bc.log.Debugf("go last block: %+v", bc.lastBlock)
 	bc.initModules[moduleNameLedger] = struct{}{}
 	return nil
