@@ -40,6 +40,7 @@ import (
 var (
 	chainId      = "Chain1"
 	contractName = "contractName"
+	log          = logger.GetLoggerByChain(logger.MODULE_CORE, chainId)
 )
 
 /*
@@ -53,7 +54,7 @@ func TestProposeStatusChange(t *testing.T) {
 	msgBus.EXPECT().Register(gomock.Any(), gomock.Any()).AnyTimes()
 	identity := mock.NewMockSigningMember(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
-	proposedCache := cache.NewProposalCache(nil, ledgerCache)
+	proposedCache := cache.NewProposalCache(nil, ledgerCache, log)
 	txScheduler := mock.NewMockTxScheduler(ctl)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
@@ -106,7 +107,6 @@ func TestProposeStatusChange(t *testing.T) {
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	txScheduler.EXPECT().Schedule(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 
-	logger := logger.GetLoggerByChain(logger.MODULE_CORE, chainId)
 	blockBuilderConf := &common.BlockBuilderConf{
 		ChainId:         "chain1",
 		TxPool:          txPool,
@@ -116,7 +116,7 @@ func TestProposeStatusChange(t *testing.T) {
 		LedgerCache:     ledgerCache,
 		ProposalCache:   proposedCache,
 		ChainConf:       chainConf,
-		Log:             logger,
+		Log:             log,
 		StoreHelper:     storeHelper,
 	}
 	blockBuilder := common.NewBlockBuilder(blockBuilderConf)
@@ -132,7 +132,7 @@ func TestProposeStatusChange(t *testing.T) {
 		identity:        identity,
 		ledgerCache:     ledgerCache,
 		proposalCache:   proposedCache,
-		log:             logger,
+		log:             log,
 		finishProposeC:  make(chan bool),
 		blockchainStore: blockChainStore,
 		chainConf:       chainConf,
@@ -149,7 +149,7 @@ func TestProposeStatusChange(t *testing.T) {
  */
 func TestShouldPropose(t *testing.T) {
 	ledgerCache := cache.NewLedgerCache(chainId)
-	proposedCache := cache.NewProposalCache(nil, ledgerCache)
+	proposedCache := cache.NewProposalCache(nil, ledgerCache, log)
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))
 
 	b0 := createNewTestBlock(0)
@@ -184,7 +184,7 @@ func TestShouldProposeByMaxBFT(t *testing.T) {
 	msgBus := mbusmock.NewMockMessageBus(ctl)
 	identity := mock.NewMockSigningMember(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
-	proposedCache := cache.NewProposalCache(nil, ledgerCache)
+	proposedCache := cache.NewProposalCache(nil, ledgerCache, log)
 	txScheduler := mock.NewMockTxScheduler(ctl)
 
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))

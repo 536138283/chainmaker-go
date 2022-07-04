@@ -38,6 +38,7 @@ import (
 var (
 	chainId      = "Chain1"
 	contractName = "contractName"
+	log          = logger.GetLoggerByChain(logger.MODULE_CORE, "Chain1")
 )
 
 func TestProposeStatusChange(t *testing.T) {
@@ -48,7 +49,7 @@ func TestProposeStatusChange(t *testing.T) {
 	msgBus.EXPECT().Register(gomock.Any(), gomock.Any()).AnyTimes()
 	identity := mock.NewMockSigningMember(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
-	proposedCache := cache.NewProposalCache(nil, ledgerCache)
+	proposedCache := cache.NewProposalCache(nil, ledgerCache, log)
 	txScheduler := mock.NewMockTxScheduler(ctl)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
@@ -154,7 +155,7 @@ func TestShouldPropose(t *testing.T) {
 	msgBus := mbusmock.NewMockMessageBus(ctl)
 	identity := mock.NewMockSigningMember(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
-	proposedCache := cache.NewProposalCache(nil, ledgerCache)
+	proposedCache := cache.NewProposalCache(nil, ledgerCache, log)
 	txScheduler := mock.NewMockTxScheduler(ctl)
 
 	ledgerCache.SetLastCommittedBlock(createNewTestBlock(0))

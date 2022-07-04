@@ -221,16 +221,16 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		// that have been entered into the block. Comprehensive considerations, directly discard this block is the optimal
 		// choice. This processing method may only cause partial transaction loss at the current node, but it can be solved
 		// by rebroadcasting on the client side.
-
-		2. tx timeout.
-		// when this block has some wrong tx and could not to reach an agreement.
-		// we need to clear the old proposal cache when the old block's tx timeout.
-		// we need to remove these txs from tx pool.
 		*/
+		if !bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
+			bp.log.DebugDynamic(func() string {
+				return fmt.Sprintf(
+					"remove self proposed block, height: %d, selfPreHash:%x, hash: %x, preHash:%x",
+					selfProposedBlock.Header.BlockHeight,
+					selfProposedBlock.Header.PreBlockHash,
+					selfProposedBlock.Header.BlockHash, preHash)
+			})
 
-		if !bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) ||
-			utils.CurrentTimeMillisSeconds()-selfProposedBlock.Header.BlockTimestamp >=
-				int64(bp.chainConf.ChainConfig().Block.TxTimeout) {
 			bp.proposalCache.ClearTheBlock(selfProposedBlock)
 
 			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
