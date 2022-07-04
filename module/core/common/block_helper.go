@@ -200,6 +200,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
 		}
 		block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] = batchIdBytes
+		bb.log.Infof("proposer add batchIds:%v into addition data,height: %d", batchIds, block.Header.BlockHeight)
 	}
 
 	// cache proposed block
@@ -1300,10 +1301,13 @@ func recoverBlockByBatch(
 			newTxs = append(newTxs, tx...)
 		}
 
+		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIds:%v, num:%d",
+			block.Header.BlockHeight, batchIds, len(newTxs)))
+
 		if len(newTxs) != int(block.Header.TxCount) {
 			return nil, nil,
-			fmt.Errorf("GetAllTxsByBatchIds fail,height: %d, want count: %d, got count: %d",
-				block.Header.BlockHeight, block.Header.TxCount, len(newTxs))
+				fmt.Errorf("GetAllTxsByBatchIds fail,height: %d, want count: %d, got count: %d",
+					block.Header.BlockHeight, block.Header.TxCount, len(newTxs))
 		}
 
 		for i, v := range indexes {
