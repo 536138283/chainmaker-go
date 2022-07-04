@@ -21,7 +21,9 @@ const (
 	flagNameOfChainId                 = "chain-id"
 )
 
-var rebuildChainId string
+var (
+	rebuildChainId string
+)
 
 func initLocalConfig(cmd *cobra.Command) {
 	if err := localconf.InitLocalConfig(cmd); err != nil {
