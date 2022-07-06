@@ -265,21 +265,35 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
 			height, len(fetchBatch)))
 		if len(fetchBatch) == 0 {
-			bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("no txs in tx pool, proposing block stoped"))
+			bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("no txs in tx pool, proposing block stopped"))
 
 			// fetch Tx from other block
 			proposedBlocks := bp.proposalCache.GetProposedBlocksAt(height)
 			if len(proposedBlocks) != 0 {
-				proposedBlock, err := bp.fetchFromProposalCache(proposedBlocks)
+				proposedBlock, keepTxs, removeTxs, err := bp.fetchFromProposalCache(proposedBlocks)
 				if err != nil {
 					return nil, err
 				}
 
-				if proposedBlock != nil {
+				if proposedBlock != nil &&
+					proposedBlock.TxsRwSet != nil &&
+					proposedBlock.CutBlock != nil {
+					bp.msgBus.Publish(msgbus.ProposedBlock, proposedBlock)
+					bp.log.Infof("proposer block[%d] from cache,tx count:%d",
+						proposedBlock.Block.Header.BlockHeight, len(proposedBlock.Block.Txs))
 					return proposedBlock, nil
 				}
-			}
 
+				if len(removeTxs) != 0 {
+					batchIds, fetchBatch = bp.removeTx(height, batchIds, removeTxs, proposedBlock.Block.Txs)
+					bp.log.Infof("remove the overtime transactions, total:%d, keep:%d, remove:%d",
+						len(proposedBlock.Block.Txs), len(keepTxs), len(removeTxs))
+				}
+
+				if common.TxPoolType != batch.TxPoolType {
+					fetchBatch = keepTxs
+				}
+			}
 			break
 		}
 		// validate txFilter rules
@@ -292,9 +306,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 				len(fetchBatch), len(remainTxs), len(removeTxs))
 		}
 
+		// 剩余交易大于0则跳出循环
 		if len(remainTxs) > 0 {
-			// 剩余交易大于0则跳出循环
-			fetchBatch = remainTxs
+			if common.TxPoolType != batch.TxPoolType {
+				fetchBatch = remainTxs
+			}
 			break
 		}
 	}
@@ -652,13 +668,60 @@ func (bp *BlockProposerImpl) getFetchBatchFromPool(
 	return nil, bp.txPool.FetchTxs(height), nil
 }
 
-func (bp *BlockProposerImpl) fetchFromProposalCache(
-	proposedBlocks []*commonpb.Block) (*consensuspb.ProposalBlock, error) {
+func (bp *BlockProposerImpl) fetchFromProposalCache(proposedBlocks []*commonpb.Block) (
+	*consensuspb.ProposalBlock, []*commonpb.Transaction, []*commonpb.Transaction, error) {
+	txTimeout := int64(bp.chainConf.ChainConfig().Block.TxTimeout)
 	for _, proposedBlock := range proposedBlocks {
 		if proposedBlock.Header.TxCount != 0 {
+
+			// if block timeout, use the other block.
+			blockTimeStamp := proposedBlock.Header.BlockTimestamp
+			if utils.CurrentTimeMillisSeconds()+txTimeout >= blockTimeStamp {
+				bp.log.DebugDynamic(
+					func() string {
+						return fmt.Sprintf("block is time out,use the other block.(height:%d,hash:%x)",
+							proposedBlock.Header.BlockHeight, proposedBlock.Header.BlockHash)
+					})
+				continue
+			}
+
+			removeTx := make([]*commonpb.Transaction, 0)
+			keepTx := make([]*commonpb.Transaction, 0)
+			for _, tx := range proposedBlock.Txs {
+				if utils.CurrentTimeMillisSeconds()+txTimeout >= tx.Payload.Timestamp {
+					removeTx = append(removeTx, tx)
+					continue
+				}
+				keepTx = append(keepTx, tx)
+			}
+
+			// all transaction time out,use the other block's tx.
+			if len(keepTx) == 0 {
+				bp.log.DebugDynamic(
+					func() string {
+						return fmt.Sprintf("no txs need to keep,use the other block.(height:%d,hash:%x)",
+							proposedBlock.Header.BlockHeight, proposedBlock.Header.BlockHash)
+					})
+				continue
+			}
+
+			// need to schedule tx again, because some tx time out.
+			if len(removeTx) != 0 {
+
+				bp.log.DebugDynamic(
+					func() string {
+						return fmt.Sprintf("fetch tx from cache,keep:%d,remove:%d,height:%d,hash:%x",
+							len(keepTx), len(removeTx), proposedBlock.Header.BlockHeight, proposedBlock.Header.BlockHash)
+					})
+
+				return &consensuspb.ProposalBlock{
+					Block: proposedBlock,
+				}, keepTx, removeTx, nil
+			}
+
 			proposer, err := bp.identity.GetMember()
 			if err != nil {
-				return nil, fmt.Errorf("identity serialize failed, %s", err)
+				return nil, nil, nil, fmt.Errorf("identity serialize failed, %s", err)
 			}
 
 			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(proposedBlock)
@@ -673,13 +736,13 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 				cutBlock = proposedBlock
 			}
 
-			bp.msgBus.Publish(msgbus.ProposedBlock,
-				&consensuspb.ProposalBlock{Block: proposedBlock, TxsRwSet: txsRwSet, CutBlock: cutBlock})
-
-			return &consensuspb.ProposalBlock{Block: proposedBlock, TxsRwSet: txsRwSet, CutBlock: cutBlock}, nil
+			return &consensuspb.ProposalBlock{
+				Block:    proposedBlock,
+				TxsRwSet: txsRwSet,
+				CutBlock: cutBlock}, nil, nil, nil
 		}
 	}
-	return nil, nil
+	return nil, nil, nil, nil
 }
 
 func (bp *BlockProposerImpl) removeTx(
