@@ -216,7 +216,7 @@ rpc:
 
   # RPC server max send/receive message size in MB
   max_send_msg_size: 100
-  max_recv_msg_size: 10
+  max_recv_msg_size: 100
 
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
