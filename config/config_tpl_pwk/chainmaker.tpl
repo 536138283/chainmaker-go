@@ -215,8 +215,8 @@ rpc:
       # - "127.0.0.1"
 
   # RPC server max send/receive message size in MB
-  max_send_msg_size: 10
-  max_recv_msg_size: 10
+  max_send_msg_size: 100
+  max_recv_msg_size: 100
 
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
@@ -386,7 +386,7 @@ storage:
   logdb_segment_async: false
 
   # file size of .fdb, MB, default: 20
-  logdb_segment_size: 128
+  logdb_segment_size: 1024
 
   # bigfilter config
   enable_bigfilter: false    #default false
