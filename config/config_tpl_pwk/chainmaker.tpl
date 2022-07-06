@@ -215,7 +215,7 @@ rpc:
       # - "127.0.0.1"
 
   # RPC server max send/receive message size in MB
-  max_send_msg_size: 10
+  max_send_msg_size: 100
   max_recv_msg_size: 10
 
 tx_filter:
