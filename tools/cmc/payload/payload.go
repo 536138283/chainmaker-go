@@ -58,6 +58,7 @@ func init() {
 	flags.IntVarP(&sequence, "sequence", "s", 1, "specify sequence")
 	flags.StringVarP(&byteCodePath, "byte-code-path", "p", "./fact.wasm", "specify byte code path")
 	flags.StringVar(&sdkConfPath, "sdk-conf-path", "", "specify sdk config path")
+	flags.StringVar(&sdkConfPath, "out-file-path", "", "out file path")
 
 }
 

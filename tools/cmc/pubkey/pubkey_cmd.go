@@ -53,6 +53,8 @@ const (
 	flagOrgId          = "org-id"
 	flagKeyOrgId       = "key-org-id"
 	flagRole           = "role"
+
+	//flagOutFilePath = "out-file-path"
 )
 
 // NewPubkeyCMD new public key management command

@@ -61,11 +61,13 @@ func userContractCMD() *cobra.Command {
 	userContractCmd.AddCommand(createUserContractCMD())
 	userContractCmd.AddCommand(invokeContractTimesCMD())
 	userContractCmd.AddCommand(invokeUserContractCMD())
+	userContractCmd.AddCommand(invokeOutUserContractCMD())
 	userContractCmd.AddCommand(upgradeUserContractCMD())
 	userContractCmd.AddCommand(freezeUserContractCMD())
 	userContractCmd.AddCommand(unfreezeUserContractCMD())
 	userContractCmd.AddCommand(revokeUserContractCMD())
 	userContractCmd.AddCommand(getUserContractCMD())
+	userContractCmd.AddCommand(getOutUserContractCMD())
 
 	return userContractCmd
 }
@@ -123,6 +125,31 @@ func invokeUserContractCMD() *cobra.Command {
 	return cmd
 }
 
+func invokeOutUserContractCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "invoke-out",
+		Short: "invoke-out user contract command",
+		Long:  "invoke-out user contract command",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return invokeOutUserContract()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
+		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
+		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
+		flagOutFilePath, flagDbHost, flagDbUser, flagDbPort, flagDbName, flagSm4Key,
+	})
+
+	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagOutFilePath)
+	cmd.MarkFlagRequired(flagContractName)
+	cmd.MarkFlagRequired(flagMethod)
+
+	return cmd
+}
+
 // invokeContractTimesCMD invoke contract and set invoke times
 //多次的并发调用指定合约方法
 // @return *cobra.Command
@@ -169,6 +196,31 @@ func getUserContractCMD() *cobra.Command {
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagMethod)
+
+	return cmd
+}
+
+func getOutUserContractCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get-out",
+		Short: "get-out user contract command",
+		Long:  "get-out user contract command",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return getOutUserContract()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
+		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout,
+		flagOutFilePath, flagDbHost, flagDbUser, flagDbPort, flagDbName, flagSm4Key,
+	})
+
+	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
+	cmd.MarkFlagRequired(flagMethod)
+	cmd.MarkFlagRequired(flagOutFilePath)
 
 	return cmd
 }
@@ -550,7 +602,9 @@ func getUserContract() error {
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}
-	util.PrintPrettyJson(resp)
+
+	fmt.Printf("QUERY contract resp: %+v\n", resp)
+
 	return nil
 }
 

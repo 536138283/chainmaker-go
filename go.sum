@@ -112,8 +112,6 @@ chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220621122141-d136370aa6d1 h1:Uh
 chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220621122141-d136370aa6d1/go.mod h1:VSFUEKhkViPmbwUvbOpN4iX0EbhnbMx+atgvn9LM2cw=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff h1:mCtuK+FKGMmVLXZf7WFU1dNfk5msQb79hzbftQEpbTo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220616062219-1f80af699445 h1:tHqV8YPuTHPA95CE1hvIH8Ql5N16SZtrr6AwyLXWdN4=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220616062219-1f80af699445/go.mod h1:gQMc0khai7YlSWDzGc6z5GkSkVFEB0Ie3R39bxutISQ=
 chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220622063223-d3795ac73af0 h1:ZKW90gvebNOU1jlycmRORc8sNxMghB3RDxfuDQ9pciY=
 chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220622063223-d3795ac73af0/go.mod h1:S8RMUOHI0jTmBmlFmpKal+ECnckqdDGG5lf3i16gBZw=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.1.2-0.20220128063811-9aeb66627e54/go.mod h1:5rNJBk4OPtdtCRF3RZDLai/Qo7AhqOM4PEickD0i2fA=
