@@ -380,7 +380,7 @@ storage:
   logdb_segment_async: false
 
   # file size of .fdb, MB, default: 20
-  logdb_segment_size: 128
+  logdb_segment_size: 1024
 
   # bigfilter config
   enable_bigfilter: false    #default false
