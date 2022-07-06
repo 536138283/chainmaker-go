@@ -63,12 +63,12 @@ func invokeOutUserContract() error {
 	var err error
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
-		fmt.Printf("open db fail:", err)
+		fmt.Printf("open db fail:%s", err)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		fmt.Printf("ping db fail:", err)
+		fmt.Printf("ping db fail:%s", err)
 	}
 	db.SetMaxOpenConns(200)
 	db.SetMaxIdleConns(20)
@@ -127,11 +127,11 @@ func getOutUserContract() error {
 	//参数准备
 	key, err := base58.Decode(sm4Key)
 	if err != nil {
-		return fmt.Errorf("file data err")
+		return fmt.Errorf("file data err:%s", err)
 	}
 	sm4, err := sym.GenerateSymKey(crypto.SM4, key)
 	if err != nil {
-		return fmt.Errorf("file data err")
+		return fmt.Errorf("file data err:%s", err)
 	}
 
 	dsn := dbUser + ":" + dbPass + "@tcp(" + dbHost + ":" + dbPort + ")/" + dbName + "?loc=Local&parseTime=true"
@@ -139,13 +139,13 @@ func getOutUserContract() error {
 	var db *sql.DB
 	db, err = sql.Open("mysql", dsn)
 	if err != nil {
-		fmt.Printf("open db fail:", err)
+		fmt.Printf("open db fail:%s", err)
 	}
 	defer db.Close()
 
 	err = db.Ping()
 	if err != nil {
-		fmt.Printf("ping db fail:", err)
+		fmt.Printf("ping db fail:%s", err)
 	}
 	db.SetMaxOpenConns(200)
 	db.SetMaxIdleConns(20)
