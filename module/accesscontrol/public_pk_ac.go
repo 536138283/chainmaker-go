@@ -253,6 +253,15 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 	if ok {
 		p.log.Debugf("member found in local cache")
 		return cached.member
+	} else {
+		if p.authType == protocol.Public {
+			tmpMember, err := p.NewMember(member)
+			if err != nil {
+				p.log.Debugf("new member failed, authType = %s, err = %s", p.authType, err.Error())
+				return nil
+			}
+			return tmpMember
+		}
 	}
 	return nil
 }

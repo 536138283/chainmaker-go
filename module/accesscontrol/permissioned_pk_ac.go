@@ -82,6 +82,7 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 	chainConfig.AuthType = strings.ToLower(chainConfig.AuthType)
 	ppacProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
 		chainConfig.AuthType, store, log)
+	ppacProvider.acService.pwkNewMember = ppacProvider.NewMember
 
 	err := ppacProvider.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {
