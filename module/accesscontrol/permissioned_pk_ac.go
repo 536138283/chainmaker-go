@@ -82,7 +82,7 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 	chainConfig.AuthType = strings.ToLower(chainConfig.AuthType)
 	ppacProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
 		chainConfig.AuthType, store, log)
-	ppacProvider.acService.pwkNewMember = ppacProvider.NewMember
+	ppacProvider.acService.pwkNewMember = ppacProvider.NewMemberFromAcs
 
 	err := ppacProvider.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {
@@ -213,6 +213,18 @@ func (pp *permissionedPkACProvider) refineEndorsements(endorsements []*common.En
 // NewMember creates a member from pb Member
 func (pp *permissionedPkACProvider) NewMember(member *pbac.Member) (protocol.Member, error) {
 	return pp.acService.newPkMember(member, pp.adminMember, pp.consensusMember)
+}
+
+// NewMemberFromAcs creates a member from pb Member
+func (pp *permissionedPkACProvider) NewMemberFromAcs(member *pbac.Member) (protocol.Member, error) {
+	pkMember, err := newPkMemberFromAcs(member, pp.adminMember, pp.consensusMember, pp.acService)
+	if err != nil {
+		return nil, fmt.Errorf("new public key member failed: %s", err.Error())
+	}
+	if pkMember.GetOrgId() != member.OrgId && member.OrgId != "" {
+		return nil, fmt.Errorf("new public key member failed: member orgId does not match on chain")
+	}
+	return pkMember, err
 }
 
 // GetHashAlg return hash algorithm the access control provider uses

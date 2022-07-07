@@ -62,7 +62,7 @@ func TestPermissionedPKGetMemberStatus(t *testing.T) {
 	ctl := gomock.NewController(t)
 	store := mock.NewMockBlockchainStore(ctl)
 	store.EXPECT().ReadObject(syscontract.SystemContract_PUBKEY_MANAGE.String(),
-		gomock.Any()).Return(nil, nil)
+		gomock.Any()).AnyTimes().Return(nil, nil)
 	logger := &test.GoLogger{}
 	ppkProvider, err := newPermissionedPkACProvider(testPermissionedPKChainConfig, testOrg1, store, logger)
 	require.Nil(t, err)

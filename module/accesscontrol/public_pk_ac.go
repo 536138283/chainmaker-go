@@ -253,15 +253,14 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 	if ok {
 		p.log.Debugf("member found in local cache")
 		return cached.member
-	} else {
-		if p.authType == protocol.Public {
-			tmpMember, err := p.NewMember(member)
-			if err != nil {
-				p.log.Debugf("new member failed, authType = %s, err = %s", p.authType, err.Error())
-				return nil
-			}
-			return tmpMember
+	}
+	if p.authType == protocol.Public {
+		tmpMember, err := p.NewMemberFromAcs(member)
+		if err != nil {
+			p.log.Debugf("new member failed, authType = %s, err = %s", p.authType, err.Error())
+			return nil
 		}
+		return tmpMember
 	}
 	return nil
 }
@@ -301,6 +300,15 @@ func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error)
 		member:    member,
 		certChain: nil,
 	})
+	return member, nil
+}
+
+// NewMember creates a member from pb Member
+func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member, error) {
+	member, err := publicNewPkMemberFromAcs(pbMember, p.adminMember, p.consensusMember, p.hashType)
+	if err != nil {
+		return nil, fmt.Errorf("new member failed: %s", err.Error())
+	}
 	return member, nil
 }
 
