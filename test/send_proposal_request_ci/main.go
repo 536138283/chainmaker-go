@@ -783,7 +783,15 @@ func initGRPCConnect(useTLS bool) (*grpc.ClientConn, error) {
 	}
 }
 
-func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, txId string) {
+func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, txId string, count ...int) {
+	if count != nil {
+		if count[0] > 200 {
+			panic("等待交易超时")
+		}
+	} else {
+		count = []int{1}
+	}
+	time.Sleep(100 * time.Millisecond)
 	fmt.Printf("\n============ testWaitTx [%s] ============%s\n", txId, time.Now().Format("2006-01-02 15:04:05"))
 	// 构造Payload
 	pair := &commonPb.KeyValuePair{Key: "txId", Value: []byte(txId)}
@@ -795,8 +803,7 @@ func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId stri
 	resp := common.ProposalRequest(sk3, client, commonPb.TxType_QUERY_CONTRACT,
 		chainId, txId, payloadBytes, nil)
 	if resp == nil || resp.ContractResult == nil || strings.Contains(resp.Message, "no such transaction") {
-		time.Sleep(time.Second * 2)
-		testWaitTx(sk3, client, chainId, txId)
+		testWaitTx(sk3, client, chainId, txId, count[0]+1)
 	} else if resp != nil && len(resp.Message) != 0 {
 		fmt.Println(resp.Message)
 	}

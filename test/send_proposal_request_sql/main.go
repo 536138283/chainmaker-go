@@ -277,15 +277,15 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 		fmt.Println("\n// 1、建表、索引、视图等DDL语句只能在合约安装init_contract 和合约升级upgrade中使用。")
 		_, result = testInvokeSqlCommon(sk3, client, "sql_execute_ddl", CHAIN1, txId)
 		panicNotEqual(result, "")
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 200)
 		fmt.Println("\n// 2、SQL中，禁止跨数据库操作，无需指定数据库名。比如select * from db.table 是禁止的； use db;是禁止的。")
 		_, result = testInvokeSqlCommon(sk3, client, "sql_dbname_table_name", CHAIN1, txId)
 		panicNotEqual(result, "")
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 200)
 		fmt.Println("\n// 3、SQL中，禁止使用事务相关操作的语句，比如commit 、rollback等，事务由ChainMaker框架自动控制。")
 		_, result = testInvokeSqlCommon(sk3, client, "sql_execute_commit", CHAIN1, txId)
 		panicNotEqual(result, "")
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 200)
 		fmt.Println("\n// 4、SQL中，禁止使用随机数、获得系统时间等不确定性函数，这些函数在不同节点产生的结果可能不一样，导致合约执行结果无法达成共识。")
 		_, result = testInvokeSqlCommon(sk3, client, "sql_random_key", CHAIN1, txId)
 		panicNotEqual(result, "")
@@ -293,11 +293,11 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 		panicNotEqual(result, "")
 		_, result = testInvokeSqlCommon(sk3, client, "sql_random_query_str", CHAIN1, txId)
 		panicNotEqual(result, "ok")
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 200)
 		fmt.Println("\n// 5、SQL中，禁止多条SQL拼接成一个SQL字符串传入。")
 		_, result = testInvokeSqlCommon(sk3, client, "sql_multi_sql", CHAIN1, txId)
 		panicNotEqual(result, "")
-		time.Sleep(time.Millisecond * 500)
+		time.Sleep(time.Millisecond * 200)
 		fmt.Println("\n// 7、禁止建立、修改或删除表名为“state_infos”的表，这是系统自带的提供KV数据存储的表，用于存放PutState函数对应的数据。")
 		_, result = testInvokeSqlCommon(sk3, client, "sql_update_state_info", CHAIN1, txId)
 		panicNotEqual(result, "")
@@ -343,7 +343,7 @@ func functionalTest(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient) {
 		time.Sleep(2 * time.Second)
 		for _, testFunc := range txIds {
 			txId = testFunc.txIdMyself
-			time.Sleep(time.Millisecond * 500)
+			time.Sleep(time.Millisecond * 200)
 			testWaitTx(sk3, client, CHAIN1, txId)
 			//testCreate(sk3, client, CHAIN1)
 			resultInfo := testGetTxByTxId(sk3, client, txId, CHAIN1)
@@ -603,7 +603,15 @@ func testGetTxByTxId(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, txId, c
 	return result
 }
 
-func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, txId string) {
+func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, txId string, count ...int) {
+	if count != nil {
+		if count[0] > 200 {
+			panic("等待交易超时")
+		}
+	} else {
+		count = []int{1}
+	}
+	time.Sleep(100 * time.Millisecond)
 	fmt.Printf("\n============ testWaitTx [%s] ============%s\n", txId, time.Now().Format("2006-01-02 15:04:05"))
 	// 构造Payload
 	pair := &commonPb.KeyValuePair{Key: "txId", Value: []byte(txId)}
@@ -615,8 +623,7 @@ func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId stri
 	resp := proposalRequest(sk3, client, commonPb.TxType_QUERY_CONTRACT,
 		chainId, txId, payloadBytes)
 	if resp == nil || resp.ContractResult == nil || strings.Contains(resp.Message, "no such transaction") {
-		time.Sleep(time.Second)
-		testWaitTx(sk3, client, chainId, txId)
+		testWaitTx(sk3, client, chainId, txId, count[0]+1)
 	} else if resp != nil && len(resp.Message) != 0 {
 		fmt.Println(resp.Message)
 	}

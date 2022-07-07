@@ -267,10 +267,9 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
 
-	bp.log.Debugf("syncmode::BlockProposerImpl::proposing() => tx_pool status = %#v", bp.txPool)
+	bp.log.Debugf("syncmode::BlockProposerImpl::proposing() => tx_pool status = %#v, height:%d", bp.txPool, height)
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
-
 	if selfProposedBlock != nil {
 		if needPropose := bp.dealProposalRequestByProposalCache(height, selfProposedBlock, preHash); !needPropose {
 			return nil
@@ -645,17 +644,17 @@ func (bp *BlockProposerImpl) dealProposalRequestByProposalCache(
 		// when this block has some wrong tx and could not to reach an agreement.
 		// we need to clear the old proposal cache when the old block's tx timeout.
 		// we need to remove these txs from tx pool.
-		if utils.CurrentTimeMillisSeconds()-selfProposedBlock.Header.BlockTimestamp >=
+		if utils.CurrentTimeSeconds()-selfProposedBlock.Header.BlockTimestamp >=
 			int64(bp.chainConf.ChainConfig().Block.TxTimeout) {
 
 			bp.proposalCache.ClearTheBlock(selfProposedBlock)
 			if common.TxPoolType == batch.TxPoolType {
 				batchIds, _ := common.GetBatchIds(selfProposedBlock)
 				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
+				return true
 			}
 
 			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
-
 			return true
 		}
 
