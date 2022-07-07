@@ -104,7 +104,9 @@ func mainStart() {
 	if errC != nil {
 		log.Error("chainmaker encounters error ", errC)
 	}
+	log.Info("Stopping RPCServer... ")
 	rpcServer.Stop()
+	log.Info("Stopping ChainMaker server... ")
 	chainMakerServer.Stop()
 	log.Info("All is stopped!")
 
