@@ -57,9 +57,6 @@ type certACProvider struct {
 
 	//consensus type
 	consensusType consensus.ConsensusType
-
-	//GovernanceContract
-	maxbftEpochConfig *maxbft.GovernanceContract
 }
 
 type trustMemberCached struct {
@@ -96,13 +93,6 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
 	msgBus.Register(msgbus.MaxbftEpochConf, certACProvider)
 
-	certACProvider.consensusType = chainConf.ChainConfig().Consensus.Type
-	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
-		if err := certACProvider.loadMaxBFTEpochConfig(); err != nil {
-			return nil, err
-		}
-	}
-
 	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)   //nolint: staticcheck
 	chainConf.AddVmWatch(certACProvider) //nolint: staticcheck
@@ -124,13 +114,20 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 		store:        store,
 	}
 
+	var maxbftCfg *maxbft.GovernanceContract
+	certACProvider.consensusType = chainConfig.Consensus.Type
+	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
+		maxbftCfg, err := certACProvider.loadChainConfigFromGovernance()
+		if err != nil {
+			return nil, err
+		}
+		chainConfig = maxbftCfg.ChainConfig
+	}
+
 	err := certACProvider.initTrustMembers(chainConfig.TrustMembers)
 	if err != nil {
 		return nil, err
 	}
-
-	certACProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
-		chainConfig.AuthType, store, log)
 
 	err = certACProvider.initTrustRoots(chainConfig.TrustRoots, localOrgId)
 	if err != nil {
@@ -143,12 +140,17 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	certACProvider.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	certACProvider.opts.KeyUsages[0] = x509.ExtKeyUsageAny
 
-	if err := certACProvider.loadCRL(); err != nil {
-		return nil, err
-	}
-
-	if err := certACProvider.loadCertFrozenList(); err != nil {
-		return nil, err
+	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
+		if err := certACProvider.updateFrozenAndCRL(maxbftCfg); err != nil {
+			return nil, err
+		}
+	} else {
+		if err := certACProvider.loadCRL(); err != nil {
+			return nil, err
+		}
+		if err := certACProvider.loadCertFrozenList(); err != nil {
+			return nil, err
+		}
 	}
 	return certACProvider, nil
 }
