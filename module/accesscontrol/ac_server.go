@@ -218,6 +218,8 @@ type accessControlService struct {
 	hashType string
 
 	authType string
+
+	pwkNewMember func(member *pbac.Member) (protocol.Member, error)
 }
 
 type memberCached struct {
@@ -875,7 +877,18 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 		}
 		return cached.member
 	}
-	return nil
+	var tmpMember protocol.Member
+	var err error
+	if acs.authType == protocol.PermissionedWithCert {
+		tmpMember, err = acs.newCertMember(member)
+	} else if acs.authType == protocol.PermissionedWithKey {
+		tmpMember, err = acs.pwkNewMember(member)
+	}
+	if err != nil {
+		acs.log.Debugf("new member failed, authType = %s, err = %s", acs.authType, err.Error())
+		return nil
+	}
+	return tmpMember
 }
 
 func (acs *accessControlService) verifyPrincipalPolicy(principal, refinedPrincipal protocol.Principal, p *policy) (

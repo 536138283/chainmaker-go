@@ -355,3 +355,29 @@ func (acs *accessControlService) lookUpPolicyByResourceName220(resourceName stri
 	}
 	return p.(*policy), nil
 }
+
+func (acs *pkACProvider) lookUpPolicy220(resourceName string) (*pbac.Policy, error) {
+	if p, ok := acs.resourceNamePolicyMap220.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+	}
+	return nil, fmt.Errorf("policy not found for resource %s", resourceName)
+}
+
+func (acs *pkACProvider) lookUpExceptionalPolicy220(resourceName string) (*pbac.Policy, error) {
+	if p, ok := acs.exceptionalPolicyMap220.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+
+	}
+	return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
+}
+
+func (acs *pkACProvider) lookUpPolicyByResourceName220(resourceName string) (*policy, error) {
+	p, ok := acs.resourceNamePolicyMap220.Load(resourceName)
+	if !ok {
+		if p, ok = acs.exceptionalPolicyMap220.Load(resourceName); !ok {
+			return nil, fmt.Errorf("look up access policy failed, did not configure access policy "+
+				"for resource %s", resourceName)
+		}
+	}
+	return p.(*policy), nil
+}

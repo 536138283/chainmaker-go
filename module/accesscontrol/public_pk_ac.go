@@ -254,6 +254,14 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 		p.log.Debugf("member found in local cache")
 		return cached.member
 	}
+	if p.authType == protocol.Public {
+		tmpMember, err := p.NewMemberFromAcs(member)
+		if err != nil {
+			p.log.Debugf("new member failed, authType = %s, err = %s", p.authType, err.Error())
+			return nil
+		}
+		return tmpMember
+	}
 	return nil
 }
 
@@ -292,6 +300,15 @@ func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error)
 		member:    member,
 		certChain: nil,
 	})
+	return member, nil
+}
+
+// NewMember creates a member from pb Member
+func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member, error) {
+	member, err := publicNewPkMemberFromAcs(pbMember, p.adminMember, p.consensusMember, p.hashType)
+	if err != nil {
+		return nil, fmt.Errorf("new member failed: %s", err.Error())
+	}
 	return member, nil
 }
 
@@ -621,6 +638,12 @@ func (p *pkACProvider) buildRoleListForVerifyPrincipal(pol *policy) map[protocol
 }
 
 func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return p.lookUpPolicyByResourceName220(policyResourceName)
+	}
+
 	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
 		if pol, ok = p.exceptionalPolicyMap.Load(resourceName); !ok {
@@ -727,6 +750,12 @@ func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePol
 
 // LookUpPolicy returns corresponding policy configured for the given resource name
 func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return p.lookUpPolicy220(policyResourceName)
+	}
+
 	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
 		return nil, fmt.Errorf("policy not found for resource %s", resourceName)
@@ -737,6 +766,12 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 
 // LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
 func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return p.lookUpExceptionalPolicy220(policyResourceName)
+	}
+
 	pol, ok := p.exceptionalPolicyMap.Load(resourceName)
 	if !ok {
 		return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
