@@ -33,15 +33,17 @@ config_file="../config/{org_id}/chainmaker.yml"
 
 # if clean existed container(can be -y/-f/force)
 FORCE_CLEAN=$1
+# if start vm go(can be -a/-alone)
+START_WITHOUT_VM_GO=$2
 
 eval $(parse_yaml "$config_file" "chainmaker_")
 
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
-start_docker_vm() {
+function start_docker_vm() {
   image_name="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
 
-  container_name=DOCKERVM-{org_id}
+  container_name=VM-GO-{org_id}
   echo "start docker vm service container: $container_name"
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
@@ -53,7 +55,7 @@ start_docker_vm() {
   exist=$(docker ps -a -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
     echo "$container_name already exists(STOPPED)"
-    if [[ "$FORCE_CLEAN" == "-f" ]] || [ "$FORCE_CLEAN" == "force" ] || [ "$FORCE_CLEAN" == "-y" ]; then
+    if [ "$FORCE_CLEAN" == "-f" ] || [ "$FORCE_CLEAN" == "force" ] || [ "$FORCE_CLEAN" == "-y" ]; then
       echo "remove it:"
       docker rm $container_name
     else
@@ -67,8 +69,8 @@ start_docker_vm() {
   fi
 
   # concat mount_path and log_path for container to mount
-  mount_path=$chainmaker_vm_dockervm_mount_path
-  log_path=$chainmaker_vm_dockervm_log_path
+  mount_path=$chainmaker_vm_go_data_mount_path
+  log_path=$chainmaker_vm_go_log_mount_path
   if [[ "${mount_path:0:1}" != "/" ]];then
     mount_path=$(pwd)/$mount_path
   fi
@@ -79,50 +81,55 @@ start_docker_vm() {
   mkdir -p "$mount_path"
   mkdir -p "$log_path"
 
+  enable_vm_go=$chainmaker_vm_go_enable
+  protocol=$chainmaker_vm_go_protocol
+  vm_go_log_level=$chainmaker_vm_go_log_level
+  runtime_server_port=$chainmaker_vm_go_runtime_server_port
+  contract_engine_port=$chainmaker_vm_go_contract_engine_port
+  rpc_timeout=$chainmaker_vm_go_dial_timeout
+  rpc_max_send_size=$chainmaker_vm_go_max_send_msg_size
+  rpc_max_recv_size=$chainmaker_vm_go_max_recv_msg_size
+  log_in_console=$chainmaker_vm_go_log_in_console
 
-  enable_docker_vm=$chainmaker_vm_enable_dockervm
-  enable_uds=$chainmaker_vm_uds_open
-  start_now=$chainmaker_vm_start_now
-  docker_vm_log_level=$chainmaker_vm_log_level
-  if [[ $enable_docker_vm = "true" &&  $start_now != "false" ]]
+  if [[ $enable_vm_go = "true" &&  $start_now != "false" ]]
   then
-    if [[ $enable_uds = "true" ]]
+
+    if [[ $protocol = "uds" ]]
     then
       echo "docker vm protocol: unix domain socket"
 
       docker run -itd \
-      -e CHAIN_RPC_PROTOCOL="0" \
-      -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$docker_vm_log_level" \
-      -e DOCKERVM_SANDBOX_LOG_LEVEL="$docker_vm_log_level" \
       -v "$mount_path":/mount \
       -v "$log_path":/log \
-      --name DOCKERVM-{org_id} \
+      -e CHAIN_RPC_PROTOCOL="0" \
+      -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
+      -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
+      -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+      -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
+      -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
+      -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+      --name VM-GO-{org_id} \
       --privileged $image_name
     else
-      # $enable_uds = "false"
+      # $protocol = "tcp"
       echo "docker vm protocol: tcp"
-
-        runtime_server_port=$chainmaker_vm_runtime_server_port
-        contract_engine_port=$chainmaker_vm_contract_engine_port
-        contract_engine_timeout=$chainmaker_vm_contract_engine_dial_timeout
-        contract_engine_max_send_size=$chainmaker_vm_contract_engine_max_send_msg_size
-        contract_engine_max_recv_size=$chainmaker_vm_contract_engine_max_recv_msg_size
 
         EXPOSE_PORT=$contract_engine_port
 
         docker run -itd \
+        --net=host \
         -v "$mount_path":/mount \
         -v "$log_path":/log \
-        --net=host \
         -e CHAIN_RPC_PROTOCOL="1" \
         -e CHAIN_RPC_PORT="$contract_engine_port" \
         -e SANDBOX_RPC_PORT="$runtime_server_port" \
-        -e MAX_SEND_MSG_SIZE="$contract_engine_max_send_size" \
-        -e MAX_RECV_MSG_SIZE="$contract_engine_max_recv_size" \
-        -e MAX_CONN_TIMEOUT="$contract_engine_timeout" \
-        -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$docker_vm_log_level" \
-        -e DOCKERVM_SANDBOX_LOG_LEVEL="$docker_vm_log_level" \
-        --name DOCKERVM-{org_id} \
+        -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
+        -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
+        -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+        -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
+        -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
+        -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+        --name VM-GO-{org_id} \
         --privileged $image_name
     fi
   fi
@@ -141,10 +148,9 @@ pid=$(ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | 
 if [ -z "${pid}" ];then
 
     # check if need to start docker vm service.
-    enable_docker_vm=$chainmaker_vm_enable_dockervm
-    enable_uds=$chainmaker_vm_uds_open
-    start_now=$chainmaker_vm_start_now
-    if [[ $enable_docker_vm = "true" && $start_now != "false" ]]
+    enable_vm_go=$chainmaker_vm_enable_dockervm
+    protocol=$chainmaker_vm_go_protocol
+    if [[ $enable_vm_go == "true" &&  ("$START_WITHOUT_VM_GO" == "-s" ||  "$START_WITHOUT_VM_GO" == "start") ]]
     then
       start_docker_vm
     fi

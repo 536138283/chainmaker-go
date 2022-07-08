@@ -485,50 +485,71 @@ storage:
       # Mysql connection info, such as:  root:admin@tcp(127.0.0.1:3306)/
       dsn: root:password@tcp(127.0.0.1:3306)/
 
-# Docker go virtual machine configuration
+# Contract Virtual Machine(VM) configs
 vm:
-  # Enable docker go virtual machine
-  enable_dockervm: {enable_dockervm}
-  # Mount point in chainmaker
-  dockervm_mount_path: ../data/{org_id}/docker-go
-  # Specify log file path
-  dockervm_log_path: ../log/{org_id}/docker-go
-  # Start docker vm right now
-  # 1. false: docker vm will not be started when starting the chain. docker vm needs to be started separately
-  # 2. true: when starting the chain, the script will start the docker vm first
-  start_now: {start_dockervm_now}
-  # Unix domain socket open, used for chainmaker and docker manager communication
-  # 1. false: docker vm uses TCP to communicate with chain
-  # 2. true: docker vm uses unix domain socket to communicate with chain
-  uds_open: {dockervm_uds_open}
-  # If use a customized VM configuration file, supplement it; else, do not configure
-  # dockervm_config_path: /config_path/vm.yml
-  # Whether to print log at terminal
-  log_in_console: false
-  # Log level
-  log_level: {dockervm_log_level}
-  #  Config items of docker runtime service
-  runtime_server:
-    # Runtime service port, default 32351
-    port: {dockervm_runtime_port}
-    # Grpc dialing timeout, default size is 10, Uint: s
+  # Golang runtime in docker container
+  go:
+    # Enable docker go virtual machine, default: false
+    enable: {enable_vm_go}
+    # Mount data path in chainmaker, include contracts, uds socks
+    data_mount_path: ../data/{org_id}/docker-go
+    # Mount log path in chainmaker
+    log_mount_path: ../log/{org_id}/docker-go
+    # Communication protocol, used for chainmaker and docker manager communication
+    # 1. tcp: docker vm uses TCP to communicate with chain
+    # 2. uds: docker vm uses unix domain socket to communicate with chain
+    protocol: {vm_go_protocol}
+    # If use a customized VM configuration file, supplement it; else, do not configure
+    # Priority: chainmaker.yml > vm.yml > default settings
+    # dockervm_config_path: /config_path/vm.yml
+    # Whether to print log on terminal
+    log_in_console: false
+    # Log level of docker vm
+    log_level: {vm_go_log_level}
+
+    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
+    max_send_msg_size: 100
+    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
+    max_recv_msg_size: 100
+    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
     dial_timeout: 10
-    # Grpc max send message size, Default size is 4, Unit: MB
+
+    #  Configs of docker runtime server (handle messages with contract sandbox)
+    runtime_server:
+      # Runtime server port, default 32351
+      port: {vm_go_runtime_port}
+
+    # Configs of contract engine server (handle messages with contract engine)
+    contract_engine:
+      # Docker vm contract engine server host, default 127.0.0.1
+      host: 127.0.0.1
+      # Docker vm contract engine server port, default 22351
+      port: {vm_go_engine_port}
+      # Max number of connection created to connect docker vm service
+      max_connection: 5
+
+  # Golang runtime in docker container (old version < v2.3.0)
+  docekrvm-go:
+    # Enable docker go virtual machine
+    enable_dockervm: {enable_dockervm}
+    # Mount point in chain maker
+    dockervm_mount_path: ../data/{org_id}/docker-go
+    # Specify log file path
+    dockervm_log_path: ../log/{org_id}/docker-go
+    # Whether to print log at terminal
+    log_in_console: false
+    # Log level
+    log_level: INFO
+    # Unix domain socket open, used for chainmaker and docker manager communication
+    uds_open: true
+    # docker vm contract service host, default 127.0.0.1
+    docker_vm_host: 127.0.0.1
+    # docker vm contract service port, default 22351
+    docker_vm_port: {docker_vm_port}
+    # Grpc max send message size, Default size is 20, Unit: MB
     max_send_msg_size: 20
-    # Grpc max receive message size, Default size is 4, Unit: MB
+    # Grpc max receive message size, Default size is 20, Unit: MB
     max_recv_msg_size: 20
-  # Config itrms of contract engine service
-  contract_engine:
-    # Docker vm contract service host, default 127.0.0.1
-    host: 127.0.0.1
-    # Docker vm contract service port, default 22351
-    port: {dockervm_engine_port}
-    # Grpc dialing timeout, default size is 10, Uint: s
-    dial_timeout: 10
-    # Grpc max send message size, Default size is 4, Unit: MB
-    max_send_msg_size: 20
-    # Grpc max receive message size, Default size is 4, Unit: MB
-    max_recv_msg_size: 20
-    # Max number of connection created to connect docker vm service
+    # max number of connection created to connect docker vm service
     max_connection: 5
 
