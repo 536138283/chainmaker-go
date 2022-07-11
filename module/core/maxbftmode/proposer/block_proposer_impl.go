@@ -669,7 +669,7 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 			removeTxs := make([]*commonpb.Transaction, 0)
 			keepTx := make([]*commonpb.Transaction, 0)
 			for _, tx := range proposedBlock.Txs {
-				if utils.CurrentTimeSeconds()+txTimeout >= tx.Payload.Timestamp {
+				if utils.CurrentTimeSeconds()-tx.Payload.Timestamp >= txTimeout {
 					removeTxs = append(removeTxs, tx)
 					continue
 				}
