@@ -156,7 +156,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 	return blockProposerImpl, nil
 }
 
-// Start, start proposer
+// Start proposer
 func (bp *BlockProposerImpl) Start() error {
 	defer bp.log.Info("block proposer starts")
 
@@ -165,7 +165,7 @@ func (bp *BlockProposerImpl) Start() error {
 	return nil
 }
 
-// Start, start proposing loop
+// Start proposing loop
 func (bp *BlockProposerImpl) startProposingLoop() {
 	for {
 		select {
@@ -175,14 +175,15 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 			}
 
 			poolStatus := bp.txPool.GetPoolStatus()
-			if poolStatus == nil {
-				bp.log.Warnf("pool status is nil")
-				return
+			if poolStatus != nil {
+				if poolStatus.ConfigTxNumInQueue != 0 || poolStatus.CommonTxNumInQueue != 0 {
+					bp.log.DebugDynamic(func() string {
+						return "publish msgbus proposeTimer propose blocks propose true"
+					})
+					go bp.msgBus.Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true})
+				}
+				bp.proposeTimer.Reset(bp.getDuration())
 			}
-			if poolStatus.ConfigTxNumInQueue != 0 || poolStatus.CommonTxNumInQueue != 0 {
-				go bp.msgBus.Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true})
-			}
-			bp.proposeTimer.Reset(bp.getDuration())
 		case signal := <-bp.txPoolSignalC:
 			if !bp.isSelfProposer() {
 				break
@@ -200,7 +201,7 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 	}
 }
 
-// Stop, stop proposing loop
+// Stop proposing loop
 func (bp *BlockProposerImpl) Stop() error {
 	defer bp.log.Infof("block proposer stopped")
 	bp.exitC <- true
@@ -368,7 +369,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	return &consensuspb.ProposalBlock{Block: block, TxsRwSet: txsRwSet, CutBlock: cutBlock}, nil
 }
 
-// OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
+// OnReceiveTxPoolSignal receive txpool signal and deliver to chan txpool signal
 func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPoolSignal) {
 	bp.txPoolSignalC <- txPoolSignal
 }
@@ -397,7 +398,7 @@ func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 	bp.log.Debugf("current node is proposer, timeout period is %v", bp.getDuration())
 }
 
-// OnReceiveMaxBFTProposal, to check if this proposer should propose a new block
+// OnReceiveMaxBFTProposal to check if this proposer should propose a new block
 // Only for maxbft consensus
 func (bp *BlockProposerImpl) OnReceiveMaxBFTProposal(proposal *maxbft.BuildProposal) {
 	proposingHeight := proposal.Height
@@ -422,7 +423,7 @@ func (bp *BlockProposerImpl) OnReceiveMaxBFTProposal(proposal *maxbft.BuildPropo
 	<-bp.finishProposeC
 }
 
-// OnReceiveYieldProposeSignal, receive yield propose signal
+// OnReceiveYieldProposeSignal receive yield propose signal
 func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
 	if !isYield {
 		return
@@ -435,9 +436,7 @@ func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
 	}
 }
 
-/*
- * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
- */
+// OnReceiveRwSetVerifyFailTxs remove verify fail txs
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
 
 	// maxbft not support deal with the tx,which rw set verify fail.
