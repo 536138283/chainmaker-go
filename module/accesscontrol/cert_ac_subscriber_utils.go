@@ -101,6 +101,10 @@ func (cp *certACProvider) loadChainConfigFromGovernance() (*maxbft.GovernanceCon
 	if err != nil {
 		return nil, fmt.Errorf("get contractName=%s from db failed, reason: %s", contractName, err)
 	}
+	if bz == nil {
+		cp.acService.log.Warnf("failed to load governance")
+		return nil, nil
+	}
 	cfg := &maxbft.GovernanceContract{}
 	if err = proto.Unmarshal(bz, cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal contractName=%s failed, reason: %s", contractName, err)

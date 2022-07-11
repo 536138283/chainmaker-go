@@ -123,7 +123,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 			return nil, err
 		}
 		//omit 1'st epoch, GovernanceContract don't save chainConfig in 1'st epoch
-		if maxbftCfg.ChainConfig != nil {
+		if maxbftCfg != nil && maxbftCfg.ChainConfig != nil {
 			chainConfig = maxbftCfg.ChainConfig
 		}
 	}
@@ -147,7 +147,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	certACProvider.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	certACProvider.opts.KeyUsages[0] = x509.ExtKeyUsageAny
 
-	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT && maxbftCfg.ChainConfig != nil {
+	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT && maxbftCfg != nil {
 		err = certACProvider.updateFrozenAndCRL(maxbftCfg)
 		if err != nil {
 			return nil, err
