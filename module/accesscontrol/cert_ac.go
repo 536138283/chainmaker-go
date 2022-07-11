@@ -115,19 +115,26 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	}
 
 	var maxbftCfg *maxbft.GovernanceContract
+	var err error
 	certACProvider.consensusType = chainConfig.Consensus.Type
 	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
-		maxbftCfg, err := certACProvider.loadChainConfigFromGovernance()
+		maxbftCfg, err = certACProvider.loadChainConfigFromGovernance()
 		if err != nil {
 			return nil, err
 		}
-		chainConfig = maxbftCfg.ChainConfig
+		//omit 1'st epoch, GovernanceContract don't save chainConfig in 1'st epoch
+		if maxbftCfg.ChainConfig != nil {
+			chainConfig = maxbftCfg.ChainConfig
+		}
 	}
 
-	err := certACProvider.initTrustMembers(chainConfig.TrustMembers)
+	err = certACProvider.initTrustMembers(chainConfig.TrustMembers)
 	if err != nil {
 		return nil, err
 	}
+
+	certACProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
+		chainConfig.AuthType, store, log)
 
 	err = certACProvider.initTrustRoots(chainConfig.TrustRoots, localOrgId)
 	if err != nil {
@@ -140,8 +147,9 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	certACProvider.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	certACProvider.opts.KeyUsages[0] = x509.ExtKeyUsageAny
 
-	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
-		if err := certACProvider.updateFrozenAndCRL(maxbftCfg); err != nil {
+	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT && maxbftCfg.ChainConfig != nil {
+		err = certACProvider.updateFrozenAndCRL(maxbftCfg)
+		if err != nil {
 			return nil, err
 		}
 	} else {
