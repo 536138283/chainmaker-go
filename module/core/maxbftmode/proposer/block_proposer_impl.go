@@ -59,8 +59,8 @@ type BlockProposerImpl struct {
 	chainConf protocol.ChainConf // chain config
 
 	idleMu sync.Mutex // for proposeBlock reentrant lock
-	//statusMu       sync.Mutex   // for propose status change lock
-	//proposerMu     sync.RWMutex // for isProposer lock, avoid race
+	statusMu       sync.Mutex   // for propose status change lock
+	proposerMu     sync.RWMutex // for isProposer lock, avoid race
 	log            protocol.Logger
 	finishProposeC chan bool // channel to receive signal to yield propose block
 
@@ -170,25 +170,27 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 	for {
 		select {
 		case <-bp.proposeTimer.C:
+			if !bp.isSelfProposer() {
+				break
+			}
+
 			poolStatus := bp.txPool.GetPoolStatus()
 			if poolStatus == nil {
 				bp.log.Warnf("pool status is nil")
 				return
 			}
 			if poolStatus.ConfigTxNumInQueue != 0 || poolStatus.CommonTxNumInQueue != 0 {
-				bp.log.DebugDynamic(func() string {
-					return "publish msgbus proposeTimer propose blocks propose true"
-				})
 				go bp.msgBus.Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true})
 			}
 			bp.proposeTimer.Reset(bp.getDuration())
 		case signal := <-bp.txPoolSignalC:
+			if !bp.isSelfProposer() {
+				break
+			}
+
 			if signal.SignalType != txpoolpb.SignalType_BLOCK_PROPOSE {
 				break
 			}
-			bp.log.DebugDynamic(func() string {
-				return "publish msgbus tx pool signal propose blocks propose true"
-			})
 			go bp.msgBus.Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true})
 		case <-bp.exitC:
 			bp.proposeTimer.Stop()
@@ -208,6 +210,10 @@ func (bp *BlockProposerImpl) Stop() error {
 // proposing, propose a block in new height
 func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensuspb.ProposalBlock, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
+
+	// change proposed status when call proposing by consensus.
+	bp.OnReceiveProposeStatusChange(true)
+
 	defer bp.yieldProposing()
 
 	bp.log.DebugDynamic(func() string {
@@ -364,7 +370,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 // OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
 func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPoolSignal) {
-	//bp.txPoolSignalC <- txPoolSignal
+	bp.txPoolSignalC <- txPoolSignal
 }
 
 /*
@@ -372,7 +378,23 @@ func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPool
  * if node is proposer, then reset the timer, otherwise stop the timer
  */
 func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
-
+	bp.log.Debugf("OnReceiveProposeStatusChange(%t)", proposeStatus)
+	bp.statusMu.Lock()
+	defer bp.statusMu.Unlock()
+	if proposeStatus == bp.isSelfProposer() {
+		// 状态一致，忽略
+		return
+	}
+	height, _ := bp.ledgerCache.CurrentHeight()
+	bp.proposalCache.ResetProposedAt(height + 1) // proposer status changed, reset this round proposed status
+	bp.setIsSelfProposer(proposeStatus)
+	if !bp.isSelfProposer() {
+		bp.yieldProposing() // try to yield if proposer self is proposing right now.
+		bp.log.Debug("current node is not proposer ")
+		return
+	}
+	bp.proposeTimer.Reset(bp.getDuration())
+	bp.log.Debugf("current node is proposer, timeout period is %v", bp.getDuration())
 }
 
 // OnReceiveMaxBFTProposal, to check if this proposer should propose a new block
@@ -525,24 +547,24 @@ func (bp *BlockProposerImpl) setIdle() {
 	bp.idle = true
 }
 
-//// setIsSelfProposer, set isProposer status of this node
-//func (bp *BlockProposerImpl) setIsSelfProposer(isSelfProposer bool) {
-//	bp.proposerMu.Lock()
-//	defer bp.proposerMu.Unlock()
-//	bp.isProposer = isSelfProposer
-//	if !bp.isProposer {
-//		bp.proposeTimer.Stop()
-//	} else {
-//		bp.proposeTimer.Reset(bp.getDuration())
-//	}
-//}
+// setIsSelfProposer, set isProposer status of this node
+func (bp *BlockProposerImpl) setIsSelfProposer(isSelfProposer bool) {
+	bp.proposerMu.Lock()
+	defer bp.proposerMu.Unlock()
+	bp.isProposer = isSelfProposer
+	if !bp.isProposer {
+		bp.proposeTimer.Stop()
+	} else {
+		bp.proposeTimer.Reset(bp.getDuration())
+	}
+}
 
-// isSelfProposer, return if this node is consensus proposer
-//func (bp *BlockProposerImpl) isSelfProposer() bool {
-//	bp.proposerMu.RLock()
-//	defer bp.proposerMu.RUnlock()
-//	return bp.isProposer
-//}
+//isSelfProposer, return if this node is consensus proposer
+func (bp *BlockProposerImpl) isSelfProposer() bool {
+	bp.proposerMu.RLock()
+	defer bp.proposerMu.RUnlock()
+	return bp.isProposer
+}
 
 /*
  * shouldProposeByMaxBFT, check if node should propose new block

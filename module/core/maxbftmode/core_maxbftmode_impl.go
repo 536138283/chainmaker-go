@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package maxbftmode
 
 import (
+	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"fmt"
 	"strings"
 
@@ -148,12 +149,15 @@ func (c *CoreEngine) OnQuit() {
 // OnMessage consume a message from message bus
 func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	// 1. receive proposal status from consensus
-	// 2. receive verify block from consensus
-	// 3. receive commit block message from consensus
-	// 4. receive propose signal from txpool
-	// 5. receive build proposal signal from maxbft consensus
+	// 2. receive propose signal from txpool
+	// 3. receive build proposal signal from maxbft consensus
+	// 4. receive deal with the tx which rw set verify fail signal from consensus
 
 	switch message.Topic {
+	case msgbus.ProposeState:
+		if proposeStatus, ok := message.Payload.(bool); ok {
+			c.blockProposer.OnReceiveProposeStatusChange(proposeStatus)
+		}
 	case msgbus.BuildProposal:
 		if proposal, ok := message.Payload.(*maxbft.BuildProposal); ok {
 			c.blockProposer.OnReceiveMaxBFTProposal(proposal)
@@ -164,6 +168,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 				return fmt.Sprintf("received consensus rw set verify fail txs block height:%d", signal.BlockHeight)
 			})
 			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
+		}
+	case msgbus.TxPoolSignal:
+		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
+			c.blockProposer.OnReceiveTxPoolSignal(signal)
 		}
 	}
 
