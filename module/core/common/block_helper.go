@@ -46,7 +46,6 @@ const (
 	//blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
 	BlockSig            = "blockSig"
 	VM                  = "vm"
-	DagVerify           = "dag"
 	TxVerify            = "txVerify"
 	TxRoot              = "txRoot"
 	QuickSyncVerifyMode = uint8(1) // quick sync verify mode
@@ -664,14 +663,6 @@ func (vb *VerifierBlock) ValidateBlock(
 		return nil, nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got txRWSetMap %d, txResultMap %d",
 			block.Header.TxCount, len(txRWSetMap), len(txResultMap))
 	}
-	// rebuild dag and verify with block.Dag
-	startDAGTick := utils.CurrentTimeMillisSeconds()
-	err = vb.CompareDag(block, snapshot, txRWSetMap)
-	dagLasts := utils.CurrentTimeMillisSeconds() - startDAGTick
-	timeLasts[DagVerify] = dagLasts
-	if err != nil {
-		return nil, nil, timeLasts, nil, fmt.Errorf("compare dag %s", err)
-	}
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
@@ -780,14 +771,6 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		return nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
 			block.Header.TxCount, len(txRWSetMap))
 	}
-	// rebuild dag and verify with block.Dag
-	startDAGTick := utils.CurrentTimeMillisSeconds()
-	err = vb.CompareDag(block, snapshot, txRWSetMap)
-	dagLasts := utils.CurrentTimeMillisSeconds() - startDAGTick
-	timeLasts[DagVerify] = dagLasts
-	if err != nil {
-		return nil, timeLasts, nil, fmt.Errorf("compare dag %s", err)
-	}
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
@@ -845,28 +828,6 @@ func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
 	}
 	// check if this block pre hash is equal with last block hash
 	return IsPreHashValid(block, lastBlockHash)
-}
-
-func (vb *VerifierBlock) CompareDag(block *commonPb.Block,
-	snapshot protocol.Snapshot, txRWSetMap map[string]*commonPb.TxRWSet) error {
-	txRWSetTable := make([]*commonPb.TxRWSet, len(block.Txs))
-	for txIndex, tx := range block.Txs {
-		txRWSet, ok := txRWSetMap[tx.Payload.GetTxId()]
-		if !ok {
-			return fmt.Errorf("no rwset of tx[%s]", tx.Payload.GetTxId())
-		}
-		txRWSetTable[txIndex] = txRWSet
-	}
-	dag := snapshot.BuildDAG(vb.chainConf.ChainConfig().Contract.EnableSqlSupport, txRWSetTable)
-	equal, err := utils.IsDagEqual(block.Dag, dag)
-	if err != nil {
-		return err
-	}
-	if !equal {
-		vb.log.Warnf("compare block dag %+v with simulate dag %+v", block.Dag, dag)
-		return fmt.Errorf("simulate dag not equal to block dag")
-	}
-	return nil
 }
 
 // BlockCommitterImpl implements BlockCommitter interface.

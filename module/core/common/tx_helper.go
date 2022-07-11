@@ -161,19 +161,6 @@ func TxVerifyResultsMerge(resultTasks map[int]VerifyBlockBatch,
 	return txHashes, txNewAdd, nil
 }
 
-func RearrangeRWSet(block *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) []*commonpb.TxRWSet {
-	rwSet := make([]*commonpb.TxRWSet, 0)
-	if rwSetMap == nil {
-		return rwSet
-	}
-	for _, tx := range block.Txs {
-		if set, ok := rwSetMap[tx.Payload.TxId]; ok {
-			rwSet = append(rwSet, set)
-		}
-	}
-	return rwSet
-}
-
 // IsTxRequestValid, to check if transaction request payload is valid
 func IsTxRequestValid(tx *commonpb.Transaction, txInPool *commonpb.Transaction) error {
 	poolTxRawBytes, err := utils.CalcUnsignedTxBytes(txInPool)
