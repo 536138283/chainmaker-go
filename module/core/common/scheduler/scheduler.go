@@ -436,9 +436,12 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			txRWSetMap[txRWSet.TxId] = txRWSet
 		}
 	}
-	close(txExecOrderTypeC)
 	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType)
-	for t := range txExecOrderTypeC {
+	// we only receive fixed number of elements from this channel since we process unreceived things
+	// and return error in later parts
+	length := len(txExecOrderTypeC)
+	for i := 0; i < length; i++ {
+		t := <-txExecOrderTypeC
 		txExecOrderTypeMap[t.string] = t.ExecOrderTxType
 	}
 	err = ts.compareDag(block, snapshot, txRWSetMap, txExecOrderTypeMap)
@@ -1433,8 +1436,8 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 			txExecOrderChargeGasCount++
 		}
 	}
-	if IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1 ||
-		!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0 {
+	if (IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
+		(!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
 		return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
 			fmt.Errorf("charge gas enabled but charge gas tx is not 1")
 	}
@@ -1464,6 +1467,10 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 
 func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snapshot,
 	txRWSetMap map[string]*commonPb.TxRWSet, txExecOrderTypeMap map[string]protocol.ExecOrderTxType) error {
+	if block.Header.BlockVersion < blockVersion2300 {
+		return nil
+	}
+	startTime := time.Now()
 	txExecOrderNormalCount, txExecOrderIteratorCount, _, err := ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
 	if err != nil {
 		return err
@@ -1494,6 +1501,8 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 			len(block.Dag.Vertexes), len(dag.Vertexes))
 		return fmt.Errorf("simulate dag not equal to block dag")
 	}
+	timeUsed := time.Since(startTime)
+	ts.log.Infof("compare dag finished, time used %v", timeUsed)
 	return nil
 }
 

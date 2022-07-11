@@ -36,6 +36,8 @@ const (
 	txId0 = "a0000000000000000000000000000000"
 	txId1 = "a0000000000000000000000000000001"
 	txId2 = "a0000000000000000000000000000002"
+	txId3 = "a0000000000000000000000000000003"
+	txId4 = "a0000000000000000000000000000004"
 )
 
 var (
@@ -2819,6 +2821,371 @@ func TestCheckCycleExists(t *testing.T) {
 				require.NotNil(t, result)
 				fmt.Println("txRWSet: ", txRwSet)
 				fmt.Println("result: ", result)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
+	type fields struct {
+		EnableOptimizeChargeGas  bool
+		EnableConflictsBitWindow bool
+		EnableGas                bool
+	}
+	type args struct {
+		txExecOrderTypeMap map[string]protocol.ExecOrderTxType
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    uint32
+		want1   uint32
+		want2   uint32
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				EnableOptimizeChargeGas:  false,
+				EnableConflictsBitWindow: true,
+				EnableGas:                false,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeIterator,
+					txId2: protocol.ExecOrderTxTypeIterator,
+				},
+			},
+			want:    1,
+			want1:   2,
+			want2:   0,
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				EnableOptimizeChargeGas:  false,
+				EnableConflictsBitWindow: true,
+				EnableGas:                false,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeIterator,
+					txId2: protocol.ExecOrderTxTypeChargeGas,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeIterator,
+					txId2: protocol.ExecOrderTxTypeChargeGas,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: false,
+		},
+		{
+			name: "test3",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeChargeGas,
+					txId2: protocol.ExecOrderTxTypeIterator,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: true,
+		},
+		{
+			name: "test4",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeIterator,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeChargeGas,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctl := gomock.NewController(t)
+			chainConf := mock.NewMockChainConf(ctl)
+			chainConfig := &configpb.ChainConfig{
+				Core: &configpb.CoreConfig{
+					EnableOptimizeChargeGas:  tt.fields.EnableOptimizeChargeGas,
+					EnableConflictsBitWindow: tt.fields.EnableConflictsBitWindow,
+				},
+				AccountConfig: &configpb.GasAccountConfig{
+					EnableGas: tt.fields.EnableGas,
+				},
+			}
+			chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
+			ts := &TxScheduler{
+				chainConf: chainConf,
+			}
+			contractId := &commonPb.Contract{
+				Name:        "",
+				Version:     "",
+				RuntimeType: 0,
+				Status:      0,
+				Creator:     nil,
+				Address:     "",
+			}
+			parameters := make(map[string]string, 8)
+			tx0 := newTx(txId0, contractId, parameters)
+			tx1 := newTx(txId1, contractId, parameters)
+			tx2 := newTx(txId2, contractId, parameters)
+
+			block := &commonPb.Block{}
+			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
+			got, got1, got2, err := ts.verifyExecOrderTxType(block, tt.args.txExecOrderTypeMap)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("verifyExecOrderTxType() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("verifyExecOrderTxType() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("verifyExecOrderTxType() got1 = %v, want %v", got1, tt.want1)
+			}
+			if got2 != tt.want2 {
+				t.Errorf("verifyExecOrderTxType() got2 = %v, want %v", got2, tt.want2)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_compareDag(t *testing.T) {
+	type fields struct {
+		EnableOptimizeChargeGas  bool
+		EnableConflictsBitWindow bool
+		EnableGas                bool
+	}
+	type args struct {
+		txExecOrderTypeMap map[string]protocol.ExecOrderTxType
+		dag                *commonPb.DAG
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				EnableOptimizeChargeGas:  false,
+				EnableConflictsBitWindow: true,
+				EnableGas:                false,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeIterator,
+					txId3: protocol.ExecOrderTxTypeIterator,
+					txId4: protocol.ExecOrderTxTypeIterator,
+				},
+				dag: &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{0, 1},
+						},
+						{
+							Neighbors: []uint32{2},
+						},
+						{
+							Neighbors: []uint32{3},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeIterator,
+					txId3: protocol.ExecOrderTxTypeIterator,
+					txId4: protocol.ExecOrderTxTypeIterator,
+				},
+				dag: &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{0, 1},
+						},
+						{
+							Neighbors: []uint32{2},
+						},
+						{
+							Neighbors: []uint32{3},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeIterator,
+					txId3: protocol.ExecOrderTxTypeIterator,
+					txId4: protocol.ExecOrderTxTypeChargeGas,
+				},
+				dag: &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{0, 1},
+						},
+						{
+							Neighbors: []uint32{2},
+						},
+						{
+							Neighbors: []uint32{0, 1, 2, 3},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctl := gomock.NewController(t)
+			snapshot := mock.NewMockSnapshot(ctl)
+			chainConf := mock.NewMockChainConf(ctl)
+			chainConfig := &configpb.ChainConfig{
+				Core: &configpb.CoreConfig{
+					EnableOptimizeChargeGas:  tt.fields.EnableOptimizeChargeGas,
+					EnableConflictsBitWindow: tt.fields.EnableConflictsBitWindow,
+				},
+				AccountConfig: &configpb.GasAccountConfig{
+					EnableGas: tt.fields.EnableGas,
+				},
+				Contract: &configpb.ContractConfig{
+					EnableSqlSupport: false,
+				},
+			}
+			dagCopy := &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{},
+					},
+				},
+			}
+			snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(dagCopy)
+			snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(5) // only the 5th tx will call it
+			chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
+			logger := mock.NewMockLogger(ctl)
+			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Error(gomock.Any()).AnyTimes()
+			ts := &TxScheduler{
+				chainConf: chainConf,
+				log:       logger,
+			}
+			contractId := &commonPb.Contract{
+				Name:        "",
+				Version:     "",
+				RuntimeType: 0,
+				Status:      0,
+				Creator:     nil,
+				Address:     "",
+			}
+			parameters := make(map[string]string, 8)
+			tx0 := newTx(txId0, contractId, parameters)
+			tx1 := newTx(txId1, contractId, parameters)
+			tx2 := newTx(txId2, contractId, parameters)
+			tx3 := newTx(txId3, contractId, parameters)
+			tx4 := newTx(txId4, contractId, parameters)
+
+			block := &commonPb.Block{Header: &commonPb.BlockHeader{BlockVersion: blockVersion2300}}
+			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2, tx3, tx4}
+			block.Dag = tt.args.dag
+			txRWSetMap := make(map[string]*commonPb.TxRWSet)
+			for i := 0; i < 5; i++ {
+				txRWSetMap[fmt.Sprintf("a000000000000000000000000000%04d", i)] = &commonPb.TxRWSet{
+					TxId:     fmt.Sprintf("a000000000000000000000000000%04d", i),
+					TxReads:  nil,
+					TxWrites: nil,
+				}
+			}
+			err := ts.compareDag(block, snapshot, txRWSetMap, tt.args.txExecOrderTypeMap)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("compareDag() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}
