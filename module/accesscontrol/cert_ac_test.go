@@ -224,11 +224,6 @@ func TestVerifyAllPrincipal(t *testing.T) {
 	require.Nil(t, err)
 	require.NotNil(t, endorsement4)
 
-	ok, err := testVerifyPrincipal(test1CertACProvider, protocol.ResourceNameAllTest,
-		[]*common.EndorsementEntry{endorsement1, endorsement2, endorsement3, endorsement4})
-	require.Nil(t, err)
-	require.Equal(t, true, ok)
-
 	validEndorsements, err := testGetValidEndorsements(test1CertACProvider, protocol.ResourceNameUpdateConfig,
 		[]*common.EndorsementEntry{endorsement1, endorsement2, endorsement3, endorsement4})
 
@@ -237,7 +232,7 @@ func TestVerifyAllPrincipal(t *testing.T) {
 
 	//all invalid
 
-	ok, err = testVerifyPrincipal(test1CertACProvider, protocol.ResourceNameUpdateConfig,
+	ok, err := testVerifyPrincipal(test1CertACProvider, protocol.ResourceNameUpdateConfig,
 		[]*common.EndorsementEntry{endorsement1, endorsement2})
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
