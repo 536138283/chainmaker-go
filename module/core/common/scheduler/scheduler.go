@@ -157,6 +157,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	// Wait for schedule finish signal
 	<-ts.scheduleFinishC
+	ts.VmManager.AfterSchedule(string(utils.CalcBlockFingerPrintWithoutTx(block)), block.Header.BlockHeight)
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)
@@ -174,7 +175,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	timeCostB := time.Since(startTime)
-	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
+	ts.log.Infof("16fd491d09a07340cafedf18e4493d4fa8afa01dcd544c29b82a9fd126295d83"+
 		"dag building cost %v, total used %v, tps %v\n", len(block.Dag.Vertexes), timeCostA,
 		timeCostB-timeCostA, timeCostB, float64(len(block.Dag.Vertexes))/(float64(timeCostB)/1e9))
 

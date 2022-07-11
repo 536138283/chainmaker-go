@@ -18,6 +18,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"go.uber.org/atomic"
 )
 
@@ -40,6 +41,8 @@ type SnapshotImpl struct {
 	blockHeight    uint64
 	blockVersion   uint32
 	preBlockHash   []byte
+
+	blockFingerprint string
 
 	preSnapshot protocol.Snapshot
 
@@ -383,7 +386,7 @@ func (s *SnapshotImpl) Seal() {
 	s.sealed.Store(true)
 }
 
-// BuildDAG build the block dag according to the read-write table
+// BuildDAG build the block dag according to the read-wriete table
 func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -513,4 +516,14 @@ func constructKey(contractName string, key []byte) string {
 	builder.WriteString(contractName)
 	builder.Write(key)
 	return builder.String()
+}
+
+// SetBlockFingerprint set block fingerprint
+func (s *SnapshotImpl) SetBlockFingerprint(fp utils.BlockFingerPrint) {
+	s.blockFingerprint = string(fp)
+}
+
+// GetBlockFingerprint returns block block fingerprint
+func (s *SnapshotImpl) GetBlockFingerprint() string {
+	return s.blockFingerprint
 }

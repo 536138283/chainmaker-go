@@ -212,7 +212,7 @@ debug:
 
 
 vm:
-  enable_dockervm: false
+  enable_dockervm: true
   dockervm_mount_path: ../data/org1/docker-go     # mount point in chain maker
   dockervm_log_path: ../log/org1/dockervm
   log_in_console: false
@@ -220,8 +220,8 @@ vm:
   uds_open: false                             # default is unix domain socket connection
   max_send_msg_size: 20
   max_recv_msg_size: 20
-  docker_vm_host: 127.0.0.1
+  docker_vm_host: 10.197.78.11
   docker_vm_port: 22359
-  max_connection: 1
+  max_connection: 2
 
 

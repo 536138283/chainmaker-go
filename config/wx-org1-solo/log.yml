@@ -9,9 +9,9 @@ log:
   system:
     log_level_default: INFO
     log_levels:
-      core: INFO
+      core: DEBUG
       net: INFO
-      vm: INFO
+      vm: DEBUG
       storage: INFO
     file_path: ../log/org1/system.log
     max_age: 365                  # 日志最长保存时间，单位：天

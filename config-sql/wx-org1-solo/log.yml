@@ -9,7 +9,7 @@ log:
   system:
     log_level_default: INFO
     log_levels:
-      core: INFO
+      core: DEBUG
       net: INFO
       vm: DEBUG
       storage: DEBUG
