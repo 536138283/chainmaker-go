@@ -4,8 +4,8 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-// Package defau1t transaction filter implementation
-package defau1t
+// Package filterdefault transaction filter implementation
+package filterdefault
 
 import (
 	"reflect"
