@@ -212,9 +212,6 @@ func (bp *BlockProposerImpl) Stop() error {
 func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensuspb.ProposalBlock, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 
-	// change proposed status when call proposing by consensus.
-	bp.OnReceiveProposeStatusChange(true)
-
 	defer bp.yieldProposing()
 
 	bp.log.DebugDynamic(func() string {
@@ -598,6 +595,9 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte
 
 func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
 	defer func() {
+		// change proposed status when call proposing by consensus.
+		bp.OnReceiveProposeStatusChange(true)
+
 		if bp.isSelfProposer() {
 			bp.proposeTimer.Reset(bp.getDuration())
 		}
