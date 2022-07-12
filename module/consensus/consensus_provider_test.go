@@ -175,11 +175,11 @@ func TestNewConsensusEngine(t *testing.T) {
 			}
 			got, err := provider(config)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewConsensusEngine() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewCoreEngine() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if reflect.TypeOf(got) != reflect.TypeOf(tt.want) {
-				t.Errorf("NewConsensusEngine() = %v, want %v", got, tt.want)
+				t.Errorf("NewCoreEngine() = %v, want %v", got, tt.want)
 			}
 		})
 	}

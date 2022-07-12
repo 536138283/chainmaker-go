@@ -28,10 +28,10 @@ func Factory() *coreEngineFactory {
 	return _instance
 }
 
-// NewConsensusEngine new the core engine.
+// NewCoreEngine new the core engine.
 // consensusType specifies the core engine type.
 // consensusConfig specifies the necessary config parameters.
-func (cf *coreEngineFactory) NewConsensusEngine(consensusType string,
+func (cf *coreEngineFactory) NewCoreEngine(consensusType string,
 	providerConf *conf.CoreEngineConfig) (protocol.CoreEngine, error) {
 	p := provider.NewCoreEngineProviderByConsensusType(consensusType)
 	var storeHelper conf.StoreHelper
