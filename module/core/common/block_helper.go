@@ -641,6 +641,14 @@ func (vb *VerifierBlock) ValidateBlock(
 			return nil, nil, timeLasts, nil, fmt.Errorf("no txs in block[%x] but dag has vertex",
 				block.Header.BlockHash)
 		}
+		// verify TxRoot
+		startRootsTick := utils.CurrentTimeMillisSeconds()
+		err = CheckBlockDigests(block, nil, hashType, vb.log)
+		if err != nil {
+			return nil, nil, timeLasts, nil, err
+		}
+		rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
+		timeLasts[TxRoot] = rootsLast
 		return nil, nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
@@ -752,6 +760,14 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 			return nil, timeLasts, nil, fmt.Errorf("no txs in block[%x] but dag has vertex",
 				block.Header.BlockHash)
 		}
+		// verify TxRoot
+		startRootsTick := utils.CurrentTimeMillisSeconds()
+		err = CheckBlockDigests(block, nil, hashType, vb.log)
+		if err != nil {
+			return nil, timeLasts, nil, err
+		}
+		rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
+		timeLasts[TxRoot] = rootsLast
 		return nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
