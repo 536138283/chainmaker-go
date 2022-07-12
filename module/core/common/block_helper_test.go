@@ -2178,3 +2178,52 @@ func getTestTx(txIds []string) []*commonpb.Transaction {
 
 	return txs
 }
+
+func TestFinalizeBlock(t *testing.T) {
+	type args struct {
+		block      *commonpb.Block
+		txRWSetMap map[string]*commonpb.TxRWSet
+		aclFailTxs []*commonpb.Transaction
+		hashType   string
+		logger     protocol.Logger
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			args: args{
+				block:      createBlock(1),
+				txRWSetMap: map[string]*commonpb.TxRWSet{},
+				aclFailTxs: nil,
+				hashType:   "SHA256",
+				logger:     logger.GetLogger("core"),
+			},
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			args: args{
+				block: func() *commonpb.Block {
+					block := createBlock(1)
+					block.Dag = nil
+					return block
+				}(),
+				txRWSetMap: map[string]*commonpb.TxRWSet{},
+				aclFailTxs: nil,
+				hashType:   "SHA256",
+				logger:     logger.GetLogger("core"),
+			},
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := FinalizeBlock(tt.args.block, tt.args.txRWSetMap, tt.args.aclFailTxs, tt.args.hashType, tt.args.logger); (err != nil) != tt.wantErr {
+				t.Errorf("FinalizeBlock() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}

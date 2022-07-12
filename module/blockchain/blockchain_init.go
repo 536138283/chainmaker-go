@@ -702,7 +702,7 @@ func (bc *Blockchain) initCore() (err error) {
 	}
 	// 时间戳
 	coreEngineFactory := core.Factory()
-	bc.coreEngine, err = coreEngineFactory.NewConsensusEngine(bc.getConsensusType().String(), coreEngineConfig)
+	bc.coreEngine, err = coreEngineFactory.NewCoreEngine(bc.getConsensusType().String(), coreEngineConfig)
 	if err != nil {
 		bc.log.Errorf("new core engine failed, %s", err.Error())
 		return err
