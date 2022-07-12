@@ -361,22 +361,30 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	err = util.CheckProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return err
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
+	return createUserContractOutput(resp)
+}
+
+func createUserContractOutput(resp *common.TxResponse) error {
+	if resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		var contract common.Contract
+		err := contract.Unmarshal(resp.ContractResult.Result)
+		if err != nil {
+			return err
+		}
+		util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.CreateUpgradeContractContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         &contract,
+			},
+		})
+	} else {
+		util.PrintPrettyJson(resp)
 	}
-	util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
-		TxResponse: resp,
-		ContractResult: &types.CreateUpgradeContractContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
 	return nil
 }
 
