@@ -652,11 +652,9 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		return errResult(result, err)
 	}
 
-	needGetBytecode := contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
+	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
 		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
-		contract.RuntimeType != commonPb.RuntimeType_GO
-
-	if needGetBytecode {
+		contract.RuntimeType != commonPb.RuntimeType_GO {
 		byteCode, err = txSimContext.GetContractBytecode(contract.Name)
 		if err != nil {
 			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
@@ -699,36 +697,10 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 			return result, specialTxType, err
 		}
 
-		// get tx's gas limit
-		limit, err := getTxGasLimit(tx)
-		if err != nil {
-			ts.log.Errorf("getTxGasLimit error: %v", err)
-			result.Message = err.Error()
+		// check and refund gas
+		if err = ts.checkRefundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
+			contractResultPayload, enableOptimizeChargeGas); err != nil {
 			return result, specialTxType, err
-		}
-
-		// compare the gas used with gas limit
-		if limit < contractResultPayload.GasUsed {
-			err = fmt.Errorf("gas limit is not enough, [limit:%d]/[gasUsed:%d]",
-				limit, contractResultPayload.GasUsed)
-			ts.log.Error(err.Error())
-			result.ContractResult.Code = uint32(commonPb.TxStatusCode_CONTRACT_FAIL)
-			result.ContractResult.Message = err.Error()
-			result.ContractResult.GasUsed = limit
-			return result, specialTxType, err
-		}
-		if !enableOptimizeChargeGas {
-			if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
-				contractResultPayload); err != nil {
-				ts.log.Errorf("refund gas err is %v", err)
-				if txSimContext.GetBlockVersion() >= blockVersion2300 {
-					result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-					result.Message = err.Error()
-					result.ContractResult.Code = uint32(1)
-					result.ContractResult.Message = err.Error()
-					return result, specialTxType, err
-				}
-			}
 		}
 	}
 
@@ -825,6 +797,46 @@ func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, 
 		}
 	}
 	return result, nil
+}
+
+func (ts *TxScheduler) checkRefundGas(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
+	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
+	result *commonPb.Result, contractResultPayload *commonPb.ContractResult, enableOptimizeChargeGas bool) error {
+
+	// get tx's gas limit
+	limit, err := getTxGasLimit(tx)
+	if err != nil {
+		ts.log.Errorf("getTxGasLimit error: %v", err)
+		result.Message = err.Error()
+		return err
+	}
+
+	// compare the gas used with gas limit
+	if limit < contractResultPayload.GasUsed {
+		err = fmt.Errorf("gas limit is not enough, [limit:%d]/[gasUsed:%d]",
+			limit, contractResultPayload.GasUsed)
+		ts.log.Error(err.Error())
+		result.ContractResult.Code = uint32(commonPb.TxStatusCode_CONTRACT_FAIL)
+		result.ContractResult.Message = err.Error()
+		result.ContractResult.GasUsed = limit
+		return err
+	}
+
+	if !enableOptimizeChargeGas {
+		if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
+			contractResultPayload); err != nil {
+			ts.log.Errorf("refund gas err is %v", err)
+			if txSimContext.GetBlockVersion() >= blockVersion2300 {
+				result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+				result.Message = err.Error()
+				result.ContractResult.Code = uint32(1)
+				result.ContractResult.Message = err.Error()
+				return err
+			}
+		}
+	}
+
+	return nil
 }
 
 func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
