@@ -15,8 +15,6 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
@@ -36,11 +34,6 @@ func enableOrDisableGasCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Enable or disable gas feature
 			var adminKeys []string
