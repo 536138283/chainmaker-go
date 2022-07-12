@@ -651,9 +651,12 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 		return errResult(result, err)
 	}
-	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
+
+	needGetBytecode := contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
 		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
-		contract.RuntimeType != commonPb.RuntimeType_GO {
+		contract.RuntimeType != commonPb.RuntimeType_GO
+
+	if needGetBytecode {
 		byteCode, err = txSimContext.GetContractBytecode(contract.Name)
 		if err != nil {
 			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
@@ -733,12 +736,6 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		return result, specialTxType, nil
 	}
 	return result, specialTxType, errors.New(contractResultPayload.Message)
-}
-func errResult(result *commonPb.Result, err error) (*commonPb.Result, protocol.ExecOrderTxType, error) {
-	result.ContractResult.Message = err.Error()
-	result.Code = commonPb.TxStatusCode_INVALID_PARAMETER
-	result.ContractResult.Code = 1
-	return result, protocol.ExecOrderTxTypeNormal, err
 }
 
 func (ts *TxScheduler) parseParameter(
@@ -956,158 +953,6 @@ func (ts *TxScheduler) getSenderPk(txSimContext protocol.TxSimContext) ([]byte, 
 	}
 
 	return pk, nil
-}
-
-// parseUserAddress
-func publicKeyFromCert(member []byte) ([]byte, error) {
-	certificate, err := utils.ParseCert(member)
-	if err != nil {
-		return nil, err
-	}
-	pubKeyBytes, err := certificate.PublicKey.Bytes()
-	if err != nil {
-		return nil, err
-	}
-	return pubKeyBytes, nil
-}
-
-func wholeCertInfo(txSimContext protocol.TxSimContext, certHash string) (*commonPb.CertInfo, error) {
-	certBytes, err := txSimContext.Get(syscontract.SystemContract_CERT_MANAGE.String(), []byte(certHash))
-	if err != nil {
-		return nil, err
-	}
-
-	return &commonPb.CertInfo{
-		Hash: certHash,
-		Cert: certBytes,
-	}, nil
-}
-
-type SenderGroup struct {
-	txsMap     map[[32]byte][]*commonPb.Transaction
-	doneTxKeyC chan [32]byte
-}
-
-func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
-	return &SenderGroup{
-		txsMap:     getSenderTxsMap(txBatch),
-		doneTxKeyC: make(chan [32]byte, len(txBatch)),
-	}
-}
-
-func getSenderTxsMap(txBatch []*commonPb.Transaction) map[[32]byte][]*commonPb.Transaction {
-	senderTxsMap := make(map[[32]byte][]*commonPb.Transaction)
-	for _, tx := range txBatch {
-		hashKey, _ := getSenderHashKey(tx)
-		senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
-	}
-	return senderTxsMap
-}
-
-func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
-	sender := tx.GetSender().GetSigner()
-	keyBytes, err := sender.Marshal()
-	if err != nil {
-		return [32]byte{}, err
-	}
-	return sha256.Sum256(keyBytes), nil
-}
-
-func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (int64, error) {
-
-	var err error
-	var balance int64
-	balanceData, err := snapshot.GetKey(-1,
-		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-		[]byte(accountmgr.AccountPrefix+address))
-	if err != nil {
-		return -1, err
-	}
-
-	if len(balanceData) == 0 {
-		balance = int64(0)
-	} else {
-		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	return balance, nil
-}
-
-func publicKeyToAddress(publicKey crypto.PublicKey) (string, error) {
-	address, err := evmutils.ZXAddressFromPublicKey(publicKey)
-	if err != nil {
-		return "", err
-	}
-	return address, nil
-}
-
-func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
-
-	var err error
-	var pk []byte
-	var publicKey crypto.PublicKey
-	signingMember := tx.GetSender().GetSigner()
-	if signingMember == nil {
-		err = errors.New(" can not find sender from tx ")
-		return nil, err
-	}
-
-	switch signingMember.MemberType {
-	case accesscontrol.MemberType_CERT:
-		pk, err = publicKeyFromCert(signingMember.MemberInfo)
-		if err != nil {
-			return nil, err
-		}
-		publicKey, err = asym.PublicKeyFromDER(pk)
-		if err != nil {
-			return nil, err
-		}
-
-	case accesscontrol.MemberType_CERT_HASH:
-		var certInfo *commonPb.CertInfo
-		infoHex := hex.EncodeToString(signingMember.MemberInfo)
-		if certInfo, err = wholeCertInfoFromSnapshot(snapshot, infoHex); err != nil {
-			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
-		}
-
-		pk, err = publicKeyFromCert(certInfo.Cert)
-		if err != nil {
-			return nil, err
-		}
-
-		publicKey, err = asym.PublicKeyFromDER(pk)
-		if err != nil {
-			return nil, err
-		}
-
-	case accesscontrol.MemberType_PUBLIC_KEY:
-		pk = signingMember.MemberInfo
-		publicKey, err = asym.PublicKeyFromPEM(pk)
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		err = fmt.Errorf("invalid member type: %s", signingMember.MemberType)
-		return nil, err
-	}
-
-	return publicKey, nil
-}
-
-func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*commonPb.CertInfo, error) {
-	certBytes, err := snapshot.GetKey(-1, syscontract.SystemContract_CERT_MANAGE.String(), []byte(certHash))
-	if err != nil {
-		return nil, err
-	}
-
-	return &commonPb.CertInfo{
-		Hash: certHash,
-		Cert: certBytes,
-	}, nil
 }
 
 // dispatchTxs dispatch txs from:
@@ -1384,6 +1229,165 @@ func (ts *TxScheduler) appendChargeGasTxToDAG(
 		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
 	}
 	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
+}
+
+func errResult(result *commonPb.Result, err error) (*commonPb.Result, protocol.ExecOrderTxType, error) {
+	result.ContractResult.Message = err.Error()
+	result.Code = commonPb.TxStatusCode_INVALID_PARAMETER
+	result.ContractResult.Code = 1
+	return result, protocol.ExecOrderTxTypeNormal, err
+}
+
+// parseUserAddress
+func publicKeyFromCert(member []byte) ([]byte, error) {
+	certificate, err := utils.ParseCert(member)
+	if err != nil {
+		return nil, err
+	}
+	pubKeyBytes, err := certificate.PublicKey.Bytes()
+	if err != nil {
+		return nil, err
+	}
+	return pubKeyBytes, nil
+}
+
+func wholeCertInfo(txSimContext protocol.TxSimContext, certHash string) (*commonPb.CertInfo, error) {
+	certBytes, err := txSimContext.Get(syscontract.SystemContract_CERT_MANAGE.String(), []byte(certHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &commonPb.CertInfo{
+		Hash: certHash,
+		Cert: certBytes,
+	}, nil
+}
+
+type SenderGroup struct {
+	txsMap     map[[32]byte][]*commonPb.Transaction
+	doneTxKeyC chan [32]byte
+}
+
+func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
+	return &SenderGroup{
+		txsMap:     getSenderTxsMap(txBatch),
+		doneTxKeyC: make(chan [32]byte, len(txBatch)),
+	}
+}
+
+func getSenderTxsMap(txBatch []*commonPb.Transaction) map[[32]byte][]*commonPb.Transaction {
+	senderTxsMap := make(map[[32]byte][]*commonPb.Transaction)
+	for _, tx := range txBatch {
+		hashKey, _ := getSenderHashKey(tx)
+		senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
+	}
+	return senderTxsMap
+}
+
+func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
+	sender := tx.GetSender().GetSigner()
+	keyBytes, err := sender.Marshal()
+	if err != nil {
+		return [32]byte{}, err
+	}
+	return sha256.Sum256(keyBytes), nil
+}
+
+func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (int64, error) {
+
+	var err error
+	var balance int64
+	balanceData, err := snapshot.GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		[]byte(accountmgr.AccountPrefix+address))
+	if err != nil {
+		return -1, err
+	}
+
+	if len(balanceData) == 0 {
+		balance = int64(0)
+	} else {
+		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return balance, nil
+}
+
+func publicKeyToAddress(publicKey crypto.PublicKey) (string, error) {
+	address, err := evmutils.ZXAddressFromPublicKey(publicKey)
+	if err != nil {
+		return "", err
+	}
+	return address, nil
+}
+
+func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+
+	var err error
+	var pk []byte
+	var publicKey crypto.PublicKey
+	signingMember := tx.GetSender().GetSigner()
+	if signingMember == nil {
+		err = errors.New(" can not find sender from tx ")
+		return nil, err
+	}
+
+	switch signingMember.MemberType {
+	case accesscontrol.MemberType_CERT:
+		pk, err = publicKeyFromCert(signingMember.MemberInfo)
+		if err != nil {
+			return nil, err
+		}
+		publicKey, err = asym.PublicKeyFromDER(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	case accesscontrol.MemberType_CERT_HASH:
+		var certInfo *commonPb.CertInfo
+		infoHex := hex.EncodeToString(signingMember.MemberInfo)
+		if certInfo, err = wholeCertInfoFromSnapshot(snapshot, infoHex); err != nil {
+			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
+		}
+
+		pk, err = publicKeyFromCert(certInfo.Cert)
+		if err != nil {
+			return nil, err
+		}
+
+		publicKey, err = asym.PublicKeyFromDER(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	case accesscontrol.MemberType_PUBLIC_KEY:
+		pk = signingMember.MemberInfo
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	default:
+		err = fmt.Errorf("invalid member type: %s", signingMember.MemberType)
+		return nil, err
+	}
+
+	return publicKey, nil
+}
+
+func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*commonPb.CertInfo, error) {
+	certBytes, err := snapshot.GetKey(-1, syscontract.SystemContract_CERT_MANAGE.String(), []byte(certHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &commonPb.CertInfo{
+		Hash: certHash,
+		Cert: certBytes,
+	}, nil
 }
 
 // getTxGasLimit get the gas limit field from tx, and will return err when the gas limit field is not set.

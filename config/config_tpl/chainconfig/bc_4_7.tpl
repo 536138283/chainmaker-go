@@ -41,13 +41,13 @@ vm:
   # Address type
   # 0-chainmaker, 1-zxl, 3-ethereum(reserved value, which is not supported in the current version)
   addr_type: 0
-  # Virtual machine support list, In the current version, there are wasmer, gasm, evm and dockergo
+  # Virtual machine support list, In the current version, there are wasmer, gasm, evm and go
   # virtual machines to choose from. One or more virtual machines can be configured to be started
   support_list:
     - "wasmer"
     - "gasm"
     - "evm"
-    - "dockergo"
+    - "go"
     - "wxvm"
 
 # Block proposing related settings

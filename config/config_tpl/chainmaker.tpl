@@ -516,9 +516,9 @@ vm:
     # Enable docker go virtual machine, default: false
     enable: {enable_vm_go}
     # Mount data path in chainmaker, include contracts, uds socks
-    data_mount_path: ../data/{org_id}/docker-go
+    data_mount_path: ../data/{org_id}/go
     # Mount log path in chainmaker
-    log_mount_path: ../log/{org_id}/docker-go
+    log_mount_path: ../log/{org_id}/go
     # Communication protocol, used for chainmaker and docker manager communication
     # 1. tcp: docker vm uses TCP to communicate with chain
     # 2. uds: docker vm uses unix domain socket to communicate with chain
@@ -528,7 +528,7 @@ vm:
     # dockervm_config_path: /config_path/vm.yml
     # Whether to print log on terminal
     log_in_console: false
-    # Log level of docker vm
+    # Log level of docker vm go
     log_level: {vm_go_log_level}
 
     # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB

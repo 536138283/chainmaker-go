@@ -492,9 +492,9 @@ vm:
     # Enable docker go virtual machine, default: false
     enable: {enable_vm_go}
     # Mount data path in chainmaker, include contracts, uds socks
-    data_mount_path: ../data/{org_id}/docker-go
+    data_mount_path: ../data/{org_id}/go
     # Mount log path in chainmaker
-    log_mount_path: ../log/{org_id}/docker-go
+    log_mount_path: ../log/{org_id}/go
     # Communication protocol, used for chainmaker and docker manager communication
     # 1. tcp: docker vm uses TCP to communicate with chain
     # 2. uds: docker vm uses unix domain socket to communicate with chain
