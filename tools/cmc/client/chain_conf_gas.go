@@ -8,16 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 package client
 
 import (
-	"errors"
 	"fmt"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
@@ -37,20 +30,12 @@ func enableOrDisableGasCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
+			adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(cc)
+			if err != nil {
+				return err
 			}
 
 			//// 2.Enable or disable gas feature
-			var adminKeys []string
-			if adminKeyFilePaths != "" {
-				adminKeys = strings.Split(adminKeyFilePaths, ",")
-			}
-			if len(adminKeys) == 0 {
-				return errors.New("admin key list is empty")
-			}
-
 			chainConfig, err := cc.GetChainConfig()
 			if err != nil {
 				return err
@@ -65,20 +50,9 @@ func enableOrDisableGasCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				endorsers := make([]*common.EndorsementEntry, len(adminKeys))
-				for i := range adminKeys {
-					var e *common.EndorsementEntry
-					var err error
-					e, err = sdkutils.MakePkEndorserWithPath(
-						adminKeys[i],
-						crypto.HashAlgoMap[cc.GetHashType()],
-						"",
-						payload,
-					)
-					if err != nil {
-						return err
-					}
-					endorsers[i] = e
+				endorsers, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+				if err != nil {
+					return err
 				}
 
 				resp, err := cc.SendChainConfigUpdateRequest(payload, endorsers, -1, syncResult)
@@ -102,7 +76,7 @@ func enableOrDisableGasCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAdminKeyFilePaths, flagSyncResult,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{

@@ -67,7 +67,6 @@ chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220607063430-b037daa0847d/go.mod h
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220608020957-f7bc44fe4a25/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220610063945-4a6f77d1301b/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220623085444-d4d73acef506/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
-chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220624073450-89bde499f22e/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220627132320-95cc14a8d47d/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220627132320-95cc14a8d47d/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220629075646-a48b109a5aad/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
@@ -89,8 +88,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220707024229-d4471b44f2ce/go.mo
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff h1:mCtuK+FKGMmVLXZf7WFU1dNfk5msQb79hzbftQEpbTo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220630033703-4b5aa2b89287 h1:VPR8eVjUPFLEb7kjrV8Pr9uIn6YdWyDUbeqmsoPGIHw=
-chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220630033703-4b5aa2b89287/go.mod h1:MUJ5iRJgZJuCOp01DfldLUIyTl08Ge4EhD8UOLd8/ps=
+chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220712084252-dab6af40f09f h1:LArijhUXRAWaBwWiD+z6D+o9iG7sZb+YvM2tzbDsoRc=
+chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220712084252-dab6af40f09f/go.mod h1:oJf8h/MRd7U7x3LvSf4L6tpoFg3Hjm/ftMKO+h4M90U=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.0/go.mod h1:H/rkyGcBqlXZQRdFpNByohh0GdQuk9cX2BbX2X16vZY=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.2-0.20220628072606-5915bec9e840 h1:w/h1apN1vaufeXYb7VkiQPTDAnhNib3Dr8+uOdIe374=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.2.2-0.20220628072606-5915bec9e840/go.mod h1:LO9aK8tRE+WautVVJ6BOHnH5Q+LvKeBYX4Vocmy8G1I=
