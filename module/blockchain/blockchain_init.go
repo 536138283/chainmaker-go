@@ -593,7 +593,7 @@ func (bc *Blockchain) initVM() (err error) {
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
-			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, localconf.ChainMakerConfig.VMConfig)
+			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
 			if err != nil {
 				bc.log.Errorf("create instance manager failed, %v", err)
 			}
@@ -641,7 +641,7 @@ func (bc *Blockchain) initVM() (err error) {
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
-			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, localconf.ChainMakerConfig.VMConfig)
+			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
 			if err != nil {
 				bc.log.Errorf("create instance manager failed, %v", err)
 			}

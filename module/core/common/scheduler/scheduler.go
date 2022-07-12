@@ -651,7 +651,9 @@ func (ts *TxScheduler) runVM(tx *commonPb.Transaction,
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 		return errResult(result, err)
 	}
-	if contract.RuntimeType != commonPb.RuntimeType_NATIVE && contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO {
+	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
+		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
+		contract.RuntimeType != commonPb.RuntimeType_GO {
 		byteCode, err = txSimContext.GetContractBytecode(contract.Name)
 		if err != nil {
 			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
