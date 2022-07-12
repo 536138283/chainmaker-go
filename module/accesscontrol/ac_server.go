@@ -578,7 +578,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
 	localOrgId string) {
-	switch acs.authType {
+	authType := strings.ToLower(acs.authType)
+	switch authType {
 	case protocol.PermissionedWithCert, protocol.Identity:
 		acs.createDefaultResourcePolicy(localOrgId)
 	case protocol.PermissionedWithKey:
