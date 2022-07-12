@@ -285,7 +285,7 @@ func FinalizeBlock(
 	block.Header.TxCount = uint32(txCount)
 
 	// TxRoot/RwSetRoot
-	var errs []error
+	errsC := make(chan error, txCount+3) // txCount+3 possible errors
 	txHashes := make([][]byte, txCount)
 	wg := &sync.WaitGroup{}
 	wg.Add(txCount)
@@ -304,14 +304,15 @@ func FinalizeBlock(
 			var err error
 			txHashes[x], err = getTxHash(tx, rwSet, hashType, block.Header, logger)
 			if err != nil {
-				errs = append(errs, err)
+				errsC <- err
 			}
 
 		}(tx, rwSet, i)
 	}
 	wg.Wait()
-	if len(errs) > 0 {
-		return errs[0]
+	if len(errsC) > 0 {
+		err := <-errsC
+		return err
 	}
 	wg.Add(3)
 	//calc tx root
@@ -321,7 +322,7 @@ func FinalizeBlock(
 		block.Header.TxRoot, err = hash.GetMerkleRoot(hashType, txHashes)
 		if err != nil {
 			logger.Warnf("get tx merkle root error %s", err)
-			errs = append(errs, err)
+			errsC <- err
 		}
 		logger.DebugDynamic(func() string {
 			return fmt.Sprintf("GetMerkleRoot(%s) get %x", hashType, block.Header.TxRoot)
@@ -334,7 +335,7 @@ func FinalizeBlock(
 		block.Header.RwSetRoot, err = utils.CalcRWSetRoot(hashType, block.Txs)
 		if err != nil {
 			logger.Warnf("get rwset merkle root error %s", err)
-			errs = append(errs, err)
+			errsC <- err
 		}
 	}()
 	//calc dag hash
@@ -346,13 +347,15 @@ func FinalizeBlock(
 		dagHash, err = utils.CalcDagHash(hashType, block.Dag)
 		if err != nil {
 			logger.Warnf("get dag hash error %s", err)
-			errs = append(errs, err)
+			errsC <- err
 		}
 		block.Header.DagHash = dagHash
 	}()
 	wg.Wait()
-	if len(errs) > 0 {
-		return errs[0]
+	// not close errsC will NOT cause memory leak
+	if len(errsC) > 0 {
+		err := <-errsC
+		return err
 	}
 	return nil
 }
