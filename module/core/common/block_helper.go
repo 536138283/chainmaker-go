@@ -740,6 +740,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
 	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+		vb.log.Errorf("verify block signature fail,err:%s", err.Error())
 		return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 	}
