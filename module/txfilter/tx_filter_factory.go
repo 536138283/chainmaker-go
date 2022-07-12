@@ -15,7 +15,7 @@ import (
 	mapimpl "chainmaker.org/chainmaker-go/module/txfilter/map"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/birdnest"
-	"chainmaker.org/chainmaker-go/module/txfilter/defau1t"
+	"chainmaker.org/chainmaker-go/module/txfilter/filterdefault"
 	"chainmaker.org/chainmaker-go/module/txfilter/shardingbirdsnest"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -39,12 +39,12 @@ func (cf *txFilterFactory) NewTxFilter(conf *filtercommon.TxFilterConfig, log pr
 	store protocol.BlockchainStore) (protocol.TxFilter, error) {
 	if conf == nil {
 		log.Warn("txfilter conf is nil, use default type: store")
-		return defau1t.New(store), nil
+		return filterdefault.New(store), nil
 	}
 	switch conf.Type {
 	// default txfilter
 	case filtercommon.TxFilterTypeDefault:
-		return defau1t.New(store), nil
+		return filterdefault.New(store), nil
 		// bird's nest txfilter
 	case filtercommon.TxFilterTypeBirdsNest:
 		return birdnest.New(conf.BirdsNest, log, store)
@@ -56,6 +56,6 @@ func (cf *txFilterFactory) NewTxFilter(conf *filtercommon.TxFilterConfig, log pr
 		return shardingbirdsnest.New(conf.ShardingBirdsNest, log, store)
 	default:
 		log.Warnf("txfilter type: %v not support, use default type: store", conf.Type)
-		return defau1t.New(store), nil
+		return filterdefault.New(store), nil
 	}
 }
