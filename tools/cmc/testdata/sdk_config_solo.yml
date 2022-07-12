@@ -4,7 +4,7 @@ chain_client:
   # 组织ID
   org_id: "wx-org1.chainmaker.org"
   # 客户端用户私钥路径
-  user_key_file_path: "../../config/wx-org1-solo/testdata/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key"
+  user_key_file_path: "./testdata/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key"
   # 客户端用户证书路径
   user_crt_file_path: "./testdata/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt"
   # 客户端用户交易签名私钥路径(若未设置，将使用user_key_file_path)
