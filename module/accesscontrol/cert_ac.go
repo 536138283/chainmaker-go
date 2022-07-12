@@ -127,6 +127,9 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 			chainConfig = maxbftCfg.ChainConfig
 		}
 	}
+	log.DebugDynamic(func() string {
+		return fmt.Sprintf("init ac from chainconfig: %+v", chainConfig)
+	})
 
 	err = certACProvider.initTrustMembers(chainConfig.TrustMembers)
 	if err != nil {
