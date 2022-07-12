@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/maxbftmode/helper"
@@ -148,12 +150,15 @@ func (c *CoreEngine) OnQuit() {
 // OnMessage consume a message from message bus
 func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	// 1. receive proposal status from consensus
-	// 2. receive verify block from consensus
-	// 3. receive commit block message from consensus
-	// 4. receive propose signal from txpool
-	// 5. receive build proposal signal from maxbft consensus
+	// 2. receive propose signal from txpool
+	// 3. receive build proposal signal from maxbft consensus
+	// 4. receive deal with the tx which rw set verify fail signal from consensus
 
 	switch message.Topic {
+	case msgbus.ProposeState:
+		if proposeStatus, ok := message.Payload.(bool); ok {
+			c.blockProposer.OnReceiveProposeStatusChange(proposeStatus)
+		}
 	case msgbus.BuildProposal:
 		if proposal, ok := message.Payload.(*maxbft.BuildProposal); ok {
 			c.blockProposer.OnReceiveMaxBFTProposal(proposal)
@@ -165,6 +170,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 			})
 			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
 		}
+	case msgbus.TxPoolSignal:
+		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
+			c.blockProposer.OnReceiveTxPoolSignal(signal)
+		}
 	}
 
 }
@@ -173,6 +182,8 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.BuildProposal, c)
 	c.msgBus.Register(msgbus.RwSetVerifyFailTxs, c)
+	c.msgBus.Register(msgbus.ProposeState, c)
+	c.msgBus.Register(msgbus.TxPoolSignal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 
