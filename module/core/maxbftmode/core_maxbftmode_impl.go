@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package maxbftmode
 
 import (
-	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"fmt"
 	"strings"
+
+	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
@@ -181,6 +182,8 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.BuildProposal, c)
 	c.msgBus.Register(msgbus.RwSetVerifyFailTxs, c)
+	c.msgBus.Register(msgbus.ProposeState, c)
+	c.msgBus.Register(msgbus.TxPoolSignal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 
