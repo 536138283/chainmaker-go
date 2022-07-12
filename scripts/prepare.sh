@@ -33,7 +33,7 @@ BC_YML_TRUST_ROOT_LINE_END=$(awk '/trust roots list end/{print NR}' ${CONFIG_TPL
 
 function show_help() {
     echo "Usage:  "
-    echo "  prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4) p2p_port(default:11301) rpc_port(default:12301) vm_go_runtime_port(default:32351) vm_go_engine_port(default:22351)"
+    echo "    prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4) p2p_port(default:11301) rpc_port(default:12301) vm_go_runtime_port(default:32351) vm_go_engine_port(default:22351)"
     echo "    eg1: prepare.sh 4 1"
     echo "    eg2: prepare.sh 4 1 11301 12301"
     echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351"
@@ -154,8 +154,7 @@ function generate_config() {
     VM_GO_CONTAINER_NAME_PREFIX="chainmaker-vm-go-container"
     ENABLE_VM_GO="false"
     VM_GO_LOG_LEVEL="INFO"
-    START_VM_GO="true"
-    VM_GO_TRANSPORT_PROTOCOL="false" # tcp: false, uds: true
+    VM_GO_TRANSPORT_PROTOCOL="tcp" # tcp / uds
 
     read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
     if  [ ! -z "$tmp" ] ;then
@@ -232,7 +231,6 @@ function generate_config() {
         xsed "s%{vm_go_runtime_port}%$(($VM_GO_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{vm_go_engine_port}%$(($VM_GO_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{vm_go_log_level}%$VM_GO_LOG_LEVEL%g" node$i/chainmaker.yml
-        xsed "s%{start_vm_go}%$START_VM_GO%g" node$i/chainmaker.yml
         xsed "s%{vm_go_protocol}%$VM_GO_TRANSPORT_PROTOCOL%g" node$i/chainmaker.yml
 
         system=$(uname)
