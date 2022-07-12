@@ -147,7 +147,7 @@ func getUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -248,50 +248,21 @@ func revokeUserContractCMD() *cobra.Command {
 }
 
 func createUserContract() error {
-	var adminKeys []string
-	var adminCrts []string
-	var adminOrgs []string
-
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
 		return err
 	}
 	defer client.Stop()
-
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		return err
 	}
-
 	rt, ok := common.RuntimeType_value[runtimeType]
 	if !ok {
 		return fmt.Errorf("unknown runtime type [%s]", runtimeType)
 	}
-
 	var kvs []*common.KeyValuePair
-
 	if runtimeType != "EVM" {
 		if params != "" {
 			kvsMap := make(map[string]string)
@@ -334,7 +305,6 @@ func createUserContract() error {
 		}
 		byteCodePath = string(byteCode)
 	}
-
 	payload, err := client.CreateContractCreatePayload(
 		contractName,
 		version,
@@ -345,39 +315,14 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-
 	if gasLimit > 0 {
 		var limit = &common.Limit{GasLimit: gasLimit}
 		payload = client.AttachGasLimit(payload, limit)
 	}
-
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		var e *common.EndorsementEntry
-		var err error
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err = sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err = sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				adminOrgs[i],
-				payload,
-			)
-		} else {
-			e, err = sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
-				"",
-				payload,
-			)
-		}
-		if err != nil {
-			return err
-		}
-		endorsementEntrys[i] = e
+	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
 	}
-
 	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {
 		return err
@@ -386,18 +331,22 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
+	if resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		var contract common.Contract
+		err = contract.Unmarshal(resp.ContractResult.Result)
+		if err != nil {
+			return err
+		}
+		util.PrintPrettyJson(types.TxResponse{
+			TxResponse: resp,
+			ContractResult: &types.ContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         &contract,
+			},
+		})
+	} else {
+		util.PrintPrettyJson(resp)
 	}
-	util.PrintPrettyJson(types.TxResponse{
-		TxResponse: resp,
-		ContractResult: &types.ContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
 	return nil
 }
 
@@ -563,17 +512,61 @@ func getUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+	var evmMethod *ethabi.Method
+
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
+
+		contractAbi, err := ethabi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		m, exist := contractAbi.Methods[method]
+		if !exist {
+			return fmt.Errorf("method '%s' not found", method)
+		}
+		evmMethod = &m
+
+		inputData, err := util.Pack(evmMethod, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+		method = inputDataHexStr[0:8]
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+	} else {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
 	}
 
-	resp, err := client.QueryContract(contractName, method, util.ConvertParameters(pairs), -1)
+	resp, err := client.QueryContract(contractName, method, kvs, -1)
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
+	}
+	if evmMethod != nil && resp.ContractResult != nil {
+		output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
+		if err != nil {
+			return err
+		}
+		resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
 	}
 	util.PrintPrettyJson(resp)
 	return nil
