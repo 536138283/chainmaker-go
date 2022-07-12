@@ -83,6 +83,7 @@ core:
 
   # Used for dynamic tuning the capacity of tx execution goroutine pool
   enable_conflicts_bit_window: true
+  enable_optimize_charge_gas: true
 
   # Consensus message compression related settings
   # consensus_turbo_config:
@@ -97,7 +98,7 @@ core:
 
 # gas account config
 account_config:
-  enable_gas: false
+  enable_gas: true
   gas_count: 0
   gas_admin_address: "ZXff78ca3b84e3f5f91ff18b45fc1ecfda2d5990db"
   default_gas: 0
