@@ -316,7 +316,8 @@ func (pp *permissionedPkACProvider) systemContractCallbackPublicKeyManagementDel
 
 func (acs *accessControlService) initResourcePolicy_220(resourcePolicies []*config.ResourcePolicy,
 	localOrgId string) {
-	switch acs.authType {
+	authType := strings.ToLower(acs.authType)
+	switch authType {
 	case protocol.PermissionedWithCert, protocol.Identity:
 		acs.createDefaultResourcePolicy_220(localOrgId)
 	case protocol.PermissionedWithKey:
