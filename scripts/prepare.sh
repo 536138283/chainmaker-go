@@ -180,39 +180,25 @@ function generate_config() {
       if  [ $enable_vm_go == "YES" ]; then
           ENABLE_VM_GO="true"
 
-          read -p "start vm go with chain (Y(default)|N)" start_now
-          if  [ ! -z "$start_now" ]; then
-              if [ $start_now == "Y" ] || [ $start_now == "y" ] || [ $start_now == "yes" ] || [ $start_now == "YES" ]; then
-                  START_VM_GO="true"
-              elif [ $start_now == "N" ] || [ $start_now == "n" ] || [ $start_now == "NO" ] || [ $start_now == "no" ]; then
-                  START_VM_GO="false"
+          read -p "vm go transport protocol (uds|tcp(default))" transport_protocol
+          if [ ! -z "$transport_protocol" ]; then
+              if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
+                  VM_GO_TRANSPORT_PROTOCOL="tcp"
+              elif [ $transport_protocol == "uds" ] || [ $transport_protocol == "UDS" ]; then
+                  VM_GO_TRANSPORT_PROTOCOL="uds"
               else
-                  echo "unknown input [" $start_now "], so use default"
+                  echo "unknown input [" $transport_protocol "], so use default"
               fi
           fi
 
-          if [ $START_VM_GO == "true" ]; then
-                read -p "vm go transport protocol (uds|tcp(default))" transport_protocol
-                if [ ! -z "$transport_protocol" ]; then
-                    if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
-                        VM_GO_TRANSPORT_PROTOCOL="tcp"
-                    elif [ $transport_protocol == "uds" ] || [ $transport_protocol == "UDS" ]; then
-                        VM_GO_TRANSPORT_PROTOCOL="uds"
-                    else
-                        echo "unknown input [" $transport_protocol "], so use default"
-                    fi
-                fi
-
-                read -p "input vm go log level (DEBUG|INFO(default)|WARN|ERROR): " vm_go_log_level
-                if  [ ! -z "$vm_go_log_level" ] ;then
-                if  [ $vm_go_log_level == "DEBUG" ] || [ $vm_go_log_level == "INFO" ] || [ $vm_go_log_level == "WARN" ] || [ $vm_go_log_level == "ERROR" ];then
-                    VM_GO_LOG_LEVEL=$vm_go_log_level
-                else
-                    echo "unknown vm go log level [" $vm_go_log_level "], so use default"
-                fi
-            fi
-
+          read -p "input vm go log level (DEBUG|INFO(default)|WARN|ERROR): " vm_go_log_level
+          if  [ ! -z "$vm_go_log_level" ] ;then
+          if  [ $vm_go_log_level == "DEBUG" ] || [ $vm_go_log_level == "INFO" ] || [ $vm_go_log_level == "WARN" ] || [ $vm_go_log_level == "ERROR" ];then
+              VM_GO_LOG_LEVEL=$vm_go_log_level
+          else
+              echo "unknown vm go log level [" $vm_go_log_level "], so use default"
           fi
+        fi
       fi
     fi
 

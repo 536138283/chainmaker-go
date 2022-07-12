@@ -193,39 +193,25 @@ function generate_config() {
     if  [ ! -z "$enable_dockervm" ]; then
       if  [ $enable_dockervm == "YES" ]; then
           ENABLE_DOCKERVM="true"
-        #   echo "enable docker vm"
 
-          read -p "start docker vm with chain (Y(default)|N)" start_now
-          if  [ ! -z "$start_now" ] ;then
-              if [ $start_now == "Y" ] || [ $start_now == "y" ] || [ $start_now == "yes" ] || [ $start_now == "YES" ]; then
-                  START_DOCKER_VM_NOW="true"
-              elif [ $start_now == "N" ] || [ $start_now == "n" ] || [ $start_now == "NO" ] || [ $start_now == "no" ]; then
-                  START_DOCKER_VM_NOW="false"
+          read -p "dockervm transport protocol (uds|tcp(default))" transport_protocol
+          if [ ! -z "$transport_protocol" ]; then
+              if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
+                  DOCKER_VM_TRANSPORT_PROTOCOL="false"
+              elif [ $transport_protocol == "uds" ] || [ $transport_protocol == "UDS" ]; then
+                  DOCKER_VM_TRANSPORT_PROTOCOL="true"
               else
-                  echo "unknown input [" $start_now "], so use default"
+                  echo "unknown input [" $transport_protocol "], so use default"
               fi
           fi
 
-          if [ $START_DOCKER_VM_NOW == "true" ]; then
-                read -p "dockervm transport protocol (uds|tcp(default))" transport_protocol
-                if [ ! -z "$transport_protocol" ]; then
-                    if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
-                        DOCKER_VM_TRANSPORT_PROTOCOL="false"
-                    elif [ $transport_protocol == "uds" ] || [ $start_now == "UDS" ]; then
-                        DOCKER_VM_TRANSPORT_PROTOCOL="true"
-                    else
-                        echo "unknown input [" $transport_protocol "], so use default"
-                    fi
-                fi
-
-                read -p "input docker vm log level (DEBUG|INFO(default)|WARN|ERROR): " dockervm_log_level
-                if  [ ! -z "$dockervm_log_level" ] ;then
-                    if  [ $dockervm_log_level == "DEBUG" ] || [ $dockervm_log_level == "INFO" ] || [ $dockervm_log_level == "WARN" ] || [ $dockervm_log_level == "ERROR" ];then
-                        DOCKER_VM_LOG_LEVEL=$dockervm_log_level
-                    else
-                        echo "unknown dockervm log level [" $dockervm_log_level "], so use default"
-                    fi
-                fi
+          read -p "input docker vm log level (DEBUG|INFO(default)|WARN|ERROR): " dockervm_log_level
+          if  [ ! -z "$dockervm_log_level" ] ;then
+              if  [ $dockervm_log_level == "DEBUG" ] || [ $dockervm_log_level == "INFO" ] || [ $dockervm_log_level == "WARN" ] || [ $dockervm_log_level == "ERROR" ];then
+                  DOCKER_VM_LOG_LEVEL=$dockervm_log_level
+              else
+                  echo "unknown dockervm log level [" $dockervm_log_level "], so use default"
+              fi
           fi
       fi
     fi

@@ -5,5 +5,5 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-./stop.sh
-./start.sh -f
+./stop.sh full
+./start.sh -f full

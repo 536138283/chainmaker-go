@@ -53,7 +53,7 @@ function start_normal() {
     do
         if [ -d $file ]; then
             echo "START ==> " $RELEASE_PATH/$file
-            cd $file/bin && ./start.sh -f && cd - > /dev/null
+            cd $file/bin && ./start.sh -f full && cd - > /dev/null
         fi
     done
 }
@@ -68,7 +68,7 @@ function start_tmux() {
         if [ -d $RELEASE_PATH/$file ]; then
             echo "START ==> " $RELEASE_PATH/$file
             tmux selectp -t $((cnt % 4))
-            tmux send-keys "export PS1=\"\[\e[32m\]($(date +%Y-%m-%d) \t) <node$(($cnt+1)) \W> \[\e[m\]\" && cd $RELEASE_PATH/$file/bin && ./start.sh && reset && ./chainmaker version && echo \"sleep 5s...\" && sleep 5 && echo -e \"\\n>>> show last line log <<<\" && tail -n 1 ../log/system.log && echo -e \"\\n>>> show process list <<<\" && ps axo pid,cmd | grep -v grep | grep \"chainmaker start\"" C-m
+            tmux send-keys "export PS1=\"\[\e[32m\]($(date +%Y-%m-%d) \t) <node$(($cnt+1)) \W> \[\e[m\]\" && cd $RELEASE_PATH/$file/bin && ./start.sh -f full && reset && ./chainmaker version && echo \"sleep 5s...\" && sleep 5 && echo -e \"\\n>>> show last line log <<<\" && tail -n 1 ../log/system.log && echo -e \"\\n>>> show process list <<<\" && ps axo pid,cmd | grep -v grep | grep \"chainmaker start\"" C-m
 
             if [ $once -eq 1 ] && [[ $(($cnt/4)) -eq 1 ]]; then
                 tmux new-window
@@ -86,4 +86,4 @@ function start_tmux() {
 }
 
 prepare
-cluster_start
+#cluster_start

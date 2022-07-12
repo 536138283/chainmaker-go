@@ -30,21 +30,38 @@ function parse_yaml {
 
 config_file="../config/{org_id}/chainmaker.yml"
 # config_file="../../config/wx-org1-solo/chainmaker.yml"
-
-# if clean existed container(can be -y/-f/force)
-FORCE_CLEAN=$1
-# if start vm go(can be -a/-alone)
-START_WITHOUT_VM_GO=$2
-
 eval $(parse_yaml "$config_file" "chainmaker_")
+
+VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
+DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.2.3"
+START_FULL_MODE=""
+
+# read params
+for i in "$@";do
+    case "$i" in
+        -y|-f|force)
+            FORCE_CLEAN=true
+            ;;
+        alone)
+            START_FULL_MODE=false
+            ;;
+        full)
+            START_FULL_MODE=true
+            ;;
+        *)
+            echo $"Usage: $0 {alone|full|-y|-f|force}"
+            echo $"  full: start chainmaker node with the vm containers"
+            echo $"  alone: start chainmaker node alone, WITHOUT vm containers"
+            echo $"  -y|-f|force: force remove stopped vm containers and create new"
+            exit
+    esac
+done
 
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
-function start_docker_vm() {
-  image_name="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
-
+function start_vm_go() {
   container_name=VM-GO-{org_id}
-  echo "start docker vm service container: $container_name"
+  echo "start go vm service container: $container_name"
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -55,10 +72,11 @@ function start_docker_vm() {
   exist=$(docker ps -a -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
     echo "$container_name already exists(STOPPED)"
-    if [ "$FORCE_CLEAN" == "-f" ] || [ "$FORCE_CLEAN" == "force" ] || [ "$FORCE_CLEAN" == "-y" ]; then
+    if [ "$FORCE_CLEAN" == "true" ]; then
       echo "remove it:"
       docker rm $container_name
     else
+      need_rm="yes"
       read -r -p "remove it and start a new container, default: yes (y|n): " need_rm
       if [ "$need_rm" == "no" ] || [ "$need_rm" == "n" ]; then
         exit 0
@@ -81,7 +99,6 @@ function start_docker_vm() {
   mkdir -p "$mount_path"
   mkdir -p "$log_path"
 
-  enable_vm_go=$chainmaker_vm_go_enable
   protocol=$chainmaker_vm_go_protocol
   vm_go_log_level=$chainmaker_vm_go_log_level
   runtime_server_port=$chainmaker_vm_go_runtime_server_port
@@ -91,17 +108,36 @@ function start_docker_vm() {
   rpc_max_recv_size=$chainmaker_vm_go_max_recv_msg_size
   log_in_console=$chainmaker_vm_go_log_in_console
 
-  if [[ $enable_vm_go = "true" &&  $start_now != "false" ]]
-  then
 
-    if [[ $protocol = "uds" ]]
-    then
-      echo "docker vm protocol: unix domain socket"
+  if [[ $protocol = "uds" ]]
+  then
+    echo "go vm protocol: unix domain socket"
+
+    docker run -itd \
+    -v "$mount_path":/mount \
+    -v "$log_path":/log \
+    -e CHAIN_RPC_PROTOCOL="0" \
+    -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
+    -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
+    -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+    -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+    --name VM-GO-{org_id} \
+    --privileged $VM_GO_IMAGE_NAME
+  else
+    # $protocol = "tcp"
+    echo "go vm protocol: tcp"
+
+      EXPOSE_PORT=$contract_engine_port
 
       docker run -itd \
+      --net=host \
       -v "$mount_path":/mount \
       -v "$log_path":/log \
-      -e CHAIN_RPC_PROTOCOL="0" \
+      -e CHAIN_RPC_PROTOCOL="1" \
+      -e CHAIN_RPC_PORT="$contract_engine_port" \
+      -e SANDBOX_RPC_PORT="$runtime_server_port" \
       -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
       -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
       -e MAX_CONN_TIMEOUT="$rpc_timeout" \
@@ -109,30 +145,9 @@ function start_docker_vm() {
       -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
       --name VM-GO-{org_id} \
-      --privileged $image_name
-    else
-      # $protocol = "tcp"
-      echo "docker vm protocol: tcp"
-
-        EXPOSE_PORT=$contract_engine_port
-
-        docker run -itd \
-        --net=host \
-        -v "$mount_path":/mount \
-        -v "$log_path":/log \
-        -e CHAIN_RPC_PROTOCOL="1" \
-        -e CHAIN_RPC_PORT="$contract_engine_port" \
-        -e SANDBOX_RPC_PORT="$runtime_server_port" \
-        -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
-        -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
-        -e MAX_CONN_TIMEOUT="$rpc_timeout" \
-        -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
-        -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
-        -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
-        --name VM-GO-{org_id} \
-        --privileged $image_name
-    fi
+      --privileged $VM_GO_IMAGE_NAME
   fi
+
   retval="$?"
   if [ $retval -ne 0 ]; then
     echo "Fail to run docker vm."
@@ -140,19 +155,124 @@ function start_docker_vm() {
   fi
 
   echo "waiting for docker vm container to warm up..."
-  sleep 5
+  sleep 3
 }
 
 
+# if enable Deprecated docker vm service and use unix domain socket, it will start a docker vm container
+function start_docker_vm_go() {
+  container_name=DOCKERVM-{org_id}
+  echo "start Deprecated docker vm service container: $container_name"
+  #check container exists
+  exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
+  if [ "$exist" ]; then
+    echo "$container_name already RUNNING, please stop it first."
+    exit 1
+  fi
+
+  exist=$(docker ps -a -f name="$container_name" --format '{{.Names}}')
+  if [ "$exist" ]; then
+    echo "$container_name already exists(STOPPED)"
+    if [[ "$FORCE_CLEAN" == "true" ]]; then
+      echo "remove it:"
+      docker rm $container_name
+    else
+      need_rm="yes"
+      read -r -p "remove it and start a new container, default: yes (y|n): " need_rm
+      if [ "$need_rm" == "no" ] || [ "$need_rm" == "n" ]; then
+        exit 0
+      else
+        docker rm $container_name
+      fi
+    fi
+  fi
+
+  # concat mount_path and log_path for container to mount
+  docker_vm_mount_path=$chainmaker_docekrvm-go_dockervm_mount_path
+  docker_vm_log_path=$chainmaker_docekrvm-go_dockervm_log_path
+  docker_vm_log_level=$chainmaker_docekrvm-go_log_level
+  docker_vm_log_in_console=$chainmaker_docekrvm-go_log_in_console
+  if [[ "${docker_vm_mount_path:0:1}" != "/" ]];then
+    docker_vm_mount_path=$(pwd)/$mount_path
+  fi
+  if [[ "${docker_vm_log_path:0:1}" != "/" ]];then
+    docker_vm_log_path=$(pwd)/$log_path
+  fi
+
+  mkdir -p "$docker_vm_mount_path"
+  mkdir -p "$docker_vm_log_path"
+
+  # env params:
+  # ENV_ENABLE_UDS=false
+  # ENV_USER_NUM=1000
+  # ENV_TX_TIME_LIMIT=2
+  # ENV_LOG_LEVEL=INFO
+  # ENV_LOG_IN_CONSOLE=false
+  # ENV_MAX_CONCURRENCY=50
+  # ENV_VM_SERVICE_PORT=22359
+  # ENV_ENABLE_PPROF=
+  # ENV_PPROF_PORT=
+  echo "start docker vm service container:"
+  docker run -itd \
+    -e ENV_LOG_IN_CONSOLE="$docker_vm_log_in_console" -e ENV_LOG_LEVEL="$docker_vm_log_level" -e ENV_ENABLE_UDS=true \
+    -e ENV_USER_NUM=10000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
+    -v "$docker_vm_mount_path":/mount \
+    -v "$docker_vm_log_path":/log \
+    --name DOCKERVM-{org_id} \
+    --privileged $DOCKER_VM_IMAGE_NAME
+
+  retval="$?"
+  if [ $retval -ne 0 ]; then
+    echo "Fail to run docker vm."
+    exit 1
+  fi
+
+  echo "waiting for Deprecated docker vm container to warm up..."
+  sleep 3
+}
+
+
+function start_vm_containers() {
+    if [ "$START_FULL_MODE" == "" ]
+    then
+      read -r -p "start with vm containers, default: yes (y|n): " start_container
+      if [ "$start_container" == "no" ] || [ "$start_container" == "n" ]; then
+        START_FULL_MODE=false
+      else
+        START_FULL_MODE=true
+      fi
+    fi
+
+    if [ "$START_FULL_MODE" == "true" ]
+    then
+      # check if need to start go vm service.
+      if [[ "$enable_go_vm_container" == "true" ]]
+      then
+        start_vm_go
+      fi
+
+      # check if need to start Deprecated docker vm service.
+      if [[ $enable_docker_vm_container == "true" ]]
+      then
+        start_docker_vm_go
+      fi
+    fi
+}
+
 pid=$(ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep |  awk  '{print $2}')
 if [ -z "${pid}" ];then
-
-    # check if need to start docker vm service.
-    enable_vm_go=$chainmaker_vm_enable_dockervm
-    protocol=$chainmaker_vm_go_protocol
-    if [[ $enable_vm_go == "true" &&  ("$START_WITHOUT_VM_GO" == "-s" ||  "$START_WITHOUT_VM_GO" == "start") ]]
+    # check if enable go vm
+    if [[ $chainmaker_vm_go_enable == "true" ]]; then
+     enable_go_vm_container=true
+    fi
+    # check if enable Deprecated docker vm
+    if [[ $chainmaker_docekrvm-go_enable_dockervm == "true" && $chainmaker_docekrvm-go_uds_open == "true" ]]; then
+      enable_docker_vm_container=true
+    fi
+    # if enable one, start vm containers
+    if [[ $enable_docker_vm_container == "true" || $enable_go_vm_container == "true" ]]
     then
-      start_docker_vm
+      start_vm_containers
     fi
 
     # start chainmaker
