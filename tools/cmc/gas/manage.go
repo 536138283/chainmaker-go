@@ -56,7 +56,7 @@ func newSetGasAdminCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				adminAddr, err = sdk.GetZXAddressFromPKPEM(pk)
+				adminAddr, err = sdk.GetZXAddressFromPKPEM(pk, cc.GetHashType())
 				if err != nil {
 					return err
 				}
@@ -231,7 +231,7 @@ func newGetGasBalanceCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				address, err = sdk.GetZXAddressFromPKPEM(pk)
+				address, err = sdk.GetZXAddressFromPKPEM(pk, cc.GetHashType())
 				if err != nil {
 					return err
 				}
@@ -434,7 +434,7 @@ func newGetGasAccountStatusCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				address, err = sdk.GetZXAddressFromPKPEM(pk)
+				address, err = sdk.GetZXAddressFromPKPEM(pk, cc.GetHashType())
 				if err != nil {
 					return err
 				}
