@@ -72,7 +72,7 @@ if [[ $chainmaker_vm_go_enable == "true" ]]; then
  enable_go_vm_container=true
 fi
 # check if enable Deprecated docker vm
-if [[ $chainmaker_docekrvm-go_enable_dockervm == "true" && $chainmaker_docekrvm-go_uds_open == "true" ]]; then
+if [[ $chainmaker_vm_docker_go_enable_dockervm == "true" && $chainmaker_vm_docker_go_uds_open == "true" ]]; then
   enable_docker_vm_container=true
 fi
 

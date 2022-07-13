@@ -191,10 +191,10 @@ function start_docker_vm_go() {
   fi
 
   # concat mount_path and log_path for container to mount
-  docker_vm_mount_path=$chainmaker_docekrvm-go_dockervm_mount_path
-  docker_vm_log_path=$chainmaker_docekrvm-go_dockervm_log_path
-  docker_vm_log_level=$chainmaker_docekrvm-go_log_level
-  docker_vm_log_in_console=$chainmaker_docekrvm-go_log_in_console
+  docker_vm_mount_path=$chainmaker_vm_docker_go_dockervm_mount_path
+  docker_vm_log_path=$chainmaker_vm_docker_go_dockervm_log_path
+  docker_vm_log_level=$chainmaker_vm_docker_go_log_level
+  docker_vm_log_in_console=$chainmaker_vm_docker_go_log_in_console
   if [[ "${docker_vm_mount_path:0:1}" != "/" ]];then
     docker_vm_mount_path=$(pwd)/$mount_path
   fi
@@ -269,7 +269,7 @@ if [ -z "${pid}" ];then
      enable_go_vm_container=true
     fi
     # check if enable Deprecated docker vm
-    if [[ $chainmaker_docekrvm-go_enable_dockervm == "true" && $chainmaker_docekrvm-go_uds_open == "true" ]]; then
+    if [[ $chainmaker_vm_docker_go_enable_dockervm == "true" && $chainmaker_vm_docker_go_uds_open == "true" ]]; then
       enable_docker_vm_container=true
     fi
     # if enable one, start vm containers
