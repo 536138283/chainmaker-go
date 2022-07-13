@@ -86,4 +86,4 @@ function start_tmux() {
 }
 
 prepare
-#cluster_start
+cluster_start

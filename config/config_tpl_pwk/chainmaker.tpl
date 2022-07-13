@@ -514,6 +514,9 @@ vm:
     # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
     dial_timeout: 10
 
+    # max process num for execute original txs
+    max_concurrency: 20
+
     #  Configs of docker runtime server (handle messages with contract sandbox)
     runtime_server:
       # Runtime server port, default 32351

@@ -32,7 +32,7 @@ config_file="../config/{org_id}/chainmaker.yml"
 # config_file="../../config/wx-org1-solo/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
-VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
+VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.0"
 DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.2.3"
 START_FULL_MODE=""
 
@@ -107,6 +107,7 @@ function start_vm_go() {
   rpc_max_send_size=$chainmaker_vm_go_max_send_msg_size
   rpc_max_recv_size=$chainmaker_vm_go_max_recv_msg_size
   log_in_console=$chainmaker_vm_go_log_in_console
+  max_concurrency=$chainmaker_vm_go_max_concurrency
 
 
   if [[ $protocol = "uds" ]]
@@ -120,6 +121,7 @@ function start_vm_go() {
     -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
     -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
     -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+    -e MAX_ORIGINAL_PROCESS_NUM="$max_concurrency" \
     -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
     -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
     -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
@@ -141,6 +143,7 @@ function start_vm_go() {
       -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
       -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
       -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+      -e MAX_ORIGINAL_PROCESS_NUM="$max_concurrency" \
       -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
