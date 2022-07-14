@@ -61,7 +61,6 @@ done
 # if enable docker vm service and use unix domain socket, run a vm docker container
 function start_vm_go() {
   container_name=VM-GO-{org_id}
-  echo "start go vm service container: $container_name"
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -73,15 +72,14 @@ function start_vm_go() {
   if [ "$exist" ]; then
     echo "$container_name already exists(STOPPED)"
     if [ "$FORCE_CLEAN" == "true" ]; then
-      echo "remove it:"
-      docker rm $container_name
+      docker rm $container_name > /dev/null
     else
       need_rm="yes"
       read -r -p "remove it and start a new container, default: yes (y|n): " need_rm
       if [ "$need_rm" == "no" ] || [ "$need_rm" == "n" ]; then
         exit 0
       else
-        docker rm $container_name
+        docker rm $container_name > /dev/null
       fi
     fi
   fi
@@ -112,7 +110,6 @@ function start_vm_go() {
 
   if [[ $protocol = "uds" ]]
   then
-    echo "go vm protocol: unix domain socket"
 
     docker run -itd \
     -v "$mount_path":/mount \
@@ -126,10 +123,10 @@ function start_vm_go() {
     -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
     -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
     --name VM-GO-{org_id} \
-    --privileged $VM_GO_IMAGE_NAME
+    --privileged $VM_GO_IMAGE_NAME \
+    > /dev/null
+
   else
-    # $protocol = "tcp"
-    echo "go vm protocol: tcp"
 
       EXPOSE_PORT=$contract_engine_port
 
@@ -148,7 +145,8 @@ function start_vm_go() {
       -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
       --name VM-GO-{org_id} \
-      --privileged $VM_GO_IMAGE_NAME
+      --privileged $VM_GO_IMAGE_NAME \
+       > /dev/null
   fi
 
   retval="$?"
@@ -157,7 +155,9 @@ function start_vm_go() {
     exit 1
   fi
 
-  echo "waiting for docker vm container to warm up..."
+  echo "start docker vm service container succeed: $container_name"
+
+
   sleep 3
 }
 
@@ -165,7 +165,6 @@ function start_vm_go() {
 # if enable Deprecated docker vm service and use unix domain socket, it will start a docker vm container
 function start_docker_vm_go() {
   container_name=DOCKERVM-{org_id}
-  echo "start Deprecated docker vm service container: $container_name"
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -177,15 +176,14 @@ function start_docker_vm_go() {
   if [ "$exist" ]; then
     echo "$container_name already exists(STOPPED)"
     if [[ "$FORCE_CLEAN" == "true" ]]; then
-      echo "remove it:"
-      docker rm $container_name
+      docker rm $container_name > /dev/null
     else
       need_rm="yes"
       read -r -p "remove it and start a new container, default: yes (y|n): " need_rm
       if [ "$need_rm" == "no" ] || [ "$need_rm" == "n" ]; then
         exit 0
       else
-        docker rm $container_name
+        docker rm $container_name > /dev/null
       fi
     fi
   fi
@@ -196,10 +194,10 @@ function start_docker_vm_go() {
   docker_vm_log_level=$chainmaker_vm_docker_go_log_level
   docker_vm_log_in_console=$chainmaker_vm_docker_go_log_in_console
   if [[ "${docker_vm_mount_path:0:1}" != "/" ]];then
-    docker_vm_mount_path=$(pwd)/$mount_path
+    docker_vm_mount_path=$(pwd)/$docker_vm_mount_path
   fi
   if [[ "${docker_vm_log_path:0:1}" != "/" ]];then
-    docker_vm_log_path=$(pwd)/$log_path
+    docker_vm_log_path=$(pwd)/$docker_vm_log_path
   fi
 
   mkdir -p "$docker_vm_mount_path"
@@ -215,14 +213,14 @@ function start_docker_vm_go() {
   # ENV_VM_SERVICE_PORT=22359
   # ENV_ENABLE_PPROF=
   # ENV_PPROF_PORT=
-  echo "start docker vm service container:"
   docker run -itd \
     -e ENV_LOG_IN_CONSOLE="$docker_vm_log_in_console" -e ENV_LOG_LEVEL="$docker_vm_log_level" -e ENV_ENABLE_UDS=true \
     -e ENV_USER_NUM=10000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
     -v "$docker_vm_mount_path":/mount \
     -v "$docker_vm_log_path":/log \
     --name DOCKERVM-{org_id} \
-    --privileged $DOCKER_VM_IMAGE_NAME
+    --privileged $DOCKER_VM_IMAGE_NAME \
+    > /dev/null
 
   retval="$?"
   if [ $retval -ne 0 ]; then
@@ -230,10 +228,10 @@ function start_docker_vm_go() {
     exit 1
   fi
 
-  echo "waiting for Deprecated docker vm container to warm up..."
+  echo "start deprecated docker vm service container succeed: $container_name"
+
   sleep 3
 }
-
 
 function start_vm_containers() {
     if [ "$START_FULL_MODE" == "" ]
@@ -281,7 +279,7 @@ if [ -z "${pid}" ];then
     # start chainmaker
     #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > /dev/null 2>&1 &
     nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > panic.log 2>&1 &
-    echo "chainmaker is startting, pls check log..."
+    echo "chainmaker is starting, pls check log..."
 else
     echo "chainmaker is already started"
 fi
