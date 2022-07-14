@@ -32,20 +32,21 @@ func RebuildDbsCMD() *cobra.Command {
 		Long:  "RebuildDbs ChainMaker",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			initLocalConfig(cmd)
-			backupDbs(rebuildChainId)
+			backupDbs(rebuildChainId, needVerify)
 			rebuildDbsStart()
 			fmt.Println("ChainMaker exit")
 			return nil
 		},
 	}
-	attachFlags(rebuildDbsCmd, []string{flagNameOfConfigFilepath, flagNameOfChainId})
+	attachFlags(rebuildDbsCmd, []string{flagNameOfConfigFilepath, flagNameOfChainId, flagNameOfNeedVerify})
 	return rebuildDbsCmd
 }
 
-func backupDbs(chainId string) {
+func backupDbs(chainId string, needVerify bool) {
 	timeS := strconv.FormatInt(time.Now().UnixNano(), 10)
 	localconf.ChainMakerConfig.StorageConfig["back_path"] = timeS
 	localconf.ChainMakerConfig.StorageConfig["rebuild_chainId"] = chainId
+	localconf.ChainMakerConfig.StorageConfig["need_verify"] = needVerify
 
 	if err := setNodeId(); err != nil {
 		fmt.Println("set node id failed")
@@ -126,6 +127,7 @@ func rebuildDbsStart() {
 	chainMakerServer := blockchain.NewChainMakerServer()
 
 	chainId, _ := localconf.ChainMakerConfig.StorageConfig["rebuild_chainId"].(string)
+	needVeri, _ := localconf.ChainMakerConfig.StorageConfig["need_verify"].(bool)
 	if err := chainMakerServer.InitForRebuildDbs(chainId); err != nil {
 		log.Errorf("chainmaker server init failed, %s", err.Error())
 		return
@@ -151,7 +153,7 @@ func rebuildDbsStart() {
 	go handleExitSignal(errorC)
 
 	// start blockchains in separate go routines
-	if err := chainMakerServer.StartForRebuildDbs(); err != nil {
+	if err := chainMakerServer.StartForRebuildDbs(needVeri); err != nil {
 		log.Errorf("chainmaker server startup failed, %s", err.Error())
 		return
 	}

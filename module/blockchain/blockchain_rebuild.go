@@ -16,7 +16,7 @@ import (
 )
 
 // Start all the modules.
-func (bc *Blockchain) RebuildDbs() {
+func (bc *Blockchain) RebuildDbs(needVerify bool) {
 	fmt.Printf("###########################")
 	fmt.Printf("###start rebuild-dbs....###")
 	fmt.Printf("###########################")
@@ -57,7 +57,18 @@ func (bc *Blockchain) RebuildDbs() {
 		}
 		preHash = block.GetHeader().BlockHash
 
-		if err3 := bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1); err3 != nil {
+		var err3 error
+		if needVerify {
+			err3 = bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1)
+		} else {
+			blockRwSets, err31 := bc.oldStore.GetBlockWithRWSets(block.Header.BlockHeight)
+			if err31 == nil {
+				err3 = bc.coreEngine.GetBlockVerifier().VerifyBlockWithRwSets(
+					blockRwSets.GetBlock(), blockRwSets.GetTxRWSets(), -1)
+			}
+		}
+
+		if err3 != nil {
 			if err3 == commonErrors.ErrBlockHadBeenCommited {
 				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			} else {
