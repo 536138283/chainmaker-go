@@ -141,7 +141,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 	if len(txBatch) == 1 && utils.IsConfigTx(txBatch[0]) {
 		isConfigBlock = true
 	}
-	block, err := initNewBlock(lastBlock, bb.identity, bb.chainId, bb.chainConf, isConfigBlock)
+	block, err := InitNewBlock(lastBlock, bb.identity, bb.chainId, bb.chainConf, isConfigBlock)
 	if err != nil {
 		return block, timeLasts, err
 	}
@@ -271,8 +271,8 @@ func (bb *BlockBuilder) findLastBlockFromCache(proposingHeight uint64, preHash [
 	return lastBlock
 }
 
-// initNewBlock init new block
-func initNewBlock(
+// InitNewBlock init new block
+func InitNewBlock(
 	lastBlock *commonPb.Block,
 	identity protocol.SigningMember,
 	chainId string,
@@ -943,10 +943,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 }
 
 // CheckPreBlock check prepare block nolint: staticcheck
-func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
-	err error, lastBlockHash []byte, proposedHeight uint64) error {
+func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block) error {
+	// proposed height == proposing height - 1
+	proposedHeight := lastBlock.Header.BlockHeight
+	// check if this block height is 1 bigger than last block height
+	lastBlockHash := lastBlock.Header.BlockHash
 
-	if err = IsHeightValid(block, proposedHeight); err != nil {
+	if err := IsHeightValid(block, proposedHeight); err != nil {
 		return err
 	}
 	// check if this block pre hash is equal with last block hash

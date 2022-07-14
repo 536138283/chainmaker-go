@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"fmt"
 	"strconv"
 
@@ -31,6 +32,18 @@ type CommitBlock struct {
 	chainConf       protocol.ChainConf
 	txFilter        protocol.TxFilter
 	msgBus          msgbus.MessageBus
+}
+
+func NewCommitBlock(ceConfig *conf.CoreEngineConfig) *CommitBlock {
+	return &CommitBlock{
+		store:           ceConfig.BlockchainStore,
+		log:             ceConfig.Log,
+		snapshotManager: ceConfig.SnapshotManager,
+		ledgerCache:     ceConfig.LedgerCache,
+		chainConf:       ceConfig.ChainConf,
+		txFilter:        ceConfig.TxFilter,
+		msgBus:          ceConfig.MsgBus,
+	}
 }
 
 // CommitBlock the action that all consensus types do when a block is committed
