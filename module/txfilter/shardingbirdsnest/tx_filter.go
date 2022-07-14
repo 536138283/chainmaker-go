@@ -196,7 +196,7 @@ func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (bool, error) 
 		var exists bool
 		exists, err = f.store.TxExists(txId)
 		if err != nil {
-			f.log.Errorf("filter check exists, query from db fail, normal txid: %v, error:%v", txId, err)
+			f.log.Errorf("[%v] query normal txid from db fail, error:%v", txId, err)
 			return false, err
 		}
 		return exists, err
@@ -210,28 +210,28 @@ func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (bool, error) 
 			var exists bool
 			exists, err = f.store.TxExists(txId)
 			if err != nil {
-				f.log.Errorf("filter check exists, query from db fail, normal txid: %v, error:%v", txId, err)
+				f.log.Errorf("[%v] query normal txid from db fail, error:%v", txId, err)
 				return false, err
 			}
 			return exists, err
 		}
-		f.log.Errorf("filter check exists, query from filter fail, txid: %v, error:%v", txId, err)
+		f.log.Errorf("[%v] query from filter fail, error:%v", txId, err)
 		return false, err
 	}
 
 	if contains {
 		exists, err := f.store.TxExists(txId)
 		if err != nil {
-			f.log.Errorf("filter check exists, query from db fail, txid: %v, error: %v", txId, err)
+			f.log.Errorf("[%v] query from db fail, error: %v", txId, err)
 			return false, err
 		}
 		// true or false positive
-		f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("filter check exists, %v positive txid: %v, "+
-			"cost: %v", exists, txId, time.Since(start)))
+		f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("[%v] %v positive, cost: %v", txId, exists,
+			time.Since(start)))
 		return exists, nil
 	}
 
-	f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("filter check exists, false txid: %v, cost: %v,",
+	f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("[%v] does not exist in filter, cost: %v",
 		txId, time.Since(start)))
 	return contains, nil
 }
