@@ -257,13 +257,6 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
 
-	// only used for test
-	acs.resourceNamePolicyMap.Store(protocol.ResourceNameAllTest, policyAllTest)
-	acs.resourceNamePolicyMap.Store("test_2", policyLimitTestAny)
-	acs.resourceNamePolicyMap.Store("test_2_admin", policyLimitTestAdmin)
-	acs.resourceNamePolicyMap.Store("test_3/4", policyPortionTestAny)
-	acs.resourceNamePolicyMap.Store("test_3/4_admin", policyPortionTestAnyAdmin)
-
 	// for txtype
 	acs.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
 	acs.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
@@ -429,13 +422,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
 
-	// only used for test
-	acs.resourceNamePolicyMap.Store(protocol.ResourceNameAllTest, policyAllTest)
-	acs.resourceNamePolicyMap.Store("test_2", policyLimitTestAny)
-	acs.resourceNamePolicyMap.Store("test_2_admin", policyLimitTestAdmin)
-	acs.resourceNamePolicyMap.Store("test_3/4", policyPortionTestAny)
-	acs.resourceNamePolicyMap.Store("test_3/4_admin", policyPortionTestAnyAdmin)
-
 	// for txtype
 	acs.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
 	acs.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
@@ -592,7 +578,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
 	localOrgId string) {
-	switch acs.authType {
+	authType := strings.ToLower(acs.authType)
+	switch authType {
 	case protocol.PermissionedWithCert, protocol.Identity:
 		acs.createDefaultResourcePolicy(localOrgId)
 	case protocol.PermissionedWithKey:

@@ -13,8 +13,8 @@ import (
 	"testing"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/birdnest"
-	"chainmaker.org/chainmaker-go/module/txfilter/defau1t"
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
+	"chainmaker.org/chainmaker-go/module/txfilter/filterdefault"
 	mapimpl "chainmaker.org/chainmaker-go/module/txfilter/map"
 	"chainmaker.org/chainmaker-go/module/txfilter/shardingbirdsnest"
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
@@ -59,7 +59,7 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 				store: store,
 			},
 			want: func() protocol.TxFilter {
-				return defau1t.New(store)
+				return filterdefault.New(store)
 			}(),
 			wantErr: false,
 		},
@@ -74,7 +74,7 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 				store: store,
 			},
 			want: func() protocol.TxFilter {
-				return defau1t.New(store)
+				return filterdefault.New(store)
 			}(),
 			wantErr: false,
 		},
@@ -148,7 +148,7 @@ func Test_txFilterFactory_NewTxFilter(t *testing.T) {
 				store: store,
 			},
 			want: func() protocol.TxFilter {
-				return defau1t.New(store)
+				return filterdefault.New(store)
 			}(),
 			wantErr: false,
 		},

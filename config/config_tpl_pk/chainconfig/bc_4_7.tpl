@@ -36,9 +36,10 @@ contract:
   # If it is true, storage.statedb_config.provider in chainmaker.yml should be sql.
   enable_sql_support: false
 
+# Virtual machine related settings
 vm:
-  #0:chainmaker, 1:zxl, 2:ethereum(reserved)
-  addr_type: 0
+  #0:chainmaker, 1:zxl, 2:ethereum
+  addr_type: 2
   # support vm list
   support_list:
     - "wasmer"

@@ -354,7 +354,7 @@ func TestChainMakerServer_StartForRebuildDbs(t *testing.T) {
 				net:    tt.fields.net,
 				readyC: tt.fields.readyC,
 			}
-			if err := server.StartForRebuildDbs(); (err != nil) != tt.wantErr {
+			if err := server.StartForRebuildDbs(false); (err != nil) != tt.wantErr {
 				t.Errorf("StartForRebuildDbs() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

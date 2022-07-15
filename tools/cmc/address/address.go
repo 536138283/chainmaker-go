@@ -41,7 +41,11 @@ func newPK2AddrCMD() *cobra.Command {
 			var err error
 			switch addressType {
 			case addressTypeZXL:
-				addr, err = sdk.GetZXAddressFromPKPEM(keyPemStr)
+				hash, ok := hashAlgoMap[hashType]
+				if !ok {
+					return fmt.Errorf("unsupported hash type %d", hashType)
+				}
+				addr, err = sdk.GetZXAddressFromPKPEM(keyPemStr, hash)
 				if err != nil {
 					return err
 				}
@@ -83,7 +87,11 @@ func newHex2AddrCMD() *cobra.Command {
 			var err error
 			switch addressType {
 			case addressTypeZXL:
-				addr, err = sdk.GetZXAddressFromPKHex(args[0])
+				hash, ok := hashAlgoMap[hashType]
+				if !ok {
+					return fmt.Errorf("unsupported hash type %d", hashType)
+				}
+				addr, err = sdk.GetZXAddressFromPKHex(args[0], hash)
 				if err != nil {
 					return err
 				}

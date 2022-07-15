@@ -149,7 +149,7 @@ func invokeContractTimesCMD() *cobra.Command {
 	return cmd
 }
 
-// getUserContractCMD get user contract info command
+// getUserContractCMD query user contract command
 // @return *cobra.Command
 func getUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
@@ -164,7 +164,7 @@ func getUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -361,22 +361,30 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	err = util.CheckProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return err
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
+	return createUserContractOutput(resp)
+}
+
+func createUserContractOutput(resp *common.TxResponse) error {
+	if resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		var contract common.Contract
+		err := contract.Unmarshal(resp.ContractResult.Result)
+		if err != nil {
+			return err
+		}
+		util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.CreateUpgradeContractContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         &contract,
+			},
+		})
+	} else {
+		util.PrintPrettyJson(resp)
 	}
-	util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
-		TxResponse: resp,
-		ContractResult: &types.CreateUpgradeContractContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
 	return nil
 }
 
@@ -538,19 +546,79 @@ func getUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+	var contractAbi *abi.ABI
+	var evmMethodId string
+
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
+
+		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		inputData, err := util.Pack(contractAbi, method, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+		evmMethodId = inputDataHexStr[0:8]
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+	} else {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
 	}
 
-	resp, err := client.QueryContract(contractName, method, util.ConvertParameters(pairs), -1)
+	var methodStr string
+	if contractAbi != nil {
+		methodStr = evmMethodId
+	} else {
+		methodStr = method
+	}
+
+	resp, err := client.QueryContract(contractName, methodStr, kvs, -1)
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}
-	util.PrintPrettyJson(resp)
+
+	if resp.Code != common.TxStatusCode_SUCCESS {
+		util.PrintPrettyJson(resp)
+		return nil
+	}
+
+	if contractAbi != nil && resp.ContractResult != nil {
+		output, err := contractAbi.Unpack(method, resp.ContractResult.Result)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		util.PrintPrettyJson(types.EvmTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.EvmContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         fmt.Sprintf("%v", output),
+			},
+		})
+	} else {
+		util.PrintPrettyJson(resp)
+	}
 	return nil
 }
 

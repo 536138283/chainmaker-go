@@ -13,7 +13,6 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/hokaccha/go-prettyjson"
@@ -36,11 +35,6 @@ func newSetGasAdminCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Set gas admin
 			var adminKeys []string
 			if adminKeyFilePaths != "" {
@@ -56,7 +50,7 @@ func newSetGasAdminCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				adminAddr, err = sdk.GetZXAddressFromPKPEM(pk)
+				adminAddr, err = sdk.GetZXAddressFromPKPEM(pk, cc.GetHashType())
 				if err != nil {
 					return err
 				}
@@ -124,11 +118,6 @@ func newGetGasAdminCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Get gas admin
 			addr, err := cc.GetGasAdmin()
 			if err != nil {
@@ -164,11 +153,6 @@ func newRechargeGasCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Recharge gas
 			rechargeGasList := []*syscontract.RechargeGas{
@@ -220,18 +204,13 @@ func newGetGasBalanceCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Get gas balance
 			if address == "" {
 				pk, err := cc.GetPublicKey().String()
 				if err != nil {
 					return err
 				}
-				address, err = sdk.GetZXAddressFromPKPEM(pk)
+				address, err = sdk.GetZXAddressFromPKPEM(pk, cc.GetHashType())
 				if err != nil {
 					return err
 				}
@@ -275,11 +254,6 @@ func newRefundGasCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Refund gas
 			payload, err := cc.CreateRefundGasPayload(address, amount)
@@ -325,11 +299,6 @@ func newFrozenGasAccountCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Frozen gas account
 			payload, err := cc.CreateFrozenGasAccountPayload(address)
 			if err != nil {
@@ -373,11 +342,6 @@ func newUnfrozenGasAccountCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Unfrozen gas account
 			payload, err := cc.CreateUnfrozenGasAccountPayload(address)
@@ -423,18 +387,13 @@ func newGetGasAccountStatusCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Get gas account status
 			if address == "" {
 				pk, err := cc.GetPublicKey().String()
 				if err != nil {
 					return err
 				}
-				address, err = sdk.GetZXAddressFromPKPEM(pk)
+				address, err = sdk.GetZXAddressFromPKPEM(pk, cc.GetHashType())
 				if err != nil {
 					return err
 				}

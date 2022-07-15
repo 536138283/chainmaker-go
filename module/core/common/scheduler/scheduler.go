@@ -62,6 +62,11 @@ type TxScheduler struct {
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]bool
 
+type TxIdAndExecOrderType struct {
+	string
+	protocol.ExecOrderTxType
+}
+
 // Schedule according to a batch of transactions,
 // and generating DAG according to the conflict relationship
 func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Transaction,
@@ -371,6 +376,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	timeoutC := time.After(ScheduleWithDagTimeout * time.Second)
 	finishC := make(chan bool)
 
+	txExecOrderTypeC := make(chan TxIdAndExecOrderType, txBatchSize)
+
 	var goRoutinePool *ants.Pool
 	if goRoutinePool, err = ants.NewPool(len(block.Txs), ants.WithPreAlloc(true)); err != nil {
 		return nil, nil, err
@@ -391,26 +398,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			case txIndex := <-runningTxC:
 				tx := txMapping[txIndex]
 				ts.log.Debugf("simulate with dag, prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
-				err := goRoutinePool.Submit(func() {
-					txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
-					// if apply failed means this tx's read set conflict with other txs' write set
-					applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
-						runVmSuccess, true)
-					if !applyResult {
-						ts.log.Debugf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
-						// apply fails in verification, make it done rather than retry it
-						doneTxC <- txIndex
-					} else {
-						ts.log.Debugf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
-							tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
-						doneTxC <- txIndex
-					}
-					// If all transactions in current batch have been successfully added to dag
-					if applySize >= txBatchSize {
-						ts.log.Debugf("finished 1 batch, apply size:%d, tx batch size:%d, dagRemain size:%d",
-							applySize, txBatchSize, len(dagRemain))
-						finishC <- true
-					}
+				err = goRoutinePool.Submit(func() {
+					handleTxInSimulateWithDag(block, snapshot, ts, tx, txIndex, doneTxC, finishC, txExecOrderTypeC, txBatchSize)
 				})
 				if err != nil {
 					ts.log.Warnf("failed to submit tx id %s during simulate with dag, %+v",
@@ -446,6 +435,18 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		if txRWSet != nil {
 			txRWSetMap[txRWSet.TxId] = txRWSet
 		}
+	}
+	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType)
+	// we only receive fixed number of elements from this channel since we process unreceived things
+	// and return error in later parts
+	length := len(txExecOrderTypeC)
+	for i := 0; i < length; i++ {
+		t := <-txExecOrderTypeC
+		txExecOrderTypeMap[t.string] = t.ExecOrderTxType
+	}
+	err = ts.compareDag(block, snapshot, txRWSetMap, txExecOrderTypeMap)
+	if err != nil {
+		return nil, nil, err
 	}
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		result, _ := prettyjson.Marshal(txRWSetMap)
@@ -486,6 +487,31 @@ func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 		dagRemain[txIndex] = dn
 	}
 	return txIndexBatch, dagRemain, reverseDagRemain, nil
+}
+
+func handleTxInSimulateWithDag(
+	block *commonPb.Block, snapshot protocol.Snapshot,
+	ts *TxScheduler, tx *commonPb.Transaction, txIndex int,
+	doneTxC chan int, finishC chan bool,
+	txExecOrderTypeC chan TxIdAndExecOrderType, txBatchSize int) {
+	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
+	// if apply failed means this tx's read set conflict with other txs' write set
+	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
+	if !applyResult {
+		ts.log.Debugf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
+		// apply fails in verification, make it done rather than retry it
+		doneTxC <- txIndex
+	} else {
+		ts.log.Debugf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
+			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
+		txExecOrderTypeC <- TxIdAndExecOrderType{tx.Payload.GetTxId(), specialTxType}
+		doneTxC <- txIndex
+	}
+	// If all transactions in current batch have been successfully added to dag
+	if applySize >= txBatchSize {
+		ts.log.Debugf("finished 1 batch, apply size:%d, tx batch size:%d", applySize, txBatchSize)
+		finishC <- true
+	}
 }
 
 func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *ConflictsBitWindow, txExecType TxExecType) {
@@ -1090,7 +1116,7 @@ func (ts *TxScheduler) appendChargeGasTx(
 	tx.Result = txSimContext.GetTxResult()
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendChargeGasTxToDAG() begin ")
-	ts.appendChargeGasTxToDAG(block, snapshot)
+	ts.appendChargeGasTxToDAG(block.Dag, snapshot)
 }
 
 // signTxPayload sign charging tx with node's private key
@@ -1231,7 +1257,7 @@ func (ts *TxScheduler) executeChargeGasTx(
 
 // appendChargeGasTxToDAG append the tx to the DAG with dependencies on all tx.
 func (ts *TxScheduler) appendChargeGasTxToDAG(
-	block *commonPb.Block,
+	dag *commonPb.DAG,
 	snapshot protocol.Snapshot) {
 
 	dagNeighbors := &commonPb.DAG_Neighbor{
@@ -1240,7 +1266,7 @@ func (ts *TxScheduler) appendChargeGasTxToDAG(
 	for i := uint32(0); i < uint32(snapshot.GetSnapshotSize()-1); i++ {
 		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
 	}
-	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
+	dag.Vertexes = append(dag.Vertexes, dagNeighbors)
 }
 
 func errResult(result *commonPb.Result, err error) (*commonPb.Result, protocol.ExecOrderTxType, error) {
@@ -1412,4 +1438,111 @@ func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 
 	limit = tx.Payload.Limit.GasLimit
 	return limit, nil
+}
+
+func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
+	txExecOrderTypeMap map[string]protocol.ExecOrderTxType) (uint32, uint32, uint32, error) {
+
+	var txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount uint32
+	for _, v := range txExecOrderTypeMap {
+		switch v {
+		case protocol.ExecOrderTxTypeNormal:
+			txExecOrderNormalCount++
+		case protocol.ExecOrderTxTypeIterator:
+			txExecOrderIteratorCount++
+		case protocol.ExecOrderTxTypeChargeGas:
+			txExecOrderChargeGasCount++
+		}
+	}
+	if (IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
+		(!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
+		return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+			fmt.Errorf("charge gas enabled but charge gas tx is not 1")
+	}
+	// check type are all correct
+	for i, tx := range block.Txs {
+		t, ok := txExecOrderTypeMap[tx.Payload.GetTxId()]
+		if !ok {
+			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+				fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
+		}
+		var typeShouldBe protocol.ExecOrderTxType
+		if uint32(i) < txExecOrderNormalCount {
+			typeShouldBe = protocol.ExecOrderTxTypeNormal
+		} else {
+			typeShouldBe = protocol.ExecOrderTxTypeIterator
+		}
+		if IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
+			typeShouldBe = protocol.ExecOrderTxTypeChargeGas
+		}
+		if t != typeShouldBe {
+			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+				fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+		}
+	}
+	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, nil
+}
+
+func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snapshot,
+	txRWSetMap map[string]*commonPb.TxRWSet, txExecOrderTypeMap map[string]protocol.ExecOrderTxType) error {
+	if block.Header.BlockVersion < blockVersion2300 {
+		return nil
+	}
+	startTime := time.Now()
+	txExecOrderNormalCount, txExecOrderIteratorCount, _, err := ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
+	if err != nil {
+		return err
+	}
+	// rebuild and verify dag
+	txRWSetTable := utils.RearrangeRWSet(block, txRWSetMap)
+	// first, only build dag for normal tx
+	if uint32(len(txRWSetTable)) < txExecOrderNormalCount {
+		return fmt.Errorf("txRWSetTable:%d < txExecOrderNormalCount:%d", len(txRWSetTable), txExecOrderNormalCount)
+	}
+
+	txRWSetTable = txRWSetTable[0:txExecOrderNormalCount]
+	dag := snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, txRWSetTable)
+	// then, append special tx into dag
+	if txExecOrderIteratorCount > 0 {
+		appendSpecialTxsToDag(dag, txExecOrderIteratorCount)
+	}
+	// snapshot.GetSnapshotSize() > 0 prevent snapshot.GetSnapshotSize() - 1 overflow
+	if IsOptimizeChargeGasEnabled(ts.chainConf) && snapshot.GetSnapshotSize() > 0 {
+		ts.appendChargeGasTxToDAG(dag, snapshot)
+	}
+	equal, err := utils.IsDagEqual(block.Dag, dag)
+	if err != nil {
+		return err
+	}
+	if !equal {
+		ts.log.Warnf("compare block dag (vertex:%d) with simulate dag (vertex:%d)",
+			len(block.Dag.Vertexes), len(dag.Vertexes))
+		return fmt.Errorf("simulate dag not equal to block dag")
+	}
+	timeUsed := time.Since(startTime)
+	ts.log.Infof("compare dag finished, time used %v", timeUsed)
+	return nil
+}
+
+// appendSpecialTxsToDag similar to ts.simulateSpecialTxs except do not execute tx, only handle dag
+// txExecOrderSpecialCount must >0
+func appendSpecialTxsToDag(dag *commonPb.DAG, txExecOrderSpecialCount uint32) {
+	txExecOrderNormalCount := uint32(len(dag.Vertexes))
+	// the first special tx
+	dagNeighbors := &commonPb.DAG_Neighbor{
+		Neighbors: make([]uint32, 0, txExecOrderNormalCount),
+	}
+	for i := uint32(0); i < txExecOrderNormalCount; i++ {
+		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
+	}
+	dag.Vertexes = append(dag.Vertexes, dagNeighbors)
+	// other special tx
+	for i := uint32(1); i < txExecOrderSpecialCount; i++ {
+		dagNeighbors := &commonPb.DAG_Neighbor{
+			Neighbors: make([]uint32, 0, 1),
+		}
+		// this special tx (txExecOrderNormalCount+i) only depend on previous special tx (txExecOrderNormalCount+i-1)
+		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, txExecOrderNormalCount+i-1)
+		dag.Vertexes = append(dag.Vertexes, dagNeighbors)
+	}
 }

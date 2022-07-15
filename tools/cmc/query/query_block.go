@@ -14,7 +14,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
@@ -50,23 +50,27 @@ func newQueryBlockByHeightOnChainCMD() *cobra.Command {
 			}
 
 			//// 2.Query block on-chain.
-			blkWithRWSetOnChain, err := cc.GetFullBlockByHeight(height)
+			truncateLength := 0
+			if truncateValue {
+				truncateLength = 1000
+			}
+			blkWithRWSetOnChain, err := cc.GetBlockByHeightTruncate(height, withRWSet, truncateLength, "truncate")
 			if err != nil {
 				return err
 			}
 
-			var blkWithRWSet = &types.BlockWithRWSet{
-				BlockWithRWSet: blkWithRWSetOnChain,
-				Block: &types.Block{
-					Block: blkWithRWSetOnChain.Block,
-					Header: &types.BlockHeader{
-						BlockHeader: blkWithRWSetOnChain.Block.Header,
-						BlockHash:   hex.EncodeToString(blkWithRWSetOnChain.Block.Header.BlockHash),
-					},
-				},
-			}
+			//var blkWithRWSet = &types.BlockWithRWSet{
+			//	BlockWithRWSet: blkWithRWSetOnChain,
+			//	Block: &types.Block{
+			//		Block: blkWithRWSetOnChain.Block,
+			//		Header: &types.BlockHeader{
+			//			BlockHeader: blkWithRWSetOnChain.Block.Header,
+			//			BlockHash:   hex.EncodeToString(blkWithRWSetOnChain.Block.Header.BlockHash),
+			//		},
+			//	},
+			//}
 
-			output, err := prettyjson.Marshal(blkWithRWSet)
+			output, err := prettyjson.Marshal(blkWithRWSetOnChain)
 			if err != nil {
 				return err
 			}
@@ -79,7 +83,7 @@ func newQueryBlockByHeightOnChainCMD() *cobra.Command {
 		flagSdkConfPath, flagChainId,
 	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagEnableCertHash, flagTruncateValue, flagWithRWSet,
 	})
 	return cmd
 }
