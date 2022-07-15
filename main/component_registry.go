@@ -120,4 +120,11 @@ func init() {
 			return maxbft.New(config)
 		},
 	)
+
+	consensus.RegisterConsensusProvider(
+		consensusPb.ConsensusType_ABFT,
+		func(config *utils.ConsensusImplConfig) (protocol.ConsensusEngine, error) {
+			return maxbft.New(config)
+		},
+	)
 }
