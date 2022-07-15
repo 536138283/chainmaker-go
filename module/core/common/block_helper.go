@@ -367,9 +367,7 @@ func getTxHash(tx *commonPb.Transaction,
 	logger protocol.Logger) (
 	[]byte, error) {
 	var rwSetHash []byte
-	logger.Debugf("calc rwSet hash for `%v` => `%#v`", tx.Payload.TxId, rwSet)
 	rwSetHash, err := utils.CalcRWSetHash(hashType, rwSet)
-	logger.Debugf("rwSet hash => %x", rwSetHash)
 	logger.DebugDynamic(func() string {
 		str := fmt.Sprintf("CalcRWSetHash rwset: %+v ,hash: %x", rwSet, rwSetHash)
 		if len(str) > 1024 {
