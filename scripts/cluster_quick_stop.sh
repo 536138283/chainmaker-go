@@ -29,7 +29,7 @@ function stop_all() {
     do
         if [ -d $file ]; then
             echo "STOP ==> " $RELEASE_PATH/$file
-            cd $file/bin && ./stop.sh && cd - > /dev/null
+            cd $file/bin && ./stop.sh full && cd - > /dev/null
         fi
     done
 }
