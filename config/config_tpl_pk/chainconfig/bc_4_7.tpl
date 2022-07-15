@@ -44,7 +44,7 @@ vm:
     - "wasmer"
     - "gasm"
     - "evm"
-    - "go"
+    - "dockergo"
     - "wxvm"
 
 # Block proposing related settings
