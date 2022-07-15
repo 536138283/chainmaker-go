@@ -1268,7 +1268,7 @@ func TestTxScheduler_parseParameter(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 			}
-			got, err := ts.parseParameter(tt.args.parameterPairs, false)
+			got, err := ts.parseParameter2220(tt.args.parameterPairs, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseParameter() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2214,13 +2214,13 @@ func TestTxScheduler_getSenderPk(t *testing.T) {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: false,
 		},
@@ -2357,36 +2357,36 @@ func Test_publicKeyFromCert(t *testing.T) {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: false,
 		},
 		{
 			name: "test1",
 			args: args{
-				member: []byte("123456"),
+				member: []byte("-----BEGIN CERTIFICATE-----\\nMIICiTCCAi+gAwIBAgIDA+zYMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\\nb3JnMi5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\\nExljYS53eC1vcmcyLmNoYWlubWFrZXIub3JnMB4XDTIwMTIwODA2NTM0M1oXDTI1\\nMTIwNzA2NTM0M1owgZExCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcyLmNoYWlubWFrZXIub3Jn\\nMQ8wDQYDVQQLEwZjbGllbnQxLDAqBgNVBAMTI2NsaWVudDEuc2lnbi53eC1vcmcy\\nLmNoYWlubWFrZXIub3JnMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZd92CJez\\nCiOMzLSTrJfX5vIUArCycg05uKru2qFaX0uvZUCwNxbfSuNvkHRXE8qIBUhTbg1Q\\nR9rOlfDY1WfgMaN7MHkwDgYDVR0PAQH/BAQDAgGmMA8GA1UdJQQIMAYGBFUdJQAw\\nKQYDVR0OBCIEICfLatSyyebzRsLbnkNKZJULB2bZOtG+88NqvAHCsXa3MCsGA1Ud\\nIwQkMCKAIPGP1bPT4/Lns2PnYudZ9/qHscm0pGL6Kfy+1CAFWG0hMAoGCCqGSM49\\nBAMCA0gAMEUCIQDzHrEHrGNtoNfB8jSJrGJU1qcxhse74wmDgIdoGjvfTwIgabRJ\\nJNvZKRpa/VyfYi3TXa5nhHRIn91ioF1dQroHQFc=\\n-----END CERTIFICATE-----"),
 			},
 			want: func() []byte {
 
-				member := "123456"
+				member := "-----BEGIN CERTIFICATE-----\\nMIICiTCCAi+gAwIBAgIDA+zYMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\\nb3JnMi5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\\nExljYS53eC1vcmcyLmNoYWlubWFrZXIub3JnMB4XDTIwMTIwODA2NTM0M1oXDTI1\\nMTIwNzA2NTM0M1owgZExCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcyLmNoYWlubWFrZXIub3Jn\\nMQ8wDQYDVQQLEwZjbGllbnQxLDAqBgNVBAMTI2NsaWVudDEuc2lnbi53eC1vcmcy\\nLmNoYWlubWFrZXIub3JnMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZd92CJez\\nCiOMzLSTrJfX5vIUArCycg05uKru2qFaX0uvZUCwNxbfSuNvkHRXE8qIBUhTbg1Q\\nR9rOlfDY1WfgMaN7MHkwDgYDVR0PAQH/BAQDAgGmMA8GA1UdJQQIMAYGBFUdJQAw\\nKQYDVR0OBCIEICfLatSyyebzRsLbnkNKZJULB2bZOtG+88NqvAHCsXa3MCsGA1Ud\\nIwQkMCKAIPGP1bPT4/Lns2PnYudZ9/qHscm0pGL6Kfy+1CAFWG0hMAoGCCqGSM49\\nBAMCA0gAMEUCIQDzHrEHrGNtoNfB8jSJrGJU1qcxhse74wmDgIdoGjvfTwIgabRJ\\nJNvZKRpa/VyfYi3TXa5nhHRIn91ioF1dQroHQFc=\\n-----END CERTIFICATE-----"
 				certificate, err := utils.ParseCert([]byte(member))
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: true,
 		},
