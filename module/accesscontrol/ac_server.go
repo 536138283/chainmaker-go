@@ -91,6 +91,7 @@ var (
 		[]protocol.Role{
 			protocol.RoleClient,
 			protocol.RoleAdmin,
+			protocol.RoleConsensusNode,
 		},
 	)
 
