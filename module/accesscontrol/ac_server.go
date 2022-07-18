@@ -52,6 +52,7 @@ var restrainedResourceList = map[string]bool{
 	common.TxType_ARCHIVE.String():         true,
 }
 
+// predifined policies
 var (
 	policyRead = newPolicy(
 		protocol.RuleAny,
