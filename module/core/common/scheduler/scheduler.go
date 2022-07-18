@@ -1256,7 +1256,7 @@ func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.P
 		if err != nil {
 			return nil, err
 		}
-		publicKey, err = asym.PublicKeyFromDER(pk)
+		publicKey, err = asym.PublicKeyFromPEM(pk)
 		if err != nil {
 			return nil, err
 		}
@@ -1273,7 +1273,7 @@ func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.P
 			return nil, err
 		}
 
-		publicKey, err = asym.PublicKeyFromDER(pk)
+		publicKey, err = asym.PublicKeyFromPEM(pk)
 		if err != nil {
 			return nil, err
 		}
