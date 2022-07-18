@@ -10,6 +10,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/txpool"
 	"chainmaker.org/chainmaker-go/module/vm"
+	abft "chainmaker.org/chainmaker/consensus-abft/v2"
 	dpos "chainmaker.org/chainmaker/consensus-dpos/v2"
 	maxbft "chainmaker.org/chainmaker/consensus-maxbft/v2"
 	raft "chainmaker.org/chainmaker/consensus-raft/v2"
@@ -124,7 +125,7 @@ func init() {
 	consensus.RegisterConsensusProvider(
 		consensusPb.ConsensusType_ABFT,
 		func(config *utils.ConsensusImplConfig) (protocol.ConsensusEngine, error) {
-			return maxbft.New(config)
+			return abft.New(config)
 		},
 	)
 }
