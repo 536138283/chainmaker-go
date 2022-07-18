@@ -10,13 +10,14 @@ import (
 	"fmt"
 	"testing"
 
-	"chainmaker.org/chainmaker/protocol/v2"
-
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
+	mock2 "chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/utils/v2"
+	"github.com/golang/mock/gomock"
 )
 
 //
@@ -2224,6 +2225,49 @@ func TestFinalizeBlock(t *testing.T) {
 			if err := FinalizeBlock(tt.args.block, tt.args.txRWSetMap, tt.args.aclFailTxs, tt.args.hashType, tt.args.logger); (err != nil) != tt.wantErr {
 				t.Errorf("FinalizeBlock() error = %v, wantErr %v", err, tt.wantErr)
 			}
+		})
+	}
+}
+
+func TestBlockCommitterImpl_AddBlock(t *testing.T) {
+	controller := gomock.NewController(t)
+	helper := mock2.NewMockStoreHelper(controller)
+	helper.EXPECT().RollBack(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	type fields struct {
+		storeHelper conf.StoreHelper
+	}
+	type args struct {
+		block *commonpb.Block
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "异常流",
+			fields: fields{
+				storeHelper: helper,
+			},
+			args: args{
+				block: &commonpb.Block{
+					Header: &commonpb.BlockHeader{BlockHeight: 666},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if panicError := recover(); panicError == nil {
+					t.Errorf("AddBlock() panic is nil")
+				}
+			}()
+			chain := &BlockCommitterImpl{
+				storeHelper: tt.fields.storeHelper,
+			}
+			// 不需要关注err
+			_ = chain.AddBlock(tt.args.block)
 		})
 	}
 }
