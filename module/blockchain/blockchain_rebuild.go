@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 )
@@ -104,4 +105,21 @@ func (bc *Blockchain) RebuildDbs(needVerify bool) {
 	bc.log.Infof("###########################")
 	bc.Stop()
 	os.Exit(0)
+}
+
+func (bc *Blockchain) SwitchConsensus(consensusConfig *config.ConsensusConfig) error {
+	// chainConf := bc.chainConf.ChainConfig()
+	// chainConf.Consensus = consensusConfig
+	delete(bc.initModules, moduleNameConsensus)
+	bc.StopOnRequirements()
+	if err := bc.Init(); err != nil {
+		bc.log.Errorf("blockchain init failed when the configuration of blockchain updating, %s", err)
+		return err
+	}
+	bc.StopOnRequirements()
+	if err := bc.Start(); err != nil {
+		bc.log.Errorf("blockchain start failed when the configuration of blockchain updating, %s", err)
+		return err
+	}
+	return nil
 }

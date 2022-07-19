@@ -203,6 +203,10 @@ func (s *MockSimContextImpl) RemoveRuntimeTypeFromCrossInfo() {
 	panic("impl me")
 }
 
+func (s *MockSimContextImpl) GetConsensusStateWrapper() protocol.ConsensusStateWrapper {
+	return nil
+}
+
 func TestKey(t *testing.T) {
 	s0 := "你好"
 	b0 := []byte(s0)

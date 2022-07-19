@@ -383,3 +383,7 @@ func (s *txQuerySimContextImpl) GetTxRWMapByContractName(contractName string) (
 
 	return txReads, txWrites
 }
+
+func (s *txQuerySimContextImpl) GetConsensusStateWrapper() protocol.ConsensusStateWrapper {
+	return nil
+}

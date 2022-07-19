@@ -9,6 +9,7 @@ SPDX-License-Identifier: Apache-2.0
 package blockchain
 
 import (
+	"chainmaker.org/chainmaker-go/module/consensus/cutover"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/logger/v2"
@@ -95,6 +96,9 @@ type Blockchain struct {
 
 	initModules  map[string]struct{}
 	startModules map[string]struct{}
+
+	//consensusSwitchSubscriber listen consensus algorithm switching and notify blockchain for switchover
+	consensusSwitchSubscriber *cutover.ConsensusSwitchSubscriber
 }
 
 // NewBlockchain create a new Blockchain instance.
