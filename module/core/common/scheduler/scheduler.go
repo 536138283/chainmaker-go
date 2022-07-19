@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -24,7 +25,6 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/evmutils"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/hokaccha/go-prettyjson"
@@ -1231,12 +1231,17 @@ func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (
 	return balance, nil
 }
 
-func publicKeyToAddress(publicKey crypto.PublicKey) (string, error) {
-	address, err := evmutils.ZXAddressFromPublicKey(publicKey)
+func publicKeyToAddress(pk crypto.PublicKey, chainCfg *configPb.ChainConfig) (string, error) {
+
+	publicKeyString, err := utils.PkToAddrStr(pk, chainCfg.Vm.AddrType, crypto.HashAlgoMap[chainCfg.Crypto.Hash])
 	if err != nil {
 		return "", err
 	}
-	return address, nil
+
+	if chainCfg.Vm.AddrType == configPb.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+	return publicKeyString, nil
 }
 
 func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
