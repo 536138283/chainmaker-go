@@ -130,6 +130,10 @@ resource_policies:
       org_list:
       role_list:
         - admin
-
+  - resource_name: CONTRACT_MANAGE-INIT_CONTRACT
+    policy:
+      rule: ANY
+      org_list:
+      role_list:
 disabled_native_contract:
  # - CONTRACT_NAME  # 通过指定系统合约名字来禁用系统合约
