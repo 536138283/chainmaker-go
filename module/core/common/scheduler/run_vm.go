@@ -30,6 +30,11 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
 	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
+	chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+	if err != nil {
+		ts.log.Errorf("get LastChainConfig error: %v", err)
+		return false
+	}
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
@@ -64,9 +69,9 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
 			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
-				pkStr, _ := getPkFromTx(tx, snapshot)
-				addr, _ := publicKeyToAddress(pkStr)
-				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
+				pk, _ := getPkFromTx(tx, snapshot)
+				addr, _ := publicKeyToAddress(pk, chainCfg)
+				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
 				txResult := &commonPb.Result{
 					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
