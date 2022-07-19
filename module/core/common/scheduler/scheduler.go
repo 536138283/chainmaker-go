@@ -1231,6 +1231,7 @@ func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (
 	return balance, nil
 }
 
+// publicKeyToAddress: generate address from public key, according to chainconfig parameter
 func publicKeyToAddress(pk crypto.PublicKey, chainCfg *configPb.ChainConfig) (string, error) {
 
 	publicKeyString, err := utils.PkToAddrStr(pk, chainCfg.Vm.AddrType, crypto.HashAlgoMap[chainCfg.Crypto.Hash])
