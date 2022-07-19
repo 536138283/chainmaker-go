@@ -48,6 +48,7 @@ func getSenderTxCollection(
 	log protocol.Logger) map[string]*TxCollection {
 	txCollectionMap := make(map[string]*TxCollection)
 
+	var err error
 	chainCfg, err := snapshot.GetBlockchainStore().GetLastChainConfig()
 	if err != nil {
 		log.Error(err.Error())
@@ -56,15 +57,15 @@ func getSenderTxCollection(
 
 	for _, tx := range txBatch {
 		// get the public key from tx
-		pk, err := getPkFromTx(tx, snapshot)
-		if err != nil {
+		pk, err2 := getPkFromTx(tx, snapshot)
+		if err2 != nil {
 			log.Errorf("getPkFromTx failed: err = %v", err)
 			continue
 		}
 
 		// convert the public key to `ZX` or `CM` or `EVM` address
-		address, err := publicKeyToAddress(pk, chainCfg)
-		if err != nil {
+		address, err2 := publicKeyToAddress(pk, chainCfg)
+		if err2 != nil {
 			log.Error("publicKeyToAddress failed: err = %v", err)
 			continue
 		}
