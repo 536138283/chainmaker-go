@@ -55,7 +55,7 @@ compile:
 	@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
 
 cmc:
-	@cd tools/cmc && GOPATH=${GOPATH} go build -o ../../bin/cmc
+	@cd tools/cmc && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../../bin/cmc
 
 send-tool:
 	cd test/send_proposal_request_tool && go build -o ../../bin/send_proposal_request_tool
