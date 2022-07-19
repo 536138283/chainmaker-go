@@ -51,6 +51,7 @@ vm:
 
 # Block proposing related settings
 block:
+  # To enable this attribute, ensure that the clock of the node is consistent
   # Verify the transaction timestamp or not
   tx_timestamp_verify: true
 
