@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"testing"
 
+	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
+
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/localconf/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -194,7 +196,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -205,6 +207,9 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 			EnableConflictsBitWindow: enableConflictsBitWindow,
 		},
 		AuthType: protocol.Identity,
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_CHAINMAKER,
+		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 	//chainConf :=
@@ -233,6 +238,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -258,7 +264,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -272,6 +278,9 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		},
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
 		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
@@ -310,6 +319,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -335,7 +345,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -349,6 +359,9 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		},
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
 		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
@@ -387,6 +400,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()

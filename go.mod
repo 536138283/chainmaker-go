@@ -9,13 +9,13 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220715122356-2dcae1920a50
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220714062027-cc613542361e
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.2.1-0.20220627031024-6cfa4d15e05e
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220719092114-ac5a2b3cdb65
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220720033843-c6960dacf1e8
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220719031021-84cb6fb3a8b6
 	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220714065948-d56b9b5eaa1e
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220613040127-5b976891c91e
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585
-	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220610084257-d720400089e4
-	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220609031411-3e1c47ac7cfb
+	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220708084550-353d2f219a51
+	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220714084009-1034af439ef0
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220719093347-4e11ea332dbf
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220719082411-d022157fdb02
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220712084252-dab6af40f09f
@@ -28,7 +28,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220715025819-ea53b65428e1
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220711130647-e3ad31cb9e3e
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220714094323-dc74f874e05d
+	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220719030803-8b9c0c2d4191
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220701060704-5a8851239c5b
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
 	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220719081931-99bd6ee62635

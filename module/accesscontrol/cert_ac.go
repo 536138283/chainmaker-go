@@ -766,7 +766,7 @@ func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementE
 	return refinedEndorsement
 }
 
-// Cache for compressed certificate
+// lookUpCertCache Cache for compressed certificate
 func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 	ret, ok := cp.certCache.Get(string(certId))
 	if !ok {
