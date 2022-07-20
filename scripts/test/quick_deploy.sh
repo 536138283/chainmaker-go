@@ -35,10 +35,13 @@ fi
 function start_chainmaker() {
   cd $SCRIPT_PATH
   ./cluster_quick_stop.sh clean
-  echo -e "\n\n【generate】 certs and config..."
-  echo -e "\nINFO\n\n\n" | ./prepare.sh $node_count $chain_count
-  echo -e "\n\n【build】 release..."
-  ./build_release.sh
+
+  if [ "${alreadyBuild}" != "true" ]; then
+    echo -e "\n\n【generate】 certs and config..."
+    echo -e "\nINFO\n\n\n" | ./prepare.sh $node_count $chain_count
+    echo -e "\n\n【build】 release..."
+    ./build_release.sh
+  fi
   echo -e "\n\n【start】 chainmaker..."
   ./cluster_quick_start.sh normal
   sleep 1
