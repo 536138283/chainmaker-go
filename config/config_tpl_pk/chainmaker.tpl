@@ -130,7 +130,7 @@ txpool:
   # tx_pool type, can be single, normal, batch.
   # By default the tx_pool type is single.
   # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
-  pool_type: "single"
+  pool_type: "normal"
 
   # Max common transaction count in tx_pool.
   # If tx_pool is full, the following transactions will be discarded.
@@ -145,14 +145,14 @@ txpool:
 
   # Common transaction queue num, only for normal tx_pool.
   # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
-  # common_queue_num: 8
+  common_queue_num: 8
 
   # The number of transactions contained in a batch, for normal and batch tx_pool.
   # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
-  # batch_max_size: 100
+  batch_max_size: 100
 
   # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
-  # batch_create_timeout: 50
+  batch_create_timeout: 50
 
  # RPC service setting
 rpc:
