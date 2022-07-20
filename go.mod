@@ -17,19 +17,19 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.1.1
 	chainmaker.org/chainmaker/net-liquid v1.0.2
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220610130509-c60ae43cb8a5
-	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220620114606-467a462bdf70
+	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220720072759-e24f7cbbcc75
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.1-0.20220620043312-0432882376cf
 	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220617151628-df429599d0c0
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.2-0.20220505075429-1188accd427f
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220616100446-bbfd624e39ba
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220614081000-17efb6e04bcb
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220610133513-3f231938ade2
-	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220713064020-d7d121bc4964
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220720084509-b45ad03a09cd
+	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220720083404-b614732c7ad5
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.2-0.20220720083211-4b5921eaa447
 	chainmaker.org/chainmaker/vm-native/v2 v2.2.2-0.20220613064617-7546fb2a674a
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220610140918-c3131eda2a0a
-	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220613080231-ee592944a1dc
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220720094041-a868c2648408
+	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.2-0.20220720083320-8413c9bb17f0
+	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220720083050-c03f22d92ed9
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -76,13 +76,6 @@ require (
 )
 
 replace (
-	chainmaker.org/chainmaker/protocol/v2 => ../protocol
-	chainmaker.org/chainmaker/vm-docker-go/v2 => ../vm-docker-go
-	chainmaker.org/chainmaker/vm/v2 => ../vm
-	chainmaker.org/chainmaker/vm-gasm/v2 => ../vm-gasm
-	chainmaker.org/chainmaker/vm-wasmer/v2 => ../vm-wasmer
-	chainmaker.org/chainmaker/vm-wxvm/v2 => ../vm-wxvm
-	chainmaker.org/chainmaker/vm-evm/v2 => ../vm-evm
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.0
 	github.com/linvon/cuckoo-filter => github.com/GuoxinL/cuckoo-filter v0.4.1
 	github.com/spf13/afero => github.com/spf13/afero v1.5.1 //for go1.15 build
