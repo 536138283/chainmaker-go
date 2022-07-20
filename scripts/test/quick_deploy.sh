@@ -44,7 +44,7 @@ function start_chainmaker() {
   fi
   echo -e "\n\n【start】 chainmaker..."
   ./cluster_quick_start.sh normal
-  sleep 1
+  sleep 3
 
   echo "【chainmaker】 process..."
   ps -ef | grep chainmaker
@@ -110,7 +110,7 @@ function cmc_test() {
 }
 
 function cat_log() {
-  grep "ERROR\|put block" $PROJECT_PATH/build/release/chainmaker*/log/system.log
+  grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*1*/log/system.log
 }
 
 start_chainmaker
