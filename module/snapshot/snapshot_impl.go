@@ -386,7 +386,7 @@ func (s *SnapshotImpl) Seal() {
 	s.sealed.Store(true)
 }
 
-// BuildDAG build the block dag according to the read-wriete table
+// BuildDAG build the block dag according to the read-write table
 func (s *SnapshotImpl) BuildDAG(isSql bool) *commonPb.DAG {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
