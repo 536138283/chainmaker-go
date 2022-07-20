@@ -37,7 +37,7 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 	if common.TxPoolType == batch.TxPoolType {
 		for _, delBlock := range delBlocks {
 			batchIds, _ := common.GetBatchIds(delBlock)
-			hp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
+			hp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
 		}
 		return
 	}
