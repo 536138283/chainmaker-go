@@ -35,13 +35,16 @@ fi
 function start_chainmaker() {
   cd $SCRIPT_PATH
   ./cluster_quick_stop.sh clean
-  echo -e "\n\n【generate】 certs and config..."
-  echo -e "\nINFO\n\n\n" | ./prepare_pwk.sh $node_count $chain_count
-  echo -e "\n\n【build】 release..."
-  ./build_release.sh
+  if [ "${alreadyBuild}" != "true" ]; then
+    echo -e "\n\n【generate】 certs and config..."
+    echo -e "\nINFO\n\n\n" | ./prepare_pwk.sh $node_count $chain_count
+    echo -e "\n\n【build】 release..."
+    ./build_release.sh
+  fi
   echo -e "\n\n【start】 chainmaker..."
   ./cluster_quick_start.sh normal
-  sleep 1
+  echo -e "\n\nstart..."
+  sleep 5
 
   echo "【chainmaker】 process..."
   ps -ef | grep chainmaker
@@ -106,7 +109,7 @@ function cmc_test() {
 }
 
 function cat_log() {
-  grep "ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-v2.1.0_alpha-wx-org1.chainmaker.org/log/system.log
+  grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*1*/log/system.log
 }
 
 start_chainmaker
