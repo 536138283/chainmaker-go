@@ -199,5 +199,4 @@ func (s *SnapshotEvidence) SetBlockFingerprint(fp utils.BlockFingerPrint) {
 // GetBlockFingerprint returns block block fingerprint
 func (s *SnapshotEvidence) GetBlockFingerprint() string {
 	panic("implement me")
-	return ""
 }
