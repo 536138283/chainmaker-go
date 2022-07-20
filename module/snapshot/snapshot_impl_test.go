@@ -187,6 +187,10 @@ func (s *MockSimContextImpl) SetStateKvHandle(index int32, rows protocol.StateIt
 	panic("impl me")
 }
 
+func (s *MockSimContextImpl) GetRequestId() string {
+	panic("impl me")
+}
+
 func TestKey(t *testing.T) {
 	s0 := "你好"
 	b0 := []byte(s0)

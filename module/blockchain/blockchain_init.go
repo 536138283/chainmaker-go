@@ -591,7 +591,9 @@ func (bc *Blockchain) initVM() (err error) {
 			if err != nil {
 				bc.log.Errorf("create instance manager failed, %v", err)
 			}
-			supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
+			if vmInstancesManager != nil {
+				supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
+			}
 		}
 
 		bc.vmMgr = vm.NewVmManager(
@@ -638,7 +640,9 @@ func (bc *Blockchain) initVM() (err error) {
 			if err != nil {
 				bc.log.Errorf("create instance manager failed, %v", err)
 			}
-			supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
+			if vmInstancesManager != nil {
+				supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
+			}
 		}
 
 		bc.vmMgr = vm.NewVmManager(

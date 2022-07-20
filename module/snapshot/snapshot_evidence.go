@@ -15,6 +15,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
 type SnapshotEvidence struct {
@@ -182,10 +183,20 @@ func (s *SnapshotEvidence) BuildDAG(isSql bool) *commonPb.DAG {
 	return dag
 }
 
-// Get Block Proposer for current snapshot
+// GetBlockProposer Get Block Proposer for current snapshot
 func (s *SnapshotEvidence) GetBlockProposer() *accesscontrol.Member {
 	if s.delegate == nil {
 		return nil
 	}
 	return s.delegate.blockProposer
+}
+
+// SetBlockFingerprint set snapshot block fingerprint
+func (s *SnapshotEvidence) SetBlockFingerprint(fp utils.BlockFingerPrint) {
+	panic("implement me")
+}
+
+// GetBlockFingerprint returns block block fingerprint
+func (s *SnapshotEvidence) GetBlockFingerprint() string {
+	panic("implement me")
 }

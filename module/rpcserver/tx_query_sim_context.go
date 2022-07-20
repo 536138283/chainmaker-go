@@ -164,6 +164,11 @@ func (s *txQuerySimContextImpl) GetBlockHeight() uint64 {
 	return lastBlock.Header.BlockHeight
 }
 
+// GetRequestId query invoke use tx id as request id
+func (s *txQuerySimContextImpl) GetRequestId() string {
+	return ""
+}
+
 func (s *txQuerySimContextImpl) GetBlockProposer() *acPb.Member {
 	var (
 		lastBlock *commonPb.Block
