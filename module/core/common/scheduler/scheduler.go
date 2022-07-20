@@ -99,6 +99,10 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.log.Debugf("end prepare `SenderGroup` ")
 	}
 
+	blockFingerprint := string(utils.CalcBlockFingerPrintWithoutTx(block))
+	ts.VmManager.BeforeSchedule(blockFingerprint, block.Header.BlockHeight)
+	defer ts.VmManager.AfterSchedule(blockFingerprint, block.Header.BlockHeight)
+
 	// launch the go routine to dispatch tx to runningTxC
 	go func() {
 		ts.log.Infof("before Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
@@ -157,7 +161,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	// Wait for schedule finish signal
 	<-ts.scheduleFinishC
-	ts.VmManager.AfterSchedule(string(utils.CalcBlockFingerPrintWithoutTx(block)), block.Header.BlockHeight)
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)
@@ -367,6 +370,10 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	ts.log.Debugf("block [%d] simulate with dag first batch size:%d, total batch size:%d",
 		block.Header.BlockHeight, len(txIndexBatch), txBatchSize)
+
+	blockFingerprint := string(utils.CalcBlockFingerPrintWithoutTx(block))
+	ts.VmManager.BeforeSchedule(blockFingerprint, block.Header.BlockHeight)
+	defer ts.VmManager.AfterSchedule(blockFingerprint, block.Header.BlockHeight)
 
 	go func() {
 		for _, tx := range txIndexBatch {
