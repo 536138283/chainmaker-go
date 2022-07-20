@@ -24,14 +24,14 @@ require (
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220704121129-5356d0b5b297
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220704121147-9f3b57c2a16c
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220711061227-aa7ff9c750ff
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220610133513-3f231938ade2
-	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220715025819-ea53b65428e1
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220720071901-f5f1b00674a8
+	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220720062608-51151621af5c
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220711130647-e3ad31cb9e3e
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220719030803-8b9c0c2d4191
+	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220720061542-3aea8c53ec3b
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220701060704-5a8851239c5b
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220720023124-54a9a0558a65
+	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220720032029-119cc38f48e8
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
