@@ -191,7 +191,7 @@ func (s *SnapshotEvidence) GetBlockProposer() *accesscontrol.Member {
 	return s.delegate.blockProposer
 }
 
-// SetBlockFingerprint set block fingerprint
+// SetBlockFingerprint set snapshot block fingerprint
 func (s *SnapshotEvidence) SetBlockFingerprint(fp utils.BlockFingerPrint) {
 	panic("implement me")
 }
