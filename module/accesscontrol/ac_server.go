@@ -37,6 +37,7 @@ const (
 
 var notEnoughParticipantsSupportError = "authentication fail: not enough participants support this action"
 
+// hsmHandleMap is a global handle map for pkcs11 or sdf hsm
 var hsmHandleMap = map[string]interface{}{}
 
 // List of access principals which should not be customized
@@ -51,6 +52,7 @@ var restrainedResourceList = map[string]bool{
 	common.TxType_ARCHIVE.String():         true,
 }
 
+// predifined policies
 var (
 	policyRead = newPolicy(
 		protocol.RuleAny,
