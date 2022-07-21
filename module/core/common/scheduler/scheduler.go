@@ -499,6 +499,9 @@ func handleTxInSimulateWithDag(
 	doneTxC chan int, finishC chan bool,
 	txExecOrderTypeC chan TxIdAndExecOrderType, txBatchSize int) {
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
+	// send specialTxType BEFORE snapshot.ApplyTxSimContext which has a lock, ensuring that all txs have it
+	// and eliminating race condition
+	txExecOrderTypeC <- TxIdAndExecOrderType{tx.Payload.GetTxId(), specialTxType}
 	// if apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
 	if !applyResult {
@@ -508,7 +511,6 @@ func handleTxInSimulateWithDag(
 	} else {
 		ts.log.Debugf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
 			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
-		txExecOrderTypeC <- TxIdAndExecOrderType{tx.Payload.GetTxId(), specialTxType}
 		doneTxC <- txIndex
 	}
 	// If all transactions in current batch have been successfully added to dag
@@ -1373,17 +1375,20 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 		return nil
 	}
 	startTime := time.Now()
-	txExecOrderNormalCount, txExecOrderIteratorCount, _, err := ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
+	txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, err := ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
 	if err != nil {
+		ts.log.Errorf("verifyExecOrderTxType has err:%s, tx type count:%d,%d,%d, block tx count:%d", err,
+			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, block.Header.TxCount)
 		return err
 	}
 	// rebuild and verify dag
 	txRWSetTable := utils.RearrangeRWSet(block, txRWSetMap)
-	// first, only build dag for normal tx
-	if uint32(len(txRWSetTable)) < txExecOrderNormalCount {
-		return fmt.Errorf("txRWSetTable:%d < txExecOrderNormalCount:%d", len(txRWSetTable), txExecOrderNormalCount)
+	if uint32(len(txRWSetTable)) != txExecOrderNormalCount+txExecOrderIteratorCount+txExecOrderChargeGasCount {
+		return fmt.Errorf("txRWSetTable:%d != txExecOrderTypeCount:%d+%d+%d", len(txRWSetTable),
+			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount)
 	}
 
+	// first, only build dag for normal tx
 	txRWSetTable = txRWSetTable[0:txExecOrderNormalCount]
 	dag := snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, txRWSetTable)
 	// then, append special tx into dag
