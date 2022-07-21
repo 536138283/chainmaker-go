@@ -8,7 +8,7 @@
 
 #set -x
 BRANCH=develop
-NEW_BRANCH=v2.2.3_qc
+NEW_BRANCH=v2.2.4_qc
 PRE_LOG="【log】 "
 
 projects=("pb-go"
