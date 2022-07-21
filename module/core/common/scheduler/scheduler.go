@@ -1375,7 +1375,8 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 		return nil
 	}
 	startTime := time.Now()
-	txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, err := ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
+	txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, err :=
+		ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
 	if err != nil {
 		ts.log.Errorf("verifyExecOrderTxType has err:%s, tx type count:%d,%d,%d, block tx count:%d", err,
 			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, block.Header.TxCount)
