@@ -13,6 +13,8 @@ import (
 	"sort"
 	"time"
 
+	"chainmaker.org/chainmaker/pb-go/v2/config"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -51,14 +53,16 @@ type scheduler struct {
 	ledger protocol.LedgerCache
 
 	// the time when the service starts
-	startTime    time.Time
-	minLagReachC chan struct{}
+	startTime         time.Time
+	minLagReachC      chan struct{}
+	lastCheckMajority time.Time
 	// collect more node status for a specified period of time
 	thresholdTime time.Duration
 	// The remaining blocks to be synchronized are carried out by the consensus module
 	thresholdBlocks uint64
 	// indicate stop syncing block function
 	stopSyncBlock bool
+	chainConf     protocol.ChainConf
 }
 
 func newScheduler(
@@ -66,7 +70,8 @@ func newScheduler(
 	ledger protocol.LedgerCache, maxNum uint64,
 	timeOut, reqTimeThreshold time.Duration,
 	batchesize uint64, log protocol.Logger,
-	reachC chan struct{}, minLagThreshold uint64, minLagThresholdTime time.Duration) *scheduler {
+	reachC chan struct{}, minLagThreshold uint64,
+	minLagThresholdTime time.Duration, conf protocol.ChainConf) *scheduler {
 
 	currHeight, err := ledger.CurrentHeight()
 	if err != nil {
@@ -93,6 +98,7 @@ func newScheduler(
 		thresholdTime:   minLagThresholdTime,
 		thresholdBlocks: minLagThreshold,
 		minLagReachC:    reachC,
+		chainConf:       conf,
 	}
 }
 
@@ -137,7 +143,6 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 			return
 		}
 	}
-	sch.receiveMajorityBlocks()
 	if sch.isPeerArchivedTooHeight(localCurrBlk.Header.BlockHeight, msg.msg.GetArchivedHeight()) {
 		sch.log.Debugf("coming node[%s], status[height: %d, archivedHeight: %d], archived too height to sync, will ignore it",
 			msg.from, msg.msg.BlockHeight, msg.msg.GetArchivedHeight())
@@ -149,11 +154,31 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 	sch.addPendingBlocksAndUpdatePendingHeight(msg.msg.BlockHeight)
 }
 
+func getNodes(conf *config.ChainConfig) []string {
+	nodes := make([]string, 0, 4)
+	for _, org := range conf.Consensus.Nodes {
+		for _, id := range org.NodeId {
+			nodes = append(nodes, id)
+		}
+	}
+	return nodes
+}
+
 // receiveMajorityBlocks Check that most blocks are synchronized.
 // currTime - startTime > thresholdTime && maxHeight - localHeight <= thresholdBlocks
 func (sch *scheduler) receiveMajorityBlocks() {
+	// 内部控制检测频率，避免上层调用间隔太短，造成频繁查询节点
+	// 状态、获取共识节点数导致任务时间消耗变长
+	if time.Since(sch.lastCheckMajority) < sch.thresholdTime/5 {
+		return
+	}
+	sch.lastCheckMajority = time.Now()
+
 	// 当节点刚启动后，需要一段时间同步其它节点的状态
-	if time.Since(sch.startTime) < sch.thresholdTime {
+	// 在thresholdTime时间范围内，当共识节点数量大于1，且获取到的节点
+	// 状态信息小于总量的1/2时， 继续与其它节点进行状态同步
+	nodeNum := len(getNodes(sch.chainConf.ChainConfig()))
+	if time.Since(sch.startTime) < sch.thresholdTime && nodeNum > 1 && len(sch.peers) < nodeNum/2 {
 		return
 	}
 
@@ -238,6 +263,10 @@ func (sch *scheduler) handleLivinessMsg() {
 		delete(sch.pendingTime, sch.pendingRecvHeight)
 		delete(sch.pendingBlocks, sch.pendingRecvHeight)
 	}
+
+	// Note 共识单节点启动时，没有节点可以进行状态同步，需要通过该任务触发信号，
+	// 通知共识模块开始运行
+	sch.receiveMajorityBlocks()
 }
 
 //handleScheduleMsg find the starting block height that needs to be synchronized an a appropriate peer

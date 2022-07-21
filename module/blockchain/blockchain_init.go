@@ -794,6 +794,7 @@ func (bc *Blockchain) initSync() (err error) {
 		bc.coreEngine.GetBlockVerifier(),
 		bc.coreEngine.GetBlockCommitter(),
 		logger.GetLoggerByChain(logger.MODULE_SYNC, bc.chainId),
+		bc.chainConf,
 	)
 	bc.initModules[moduleNameSync] = struct{}{}
 	return

@@ -46,7 +46,8 @@ type BlockChainSyncServer struct {
 
 	log protocol.Logger
 	// The configuration in sync module
-	conf *BlockSyncServerConf
+	conf      *BlockSyncServerConf
+	chainConf protocol.ChainConf
 	// Identification of module startup
 	start int32
 	// Identification of module close
@@ -72,7 +73,8 @@ func NewBlockChainSyncServer(
 	ledgerCache protocol.LedgerCache,
 	blockVerifier protocol.BlockVerifier,
 	blockCommitter protocol.BlockCommitter,
-	log protocol.Logger) protocol.SyncService {
+	log protocol.Logger,
+	conf protocol.ChainConf) protocol.SyncService {
 
 	syncServer := &BlockChainSyncServer{
 		chainId:         chainId,
@@ -87,6 +89,7 @@ func NewBlockChainSyncServer(
 		requestCache:    sync.Map{},
 		minLagReachC:    make(chan struct{}),
 		commitBlockC:    make(chan struct{}),
+		chainConf:       conf,
 	}
 	return syncServer
 }
@@ -104,7 +107,8 @@ func (sync *BlockChainSyncServer) Start() error {
 	scheduler := newScheduler(sync, sync.ledgerCache,
 		sync.conf.blockPoolSize, sync.conf.timeOut,
 		sync.conf.reqTimeThreshold, sync.conf.batchSizeFromOneNode,
-		sync.log, sync.minLagReachC, sync.conf.minLagThreshold, sync.conf.minLagThresholdTime)
+		sync.log, sync.minLagReachC, sync.conf.minLagThreshold,
+		sync.conf.minLagThresholdTime, sync.chainConf)
 	if scheduler == nil {
 		return fmt.Errorf("init scheduler failed")
 	}
