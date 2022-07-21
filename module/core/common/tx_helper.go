@@ -103,7 +103,10 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 			return err
 		}
 
-		return IsTxRequestValid(tx, txInPool)
+		// not necessary to verify tx hash when in SYNC_VERIFY
+		if mode == protocol.CONSENSUS_VERIFY {
+			return IsTxRequestValid(tx, txInPool)
+		}
 	}
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	var (
