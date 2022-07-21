@@ -10,7 +10,7 @@ MOUNT_PATH=$(pwd)/docker-go
 LOG_LEVEL=INFO
 EXPOSE_PORT=22351
 CONTAINER_NAME=chainmaker-docker-vm
-IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.2.3"
+IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.2.4"
 
 
 read -r -p "input path to cache contract files(must be absolute path, default:'./docker-go'): " tmp
