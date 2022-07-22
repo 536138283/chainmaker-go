@@ -1,16 +1,17 @@
 package scheduler
 
 import (
+	"fmt"
+	"testing"
+
 	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	mock2 "chainmaker.org/chainmaker/protocol/v2/mock"
-	"fmt"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 const (
@@ -87,7 +88,7 @@ func TestVerifyOptimizeChargeGasTx_OK(t *testing.T) {
 			ContractName: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 			Method:       syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(),
 			Parameters: []*commonPb.KeyValuePair{
-				&commonPb.KeyValuePair{
+				{
 					Key:   Address_Client1_Org1_ZXL,
 					Value: []byte("8000"),
 				},
@@ -228,7 +229,7 @@ func TestVerifyOptimizeChargeGasTx_WithWrongAccountAddress(t *testing.T) {
 			ContractName: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 			Method:       syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(),
 			Parameters: []*commonPb.KeyValuePair{
-				&commonPb.KeyValuePair{
+				{
 					Key:   "bad_account_address",
 					Value: []byte("8000"),
 				},

@@ -1,11 +1,12 @@
 package scheduler
 
 import (
+	"fmt"
+	"strconv"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"fmt"
-	"strconv"
 )
 
 func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {

@@ -7,9 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
-	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"encoding/hex"
 	"fmt"
+
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
@@ -202,7 +203,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 
 	snapshot := v.snapshotManager.NewSnapshot(lastBlock, block)
 	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
-		if err := scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
+		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
 			return err
 		}
 	}
