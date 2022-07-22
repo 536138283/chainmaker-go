@@ -51,6 +51,10 @@ var pkResourcePolicy = map[string]*policy{
 	// for gas admin
 	syscontract.SystemContract_ACCOUNT_MANAGER.String() + "-" +
 		syscontract.GasAccountFunction_SET_ADMIN.String(): pubPolicyMajorityAdmin,
+
+	// for charging gas in optimize mode
+	syscontract.SystemContract_ACCOUNT_MANAGER.String() + "-" +
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(): policyConsensus,
 }
 
 var pkExpResourcePolicy = map[string]*policy{
@@ -150,6 +154,10 @@ var pkResourcePolicyForDPOS = map[string]*policy{
 	// for admin management
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(): pubPolicyMajorityAdmin,
+
+	// for charging gas in optimize mode
+	syscontract.SystemContract_ACCOUNT_MANAGER.String() + "-" +
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(): policyConsensus,
 }
 
 var pkExpResourcePolicyForDPOS = map[string]*policy{
