@@ -41,8 +41,9 @@ chainmaker.org/chainmaker/localconf/v2 v2.2.0/go.mod h1:MDEtD3H9T05YNDepoA3vYSUQ
 chainmaker.org/chainmaker/localconf/v2 v2.2.1/go.mod h1:j0X1gJkeZy0X9djepkKKSafREZn74YYOt9EKjOPIX2A=
 chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220601092821-2162b2905ed5/go.mod h1:wiflrrd8MwwM2UzIKi+xVr30YgwJP0Ddp6A+zH49AzU=
 chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220607115425-03689a750027/go.mod h1:wiflrrd8MwwM2UzIKi+xVr30YgwJP0Ddp6A+zH49AzU=
-chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220714065948-d56b9b5eaa1e h1:XkgK1d+PLCIsvBhSAoFK5R1SlXj1H9AP7KiXg2gxpVc=
 chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220714065948-d56b9b5eaa1e/go.mod h1:psqFFF+tNwru3J2WVRtB4RP/qan+++xOLUopAKyXTg0=
+chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220722082432-17d9a1daf103 h1:PCp9rFrlJq22txdWcqoBI1IGd7k6HwhqnOYMeFYmZF4=
+chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220722082432-17d9a1daf103/go.mod h1:psqFFF+tNwru3J2WVRtB4RP/qan+++xOLUopAKyXTg0=
 chainmaker.org/chainmaker/logger/v2 v2.2.0/go.mod h1:fux32ogSRS2qKD9m52uE5jW3ngpgyV02Yd4Zed8/n38=
 chainmaker.org/chainmaker/logger/v2 v2.2.1/go.mod h1:S3pJIY3aOVTyNC2//EIgT+nGF9mfB71R2E1b5NYp+VQ=
 chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220601091955-6c66ad476f3a/go.mod h1:NKHb0tOqmUBzXgBMhi0+bL+1l4jToLtdhABWlbnjq/U=
@@ -58,8 +59,6 @@ chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220610084257-d720400089e4/go.mod
 chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220708084550-353d2f219a51 h1:+Fze0U0HWsNxxVJwTdx0G+7n81OZEQqkTzMO0c4UEho=
 chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220708084550-353d2f219a51/go.mod h1:aKUfP7rENoKyBP5lmFEOUjPYMnS+7MUSitav3VQCJGM=
 chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220609031411-3e1c47ac7cfb/go.mod h1:SlDfr4TL1hkN1Q9El+Bz4unFBqNTdgr2qOS43A8HrKE=
-chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220714084009-1034af439ef0 h1:50oGZhEt7i21iYsnxjb5VY6xrFZkIwxulkLoM+035ZA=
-chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220714084009-1034af439ef0/go.mod h1:SlDfr4TL1hkN1Q9El+Bz4unFBqNTdgr2qOS43A8HrKE=
 chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220719062616-f8aebd894246 h1:esacaGWAGjGikWWVdEtkY+p6xZJSXblKDgKzXieA7EY=
 chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220719062616-f8aebd894246/go.mod h1:SlDfr4TL1hkN1Q9El+Bz4unFBqNTdgr2qOS43A8HrKE=
 chainmaker.org/chainmaker/pb-go/v2 v2.2.0/go.mod h1:b5fg5e93xCjSHU1b5yk/mnslab+z7N08kMkNVDoSpcI=

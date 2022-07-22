@@ -27,6 +27,7 @@ node:
   priv_key_file:     ../config/wx-org3/certs/node/consensus1/consensus1.sign.key
   cert_file:         ../config/wx-org3/certs/node/consensus1/consensus1.sign.crt
   cert_cache_size:   1000
+  cert_key_usage_check: true
 
 net:
   provider: LibP2P
