@@ -7,13 +7,14 @@ SPDX-License-Identifier: Apache-2.0
 package proposer
 
 import (
-	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
-	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"context"
 	"encoding/hex"
 	"sync"
 	"time"
+
+	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
@@ -120,7 +121,6 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
 	return nil, nil
 }
 
-
 func (bp *BlockProposerImpl) getTxBatchFromABFTCache() *commonpb.Block {
 	txBatch := bp.abftCache.GetProposedTxBatch()
 	if txBatch == nil {
@@ -162,9 +162,14 @@ func (bp *BlockProposerImpl) Propose(proposedSignal *abft.PackagedSignal) error 
 	case <-ticker.C:
 		cancel()
 		bp.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", emptyBlockBatch.Header.BlockHeight)
+		err = common.FinalizeBlock(blockBatch, nil, nil, bp.chainConf.ChainConfig().Crypto.Hash, bp.log)
+		if err != nil {
+			return err
+		}
 		bp.msgBus.Publish(msgbus.ProposedBlock, &emptyBlockBatch)
 		rwSetMap := make(map[string]*commonpb.TxRWSet)
 		bp.abftCache.SetProposedTxBatch(&emptyBlockBatch, rwSetMap)
+		bp.log.Infof("proposer success [%d](txs:%d)", emptyBlockBatch.Header.BlockHeight, emptyBlockBatch.Header.TxCount)
 		return nil
 	case <-bp.getTxBatchC:
 		if err := bp.doPropose(lastBlock, blockBatch); err != nil {

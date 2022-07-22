@@ -7,11 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package commiter
 
 import (
-	"chainmaker.org/chainmaker/utils/v2"
 	"encoding/hex"
 	"fmt"
 	"sort"
 	"sync"
+
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/utils/v2"
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
@@ -33,6 +35,7 @@ type BlockCommitter struct {
 	txPool        protocol.TxPool
 	identity      protocol.SigningMember
 	chainConf     protocol.ChainConf
+	msgbus        msgbus.MessageBus
 	retryList     []*commonpb.Transaction
 	commonCommit  *common.CommitBlock
 	lock          sync.Mutex
@@ -50,6 +53,7 @@ func NewCommitter(ceConfig *conf.CoreEngineConfig) *BlockCommitter {
 		identity:      ceConfig.Identity,
 		chainConf:     ceConfig.ChainConf,
 		lock:          sync.Mutex{},
+		msgbus:        ceConfig.MsgBus,
 	}
 
 	committer.commonCommit = common.NewCommitBlock(ceConfig)
@@ -125,11 +129,14 @@ func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	block.Header.BlockHash = hash[:]
 	block.Header.Signature = sig
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, _, err :=
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
 		bc.commonCommit.CommitBlock(block, rwSetMap, nil)
 	if err != nil {
 		bc.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
 	}
+
+	// synchronize new block height to consensus and sync module
+	bc.msgbus.PublishSafe(msgbus.BlockInfo, blockInfo)
 
 	// deal with tx(ABA fail)
 	bc.handleABAFailTxs()

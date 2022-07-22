@@ -716,10 +716,17 @@ func (vb *VerifierBlock) ValidateBlock(
 	vb.log.DebugDynamic(func() string {
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	// abft's block proposer is nil
+	if block.Header.Proposer.MemberInfo != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil", vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts[BlockSig] = sigLasts
 
@@ -841,11 +848,17 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	vb.log.DebugDynamic(func() string {
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		vb.log.Errorf("verify block signature fail,err:%s", err.Error())
-		return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	if block.Header.Proposer.MemberInfo != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			vb.log.Errorf("verify block signature fail,err:%s", err.Error())
+			return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil", vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts[BlockSig] = sigLasts
 
@@ -863,10 +876,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		}
 		// verify TxRoot
 		startRootsTick := utils.CurrentTimeMillisSeconds()
-		err = CheckBlockDigests(block, nil, hashType, vb.log)
-		if err != nil {
-			return nil, timeLasts, nil, err
+		if vb.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
+			err = CheckBlockDigests(block, nil, hashType, vb.log)
+			if err != nil {
+				return nil, timeLasts, nil, err
+			}
 		}
+
 		rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 		timeLasts[TxRoot] = rootsLast
 		return nil, timeLasts, nil, nil
