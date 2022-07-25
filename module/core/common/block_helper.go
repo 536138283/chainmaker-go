@@ -50,6 +50,7 @@ const (
 	TxRoot              = "txRoot"
 	QuickSyncVerifyMode = uint8(1) // quick sync verify mode
 	NormalVerifyMode    = uint8(0) // normal verify mode
+	DEFAULTTIMEOUT      = 5000
 )
 
 type BlockBuilderConf struct {
@@ -1018,10 +1019,12 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	// Remove txs from txpool. Remove will invoke proposeSignal from txpool if pool size > txcount
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	txRetry, batchRetry := chain.syncWithTxPool(lastProposed, height)
+	txRetry, batchRetry, batchIds, err := chain.syncWithTxPool(lastProposed, height)
+	if err != nil {
+		return err
+	}
 
 	if TxPoolType == batch.TxPoolType {
-		batchIds, _ := GetBatchIds(lastProposed)
 		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
 		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
 	} else {
@@ -1066,7 +1069,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 }
 
 func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) (
-	[]*commonPb.Transaction, []string) {
+	[]*commonPb.Transaction, []string, []string, error) {
 	proposedBlocks := chain.proposalCache.GetProposedBlocksAt(height)
 	txRetry := make([]*commonPb.Transaction, 0, len(block.Txs))
 	batchRetry := make([]string, 0, len(block.Txs))
@@ -1075,7 +1078,10 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	keepBatchIds := make(map[string]struct{}, len(block.Txs))
 
 	if TxPoolType == batch.TxPoolType {
-		batchIds, _ := GetBatchIds(block)
+		batchIds, _, err := GetBatchIds(block)
+		if err != nil {
+			return nil, nil, nil, err
+		}
 		for _, batchId := range batchIds {
 			keepBatchIds[batchId] = struct{}{}
 		}
@@ -1084,16 +1090,20 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 				continue
 			}
 
-			retryBatchIds, _ := GetBatchIds(block)
+			retryBatchIds, _, err := GetBatchIds(block)
+			if err != nil {
+				return nil, nil, batchIds, err
+			}
 			for _, retryBatchId := range retryBatchIds {
 				if _, ok := keepBatchIds[retryBatchId]; !ok {
 					batchRetry = append(batchRetry, retryBatchId)
 				}
 			}
 		}
-		return txRetry, batchRetry
+		return txRetry, batchRetry, batchIds, nil
 	}
 
+	// normal tx pool
 	for _, tx := range block.Txs {
 		keepTxs[tx.Payload.TxId] = struct{}{}
 	}
@@ -1107,7 +1117,8 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 			}
 		}
 	}
-	return txRetry, batchRetry
+
+	return txRetry, batchRetry, nil, nil
 }
 
 //nolint: ineffassign, staticcheck
@@ -1251,14 +1262,26 @@ func recoverBlockByBatch(
 
 		maxRetryTime := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryTime
 		retryInterval := chainConf.ChainConfig().Core.ConsensusTurboConfig.RetryInterval
+		timeOut := int(maxRetryTime * retryInterval)
+		if timeOut <= 0 {
+			timeOut = DEFAULTTIMEOUT
+		}
 
 		proposerId, err := GetProposerId(ac, netService, block.Header.Proposer)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		batchIds, indexes := GetBatchIds(block)
+		batchIds, indexes, err := GetBatchIds(block)
+		if err != nil {
+			return nil, nil, err
+		}
+
 		if len(batchIds) == 0 {
+			logger.DebugDynamic(func() string {
+				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d]",
+					block.Header.BlockHeight)
+			})
 			return &commonPb.Block{
 				Header:         block.Header,
 				Dag:            block.Dag,
@@ -1271,7 +1294,7 @@ func recoverBlockByBatch(
 			batchIds,
 			proposerId,
 			block.Header.BlockHeight,
-			int(maxRetryTime*retryInterval))
+			timeOut)
 
 		if err != nil {
 			return nil, nil, err
@@ -1298,7 +1321,11 @@ func recoverBlockByBatch(
 		return newBlock, batchIds, nil
 	}
 
-	batchIds, _ := GetBatchIds(block)
+	batchIds, _, err := GetBatchIds(block)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	return &commonPb.Block{
 		Header:         block.Header,
 		Dag:            block.Dag,

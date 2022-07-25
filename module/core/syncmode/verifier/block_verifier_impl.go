@@ -472,7 +472,10 @@ func parseVerifyResult(block *commonpb.Block, isValid bool,
 
 func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
 	if common.TxPoolType == batch.TxPoolType {
-		v.cutBlocksForBatchPool(blocksToCut, blockToKeep)
+		err := v.cutBlocksForBatchPool(blocksToCut, blockToKeep)
+		if err != nil {
+			v.log.Warnf(fmt.Sprintf("cut block[%d] failed, err:%v", blockToKeep.Header.BlockHeight, err))
+		}
 		return
 	}
 
@@ -497,10 +500,15 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 }
 
-func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
+func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) error {
 
 	keepBatchIdsMap := make(map[string]interface{})
-	batchIds, _ := common.GetBatchIds(blockToKeep)
+	batchIds, _, err := common.GetBatchIds(blockToKeep)
+	if err != nil {
+		v.log.Errorf("get batch ids from keep block[%d,%x] failed, err:%v",
+			blockToKeep.Header.BlockHeight, blockToKeep.Header.BlockHash, err)
+		return err
+	}
 	for _, batchId := range batchIds {
 		keepBatchIdsMap[batchId] = struct{}{}
 	}
@@ -508,7 +516,12 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 	finalCutBatchIds := make([]string, 0)
 	for _, blockToCut := range blocksToCut {
 		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
-		cutBatchIds, _ := common.GetBatchIds(blockToCut)
+		cutBatchIds, _, err := common.GetBatchIds(blockToCut)
+		if err != nil {
+			v.log.Warnf("get batch ids from removed block[%d,%x] failed, err:%v",
+				blockToCut.Header.BlockHeight, blockToCut.Header.BlockHash, err)
+			continue
+		}
 		for _, cutBatchId := range cutBatchIds {
 			if _, ok := keepBatchIdsMap[cutBatchId]; ok {
 				// this transaction is kept, do NOT cut it.
@@ -523,6 +536,7 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 		v.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
 	}
 
+	return nil
 }
 
 // verifyRepeat to check if the block has verified before
