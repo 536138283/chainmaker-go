@@ -26,11 +26,11 @@ require (
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220714093409-76db3fe643ae
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220720075238-b471f8f8b528
 	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220720140745-09a8cd54bef4
-	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220711130647-e3ad31cb9e3e
+	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220725072123-a6969a287511
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
 	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220720061542-3aea8c53ec3b
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220701060704-5a8851239c5b
-	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
+	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1-0.20220725072410-3bf1a6069ed2
 	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220720132124-5168e4cb955d
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
