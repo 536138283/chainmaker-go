@@ -32,6 +32,7 @@ func (p *pkACProvider) OnQuit() {
 
 }
 
+// onMessageChainConfig used to handle chain conf message
 func (p *pkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	dataStr, _ := msg.Payload.([]string)
 	dataBytes, err := hex.DecodeString(dataStr[0])
