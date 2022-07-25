@@ -51,6 +51,9 @@ node:
   # By default the cache size is 1000.
   cert_cache_size:   1000
 
+  # CertKeyUsageCheck, used to check if tx sender use the proper certificate to sign transactions
+  cert_key_usage_check: true
+
   # fast sync settings
   fast_sync:
     # Enable it or not

@@ -437,6 +437,9 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// for gas admin
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
+	// for charge gas in optimize mode
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 	// for set invoke base gas
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), pubPolicyMajorityAdmin)
@@ -568,6 +571,9 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyForbidden)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyForbidden)
+	// for charge gas in optimize mode
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 
 	// for admin management
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
