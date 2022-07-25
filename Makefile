@@ -12,9 +12,6 @@ VERSION=v2.3.0_alpha
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
 
-AARCH64="aarch64"
-CPU=$(shell uname -m)
-
 LOCALCONF_HOME=chainmaker.org/chainmaker-go/module/blockchain
 GOLDFLAGS += -X "${LOCALCONF_HOME}.CurrentVersion=${VERSION}"
 GOLDFLAGS += -X "${LOCALCONF_HOME}.BuildDateTime=${DATETIME}"
@@ -22,17 +19,6 @@ GOLDFLAGS += -X "${LOCALCONF_HOME}.GitBranch=${GIT_BRANCH}"
 GOLDFLAGS += -X "${LOCALCONF_HOME}.GitCommit=${GIT_COMMIT}"
 
 chainmaker:
-ifeq ("$(CPU)",$(AARCH64))
-ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.aarch64),)
-	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.x86_64
-	mv module/vm/wasmer/wasmer-go/libwasmer.so.aarch64 module/vm/wasmer/wasmer-go/libwasmer.so
-endif
-else
-ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.x86_64),)
-	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.aarch64
-	mv module/vm/wasmer/wasmer-go/libwasmer.so.x86_64 module/vm/wasmer/wasmer-go/libwasmer.so
-endif
-endif
 	@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
 
 chainmaker-vendor:

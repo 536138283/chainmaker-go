@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"testing"
 
+	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
+
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/localconf/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -194,7 +196,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -205,6 +207,9 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 			EnableConflictsBitWindow: enableConflictsBitWindow,
 		},
 		AuthType: protocol.Identity,
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_CHAINMAKER,
+		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 	//chainConf :=
@@ -233,6 +238,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -258,7 +264,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -272,6 +278,9 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		},
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
 		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
@@ -310,6 +319,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -335,7 +345,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -349,6 +359,9 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		},
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
 		},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
@@ -387,6 +400,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -842,7 +856,7 @@ func TestSimulateWithDag(t *testing.T) {
 			},
 			runContract: runContractNormal,
 			sealTimes:   1,
-			wantErr:     true,
+			wantErr:     false, // in real case, compareDag will return err since buildDag will build a different dag!
 		},
 		{
 			name:              "testDagHasDuplicates",
@@ -1268,7 +1282,7 @@ func TestTxScheduler_parseParameter(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 			}
-			got, err := ts.parseParameter(tt.args.parameterPairs, false)
+			got, err := ts.parseParameter2220(tt.args.parameterPairs, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseParameter() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2214,13 +2228,13 @@ func TestTxScheduler_getSenderPk(t *testing.T) {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: false,
 		},
@@ -2357,36 +2371,36 @@ func Test_publicKeyFromCert(t *testing.T) {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: false,
 		},
 		{
 			name: "test1",
 			args: args{
-				member: []byte("123456"),
+				member: []byte("-----BEGIN CERTIFICATE-----\\nMIICiTCCAi+gAwIBAgIDA+zYMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\\nb3JnMi5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\\nExljYS53eC1vcmcyLmNoYWlubWFrZXIub3JnMB4XDTIwMTIwODA2NTM0M1oXDTI1\\nMTIwNzA2NTM0M1owgZExCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcyLmNoYWlubWFrZXIub3Jn\\nMQ8wDQYDVQQLEwZjbGllbnQxLDAqBgNVBAMTI2NsaWVudDEuc2lnbi53eC1vcmcy\\nLmNoYWlubWFrZXIub3JnMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZd92CJez\\nCiOMzLSTrJfX5vIUArCycg05uKru2qFaX0uvZUCwNxbfSuNvkHRXE8qIBUhTbg1Q\\nR9rOlfDY1WfgMaN7MHkwDgYDVR0PAQH/BAQDAgGmMA8GA1UdJQQIMAYGBFUdJQAw\\nKQYDVR0OBCIEICfLatSyyebzRsLbnkNKZJULB2bZOtG+88NqvAHCsXa3MCsGA1Ud\\nIwQkMCKAIPGP1bPT4/Lns2PnYudZ9/qHscm0pGL6Kfy+1CAFWG0hMAoGCCqGSM49\\nBAMCA0gAMEUCIQDzHrEHrGNtoNfB8jSJrGJU1qcxhse74wmDgIdoGjvfTwIgabRJ\\nJNvZKRpa/VyfYi3TXa5nhHRIn91ioF1dQroHQFc=\\n-----END CERTIFICATE-----"),
 			},
 			want: func() []byte {
 
-				member := "123456"
+				member := "-----BEGIN CERTIFICATE-----\\nMIICiTCCAi+gAwIBAgIDA+zYMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\\nb3JnMi5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\\nExljYS53eC1vcmcyLmNoYWlubWFrZXIub3JnMB4XDTIwMTIwODA2NTM0M1oXDTI1\\nMTIwNzA2NTM0M1owgZExCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcyLmNoYWlubWFrZXIub3Jn\\nMQ8wDQYDVQQLEwZjbGllbnQxLDAqBgNVBAMTI2NsaWVudDEuc2lnbi53eC1vcmcy\\nLmNoYWlubWFrZXIub3JnMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZd92CJez\\nCiOMzLSTrJfX5vIUArCycg05uKru2qFaX0uvZUCwNxbfSuNvkHRXE8qIBUhTbg1Q\\nR9rOlfDY1WfgMaN7MHkwDgYDVR0PAQH/BAQDAgGmMA8GA1UdJQQIMAYGBFUdJQAw\\nKQYDVR0OBCIEICfLatSyyebzRsLbnkNKZJULB2bZOtG+88NqvAHCsXa3MCsGA1Ud\\nIwQkMCKAIPGP1bPT4/Lns2PnYudZ9/qHscm0pGL6Kfy+1CAFWG0hMAoGCCqGSM49\\nBAMCA0gAMEUCIQDzHrEHrGNtoNfB8jSJrGJU1qcxhse74wmDgIdoGjvfTwIgabRJ\\nJNvZKRpa/VyfYi3TXa5nhHRIn91ioF1dQroHQFc=\\n-----END CERTIFICATE-----"
 				certificate, err := utils.ParseCert([]byte(member))
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: true,
 		},
@@ -3151,7 +3165,7 @@ func TestTxScheduler_compareDag(t *testing.T) {
 			logger := mock.NewMockLogger(ctl)
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
-			logger.EXPECT().Error(gomock.Any()).AnyTimes()
+			logger.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
 			ts := &TxScheduler{
 				chainConf: chainConf,
 				log:       logger,

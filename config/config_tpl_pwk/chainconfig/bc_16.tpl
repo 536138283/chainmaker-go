@@ -50,6 +50,7 @@ vm:
 
 # Block proposing related settings
 block:
+  # To enable this attribute, ensure that the clock of the node is consistent
   # Verify the transaction timestamp or not
   tx_timestamp_verify: true
 
@@ -242,6 +243,11 @@ resource_policies:
       org_list:
       role_list:
         - admin
+  - resource_name: CONTRACT_MANAGE-INIT_CONTRACT
+    policy:
+      rule: ANY
+      org_list:
+      role_list:
 
 # The disabled native contract list
 # Disable the system contract by specifying the system contract name

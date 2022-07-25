@@ -383,3 +383,8 @@ func (s *txQuerySimContextImpl) GetTxRWMapByContractName(contractName string) (
 
 	return txReads, txWrites
 }
+
+// GetStrAddrFromPbMember calculate string address from pb Member
+func (s *txQuerySimContextImpl) GetStrAddrFromPbMember(pbMember *acPb.Member) (string, error) {
+	return "", nil
+}

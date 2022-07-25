@@ -9,7 +9,7 @@
 export LD_LIBRARY_PATH=$(dirname $PWD)/lib:$LD_LIBRARY_PATH
 export PATH=$(dirname $PWD)/lib:$PATH
 export WASMER_BACKTRACE=1
-ulimit -n 655360
+
 
 function parse_yaml {
    local prefix=$2

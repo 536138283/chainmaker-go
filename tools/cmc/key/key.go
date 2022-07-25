@@ -31,6 +31,7 @@ func KeyCMD() *cobra.Command {
 		Long:  "ChainMaker key command",
 	}
 	keyCmd.AddCommand(genCMD())
+	keyCmd.AddCommand(exportPublickeyCMD())
 	return keyCmd
 }
 

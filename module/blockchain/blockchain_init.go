@@ -593,7 +593,7 @@ func (bc *Blockchain) initVM() (err error) {
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			bc.addVmManager(vmType, supportedVmManagerList)
-			if componentVm.VmTypeToRunTimeType[vmType] == common.RuntimeType_DOCKER_GO {
+			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
 				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
@@ -640,7 +640,7 @@ func (bc *Blockchain) initVM() (err error) {
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			bc.addVmManager(vmType, supportedVmManagerList)
-			if componentVm.VmTypeToRunTimeType[vmType] == common.RuntimeType_DOCKER_GO {
+			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
 				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
@@ -664,6 +664,10 @@ func (bc *Blockchain) addVmManager(vmType string,
 	vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
 	if err != nil {
 		bc.log.Errorf("create instance manager failed, %v", err)
+	}
+	if vmInstancesManager == nil {
+		bc.log.Debugf("vm instances manager of %s is nil", vmType)
+		return
 	}
 	runtime := componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]
 	supportedVmManagerList[runtime] = vmInstancesManager

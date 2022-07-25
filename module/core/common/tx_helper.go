@@ -103,7 +103,10 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 			return err
 		}
 
-		return IsTxRequestValid(tx, txInPool)
+		// not necessary to verify tx hash when in SYNC_VERIFY
+		if mode == protocol.CONSENSUS_VERIFY {
+			return IsTxRequestValid(tx, txInPool)
+		}
 	}
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	var (
@@ -368,15 +371,15 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			}
 		}
 
-		if mode == protocol.CONSENSUS_VERIFY {
-			if vt.chainConf.ChainConfig().Block.TxTimestampVerify {
-				currentTime := utils.CurrentTimeSeconds()
-				if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
-					errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current timestamp:%d",
-						tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
-					vt.log.Errorf(errMsg)
-					return nil, nil, nil, errors.New(errMsg)
-				}
+		if mode == protocol.CONSENSUS_VERIFY &&
+			vt.chainConf.ChainConfig().Consensus.Type != consensuspb.ConsensusType_RAFT &&
+			vt.chainConf.ChainConfig().Block.TxTimestampVerify {
+			currentTime := utils.CurrentTimeSeconds()
+			if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
+				errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current "+
+					"timestamp:%d", tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
+				vt.log.Errorf(errMsg)
+				return nil, nil, nil, errors.New(errMsg)
 			}
 		}
 

@@ -395,7 +395,7 @@ func getTxHash(tx *commonPb.Transaction,
 	return txHash, nil
 }
 
-// IsTxCountValid, to check if txcount in block is valid
+// IsTxCountValid to check if txcount in block is valid
 func IsTxCountValid(block *commonPb.Block) error {
 	if block.Header.TxCount != uint32(len(block.Txs)) {
 		return fmt.Errorf("txcount expect %d, got %d", block.Header.TxCount, len(block.Txs))
@@ -403,7 +403,7 @@ func IsTxCountValid(block *commonPb.Block) error {
 	return nil
 }
 
-// IsHeightValid, to check if block height is valid
+// IsHeightValid to check if block height is valid
 func IsHeightValid(block *commonPb.Block, currentHeight uint64) error {
 	if currentHeight+1 != block.Header.BlockHeight {
 		return fmt.Errorf("height expect %d, got %d", currentHeight+1, block.Header.BlockHeight)
@@ -411,7 +411,7 @@ func IsHeightValid(block *commonPb.Block, currentHeight uint64) error {
 	return nil
 }
 
-// IsPreHashValid, to check if block.preHash equals with last block hash
+// IsPreHashValid to check if block.preHash equals with last block hash
 func IsPreHashValid(block *commonPb.Block, preHash []byte) error {
 	if !bytes.Equal(preHash, block.Header.PreBlockHash) {
 		return fmt.Errorf("prehash expect %x, got %x", preHash, block.Header.PreBlockHash)
@@ -419,7 +419,7 @@ func IsPreHashValid(block *commonPb.Block, preHash []byte) error {
 	return nil
 }
 
-// IsBlockHashValid, to check if block hash equals with result calculated from block
+// IsBlockHashValid to check if block hash equals with result calculated from block
 func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 	hash, err := utils.CalcBlockHash(hashType, block)
 	if err != nil {
@@ -431,7 +431,7 @@ func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 	return nil
 }
 
-// IsTxDuplicate, to check if there is duplicated transactions in one block
+// IsTxDuplicate to check if there is duplicated transactions in one block
 func IsTxDuplicate(txs []*commonPb.Transaction) bool {
 	txSet := make(map[string]struct{})
 	exist := struct{}{}
@@ -445,7 +445,7 @@ func IsTxDuplicate(txs []*commonPb.Transaction) bool {
 	return len(txSet) < len(txs)
 }
 
-// IsMerkleRootValid, to check if block merkle root equals with simulated merkle root
+// IsMerkleRootValid to check if block merkle root equals with simulated merkle root
 func IsMerkleRootValid(block *commonPb.Block, txHashes [][]byte, hashType string) error {
 	txRoot, err := hash.GetMerkleRoot(hashType, txHashes)
 	if err != nil || !bytes.Equal(txRoot, block.Header.TxRoot) {
@@ -455,7 +455,7 @@ func IsMerkleRootValid(block *commonPb.Block, txHashes [][]byte, hashType string
 	return nil
 }
 
-// IsDagHashValid, to check if block dag equals with simulated block dag
+// IsDagHashValid to check if block dag equals with simulated block dag
 func IsDagHashValid(block *commonPb.Block, hashType string) error {
 	dagHash, err := utils.CalcDagHash(hashType, block.Dag)
 	if err != nil || !bytes.Equal(dagHash, block.Header.DagHash) {
@@ -464,7 +464,7 @@ func IsDagHashValid(block *commonPb.Block, hashType string) error {
 	return nil
 }
 
-// IsRWSetHashValid, to check if read write set is valid
+// IsRWSetHashValid to check if read write set is valid
 func IsRWSetHashValid(block *commonPb.Block, hashType string) error {
 	rwSetRoot, err := utils.CalcRWSetRoot(hashType, block.Txs)
 	if err != nil {
@@ -807,7 +807,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
-	vb.log.Warnf("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
+	vb.log.Infof("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
@@ -960,16 +960,17 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 
 func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	defer func() {
-		panicErr := recover()
-		if panicErr != nil {
+		if panicError := recover(); panicError != nil {
+
 			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
 				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 			}
-			panic("add block err: " + err.Error())
+
+			panic(fmt.Sprintf("cache add block fail, panic: %v", panicError))
 		}
 		if err != nil {
 			if err == commonErrors.ErrBlockHadBeenCommited {
-				chain.log.Warn("cache add block fail, err: ", err)
+				chain.log.Warnf("cache add block fail, err: %v", err)
 				return
 			}
 			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
@@ -980,9 +981,8 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	}()
 
 	startTick := utils.CurrentTimeMillisSeconds()
-	chain.log.Debugf("add block(%d,%x)=(%x,%d,%d)",
-		block.Header.BlockHeight, block.Header.BlockHash, block.Header.PreBlockHash,
-		block.Header.TxCount, len(block.Txs))
+	chain.log.Debugf("add block(%d,%x)=(%x,%d,%d)", block.Header.BlockHeight, block.Header.BlockHash,
+		block.Header.PreBlockHash, block.Header.TxCount, len(block.Txs))
 	chain.mu.Lock()
 	defer chain.mu.Unlock()
 
