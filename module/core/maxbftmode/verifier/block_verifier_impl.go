@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
@@ -191,6 +193,13 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 		return verifyResult, err
 	}
 
+	snapshot := v.snapshotManager.NewSnapshot(lastBlock, block)
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
+			return nil, err
+		}
+	}
+
 	// sync mode, need to verify consensus vote signature
 	beginConsensCheck := utils.CurrentTimeMillisSeconds()
 	if protocol.SYNC_VERIFY == mode {
@@ -361,7 +370,7 @@ func (v *BlockVerifierImpl) validateBlock(block,
 	var err error
 	var txCapacity uint32
 
-	if v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity

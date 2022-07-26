@@ -724,6 +724,7 @@ func (ts *TxScheduler) checkRefundGas(accountMangerContract *commonPb.Contract, 
 		result.ContractResult.Code = uint32(commonPb.TxStatusCode_CONTRACT_FAIL)
 		result.ContractResult.Message = err.Error()
 		result.ContractResult.GasUsed = limit
+		result.ContractResult.Result = nil
 		return err
 	}
 
