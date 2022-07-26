@@ -1279,8 +1279,8 @@ func recoverBlockByBatch(
 
 		if len(batchIds) == 0 {
 			logger.DebugDynamic(func() string {
-				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d]",
-					block.Header.BlockHeight)
+				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d], additionalData :%v",
+					block.Header.BlockHeight, block.AdditionalData.ExtraData)
 			})
 			return &commonPb.Block{
 				Header:         block.Header,

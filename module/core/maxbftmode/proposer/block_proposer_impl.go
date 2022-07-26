@@ -781,14 +781,18 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 			}
 
 			fetchBatch := keepTx
+			batchIds, _, err := common.GetBatchIds(proposedBlock)
+			if err != nil {
+				return nil, nil, err
+			}
+
 			if len(removeTxs) != 0 || len(retryTxs) != 0 {
-				batchIds, _, err := common.GetBatchIds(proposedBlock)
-				if err != nil {
-					return nil, nil, err
-				}
 				newBatchIds, fetchBatch = bp.removeAndRetryTx(proposedBlock.Header.BlockHeight, batchIds, removeTxs, keepTx, RETRY)
 				bp.log.Infof("remove the overtime transactions, total:%d, fetch:%d, remove:%d",
 					len(proposedBlock.Txs), len(fetchBatch), len(removeTxs))
+			} else {
+				// no tx need to remove or retry,use the old batchIds.
+				newBatchIds = batchIds
 			}
 
 			// schedule tx again
