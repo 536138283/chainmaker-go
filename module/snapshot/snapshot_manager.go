@@ -52,6 +52,7 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 	return snapshotImpl
 }
 
+// Get a Snapshot from SnapshotManager for read, don't modify any data.
 func (m *ManagerImpl) GetSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	fingerPrint := utils.CalcBlockFingerPrintWithoutTx(block)
 	snapshot, exist := m.snapshots[fingerPrint]
