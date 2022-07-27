@@ -494,10 +494,14 @@ func IntegersContains(array []int, val int) bool {
 	return false
 }
 
-func GetBatchIds(block *commonpb.Block) ([]string, []uint32) {
+func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 	if batchIdsByte, ok := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]; ok {
-		txBatchInfo, _ := DeserializeTxBatchInfo(batchIdsByte)
-		return txBatchInfo.BatchIds, txBatchInfo.Index
+		txBatchInfo, err := DeserializeTxBatchInfo(batchIdsByte)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return txBatchInfo.BatchIds, txBatchInfo.Index, nil
 	}
-	return []string{}, []uint32{}
+	return []string{}, []uint32{}, nil
 }

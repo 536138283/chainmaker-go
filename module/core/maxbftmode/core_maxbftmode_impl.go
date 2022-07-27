@@ -131,7 +131,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		return nil, err
 	}
 
-	core.MaxbftHelper = helper.NewMaxbftHelper(cf.TxPool, cf.ChainConf, cf.ProposalCache)
+	core.MaxbftHelper = helper.NewMaxbftHelper(cf.TxPool, cf.ChainConf, cf.ProposalCache, cf.Log)
 
 	// get the type of tx pool
 	if value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]; ok {

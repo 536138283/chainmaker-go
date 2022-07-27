@@ -18,11 +18,16 @@ type maxBftHelper struct {
 	txPool        protocol.TxPool
 	chainConf     protocol.ChainConf
 	proposalCache protocol.ProposalCache
+	logger        protocol.Logger
 }
 
-func NewMaxbftHelper(txPool protocol.TxPool,
-	chainConf protocol.ChainConf, proposalCache protocol.ProposalCache) protocol.MaxbftHelper {
-	return &maxBftHelper{txPool: txPool, chainConf: chainConf, proposalCache: proposalCache}
+func NewMaxbftHelper(txPool protocol.TxPool, chainConf protocol.ChainConf,
+	proposalCache protocol.ProposalCache, log protocol.Logger) protocol.MaxbftHelper {
+	return &maxBftHelper{
+		txPool:        txPool,
+		chainConf:     chainConf,
+		proposalCache: proposalCache,
+		logger:        log}
 }
 
 func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
@@ -36,7 +41,13 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 
 	if common.TxPoolType == batch.TxPoolType {
 		for _, delBlock := range delBlocks {
-			batchIds, _ := common.GetBatchIds(delBlock)
+			batchIds, _, err := common.GetBatchIds(delBlock)
+			if err != nil {
+				// if get batch ids fail,discard other blocks.
+				hp.logger.Warnf("get batch ids from block[%d,%x] failed, err:%v",
+					delBlock.Header.BlockHeight, delBlock.Header.BlockHash, err)
+				continue
+			}
 			hp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
 		}
 		return
