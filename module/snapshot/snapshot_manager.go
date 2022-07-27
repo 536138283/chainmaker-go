@@ -52,6 +52,15 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 	return snapshotImpl
 }
 
+func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
+	fingerPrint := utils.CalcBlockFingerPrintWithoutTx(block)
+	snapshot, exist := m.snapshots[fingerPrint]
+	if !exist {
+		return m.NewSnapshot(prevBlock, block)
+	}
+	return snapshot
+}
+
 func (m *ManagerImpl) NotifyBlockCommitted(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
