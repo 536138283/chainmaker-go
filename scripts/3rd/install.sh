@@ -10,7 +10,7 @@ cd glibc-2.18
 mkdir build
 cd build
 # Adapt to gmake version 4.x
-sed -i "s/3..89.../3.[89]* | 4.[0-9] )/g" ../configure
+sed -i "s/3.\[89\]\*./3.[89]* | 4.* )/g" ../configure
 ../configure --prefix=/usr
 make -j4
 sudo make install
