@@ -276,12 +276,15 @@ func (bc *BlockCommitter) AddBlock(block *commonpb.Block) error {
 			hex.EncodeToString(block.Header.BlockHash))
 	}
 
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, _, err :=
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
 		bc.commonCommit.CommitBlock(abftBlock.GetTxBatch(), abftBlock.GetTxBatchRwSet(), nil)
 	if err != nil {
 		bc.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
 		return err
 	}
+
+	// synchronize new block height to consensus and sync module
+	bc.msgbus.PublishSafe(msgbus.BlockInfo, blockInfo)
 
 	//sync txpool(put retryList back txpool & delete blocked tx)
 	bc.txPool.RetryAndRemoveTxs(nil, block.Txs)
