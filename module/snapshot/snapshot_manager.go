@@ -52,7 +52,7 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 	return snapshotImpl
 }
 
-func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
+func (m *ManagerImpl) GetSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	fingerPrint := utils.CalcBlockFingerPrintWithoutTx(block)
 	snapshot, exist := m.snapshots[fingerPrint]
 	if !exist {
