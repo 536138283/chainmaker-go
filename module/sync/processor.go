@@ -13,7 +13,6 @@ import (
 
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 
-	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/Workiva/go-datastructures/queue"
@@ -128,7 +127,7 @@ func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
 		return nil, nil
 	}
 	pro.log.Debugf("process block [height: %d] start, status [%d]", info.blk.Header.BlockHeight, status)
-	if info.withRWSets && localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable {
+	if info.withRWSets {
 		if status = pro.validateAndCommitBlockWithRwSets(info.blk, info.rwsets); status == ok || status == hasProcessed {
 			pro.hasCommitBlock++
 		}
