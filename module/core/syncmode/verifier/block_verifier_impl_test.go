@@ -103,7 +103,8 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	txResultMap[tx.Payload.TxId] = tx.Result
 
 	snapshot := mock.NewMockSnapshot(ctl)
-	snapshot.EXPECT().GetBlockchainStore().AnyTimes()
+	blockchainStore := mock.NewMockBlockchainStore(ctl)
+	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockchainStore)
 	snapshot.EXPECT().Seal().AnyTimes()
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
@@ -111,6 +112,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
+	snapshotMgr.EXPECT().GetSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	snapshotMgr.EXPECT().ClearSnapshot(gomock.Any()).AnyTimes().Return(nil)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
@@ -142,8 +144,16 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 				RetryTime:             0,
 				RetryInterval:         0,
 			},
-		}}
+			EnableSenderGroup:        false,
+			EnableConflictsBitWindow: false,
+		},
+		AuthType: protocol.Identity,
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_CHAINMAKER,
+		},
+	}
 	chainConf.EXPECT().ChainConfig().Return(&chainConfig).AnyTimes()
+	blockchainStore.EXPECT().GetLastChainConfig().AnyTimes().Return(&chainConfig, nil)
 
 	verifier := &BlockVerifierImpl{
 		chainId:         chainId,
