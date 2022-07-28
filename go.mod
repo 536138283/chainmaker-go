@@ -24,7 +24,7 @@ require (
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220725080811-bc44cd76820f
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220722072056-7608b4240a1b
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220714093409-76db3fe643ae
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220720075238-b471f8f8b528
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.0.0-20220728033812-9b2423c586f8
 	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220720140745-09a8cd54bef4
 	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220726065458-822de7f9bedf
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
@@ -50,55 +50,32 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mr-tron/base58 v1.2.0
 	github.com/panjf2000/ants/v2 v2.4.8
-	github.com/prometheus/client_golang v1.11.1
+	github.com/prometheus/client_golang v1.11.0
 	github.com/rcrowley/go-metrics v0.0.0-20201227073835-cf1acfcdf475
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
-	github.com/spf13/viper v1.12.0
-	github.com/stretchr/testify v1.7.2
+	github.com/spf13/viper v1.10.1
+	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
-	go.uber.org/atomic v1.9.0
-	golang.org/x/net v0.0.0-20220728030405-41545e8bf201
+	go.uber.org/atomic v1.7.0
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
-	google.golang.org/grpc v1.48.0
+	google.golang.org/grpc v1.47.0
 	gorm.io/driver/mysql v1.2.0
 	gorm.io/gorm v1.22.3
 )
 
 require (
 	chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff // indirect
-	github.com/StackExchange/wmi v1.2.1 // indirect
-	github.com/benbjohnson/clock v1.3.0 // indirect
-	github.com/census-instrumentation/opencensus-proto v0.3.0 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/cncf/xds/go v0.0.0-20211130200136-a8f946100490 // indirect
-	github.com/dgryski/go-metro v0.0.0-20211217172704-adc40b04c140 // indirect
-	github.com/envoyproxy/protoc-gen-validate v0.6.2 // indirect
-	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
-	github.com/miekg/pkcs11 v1.1.1 // indirect
-	github.com/pelletier/go-toml/v2 v2.0.2 // indirect
-	github.com/pingcap/log v1.1.0 // indirect
-	github.com/pingcap/tipb v0.0.0-20220722105657-aec1a265cf56 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
-	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
-	github.com/sirupsen/logrus v1.9.0 // indirect
-	github.com/spf13/afero v1.9.2 // indirect
-	github.com/subosito/gotenv v1.4.0 // indirect
-	github.com/tidwall/gjson v1.14.1 // indirect
-	github.com/yusufpapurcu/wmi v1.2.2 // indirect
-	go.uber.org/multierr v1.8.0 // indirect
-	go.uber.org/zap v1.21.0 // indirect
-	golang.org/x/crypto v0.0.0-20220722155217-630584e8d5aa // indirect
-	google.golang.org/genproto v0.0.0-20220725144611-272f38e5d71b // indirect
-	gopkg.in/ini.v1 v1.66.6 // indirect
 )
 
 replace (
