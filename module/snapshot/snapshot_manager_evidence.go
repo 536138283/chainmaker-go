@@ -51,6 +51,16 @@ func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb
 	return evidenceSnapshot
 }
 
+// Get a Snapshot from SnapshotManager for read, don't modify any data.
+func (m *ManagerEvidence) GetSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
+	fingerPrint := utils.CalcBlockFingerPrint(block)
+	snapshot, exist := m.snapshots[fingerPrint]
+	if !exist {
+		return m.NewSnapshot(prevBlock, block)
+	}
+	return snapshot
+}
+
 func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()

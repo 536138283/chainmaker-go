@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"chainmaker.org/chainmaker/protocol/v2"
+
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
@@ -26,7 +28,6 @@ import (
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	chainConfConfig "chainmaker.org/chainmaker/pb-go/v2/config"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -201,7 +202,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		return err
 	}
 
-	snapshot := v.snapshotManager.NewSnapshot(lastBlock, block)
+	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
 	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
 			return err
