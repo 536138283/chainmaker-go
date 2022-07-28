@@ -8,7 +8,6 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -368,18 +367,6 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac,
 				vt.proposalCache, mode, verifyMode, blockVersion); err != nil {
 				return nil, nil, nil, err
-			}
-		}
-
-		if mode == protocol.CONSENSUS_VERIFY &&
-			vt.chainConf.ChainConfig().Consensus.Type != consensuspb.ConsensusType_RAFT &&
-			vt.chainConf.ChainConfig().Block.TxTimestampVerify {
-			currentTime := utils.CurrentTimeSeconds()
-			if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
-				errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current "+
-					"timestamp:%d", tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
-				vt.log.Errorf(errMsg)
-				return nil, nil, nil, errors.New(errMsg)
 			}
 		}
 
