@@ -112,8 +112,8 @@ func certToUserAddrInStake() *cobra.Command {
 				}
 				pubkey = []byte(pkStr)
 			}
-			if hashType == crypto.CRYPTO_ALGO_SM3 || hashType == crypto.CRYPTO_ALGO_SHA256 {
-				if hashBz, err = hashAlo.GetByStrType(hashType, pubkey); err != nil {
+			if hashType == crypto.HASH_TYPE_SM3 || hashType == crypto.HASH_TYPE_SHA256 {
+				if hashBz, err = hashAlo.Get(hashType, pubkey); err != nil {
 					return err
 				}
 			}

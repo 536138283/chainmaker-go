@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
@@ -69,7 +68,7 @@ func newSetGasAdminCMD() *cobra.Command {
 				var err error
 				e, err = sdkutils.MakePkEndorserWithPath(
 					adminKeys[i],
-					crypto.HashAlgoMap[cc.GetHashType()],
+					cc.GetHashType(),
 					"",
 					payload,
 				)
