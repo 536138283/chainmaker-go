@@ -5,33 +5,33 @@ go 1.16
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220607072052-653ff1f72ed5
 	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220714114240-0dc80c782d1d
-	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220719084152-020bbed35d5f
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220715122356-2dcae1920a50
-	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220714062027-cc613542361e
+	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220627035228-9da92176f1cf
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220729032354-618f5c8a5ddb
+	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220725121227-27a0a9458270
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.2.1-0.20220627031024-6cfa4d15e05e
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220720033843-c6960dacf1e8
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220719031021-84cb6fb3a8b6
-	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220714065948-d56b9b5eaa1e
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.2.2-0.20220722025546-9bd6894c7fee
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.2.2-0.20220727082533-2a5b6fa4e4bc
+	chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220722082432-17d9a1daf103
 	chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220613040127-5b976891c91e
 	chainmaker.org/chainmaker/net-common v1.1.2-0.20220610083519-e6727dc4f585
 	chainmaker.org/chainmaker/net-libp2p v1.1.3-0.20220708084550-353d2f219a51
-	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220714084009-1034af439ef0
-	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220719093347-4e11ea332dbf
-	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220719082411-d022157fdb02
-	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220712084252-dab6af40f09f
+	chainmaker.org/chainmaker/net-liquid v1.0.3-0.20220719062616-f8aebd894246
+	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220725093050-46d678ea72de
+	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220727073646-c293c6cfd75c
+	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220729114520-2d67823d7c81
 	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220714081904-fe9f04d19e8f
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220704121112-bd723fc4a2a3
-	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220704121129-5356d0b5b297
-	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220704121147-9f3b57c2a16c
-	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220711061227-aa7ff9c750ff
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220715025634-e8859dd26198
-	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220715025819-ea53b65428e1
-	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220711130647-e3ad31cb9e3e
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220722072134-914f5a6360c2
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220725080811-bc44cd76820f
+	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220722072056-7608b4240a1b
+	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220714093409-76db3fe643ae
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.0.0-20220728033812-9b2423c586f8
+	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220720140745-09a8cd54bef4
+	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220726065458-822de7f9bedf
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220719030803-8b9c0c2d4191
+	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220726064734-33b14b255527
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220701060704-5a8851239c5b
-	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1
-	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220719081931-99bd6ee62635
+	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1-0.20220725072410-3bf1a6069ed2
+	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220726064749-357c8951be38
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -73,6 +73,7 @@ require (
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
 )
 

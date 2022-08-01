@@ -242,7 +242,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 			bp.proposalCache.ClearTheBlock(selfProposedBlock)
 
 			if common.TxPoolType == batch.TxPoolType {
-				batchIds, _ := common.GetBatchIds(selfProposedBlock)
+				batchIds, _, err := common.GetBatchIds(selfProposedBlock)
+				if err != nil {
+					return nil, err
+				}
+
 				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
 			} else {
 				bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
@@ -480,6 +484,7 @@ func (bp *BlockProposerImpl) FetchTxFromOtherBlock(height uint64, preHash []byte
 
 	newFetchBatch := make([]*commonpb.Transaction, 0)
 	newBatchIds := make([]string, 0)
+	var err error
 
 	txInSameBranch := bp.getTxInSameBranch(preHash, height)
 	// 交易有可能锁在前面4个块中
@@ -493,7 +498,11 @@ func (bp *BlockProposerImpl) FetchTxFromOtherBlock(height uint64, preHash []byte
 			continue
 		}
 
-		newFetchBatch, newBatchIds = bp.fetchFromProposalCache(proposedBlocks, txInSameBranch)
+		newFetchBatch, newBatchIds, err = bp.fetchFromProposalCache(proposedBlocks, txInSameBranch)
+		if err != nil {
+			continue
+		}
+
 		if len(newFetchBatch) != 0 {
 			break
 		}
@@ -726,7 +735,7 @@ func (bp *BlockProposerImpl) getFetchBatchFromPool(
 
 func (bp *BlockProposerImpl) fetchFromProposalCache(
 	proposedBlocks []*commonpb.Block, txInSameBranch map[string]interface{}) (
-	[]*commonpb.Transaction, []string) {
+	[]*commonpb.Transaction, []string, error) {
 	txTimeout := int64(bp.chainConf.ChainConfig().Block.TxTimeout)
 	newBatchIds := make([]string, 0)
 	for _, proposedBlock := range proposedBlocks {
@@ -772,21 +781,28 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 			}
 
 			fetchBatch := keepTx
+			batchIds, _, err := common.GetBatchIds(proposedBlock)
+			if err != nil {
+				return nil, nil, err
+			}
+
 			if len(removeTxs) != 0 || len(retryTxs) != 0 {
-				batchIds, _ := common.GetBatchIds(proposedBlock)
 				newBatchIds, fetchBatch = bp.removeAndRetryTx(proposedBlock.Header.BlockHeight, batchIds, removeTxs, keepTx, RETRY)
 				bp.log.Infof("remove the overtime transactions, total:%d, fetch:%d, remove:%d",
 					len(proposedBlock.Txs), len(fetchBatch), len(removeTxs))
+			} else {
+				// no tx need to remove or retry,use the old batchIds.
+				newBatchIds = batchIds
 			}
 
 			// schedule tx again
 			bp.log.Infof(fmt.Sprintf("fetch tx from cache,fetch:%d,remove:%d,height:%d,hash:%x",
 				len(fetchBatch), len(removeTxs), proposedBlock.Header.BlockHeight, proposedBlock.Header.BlockHash))
 
-			return fetchBatch, newBatchIds
+			return fetchBatch, newBatchIds, nil
 		}
 	}
-	return nil, newBatchIds
+	return nil, newBatchIds, nil
 }
 
 func (bp *BlockProposerImpl) removeAndRetryTx(

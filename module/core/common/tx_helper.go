@@ -8,7 +8,6 @@ package common
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -103,7 +102,10 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 			return err
 		}
 
-		return IsTxRequestValid(tx, txInPool)
+		// not necessary to verify tx hash when in SYNC_VERIFY
+		if mode == protocol.CONSENSUS_VERIFY {
+			return IsTxRequestValid(tx, txInPool)
+		}
 	}
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	var (
@@ -368,18 +370,6 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			}
 		}
 
-		if mode == protocol.CONSENSUS_VERIFY &&
-			vt.chainConf.ChainConfig().Consensus.Type != consensuspb.ConsensusType_RAFT &&
-			vt.chainConf.ChainConfig().Block.TxTimestampVerify {
-			currentTime := utils.CurrentTimeSeconds()
-			if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
-				errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current "+
-					"timestamp:%d", tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
-				vt.log.Errorf(errMsg)
-				return nil, nil, nil, errors.New(errMsg)
-			}
-		}
-
 		startOthersTicker := utils.CurrentTimeMillisSeconds()
 		rwSet := vt.txRWSetMap[tx.Payload.TxId]
 		result := vt.txResultMap[tx.Payload.TxId]
@@ -491,10 +481,14 @@ func IntegersContains(array []int, val int) bool {
 	return false
 }
 
-func GetBatchIds(block *commonpb.Block) ([]string, []uint32) {
+func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 	if batchIdsByte, ok := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]; ok {
-		txBatchInfo, _ := DeserializeTxBatchInfo(batchIdsByte)
-		return txBatchInfo.BatchIds, txBatchInfo.Index
+		txBatchInfo, err := DeserializeTxBatchInfo(batchIdsByte)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return txBatchInfo.BatchIds, txBatchInfo.Index, nil
 	}
-	return []string{}, []uint32{}
+	return []string{}, []uint32{}, nil
 }

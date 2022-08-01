@@ -26,6 +26,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/query"
 	"chainmaker.org/chainmaker-go/tools/cmc/tee"
 	"chainmaker.org/chainmaker-go/tools/cmc/txpool"
+	"chainmaker.org/chainmaker-go/tools/cmc/version"
 	"github.com/spf13/cobra"
 )
 
@@ -54,6 +55,7 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(address.NewAddressCMD())
 	mainCmd.AddCommand(gas.NewGasManageCMD())
 	mainCmd.AddCommand(txpool.NewTxPoolCMD())
+	mainCmd.AddCommand(version.VersionCMD())
 
 	// 后续改成go-sdk
 	//mainCmd.AddCommand(payload.PayloadCMD())

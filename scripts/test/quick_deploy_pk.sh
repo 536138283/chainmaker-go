@@ -108,7 +108,7 @@ function cat_log() {
   grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*1*/log/system.log
 }
 
-#start_chainmaker
-#prepare_cmc
-#cmc_test
+start_chainmaker
+prepare_cmc
+cmc_test
 cat_log

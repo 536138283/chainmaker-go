@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
@@ -191,6 +193,13 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 		return verifyResult, err
 	}
 
+	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
+			return nil, err
+		}
+	}
+
 	// sync mode, need to verify consensus vote signature
 	beginConsensCheck := utils.CurrentTimeMillisSeconds()
 	if protocol.SYNC_VERIFY == mode {
@@ -361,7 +370,7 @@ func (v *BlockVerifierImpl) validateBlock(block,
 	var err error
 	var txCapacity uint32
 
-	if v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
@@ -470,7 +479,10 @@ func parseVerifyResult(
 func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
 
 	if common.TxPoolType == batch.TxPoolType {
-		v.cutBlocksForBatchPool(blocksToCut, blockToKeep)
+		err := v.cutBlocksForBatchPool(blocksToCut, blockToKeep)
+		if err != nil {
+			v.log.Warnf(fmt.Sprintf("cut block[%d] failed, err:%v", blockToKeep.Header.BlockHeight, err))
+		}
 		return
 	}
 
@@ -495,10 +507,16 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 }
 
-func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
+func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) error {
 
 	keepBatchIdsMap := make(map[string]interface{})
-	batchIds, _ := common.GetBatchIds(blockToKeep)
+	batchIds, _, err := common.GetBatchIds(blockToKeep)
+	if err != nil {
+		v.log.Errorf("get batch ids from keep block[%d,%x] failed, err:%v",
+			blockToKeep.Header.BlockHeight, blockToKeep.Header.BlockHash, err)
+		return err
+	}
+
 	for _, batchId := range batchIds {
 		keepBatchIdsMap[batchId] = struct{}{}
 	}
@@ -506,7 +524,12 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 	finalCutBatchIds := make([]string, 0)
 	for _, blockToCut := range blocksToCut {
 		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
-		cutBatchIds, _ := common.GetBatchIds(blockToCut)
+		cutBatchIds, _, err := common.GetBatchIds(blockToCut)
+		if err != nil {
+			v.log.Warnf("get batch ids from removed block[%d,%x] failed, err:%v",
+				blockToCut.Header.BlockHeight, blockToCut.Header.BlockHash, err)
+			continue
+		}
 		for _, cutBatchId := range cutBatchIds {
 			if _, ok := keepBatchIdsMap[cutBatchId]; ok {
 				// this transaction is kept, do NOT cut it.
@@ -521,6 +544,7 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 		v.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
 	}
 
+	return nil
 }
 
 // verifyRepeat to check if the block has verified before

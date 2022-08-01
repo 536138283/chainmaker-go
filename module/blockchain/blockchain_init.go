@@ -678,6 +678,10 @@ func (bc *Blockchain) addVmManager(vmType string,
 	if err != nil {
 		bc.log.Errorf("create instance manager failed, %v", err)
 	}
+	if vmInstancesManager == nil {
+		bc.log.Debugf("vm instances manager of %s is nil", vmType)
+		return
+	}
 	runtime := componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]
 	supportedVmManagerList[runtime] = vmInstancesManager
 }

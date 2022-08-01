@@ -5,6 +5,7 @@
 package address
 
 import (
+	"chainmaker.org/chainmaker/common/v2/crypto"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -21,10 +22,10 @@ const (
 var (
 	addressType string
 	hashType    int
-	hashAlgoMap = map[int]string{
-		0: "SHA256",
-		1: "SHA3_256",
-		2: "SM3",
+	hashAlgoMap = map[int]crypto.HashType{
+		0: crypto.HASH_TYPE_SHA256,
+		1: crypto.HASH_TYPE_SHA3_256,
+		2: crypto.HASH_TYPE_SM3,
 	}
 )
 

@@ -387,3 +387,8 @@ func (s *txQuerySimContextImpl) GetTxRWMapByContractName(contractName string) (
 func (s *txQuerySimContextImpl) GetConsensusStateWrapper() protocol.ConsensusStateWrapper {
 	return nil
 }
+
+// GetStrAddrFromPbMember calculate string address from pb Member
+func (s *txQuerySimContextImpl) GetStrAddrFromPbMember(pbMember *acPb.Member) (string, error) {
+	return "", nil
+}

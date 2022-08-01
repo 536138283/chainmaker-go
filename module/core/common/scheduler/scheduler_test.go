@@ -856,7 +856,7 @@ func TestSimulateWithDag(t *testing.T) {
 			},
 			runContract: runContractNormal,
 			sealTimes:   1,
-			wantErr:     true,
+			wantErr:     false, // in real case, compareDag will return err since buildDag will build a different dag!
 		},
 		{
 			name:              "testDagHasDuplicates",
@@ -3165,7 +3165,7 @@ func TestTxScheduler_compareDag(t *testing.T) {
 			logger := mock.NewMockLogger(ctl)
 			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
 			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
-			logger.EXPECT().Error(gomock.Any()).AnyTimes()
+			logger.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
 			ts := &TxScheduler{
 				chainConf: chainConf,
 				log:       logger,

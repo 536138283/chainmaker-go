@@ -271,7 +271,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 	if selfProposedBlock != nil {
-		if needPropose := bp.dealProposalRequestByProposalCache(height, selfProposedBlock, preHash); !needPropose {
+		if needPropose := bp.dealProposalRequestWithProposalCache(height, selfProposedBlock, preHash); !needPropose {
 			return nil
 		}
 	}
@@ -636,7 +636,7 @@ func (bp *BlockProposerImpl) removeTx(
 	return batchIds, fetchBatches, fetchBatch
 }
 
-func (bp *BlockProposerImpl) dealProposalRequestByProposalCache(
+func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 	height uint64, selfProposedBlock *commonpb.Block, preHash []byte) (needPropose bool) {
 
 	if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
@@ -649,7 +649,11 @@ func (bp *BlockProposerImpl) dealProposalRequestByProposalCache(
 
 			bp.proposalCache.ClearTheBlock(selfProposedBlock)
 			if common.TxPoolType == batch.TxPoolType {
-				batchIds, _ := common.GetBatchIds(selfProposedBlock)
+				batchIds, _, err := common.GetBatchIds(selfProposedBlock)
+				if err != nil {
+					// no need to handle this err,propose a new block.
+					return true
+				}
 				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
 				return true
 			}
@@ -700,7 +704,10 @@ func (bp *BlockProposerImpl) dealProposalRequestByProposalCache(
 	// transaction loss at the current node, but it can be solved by rebroadcasting on the client side.
 
 	if common.TxPoolType == batch.TxPoolType {
-		batchIds, _ := common.GetBatchIds(selfProposedBlock)
+		batchIds, _, err := common.GetBatchIds(selfProposedBlock)
+		if err != nil {
+			return true
+		}
 		bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
 		return true
 	}
