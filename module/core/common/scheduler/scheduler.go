@@ -544,7 +544,7 @@ func (ts *TxScheduler) executeTx(
 			return txSimContext, protocol.ExecOrderTxTypeNormal, false
 		}
 	} else if blockVersion >= 2220 {
-		if ts.guardForExecuteTx2220(tx, txSimContext, enableGas, enableOptimizeChargeGas) {
+		if !ts.guardForExecuteTx2220(tx, txSimContext, enableGas, enableOptimizeChargeGas) {
 			return txSimContext, protocol.ExecOrderTxTypeNormal, false
 		}
 	}
