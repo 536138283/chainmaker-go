@@ -42,6 +42,8 @@ func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb
 		evidenceSnapshot.SetPreSnapshot(prevSnapshot)
 	}
 
+	evidenceSnapshot.SetBlockFingerprint(fingerPrint)
+
 	m.log.Infof(
 		"create snapshot at height %d, fingerPrint[%v] -> prevFingerPrint[%v]",
 		blockHeight,

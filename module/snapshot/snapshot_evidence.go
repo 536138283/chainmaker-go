@@ -11,6 +11,8 @@ import (
 	"errors"
 	"math"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
@@ -20,6 +22,16 @@ import (
 type SnapshotEvidence struct {
 	delegate *SnapshotImpl
 	log      protocol.Logger
+}
+
+// GetBlockFingerprint returns current block fingerprint
+func (s *SnapshotEvidence) GetBlockFingerprint() string {
+	return s.delegate.GetBlockFingerprint()
+}
+
+// SetBlockFingerprint set block fingerprint
+func (s *SnapshotEvidence) SetBlockFingerprint(fp utils.BlockFingerPrint) {
+	s.delegate.SetBlockFingerprint(fp)
 }
 
 func (s *SnapshotEvidence) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {

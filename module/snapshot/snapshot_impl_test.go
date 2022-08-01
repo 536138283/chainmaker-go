@@ -38,6 +38,11 @@ type MockSimContextImpl struct {
 	txResult     *commonPb.Result
 }
 
+func (s *MockSimContextImpl) GetBlockFingerprint() string {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *MockSimContextImpl) GetKeys(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	//TODO implement me
 	panic("implement me")
