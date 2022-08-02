@@ -676,7 +676,8 @@ func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
 	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
 	result *commonPb.Result) (re *commonPb.Result, err error) {
-	if ts.checkNativeFilter(contractName, method) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
+		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		var code commonPb.TxStatusCode
 		var runChargeGasContract *commonPb.ContractResult
 		var limit uint64
