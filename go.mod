@@ -24,12 +24,12 @@ require (
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220725080811-bc44cd76820f
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220722072056-7608b4240a1b
 	chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220714093409-76db3fe643ae
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220801124929-35d0ffe0f79a
-	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220801030559-333653cb379e
-	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220801033342-9505c0ca9888
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.2-0.20220801023023-da89439609e3
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220802070253-7c0987cb8f96
+	chainmaker.org/chainmaker/vm-engine/v2 v2.2.3-0.20220802070244-950c8867ced6
+	chainmaker.org/chainmaker/vm-evm/v2 v2.2.2-0.20220802070220-01da1cf03d9c
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.2.2-0.20220802030518-73309718e505
 	chainmaker.org/chainmaker/vm-native/v2 v2.2.3-0.20220726064734-33b14b255527
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220801061224-4b0f98274447
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.2.2-0.20220802070258-414e787b9c8d
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.2.1-0.20220801023609-a749aec413ec
 	chainmaker.org/chainmaker/vm/v2 v2.2.3-0.20220801022349-2a0ae7e96d25
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
