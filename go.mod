@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.2.3-0.20220607072052-653ff1f72ed5
-	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220720085129-5de825549b8c
+	chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220802092829-4f5476e5291b
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.0.0-20220627035228-9da92176f1cf
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.2.1-0.20220802092723-be68f77cd652
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.0.0-20220725121227-27a0a9458270
