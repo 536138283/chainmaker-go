@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/common/v2/bitmap"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -42,6 +44,8 @@ type SnapshotImpl struct {
 	preBlockHash   []byte
 
 	preSnapshot protocol.Snapshot
+
+	blockFingerprint string
 
 	// applied data, please lock it before using
 	txRWSetTable   []*commonPb.TxRWSet
@@ -521,4 +525,14 @@ func constructKey(contractName string, key []byte) string {
 	builder.WriteString(contractName)
 	builder.Write(key)
 	return builder.String()
+}
+
+// SetBlockFingerprint set block fingerprint
+func (s *SnapshotImpl) SetBlockFingerprint(fp utils.BlockFingerPrint) {
+	s.blockFingerprint = string(fp)
+}
+
+// GetBlockFingerprint returns current block fingerprint
+func (s *SnapshotImpl) GetBlockFingerprint() string {
+	return s.blockFingerprint
 }

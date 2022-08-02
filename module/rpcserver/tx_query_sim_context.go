@@ -39,6 +39,11 @@ type txQuerySimContextImpl struct {
 	keyIndex         int
 }
 
+// GetBlockFingerprint returns unique id for block
+func (s *txQuerySimContextImpl) GetBlockFingerprint() string {
+	return ""
+}
+
 func (s *txQuerySimContextImpl) GetKeys(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	//TODO implement me
 	panic("implement me")
