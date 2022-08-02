@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
+	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
 )
 
 // TxFilter sync.Map transaction filter
@@ -42,12 +43,12 @@ func (f *TxFilter) SetHeight(height uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f *TxFilter) IsExistsAndReturnHeight(txId string, _ ...bn.RuleType) (bool, uint64, error) {
-	exists, err := f.IsExists(txId)
+func (f *TxFilter) IsExistsAndReturnHeight(txId string, _ ...bn.RuleType) (bool, uint64, *txfilter.Stat, error) {
+	exists, stat, err := f.IsExists(txId)
 	if err != nil {
-		return false, 0, err
+		return false, 0, nil, err
 	}
-	return exists, f.height, nil
+	return exists, f.height, stat, nil
 }
 
 // Add txId to transaction filter
@@ -75,9 +76,9 @@ func (f *TxFilter) AddsAndSetHeight(txId []string, height uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f *TxFilter) IsExists(txId string, _ ...bn.RuleType) (bool, error) {
+func (f *TxFilter) IsExists(txId string, _ ...bn.RuleType) (bool, *txfilter.Stat, error) {
 	_, ok := f.m.Load(txId)
-	return ok, nil
+	return ok, nil, nil
 }
 
 // Close transaction filter

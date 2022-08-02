@@ -8,7 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package filterdefault
 
 import (
+	"time"
+
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	"chainmaker.org/chainmaker/common/v2/birdsnest"
+	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -42,8 +46,11 @@ func (f TxFilter) SetHeight(_ uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f TxFilter) IsExistsAndReturnHeight(txId string, _ ...birdsnest.RuleType) (bool, uint64, error) {
-	return f.store.TxExistsInFullDB(txId)
+func (f TxFilter) IsExistsAndReturnHeight(txId string, _ ...birdsnest.RuleType) (bool, uint64, *txfilter.Stat, error) {
+	start := time.Now()
+	exists, height, err := f.store.TxExistsInFullDB(txId)
+	costs := time.Since(start)
+	return exists, height, filtercommon.NewStat1(0, costs), err
 }
 
 // Add txId to transaction filter
@@ -62,8 +69,11 @@ func (f TxFilter) AddsAndSetHeight(_ []string, _ uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f TxFilter) IsExists(txId string, _ ...birdsnest.RuleType) (bool, error) {
-	return f.store.TxExists(txId)
+func (f TxFilter) IsExists(txId string, _ ...birdsnest.RuleType) (bool, *txfilter.Stat, error) {
+	start := time.Now()
+	exists, err := f.store.TxExists(txId)
+	costs := time.Since(start)
+	return exists, filtercommon.NewStat1(0, costs), err
 }
 
 // Close transaction filter

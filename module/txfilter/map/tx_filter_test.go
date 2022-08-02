@@ -69,7 +69,7 @@ func TestTxFilter_IsExistsAndReturnHeight(t *testing.T) {
 			f := &TxFilter{
 				height: tt.fields.height,
 			}
-			got, got1, err := f.IsExistsAndReturnHeight(tt.args.in0, tt.args.in1...)
+			got, got1, _, err := f.IsExistsAndReturnHeight(tt.args.in0, tt.args.in1...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IsExistsAndReturnHeight() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -252,7 +252,7 @@ func TestTxFilter_IsExists(t *testing.T) {
 				height: tt.fields.height,
 				m:      sync.Map{},
 			}
-			got, err := f.IsExists(tt.args.txId, tt.args.in1...)
+			got, _, err := f.IsExists(tt.args.txId, tt.args.in1...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IsExists() error = %v, wantErr %v", err, tt.wantErr)
 				return

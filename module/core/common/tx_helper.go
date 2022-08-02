@@ -16,6 +16,7 @@ import (
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -44,6 +45,15 @@ type VerifyStat struct {
 	SigLasts    int64
 	OthersLasts int64
 	SigCount    int
+	txfilter.Stat
+}
+
+func (stat *VerifyStat) Sum(filter *txfilter.Stat) {
+	if filter != nil {
+		stat.FpCount += filter.FpCount
+		stat.FilterCosts += filter.FilterCosts
+		stat.DbCosts += filter.DbCosts
+	}
 }
 
 type RwSetVerifyFailTx struct {
@@ -109,19 +119,22 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	}
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	var (
-		isExist bool
-		err     error
+		isExist    bool
+		err        error
+		filterStat *txfilter.Stat
 	)
 
 	if verifyMode != QuickSyncVerifyMode {
 		if mode == protocol.CONSENSUS_VERIFY {
-			isExist, err = filter.IsExists(tx.Payload.TxId, bn.RuleType_AbsoluteExpireTime)
+			isExist, filterStat, err = filter.IsExists(tx.Payload.TxId, bn.RuleType_AbsoluteExpireTime)
 		} else {
-			isExist, err = filter.IsExists(tx.Payload.TxId)
+			isExist, filterStat, err = filter.IsExists(tx.Payload.TxId)
 		}
 	}
 
 	stat.DBLasts += utils.CurrentTimeMillisSeconds() - startDBTicker
+	stat.Sum(filterStat)
+
 	if err != nil || isExist {
 		err = fmt.Errorf("tx duplicate in DB (tx:%s) error: %v", tx.Payload.TxId, err)
 		return err
@@ -341,13 +354,24 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 
 	for i, stat := range stats {
 		if stat != nil {
-			vt.log.Debugf("verify stat (index:%d,sigcount:%d/%d,db:%d,sig:%d,other:%d,total:%d)",
-				i, stat.SigLasts, stat.TotalCount, stat.DBLasts, stat.SigLasts, stat.OthersLasts, concurrentLasts)
+			vt.log.Debugf(
+				"verify stat (index:%d,sigcount:%d/%d,db:%d,sig:%d,other:%d,total:%d) "+
+					"txfilter (fp:%d,exists:%d,fpdb:%d)",
+				i, stat.SigLasts, stat.TotalCount, stat.DBLasts, stat.SigLasts, stat.OthersLasts, concurrentLasts,
+				stat.FpCount, stat.FilterCosts, stat.DbCosts,
+			)
 		}
 	}
 
-	vt.log.Infof("verify txs,height: [%d] (pool:%d,txVerify:%d,results:%d)",
-		block.Header.BlockHeight, poolLasts, concurrentLasts, resultLasts)
+	total, sig, db, other, fp, filterCosts, dbCosts := calStatsAvg(stats)
+
+	vt.log.Infof("verify txs,height: [%d] (pool:%d,txVerify:%d,results:%d) "+
+		"avg(sigcount:%d/%d,db:%d,sig:%d,other:%d, "+
+		"fp:%d,exists:%d,fpdb:%d)",
+		block.Header.BlockHeight, poolLasts, concurrentLasts, resultLasts,
+		sig, total, db, sig, other,
+		fp, filterCosts, dbCosts,
+	)
 	return txHashes, txNewAdd, nil, nil
 }
 
@@ -491,4 +515,38 @@ func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 		return txBatchInfo.BatchIds, txBatchInfo.Index, nil
 	}
 	return []string{}, []uint32{}, nil
+}
+
+// calStatsAvg Calculate STATS averages
+func calStatsAvg(stats map[int]*VerifyStat) (total, sig, db, other int, fp uint32,
+	filterCosts, dbCosts int64) {
+	var count int
+	if len(stats) == 0 {
+		return
+	}
+
+	for _, stat := range stats {
+		if stat != nil {
+			total += stat.TotalCount
+			sig += int(stat.SigLasts)
+			db += int(stat.DBLasts)
+			other += int(stat.OthersLasts)
+			fp += stat.FpCount
+			filterCosts += stat.FilterCosts
+			dbCosts += stat.DbCosts
+			count++
+		}
+	}
+	if count == 0 {
+		return
+	}
+	total /= count
+	sig /= count
+	db /= count
+	other /= count
+	filterCosts /= int64(count)
+	if fp != 0 {
+		dbCosts /= int64(fp)
+	}
+	return
 }

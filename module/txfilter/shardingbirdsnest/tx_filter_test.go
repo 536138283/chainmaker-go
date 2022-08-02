@@ -472,7 +472,7 @@ func TestTxFilter_IsExists(t *testing.T) {
 				store: tt.fields.store,
 				exitC: tt.fields.exitC,
 			}
-			gotExists, err := f.IsExists(tt.args.txId, tt.args.ruleType...)
+			gotExists, _, err := f.IsExists(tt.args.txId, tt.args.ruleType...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("IsExists() error = %v, wantErr %v", err, tt.wantErr)
 				return
