@@ -313,8 +313,13 @@ func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member,
 }
 
 func (p *pkACProvider) createDefaultResourcePolicy() {
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameReadData, policyRead)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameWriteData, policyWrite)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateSelfConfig, policySelfConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
 
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, pubPolicyConsensus)
 	// for txtype
 	p.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
@@ -450,8 +455,13 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 
 // need to consistent with 2.1.0 for dpos
 func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameReadData, policyRead)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameWriteData, policyWrite)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateSelfConfig, policySelfConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
 
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, pubPolicyConsensus)
 	// for txtype
 	p.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
