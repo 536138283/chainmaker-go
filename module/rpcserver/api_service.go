@@ -394,11 +394,10 @@ func (s *ApiService) dealTransact(tx *commonPb.Transaction, source protocol.TxSo
 	s.updateTxSizeHistogram(tx, err)
 
 	if err != nil {
-		s.log.Warnf("Add tx failed, %s, chainId:%s, txId:%s",
+		errMsg = fmt.Sprintf("Add tx failed, %s, chainId:%s, txId:%s",
 			err.Error(), tx.Payload.ChainId, tx.Payload.TxId)
+		s.log.Warn(errMsg)
 
-		errCode = commonErr.ERR_CODE_TX_ADD_FAILED
-		errMsg = s.getErrMsg(errCode, err)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 		resp.Message = errMsg
 		resp.TxId = tx.Payload.TxId
