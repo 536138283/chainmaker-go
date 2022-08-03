@@ -1975,7 +1975,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 			wantPk: func() []byte {
 				return nil
 			}(),
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
