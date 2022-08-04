@@ -9,26 +9,7 @@ package types
 
 import (
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/store"
 )
-
-// BlockHeader extends of *common.BlockHeader
-type BlockHeader struct {
-	*common.BlockHeader
-	BlockHash string `json:"block_hash,omitempty"`
-}
-
-// Block extends of *common.Block
-type Block struct {
-	*common.Block
-	Header *BlockHeader `json:"header,omitempty"`
-}
-
-// BlockWithRWSet extends of *store.BlockWithRWSet
-type BlockWithRWSet struct {
-	*store.BlockWithRWSet
-	Block *Block `json:"block,omitempty"`
-}
 
 // CreateUpgradeContractTxResponse extends of *common.TxResponse when upgrade contract
 type CreateUpgradeContractTxResponse struct {

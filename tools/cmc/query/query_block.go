@@ -6,12 +6,13 @@
 package query
 
 import (
+	"encoding/base64"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"math"
 	"strconv"
 
-	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"github.com/hokaccha/go-prettyjson"
@@ -59,17 +60,6 @@ func newQueryBlockByHeightOnChainCMD() *cobra.Command {
 				return err
 			}
 
-			//var blkWithRWSet = &types.BlockWithRWSet{
-			//	BlockWithRWSet: blkWithRWSetOnChain,
-			//	Block: &types.Block{
-			//		Block: blkWithRWSetOnChain.Block,
-			//		Header: &types.BlockHeader{
-			//			BlockHeader: blkWithRWSetOnChain.Block.Header,
-			//			BlockHash:   hex.EncodeToString(blkWithRWSetOnChain.Block.Header.BlockHash),
-			//		},
-			//	},
-			//}
-
 			output, err := prettyjson.Marshal(blkWithRWSetOnChain)
 			if err != nil {
 				return err
@@ -80,10 +70,10 @@ func newQueryBlockByHeightOnChainCMD() *cobra.Command {
 	}
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
+		flagSdkConfPath,
 	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash, flagTruncateValue, flagWithRWSet,
+		flagEnableCertHash, flagTruncateValue, flagWithRWSet, flagChainId,
 	})
 	return cmd
 }
@@ -91,7 +81,7 @@ func newQueryBlockByHeightOnChainCMD() *cobra.Command {
 // newQueryBlockByHashOnChainCMD `query block by block hash` command implementation
 func newQueryBlockByHashOnChainCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "block-by-hash [block hash in hex]",
+		Use:   "block-by-hash [block hash in base64/hex]",
 		Short: "query on-chain block by hash",
 		Long:  "query on-chain block by hash",
 		Args:  cobra.ExactArgs(1),
@@ -110,7 +100,14 @@ func newQueryBlockByHashOnChainCMD() *cobra.Command {
 			}
 
 			//// 2.Query block on-chain.
-			height, err := cc.GetBlockHeightByHash(args[0])
+			var blkHashStr = args[0]
+			var blkHashBz []byte
+			if blkHashBz, err = hex.DecodeString(blkHashStr); err != nil {
+				if blkHashBz, err = base64.StdEncoding.DecodeString(blkHashStr); err != nil {
+					return errors.New("invalid block hash, block hash must be base64 or hex encoding")
+				}
+			}
+			height, err := cc.GetBlockHeightByHash(hex.EncodeToString(blkHashBz))
 			if err != nil {
 				return err
 			}
@@ -119,18 +116,7 @@ func newQueryBlockByHashOnChainCMD() *cobra.Command {
 				return err
 			}
 
-			var blkWithRWSet = &types.BlockWithRWSet{
-				BlockWithRWSet: blkWithRWSetOnChain,
-				Block: &types.Block{
-					Block: blkWithRWSetOnChain.Block,
-					Header: &types.BlockHeader{
-						BlockHeader: blkWithRWSetOnChain.Block.Header,
-						BlockHash:   hex.EncodeToString(blkWithRWSetOnChain.Block.Header.BlockHash),
-					},
-				},
-			}
-
-			output, err := prettyjson.Marshal(blkWithRWSet)
+			output, err := prettyjson.Marshal(blkWithRWSetOnChain)
 			if err != nil {
 				return err
 			}
@@ -140,10 +126,10 @@ func newQueryBlockByHashOnChainCMD() *cobra.Command {
 	}
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
+		flagSdkConfPath,
 	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagEnableCertHash, flagChainId,
 	})
 	return cmd
 }
@@ -179,18 +165,7 @@ func newQueryBlockByTxIdOnChainCMD() *cobra.Command {
 				return err
 			}
 
-			var blkWithRWSet = &types.BlockWithRWSet{
-				BlockWithRWSet: blkWithRWSetOnChain,
-				Block: &types.Block{
-					Block: blkWithRWSetOnChain.Block,
-					Header: &types.BlockHeader{
-						BlockHeader: blkWithRWSetOnChain.Block.Header,
-						BlockHash:   hex.EncodeToString(blkWithRWSetOnChain.Block.Header.BlockHash),
-					},
-				},
-			}
-
-			output, err := prettyjson.Marshal(blkWithRWSet)
+			output, err := prettyjson.Marshal(blkWithRWSetOnChain)
 			if err != nil {
 				return err
 			}
@@ -200,10 +175,10 @@ func newQueryBlockByTxIdOnChainCMD() *cobra.Command {
 	}
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
+		flagSdkConfPath,
 	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagEnableCertHash, flagChainId,
 	})
 	return cmd
 }
