@@ -58,10 +58,11 @@ func New(config *bn.BirdsNestConfig, log protocol.Logger, store protocol.Blockch
 	// New bird's nest
 	birdsNest, err := bn.NewBirdsNest(config, exitC, bn.LruStrategy, filtercommon.NewLogger(log))
 	if err != nil {
-		log.Errorf("new filter fail, error: %v", err)
 		if err != bn.ErrCannotModifyTheNestConfiguration {
+			log.Errorf("new filter fail, error: %v", err)
 			return nil, err
 		}
+		log.Warnf("new filter, %v", err)
 	}
 	txFilter := &TxFilter{
 		log:   log,
