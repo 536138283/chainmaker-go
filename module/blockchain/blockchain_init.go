@@ -738,7 +738,10 @@ func (bc *Blockchain) initConsensus() (err error) {
 			}
 		}
 	}
-	if !isConsensusNode {
+	//epoch1 [1,100]
+	//node7 ;
+	if !isConsensusNode &&
+		bc.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_MAXBFT {
 		// this node is not a consensus node
 		delete(bc.initModules, moduleNameConsensus)
 		return nil
