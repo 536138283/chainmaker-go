@@ -123,7 +123,7 @@ func configTrustRoot(op int) error {
 	}
 	defer client.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}

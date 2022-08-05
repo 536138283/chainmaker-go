@@ -280,7 +280,7 @@ func createUserContract() error {
 	}
 	defer client.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -353,7 +353,7 @@ func createUserContract() error {
 		payload = client.AttachGasLimit(payload, limit)
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}
@@ -637,7 +637,7 @@ func upgradeUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -666,7 +666,7 @@ func upgradeUserContract() error {
 		payload = client.AttachGasLimit(payload, limit)
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}
@@ -710,7 +710,7 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -737,7 +737,7 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return fmt.Errorf("create cert manage %s payload failed, %s", whichOperation, err.Error())
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}

@@ -30,7 +30,7 @@ func enableOrDisableGasCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(cc)
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 			if err != nil {
 				return err
 			}
@@ -50,7 +50,7 @@ func enableOrDisableGasCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				endorsers, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+				endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
 				if err != nil {
 					return err
 				}
