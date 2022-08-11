@@ -40,6 +40,7 @@ func (nsf *NetServiceFactory) NewNetService(
 		ns.msgBus.Register(msgbus.CertManageCertsAliasDelete, ns.NetConfigSubscribe())
 		ns.msgBus.Register(msgbus.PubkeyManageAdd, ns.NetConfigSubscribe())
 		ns.msgBus.Register(msgbus.PubkeyManageDelete, ns.NetConfigSubscribe())
+		ns.msgBus.Register(msgbus.MaxbftEpochConf, ns.NetConfigSubscribe())
 
 		// v220_compat Deprecated
 		{
