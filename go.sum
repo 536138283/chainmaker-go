@@ -120,10 +120,7 @@ chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220609072455-9955e07a6793/go.mod h
 chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220613093507-2bd9879ad69c/go.mod h1:i4nlJCGIo+V9ePPUDTE0HZe3TctG9kkLP1snVF7BEJc=
 chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220615103110-6849a8ada870/go.mod h1:i4nlJCGIo+V9ePPUDTE0HZe3TctG9kkLP1snVF7BEJc=
 chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220711061227-aa7ff9c750ff/go.mod h1:nxJKxJ3jxYa7GapqNo+3/27s7hJieA7xpcsOuCr57yY=
-chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220714093409-76db3fe643ae h1:ZZgESa8twNQaXS6ayhuKC/UsLNEBZI2gaP4kQIErfio=
 chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220714093409-76db3fe643ae/go.mod h1:nxJKxJ3jxYa7GapqNo+3/27s7hJieA7xpcsOuCr57yY=
-chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220809065023-65f1637310fe h1:/glcKnqWJctaZTfeaNRjIhnIpQBM3/ttNlQRhwMgP3k=
-chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220809065023-65f1637310fe/go.mod h1:nxJKxJ3jxYa7GapqNo+3/27s7hJieA7xpcsOuCr57yY=
 chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220809070446-5ded62818df3 h1:G36u7b2WLCRguzh8R4axvHH/C0or9sps6eQ6FOun0KI=
 chainmaker.org/chainmaker/utils/v2 v2.2.3-0.20220809070446-5ded62818df3/go.mod h1:nxJKxJ3jxYa7GapqNo+3/27s7hJieA7xpcsOuCr57yY=
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.2.2-0.20220808033023-001812a3ecd3 h1:XXBhMMzk+H7wr/NeEUbCJ5+9R1ptlm3Siws0ATh8ULA=
