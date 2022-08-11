@@ -442,7 +442,7 @@ func newSetInvokeBaseGasCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			//// 2.Set gas admin
+			//// 2.Set base gas
 			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 			if err != nil {
 				return err
