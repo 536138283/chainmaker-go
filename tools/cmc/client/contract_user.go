@@ -365,10 +365,10 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	return createUserContractOutput(resp)
+	return createUpgradeUserContractOutput(resp)
 }
 
-func createUserContractOutput(resp *common.TxResponse) error {
+func createUpgradeUserContractOutput(resp *common.TxResponse) error {
 	if resp.ContractResult != nil && resp.ContractResult.Result != nil {
 		var contract common.Contract
 		err := contract.Unmarshal(resp.ContractResult.Result)
@@ -680,19 +680,7 @@ func upgradeUserContract() error {
 	if err != nil {
 		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
-	}
-	util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
-		TxResponse: resp,
-		ContractResult: &types.CreateUpgradeContractContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
-	return nil
+	return createUpgradeUserContractOutput(resp)
 }
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {
