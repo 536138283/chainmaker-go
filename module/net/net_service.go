@@ -708,6 +708,7 @@ func (ns *NetService) initBindMsgBus() error {
 	); err != nil {
 		return err
 	}
+
 	if err := ns.receiveMsgForMsgBus(
 		txPoolMsgHandler,
 		CreateFlagWithPrefixAndMsgType(
