@@ -105,8 +105,6 @@ chainmaker.org/chainmaker/store-tikv/v2 v2.2.0/go.mod h1:8UL1kjfPoR3fYK0kR7IU+nl
 chainmaker.org/chainmaker/store-tikv/v2 v2.2.2-0.20220628082917-7cd73d9d46de h1:1J++C9vdVKl082QZW2XT7iR7WFrve7OfWhuzIbFAsb0=
 chainmaker.org/chainmaker/store-tikv/v2 v2.2.2-0.20220628082917-7cd73d9d46de/go.mod h1:tR7Usx2vMXszz8NNqWB2/H/BSDSGpyyDwut4wlj1Zow=
 chainmaker.org/chainmaker/store/v2 v2.2.0/go.mod h1:KTCAh2P9K6zQJff3awtQXYO+Vd6+Zpwm2fha0SPwSH0=
-chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220714081904-fe9f04d19e8f h1:hLnsCGjMEhPhY8Neh63xekm7KxTFykSV8kKJB8dKpKI=
-chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220714081904-fe9f04d19e8f/go.mod h1:85HtTMV/5Dre6JWHSqjJQEOggS+/6u3xDcflhQ08ed4=
 chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220810122522-1f420b9b2990 h1:iKCMvde7Ii25relAlriiMAfQIwVBgSail2yIsKbOJL4=
 chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220810122522-1f420b9b2990/go.mod h1:85HtTMV/5Dre6JWHSqjJQEOggS+/6u3xDcflhQ08ed4=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220804091209-d91a8c63a802 h1:icbzRTONFUYajaZo/FHA3G9+Wx0M+BfLznZE6xuZYUk=

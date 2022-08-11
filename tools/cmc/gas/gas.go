@@ -47,6 +47,7 @@ func NewGasManageCMD() *cobra.Command {
 	cmd.AddCommand(newFrozenGasAccountCMD())
 	cmd.AddCommand(newUnfrozenGasAccountCMD())
 	cmd.AddCommand(newGetGasAccountStatusCMD())
+	cmd.AddCommand(newSetInvokeBaseGasCMD())
 
 	return cmd
 }
