@@ -8,69 +8,19 @@ SPDX-License-Identifier: Apache-2.0
 package cert
 
 import (
-	"encoding/hex"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
 
-	"github.com/mr-tron/base58"
-	"github.com/spf13/cobra"
-
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	hashAlo "chainmaker.org/chainmaker/common/v2/crypto/hash"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/common/v2/evmutils"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"github.com/mr-tron/base58"
+	"github.com/spf13/cobra"
 )
-
-// addrCMD get addr from cert
-// @return *cobra.Command
-func addrCMD() *cobra.Command {
-	addrCmd := &cobra.Command{
-		Use:   "addr",
-		Short: "get addr from cert",
-		Long:  "get addr from cert",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return getAddr()
-		},
-	}
-
-	attachFlags(addrCmd, []string{
-		flagCertOrPubkeyPath,
-	})
-
-	return addrCmd
-}
-
-func getAddr() error {
-
-	certBytes, err := ioutil.ReadFile(flagCertOrPubkeyPath)
-	if err != nil {
-		return fmt.Errorf("read cert file [%s] failed, %s", flagCertOrPubkeyPath, err)
-	}
-
-	block, _ := pem.Decode(certBytes)
-	if block == nil {
-		return errors.New("pem.Decode failed, invalid cert")
-	}
-	cert, err := bcx509.ParseCertificate(block.Bytes)
-	if err != nil {
-		return fmt.Errorf("parseCertificate cert failed, %s", err)
-	}
-
-	ski := hex.EncodeToString(cert.SubjectKeyId)
-	addrInt, err := evmutils.MakeAddressFromHex(ski)
-	if err != nil {
-		return fmt.Errorf("make address from cert SKI failed, %s", err)
-	}
-
-	fmt.Printf("ski:       %s\n", ski)
-	fmt.Printf("addr(Int): %s\n", addrInt.String())
-	fmt.Printf("addr:      0x%x\n", addrInt.AsStringKey())
-	return nil
-}
 
 // certToUserAddrInStake get user addr feature of the DPoS from cert
 // @return *cobra.Command
