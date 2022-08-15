@@ -857,7 +857,7 @@ func evmtest() {
 
 	balanceA := testQueryBalance(sk3, client, CHAIN1, userCrtPath)
 	if balanceA != "1000000000000000000000000000" {
-		fmt.Println("balance A not equal 1000000000000000000000000000 will skip evmtest for later fix")
+		panic("balance A not equal 1000000000000000000000000000 will skip evmtest for later fix")
 		return
 	}
 	balanceB := testQueryBalance(sk3, client, CHAIN1, adminCrtPath)
