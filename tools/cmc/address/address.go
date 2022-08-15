@@ -16,8 +16,10 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"chainmaker.org/chainmaker/sdk-go/v2/utils"
+	cmutils "chainmaker.org/chainmaker/utils/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -65,6 +67,7 @@ func NewAddressCMD() *cobra.Command {
 	cmd.AddCommand(newPK2AddrCMD())
 	cmd.AddCommand(newHex2AddrCMD())
 	cmd.AddCommand(newCert2AddrCMD())
+	cmd.AddCommand(newName2AddrCMD())
 
 	return cmd
 }
@@ -141,8 +144,8 @@ func newPK2AddrCMD() *cobra.Command {
 func newHex2AddrCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "hex-to-addr [hex string]",
-		Short: "get address from hex string",
-		Long:  "get address from hex string",
+		Short: "get address from public key DER hex string",
+		Long:  "get address from public key DER hex string",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			hash, ok := hashAlgoMap[hashType]
@@ -238,6 +241,41 @@ func newCert2AddrCMD() *cobra.Command {
 				addressTypeEVM: {addrEvm, skiHex},
 				addressTypeCM:  {addrCm, skiHex},
 				addressTypeZXL: {addrZxl, skiHex},
+			}
+
+			util.PrintPrettyJson(addrSkis)
+			return nil
+		},
+	}
+	return cmd
+}
+
+// newName2AddrCMD get address from contract name string
+// @return *cobra.Command
+func newName2AddrCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "name-to-addr [contract name string]",
+		Short: "get address from contract name string",
+		Long:  "get address from contract name string",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			addrCm, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_CHAINMAKER)
+			if err != nil {
+				return err
+			}
+			addrZxl, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_ZXL)
+			if err != nil {
+				return err
+			}
+			addrEvm, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_ETHEREUM)
+			if err != nil {
+				return err
+			}
+
+			var addrSkis = map[string]addrSki{
+				addressTypeEVM: {addrEvm, ""},
+				addressTypeCM:  {addrCm, ""},
+				addressTypeZXL: {"ZX" + addrZxl, ""},
 			}
 
 			util.PrintPrettyJson(addrSkis)
