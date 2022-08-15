@@ -5,5 +5,5 @@ cd $CMC
 --abi-file-path=../../testdata/erc20.abi \
 --method=transfer \
 --sdk-conf-path=../config/sdk_config.yml \
---params="[{\"address\": \"0x5a3e1a768e3ad7f49f7207c1cc113a337dfaa4ba\"},{\"uint256\": \"10000000000000000\"}]" \
+--params="[{\"address\": \"0x04dd97bbf0b8dca0e9c7c867591903b52fbdf586\"},{\"uint256\": \"10000000000000000\"}]" \
 --sync-result=true

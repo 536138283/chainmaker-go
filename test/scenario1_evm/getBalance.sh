@@ -5,7 +5,7 @@ echo "UserA balance:"
 --abi-file-path=../../testdata/erc20.abi \
 --method=balanceOf \
 --sdk-conf-path=../config/sdk_config.yml \
---params="[{\"address\":\"0xebe30584c91d648adadfb746d56c0d38dcb2d262\"}]"
+--params="[{\"address\":\"0x83a5bc9b4d2db58249c670720a9860e9476a5424\"}]"
 
 echo "UserB balance:"
 ./cmc client contract user get \
@@ -13,4 +13,4 @@ echo "UserB balance:"
 --abi-file-path=../../testdata/erc20.abi \
 --method=balanceOf \
 --sdk-conf-path=../config/sdk_config.yml \
---params="[{\"address\":\"0x5a3e1a768e3ad7f49f7207c1cc113a337dfaa4ba\"}]"
+--params="[{\"address\":\"0x04dd97bbf0b8dca0e9c7c867591903b52fbdf586\"}]"

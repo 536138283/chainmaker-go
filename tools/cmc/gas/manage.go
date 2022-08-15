@@ -426,3 +426,53 @@ func getSelfAddress(cc *sdk.ChainClient) (string, error) {
 	}
 	return address, nil
 }
+
+// newSetInvokeBaseGasCMD set VM base gas of invoke tx
+// @return *cobra.Command
+func newSetInvokeBaseGasCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-base-gas",
+		Short: "set VM base gas of invoke tx",
+		Long:  "set VM base gas of invoke tx",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			//// 1.Chain Client
+			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
+			if err != nil {
+				return err
+			}
+			defer cc.Stop()
+
+			//// 2.Set base gas
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+
+			payload, err := cc.CreateSetInvokeBaseGasPayload(amount)
+			if err != nil {
+				return err
+			}
+			endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := cc.SendGasManageRequest(payload, endorsers, -1, syncResult)
+			if err != nil {
+				return err
+			}
+
+			util.PrintPrettyJson(resp)
+			return nil
+		},
+	}
+
+	util.AttachFlags(cmd, flags, []string{
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult,
+	})
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath, flagAmount,
+	})
+	return cmd
+}
