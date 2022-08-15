@@ -363,13 +363,14 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 		}
 	}
 
-	total, sig, db, other, fp, filterCosts, dbCosts := calStatsAvg(stats)
+	total, sig, db, other, fp, filterCosts, dbCosts, totalFilterCosts, totalDbCosts := calStatsAvg(stats)
 
-	vt.log.Infof("verify txs,height: [%d] (pool:%d,txVerify:%d,results:%d) "+
-		"avg(sigcount:%d/%d,db:%d,sig:%d,other:%d, "+
-		"fp:%d,exists:%d,fpdb:%d)",
-		block.Header.BlockHeight, poolLasts, concurrentLasts, resultLasts,
+	vt.log.Infof("verify txs,height: [%d] (count:%v,pool:%d,txVerify:%d,results:%d) "+
+		"avg(sigcount:%d/%d,db:%d,sig:%d,other:%d) "+
+		"filter total(fp:%d,exists:%d,fpdb:%d) filter avg(fp:%d,exists:%d,fpdb:%d)",
+		block.Header.BlockHeight, block.Header.TxCount, poolLasts, concurrentLasts, resultLasts,
 		sig, total, db, sig, other,
+		fp, totalFilterCosts, totalDbCosts,
 		fp, filterCosts, dbCosts,
 	)
 	return txHashes, txNewAdd, nil, nil
@@ -519,7 +520,7 @@ func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 
 // calStatsAvg Calculate STATS averages
 func calStatsAvg(stats map[int]*VerifyStat) (total, sig, db, other int, fp uint32,
-	filterCosts, dbCosts int64) {
+	filterCosts, dbCosts, totalFilterCosts, totalDbCosts int64) {
 	var count int
 	if len(stats) == 0 {
 		return
@@ -537,6 +538,8 @@ func calStatsAvg(stats map[int]*VerifyStat) (total, sig, db, other int, fp uint3
 			count++
 		}
 	}
+	totalFilterCosts = filterCosts
+	totalDbCosts = dbCosts
 	if count == 0 {
 		return
 	}
