@@ -20,12 +20,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"chainmaker.org/chainmaker/common/v2/cert"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/crypto/x509"
+	"github.com/spf13/cobra"
 )
 
 const (
@@ -51,7 +50,6 @@ func CertCMD() *cobra.Command {
 	certCmd.AddCommand(issueCMD())
 	certCmd.AddCommand(createCertCrlCMD())
 	certCmd.AddCommand(nodeIdCMD())
-	certCmd.AddCommand(addrCMD())
 	certCmd.AddCommand(certToUserAddrInStake())
 	return certCmd
 }
