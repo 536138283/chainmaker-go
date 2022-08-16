@@ -7,6 +7,6 @@ Liquid网络
 pwk模式
 启用DockerGo
 
-启用Gas
+不启用Gas
 不启用SQL合约
 不启用过滤器
