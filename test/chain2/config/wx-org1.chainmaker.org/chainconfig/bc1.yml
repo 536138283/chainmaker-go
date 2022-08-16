@@ -116,16 +116,16 @@ consensus:
     # We use p2p node id to represent nodes here.
     - org_id: "wx-org1.chainmaker.org"
       node_id:
-        - "QmQNHP7xMZqUcvsJvpNCKePHMgLgXcifapqmWr49sxPNWH"
+        - "QmX6eR4DjWkgEc7itQ1rs3EcxEBPBRXhiTfMgUqDKpnKqU"
     - org_id: "wx-org2.chainmaker.org"
       node_id:
-        - "Qmc3zs9dX8niQZ23iTNU9JqFzd3XEWa3pYJsvjpfP98Yis"
+        - "QmcwnV55uqEita87SziKwaUwxRah9ZdEnVKT3BLvRBDkJa"
     - org_id: "wx-org3.chainmaker.org"
       node_id:
-        - "QmVHHhWxStKp5Khzj4qRp4A3TJg5tX3GSkWBKcMmwWPm8g"
+        - "QmWrUzdC4tp5zyrMBXDEKvKcdTHvARuBCh3WRQJr3wyaU4"
     - org_id: "wx-org4.chainmaker.org"
       node_id:
-        - "QmQ5LSk2hASzxLRaRNBYA9myzG93UhPuRJzbaTXRsytbuM"
+        - "QmRiVgwJsmBtTXpyTcfx59ejcLdMeuq1ZHdGKM2Jud9W8R"
 #    - org_id: "{org5_id}"
 #      node_id:
 #        - "{org5_peerid}"

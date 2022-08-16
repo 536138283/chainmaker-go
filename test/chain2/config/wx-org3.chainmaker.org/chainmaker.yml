@@ -108,10 +108,10 @@ net:
   # Example ip format: "/ip4/127.0.0.1/tcp/11301/p2p/"+nodeid
   # Example dns format："/dns/cm-node1.org/tcp/11301/p2p/"+nodeid
   seeds:
-    - "/ip4/127.0.0.1/tcp/11301/p2p/QmQNHP7xMZqUcvsJvpNCKePHMgLgXcifapqmWr49sxPNWH"
-    - "/ip4/127.0.0.1/tcp/11302/p2p/Qmc3zs9dX8niQZ23iTNU9JqFzd3XEWa3pYJsvjpfP98Yis"
-    - "/ip4/127.0.0.1/tcp/11303/p2p/QmVHHhWxStKp5Khzj4qRp4A3TJg5tX3GSkWBKcMmwWPm8g"
-    - "/ip4/127.0.0.1/tcp/11304/p2p/QmQ5LSk2hASzxLRaRNBYA9myzG93UhPuRJzbaTXRsytbuM"
+    - "/ip4/127.0.0.1/tcp/11301/p2p/QmX6eR4DjWkgEc7itQ1rs3EcxEBPBRXhiTfMgUqDKpnKqU"
+    - "/ip4/127.0.0.1/tcp/11302/p2p/QmcwnV55uqEita87SziKwaUwxRah9ZdEnVKT3BLvRBDkJa"
+    - "/ip4/127.0.0.1/tcp/11303/p2p/QmWrUzdC4tp5zyrMBXDEKvKcdTHvARuBCh3WRQJr3wyaU4"
+    - "/ip4/127.0.0.1/tcp/11304/p2p/QmRiVgwJsmBtTXpyTcfx59ejcLdMeuq1ZHdGKM2Jud9W8R"
 
   # Network tls settings.
   tls:
