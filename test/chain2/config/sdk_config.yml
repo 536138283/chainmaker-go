@@ -1,6 +1,6 @@
 chain_client:
   # 链ID
-  chain_id: "chain1"
+  chain_id: "chain2"
   # 组织ID
   org_id: "wx-org1.chainmaker.org"
 
@@ -16,10 +16,6 @@ chain_client:
   nodes:
     - # 节点地址，格式为：IP:端口:连接数
       node_addr: "127.0.0.1:12301"
-      # 节点连接数
-      conn_cnt: 10
-    - # 节点地址，格式为：IP:端口:连接数
-      node_addr: "127.0.0.1:12302"
       # 节点连接数
       conn_cnt: 10
 

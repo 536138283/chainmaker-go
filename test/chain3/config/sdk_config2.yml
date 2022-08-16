@@ -3,7 +3,7 @@ chain_client:
   chain_id: "chain3"
 
   # 客户端用户交易签名私钥路径
-  user_sign_key_file_path: "../config/node1/admin/admin1/admin1.key"
+  user_sign_key_file_path: "../config/node2/admin/admin1/admin1.key"
 
   # 签名使用的哈希算法，和节点保持一直
   crypto:
@@ -14,7 +14,7 @@ chain_client:
 
   nodes:
     - # 节点地址，格式为：IP:端口:连接数
-      node_addr: "127.0.0.1:12301"
+      node_addr: "127.0.0.1:12302"
       # 节点连接数
       conn_cnt: 10
     - # 节点地址，格式为：IP:端口:连接数

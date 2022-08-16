@@ -26,7 +26,7 @@ crypto_engine: tjfoc #support gmssl, tencentsm and tjfoc
 # Chains the node currently joined in
 blockchain:
   # chain id and its genesis block file path.
-  - chainId: chain1
+  - chainId: chain2
     genesis: ../config/wx-org2.chainmaker.org/chainconfig/bc1.yml
 #  - chainId: chain2
 #    genesis: ../config/{org_path2}/chainconfig/bc2.yml
@@ -87,7 +87,7 @@ net:
   # libp2p: using libp2p components to build the p2p module.
   # liquid: a new p2p network module. We build it from 0 to 1.
   # This item must be consistent across the blockchain network.
-  provider: LibP2P
+  provider: Liquid
 
   # The address and port the node listens on.
   # By default, it uses 0.0.0.0 to listen on all network interfaces.
