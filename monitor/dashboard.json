@@ -15,8 +15,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 1,
-  "iteration": 1645102540090,
+  "id": 3,
+  "iteration": 1660744004088,
   "links": [],
   "panels": [
     {
@@ -462,89 +462,113 @@
           "expr": "sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1024\"})",
           "hide": false,
           "interval": "",
-          "legendFormat": "[0,1024]",
+          "legendFormat": "[0,1K]",
           "refId": "A"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2048\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1024\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(1024,2048]",
+          "legendFormat": "(1K,2K]",
           "refId": "B"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"4096\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2048\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(2048,4096]",
+          "legendFormat": "(2K,4K]",
           "refId": "C"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"8192\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"4096\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(4096,8192]",
+          "legendFormat": "(4K,8K]",
           "refId": "D"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"16384\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"8192\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(8192,16384]",
+          "legendFormat": "(8K,16K]",
           "refId": "E"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"32768\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"16384\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(16384,32768]",
+          "legendFormat": "(16K,32K]",
           "refId": "F"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"65536\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"32768\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(32768,65536]",
+          "legendFormat": "(32K,64K]",
           "refId": "G"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"131072\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"65536\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(65536,131072]",
+          "legendFormat": "(64K,128K]",
           "refId": "H"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"262144\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"131072\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(131072,262144]",
+          "legendFormat": "(128K,256K]",
           "refId": "I"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"524288\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"262144\"}))",
           "hide": false,
           "interval": "",
-          "legendFormat": "(262144,524288]",
+          "legendFormat": "(256K,512K]",
           "refId": "J"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1.048576e+06\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"524288\"}))",
           "interval": "",
-          "legendFormat": "(524288,1048576]",
+          "legendFormat": "(512K,1M]",
           "refId": "K"
         },
         {
           "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2.097152e+06\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1.048576e+06\"}))",
           "interval": "",
-          "legendFormat": "(1048576,2097152]",
+          "legendFormat": "(1M,2M]",
           "refId": "L"
         },
         {
-          "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"+Inf\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2.097152e+06\"}))",
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"4.194304e+06\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2.097152e+06\"}))",
           "interval": "",
-          "legendFormat": "(2097152,+Inf)",
+          "legendFormat": "(2M,4M]",
           "refId": "M"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"8.388608e+06\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"4.194304e+06\"}))",
+          "interval": "",
+          "legendFormat": "(4M,8M]",
+          "refId": "N"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1.6777216e+07\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"8.388608e+06\"}))",
+          "interval": "",
+          "legendFormat": "(8M,16M]",
+          "refId": "O"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"3.3554432e+07\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1.6777216e+07\"}))",
+          "interval": "",
+          "legendFormat": "(16M,32M]",
+          "refId": "P"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"+Inf\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_size_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"3.3554432e+07\"}))",
+          "interval": "",
+          "legendFormat": "(32M+Inf)",
+          "refId": "Q"
         }
       ],
       "timeFrom": null,
@@ -597,9 +621,9 @@
       "pluginVersion": "7.1.2",
       "targets": [
         {
-          "expr": "sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.05\"})",
+          "expr": "sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.005\"})",
           "interval": "",
-          "legendFormat": "[0,0.05]",
+          "legendFormat": "[0,0.005]",
           "refId": "A"
         },
         {
@@ -633,10 +657,22 @@
           "refId": "F"
         },
         {
-          "expr": "(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
+          "expr": "(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))-ignoring(le)(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
           "interval": "",
-          "legendFormat": "(1,10]",
+          "legendFormat": "(1,2]",
           "refId": "G"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))-ignoring(le)(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))",
+          "interval": "",
+          "legendFormat": "(2,5]",
+          "refId": "H"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_scheduler_metric_vm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))",
+          "interval": "",
+          "legendFormat": "(5,10]",
+          "refId": "I"
         }
       ],
       "timeFrom": null,
@@ -688,7 +724,7 @@
       "pluginVersion": "7.1.2",
       "targets": [
         {
-          "expr": "sum by (le) (chainmaker_wasmer_metric_wasm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.05\"})",
+          "expr": "sum by (le) (chainmaker_wasmer_metric_wasm_run_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.005\"})",
           "groupBy": [
             {
               "params": [
@@ -704,7 +740,7 @@
             }
           ],
           "interval": "",
-          "legendFormat": "[0,0.05]",
+          "legendFormat": "[0,0.005]",
           "orderByTime": "ASC",
           "policy": "default",
           "refId": "A",
@@ -1095,9 +1131,9 @@
       "pluginVersion": "7.1.2",
       "targets": [
         {
-          "expr": "sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.05\"})",
+          "expr": "sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.005\"})",
           "interval": "",
-          "legendFormat": "[0,0.05]",
+          "legendFormat": "[0,0.005]",
           "refId": "A"
         },
         {
@@ -1131,10 +1167,22 @@
           "refId": "F"
         },
         {
-          "expr": "(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
+          "expr": "(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))-ignoring(le)(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
           "interval": "",
-          "legendFormat": "(1,10]",
+          "legendFormat": "(1,2]",
           "refId": "G"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))-ignoring(le)(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))",
+          "interval": "",
+          "legendFormat": "(2,5]",
+          "refId": "H"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_proposer_metric_block_package_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))",
+          "interval": "",
+          "legendFormat": "(5,10]",
+          "refId": "I"
         }
       ],
       "timeFrom": null,
@@ -1186,9 +1234,9 @@
       "pluginVersion": "7.1.2",
       "targets": [
         {
-          "expr": "sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.05\"})",
+          "expr": "sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.005\"})",
           "interval": "",
-          "legendFormat": "[0,0.05]",
+          "legendFormat": "[0,0.005]",
           "refId": "A"
         },
         {
@@ -1222,10 +1270,22 @@
           "refId": "F"
         },
         {
-          "expr": "(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
+          "expr": "(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))-ignoring(le)(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
           "interval": "",
-          "legendFormat": "(1,10]",
+          "legendFormat": "(1,2]",
           "refId": "G"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))-ignoring(le)(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))",
+          "interval": "",
+          "legendFormat": "(2,5]",
+          "refId": "H"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_verifier_metric_block_verify_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))",
+          "interval": "",
+          "legendFormat": "(5,10]",
+          "refId": "I"
         }
       ],
       "timeFrom": null,
@@ -1277,9 +1337,9 @@
       "pluginVersion": "7.1.2",
       "targets": [
         {
-          "expr": "sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.05\"})",
+          "expr": "sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"0.005\"})",
           "interval": "",
-          "legendFormat": "[0,0.05]",
+          "legendFormat": "[0,0.005]",
           "refId": "A"
         },
         {
@@ -1313,10 +1373,22 @@
           "refId": "F"
         },
         {
-          "expr": "(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"1\"}))",
           "interval": "",
-          "legendFormat": "(1,10]",
+          "legendFormat": "(1,2]",
           "refId": "G"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"2\"}))",
+          "interval": "",
+          "legendFormat": "(2,5]",
+          "refId": "H"
+        },
+        {
+          "expr": "(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"10\"}))-ignoring(le)(sum by (le) (chainmaker_committer_metric_block_commit_time_bucket{chainId=~\"$chainId\", job=~\"$node\", le=\"5\"}))",
+          "interval": "",
+          "legendFormat": "(5,10]",
+          "refId": "I"
         }
       ],
       "timeFrom": null,
@@ -1602,5 +1674,5 @@
   "timezone": "browser",
   "title": "ChainMaker",
   "uid": "CkwuqfoGk",
-  "version": 2
+  "version": 5
 }
