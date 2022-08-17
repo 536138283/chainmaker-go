@@ -21,7 +21,7 @@ import (
 )
 
 // Dispatch dispatch tx
-func Dispatch(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId string, kvs []*common.KeyValuePair,
+func Dispatch(client *sdk.ChainClient, contractName, methodName string, kvs []*common.KeyValuePair,
 	abi *abi.ABI, limit *common.Limit) {
 	var (
 		wgSendReq sync.WaitGroup
@@ -29,7 +29,7 @@ func Dispatch(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId 
 
 	for i := 0; i < concurrency; i++ {
 		wgSendReq.Add(1)
-		go runInvokeContract(client, contractName, rawMethodName, evmMethodId, kvs, &wgSendReq, abi, limit)
+		go runInvokeContract(client, contractName, methodName, kvs, &wgSendReq, abi, limit)
 	}
 
 	wgSendReq.Wait()
@@ -49,19 +49,12 @@ func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*
 	wgSendReq.Wait()
 }
 
-func runInvokeContract(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId string,
+func runInvokeContract(client *sdk.ChainClient, contractName, methodName string,
 	kvs []*common.KeyValuePair, wg *sync.WaitGroup, abi *abi.ABI, limit *common.Limit) {
 
 	defer func() {
 		wg.Done()
 	}()
-
-	var methodStr string
-	if abi != nil {
-		methodStr = evmMethodId
-	} else {
-		methodStr = rawMethodName
-	}
 
 	for i := 0; i < totalCntPerGoroutine; i++ {
 		if client.IsEnableNormalKey() {
@@ -70,7 +63,7 @@ func runInvokeContract(client *sdk.ChainClient, contractName, rawMethodName, evm
 			txId = utils.GetTimestampTxId()
 		}
 
-		resp, err := client.InvokeContractWithLimit(contractName, methodStr, txId, kvs, timeout, syncResult, limit)
+		resp, err := client.InvokeContractWithLimit(contractName, methodName, txId, kvs, timeout, syncResult, limit)
 		if err != nil {
 			fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 			return
@@ -82,7 +75,7 @@ func runInvokeContract(client *sdk.ChainClient, contractName, rawMethodName, evm
 		}
 
 		if abi != nil && resp.ContractResult != nil {
-			output, err := abi.Unpack(rawMethodName, resp.ContractResult.Result)
+			output, err := abi.Unpack(methodName, resp.ContractResult.Result)
 			if err != nil {
 				fmt.Println(err)
 				return
@@ -132,17 +125,10 @@ func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string,
 		resp.ContractResult, txId)
 }
 
-func invokeContract(client *sdk.ChainClient, contractName, rawMethodName, evmMethodId, txId string,
+func invokeContract(client *sdk.ChainClient, contractName, methodName, txId string,
 	kvs []*common.KeyValuePair, abi *abi.ABI, limit *common.Limit) {
 
-	var methodStr string
-	if abi != nil {
-		methodStr = evmMethodId
-	} else {
-		methodStr = rawMethodName
-	}
-
-	resp, err := client.InvokeContractWithLimit(contractName, methodStr, txId, kvs, timeout, syncResult, limit)
+	resp, err := client.InvokeContractWithLimit(contractName, methodName, txId, kvs, timeout, syncResult, limit)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 		return
@@ -154,7 +140,7 @@ func invokeContract(client *sdk.ChainClient, contractName, rawMethodName, evmMet
 	}
 
 	if abi != nil && resp.ContractResult != nil {
-		output, err := abi.Unpack(rawMethodName, resp.ContractResult.Result)
+		output, err := abi.Unpack(methodName, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
 			return
