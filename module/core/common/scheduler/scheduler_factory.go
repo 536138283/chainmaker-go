@@ -57,7 +57,7 @@ func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf, stor
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		txScheduler.metricVMRunTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER, "metric_vm_run_time",
-			"VM run time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
+			"VM run time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10}, "chainId")
 	}
 	return txScheduler
 }
@@ -123,7 +123,7 @@ func newTxSchedulerEvidence(vmMgr protocol.VmManager, chainConf protocol.ChainCo
 			monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER,
 			"metric_vm_run_time",
 			"VM run time metric",
-			[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
+			[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10},
 			"chainId",
 		)
 	}

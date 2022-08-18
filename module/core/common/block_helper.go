@@ -1444,7 +1444,7 @@ func (chain *BlockCommitterImpl) initMetrics() {
 		monitor.SUBSYSTEM_CORE_COMMITTER,
 		monitor.MetricBlockSize,
 		monitor.HelpCurrentBlockSizeMetric,
-		prometheus.ExponentialBuckets(1024, 2, 12),
+		prometheus.ExponentialBuckets(1024, 2, 16),
 		monitor.ChainId,
 	)
 	chain.metricBlockHeight = monitor.NewGaugeVec(
@@ -1463,7 +1463,7 @@ func (chain *BlockCommitterImpl) initMetrics() {
 		monitor.SUBSYSTEM_CORE_COMMITTER,
 		monitor.MetricBlockCommitTime,
 		monitor.HelpBlockCommitTimeMetric,
-		[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
+		[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10},
 		monitor.ChainId,
 	)
 	chain.metricBlockIntervalTime = monitor.NewHistogramVec(
