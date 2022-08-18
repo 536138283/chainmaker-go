@@ -4,14 +4,14 @@ chain_client:
   # 组织ID
   org_id: "wx-org1.chainmaker.org"
   # 客户端用户私钥路径
-  user_key_file_path: "../config/wx-org1.chainmaker.org/certs/user/client1/client1.tls.key"
+  user_key_file_path: "../config/wx-org1.chainmaker.org/certs/user/admin1/admin1.tls.key"
   # 客户端用户证书路径
-  user_crt_file_path: "../config/wx-org1.chainmaker.org/certs/user/client1/client1.tls.crt"
+  user_crt_file_path: "../config/wx-org1.chainmaker.org/certs/user/admin1/admin1.tls.crt"
 
   # 客户端用户交易签名私钥路径(若未设置，将使用user_key_file_path)
-  user_sign_key_file_path: "../config/wx-org1.chainmaker.org/certs/user/client1/client1.sign.key"
+  user_sign_key_file_path: "../config/wx-org1.chainmaker.org/certs/user/admin1/admin1.sign.key"
   # 客户端用户交易签名证书路径(若未设置，将使用user_crt_file_path)
-  user_sign_crt_file_path: "../config/wx-org1.chainmaker.org/certs/user/client1/client1.sign.crt"
+  user_sign_crt_file_path: "../config/wx-org1.chainmaker.org/certs/user/admin1/admin1.sign.crt"
   # 同步交易结果模式下，轮训获取交易结果时的最大轮训次数，删除此项或设为<=0则使用默认值 10
   retry_limit: 10
   # 同步交易结果模式下，每次轮训交易结果时的等待时间，单位：ms 删除此项或设为<=0则使用默认值 500

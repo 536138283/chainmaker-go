@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 
 import json
 
-from config.public_import import *
 from utils.connect_linux import TheServerHelper
+import config.public_import as gl
 
 
 class ContractQuery(object):
@@ -17,13 +17,13 @@ class ContractQuery(object):
     def __init__(self, query_param, sdk_config=None):
         self.query_param = query_param
         self.new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        self.sdk_config_path = f'{SDK_PATH}{self.new_sdk_config}'
+        self.sdk_config_path = f'{gl.SDK_PATH}{self.new_sdk_config}'
 
     def query_block_height(self):
         if self.query_param:
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-height {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-height {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
         else:
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-height --chain-id=chain1 {self.sdk_config_path}'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-height --chain-id=chain1 {self.sdk_config_path}'
 
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
@@ -31,21 +31,21 @@ class ContractQuery(object):
         return result
 
     def query_block_hash(self):
-        cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-hash {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
+        cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-hash {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
         return result
 
     def query_block_tx_id(self):
-        cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-txid {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
+        cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-txid {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
         return result
 
     def query_by_tx(self):
-        cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} tx {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
+        cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} tx {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
@@ -65,26 +65,28 @@ class ContractQuery(object):
         return block_height
 
 
-def query_address(org, user):
-    cmd = CMC_TOOL_PATH + f"./cmc address cert-to-addr {CRYPTO_CONFIG_PATH}/wx-org{org}.chainmaker.org/certs/user/{user}/{user}.sign.crt"
+def query_address(cmc):
+    cmd = gl.CMC_TOOL_PATH + cmc
     print(cmd)
     result = json.loads(TheServerHelper(cmd).ssh_connectionServer())
     print(result)
-    return result
+    address = result.get("ethereum").get("address")
+    return address
+
+def get_user_addr(org, user):
+    cmc="./cmc"
+    if gl.ACCOUNT_TYPE=="cert":
+        cmc=f"./cmc address cert-to-addr {gl.CRYPTO_CONFIG_PATH}/wx-org{org}.chainmaker.org/certs/user/admin1/admin1.sign.crt"
+    if gl.ACCOUNT_TYPE=="pwk":
+        cmc = f"./cmc address pk-to-addr {gl.CRYPTO_CONFIG_PATH}/wx-org{org}.chainmaker.org/keys/user/admin/admin.pem"
+    if gl.ACCOUNT_TYPE=="pk":
+        cmc = f"./cmc address pk-to-addr {gl.CRYPTO_CONFIG_PATH}/node{user}/admin/admin{user}/admin{user}.pem"
+    return  query_address(cmc)
+def get_user_balance(result):
+    balance = json.loads(result).get("contract_result").get("result")
+    return balance
 
 
 if __name__ == "__main__":
-    # print(ContractQuery("1").query_block_height())
-    # a = ContractQuery("16fa37171eced262ca52fdfc07218265bfe0bd9caa554b5db3c1683ebacae377",
-    #                   sdk_config="sdk_config.yml").query_by_tx()
-    # print(a)
-    # a = ContractQuery("83", sdk_config="sdk_config_pk.yml").query_block_height()
-    # print(a)
-    # a = ContractQuery("", sdk_config="sdk_config4.yml").query_last_height()
-    # b = json.loads(a)
-    # print(type(b))
-    # base64_decode(b)
-    # ContractQuery("47032febf20a40eaa1328de8e25e8f7b00b6a84be3744a968271ceacc9222818").query_block_tx_id()
-    # ContractQuery("cab9933710024c99a2609c7c540a84840f02f71607424d239298b579f63da642").query_by_tx()
     query_address("1", "client1")
     query_address("1", "admin1")

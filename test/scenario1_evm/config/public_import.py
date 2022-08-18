@@ -1,8 +1,36 @@
 """
-    File   : public_import.py
-    Author : nannowang
-    Date   : 2021/12/9
-    DESC   :
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+
 """
-# from config.setting_zxl import *
-from config.setting_myself_test import *
+
+TESTPROJECTPATH = "TODO"
+
+"""
+CMC工具配置
+"""
+# cmc工具位置
+CMC_TOOL_PATH = "TODO"
+
+# cmc工具背书等配置
+SDK_CONFIG_PATH = r'../config/sdk_config.yml'
+CRYPTO_CONFIG_PATH = r'../config'
+ADMIN_KEY_FILE_PATHS = "TODO"
+ADMIN_CRT_FILE_PATHS = "TODO"
+ADMIN_ORG_IDS_PWK = "TODO"
+
+ADMIN_KEY_FILE_PATHS_BY_PWK = "TODO"
+
+ADMIN_KEY_FILE_PATHS_BY_GAS_PK = "TODO"
+
+ADMIN_KEY_FILE_PATHS_BY_PK = "TODO"
+
+# WASM_APTH = r'./testdata/claim-wasm-demo/'
+WASM_APTH = r'../../testdata/'
+SDK_PATH = r'../config/'
+# 公钥身份
+# SDK_PATH = r'./testdata/sdk_config_pwk.yml'
+ACCOUNT_TYPE = "cert" # cert/pwk/pk
+USER_B_KEY = r"wx-org2.chainmaker.org/keys/user/admin/admin.key"
+ENABLE_GAS = False

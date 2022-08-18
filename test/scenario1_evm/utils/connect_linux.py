@@ -6,34 +6,6 @@ SPDX-License-Identifier: Apache-2.0
 """
 
 import subprocess
-import logging
-import sys
-import os
-from config.public_import import *
-
-# 连接Linux，输入Linux命令，可执行Linux命令
-
-
-# 加入日志
-# 获取logger实例
-logger = logging.getLogger("baseSpider")
-# 指定输出格式
-formatter = logging.Formatter('%(asctime)s\
-              %(levelname)-8s:%(message)s')
-# 文件日志
-file_handler = logging.FileHandler("operation_theServer.log")
-file_handler.setFormatter(formatter)
-# 控制台日志
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(formatter)
-
-# 为logge添加具体的日志处理器
-logger.addHandler(file_handler)
-logger.addHandler(console_handler)
-
-logger.setLevel(logging.INFO)
-
-
 class TheServerHelper():
     def __init__(self, remote, local_dir='', ftpType='', port=22):
 
@@ -51,8 +23,6 @@ class TheServerHelper():
             result = stderr_result if stderr_result else stdout_result
         except Exception as e:
             print(e)
-            logger.error("SSHConnection" + self.serverIP + "failed!")
-
             return False
 
         # 关闭连接

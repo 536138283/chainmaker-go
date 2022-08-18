@@ -5,25 +5,15 @@ SPDX-License-Identifier: Apache-2.0
 
 """
 
-
-
-from config.public_import import *
+import config.public_import as gl
 from utils.connect_linux import TheServerHelper
 
 
 class ContractDeal(object):
     BASE_CMD = './cmc client contract user'
 
-    # 普通的cert模式
-    ADMIN_KEY_AND_CRT = f'--admin-key-file-paths={ADMIN_KEY_FILE_PATHS} --admin-crt-file-paths={ADMIN_CRT_FILE_PATHS}'
-    # pwk模式
-    ADMIN_ORG_KEY = f'--admin-org-ids={ADMIN_ORG_IDS_PWK} --admin-key-file-paths={ADMIN_KEY_FILE_PATHS_BY_PWK}'
-    # pk模式
-    ADMIN_KEY_FILE_PATHS_BY_PK_ONE = f'--admin-key-file-paths={ADMIN_KEY_FILE_PATHS_BY_PK}'
-
     def __init__(self, contract_name, sync_result=True):
         """
-
         :param contract_name: 合约名称
         :param sync_result: 同步参数，默认true，传入false就异步
         """
@@ -40,29 +30,35 @@ class ContractDeal(object):
         :param sdk_config: 默认是节点1，传入的这个sdk的配置文件表示在哪个节点上跑
         :return:
         """
-        wasm_path = WASM_APTH + wasm
+        wasm_path = gl.WASM_APTH + wasm
         params_new = params if params else "{}"
         new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
         new_abi = abi if abi else wasm.split(".")[0] + ".abi"
-        sdk_config_path = f'{SDK_PATH}{new_sdk_config}'
+        sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
         if public_identity == "pwk":
             print("合约创建-pwk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} create --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 {sdk_config_path} {self.ADMIN_ORG_KEY} --sync-result={self.sync_result} ' + '--params="%s"' % params_new
+            ADMIN_ORG_KEY = f'--admin-org-ids={gl.ADMIN_ORG_IDS_PWK} --admin-key-file-paths={gl.ADMIN_KEY_FILE_PATHS_BY_PWK}'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --abi-file-path={gl.WASM_APTH}{new_abi} --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_ORG_KEY} --sync-result={self.sync_result}'
         elif public_identity == "pk":
             print("合约创建-pk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} create --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 {sdk_config_path} {self.ADMIN_KEY_FILE_PATHS_BY_PK_ONE} --sync-result={self.sync_result} ' + '--params="%s"' % params_new
+            ADMIN_KEY_FILE_PATHS_BY_PK_ONE = f'--admin-key-file-paths={gl.ADMIN_KEY_FILE_PATHS_BY_PK}'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --abi-file-path={gl.WASM_APTH}{new_abi} --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_KEY_FILE_PATHS_BY_PK_ONE} --sync-result={self.sync_result}'
         else:
             print("合约创建-cert模式".center(50, "="))
+            ADMIN_KEY_AND_CRT = f'--admin-key-file-paths={gl.ADMIN_KEY_FILE_PATHS} --admin-crt-file-paths={gl.ADMIN_CRT_FILE_PATHS}'
+
             if runtime == "EVM":
-                cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} create --abi-file-path={WASM_APTH}{new_abi} --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 {sdk_config_path} {self.ADMIN_KEY_AND_CRT}  --sync-result={self.sync_result} '
+                cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --abi-file-path={gl.WASM_APTH}{new_abi} --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_KEY_AND_CRT}  --sync-result={self.sync_result} '
             else:
-                cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} create --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 {sdk_config_path} {self.ADMIN_KEY_AND_CRT}  --sync-result={self.sync_result} ' + '--params="%s"' % params_new
+                cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_KEY_AND_CRT}  --sync-result={self.sync_result} '
+        if gl.ENABLE_GAS:
+            cmd = cmd + " --gas-limit=99999999"
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
         return result
 
-    def invoke(self, method, params, sdk_config=None, txid=None, abi=None, signkey=None, signcrt=None):
+    def invoke(self, method, params, sdk_config=None, txid=None, abi=None, signkey=None, signcrt=None, org=None):
         """
         调用合约
         :param method: 调用合约方法
@@ -71,14 +67,18 @@ class ContractDeal(object):
         :return: 返回合约调用结果
         """
         new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        sdk_config_path = f'{SDK_PATH}{new_sdk_config}'
+        sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
         txid = f" --tx-id={txid}" if txid else ""
-        new_sign_key = f" --user-signkey-file-path={CRYPTO_CONFIG_PATH}/{signkey} " if signkey else ""
-        new_sign_crt = f" --user-signcrt-file-path={CRYPTO_CONFIG_PATH}/{signcrt} " if signkey else " "
+        new_sign_key = f" --user-signkey-file-path={gl.CRYPTO_CONFIG_PATH}/{signkey} " if signkey else ""
+        new_sign_crt = f" --user-signcrt-file-path={gl.CRYPTO_CONFIG_PATH}/{signcrt} " if signkey else " "
         if abi:
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} invoke --contract-name={self.contract_name} --abi-file-path={WASM_APTH}{abi} --method={method} {sdk_config_path}{new_sign_key}{new_sign_crt}--params="{params}" --sync-result={self.sync_result}{txid}'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} invoke --contract-name={self.contract_name} --abi-file-path={gl.WASM_APTH}{abi} --method={method} --sdk-conf-path={sdk_config_path}{new_sign_key}{new_sign_crt}--params="{params}" --sync-result={self.sync_result}{txid}'
         else:
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} invoke --contract-name={self.contract_name} --method={method} {sdk_config_path} --params="{params}" --sync-result={self.sync_result}{txid}'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} invoke --contract-name={self.contract_name} --method={method} --sdk-conf-path={sdk_config_path} --params="{params}" --sync-result={self.sync_result}{txid}'
+        orgid =  f" --org-id={org}" if org else ""
+        cmd = cmd + orgid
+        if gl.ENABLE_GAS:
+            cmd = cmd + " --gas-limit=99999999"
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
@@ -92,110 +92,11 @@ class ContractDeal(object):
         :return:
         """
         new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        sdk_config_path = f'{SDK_PATH}{new_sdk_config}'
+        sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
         if abi:
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} get --contract-name={self.contract_name} --abi-file-path={WASM_APTH}{abi} --method={method} {sdk_config_path} --params="{params}"'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} get --contract-name={self.contract_name} --abi-file-path={gl.WASM_APTH}{abi} --method={method} --sdk-conf-path={sdk_config_path} --params="{params}"'
         else:
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} get --contract-name={self.contract_name} --method={method} {sdk_config_path} --params="{params}"'
-        print(cmd)
-        result = TheServerHelper(cmd).ssh_connectionServer()
-        print(result)
-        return result
-
-    def upgrade(self, runtime, version, wasm, public_identity=None, org=None, params=None, sdk_config=None):
-        """
-        合约升级
-        :param runtime: GASM,WASMER
-        :param version: 合约升级的版本
-        :param org: 在哪个节点上执行合约
-        :return: 返回合约升级的结果
-        """
-        wasm_path = WASM_APTH + wasm
-        params_new = params if params else "{}"
-        new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        sdk_config_path = f'{SDK_PATH}{new_sdk_config}'
-        new_org = org if org else "1"
-        if public_identity == "pk":
-            print("合约升级-pk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} upgrade --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version={version} {sdk_config_path} {self.ADMIN_KEY_FILE_PATHS_BY_PK_ONE} --sync-result={self.sync_result} ' + '--params="%s"' % params_new
-
-        elif public_identity == "pwk":
-            print("合约升级-pwk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} upgrade --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version={version} {sdk_config_path} {self.ADMIN_ORG_KEY} --org-id=wx-org{new_org}.chainmaker.org --sync-result={self.sync_result} ' + '--params="%s"' % params_new
-
-        else:
-            print("合约升级-cert模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} upgrade --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version={version} {sdk_config_path} {self.ADMIN_KEY_AND_CRT} --org-id=wx-org{new_org}.chainmaker.org --sync-result={self.sync_result} ' + '--params="%s"' % params_new
-        print(cmd)
-        result = TheServerHelper(cmd).ssh_connectionServer()
-        print(result)
-        return result
-
-    def freeze(self, org=None, public_identity=None, sdk_config=None):
-        """
-        合约冻结
-        :param org: 在哪个节点上执行合约
-        :return: 返回合约冻结结果
-        """
-        org_new = org if org else "1"
-        new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        sdk_config_path = f'{SDK_PATH}{new_sdk_config}'
-        if public_identity == "pwk":
-            print("合约冻结-pwk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} freeze --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_ORG_KEY} --org-id=wx-org{org_new}.chainmaker.org --sync-result={self.sync_result}'
-
-        elif public_identity == "pk":
-            print("合约冻结-pk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} freeze --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_KEY_FILE_PATHS_BY_PK_ONE} --sync-result={self.sync_result}'
-        else:
-            print("合约冻结-cert模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} freeze --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_KEY_AND_CRT} --org-id=wx-org{org_new}.chainmaker.org --sync-result={self.sync_result}'
-        print(cmd)
-        result = TheServerHelper(cmd).ssh_connectionServer()
-        print(result)
-        return result
-
-    def unfreeze(self, org=None, public_identity=None, sdk_config=None):
-        """
-        合约解冻
-        :param org: 在哪个节点上执行
-        :return: 返回合约解冻结果
-        """
-        org_new = org if org else "1"
-        new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        sdk_config_path = f'{SDK_PATH}{new_sdk_config}'
-        if public_identity == "pwk":
-            print("合约解冻-pwk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} unfreeze --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_ORG_KEY} --org-id=wx-org{org_new}.chainmaker.org --sync-result={self.sync_result}'
-        elif public_identity == "pk":
-            print("合约解冻-pk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} unfreeze --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_KEY_FILE_PATHS_BY_PK_ONE} --sync-result={self.sync_result}'
-        else:
-            print("合约解冻-cert模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} unfreeze --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_KEY_AND_CRT} --org-id=wx-org{org_new}.chainmaker.org --sync-result={self.sync_result}'
-        print(cmd)
-        result = TheServerHelper(cmd).ssh_connectionServer()
-        print(result)
-        return result
-
-    def revoke(self, org=None, public_identity=None, sdk_config=None):
-        """
-        合约吊销
-        :param org: 在哪个节点上执行
-        :return: 返回吊销合约结果
-        """
-        org_new = org if org else "1"
-        new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        sdk_config_path = f'{SDK_PATH}{new_sdk_config}'
-        if public_identity == "pwk":
-            print("合约吊销-pwk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} revoke --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_ORG_KEY} --org-id=wx-org{org_new}.chainmaker.org --sync-result={self.sync_result}'
-        elif public_identity == "pk":
-            print("合约吊销-pk模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} revoke --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_KEY_FILE_PATHS_BY_PK_ONE} --sync-result={self.sync_result}'
-        else:
-            print("合约吊销-cert模式".center(50, "="))
-            cmd = CMC_TOOL_PATH + f'{self.BASE_CMD} revoke --contract-name={self.contract_name} {sdk_config_path} {self.ADMIN_KEY_AND_CRT} --org-id=wx-org{org_new}.chainmaker.org --sync-result={self.sync_result}'
+            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} get --contract-name={self.contract_name} --method={method} --sdk-conf-path={sdk_config_path} --params="{params}"'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
