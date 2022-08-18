@@ -34,7 +34,7 @@ crypto:
 contract:
   # If the sql support contract is enabled or not.
   # If it is true, storage.statedb_config.provider in chainmaker.yml should be sql.
-  enable_sql_support: false
+  enable_sql_support: true
 
 # Virtual machine related settings
 vm:

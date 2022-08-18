@@ -1,7 +1,7 @@
 ## Raft的模块搭配模式
 
 Raft共识 4节点
-Sql+文件存储
+Sql存储
 Liquid网络
 国密SM2 SM3
 pwk模式
