@@ -1039,6 +1039,10 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	// clear propose repeat map before send
 	ProposeRepeatTimerMap = sync.Map{}
+	ProposeRepeatTimerMap.Range(func(key, value interface{}) bool {
+		ProposeRepeatTimerMap.Delete(key)
+		return true
+	})
 
 	// synchronize new block height to consensus and sync module
 	chain.msgBus.PublishSafe(msgbus.BlockInfo, blockInfo)
