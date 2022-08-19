@@ -579,6 +579,7 @@ func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
 		verifyBlock.vmMgr,
 		verifyBlock.chainConf,
 		conf.StoreHelper,
+		conf.LedgerCache,
 	)
 	return verifyBlock
 }

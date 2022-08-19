@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"testing"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+
 	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
 
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -160,7 +162,7 @@ func newBlock() *commonPb.Block {
 	return &commonPb.Block{
 		Header: &commonPb.BlockHeader{
 			ChainId:        "",
-			BlockHeight:    0,
+			BlockHeight:    10,
 			PreBlockHash:   nil,
 			BlockHash:      nil,
 			BlockVersion:   2300,
@@ -195,6 +197,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
+	ledgerCache := mock.NewMockLedgerCache(ctl)
 	crypto := configpb.CryptoConfig{
 		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
@@ -210,14 +213,14 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 		Vm: &configpb.Vm{
 			AddrType: configpb.AddrType_CHAINMAKER,
 		},
+		Consensus: &configpb.ConsensusConfig{Type: consensus.ConsensusType_TBFT},
 	}
-	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
-	//chainConf :=
+	chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -239,6 +242,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
+	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -263,6 +267,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
+	ledgerCache := mock.NewMockLedgerCache(ctl)
 	crypto := configpb.CryptoConfig{
 		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
@@ -282,13 +287,14 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		Vm: &configpb.Vm{
 			AddrType: configpb.AddrType_ZXL,
 		},
+		Consensus: &configpb.ConsensusConfig{Type: consensus.ConsensusType_TBFT},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -320,6 +326,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
+	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
@@ -344,6 +351,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	chainConf := mock.NewMockChainConf(ctl)
+	ledgerCache := mock.NewMockLedgerCache(ctl)
 	crypto := configpb.CryptoConfig{
 		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
@@ -363,13 +371,14 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		Vm: &configpb.Vm{
 			AddrType: configpb.AddrType_ZXL,
 		},
+		Consensus: &configpb.ConsensusConfig{Type: consensus.ConsensusType_TBFT},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -401,6 +410,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
+	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
