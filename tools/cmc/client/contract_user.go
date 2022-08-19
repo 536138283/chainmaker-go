@@ -415,7 +415,6 @@ func invokeUserContract() error {
 
 	var kvs []*common.KeyValuePair
 	var contractAbi *abi.ABI
-	var evmMethodId string
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -434,7 +433,6 @@ func invokeUserContract() error {
 		}
 
 		inputDataHexStr := hex.EncodeToString(inputData)
-		evmMethodId = inputDataHexStr[0:8]
 
 		kvs = []*common.KeyValuePair{
 			{
@@ -459,9 +457,9 @@ func invokeUserContract() error {
 	}
 
 	if txId != "" {
-		invokeContract(cc, contractName, method, evmMethodId, txId, kvs, contractAbi, limit)
+		invokeContract(cc, contractName, method, txId, kvs, contractAbi, limit)
 	} else {
-		Dispatch(cc, contractName, method, evmMethodId, kvs, contractAbi, limit)
+		Dispatch(cc, contractName, method, kvs, contractAbi, limit)
 	}
 	return nil
 }
@@ -548,7 +546,6 @@ func getUserContract() error {
 
 	var kvs []*common.KeyValuePair
 	var contractAbi *abi.ABI
-	var evmMethodId string
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -567,7 +564,6 @@ func getUserContract() error {
 		}
 
 		inputDataHexStr := hex.EncodeToString(inputData)
-		evmMethodId = inputDataHexStr[0:8]
 
 		kvs = []*common.KeyValuePair{
 			{
@@ -586,14 +582,7 @@ func getUserContract() error {
 		}
 	}
 
-	var methodStr string
-	if contractAbi != nil {
-		methodStr = evmMethodId
-	} else {
-		methodStr = method
-	}
-
-	resp, err := client.QueryContract(contractName, methodStr, kvs, -1)
+	resp, err := client.QueryContract(contractName, method, kvs, -1)
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}

@@ -136,7 +136,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 			monitor.SUBSYSTEM_CORE_PROPOSER,
 			"metric_block_package_time",
 			"block package time metric",
-			[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10},
+			[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10},
 			"chainId",
 		)
 	}
