@@ -13,6 +13,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"chainmaker.org/chainmaker-go/module/snapshot"
+	"chainmaker.org/chainmaker/vm/v2"
+
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
@@ -36,6 +39,8 @@ const (
 )
 
 var _ apiPb.RpcNodeServer = (*ApiService)(nil)
+
+var snapshotFactory snapshot.Factory
 
 // ApiService struct define
 type ApiService struct {
@@ -231,17 +236,20 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		return s.dealSystemChainQuery(tx, vmMgr)
 	}
 
-	ctx := &txQuerySimContextImpl{
-		tx:               tx,
-		txReadKeyMap:     map[string]*commonPb.TxRead{},
-		txWriteKeyMap:    map[string]*commonPb.TxWrite{},
-		txWriteKeySql:    make([]*commonPb.TxWrite, 0),
-		txWriteKeyDdlSql: make([]*commonPb.TxWrite, 0),
-		rowCache:         make(map[int32]interface{}),
-		blockchainStore:  store,
-		vmManager:        vmMgr,
-		blockVersion:     protocol.DefaultBlockVersion,
+	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
+	snapshotMgr := snapshotFactory.NewSnapshotManager(store, log)
+
+	var snap protocol.Snapshot
+	snap, err = snapshotMgr.NewQuerySnapshot(store)
+	if err != nil {
+		s.log.Error(err)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = err.Error()
+		resp.TxId = tx.Payload.TxId
+		return resp
 	}
+
+	ctx := vm.NewTxSimContext(vmMgr, snap, tx, protocol.DefaultBlockVersion, log)
 
 	contract, err := store.GetContractByName(tx.Payload.ContractName)
 	if err != nil {
@@ -314,21 +322,40 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 // dealSystemChainQuery - deal system chain query
 func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protocol.VmManager) *commonPb.TxResponse {
 	var (
-		resp = &commonPb.TxResponse{}
+		resp    = &commonPb.TxResponse{}
+		store   protocol.BlockchainStore
+		err     error
+		errCode commonErr.ErrCode
+		errMsg  string
 	)
 
 	chainId := tx.Payload.ChainId
 
-	ctx := &txQuerySimContextImpl{
-		tx:               tx,
-		txReadKeyMap:     map[string]*commonPb.TxRead{},
-		txWriteKeyMap:    map[string]*commonPb.TxWrite{},
-		txWriteKeySql:    make([]*commonPb.TxWrite, 0),
-		txWriteKeyDdlSql: make([]*commonPb.TxWrite, 0),
-		rowCache:         make(map[int32]interface{}),
-		vmManager:        vmMgr,
-		blockVersion:     protocol.DefaultBlockVersion,
+	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
+		errCode = commonErr.ERR_CODE_GET_STORE
+		errMsg = s.getErrMsg(errCode, err)
+		s.log.Error(errMsg)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = errMsg
+		resp.TxId = tx.Payload.TxId
+		return resp
 	}
+
+	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
+	snapshotMgr := snapshotFactory.NewSnapshotManager(store, log)
+
+	var snap protocol.Snapshot
+	snap, err = snapshotMgr.NewQuerySnapshot(store)
+	if err != nil {
+		s.log.Error(err)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = err.Error()
+		resp.TxId = tx.Payload.TxId
+		return resp
+	}
+
+	ctx := vm.NewTxSimContext(vmMgr, snap, tx, protocol.DefaultBlockVersion, log)
+
 	defaultGas := uint64(0)
 	chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)
 	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {

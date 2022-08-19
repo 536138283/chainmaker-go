@@ -19,6 +19,10 @@ type ManagerEvidence struct {
 	log       protocol.Logger
 }
 
+func (m *ManagerEvidence) NewQuerySnapshot(store protocol.BlockchainStore) (protocol.Snapshot, error) {
+	return m.delegate.makeQuerySnapshot()
+}
+
 // When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
 func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	m.delegate.lock.Lock()
