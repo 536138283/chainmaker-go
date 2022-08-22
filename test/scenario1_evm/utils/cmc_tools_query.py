@@ -64,9 +64,15 @@ class ContractQuery(object):
         print(block_height)
         return block_height
 
+    def query_balance(self,address):
+        result= self.get("balanceOf", r"[{\"address\":\"%s\"}]" % address,
+             sdk_config="sdk_config.yml", abi="erc20.abi")
+        balance = json.loads(result).get("contract_result").get("result")
+        return balance
+
 
 def query_address(cmc):
-    cmd = gl.CMC_TOOL_PATH + cmc
+    cmd = f'cd {gl.CMC_TOOL_PATH} && ' + cmc
     print(cmd)
     result = json.loads(TheServerHelper(cmd).ssh_connectionServer())
     print(result)

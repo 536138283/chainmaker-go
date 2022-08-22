@@ -18,9 +18,9 @@ class ContractDeal(object):
         :param sync_result: 同步参数，默认true，传入false就异步
         """
         self.contract_name = contract_name
-        self.sync_result = "true" if sync_result else "false"
+        self.sync_result = sync_result
 
-    def create(self, runtime, wasm, abi=None, params=None, public_identity=None, sdk_config=None):
+    def create(self, runtime, wasm, abi=None, params=None, public_identity=None, sdk_config=None,endorserKeys =None,endorserCerts=None,endorserOrgs=None):
         """
         支持创建普通sql合约以及kv合约
         :param runtime: GASM,WASMER,DOCKER_GO,EVM
@@ -31,28 +31,28 @@ class ContractDeal(object):
         :return:
         """
         wasm_path = gl.WASM_APTH + wasm
-        params_new = params if params else "{}"
+        # params_new = params if params else "{}"
         new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
-        new_abi = abi if abi else wasm.split(".")[0] + ".abi"
+        # new_abi = abi if abi else wasm.split(".")[0] + ".abi"
         sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
+        cmd = f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} create --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path}'
         if public_identity == "pwk":
             print("合约创建-pwk模式".center(50, "="))
-            ADMIN_ORG_KEY = f'--admin-org-ids={gl.ADMIN_ORG_IDS_PWK} --admin-key-file-paths={gl.ADMIN_KEY_FILE_PATHS_BY_PWK}'
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --abi-file-path={gl.WASM_APTH}{new_abi} --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_ORG_KEY} --sync-result={self.sync_result}'
+            cmd = cmd + f' --admin-org-ids={endorserOrgs} --admin-key-file-paths={endorserKeys}'
         elif public_identity == "pk":
             print("合约创建-pk模式".center(50, "="))
-            ADMIN_KEY_FILE_PATHS_BY_PK_ONE = f'--admin-key-file-paths={gl.ADMIN_KEY_FILE_PATHS_BY_PK}'
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --abi-file-path={gl.WASM_APTH}{new_abi} --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_KEY_FILE_PATHS_BY_PK_ONE} --sync-result={self.sync_result}'
+            cmd = cmd + f' --admin-key-file-paths={endorserKeys}'
         else:
             print("合约创建-cert模式".center(50, "="))
-            ADMIN_KEY_AND_CRT = f'--admin-key-file-paths={gl.ADMIN_KEY_FILE_PATHS} --admin-crt-file-paths={gl.ADMIN_CRT_FILE_PATHS}'
-
-            if runtime == "EVM":
-                cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --abi-file-path={gl.WASM_APTH}{new_abi} --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_KEY_AND_CRT}  --sync-result={self.sync_result} '
-            else:
-                cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} create --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version=1.0 --sdk-conf-path={sdk_config_path} {ADMIN_KEY_AND_CRT}  --sync-result={self.sync_result} '
+            cmd = cmd + f' --admin-key-file-paths={endorserKeys} --admin-crt-file-paths={endorserCerts}'
         if gl.ENABLE_GAS:
             cmd = cmd + " --gas-limit=99999999"
+        if params :
+            cmd = cmd + f' --params="{params}"'
+        if abi :
+            cmd = cmd + f" --abi-file-path={gl.WASM_APTH}{abi}"
+        if self.sync_result:
+            cmd = cmd + " --sync-result=true"
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
@@ -68,15 +68,22 @@ class ContractDeal(object):
         """
         new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
         sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
-        txid = f" --tx-id={txid}" if txid else ""
-        new_sign_key = f" --user-signkey-file-path={gl.CRYPTO_CONFIG_PATH}/{signkey} " if signkey else ""
-        new_sign_crt = f" --user-signcrt-file-path={gl.CRYPTO_CONFIG_PATH}/{signcrt} " if signkey else " "
+        cmd =f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} invoke --contract-name={self.contract_name} --method={method} --sdk-conf-path={sdk_config_path}'
+        if txid :
+            cmd = cmd + f" --tx-id={txid}"
+        if signkey:
+            cmd = cmd + f" --user-signkey-file-path={gl.CRYPTO_CONFIG_PATH}/{signkey}"
+        if signcrt:
+            cmd = cmd + f" --user-signcrt-file-path={gl.CRYPTO_CONFIG_PATH}/{signcrt}"
         if abi:
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} invoke --contract-name={self.contract_name} --abi-file-path={gl.WASM_APTH}{abi} --method={method} --sdk-conf-path={sdk_config_path}{new_sign_key}{new_sign_crt}--params="{params}" --sync-result={self.sync_result}{txid}'
-        else:
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} invoke --contract-name={self.contract_name} --method={method} --sdk-conf-path={sdk_config_path} --params="{params}" --sync-result={self.sync_result}{txid}'
-        orgid =  f" --org-id={org}" if org else ""
-        cmd = cmd + orgid
+            cmd = cmd + f' --abi-file-path={gl.WASM_APTH}{abi}'
+        if params:
+            cmd = cmd + f' --params="{params}"'
+        if self.sync_result:
+            cmd = cmd + f' --sync-result=true'
+        if org:
+            cmd = cmd + f" --org-id={org}"
+
         if gl.ENABLE_GAS:
             cmd = cmd + " --gas-limit=99999999"
         print(cmd)
@@ -93,10 +100,11 @@ class ContractDeal(object):
         """
         new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
         sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
+        cmd =f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} get --contract-name={self.contract_name} --method={method} --sdk-conf-path={sdk_config_path}'
         if abi:
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} get --contract-name={self.contract_name} --abi-file-path={gl.WASM_APTH}{abi} --method={method} --sdk-conf-path={sdk_config_path} --params="{params}"'
-        else:
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} get --contract-name={self.contract_name} --method={method} --sdk-conf-path={sdk_config_path} --params="{params}"'
+            cmd = cmd + f' --abi-file-path={gl.WASM_APTH}{abi}'
+        if params:
+            cmd = cmd +f' --params="{params}"'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)

@@ -18,13 +18,7 @@ SDK_CONFIG_PATH = r'../config/sdk_config.yml'
 CRYPTO_CONFIG_PATH = r'../config'
 ADMIN_KEY_FILE_PATHS = "TODO"
 ADMIN_CRT_FILE_PATHS = "TODO"
-ADMIN_ORG_IDS_PWK = "TODO"
-
-ADMIN_KEY_FILE_PATHS_BY_PWK = "TODO"
-
-ADMIN_KEY_FILE_PATHS_BY_GAS_PK = "TODO"
-
-ADMIN_KEY_FILE_PATHS_BY_PK = "TODO"
+ADMIN_ORG_IDS = "TODO"
 
 # WASM_APTH = r'./testdata/claim-wasm-demo/'
 WASM_APTH = r'../../testdata/'

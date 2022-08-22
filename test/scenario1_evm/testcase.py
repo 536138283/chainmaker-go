@@ -26,20 +26,20 @@ class Test(unittest.TestCase):
         user_c_address = get_user_addr("3", "3")
         print("query UserD address: org4 admin".center(50, "="))
         user_d_address = get_user_addr("4", "4")
-        if gl.ACCOUNT_TYPE == "pk":
+        if gl.ENABLE_GAS == True:
             cmd = Command(sync_result=True)
             cmd.recharge_gas(user_a_address)
             cmd.recharge_gas(user_b_address)
         print("ERC20合约安装".center(50, "="))
         cd_erc = ContractDeal("ERC20", sync_result=True)
-        result_erc = cd_erc.create("EVM", "erc20.bin", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml')
+        result_erc = cd_erc.create("EVM", "erc20.bin",abi="erc20.abi", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         erc_address = json.loads(result_erc).get("contract_result").get("result").get("address")
         print("ERC20 contract address: ", erc_address)
 
         print("withdraw合约安装".center(50, "="))
         cd_withdraw = ContractDeal("withdraw", sync_result=True)
-        result_withdraw = cd_withdraw.create("EVM", "withdraw.bin", public_identity=f'{gl.ACCOUNT_TYPE}',
-                                             sdk_config='sdk_config.yml')
+        result_withdraw = cd_withdraw.create("EVM", "withdraw.bin", public_identity=f'{gl.ACCOUNT_TYPE}',abi="withdraw.abi",
+                                             endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
         print("withdraw contract address: ", withdraw_address)
 
@@ -64,21 +64,21 @@ class Test(unittest.TestCase):
 
         print("UserA balance:".center(50, "="))
         balance_a_result = cd_erc.get("balanceOf", r"[{\"address\":\"%s\"}]" % user_a_address,
-                                      sdk_config="sdk_config.yml", abi="erc20.abi")
+                                      sdk_config="sdk_config2.yml", abi="erc20.abi")
         expect_a = "[999999999999999999999999700]"
         balance_a = get_user_balance(balance_a_result)
         self.assertEqual(expect_a, balance_a, "success")
 
         print("UserB balance:".center(50, "="))
         balance_b_result = cd_erc.get("balanceOf", r"[{\"address\":\"%s\"}]" % user_b_address,
-                                      sdk_config="sdk_config.yml", abi="erc20.abi")
+                                      sdk_config="sdk_config2.yml", abi="erc20.abi")
         expect_b = "[110]"
         balance_b = get_user_balance(balance_b_result)
         self.assertEqual(expect_b, balance_b, "success")
 
         print("withdraw contract balance:".center(50, "="))
         balance_c_result = cd_erc.get("balanceOf", r"[{\"address\":\"%s\"}]" % withdraw_address,
-                                      sdk_config="sdk_config.yml", abi="erc20.abi")
+                                      sdk_config="sdk_config2.yml", abi="erc20.abi")
         expect_c = "[190]"
         balance_c = get_user_balance(balance_c_result)
         self.assertEqual(expect_c, balance_c, "success")

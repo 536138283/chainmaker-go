@@ -20,7 +20,7 @@ class Command(object):
         self.sdk_config_path = f'{gl.SDK_PATH}{self.new_sdk_config}'
 
     def recharge_gas(self, address, amount=1000000000):
-        cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} gas recharge --address={address} --amount={amount} --sdk-conf-path={self.sdk_config_path}'
+        cmd =   f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} gas recharge --address={address} --amount={amount} --sdk-conf-path={self.sdk_config_path}'
         if self.sync_result:
             cmd = cmd + " --sync-result=true"
         print(cmd)
