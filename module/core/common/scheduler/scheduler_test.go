@@ -194,6 +194,8 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
+	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
 		Hash: crypto2.CRYPTO_ALGO_SHA256,
@@ -262,6 +264,8 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
+	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
 		Hash: crypto2.CRYPTO_ALGO_SHA256,
@@ -343,6 +347,8 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
+	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
 	chainConf := mock.NewMockChainConf(ctl)
 	crypto := configpb.CryptoConfig{
 		Hash: crypto2.CRYPTO_ALGO_SHA256,
