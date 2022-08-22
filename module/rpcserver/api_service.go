@@ -13,10 +13,8 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/module/snapshot"
-	"chainmaker.org/chainmaker/vm/v2"
-
 	"chainmaker.org/chainmaker-go/module/blockchain"
+	"chainmaker.org/chainmaker-go/module/snapshot"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -29,6 +27,7 @@ import (
 	"chainmaker.org/chainmaker/store/v2/archive"
 	"chainmaker.org/chainmaker/utils/v2"
 	native "chainmaker.org/chainmaker/vm-native/v2"
+	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/time/rate"
 )
@@ -39,8 +38,6 @@ const (
 )
 
 var _ apiPb.RpcNodeServer = (*ApiService)(nil)
-
-var snapshotFactory snapshot.Factory
 
 // ApiService struct define
 type ApiService struct {
@@ -237,10 +234,9 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	}
 
 	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
-	snapshotMgr := snapshotFactory.NewSnapshotManager(store, log)
 
 	var snap protocol.Snapshot
-	snap, err = snapshotMgr.NewQuerySnapshot(store)
+	snap, err = snapshot.NewQuerySnapshot(store, log)
 	if err != nil {
 		s.log.Error(err)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -342,10 +338,9 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 	}
 
 	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
-	snapshotMgr := snapshotFactory.NewSnapshotManager(store, log)
 
 	var snap protocol.Snapshot
-	snap, err = snapshotMgr.NewQuerySnapshot(store)
+	snap, err = snapshot.NewQuerySnapshot(store, log)
 	if err != nil {
 		s.log.Error(err)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -515,11 +510,17 @@ func (s *ApiService) GetChainMakerVersion(ctx context.Context, req *configPb.Cha
 	}, nil
 }
 
+// GetPoolStatus Returns the max size of config transaction pool and common transaction pool,
+// the num of config transaction in queue and pendingCache,
+// and the the num of common transaction in queue and pendingCache.
 func (s *ApiService) GetPoolStatus(ctx context.Context,
 	request *txpoolPb.GetPoolStatusRequest) (*txpoolPb.TxPoolStatus, error) {
 	return s.chainMakerServer.GetPoolStatus(request.ChainId)
 }
 
+// GetTxIdsByTypeAndStage Returns config or common txIds in different stage.
+// TxType may be TxType_CONFIG_TX, TxType_COMMON_TX, (TxType_CONFIG_TX|TxType_COMMON_TX)
+// TxStage may be TxStage_IN_QUEUE, TxStage_IN_PENDING, (TxStage_IN_QUEUE|TxStage_IN_PENDING)
 func (s *ApiService) GetTxIdsByTypeAndStage(ctx context.Context,
 	request *txpoolPb.GetTxIdsByTypeAndStageRequest) (*txpoolPb.GetTxIdsByTypeAndStageResponse, error) {
 	txIds, err := s.chainMakerServer.GetTxIdsByTypeAndStage(request.ChainId,
@@ -530,6 +531,9 @@ func (s *ApiService) GetTxIdsByTypeAndStage(ctx context.Context,
 	return &txpoolPb.GetTxIdsByTypeAndStageResponse{TxIds: txIds}, nil
 }
 
+// GetTxsInPoolByTxIds Retrieve the transactions by the txIds from the txPool,
+// return transactions in the txPool and txIds not in txPool.
+// default query upper limit is 1w transaction, and error is returned if the limit is exceeded.
 func (s *ApiService) GetTxsInPoolByTxIds(ctx context.Context,
 	request *txpoolPb.GetTxsInPoolByTxIdsRequest) (*txpoolPb.GetTxsInPoolByTxIdsResponse, error) {
 	txs, txIds, err := s.chainMakerServer.GetTxsInPoolByTxIds(request.ChainId, request.TxIds)

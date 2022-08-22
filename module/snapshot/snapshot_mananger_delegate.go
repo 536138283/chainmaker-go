@@ -76,36 +76,3 @@ func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block) *SnapshotImpl 
 	}
 	return snapshotImpl
 }
-
-func (m *ManagerDelegate) makeQuerySnapshot() (*SnapshotImpl, error) {
-	txCount := 1
-	lastBlock, err := m.blockchainStore.GetLastBlock()
-	if err != nil {
-		return nil, err
-	}
-
-	querySnapshot := &SnapshotImpl{
-		blockchainStore: m.blockchainStore,
-		preSnapshot:     nil,
-		log:             m.log,
-		txResultMap:     make(map[string]*commonPb.Result, txCount),
-
-		chainId:        lastBlock.Header.ChainId,
-		blockHeight:    lastBlock.Header.BlockHeight,
-		blockVersion:   lastBlock.Header.BlockVersion,
-		blockTimestamp: lastBlock.Header.BlockTimestamp,
-		blockProposer:  lastBlock.Header.Proposer,
-		preBlockHash:   lastBlock.Header.PreBlockHash,
-
-		txTable: nil,
-
-		readTable:  make(map[string]*sv, txCount),
-		writeTable: make(map[string]*sv, txCount),
-
-		txRoot:    lastBlock.Header.TxRoot,
-		dagHash:   lastBlock.Header.DagHash,
-		rwSetHash: lastBlock.Header.RwSetRoot,
-	}
-
-	return querySnapshot, nil
-}

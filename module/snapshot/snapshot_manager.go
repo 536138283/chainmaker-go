@@ -54,11 +54,6 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 	return snapshotImpl
 }
 
-// NewQuerySnapshot create a snapshot for query tx
-func (m *ManagerImpl) NewQuerySnapshot(store protocol.BlockchainStore) (protocol.Snapshot, error) {
-	return m.delegate.makeQuerySnapshot()
-}
-
 // Get a Snapshot from SnapshotManager for read, don't modify any data.
 func (m *ManagerImpl) GetSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	fingerPrint := utils.CalcBlockFingerPrintWithoutTx(block)
