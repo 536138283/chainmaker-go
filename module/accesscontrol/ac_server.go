@@ -320,7 +320,8 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	// system contract interface resource definitions
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CORE_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), policyConfig)
 
@@ -502,7 +503,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	// system contract interface resource definitions
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CORE_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), policyConfig)
 
