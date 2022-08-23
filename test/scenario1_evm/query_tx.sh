@@ -1,2 +1,2 @@
 cd $CMC
-./cmc query tx  "170b7536b99c97f8ca1bea2d1266524b8fd679d6bede49a1bfef973d34682ade" --sdk-conf-path=../config/sdk_config2.yml
+./cmc query tx  "170dee9b23713f78ca6afcd28fc34fcc5b80a44c2dca41858b7e88fd8fd37dc6" --sdk-conf-path=../config/sdk_config2.yml

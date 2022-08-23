@@ -96,21 +96,21 @@ test-deploy:
 
 sql-qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
-	cd test/send_proposal_request_ci && ./clean_sql_log.sh
+	cd test/chain2 && ./stop.sh
+	cd test/chain2 && ./clean.sh
 	echo "start new sql-qta test"
-	cd test/send_proposal_request_ci && ./build.sh
-	cd test/send_proposal_request_ci && ./start_sql_tbft_4.sh
-	cd test/send_proposal_request_sql && go run main.go
-	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
-	cd test/send_proposal_request_ci && ./clean_sql_log.sh
+	cd test/chain2 && ./build.sh
+	cd test/chain2 && ./start.sh
+	cd test/scenario1_evm && python3 demo_pwk.py
+	cd test/chain2 && ./stop.sh
+	cd test/chain2 && ./clean.sh
 qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
 	echo "start new qta test"
-	cd test/send_proposal_request_ci && ./build.sh
-	cd test/send_proposal_request_ci && ./start_solo.sh
-	cd test/send_proposal_request_ci && go run main.go
-	cd test/send_proposal_request_ci && ./stop_solo.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
+	cd test/chain1 && ./build.sh
+	cd test/chain1 && ./start.sh
+	cd test/scenario1_evm && python3 demo_cert.py
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
