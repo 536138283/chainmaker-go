@@ -188,7 +188,7 @@ func (s *ApiService) sendNewTx(store protocol.BlockchainStore, tx *commonPb.Tran
 		block           *commonPb.Block
 	)
 
-	blockCh := make(chan model.NewBlockEvent)
+	blockCh := make(chan model.NewBlockEvent, 1000)
 
 	chainId := tx.Payload.ChainId
 	if eventSubscriber, err = s.chainMakerServer.GetEventSubscribe(chainId); err != nil {
