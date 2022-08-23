@@ -566,11 +566,11 @@ func (bp *BlockProposerImpl) getDuration() time.Duration {
 // @Deprecated
 //nolint: unused
 func (bp *BlockProposerImpl) getChainVersion() uint32 {
-	//if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
-	//	return []byte(protocol.DefaultBlockVersion)
-	//}
-	//return []byte(bp.chainConf.ChainConfig().Version)
-	return protocol.DefaultBlockVersion
+	if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
+		bp.log.Warnf("No chain config found, use default block version:%d", protocol.DefaultBlockVersion)
+		return protocol.DefaultBlockVersion
+	}
+	return bp.chainConf.ChainConfig().GetBlockVersion()
 }
 
 // setNotIdle, set not idle status
