@@ -53,6 +53,7 @@ type CoreEngine struct {
 
 // NewCoreEngine new a core engine.
 func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
+	cf.Log.Infof("start core module, chainConfig: %+v \n", cf.ChainConf.ChainConfig())
 	core := &CoreEngine{
 		msgBus:          cf.MsgBus,
 		txPool:          cf.TxPool,

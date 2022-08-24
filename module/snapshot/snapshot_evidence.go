@@ -201,3 +201,10 @@ func (s *SnapshotEvidence) GetBlockProposer() *accesscontrol.Member {
 	}
 	return s.delegate.blockProposer
 }
+
+func (s *SnapshotEvidence) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*commonPb.TxRWSet) {
+	if s.delegate == nil {
+		return
+	}
+	s.delegate.ApplyBlock(block, txRWSetMap)
+}

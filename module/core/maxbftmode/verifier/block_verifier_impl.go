@@ -12,7 +12,6 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
-
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
@@ -255,7 +254,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		return err
 	}
 
-	v.log.Debugf("verify receive [%d](%x,%d,%d), from sync %d",
+	v.log.Debugf("VerifyBlockWithRwSets receive [%d](%x,%d,%d), from sync %d",
 		block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount, len(block.Txs), mode)
 	// avoid concurrent verify, only one block hash can be verified at the same time
 	if !v.reentrantLocks.Lock(string(block.Header.BlockHash)) {
@@ -324,6 +323,8 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	if err = v.proposalCache.SetProposedBlock(newBlock, txRWSetMap, contractEventMap, false); err != nil {
 		return err
 	}
+	currSnapshot := v.snapshotManager.NewSnapshot(lastBlock, block)
+	currSnapshot.ApplyBlock(block, txRWSetMap)
 
 	// mark transactions in block as pending status in txpool
 	if common.TxPoolType == batch.TxPoolType {

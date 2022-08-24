@@ -362,6 +362,16 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	return true, len(s.txTable)
 }
 
+func (s *SnapshotImpl) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*commonPb.TxRWSet) {
+	if len(block.Txs) != len(txRWSetMap) {
+		s.log.Warnf("txs num is: %d, but rwSet num is: %d", len(block.Txs), len(txRWSetMap))
+		return
+	}
+	for _, tx := range block.Txs {
+		s.apply(tx, txRWSetMap[tx.Payload.TxId], tx.Result, tx.Result.Code == commonPb.TxStatusCode_SUCCESS)
+	}
+}
+
 // After the read-write set is generated, add TxSimContext to the snapshot
 func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet, txResult *commonPb.Result,
 	runVmSuccess bool) {
