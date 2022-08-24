@@ -26,15 +26,16 @@ type TxSchedulerFactory struct {
 
 // NewTxScheduler building a transaction scheduler
 func (sf TxSchedulerFactory) NewTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
-	storeHelper conf.StoreHelper) protocol.TxScheduler {
+	storeHelper conf.StoreHelper, ledgerCache protocol.LedgerCache) protocol.TxScheduler {
 	if chainConf.ChainConfig().Scheduler != nil && chainConf.ChainConfig().Scheduler.EnableEvidence {
-		return newTxSchedulerEvidence(vmMgr, chainConf, storeHelper)
+		return newTxSchedulerEvidence(vmMgr, chainConf, storeHelper, ledgerCache)
 	}
-	return newTxScheduler(vmMgr, chainConf, storeHelper)
+	return newTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
 }
 
 // newTxScheduler building a regular transaction scheduler
-func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf, storeHelper conf.StoreHelper) *TxScheduler {
+func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
+	storeHelper conf.StoreHelper, cache protocol.LedgerCache) *TxScheduler {
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, chainConf.ChainConfig().ChainId)
 	log.Debugf("use the common TxScheduler.")
 	var txScheduler = &TxScheduler{
@@ -44,6 +45,7 @@ func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf, stor
 		log:             log,
 		chainConf:       chainConf,
 		StoreHelper:     storeHelper,
+		ledgerCache:     cache,
 	}
 	var err error
 	txScheduler.keyReg, err = regexp.Compile(protocol.DefaultStateRegex)
@@ -100,7 +102,7 @@ func initSigner(
 
 // newTxSchedulerEvidence building a evidence transaction scheduler
 func newTxSchedulerEvidence(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
-	storeHelper conf.StoreHelper) *TxSchedulerEvidence {
+	storeHelper conf.StoreHelper, cache protocol.LedgerCache) *TxSchedulerEvidence {
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, chainConf.ChainConfig().ChainId)
 	log.Debugf("use the evidence TxScheduler.")
 	txSchedulerEvidence := &TxSchedulerEvidence{
@@ -111,6 +113,7 @@ func newTxSchedulerEvidence(vmMgr protocol.VmManager, chainConf protocol.ChainCo
 			log:             log,
 			chainConf:       chainConf,
 			StoreHelper:     storeHelper,
+			ledgerCache:     cache,
 		},
 	}
 	var err error

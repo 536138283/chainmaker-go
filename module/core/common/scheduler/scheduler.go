@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -61,6 +63,7 @@ type TxScheduler struct {
 	StoreHelper     conf.StoreHelper
 	keyReg          *regexp.Regexp
 	signer          protocol.SigningMember
+	ledgerCache     protocol.LedgerCache
 }
 
 // Transaction dependency in adjacency table representation
@@ -78,11 +81,22 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
+	var err error
+	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_TBFT &&
+		int64(block.Header.BlockHeight)-int64(lastCommittedHeight) < 1 {
+		return nil, nil, fmt.Errorf("no need to schedule old block, ledger height: %d, block height: %d",
+			lastCommittedHeight, block.Header.BlockHeight)
+	}
+
 	txBatchSize := len(txBatch)
 	ts.log.Infof("schedule tx batch start, block_number = %v, size = %d", block.Header.BlockHeight, txBatchSize)
 
 	var goRoutinePool *ants.Pool
-	var err error
 	poolCapacity := ts.StoreHelper.GetPoolCapacity()
 	ts.log.Debugf("GetPoolCapacity() => %v", poolCapacity)
 	if goRoutinePool, err = ants.NewPool(poolCapacity, ants.WithPreAlloc(false)); err != nil {
