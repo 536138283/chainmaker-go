@@ -32,9 +32,9 @@ node:
 
 net:
   provider: LibP2P
-  listen_addr: /ip4/0.0.0.0/tcp/11351
+  listen_addr: /ip4/0.0.0.0/tcp/11301
   seeds:
-  #  - "/ip4/127.0.0.1/tcp/11301/p2p/QmcQHCuAXaFkbcsPUj7e37hXXfZ9DdN7bozseo5oX4qiC4"
+    - "/ip4/127.0.0.1/tcp/11301/p2p/Qmbh5QRj9zMXPJH8BYkh6nPgztji3geU8fKEuuzDJ7KS5k"
   tls:
     enabled: true
     priv_key_file: ../config/wx-org-solo/certs/wx-org.chainmaker.org/node/consensus1/consensus1.tls.key

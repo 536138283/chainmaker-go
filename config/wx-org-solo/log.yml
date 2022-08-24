@@ -26,11 +26,11 @@ log:
       log_in_console: false         # 是否展示日志到终端，仅限于调试使用
       show_color: true              # 是否打印颜色日志
   system:
-    log_level_default: DEBUG
+    log_level_default: INFO
     log_levels:
-      core: DEBUG
-      net: DEBUG
-      vm: DEBUG
+      core: INFO
+      net: INFO
+      vm: INFO
       storage: INFO
     file_path: ../log/org/system.log
     log_by_chain: true
