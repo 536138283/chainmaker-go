@@ -105,12 +105,4 @@ sql-qta:
 	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
 	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 qta:
-	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
-	echo "start new qta test"
-	cd test/send_proposal_request_ci && ./build.sh
-	cd test/send_proposal_request_ci && ./start_solo.sh
-	cd test/send_proposal_request_ci && go run main.go
-	cd test/send_proposal_request_ci && ./stop_solo.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
+	echo "new version qta coming"
