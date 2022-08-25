@@ -189,6 +189,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 		} else {
 			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
+		block.Header.TxCount = uint32(len(block.Txs))
 	}
 
 	if TxPoolType == batch.TxPoolType {
@@ -433,17 +434,21 @@ func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 }
 
 // IsTxDuplicate to check if there is duplicated transactions in one block
-func IsTxDuplicate(txs []*commonPb.Transaction) bool {
+func IsTxDuplicate(txs []*commonPb.Transaction) (duplicate bool, duplicateTxs []string) {
 	txSet := make(map[string]struct{})
 	exist := struct{}{}
 	for _, tx := range txs {
 		if tx == nil || tx.Payload == nil {
-			return true
+			return true, duplicateTxs
+		}
+		if _, ok := txSet[tx.Payload.TxId]; ok {
+			duplicateTxs = append(duplicateTxs, tx.Payload.TxId+" duplicated")
+			continue
 		}
 		txSet[tx.Payload.TxId] = exist
 	}
 	// length of set < length of txs, means txs have duplicate tx
-	return len(txSet) < len(txs)
+	return len(txSet) < len(txs), duplicateTxs
 }
 
 // IsMerkleRootValid to check if block merkle root equals with simulated merkle root
@@ -653,10 +658,15 @@ func (vb *VerifierBlock) ValidateBlock(
 		timeLasts[TxRoot] = rootsLast
 		return nil, nil, timeLasts, nil, nil
 	}
+	// 1. 空交易
+	// 2. recoveryBlock
 	// verify if txs are duplicate in this block
-	if IsTxDuplicate(block.Txs) {
-		return nil, nil, timeLasts, nil, fmt.Errorf("tx duplicate")
+	//if TxPoolType != batch.TxPoolType {
+
+	if duplicate, errors := IsTxDuplicate(block.Txs); duplicate {
+		return nil, nil, timeLasts, nil, fmt.Errorf("tx duplicate, errors: %v", errors)
 	}
+	//}
 
 	// simulate with DAG, and verify read write set
 	startDbTxTick := utils.CurrentTimeMillisSeconds()
@@ -774,8 +784,8 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		return nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
-	if IsTxDuplicate(block.Txs) {
-		return nil, timeLasts, nil, fmt.Errorf("tx duplicate")
+	if duplicate, errors := IsTxDuplicate(block.Txs); duplicate {
+		return nil, timeLasts, nil, fmt.Errorf("tx duplicate, errors: %v", errors)
 	}
 
 	// simulate with DAG, and verify read write set
