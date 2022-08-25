@@ -936,11 +936,26 @@ func (cp *certACProvider) verifyMember(mem protocol.Member) ([]*bcx509.Certifica
 		return nil, fmt.Errorf("invalid member: member type err")
 	}
 
-	certChains, err := certMember.cert.Verify(cp.opts)
-	if err != nil {
-		return nil, fmt.Errorf("not ac valid certificate from trusted CAs: %v", err)
-	}
 	orgIdFromCert := certMember.cert.Subject.Organization[0]
+	org := cp.acService.getOrgInfoByOrgId(orgIdFromCert)
+
+	// the Third-party CA
+	if certMember.cert.IsCA == true && org == nil {
+		cp.acService.log.Info("the Third-party CA verify the member")
+		certChain := []*bcx509.Certificate{certMember.cert}
+		err := cp.checkCRL(certChain)
+		if err != nil {
+			return nil, err
+		}
+
+		err = cp.checkCertFrozenList(certChain)
+		if err != nil {
+			return nil, err
+		}
+
+		return certChain, nil
+	}
+
 	if mem.GetOrgId() != orgIdFromCert {
 		return nil, fmt.Errorf(
 			"signer does not belong to the organization it claims [claim: %s, certificate: %s]",
@@ -948,10 +963,16 @@ func (cp *certACProvider) verifyMember(mem protocol.Member) ([]*bcx509.Certifica
 			orgIdFromCert,
 		)
 	}
-	org := cp.acService.getOrgInfoByOrgId(orgIdFromCert)
+
 	if org == nil {
 		return nil, fmt.Errorf("no orgnization found")
 	}
+
+	certChains, err := certMember.cert.Verify(cp.opts)
+	if err != nil {
+		return nil, fmt.Errorf("not ac valid certificate from trusted CAs: %v", err)
+	}
+
 	if len(org.(*organization).trustedRootCerts) <= 0 {
 		return nil, fmt.Errorf("no trusted root: please configure trusted root certificate")
 	}
