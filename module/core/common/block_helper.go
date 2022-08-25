@@ -185,10 +185,12 @@ func (bb *BlockBuilder) GenerateNewBlock(
 
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
-			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
+			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds,
+				txsTimeout)
 		} else {
 			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
+		block.Header.TxCount = uint32(len(block.Txs))
 	}
 
 	if TxPoolType == batch.TxPoolType {
@@ -200,7 +202,16 @@ func (bb *BlockBuilder) GenerateNewBlock(
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
 		}
 		block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] = batchIdBytes
-		bb.log.Infof("proposer add batchIds:%v into addition data,height: %d", batchIds, block.Header.BlockHeight)
+		bb.log.InfoDynamic(func() string {
+			return fmt.Sprintf("[%v] proposer add batchIds:%v into addition data", block.Header.BlockHeight,
+				func() []string {
+					var batch0 []string
+					for i := range batchIds {
+						batch0 = append(batch0, hex.EncodeToString([]byte(batchIds[i])))
+					}
+					return batch0
+				}())
+		})
 	}
 
 	// cache proposed block
@@ -433,17 +444,21 @@ func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 }
 
 // IsTxDuplicate to check if there is duplicated transactions in one block
-func IsTxDuplicate(txs []*commonPb.Transaction) bool {
+func IsTxDuplicate(txs []*commonPb.Transaction) (duplicate bool, duplicateTxs []string) {
 	txSet := make(map[string]struct{})
 	exist := struct{}{}
 	for _, tx := range txs {
 		if tx == nil || tx.Payload == nil {
-			return true
+			return true, duplicateTxs
+		}
+		if _, ok := txSet[tx.Payload.TxId]; ok {
+			duplicateTxs = append(duplicateTxs, tx.Payload.TxId+" duplicated")
+			continue
 		}
 		txSet[tx.Payload.TxId] = exist
 	}
 	// length of set < length of txs, means txs have duplicate tx
-	return len(txSet) < len(txs)
+	return len(txSet) < len(txs), duplicateTxs
 }
 
 // IsMerkleRootValid to check if block merkle root equals with simulated merkle root
@@ -653,10 +668,15 @@ func (vb *VerifierBlock) ValidateBlock(
 		timeLasts[TxRoot] = rootsLast
 		return nil, nil, timeLasts, nil, nil
 	}
+	// 1. 空交易
+	// 2. recoveryBlock
 	// verify if txs are duplicate in this block
-	if IsTxDuplicate(block.Txs) {
-		return nil, nil, timeLasts, nil, fmt.Errorf("tx duplicate")
+	//if TxPoolType != batch.TxPoolType {
+
+	if duplicate, errors := IsTxDuplicate(block.Txs); duplicate {
+		return nil, nil, timeLasts, nil, fmt.Errorf("tx duplicate, errors: %v", errors)
 	}
+	//}
 
 	// simulate with DAG, and verify read write set
 	startDbTxTick := utils.CurrentTimeMillisSeconds()
@@ -774,8 +794,8 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		return nil, timeLasts, nil, nil
 	}
 	// verify if txs are duplicate in this block
-	if IsTxDuplicate(block.Txs) {
-		return nil, timeLasts, nil, fmt.Errorf("tx duplicate")
+	if duplicate, errors := IsTxDuplicate(block.Txs); duplicate {
+		return nil, timeLasts, nil, fmt.Errorf("tx duplicate, errors: %v", errors)
 	}
 
 	// simulate with DAG, and verify read write set
@@ -809,7 +829,8 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
-	vb.log.Infof("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
+	vb.log.Infof("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs),
+		block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
@@ -1011,8 +1032,8 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	lastProposed.AdditionalData = block.AdditionalData
 
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err := chain.commonCommit.CommitBlock(
-		lastProposed, rwSetMap, conEventMap)
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
+		chain.commonCommit.CommitBlock(lastProposed, rwSetMap, conEventMap)
 	if err != nil {
 		chain.log.Errorf("block common commit failed: %s, blockHeight: (%d)",
 			err.Error(), lastProposed.Header.BlockHeight)
@@ -1367,7 +1388,8 @@ func recoverBlock(
 			return nil, nil, err
 		}
 
-		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
+		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
+			int(maxRetryTime*retryInterval))
 		if err != nil {
 			return nil, nil, err
 		}

@@ -12,23 +12,20 @@ import (
 	"sync"
 	"time"
 
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
-
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
-
-	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
-
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/net-common/utils"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -279,10 +276,14 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 			height, len(fetchBatch)))
 		if len(fetchBatch) == 0 {
 			bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("no txs in tx pool, proposing block stopped"))
-
 			// fetch Tx from other block
 			fetchFromOtherBlockStart := utils.CurrentTimeMillisSeconds()
 			fetchBatch, batchIds = bp.FetchTxFromOtherBlock(height, preHash)
+			// re_gen new txBatches by retry txs
+			if len(fetchBatch) != 0 && len(batchIds) != 0 {
+				batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
+				fetchBatch = getFetchBatch(fetchBatches)
+			}
 			fetchFromOtherBlockLasts += utils.CurrentTimeMillisSeconds() - fetchFromOtherBlockStart
 			break
 		}
@@ -291,7 +292,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
 		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
 		if len(removeTxs) > 0 {
-			batchIds, fetchBatch = bp.removeAndRetryTx(height, batchIds, removeTxs, remainTxs, REMOVE)
+			batchIds, fetchBatch, fetchBatches = bp.removeAndRetryTx(height, batchIds, removeTxs, remainTxs, REMOVE)
 			bp.log.Warnf("remove the overtime transactions, remain:%d, remove:%d",
 				len(remainTxs), len(removeTxs))
 		}
@@ -303,7 +304,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	}
 	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
-	batchIds, fetchBatch = bp.fetchBatchWithoutDupTxInSameBranch(height, preHash, batchIds, fetchBatch)
+	batchIds, fetchBatch, fetchBatches = bp.fetchBatchWithoutDupTxInSameBranch(height, preHash, batchIds, fetchBatch,
+		fetchBatches)
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
@@ -787,7 +789,8 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 			}
 
 			if len(removeTxs) != 0 || len(retryTxs) != 0 {
-				newBatchIds, fetchBatch = bp.removeAndRetryTx(proposedBlock.Header.BlockHeight, batchIds, removeTxs, keepTx, RETRY)
+				newBatchIds, fetchBatch, _ = bp.removeAndRetryTx(proposedBlock.Header.BlockHeight, batchIds, removeTxs,
+					keepTx, RETRY)
 				bp.log.Infof("remove the overtime transactions, total:%d, fetch:%d, remove:%d",
 					len(proposedBlock.Txs), len(fetchBatch), len(removeTxs))
 			} else {
@@ -807,32 +810,31 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 
 func (bp *BlockProposerImpl) removeAndRetryTx(
 	height uint64, batchIds []string, removeTxs, fetchBatch []*commonpb.Transaction, mode int) (
-	[]string, []*commonpb.Transaction) {
+	[]string, []*commonpb.Transaction, [][]*commonpb.Transaction) {
 	// don't remove tx when is batchTx pool
 	if common.TxPoolType == batch.TxPoolType {
 		// remove and get new batchIds
-
 		if mode == RETRY {
 			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
 			newFetchBatch := getFetchBatch(fetchBatches)
 
-			return newBatchIds, newFetchBatch
+			return newBatchIds, newFetchBatch, fetchBatches
 		}
 
 		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
 		newFetchBatch := getFetchBatch(fetchBatches)
 
-		return newBatchIds, newFetchBatch
+		return newBatchIds, newFetchBatch, fetchBatches
 
 	}
 	bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
-	return batchIds, fetchBatch
+	return batchIds, fetchBatch, nil
 
 }
 
-func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(
-	height uint64, preHash []byte, batchIds []string, fetchBatch []*commonpb.Transaction) (
-	[]string, []*commonpb.Transaction) {
+func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, preHash []byte, batchIds []string,
+	fetchBatch []*commonpb.Transaction, fetchBatches [][]*commonpb.Transaction) ([]string, []*commonpb.Transaction,
+	[][]*commonpb.Transaction) {
 	if common.TxPoolType == batch.TxPoolType {
 		dupTxs := make([]*commonpb.Transaction, 0)
 		for _, tx := range fetchBatch {
@@ -840,25 +842,21 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(
 				dupTxs = append(dupTxs, tx)
 			}
 		}
-
 		if len(dupTxs) != 0 {
-			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, dupTxs)
-			newFetchBatch := getFetchBatch(fetchBatches)
-
-			return newBatchIds, newFetchBatch
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
+			fetchBatch = getFetchBatch(fetchBatches)
 		}
-	} else {
-		finalBatch := make([]*commonpb.Transaction, 0)
-		for _, tx := range fetchBatch {
-			if isExit, _ := common.IfExitInSameBranch(
-				height, tx.Payload.TxId, bp.proposalCache, preHash); !isExit {
-				finalBatch = append(finalBatch, tx)
-			}
-		}
-		fetchBatch = finalBatch
+		return batchIds, fetchBatch, fetchBatches
 	}
-
-	return batchIds, fetchBatch
+	finalBatch := make([]*commonpb.Transaction, 0)
+	for _, tx := range fetchBatch {
+		if isExit, _ := common.IfExitInSameBranch(
+			height, tx.Payload.TxId, bp.proposalCache, preHash); !isExit {
+			finalBatch = append(finalBatch, tx)
+		}
+	}
+	fetchBatch = finalBatch
+	return batchIds, fetchBatch, fetchBatches
 }
 
 //// isIdle, to check if proposer is idle
