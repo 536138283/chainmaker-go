@@ -185,7 +185,8 @@ func (bb *BlockBuilder) GenerateNewBlock(
 
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
-			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds, txsTimeout)
+			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds,
+				txsTimeout)
 		} else {
 			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
 		}
@@ -201,7 +202,16 @@ func (bb *BlockBuilder) GenerateNewBlock(
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
 		}
 		block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] = batchIdBytes
-		bb.log.Infof("proposer add batchIds:%v into addition data,height: %d", batchIds, block.Header.BlockHeight)
+		bb.log.InfoDynamic(func() string {
+			return fmt.Sprintf("[%v] proposer add batchIds:%v into addition data", block.Header.BlockHeight,
+				func() []string {
+					var batch0 []string
+					for i := range batchIds {
+						batch0 = append(batch0, hex.EncodeToString([]byte(batchIds[i])))
+					}
+					return batch0
+				}())
+		})
 	}
 
 	// cache proposed block
@@ -819,7 +829,8 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
 	txHashes, _, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
-	vb.log.Infof("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs), block.Header.TxRoot)
+	vb.log.Infof("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs),
+		block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
@@ -1021,8 +1032,8 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	lastProposed.AdditionalData = block.AdditionalData
 
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
-	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err := chain.commonCommit.CommitBlock(
-		lastProposed, rwSetMap, conEventMap)
+	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
+		chain.commonCommit.CommitBlock(lastProposed, rwSetMap, conEventMap)
 	if err != nil {
 		chain.log.Errorf("block common commit failed: %s, blockHeight: (%d)",
 			err.Error(), lastProposed.Header.BlockHeight)
@@ -1377,7 +1388,8 @@ func recoverBlock(
 			return nil, nil, err
 		}
 
-		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight, int(maxRetryTime*retryInterval))
+		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
+			int(maxRetryTime*retryInterval))
 		if err != nil {
 			return nil, nil, err
 		}

@@ -8,26 +8,24 @@ package proposer
 
 import (
 	"bytes"
-	"chainmaker.org/chainmaker/net-common/utils"
 	"fmt"
 	"sync"
 	"time"
 
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
-
-	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/protocol/v2"
-
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/net-common/utils"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -306,7 +304,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	}
 	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
-	batchIds, fetchBatch, fetchBatches = bp.fetchBatchWithoutDupTxInSameBranch(height, preHash, batchIds, fetchBatch, fetchBatches)
+	batchIds, fetchBatch, fetchBatches = bp.fetchBatchWithoutDupTxInSameBranch(height, preHash, batchIds, fetchBatch,
+		fetchBatches)
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
@@ -790,7 +789,8 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 			}
 
 			if len(removeTxs) != 0 || len(retryTxs) != 0 {
-				newBatchIds, fetchBatch, _ = bp.removeAndRetryTx(proposedBlock.Header.BlockHeight, batchIds, removeTxs, keepTx, RETRY)
+				newBatchIds, fetchBatch, _ = bp.removeAndRetryTx(proposedBlock.Header.BlockHeight, batchIds, removeTxs,
+					keepTx, RETRY)
 				bp.log.Infof("remove the overtime transactions, total:%d, fetch:%d, remove:%d",
 					len(proposedBlock.Txs), len(fetchBatch), len(removeTxs))
 			} else {
