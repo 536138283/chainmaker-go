@@ -429,11 +429,16 @@ storage:
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0 common write，1 quick write
 
+  # state db cache
   state_cache_config:
-    life_window: 3000000000000   #key/value ttl time, ns
+    # key/value ttl time, ns
+    life_window: 3000000000000
+    # interval between removing expired keys and values(clean up).
     clean_window: 1000000000
+    # max size of entry in bytes.
     max_entry_size: 500
-    hard_max_cache_size: 10240   #cache size MB
+    # max cache size MB
+    hard_max_cache_size: 1024
   # Block db config
   blockdb_config:
     # Databases type support leveldb, sql, badgerdb, tikvdb
