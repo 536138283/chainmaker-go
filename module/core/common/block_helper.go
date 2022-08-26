@@ -1059,11 +1059,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	chain.proposalCache.ClearProposedBlockAt(height)
 
 	// clear propose repeat map before send
-	ProposeRepeatTimerMap = sync.Map{}
-	ProposeRepeatTimerMap.Range(func(key, value interface{}) bool {
-		ProposeRepeatTimerMap.Delete(key)
-		return true
-	})
+	ClearProposeRepeatTimerMap()
 
 	// synchronize new block height to consensus and sync module
 	chain.msgBus.PublishSafe(msgbus.BlockInfo, blockInfo)
@@ -1578,4 +1574,11 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 	} else {
 		chain.log.Errorw("bytehelper.Uint64ToBytes failed", "err", err)
 	}
+}
+
+func ClearProposeRepeatTimerMap() {
+	ProposeRepeatTimerMap.Range(func(key, value interface{}) bool {
+		ProposeRepeatTimerMap.Delete(key)
+		return true
+	})
 }

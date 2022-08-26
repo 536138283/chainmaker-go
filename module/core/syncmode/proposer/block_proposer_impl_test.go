@@ -10,8 +10,11 @@ import (
 	"crypto/sha256"
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
@@ -1109,4 +1112,23 @@ func createBlockByHash(height uint64, hash []byte) *commonpb.Block {
 	}
 
 	return block
+}
+
+// run this test with `-race`
+func TestBlockProposerImpl_getLastProposeTimeByBlockFinger_raceCondition(t *testing.T) {
+	finger1 := "test finger 1"
+	bp := &BlockProposerImpl{}
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go func() {
+		got, err := bp.getLastProposeTimeByBlockFinger(finger1)
+		assert.Nil(t, err)
+		assert.Greater(t, got, int64(0))
+		wg.Done()
+	}()
+	go func() {
+		common.ClearProposeRepeatTimerMap()
+		wg.Done()
+	}()
+	wg.Wait()
 }
