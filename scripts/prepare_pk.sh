@@ -186,7 +186,7 @@ function generate_config() {
 
     read -p "enable vm go (YES|NO(default))" enable_vm_go
     if  [ ! -z "$enable_vm_go" ]; then
-      if  [ $enable_vm_go == "YES" ]; then
+      if  [ $enable_vm_go == "yes" ] || [ $enable_vm_go == "YES" ]; then
           ENABLE_VM_GO="true"
 
           read -p "vm go transport protocol (uds|tcp(default))" transport_protocol
