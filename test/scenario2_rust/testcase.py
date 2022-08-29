@@ -20,7 +20,7 @@ class Test(unittest.TestCase):
 
         print("\n","rust asset 合约安装".center(50, "="))
         cd_asset = ContractDeal("asset", sync_result=True)
-        result_erc = cd_asset.create("WASMER", "asset.wasm",params=r"{\"issue_limit\":\"10000000\",\"total_supply\":\"1000000000\"}", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        result_erc = cd_asset.create("WASMER", "rust-asset-2.0.0.wasm",params=r"{\"issue_limit\":\"10000000\",\"total_supply\":\"1000000000\"}", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
         print("rust asset 合约地址:",asset_address,"\n")
 
@@ -74,14 +74,14 @@ class Test(unittest.TestCase):
 
 
         print("给A账户增发代币100".center(50, "="))
-        cd_asset.invoke("issue_amount", r"{\"amount\":\"100\",\"to\":\"33449aada691ddd8e2b7ddf6b9556684108d319ce0efb0b63884b9bf3cac2e04\"}",
+        cd_asset.invoke("issue_amount", r"{\"amount\":\"100\",\"to\":\"fe2bb3b5b09cb9e506912d605f0d62947ed7154400ce9775113d720239b51f72\"}",
                                                 sdk_config="sdk_config.yml",
                                                 signkey="",
                                                 signcrt="",
                                                 org="")
 
         print("给B账户增发代币100".center(50, "="))
-        cd_asset.invoke("issue_amount", r"{\"amount\":\"100\",\"to\":\"157e39b86ff75435877af4f564d4aa1b94030ca158a52cc50f321f7e980701b1\"}",
+        cd_asset.invoke("issue_amount", r"{\"amount\":\"100\",\"to\":\"9afc94e4343b5d6c1d3017e1cdc4ab3dd953ab5250bd1f2f6f8903037075cd77\"}",
                     sdk_config="sdk_config.yml",
                     signkey="",
                     signcrt="",
@@ -90,7 +90,7 @@ class Test(unittest.TestCase):
 
 
         print("A账户给B账户转账10".center(50, "="))
-        cd_asset.invoke("transfer", r"{\"amount\":\"10\",\"to\":\"157e39b86ff75435877af4f564d4aa1b94030ca158a52cc50f321f7e980701b1\"}",
+        cd_asset.invoke("transfer", r"{\"amount\":\"10\",\"to\":\"9afc94e4343b5d6c1d3017e1cdc4ab3dd953ab5250bd1f2f6f8903037075cd77\"}",
                         sdk_config="sdk_config.yml",
                         signkey="",
                         signcrt="",
@@ -100,7 +100,7 @@ class Test(unittest.TestCase):
 
         print("查询A账户余额，应该为90".center(50, "="))
         balance_a_result = cd_asset.get("balance_of",
-                                        r"{\"owner\":\"33449aada691ddd8e2b7ddf6b9556684108d319ce0efb0b63884b9bf3cac2e04\"}",
+                                        r"{\"owner\":\"fe2bb3b5b09cb9e506912d605f0d62947ed7154400ce9775113d720239b51f72\"}",
                                         sdk_config="sdk_config2.yml", signkey="", signcrt="", org="")
 
         balance_user_a = base64.b64decode(json.loads(balance_a_result).get("contract_result").get("result"))
@@ -111,7 +111,7 @@ class Test(unittest.TestCase):
 
         print("查询B账户余额，应该为110".center(50, "="))
         balance_b_result = cd_asset.get("balance_of",
-                                        r"{\"owner\":\"157e39b86ff75435877af4f564d4aa1b94030ca158a52cc50f321f7e980701b1\"}",
+                                        r"{\"owner\":\"9afc94e4343b5d6c1d3017e1cdc4ab3dd953ab5250bd1f2f6f8903037075cd77\"}",
                                         sdk_config="sdk_config2.yml", signkey="", signcrt="", org="")
 
         balance_user_b = base64.b64decode(json.loads(balance_b_result).get("contract_result").get("result"))
@@ -121,7 +121,7 @@ class Test(unittest.TestCase):
 
 
         print("B账户给A账户授权代转账金额为50".center(50, "="))
-        cd_asset.invoke("approve", r"{\"amount\":\"50\",\"spender\":\"33449aada691ddd8e2b7ddf6b9556684108d319ce0efb0b63884b9bf3cac2e04\"}",
+        cd_asset.invoke("approve", r"{\"amount\":\"50\",\"spender\":\"fe2bb3b5b09cb9e506912d605f0d62947ed7154400ce9775113d720239b51f72\"}",
                         sdk_config="sdk_config.yml",
                         signkey="../config/wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.key",
                         signcrt="../config/wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
@@ -130,7 +130,7 @@ class Test(unittest.TestCase):
 
 
         print("A账户用B账户授权的代币给C账户转账10".center(50, "="))
-        cd_asset.invoke("transfer_from", r"{\"amount\":\"10\",\"from\":\"157e39b86ff75435877af4f564d4aa1b94030ca158a52cc50f321f7e980701b1\",\"to\":\"1dc96c9fba4b7b93e00395c8e6af30a9f3ff9de6db28185c3eb2ed6668693c54\"}",
+        cd_asset.invoke("transfer_from", r"{\"amount\":\"10\",\"from\":\"9afc94e4343b5d6c1d3017e1cdc4ab3dd953ab5250bd1f2f6f8903037075cd77\",\"to\":\"b1887445b97e0bbad8f366c357a8e73cc93812f10fcec372d20313984f62a1fc\"}",
                         sdk_config="sdk_config.yml",
                         signkey="",
                         signcrt="",
@@ -141,7 +141,7 @@ class Test(unittest.TestCase):
 
         print("查询B账户给A账户授权代转账的余额,应该为40".center(50, "="))
         balance_b_allowance_a_result = cd_asset.get("allowance",
-                                        r"{\"spender\":\"33449aada691ddd8e2b7ddf6b9556684108d319ce0efb0b63884b9bf3cac2e04\",\"owner\":\"157e39b86ff75435877af4f564d4aa1b94030ca158a52cc50f321f7e980701b1\"}",
+                                        r"{\"spender\":\"fe2bb3b5b09cb9e506912d605f0d62947ed7154400ce9775113d720239b51f72\",\"owner\":\"9afc94e4343b5d6c1d3017e1cdc4ab3dd953ab5250bd1f2f6f8903037075cd77\"}",
                                         sdk_config="sdk_config2.yml", signkey="", signcrt="", org="")
 
         balance_b_allowance_a = base64.b64decode(json.loads(balance_b_allowance_a_result).get("contract_result").get("result"))
