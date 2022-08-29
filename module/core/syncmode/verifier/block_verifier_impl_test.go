@@ -291,9 +291,11 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
 	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(b1.Dag)
+	snapshot.EXPECT().ApplyBlock(gomock.Any(), gomock.Any()).AnyTimes()
 	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
+
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()

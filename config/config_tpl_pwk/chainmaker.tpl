@@ -404,11 +404,16 @@ storage:
   write_block_type: 0  # 0普通写模式，1快速写模式
   # Whether to disable blockFileDb
   disable_block_file_db: false
+  # state db cache
   state_cache_config:
-    life_window: 3000000000000   #key/value ttl 时间，单位 ns
+    # key/value ttl time, ns
+    life_window: 3000000000000
+    # interval between removing expired keys and values(clean up).
     clean_window: 1000000000
+    # max size of entry in bytes.
     max_entry_size: 500
-    hard_max_cache_size: 10240   #缓存大小，单位MB
+    # max cache size MB
+    hard_max_cache_size: 1024
 
   # Block db config
   blockdb_config:

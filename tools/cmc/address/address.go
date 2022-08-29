@@ -25,7 +25,8 @@ import (
 )
 
 const (
-	flagHashType = "hash-type"
+	flagHashType     = "hash-type"
+	flagBlockVersion = "block-version"
 
 	// address types
 	addressTypeZXL = "zhixinchain"
@@ -40,6 +41,7 @@ var (
 		1: crypto.HASH_TYPE_SHA3_256,
 		2: crypto.HASH_TYPE_SM3,
 	}
+	blockVersion uint32
 )
 
 var flags *pflag.FlagSet
@@ -47,8 +49,8 @@ var flags *pflag.FlagSet
 func init() {
 	flags = &pflag.FlagSet{}
 	flags.IntVar(&hashType, flagHashType, 0,
-		`The type of hash algo obtained. 0: SAH256 (default), 1: SHA3_256, 2: SM3"
-eg. --address-type=0`)
+		"The type of hash algo obtained. 0: SAH256 (default), 1: SHA3_256, 2: SM3 eg. --hash-type=1")
+	flags.Uint32Var(&blockVersion, flagBlockVersion, 2300, "Block version")
 }
 
 type addrSki struct {
@@ -259,15 +261,15 @@ func newName2AddrCMD() *cobra.Command {
 		Long:  "get address from contract name string",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			addrCm, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_CHAINMAKER)
+			addrCm, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_CHAINMAKER, blockVersion)
 			if err != nil {
 				return err
 			}
-			addrZxl, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_ZXL)
+			addrZxl, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_ZXL, blockVersion)
 			if err != nil {
 				return err
 			}
-			addrEvm, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_ETHEREUM)
+			addrEvm, err := cmutils.NameToAddrStr(args[0], configPb.AddrType_ETHEREUM, blockVersion)
 			if err != nil {
 				return err
 			}
@@ -282,5 +284,6 @@ func newName2AddrCMD() *cobra.Command {
 			return nil
 		},
 	}
+	util.AttachFlags(cmd, flags, []string{flagBlockVersion})
 	return cmd
 }

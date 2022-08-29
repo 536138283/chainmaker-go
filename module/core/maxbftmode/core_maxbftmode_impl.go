@@ -53,6 +53,7 @@ type CoreEngine struct {
 
 // NewCoreEngine new a core engine.
 func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
+	cf.Log.Infof("start core module, chainConfig: %+v \n", cf.ChainConf.ChainConfig())
 	core := &CoreEngine{
 		msgBus:          cf.MsgBus,
 		txPool:          cf.TxPool,
@@ -64,7 +65,11 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		log:             cf.Log,
 	}
 	var schedulerFactory scheduler.TxSchedulerFactory
-	core.txScheduler = schedulerFactory.NewTxScheduler(cf.VmMgr, cf.ChainConf, cf.StoreHelper)
+	core.txScheduler = schedulerFactory.NewTxScheduler(
+		cf.VmMgr,
+		cf.ChainConf,
+		cf.StoreHelper,
+		cf.LedgerCache)
 	core.quitC = make(<-chan interface{})
 
 	var err error

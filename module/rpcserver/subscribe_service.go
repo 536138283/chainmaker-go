@@ -28,6 +28,7 @@ const (
 	TRUE = "true"
 )
 
+// SubscribeWS processing requests for message subscription by websocket
 func (s *ApiService) SubscribeWS(rawTxReq *commonPb.RawTxRequest, server apiPb.RpcNode_SubscribeWSServer) error {
 	var req commonPb.TxRequest
 

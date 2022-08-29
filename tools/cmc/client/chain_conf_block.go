@@ -141,7 +141,7 @@ func updateTxParameterSize() error {
 	txTimeout := chainConfig.Block.TxTimeout
 	blockTxCap := chainConfig.Block.BlockTxCapacity
 	blockSize := chainConfig.Block.BlockSize
-	blockInterval = chainConfig.Block.BlockSize
+	blockInterval = chainConfig.Block.BlockInterval
 
 	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, txTimeout, blockTxCap,
 		blockSize, blockInterval, txParameterSize)

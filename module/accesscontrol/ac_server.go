@@ -869,6 +869,8 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 		}
 		return cached.member
 	}
+
+	//handle false positive when member cache is cleared
 	var tmpMember protocol.Member
 	var err error
 	if acs.authType == protocol.PermissionedWithCert {
@@ -880,6 +882,13 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 		acs.log.Debugf("new member failed, authType = %s, err = %s", acs.authType, err.Error())
 		return nil
 	}
+	//add to cache
+	cached = &memberCached{
+		member:    tmpMember,
+		certChain: nil,
+	}
+	acs.addMemberToCache(string(member.MemberInfo), cached)
+
 	return tmpMember
 }
 

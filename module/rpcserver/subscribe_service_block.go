@@ -146,7 +146,7 @@ func (s *ApiService) sendNewBlock(store protocol.BlockchainStore, tx *commonPb.T
 		blockInfo       *commonPb.BlockInfo
 	)
 
-	blockCh := make(chan model.NewBlockEvent)
+	blockCh := make(chan model.NewBlockEvent, 1000)
 
 	chainId := tx.Payload.ChainId
 	if eventSubscriber, err = s.chainMakerServer.GetEventSubscribe(chainId); err != nil {

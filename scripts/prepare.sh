@@ -156,12 +156,23 @@ function generate_config() {
     VM_GO_LOG_LEVEL="INFO"
     VM_GO_TRANSPORT_PROTOCOL="tcp" # tcp / uds
 
-    read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
-    if  [ ! -z "$tmp" ] ;then
-      if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+    if  [ $NODE_CNT -gt 1 ] ;then
+      read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+      if  [ ! -z "$tmp" ] ;then
+        if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
           CONSENSUS_TYPE=$tmp
-      else
-        echo "unknown consensus type [" $tmp "], so use default"
+        else
+          echo "invalid consensus type [" $tmp "], so use default"
+        fi
+      fi
+    else
+      read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+      if  [ ! -z "$tmp" ] ;then
+        if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+          CONSENSUS_TYPE=$tmp
+        else
+          echo "unknown consensus type [" $tmp "], so use default"
+        fi
       fi
     fi
 
@@ -176,7 +187,7 @@ function generate_config() {
 
     read -p "enable vm go (YES|NO(default))" enable_vm_go
     if  [ ! -z "$enable_vm_go" ]; then
-      if  [ $enable_vm_go == "YES" ]; then
+      if  [ $enable_vm_go == "yes" ] || [ $enable_vm_go == "YES" ]; then
           ENABLE_VM_GO="true"
 
           read -p "vm go transport protocol (uds|tcp(default))" transport_protocol

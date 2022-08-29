@@ -31,14 +31,16 @@ go get chainmaker.org/chainmaker/protocol/v2@${BRANCH}
 go get chainmaker.org/chainmaker/sdk-go/v2@${BRANCH}
 go get chainmaker.org/chainmaker/store/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-batch/v2@${BRANCH}
+go get chainmaker.org/chainmaker/txpool-normal/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-single/v2@${BRANCH}
 go get chainmaker.org/chainmaker/utils/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-docker-go/v2@${BRANCH}
+go get chainmaker.org/chainmaker/vm-engine/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-native/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-evm/v2@${BRANCH}
-go get chainmaker.org/chainmaker/vm-gasm/v2@v2.2.1
+go get chainmaker.org/chainmaker/vm-gasm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-wasmer/v2@${BRANCH}
-go get chainmaker.org/chainmaker/vm-wxvm/v2@v2.2.1
+go get chainmaker.org/chainmaker/vm-wxvm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm/v2@${BRANCH}
 
 go mod tidy

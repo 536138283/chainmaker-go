@@ -60,10 +60,46 @@ type SnapshotImpl struct {
 	rwSetHash []byte
 }
 
+// NewQuerySnapshot create a snapshot for query tx
+func NewQuerySnapshot(store protocol.BlockchainStore, log protocol.Logger) (*SnapshotImpl, error) {
+	txCount := 1
+	lastBlock, err := store.GetLastBlock()
+	if err != nil {
+		return nil, err
+	}
+
+	querySnapshot := &SnapshotImpl{
+		blockchainStore: store,
+		preSnapshot:     nil,
+		log:             log,
+		txResultMap:     make(map[string]*commonPb.Result, txCount),
+
+		chainId:        lastBlock.Header.ChainId,
+		blockHeight:    lastBlock.Header.BlockHeight,
+		blockVersion:   lastBlock.Header.BlockVersion,
+		blockTimestamp: lastBlock.Header.BlockTimestamp,
+		blockProposer:  lastBlock.Header.Proposer,
+		preBlockHash:   lastBlock.Header.PreBlockHash,
+
+		txTable: nil,
+
+		readTable:  make(map[string]*sv, txCount),
+		writeTable: make(map[string]*sv, txCount),
+
+		txRoot:    lastBlock.Header.TxRoot,
+		dagHash:   lastBlock.Header.DagHash,
+		rwSetHash: lastBlock.Header.RwSetRoot,
+	}
+
+	return querySnapshot, nil
+}
+
+// GetPreSnapshot previous snapshot
 func (s *SnapshotImpl) GetPreSnapshot() protocol.Snapshot {
 	return s.preSnapshot
 }
 
+// SetPreSnapshot previous snapshot
 func (s *SnapshotImpl) SetPreSnapshot(snapshot protocol.Snapshot) {
 	s.preSnapshot = snapshot
 }
@@ -324,6 +360,16 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 
 	s.apply(tx, txRWSet, txResult, runVmSuccess)
 	return true, len(s.txTable)
+}
+
+func (s *SnapshotImpl) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*commonPb.TxRWSet) {
+	if len(block.Txs) != len(txRWSetMap) {
+		s.log.Warnf("txs num is: %d, but rwSet num is: %d", len(block.Txs), len(txRWSetMap))
+		return
+	}
+	for _, tx := range block.Txs {
+		s.apply(tx, txRWSetMap[tx.Payload.TxId], tx.Result, tx.Result.Code == commonPb.TxStatusCode_SUCCESS)
+	}
 }
 
 // After the read-write set is generated, add TxSimContext to the snapshot
