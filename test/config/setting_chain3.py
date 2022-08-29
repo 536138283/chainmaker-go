@@ -14,7 +14,7 @@ def UpdateSetting():
     gl.SDK_CONFIG_PATH = r'../config/sdk_config.yml'
     gl.CRYPTO_CONFIG_PATH = r'../config'
     gl.ADMIN_KEY_FILE_PATHS = ','.join([f'{gl.CRYPTO_CONFIG_PATH}/node{i}/admin/admin{i}/admin{i}.key'
-                                 for i in range(1, 4)])
+                                        for i in range(1, 4)])
 
     gl.WASM_APTH = r'../../testdata/'
     gl.SDK_PATH = r'../config/'

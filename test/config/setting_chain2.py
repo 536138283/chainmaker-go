@@ -14,7 +14,7 @@ def UpdateSetting():
     gl.SDK_CONFIG_PATH = r'../config/sdk_config.yml'
     gl.CRYPTO_CONFIG_PATH = r'../config'
     gl.ADMIN_KEY_FILE_PATHS = ','.join([f'{gl.CRYPTO_CONFIG_PATH}/wx-org{i}.chainmaker.org/keys/user/admin/admin.key'
-                                 for i in range(1, 4)])
+                                        for i in range(1, 4)])
     gl.ADMIN_ORG_IDS = ','.join([f'wx-org{i}.chainmaker.org' for i in range(1, 4)])
 
     gl.WASM_APTH = r'../../testdata/'

@@ -17,19 +17,19 @@ class Erc20(object):
         self.contract_name=contract_name
         self.sdk_config = sdk_config
         self.contract=ContractDeal(contract_name, sync_result=sync_result)
-        self.pTransfer="{\"to\": \"%s\",\"amount\": \"%d\"}"
-        self.pBalanceOf="{\"account\":\"%s\"}"
-        self.pApprove="{\"spender\": \"%s\",\"amount\": \"%d\"}"
-        self.pTransferFrom="{\"owner\": \"%s\",\"to\": \"%s\",\"amount\": \"%d\"}"
-        self.pAllowance="{\"spender\":\"%s\",\"owner\":\"%s\"}"
+        self.pTransfer="{{\"to\": \"{}\",\"amount\": \"{}\"}}"
+        self.pBalanceOf="{{\"account\":\"{}\"}}"
+        self.pApprove="{{\"spender\": \"{}\",\"amount\": \"{}\"}}"
+        self.pTransferFrom="{{\"owner\": \"{}\",\"to\": \"{}\",\"amount\": \"{}\"}}"
+        self.pAllowance="{{\"spender\":\"{}\",\"owner\":\"{}\"}}"
 
         self.abi=abi
         if abi:
-            self.pTransfer="[{\"address\": \"%s\"},{\"uint256\": \"%d\"}]"
-            self.pBalanceOf="[{\"address\":\"%s\"}]"
-            self.pApprove="[{\"address\": \"%s\"},{\"uint256\": \"%d\"}]"
-            self.pTransferFrom="[{\"address\": \"%s\"},{\"address\": \"%s\"},{\"uint256\": \"%d\"}]"
-            self.pAllowance="[{\"address\":\"%s\"},{\"address\":\"%s\"}]"
+            self.pTransfer="[{{\"address\": \"{}\"}},{{\"uint256\": \"{}\"}}]"
+            self.pBalanceOf="[{{\"address\":\"{}\"}}]"
+            self.pApprove="[{{\"address\": \"{}\"}},{{\"uint256\": \"{}\"}}]"
+            self.pTransferFrom="[{{\"address\": \"{}\"}},{{\"address\": \"{}\"}},{{\"uint256\": \"{}\"}}]"
+            self.pAllowance="[{{\"address\":\"{}\"}},{{\"address\":\"{}\"}}]"
 
     def transfer(self, to, amount):
         self.contract.invoke("transfer", self.pTransfer.format(to, amount),

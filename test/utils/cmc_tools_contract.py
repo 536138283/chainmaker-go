@@ -78,7 +78,7 @@ class ContractDeal(object):
         if abi:
             cmd = cmd + f' --abi-file-path={gl.WASM_APTH}{abi}'
         if params:
-            cmd = cmd + f' --params="{params}"'
+            cmd = cmd + f' --params=\'{params}\''
         if self.sync_result:
             cmd = cmd + f' --sync-result=true'
         if org:
@@ -104,7 +104,7 @@ class ContractDeal(object):
         if abi:
             cmd = cmd + f' --abi-file-path={gl.WASM_APTH}{abi}'
         if params:
-            cmd = cmd +f' --params="{params}"'
+            cmd = cmd + f' --params=\'{params}\''
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
