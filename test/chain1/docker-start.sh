@@ -11,7 +11,7 @@ set -x
 # if enable docker vm service and use unix domain socket, run a vm docker container
 #参数： 1 orgId，2 mountPath，3 logPath，4 节点端口，5，$contract_engine_portDocker映射端口
 function start_vm_go() {
-  container_name=VM-GO-wx-org$1.chainmaker.org
+  container_name=VM-GO-wx-org$1.ci-chain1
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -54,8 +54,8 @@ function start_vm_go() {
   --net=host \
   -v "$mount_path":/mount \
   -v "$log_path":/log \
-  -e CHAIN_RPC_PORT="$4" \
-  -e SANDBOX_RPC_PORT="$5" \
+  -e CHAIN_RPC_PORT="$5" \
+  -e SANDBOX_RPC_PORT="$4" \
   --name $container_name \
   --privileged $VM_GO_IMAGE_NAME \
    > /dev/null
@@ -68,10 +68,15 @@ function start_vm_go() {
   fi
 
   echo "start docker vm service container succeed: $container_name"
-  sleep 3
+
 }
 
+echo "clean docker go"
+docker rm -f  `docker ps -aq -f name=ci-chain1`
+echo "start docker go"
 start_vm_go 1 "./data/wx-org1.chainmaker.org/go" "./log/wx-org1.chainmaker.org/go" 32351 22351
 start_vm_go 2 "./data/wx-org2.chainmaker.org/go" "./log/wx-org2.chainmaker.org/go" 32352 22352
 start_vm_go 3 "./data/wx-org3.chainmaker.org/go" "./log/wx-org3.chainmaker.org/go" 32353 22353
 start_vm_go 4 "./data/wx-org4.chainmaker.org/go" "./log/wx-org4.chainmaker.org/go" 32354 22354
+sleep 3
+docker ps | grep "ci-chain1"
