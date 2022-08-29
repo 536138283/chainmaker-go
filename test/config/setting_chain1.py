@@ -13,14 +13,17 @@ def UpdateSetting():
     gl.CMC_TOOL_PATH = gl.TESTPROJECTPATH
     gl.SDK_CONFIG_PATH = r'../config/sdk_config.yml'
     gl.CRYPTO_CONFIG_PATH = r'../config'
-    gl.ADMIN_KEY_FILE_PATHS = ','.join([f'{gl.CRYPTO_CONFIG_PATH}/wx-org{i}.chainmaker.org/certs/user/admin1/admin1.sign.key'
+    gl.ADMIN_KEY_FILE_PATHS = ','.join([f'{gl.CRYPTO_CONFIG_PATH}/wx-org{i}.chainmaker.org/certs/user/admin1/admin1.tls.key'
                                  for i in range(1, 4)])
-    gl.ADMIN_CRT_FILE_PATHS = ','.join([f'{gl.CRYPTO_CONFIG_PATH}/wx-org{i}.chainmaker.org/certs/user/admin1/admin1.sign.crt'
+    gl.ADMIN_CRT_FILE_PATHS = ','.join([f'{gl.CRYPTO_CONFIG_PATH}/wx-org{i}.chainmaker.org/certs/user/admin1/admin1.tls.crt'
                                  for i in range(1, 4)])
 
 
-    gl.WASM_APTH = r'../../testdata/'
+    gl.WASM_APTH = r'../../wasm/'
     gl.SDK_PATH = r'../config/'
     gl.ACCOUNT_TYPE = "cert"
-    gl.USER_B_KEY = r"wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.key"
+    gl.USER_B_KEY = r"wx-org2.chainmaker.org/certs/user/admin1/admin1.tls.key"
+
+
+
 

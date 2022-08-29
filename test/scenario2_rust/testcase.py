@@ -12,7 +12,8 @@ import unittest
 sys.path.append("..")
 
 import config.public_import as gl
-from utils.cmc_tools_contract_deal_by_all import ContractDeal
+from utils.cmc_tools_contract import ContractDeal
+
 
 
 class Test(unittest.TestCase):
@@ -45,26 +46,17 @@ class Test(unittest.TestCase):
 
 
         print("query UserA address: org1 admin".center(50, "="))
-        user_a_address_result = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml",
-                                             signkey="wx-org1.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                                             signcrt="wx-org1.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                             org="wx-org1.chainmaker.org")
+        user_a_address_result = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml")
         user_a_address = base64.b64decode(json.loads(user_a_address_result).get("contract_result").get("result"))
 
 
         print("query UserB address: org2 admin".center(50, "="))
-        user_b_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml",
-                                             signkey="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                                             signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                             org="wx-org2.chainmaker.org")
+        user_b_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml")
         user_b_address2 = base64.b64decode(json.loads(user_b_address_result2).get("contract_result").get("result"))
         self.assertEqual(user_b_address2, user_b_address, "success")
 
         print("query UserC address: org3 admin".center(50, "="))
-        user_c_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml",
-                                              signkey="wx-org3.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                                              signcrt="wx-org3.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                              org="wx-org3.chainmaker.org")
+        user_c_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml")
         user_c_address2 = base64.b64decode(json.loads(user_c_address_result2).get("contract_result").get("result"))
         self.assertEqual(user_c_address2, user_c_address, "success")
 

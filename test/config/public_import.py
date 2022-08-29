@@ -11,7 +11,7 @@ TESTPROJECTPATH = "TODO"
 CMC工具配置
 """
 # cmc工具位置
-CMC_TOOL_PATH = "TODO"
+CMC_TOOL_PATH = r'../../chain1/bin'
 
 # cmc工具背书等配置
 SDK_CONFIG_PATH = r'../config/sdk_config.yml'
@@ -21,7 +21,7 @@ ADMIN_CRT_FILE_PATHS = "TODO"
 ADMIN_ORG_IDS = "TODO"
 
 # WASM_APTH = r'./testdata/claim-wasm-demo/'
-WASM_APTH = r'../../testdata/'
+WASM_APTH = r'../../wasm/'
 SDK_PATH = r'../config/'
 # 公钥身份
 # SDK_PATH = r'./testdata/sdk_config_pwk.yml'
