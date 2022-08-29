@@ -105,4 +105,4 @@ sql-qta:
 	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
 	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 qta:
-	echo "new version qta coming"
+	echo "new version qta TODO"
