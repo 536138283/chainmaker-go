@@ -19,7 +19,7 @@ def UpdateSetting():
                                  for i in range(1, 4)])
 
 
-    gl.WASM_APTH = r'../../wasm/'
+    gl.WASM_APTH = r'../../testdata/'
     gl.SDK_PATH = r'../config/'
     gl.ACCOUNT_TYPE = "cert"
     gl.USER_B_KEY = r"wx-org2.chainmaker.org/certs/user/admin1/admin1.tls.key"

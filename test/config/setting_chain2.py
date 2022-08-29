@@ -17,7 +17,7 @@ def UpdateSetting():
                                  for i in range(1, 4)])
     gl.ADMIN_ORG_IDS = ','.join([f'wx-org{i}.chainmaker.org' for i in range(1, 4)])
 
-    gl.WASM_APTH = r'../../wasm/'
+    gl.WASM_APTH = r'../../testdata/'
     gl.SDK_PATH = r'../config/'
     gl.ACCOUNT_TYPE = "pwk"
     gl.USER_B_KEY = r"wx-org2.chainmaker.org/keys/user/admin/admin.key"

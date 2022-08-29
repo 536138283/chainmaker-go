@@ -71,7 +71,7 @@ function start_vm_go() {
   sleep 3
 }
 
-start_vm_go 1 "../data/wx-org1.chainmaker.org/go" "../log/wx-org1.chainmaker.org/go" 32351 22351
-start_vm_go 2 "../data/wx-org2.chainmaker.org/go" "../log/wx-org2.chainmaker.org/go" 32352 22352
-start_vm_go 3 "../data/wx-org3.chainmaker.org/go" "../log/wx-org3.chainmaker.org/go" 32353 22353
-start_vm_go 4 "../data/wx-org4.chainmaker.org/go" "../log/wx-org4.chainmaker.org/go" 32354 22354
+start_vm_go 1 "./data/wx-org1.chainmaker.org/go" "./log/wx-org1.chainmaker.org/go" 32351 22351
+start_vm_go 2 "./data/wx-org2.chainmaker.org/go" "./log/wx-org2.chainmaker.org/go" 32352 22352
+start_vm_go 3 "./data/wx-org3.chainmaker.org/go" "./log/wx-org3.chainmaker.org/go" 32353 22353
+start_vm_go 4 "./data/wx-org4.chainmaker.org/go" "./log/wx-org4.chainmaker.org/go" 32354 22354
