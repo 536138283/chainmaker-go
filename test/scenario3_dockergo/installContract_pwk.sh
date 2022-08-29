@@ -1,7 +1,6 @@
 cd $CMC
 ./cmc client contract user create \
---abi-file-path=../../testdata/erc20.abi \
---contract-name=ERC20 \
+--contract-name=ERC20Go \
 --runtime-type=EVM \
 --byte-code-path=../../testdata/erc20.bin \
 --version=1.0 \

@@ -2,20 +2,18 @@ cd $CMC
 
 echo "A转账给B"
 ./cmc client contract user invoke \
---contract-name=ERC20 \
---abi-file-path=../../testdata/erc20.abi \
+--contract-name=ERC20Go \
 --method=transfer \
 --sdk-conf-path=../config/sdk_config.yml \
---params="[{\"address\": \"0x04dd97bbf0b8dca0e9c7c867591903b52fbdf586\"},{\"uint256\": \"100\"}]" \
+--params="{\"to\": \"8a0c48820698bf17be2fed5642d6273285afb302\",\"amount\": \"100\"}" \
 --gas-limit=99999999 \
 --sync-result=true
 
 echo "A转账给withdraw合约"
 ./cmc client contract user invoke \
---contract-name=ERC20 \
---abi-file-path=../../testdata/erc20.abi \
+--contract-name=ERC20Go \
 --method=transfer \
 --sdk-conf-path=../config/sdk_config.yml \
---params="[{\"address\": \"0xd6d64458dc76d02482052bfb8a5b33a72c054c77\"},{\"uint256\": \"200\"}]" \
+--params="{\"to\": \"0xd6d64458dc76d02482052bfb8a5b33a72c054c77\",\"amount\": \"200\"}" \
 --gas-limit=99999999 \
 --sync-result=true

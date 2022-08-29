@@ -6,7 +6,7 @@
 #
 VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.0"
 
-
+set -x
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
 #参数： 1 orgId，2 mountPath，3 logPath，4 节点端口，5，$contract_engine_portDocker映射端口
@@ -54,16 +54,8 @@ function start_vm_go() {
   --net=host \
   -v "$mount_path":/mount \
   -v "$log_path":/log \
-  -e CHAIN_RPC_PROTOCOL="" \
   -e CHAIN_RPC_PORT="$4" \
   -e SANDBOX_RPC_PORT="$5" \
-  -e MAX_SEND_MSG_SIZE="" \
-  -e MAX_RECV_MSG_SIZE="" \
-  -e MAX_CONN_TIMEOUT="" \
-  -e MAX_ORIGINAL_PROCESS_NUM="" \
-  -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="" \
-  -e DOCKERVM_SANDBOX_LOG_LEVEL="" \
-  -e DOCKERVM_LOG_IN_CONSOLE="" \
   --name $container_name \
   --privileged $VM_GO_IMAGE_NAME \
    > /dev/null
