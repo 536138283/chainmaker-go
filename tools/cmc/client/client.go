@@ -86,6 +86,7 @@ var (
 	permissionResourcePolicyRule     string
 	permissionResourcePolicyOrgList  []string
 	permissionResourcePolicyRoleList []string
+	respResultToString               bool
 )
 
 const (
@@ -146,6 +147,7 @@ const (
 	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
+	flagRespResultToString               = "result-to-string"
 )
 
 // ClientCMD new client series command
@@ -258,6 +260,8 @@ func init() {
 		"chain config permission resource policy org list")
 	flags.StringSliceVar(&permissionResourcePolicyRoleList, flagPermissionResourcePolicyRoleList, []string{},
 		"chain config permission resource policy role list")
+	flags.BoolVar(&respResultToString, flagRespResultToString, false,
+		"enable convert TxResponse.ContractResult.Result to string for readable output")
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {

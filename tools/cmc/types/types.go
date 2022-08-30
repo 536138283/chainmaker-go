@@ -44,5 +44,5 @@ type TxResponse struct {
 // ContractResult extends of *common.ContractResult
 type ContractResult struct {
 	*common.ContractResult
-	Result *common.Contract `json:"result"`
+	Result string `json:"result"`
 }
