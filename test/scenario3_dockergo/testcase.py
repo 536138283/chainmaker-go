@@ -45,7 +45,9 @@ class Test(unittest.TestCase):
                                              endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
         print("withdraw contract address: ", withdraw_address)
-
+        print("A Mint 10亿".center(50, "="))
+        erc20.invoke("mint", "{{\"account\": \"{}\",\"amount\": \"1000000000\"}}".format(user_a_address),
+                           sdk_config="sdk_config.yml",stringResult=True)
         print("A转账给B".center(50, "="))
         erc20.transfer(user_b_address,100)
 
@@ -54,7 +56,7 @@ class Test(unittest.TestCase):
 
 
         print("B调用withdraw合约，提款10".center(50, "="))
-        cd_withdraw.invoke("withdraw", r"[{\"address\": \"%s\"},{\"uint256\": \"10\"}]" % erc_address,
+        cd_withdraw.invoke("withdraw", r'[{"address": "%s"},{"uint256": "10"}]' % erc_address,
                            sdk_config="sdk_config.yml",
                            abi="withdraw.abi", signkey=gl.USER_B_KEY,
                            signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
