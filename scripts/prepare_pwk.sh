@@ -160,18 +160,18 @@ function generate_config() {
     VM_GO_TRANSPORT_PROTOCOL="tcp" # tcp / uds
 
     if  [ $NODE_CNT -gt 1 ] ;then
-      read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+      read -p "input consensus type (1-TBFT(default),4-RAFT): " tmp
       if  [ ! -z "$tmp" ] ;then
-        if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+        if [ $tmp -eq 1 ] || [ $tmp -eq 4 ] ;then
           CONSENSUS_TYPE=$tmp
         else
           echo "invalid consensus type [" $tmp "], so use default"
         fi
       fi
     else
-      read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+      read -p "input consensus type (0-SOLO,1-TBFT(default),4-RAFT): " tmp
       if  [ ! -z "$tmp" ] ;then
-        if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+        if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 4 ] ;then
           CONSENSUS_TYPE=$tmp
         else
           echo "unknown consensus type [" $tmp "], so use default"
