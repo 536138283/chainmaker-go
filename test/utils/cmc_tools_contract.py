@@ -58,7 +58,7 @@ class ContractDeal(object):
         print(result)
         return result
 
-    def invoke(self, method, params, sdk_config=None, txid=None, abi=None, signkey=None, signcrt=None, org=None):
+    def invoke(self, method, params, sdk_config=None, txid=None, abi=None, signkey=None, signcrt=None, org=None, stringResult=False):
         """
         调用合约
         :param method: 调用合约方法
@@ -86,12 +86,14 @@ class ContractDeal(object):
 
         if gl.ENABLE_GAS:
             cmd = cmd + " --gas-limit=99999999"
+        if stringResult:
+            cmd = cmd + " --result-to-string=true"
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
         return result
 
-    def get(self, method, params, sdk_config=None, abi=None):
+    def get(self, method, params, sdk_config=None, abi=None, stringResult=False):
         """
         查询合约
         :param method: 查询合约的方法
@@ -105,6 +107,8 @@ class ContractDeal(object):
             cmd = cmd + f' --abi-file-path={gl.WASM_APTH}{abi}'
         if params:
             cmd = cmd + f' --params=\'{params}\''
+        if stringResult:
+            cmd = cmd + " --result-to-string=true"
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
