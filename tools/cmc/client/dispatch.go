@@ -78,13 +78,8 @@ func invokeContract(client *sdk.ChainClient, contractName, methodName, txId stri
 		return
 	}
 
-	if resp.Code != common.TxStatusCode_SUCCESS {
-		util.PrintPrettyJson(resp)
-		return
-	}
-
 	var output interface{}
-	if abi != nil && resp.ContractResult != nil {
+	if abi != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
 		unpackedData, err := abi.Unpack(method, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
