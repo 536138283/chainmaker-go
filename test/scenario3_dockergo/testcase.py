@@ -46,7 +46,7 @@ class Test(unittest.TestCase):
         withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
         print("withdraw contract address: ", withdraw_address)
         print("A Mint 10亿".center(50, "="))
-        erc20.invoke("mint", "{{\"account\": \"{}\",\"amount\": \"1000000000\"}}".format(user_a_address),
+        cd_erc.invoke("mint", "{{\"account\": \"{}\",\"amount\": \"1000000000\"}}".format(user_a_address),
                            sdk_config="sdk_config.yml",stringResult=True)
         print("A转账给B".center(50, "="))
         erc20.transfer(user_b_address,100)
@@ -65,7 +65,7 @@ class Test(unittest.TestCase):
         print("UserA balance:".center(50, "="))
         balance_a =erc20.balanceOf(user_a_address)
 
-        expect_a = "999999999999999999999999700"
+        expect_a = "999999700"
 
         self.assertEqual(expect_a, balance_a, "success")
 

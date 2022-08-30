@@ -51,6 +51,6 @@ else
 fi
 
 # nohup ./chainmaker start -c ../config/node5/chainmaker.yml ci-chain2 > panic.log &
-echo "sleep 30s to wait Raft wakeup..."
-sleep 30
+echo "sleep 12s to wait Raft wakeup..."
+sleep 12
 ps -ef|grep chainmaker | grep "ci-chain2"
