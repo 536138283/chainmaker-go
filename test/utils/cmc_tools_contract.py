@@ -93,7 +93,7 @@ class ContractDeal(object):
         print(result)
         return result
 
-    def get(self, method, params, sdk_config=None, abi=None, stringResult=False):
+    def get(self, method, params, sdk_config=None, abi=None, stringResult=False, signkey=None, signcrt=None, org=None):
         """
         查询合约
         :param method: 查询合约的方法
@@ -109,6 +109,12 @@ class ContractDeal(object):
             cmd = cmd + f' --params=\'{params}\''
         if stringResult:
             cmd = cmd + " --result-to-string=true"
+        if signkey:
+            cmd = cmd + f" --user-signkey-file-path={gl.CRYPTO_CONFIG_PATH}/{signkey}"
+        if signcrt:
+            cmd = cmd + f" --user-signcrt-file-path={gl.CRYPTO_CONFIG_PATH}/{signcrt}"
+        if org:
+            cmd = cmd + f" --org-id={org}"
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
