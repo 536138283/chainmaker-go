@@ -599,7 +599,7 @@ func getUserContract() error {
 	}
 
 	var output interface{}
-	if contractAbi != nil && resp.ContractResult != nil {
+	if contractAbi != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
 		unpackedData, err := contractAbi.Unpack(method, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
