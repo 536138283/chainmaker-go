@@ -48,11 +48,7 @@ class Test(unittest.TestCase):
 
 
         print("注册B账户".center(50, "="))
-        user_b_address_result = cd_asset.invoke("register", "",
-                                                sdk_config="sdk_config2.yml",
-                                                signkey=gl.USER_B_KEY,
-                                                signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                                org="wx-org2.chainmaker.org")
+        user_b_address_result = cd_asset.invoke("register", "",sdk_config="sdk_config2.yml")
         user_b_address = str(base64.b64decode(json.loads(user_b_address_result).get("contract_result").get("result")),encoding='utf-8')
 
 
@@ -71,6 +67,8 @@ class Test(unittest.TestCase):
         user_b_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml")
         user_b_address2 = str(base64.b64decode(json.loads(user_b_address_result2).get("contract_result").get("result")),encoding='utf-8')
         self.assertEqual(user_b_address2, user_b_address, "success")
+
+
 
         print("query UserC address: org3 admin".center(50, "="))
         user_c_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config3.yml")
