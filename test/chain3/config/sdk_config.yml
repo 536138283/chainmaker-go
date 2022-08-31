@@ -17,10 +17,7 @@ chain_client:
       node_addr: "127.0.0.1:12301"
       # 节点连接数
       conn_cnt: 10
-    - # 节点地址，格式为：IP:端口:连接数
-      node_addr: "127.0.0.1:12302"
-      # 节点连接数
-      conn_cnt: 10
+
 
   archive:
     # 数据归档链外存储相关配置

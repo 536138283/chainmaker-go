@@ -96,7 +96,7 @@ core:
 # gas account config
 account_config:
   enable_gas: true
-  gas_admin_address: "4aab4aaad419e5cf5e145bf9ba854c17f2ff7955"
+  gas_admin_address: "ab108fc6c3850e01cee01e419d07f097186c3982"
   gas_count: 1000000000
   default_gas: 100
 

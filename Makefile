@@ -101,7 +101,9 @@ sql-qta:
 	echo "start new sql-qta test"
 	cd test/chain2 && ./build.sh
 	cd test/chain2 && ./start.sh
-	cd test/scenario1_evm && python3 demo_pwk.py
+	cd test/scenario0_native && python3 chain2.py
+	cd test/scenario1_evm && python3 chain2.py
+	cd test/scenario2_rust && python3 chain2.py
 	cd test/chain2 && ./stop.sh
 	cd test/chain2 && ./clean.sh
 qta:
@@ -111,6 +113,21 @@ qta:
 	echo "start new qta test"
 	cd test/chain1 && ./build.sh
 	cd test/chain1 && ./start.sh
-	cd test/scenario1_evm && python3 demo_cert.py
+	cd test/scenario0_native && python3 chain1.py
+	cd test/scenario1_evm && python3 chain1.py
+	cd test/scenario2_rust && python3 chain1.py
 	cd test/chain1 && ./stop.sh
 	cd test/chain1 && ./clean.sh
+
+pub-qta:
+	echo "clear environment"
+	cd test/chain3 && ./stop.sh
+	cd test/chain3 && ./clean.sh
+	echo "start new qta test"
+	cd test/chain3 && ./build.sh
+	cd test/chain3 && ./start.sh
+	cd test/scenario0_native && python3 chain3.py
+	cd test/scenario1_evm && python3 chain3.py
+	cd test/scenario2_rust && python3 chain3.py
+	cd test/chain3 && ./stop.sh
+	cd test/chain3 && ./clean.sh

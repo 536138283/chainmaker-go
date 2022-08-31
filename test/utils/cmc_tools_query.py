@@ -14,38 +14,33 @@ import config.public_import as gl
 class ContractQuery(object):
     BASE_CMD = './cmc query'
 
-    def __init__(self, query_param, sdk_config=None):
-        self.query_param = query_param
+    def __init__(self, sdk_config=None):
         self.new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
         self.sdk_config_path = f'{gl.SDK_PATH}{self.new_sdk_config}'
 
-    def query_block_height(self):
-        if self.query_param:
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-height {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
-        else:
-            cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-height --chain-id=chain1 {self.sdk_config_path}'
-
-        print(cmd)
-        result = TheServerHelper(cmd).ssh_connectionServer()
-        # print(result)
-        return result
-
-    def query_block_hash(self):
-        cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-hash {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
+    def query_block_height(self,height):
+        cmd = f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} block-by-height {height}  --sdk-conf-path={self.sdk_config_path}'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
         return result
 
-    def query_block_tx_id(self):
-        cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} block-by-txid {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
+    def query_block_hash(self,hash):
+        cmd = f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} block-by-hash {hash}  --sdk-conf-path={self.sdk_config_path}'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)
         return result
 
-    def query_by_tx(self):
-        cmd = gl.CMC_TOOL_PATH + f'{self.BASE_CMD} tx {self.query_param} --chain-id=chain1 {self.sdk_config_path}'
+    def query_block_tx_id(self,txid):
+        cmd = f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} block-by-txid {txid}  --sdk-conf-path={self.sdk_config_path}'
+        print(cmd)
+        result = TheServerHelper(cmd).ssh_connectionServer()
+        print(result)
+        return result
+
+    def query_by_tx(self,txid):
+        cmd = f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} tx {txid} --sdk-conf-path={self.sdk_config_path}'
         print(cmd)
         result = TheServerHelper(cmd).ssh_connectionServer()
         print(result)

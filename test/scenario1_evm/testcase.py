@@ -18,7 +18,7 @@ from utils.erc20 import Erc20
 
 
 class Test(unittest.TestCase):
-    def test_balance_a_compare_pwk(self):
+    def test_erc20_evm(self):
         print("query UserA address: org1 admin".center(50, "="))
         user_a_address = get_user_addr("1", "1")
         print("query UserB address: org2 admin".center(50, "="))

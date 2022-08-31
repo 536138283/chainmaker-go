@@ -1,8 +1,8 @@
 # 场景1 EVM的使用
 A账户是org1，admin1
-B账户是org1，client1
-C账户是org2，admin1
-D账户是org2，client1
+B账户是org2，admin1
+C账户是org3，admin1
+D账户是org4，admin1
 1. A安装ERC20合约
 2. 节点2查询A账户余额
 3. A发起转账给B
