@@ -13,11 +13,28 @@ sys.path.append("..")
 
 import config.public_import as gl
 from utils.cmc_tools_contract import ContractDeal
-
+from utils.cmc_tools_query import get_user_addr
+from utils.cmc_command import Command
 
 
 class Test(unittest.TestCase):
     def test_balance_a_compare_cert(self):
+        print("query UserA address: org1 admin".center(50, "="))
+        user_a_address = get_user_addr("1", "1")
+        print("query UserB address: org2 admin".center(50, "="))
+        user_b_address = get_user_addr("2", "2")
+        print("query UserC address: org3 admin".center(50, "="))
+        user_c_address = get_user_addr("3", "3")
+        print("query UserD address: org4 admin".center(50, "="))
+        user_d_address = get_user_addr("4", "4")
+        print("User ABCD address:", user_a_address, user_b_address, user_c_address, user_d_address)
+
+        if gl.ENABLE_GAS == True:
+            cmd = Command(sync_result=True)
+            cmd.recharge_gas(user_a_address)
+            cmd.recharge_gas(user_b_address)
+            cmd.recharge_gas(user_c_address)
+            cmd.recharge_gas(user_d_address)
 
         print("\n","rust asset 合约安装".center(50, "="))
         cd_asset = ContractDeal("asset", sync_result=True)
@@ -32,44 +49,31 @@ class Test(unittest.TestCase):
 
         print("注册B账户".center(50, "="))
         user_b_address_result = cd_asset.invoke("register", "",
-                                                sdk_config="sdk_config.yml",
-                                                signkey="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.key",
+                                                sdk_config="sdk_config2.yml",
+                                                signkey=gl.USER_B_KEY,
                                                 signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
                                                 org="wx-org2.chainmaker.org")
         user_b_address = str(base64.b64decode(json.loads(user_b_address_result).get("contract_result").get("result")),encoding='utf-8')
 
 
         print("注册C账户".center(50, "="))
-        user_c_address_result = cd_asset.invoke("register", "",
-                                                sdk_config="sdk_config.yml",
-                                                signkey="wx-org3.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                                                signcrt="wx-org3.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                                org="wx-org3.chainmaker.org")
+        user_c_address_result = cd_asset.invoke("register", "",sdk_config="sdk_config3.yml")
         user_c_address = str(base64.b64decode(json.loads(user_c_address_result).get("contract_result").get("result")),encoding='utf-8')
 
 
 
         print("query UserA address: org1 admin".center(50, "="))
-        user_a_address_result = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml",
-                                             signkey="wx-org1.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                                             signcrt="wx-org1.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                             org="wx-org1.chainmaker.org")
+        user_a_address_result = cd_asset.get("query_address", "", sdk_config="sdk_config.yml")
         user_a_address = str(base64.b64decode(json.loads(user_a_address_result).get("contract_result").get("result")),encoding='utf-8')
 
 
         print("query UserB address: org2 admin".center(50, "="))
-        user_b_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml",
-                                              signkey="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                                              signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                              org="wx-org2.chainmaker.org")
+        user_b_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml")
         user_b_address2 = str(base64.b64decode(json.loads(user_b_address_result2).get("contract_result").get("result")),encoding='utf-8')
         self.assertEqual(user_b_address2, user_b_address, "success")
 
         print("query UserC address: org3 admin".center(50, "="))
-        user_c_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml",
-                                              signkey="wx-org3.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                                              signcrt="wx-org3.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                                              org="wx-org3.chainmaker.org")
+        user_c_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config3.yml")
         user_c_address2 = str(base64.b64decode(json.loads(user_c_address_result2).get("contract_result").get("result")),encoding='utf-8')
         self.assertEqual(user_c_address2, user_c_address, "success")
 
@@ -126,10 +130,7 @@ class Test(unittest.TestCase):
 
         print("B账户给A账户授权代转账金额为50".center(50, "="))
         cd_asset.invoke("approve", "{{\"spender\":\"{}\",\"amount\":\"{}\"}}".format(user_a_address,50),
-                        sdk_config="sdk_config.yml",
-                        signkey="../config/wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.key",
-                        signcrt="../config/wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
-                        org="wx-org2.chainmaker.org")
+                        sdk_config="sdk_config2.yml")
 
 
 
