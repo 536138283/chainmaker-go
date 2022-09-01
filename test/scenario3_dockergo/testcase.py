@@ -41,7 +41,7 @@ class Test(unittest.TestCase):
         erc20 = Erc20(erc_address,None,True,sdk_config="sdk_config.yml")
         print("withdraw合约安装".center(50, "="))
         cd_withdraw = ContractDeal("withdraw", sync_result=True)
-        result_withdraw = cd_withdraw.create("EVM", "withdraw.bin", public_identity=f'{gl.ACCOUNT_TYPE}',abi="withdraw.abi",
+        result_withdraw = cd_withdraw.create("EVM", "withdrawgo.bin", public_identity=f'{gl.ACCOUNT_TYPE}',abi="withdraw.abi",
                                              endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
         print("withdraw contract address: ", withdraw_address)
