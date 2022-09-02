@@ -19,7 +19,7 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.2.2-0.20220826100541-913eb9012cc6
 	chainmaker.org/chainmaker/protocol/v2 v2.2.3-0.20220826022819-2baf2eabad50
 	chainmaker.org/chainmaker/sdk-go/v2 v2.2.2-0.20220825084146-0300b4ecbbcf
-	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220824032236-4208406e4a65
+	chainmaker.org/chainmaker/store/v2 v2.2.2-0.20220902024051-9d0ca987b111
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.2.3-0.20220804091209-d91a8c63a802
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.0.0-20220804091131-a853cc122e72
 	chainmaker.org/chainmaker/txpool-single/v2 v2.2.3-0.20220804090400-91ae3af54683
@@ -69,6 +69,7 @@ require (
 
 require (
 	chainmaker.org/chainmaker/raftwal/v2 v2.1.1-0.20211220112831-1ebb19d509ff // indirect
+	chainmaker.org/chainmaker/store-sqldb/v2 v2.2.2-0.20220901083152-4bad2fcec892 // indirect
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
