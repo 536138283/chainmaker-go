@@ -82,43 +82,35 @@ class Test(unittest.TestCase):
 
         print("给A账户增发代币100".center(50, "="))
         cd_asset.invoke("issue_amount", "{{\"to\": \"{}\",\"amount\": \"{}\"}}".format(user_a_address,100),
-                        sdk_config="sdk_config.yml",
-                        signkey="",
-                        signcrt="",
-                        org="")
+                        sdk_config="sdk_config.yml")
+
 
         print("给B账户增发代币100".center(50, "="))
         cd_asset.invoke("issue_amount", "{{\"to\":\"{}\",\"amount\":\"{}\"}}".format(user_b_address2,100),
-                        sdk_config="sdk_config.yml",
-                        signkey="",
-                        signcrt="",
-                        org="")
+                        sdk_config="sdk_config.yml")
+
 
         print("A账户给B账户转账10".center(50, "="))
         cd_asset.invoke("transfer", "{{\"to\":\"{}\",\"amount\":\"{}\"}}".format(user_b_address2,10),
-                        sdk_config="sdk_config.yml",
-                        signkey="",
-                        signcrt="",
-                        org="")
+                        sdk_config="sdk_config.yml")
+
 
         print("B账户给A账户授权代转账金额为50".center(50, "="))
-        cd_asset.invoke("approve", "{{\"spender\":\"{}\",\"amount\":\"{}\"}}".format(user_a_address,50),
-                        sdk_config="sdk_config2.yml")
+        cd_asset.invoke("approve", "{{\"spender\":\"{}\",\"amount\":\"{}\"}}".format(user_a_address,50),sdk_config="sdk_config2.yml")
+
 
 
 
         print("A账户用B账户授权的金额给C账户转账10".center(50, "="))
         cd_asset.invoke("transfer_from", "{{\"from\":\"{}\",\"to\":\"{}\",\"amount\":\"{}\"}}".format(user_b_address2,user_c_address2,10),
-                        sdk_config="sdk_config.yml",
-                        signkey="",
-                        signcrt="",
-                        org="")
+                        sdk_config="sdk_config.yml")
+
 
 
         print("查询B账户给A账户授权代转账的余额,应该为40".center(50, "="))
         balance_b_allowance_a_result = cd_asset.get("allowance",
                                                     "{{\"owner\":\"{}\",\"spender\":\"{}\"}}".format(user_b_address2,user_a_address),
-                                                    sdk_config="sdk_config.yml", signkey="", signcrt="", org="")
+                                                    sdk_config="sdk_config.yml")
 
         balance_b_allowance_a = base64.b64decode(json.loads(balance_b_allowance_a_result).get("contract_result").get("result"))
         print("查询结果：B账户给A账户授权的代转账余额:",balance_b_allowance_a,"\n")
@@ -132,9 +124,10 @@ class Test(unittest.TestCase):
 
 
         print("查询B账户余额，应该为100".center(50, "="))
-        balance_b_result = cd_asset.get("balance_of",
-                                        "{{\"owner\":\"{}\"}}".format(user_b_address2),
-                                        sdk_config="sdk_config2.yml", signkey="", signcrt="", org="")
+        balance_b_result = cd_asset.get("balance_of","{{\"owner\":\"{}\"}}".format(user_b_address2),
+                                        sdk_config="sdk_config2.yml")
+
+
 
         balance_user_b = base64.b64decode(json.loads(balance_b_result).get("contract_result").get("result"))
         print("查询结果：B账户余额",balance_user_b,"\n")
