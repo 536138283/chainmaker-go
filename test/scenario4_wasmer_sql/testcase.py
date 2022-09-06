@@ -120,7 +120,7 @@ class Test(unittest.TestCase):
         cd_asset.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(20),"长安链chainmaker",str(2000),"510623199202023323"))
 
         print("10.1 提交一笔执行会失败的交易".center(50, "="))
-        cd_asset.invoke("sql_insql_update_rollback_save_point",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(20),"chainmaker_save_point"))
+        cd_asset.invoke("sql_update_rollback_save_point",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(20),"chainmaker_save_point"))
 
         print("10.2 查询提交的失败交易有没有对上一笔产生影响".center(50, "="))
         query_id_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(20)))
@@ -132,7 +132,7 @@ class Test(unittest.TestCase):
         print("id_card_no:",str(base64.b64decode(json.loads(query_id).get("id_card_no")),encoding='utf-8'),"\n")
 
         name=str(base64.b64decode(json.loads(query_id).get("name")),encoding='utf-8')
-        self.assertEqual(name, '长安链chainmaker_update', "success")
+        self.assertEqual(name, '长安链chainmaker', "success")
 
 
         print("11.升级合约".center(50, "="))
