@@ -30,6 +30,7 @@ import (
 	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
+	"chainmaker.org/chainmaker/protocol/v2/test"
 	"chainmaker.org/chainmaker/utils/v2"
 
 	"github.com/golang/mock/gomock"
@@ -1099,7 +1100,7 @@ func TestBlockProposerImpl_getChainVersion(t *testing.T) {
 				exitC:                  nil,
 				proposalCache:          nil,
 				chainConf:              nil,
-				log:                    nil,
+				log:                    &test.HoleLogger{},
 				finishProposeC:         nil,
 				metricBlockPackageTime: nil,
 				proposer:               nil,
@@ -1193,7 +1194,7 @@ func TestBlockProposerImpl_setNotIdle(t *testing.T) {
 				exitC:                  nil,
 				proposalCache:          nil,
 				chainConf:              nil,
-				log:                    nil,
+				log:                    &test.HoleLogger{},
 				finishProposeC:         nil,
 				metricBlockPackageTime: nil,
 				proposer:               nil,
@@ -1222,7 +1223,7 @@ func TestBlockProposerImpl_setNotIdle(t *testing.T) {
 				exitC:                  nil,
 				proposalCache:          nil,
 				chainConf:              nil,
-				log:                    nil,
+				log:                    &test.HoleLogger{},
 				finishProposeC:         nil,
 				metricBlockPackageTime: nil,
 				proposer:               nil,

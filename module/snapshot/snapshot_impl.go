@@ -381,6 +381,9 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	return true, len(s.txTable)
 }
 
+// ApplyBlock apply new block
+// @param block
+// @param txRWSetMap
 func (s *SnapshotImpl) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*commonPb.TxRWSet) {
 	if len(block.Txs) != len(txRWSetMap) {
 		s.log.Warnf("txs num is: %d, but rwSet num is: %d", len(block.Txs), len(txRWSetMap))

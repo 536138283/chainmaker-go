@@ -94,7 +94,8 @@ func (f *TxFilter) SetHeight(height uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...common.RuleType) (bool, uint64, *txfilter.Stat, error) {
+func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...common.RuleType) (
+	bool, uint64, *txfilter.Stat, error) {
 	exists, stat, err := f.IsExists(txId, ruleType...)
 	if err != nil {
 		return false, 0, stat, err

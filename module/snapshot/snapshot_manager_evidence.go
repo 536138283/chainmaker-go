@@ -103,6 +103,9 @@ func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 	return nil
 }
 
+// ClearSnapshot clear snapshot by block
+// @param block
+// @return error
 func (m *ManagerEvidence) ClearSnapshot(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()

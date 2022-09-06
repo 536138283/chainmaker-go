@@ -35,11 +35,18 @@ func (s *SnapshotEvidence) SetBlockFingerprint(fp utils.BlockFingerPrint) {
 	s.delegate.SetBlockFingerprint(fp)
 }
 
+// GetKeys get keys
+// @param txExecSeq
+// @param keys
+// @return []*vmPb.BatchKey
+// @return error
 func (s *SnapshotEvidence) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	//TODO implement me
 	panic("implement me")
 }
 
+// GetPreSnapshot get pre snapshot
+// @return protocol.Snapshot
 func (s *SnapshotEvidence) GetPreSnapshot() protocol.Snapshot {
 	if s.delegate == nil {
 		return nil
@@ -211,6 +218,9 @@ func (s *SnapshotEvidence) GetBlockProposer() *accesscontrol.Member {
 	return s.delegate.blockProposer
 }
 
+// ApplyBlock apply new block
+// @param block
+// @param txRWSetMap
 func (s *SnapshotEvidence) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*commonPb.TxRWSet) {
 	if s.delegate == nil {
 		return

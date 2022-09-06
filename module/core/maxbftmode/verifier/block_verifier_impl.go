@@ -166,6 +166,11 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	return err
 }
 
+// VerifyBlockSync verify block
+// @param block
+// @param mode
+// @return result
+// @return err
 func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
 	mode protocol.VerifyMode) (result *consensuspb.VerifyResult, err error) {
 	return v.verifyBlock(block, mode)

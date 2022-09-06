@@ -51,6 +51,7 @@ const (
 )
 
 const (
+	// ErrMsgOfGasLimitNotSet error message
 	ErrMsgOfGasLimitNotSet = "field `GasLimit` must be set in payload."
 )
 
@@ -80,6 +81,7 @@ type TxScheduler struct {
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]bool
 
+// TxIdAndExecOrderType txid and ExecOrderTxType
 type TxIdAndExecOrderType struct {
 	string
 	protocol.ExecOrderTxType
@@ -1229,11 +1231,15 @@ func wholeCertInfo(txSimContext protocol.TxSimContext, certHash string) (*common
 	}, nil
 }
 
+// SenderGroup sender group
 type SenderGroup struct {
 	txsMap     map[[32]byte][]*commonPb.Transaction
 	doneTxKeyC chan [32]byte
 }
 
+// NewSenderGroup 构造SenderGroup
+// @param txBatch
+// @return *SenderGroup
 func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
 	return &SenderGroup{
 		txsMap:     getSenderTxsMap(txBatch),

@@ -54,28 +54,28 @@ type BlockProposerImpl struct {
 	txFilter protocol.TxFilter
 	// whether current node can propose block now
 	isProposer bool
-	// whether current node is proposing or not
+	//idle whether current node is proposing or not
 	idle bool
-	// timer controls the proposing periods
+	//proposeTimer timer controls the proposing periods
 	proposeTimer *time.Timer
-	// channel to handle propose status change from consensus module
-	canProposeC chan bool
-	// channel to handle propose signal from tx pool
+	//canProposeC channel to handle propose status change from consensus module
+	//canProposeC chan bool
+	//txPoolSignalC channel to handle propose signal from tx pool
 	txPoolSignalC chan *txpoolpb.TxPoolSignal
-	// channel to stop proposing loop
+	//exitC channel to stop proposing loop
 	exitC chan bool
-	// proposal cache
+	//proposalCache proposal cache
 	proposalCache protocol.ProposalCache
-	// chain config
+	//chainConf chain config
 	chainConf protocol.ChainConf
-	// for proposeBlock reentrant lock
+	//idleMu for proposeBlock reentrant lock
 	idleMu sync.Mutex
-	// for propose status change lock
+	//statusMu for propose status change lock
 	statusMu sync.Mutex
-	// for isProposer lock, avoid race
+	//proposerMu for isProposer lock, avoid race
 	proposerMu sync.RWMutex
 	log        protocol.Logger
-	// channel to receive signal to yield propose block
+	//finishProposeC channel to receive signal to yield propose block
 	finishProposeC chan bool
 	// metric block package time
 	metricBlockPackageTime *prometheus.HistogramVec
@@ -118,9 +118,11 @@ type BlockProposerConfig struct {
 }
 
 const (
-	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
-
-	RETRY  = 0
+	//DEFAULTDURATION default proposal duration, millis seconds
+	DEFAULTDURATION = 1000
+	//RETRY 0
+	RETRY = 0
+	//REMOVE 1
 	REMOVE = 1
 )
 
@@ -477,6 +479,11 @@ func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
 	}
 }
 
+// FetchTxFromOtherBlock fetch tx
+// @param height
+// @param preHash
+// @return []*commonpb.Transaction
+// @return []string
 func (bp *BlockProposerImpl) FetchTxFromOtherBlock(height uint64, preHash []byte) (
 	[]*commonpb.Transaction, []string) {
 
@@ -564,11 +571,11 @@ func (bp *BlockProposerImpl) getDuration() time.Duration {
 // @Deprecated
 //nolint: unused
 func (bp *BlockProposerImpl) getChainVersion() uint32 {
-	//if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
-	//	return []byte(protocol.DefaultBlockVersion)
-	//}
-	//return []byte(bp.chainConf.ChainConfig().Version)
-	return protocol.DefaultBlockVersion
+	if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
+		bp.log.Warnf("No chain config found, use default block version:%d", protocol.DefaultBlockVersion)
+		return protocol.DefaultBlockVersion
+	}
+	return bp.chainConf.ChainConfig().GetBlockVersion()
 }
 
 // setNotIdle, set not idle status

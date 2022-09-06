@@ -136,6 +136,9 @@ func calcNotConsensusFingerPrint(block *commonPb.Block) utils.BlockFingerPrint {
 	return utils.CalcBlockFingerPrintWithoutTx(newBlock)
 }
 
+// ClearSnapshot clear snapshot by block
+// @param block
+// @return error
 func (m *ManagerImpl) ClearSnapshot(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()

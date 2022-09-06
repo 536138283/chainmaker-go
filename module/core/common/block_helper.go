@@ -57,7 +57,7 @@ const (
 	QuickSyncVerifyMode = uint8(1)
 	// NormalVerifyMode normal verify mode
 	NormalVerifyMode = uint8(0)
-
+	//DEFAULTTIMEOUT default timeout
 	DEFAULTTIMEOUT = 5000
 )
 
@@ -299,7 +299,7 @@ func initNewBlock(
 			PreBlockHash:   lastBlock.Header.BlockHash,
 			BlockHash:      nil,
 			PreConfHeight:  preConfHeight,
-			BlockVersion:   protocol.DefaultBlockVersion,
+			BlockVersion:   chainConf.ChainConfig().GetBlockVersion(),
 			DagHash:        nil,
 			RwSetRoot:      nil,
 			TxRoot:         nil,
@@ -1729,6 +1729,7 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 	}
 }
 
+// ClearProposeRepeatTimerMap clear map data
 func ClearProposeRepeatTimerMap() {
 	ProposeRepeatTimerMap.Range(func(key, value interface{}) bool {
 		ProposeRepeatTimerMap.Delete(key)

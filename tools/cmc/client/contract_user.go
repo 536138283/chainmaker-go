@@ -116,7 +116,7 @@ func invokeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
-		flagGasLimit, flagTxId, flagContractAddress,
+		flagGasLimit, flagTxId, flagContractAddress, flagRespResultToString,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -167,7 +167,7 @@ func invokeContractTimesCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
-		flagContractAddress,
+		flagContractAddress, flagGasLimit, flagRespResultToString,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -192,6 +192,7 @@ func getUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress, flagAbiFilePath,
+		flagRespResultToString,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -577,7 +578,12 @@ func invokeContractTimes() error {
 		}
 	}
 
-	DispatchTimes(client, contractName, method, kvs, evmMethod)
+	var limit *common.Limit
+	if gasLimit > 0 {
+		limit = &common.Limit{GasLimit: gasLimit}
+	}
+
+	DispatchTimes(client, contractName, method, kvs, evmMethod, limit)
 	return nil
 }
 
@@ -644,22 +650,28 @@ func getUserContract() error {
 		return nil
 	}
 
-	if contractAbi != nil && resp.ContractResult != nil {
-		output, err := contractAbi.Unpack(method, resp.ContractResult.Result)
+	var output interface{}
+	if contractAbi != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		unpackedData, err := contractAbi.Unpack(method, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
 			return nil
 		}
-		util.PrintPrettyJson(types.EvmTxResponse{
+		output = types.EvmTxResponse{
 			TxResponse: resp,
 			ContractResult: &types.EvmContractResult{
 				ContractResult: resp.ContractResult,
-				Result:         fmt.Sprintf("%v", output),
+				Result:         fmt.Sprintf("%v", unpackedData),
 			},
-		})
+		}
 	} else {
-		util.PrintPrettyJson(resp)
+		if respResultToString {
+			output = util.RespResultToString(resp)
+		} else {
+			output = resp
+		}
 	}
+	util.PrintPrettyJson(output)
 	return nil
 }
 

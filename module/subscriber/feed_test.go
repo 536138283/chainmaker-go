@@ -56,11 +56,11 @@ func TestFeedPanics(t *testing.T) {
 
 func checkPanic(want error, fn func()) (err error) {
 	defer func() {
-		panic := recover()
-		if panic == nil {
+		p := recover()
+		if p == nil {
 			err = fmt.Errorf("didn't panic")
-		} else if !reflect.DeepEqual(panic, want) {
-			err = fmt.Errorf("panicked with wrong error: got %q, want %q", panic, want)
+		} else if !reflect.DeepEqual(p, want) {
+			err = fmt.Errorf("panicked with wrong error: got %q, want %q", p, want)
 		}
 	}()
 	fn()

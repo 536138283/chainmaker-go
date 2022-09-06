@@ -54,6 +54,8 @@ type VerifyStat struct {
 	txfilter.Stat
 }
 
+// Sum sum stat data
+// @param filter
 func (stat *VerifyStat) Sum(filter *txfilter.Stat) {
 	if filter != nil {
 		stat.FpCount += filter.FpCount

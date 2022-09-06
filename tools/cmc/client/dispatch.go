@@ -16,8 +16,6 @@ import (
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	utils "chainmaker.org/chainmaker/utils/v2"
 )
 
 // Dispatch dispatch tx
@@ -37,14 +35,14 @@ func Dispatch(client *sdk.ChainClient, contractName, methodName string, kvs []*c
 
 // DispatchTimes dispatch tx in times
 func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
-	evmMethod *abi.ABI) {
+	evmMethod *abi.ABI, limit *common.Limit) {
 	var (
 		wgSendReq sync.WaitGroup
 	)
 	times := util.MaxInt(1, sendTimes)
 	wgSendReq.Add(times)
 	for i := 0; i < times; i++ {
-		go runInvokeContractOnce(client, contractName, method, kvs, &wgSendReq, evmMethod)
+		go runInvokeContractOnce(client, contractName, method, kvs, &wgSendReq, evmMethod, limit)
 	}
 	wgSendReq.Wait()
 }
@@ -57,72 +55,18 @@ func runInvokeContract(client *sdk.ChainClient, contractName, methodName string,
 	}()
 
 	for i := 0; i < totalCntPerGoroutine; i++ {
-		if client.IsEnableNormalKey() {
-			txId = utils.GetRandTxId()
-		} else {
-			txId = utils.GetTimestampTxId()
-		}
-
-		resp, err := client.InvokeContractWithLimit(contractName, methodName, txId, kvs, timeout, syncResult, limit)
-		if err != nil {
-			fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
-			return
-		}
-
-		if resp.Code != common.TxStatusCode_SUCCESS {
-			util.PrintPrettyJson(resp)
-			return
-		}
-
-		if abi != nil && resp.ContractResult != nil {
-			output, err := abi.Unpack(methodName, resp.ContractResult.Result)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			util.PrintPrettyJson(types.EvmTxResponse{
-				TxResponse: resp,
-				ContractResult: &types.EvmContractResult{
-					ContractResult: resp.ContractResult,
-					Result:         fmt.Sprintf("%v", output),
-				},
-			})
-		} else {
-			util.PrintPrettyJson(resp)
-		}
+		invokeContract(client, contractName, methodName, "", kvs, abi, limit)
 	}
 }
 
 func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
-	wg *sync.WaitGroup, evmMethod *abi.ABI) {
+	wg *sync.WaitGroup, abi *abi.ABI, limit *common.Limit) {
 
 	defer func() {
 		wg.Done()
 	}()
 
-	txId := sdkutils.GetTimestampTxId()
-	resp, err := client.InvokeContract(contractName, method, txId, kvs, timeout, syncResult)
-	if err != nil {
-		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
-		return
-	}
-
-	if resp.Code != common.TxStatusCode_SUCCESS {
-		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
-		return
-	}
-
-	if evmMethod != nil && resp.ContractResult != nil {
-		output, err := evmMethod.Unpack(method, resp.ContractResult.Result)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
-	}
-
-	fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]/[txId:%s]\n", resp.Code, resp.Message,
-		resp.ContractResult, txId)
+	invokeContract(client, contractName, method, "", kvs, abi, limit)
 }
 
 func invokeContract(client *sdk.ChainClient, contractName, methodName, txId string,
@@ -134,25 +78,26 @@ func invokeContract(client *sdk.ChainClient, contractName, methodName, txId stri
 		return
 	}
 
-	if resp.Code != common.TxStatusCode_SUCCESS {
-		util.PrintPrettyJson(resp)
-		return
-	}
-
-	if abi != nil && resp.ContractResult != nil {
-		output, err := abi.Unpack(methodName, resp.ContractResult.Result)
+	var output interface{}
+	if abi != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		unpackedData, err := abi.Unpack(method, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
 			return
 		}
-		util.PrintPrettyJson(types.EvmTxResponse{
+		output = types.EvmTxResponse{
 			TxResponse: resp,
 			ContractResult: &types.EvmContractResult{
 				ContractResult: resp.ContractResult,
-				Result:         fmt.Sprintf("%v", output),
+				Result:         fmt.Sprintf("%v", unpackedData),
 			},
-		})
+		}
 	} else {
-		util.PrintPrettyJson(resp)
+		if respResultToString {
+			output = util.RespResultToString(resp)
+		} else {
+			output = resp
+		}
 	}
+	util.PrintPrettyJson(output)
 }

@@ -8,11 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 package txpool
 
 import (
-	normal "chainmaker.org/chainmaker/txpool-normal/v2"
 	"strings"
 
+	normal "chainmaker.org/chainmaker/txpool-normal/v2"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/protocol/v2" // nolint: typecheck
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 const (
