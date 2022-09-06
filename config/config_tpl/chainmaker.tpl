@@ -422,6 +422,7 @@ storage:
     tx_capacity: 1000000000   #support max transaction capacity
     fp_rate: 0.000000001      #false postive rate
   # RWC config               default 1000000
+  enable_rwc: true #default false
   rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
 
   # Symmetric encryption key:16 bytes key

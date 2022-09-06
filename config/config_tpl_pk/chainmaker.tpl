@@ -47,7 +47,7 @@ node:
   # fast sync settings
   fast_sync:
     # Enable it or not
-    enabled: false  # [*]
+    enabled: true  # [*]
 
     # The number of blocks that did not perform fast synchronization at the end
     min_full_blocks: 10
@@ -390,6 +390,7 @@ storage:
     tx_capacity: 1000000000   #support max transaction capacity
     fp_rate: 0.000000001      #false postive rate
   # RWC config               default 1000000
+  enable_rwc: true #default false
   rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
 
 
@@ -397,8 +398,6 @@ storage:
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0普通写模式，1快速写模式
-  # Whether to disable blockFileDb
-  disable_block_file_db: false
   # state db cache
   state_cache_config:
     # key/value ttl time, ns
