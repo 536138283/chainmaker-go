@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"strings"
 
+	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/maxbftmode/helper"
@@ -64,6 +66,7 @@ type CoreEngine struct {
 
 // NewCoreEngine new a core engine.
 func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
+	cf.Log.Infof("start core module, chainConfig: %+v \n", cf.ChainConf.ChainConfig())
 	core := &CoreEngine{
 		msgBus:          cf.MsgBus,
 		txPool:          cf.TxPool,
@@ -76,7 +79,11 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 	}
 	var schedulerFactory scheduler.TxSchedulerFactory
 	// new tx scheduler to set the core engine
-	core.txScheduler = schedulerFactory.NewTxScheduler(cf.VmMgr, cf.ChainConf, cf.StoreHelper)
+	core.txScheduler = schedulerFactory.NewTxScheduler(
+		cf.VmMgr,
+		cf.ChainConf,
+		cf.StoreHelper,
+		cf.LedgerCache)
 	core.quitC = make(<-chan interface{})
 
 	var err error
@@ -147,7 +154,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 	}
 
 	// new max bft helper to set the core engine
-	core.MaxbftHelper = helper.NewMaxbftHelper(cf.TxPool, cf.ChainConf, cf.ProposalCache)
+	core.MaxbftHelper = helper.NewMaxbftHelper(cf.TxPool, cf.ChainConf, cf.ProposalCache, cf.Log)
 
 	// get the type of tx pool
 	if value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]; ok {
@@ -165,10 +172,16 @@ func (c *CoreEngine) OnQuit() {
 
 // OnMessage consume a message from message bus
 func (c *CoreEngine) OnMessage(message *msgbus.Message) {
-	// 1. receive build proposal signal from maxbft consensus
-	// 2. receive rw set verify fail txs from maxbft consensus
+	// 1. receive proposal status from consensus
+	// 2. receive propose signal from txpool
+	// 3. receive build proposal signal from maxbft consensus
+	// 4. receive deal with the tx which rw set verify fail signal from consensus
 
 	switch message.Topic {
+	case msgbus.ProposeState:
+		if proposeStatus, ok := message.Payload.(bool); ok {
+			c.blockProposer.OnReceiveProposeStatusChange(proposeStatus)
+		}
 	case msgbus.BuildProposal:
 		if proposal, ok := message.Payload.(*maxbft.BuildProposal); ok {
 			c.blockProposer.OnReceiveMaxBFTProposal(proposal)
@@ -181,6 +194,10 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 			// OnReceiveRwSetVerifyFailTxs remove verify fail txs, deal with rw set verify fail txs
 			c.blockProposer.OnReceiveRwSetVerifyFailTxs(signal)
 		}
+	case msgbus.TxPoolSignal:
+		if signal, ok := message.Payload.(*txpoolpb.TxPoolSignal); ok {
+			c.blockProposer.OnReceiveTxPoolSignal(signal)
+		}
 	}
 
 }
@@ -191,6 +208,8 @@ func (c *CoreEngine) Start() {
 	// 2. register msgbus RwSetVerifyFailTxs
 	c.msgBus.Register(msgbus.BuildProposal, c)
 	c.msgBus.Register(msgbus.RwSetVerifyFailTxs, c)
+	c.msgBus.Register(msgbus.ProposeState, c)
+	c.msgBus.Register(msgbus.TxPoolSignal, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 

@@ -15,6 +15,8 @@ import (
 	"fmt"
 	"strings"
 
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
@@ -47,6 +49,7 @@ func (cp *certACProvider) Watch(chainConfig *config.ChainConfig) error {
 	}
 
 	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
+	cp.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, cp.localOrg.id)
 
 	cp.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	cp.opts.KeyUsages[0] = x509.ExtKeyUsageAny
@@ -256,6 +259,7 @@ func (pp *permissionedPkACProvider) Watch(chainConfig *config.ChainConfig) error
 	}
 
 	pp.acService.initResourcePolicy(chainConfig.ResourcePolicies, pp.localOrg)
+	pp.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, pp.localOrg)
 
 	pp.acService.memberCache.Clear()
 
@@ -308,4 +312,73 @@ func (pp *permissionedPkACProvider) systemContractCallbackPublicKeyManagementDel
 		}
 	}
 	return nil
+}
+
+func (acs *accessControlService) initResourcePolicy_220(resourcePolicies []*config.ResourcePolicy,
+	localOrgId string) {
+	authType := strings.ToLower(acs.authType)
+	switch authType {
+	case protocol.PermissionedWithCert, protocol.Identity:
+		acs.createDefaultResourcePolicy_220(localOrgId)
+	case protocol.PermissionedWithKey:
+		acs.createDefaultResourcePolicyForPK_220(localOrgId)
+	}
+	for _, resourcePolicy := range resourcePolicies {
+		if acs.validateResourcePolicy(resourcePolicy) {
+			policy := newPolicyFromPb(resourcePolicy.Policy)
+			acs.resourceNamePolicyMap220.Store(resourcePolicy.ResourceName, policy)
+		}
+	}
+}
+
+func (acs *accessControlService) lookUpPolicy220(resourceName string) (*pbac.Policy, error) {
+	if p, ok := acs.resourceNamePolicyMap220.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+	}
+	return nil, fmt.Errorf("policy not found for resource %s", resourceName)
+}
+
+func (acs *accessControlService) lookUpExceptionalPolicy220(resourceName string) (*pbac.Policy, error) {
+	if p, ok := acs.exceptionalPolicyMap220.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+
+	}
+	return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
+}
+
+func (acs *accessControlService) lookUpPolicyByResourceName220(resourceName string) (*policy, error) {
+	p, ok := acs.resourceNamePolicyMap220.Load(resourceName)
+	if !ok {
+		if p, ok = acs.exceptionalPolicyMap220.Load(resourceName); !ok {
+			return nil, fmt.Errorf("look up access policy failed, did not configure access policy "+
+				"for resource %s", resourceName)
+		}
+	}
+	return p.(*policy), nil
+}
+
+func (acs *pkACProvider) lookUpPolicy220(resourceName string) (*pbac.Policy, error) {
+	if p, ok := acs.resourceNamePolicyMap220.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+	}
+	return nil, fmt.Errorf("policy not found for resource %s", resourceName)
+}
+
+func (acs *pkACProvider) lookUpExceptionalPolicy220(resourceName string) (*pbac.Policy, error) {
+	if p, ok := acs.exceptionalPolicyMap220.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+
+	}
+	return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
+}
+
+func (acs *pkACProvider) lookUpPolicyByResourceName220(resourceName string) (*policy, error) {
+	p, ok := acs.resourceNamePolicyMap220.Load(resourceName)
+	if !ok {
+		if p, ok = acs.exceptionalPolicyMap220.Load(resourceName); !ok {
+			return nil, fmt.Errorf("look up access policy failed, did not configure access policy "+
+				"for resource %s", resourceName)
+		}
+	}
+	return p.(*policy), nil
 }

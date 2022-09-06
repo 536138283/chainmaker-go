@@ -440,7 +440,7 @@ func (bc *Blockchain) initCache() (err error) {
 	// cache the lasted config block
 	bc.ledgerCache = cache.NewLedgerCache(bc.chainId)
 	bc.ledgerCache.SetLastCommittedBlock(bc.lastBlock)
-	bc.proposalCache = cache.NewProposalCache(bc.chainConf, bc.ledgerCache)
+	bc.proposalCache = cache.NewProposalCache(bc.chainConf, bc.ledgerCache, bc.log)
 	bc.log.Debugf("go last block: %+v", bc.lastBlock)
 	bc.initModules[moduleNameLedger] = struct{}{}
 	return nil
@@ -592,12 +592,10 @@ func (bc *Blockchain) initVM() (err error) {
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
 		for _, vmType := range chainConfig.Vm.SupportList {
-			vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
-			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, localconf.ChainMakerConfig.VMConfig)
-			if err != nil {
-				bc.log.Errorf("create instance manager failed, %v", err)
+			bc.addVmManager(vmType, supportedVmManagerList)
+			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
+				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
-			supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
 		}
 
 		bc.vmMgr = vm.NewVmManager(
@@ -608,6 +606,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.chainConf,
 			vmlog,
 		)
+
 	} else {
 		/*
 			bc.vmMgr = vm.NewVmManager(
@@ -640,12 +639,10 @@ func (bc *Blockchain) initVM() (err error) {
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
 		for _, vmType := range chainConfig.Vm.SupportList {
-			vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
-			vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, localconf.ChainMakerConfig.VMConfig)
-			if err != nil {
-				bc.log.Errorf("create instance manager failed, %v", err)
+			bc.addVmManager(vmType, supportedVmManagerList)
+			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
+				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
-			supportedVmManagerList[componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]] = vmInstancesManager
 		}
 
 		bc.vmMgr = vm.NewVmManager(
@@ -659,6 +656,21 @@ func (bc *Blockchain) initVM() (err error) {
 	}
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
+}
+
+func (bc *Blockchain) addVmManager(vmType string,
+	supportedVmManagerList map[common.RuntimeType]protocol.VmInstancesManager) {
+	vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
+	vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
+	if err != nil {
+		bc.log.Errorf("create instance manager failed, %v", err)
+	}
+	if vmInstancesManager == nil {
+		bc.log.Debugf("vm instances manager of %s is nil", vmType)
+		return
+	}
+	runtime := componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]
+	supportedVmManagerList[runtime] = vmInstancesManager
 }
 
 type soloChainNodesInfoProvider struct{}
@@ -702,7 +714,7 @@ func (bc *Blockchain) initCore() (err error) {
 	}
 	// 时间戳
 	coreEngineFactory := core.Factory()
-	bc.coreEngine, err = coreEngineFactory.NewConsensusEngine(bc.getConsensusType().String(), coreEngineConfig)
+	bc.coreEngine, err = coreEngineFactory.NewCoreEngine(bc.getConsensusType().String(), coreEngineConfig)
 	if err != nil {
 		bc.log.Errorf("new core engine failed, %s", err.Error())
 		return err
@@ -726,7 +738,10 @@ func (bc *Blockchain) initConsensus() (err error) {
 			}
 		}
 	}
-	if !isConsensusNode {
+	//epoch1 [1,100]
+	//node7 ;
+	if !isConsensusNode &&
+		bc.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_MAXBFT {
 		// this node is not a consensus node
 		delete(bc.initModules, moduleNameConsensus)
 		return nil
@@ -750,6 +765,7 @@ func (bc *Blockchain) initConsensus() (err error) {
 		LedgerCache:   bc.ledgerCache,
 		ProposalCache: bc.proposalCache,
 		MsgBus:        bc.msgBus,
+		Logger:        logger.GetLoggerByChain(logger.MODULE_CONSENSUS, bc.chainId),
 	}
 	provider := consensus.GetConsensusProvider(bc.chainConf.ChainConfig().Consensus.Type)
 	bc.consensus, err = provider(config)

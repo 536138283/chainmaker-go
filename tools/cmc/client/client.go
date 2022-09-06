@@ -49,6 +49,7 @@ var (
 	enableCertHash  bool
 	blockHeight     uint64
 	withRWSet       bool
+	truncateValue   bool
 	isAgree         bool
 	txId            string
 
@@ -111,6 +112,7 @@ const (
 	flagEnableCertHash                   = "enable-cert-hash"
 	flagBlockHeight                      = "block-height"
 	flagWithRWSet                        = "with-rw-set"
+	flagTruncateValue                    = "truncate-value"
 	flagIsAgree                          = "is-agree"
 	flagTxId                             = "tx-id"
 	flagByteCodePath                     = "byte-code-path"
@@ -209,7 +211,7 @@ func init() {
 	flags.StringVar(&version, flagVersion, "", "specify user contract version, eg: 1.0.0")
 	flags.StringVar(&byteCodePath, flagByteCodePath, "", "specify user contract byte code path")
 	flags.StringVar(&runtimeType, flagRuntimeType, "", "specify user contract runtime type, such as: "+
-		"NATIVE | WASMER | WXVM | GASM | EVM | DOCKER_GO | DOCKER_JAVA")
+		"NATIVE | WASMER | WXVM | GASM | EVM | DOCKER_GO | JAVA")
 	flags.StringVar(&chainId, flagChainId, "", "specify the chain id, such as: chain1, chain2 etc.")
 	flags.IntVar(&sendTimes, flagSendTimes, 1, "specify SendTimes , default once")
 	flags.Int64Var(&timeout, flagTimeout, 10, "specify timeout in seconds, default 10s")
@@ -220,6 +222,7 @@ func init() {
 	flags.BoolVar(&syncResult, flagSyncResult, false, "whether wait the result of the transaction, default false")
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash, default true")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet, default true")
+	flags.BoolVar(&truncateValue, flagTruncateValue, false, "enable truncate value, default false")
 	flags.Uint64Var(&blockHeight, flagBlockHeight, 0, "specify block height, default 0")
 	flags.StringVar(&txId, flagTxId, "", "specify tx id")
 	flags.BoolVar(&isAgree, flagIsAgree, true, "specify multi sign vote choice")

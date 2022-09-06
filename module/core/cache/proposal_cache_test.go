@@ -5,6 +5,8 @@ import (
 	"sync"
 	"testing"
 
+	"chainmaker.org/chainmaker/logger/v2"
+
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -17,6 +19,10 @@ import (
 /*
  * test unit proposal cache ClearTheBlock func
  */
+var (
+	log = logger.GetLoggerByChain(logger.MODULE_CORE, "chain1")
+)
+
 func TestProposalCache_ClearTheBlock(t *testing.T) {
 
 	ctl := gomock.NewController(t)
@@ -24,7 +30,7 @@ func TestProposalCache_ClearTheBlock(t *testing.T) {
 	ledgerCache := mock.NewMockLedgerCache(ctl)
 	ledgerCache.EXPECT().CurrentHeight().Return(uint64(0), nil)
 
-	proposalCache := NewProposalCache(chainConf, ledgerCache)
+	proposalCache := NewProposalCache(chainConf, ledgerCache, log)
 
 	rwSetMap := make(map[string]*commonpb.TxRWSet)
 	contractEvenMap := make(map[string][]*commonpb.ContractEvent)
@@ -90,7 +96,7 @@ func TestProposalCache_ClearProposedBlockAt(t *testing.T) {
 	ledgerCache := mock.NewMockLedgerCache(ctl)
 	ledgerCache.EXPECT().CurrentHeight().Return(uint64(0), nil)
 
-	proposalCache := NewProposalCache(chainConf, ledgerCache)
+	proposalCache := NewProposalCache(chainConf, ledgerCache, log)
 
 	rwSetMap := make(map[string]*commonpb.TxRWSet)
 	contractEvenMap := make(map[string][]*commonpb.ContractEvent)
@@ -183,6 +189,7 @@ func TestNewProposalCache(t *testing.T) {
 				ledgerCache: &LedgerCache{
 					chainId: "12345",
 				},
+				logger: log,
 			},
 		},
 		{
@@ -201,6 +208,7 @@ func TestNewProposalCache(t *testing.T) {
 					chainId:            "6789",
 					lastCommittedBlock: CreateNewTestBlock(1),
 				},
+				logger: log,
 			},
 		},
 		{
@@ -220,13 +228,14 @@ func TestNewProposalCache(t *testing.T) {
 					chainId:            "6789",
 					lastCommittedBlock: CreateNewTestBlock(2),
 				},
+				logger: log,
 			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewProposalCache(tt.args.chainConf, tt.args.ledgerCache); !reflect.DeepEqual(got, tt.want) {
+			if got := NewProposalCache(tt.args.chainConf, tt.args.ledgerCache, log); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("NewProposalCache() = %v, want %v", got, tt.want)
 			}
 		})
@@ -612,6 +621,7 @@ func TestProposalCache_KeepProposedBlock(t *testing.T) {
 				lastProposedBlock: tt.fields.lastProposedBlock,
 				chainConf:         tt.fields.chainConf,
 				ledgerCache:       tt.fields.ledgerCache,
+				logger:            log,
 			}
 			if got := pc.KeepProposedBlock(tt.args.hash, tt.args.height); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("KeepProposedBlock() = %v, want %v", got, tt.want)

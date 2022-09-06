@@ -19,9 +19,13 @@ const (
 	flagNameOfConfigFilepath          = "conf-file"
 	flagNameShortHandOFConfigFilepath = "c"
 	flagNameOfChainId                 = "chain-id"
+	flagNameOfNeedVerify              = "need-verify"
 )
 
-var rebuildChainId string
+var (
+	rebuildChainId string
+	needVerify     bool
+)
 
 func initLocalConfig(cmd *cobra.Command) {
 	if err := localconf.InitLocalConfig(cmd); err != nil {
@@ -36,6 +40,8 @@ func initFlagSet() *pflag.FlagSet {
 		localconf.ConfigFilepath, "specify config file path, if not set, default use ./chainmaker.yml")
 	flags.StringVarP(&rebuildChainId, flagNameOfChainId, "",
 		"chain1", "specify chain-id, this flag only used by rebuild-dbs module")
+	flags.BoolVarP(&needVerify, flagNameOfNeedVerify, "v",
+		true, "specify need-verify, verify rebuild block whether or not, this flag only used by rebuild-dbs module")
 	return flags
 }
 

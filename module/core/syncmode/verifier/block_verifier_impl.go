@@ -10,6 +10,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"chainmaker.org/chainmaker/protocol/v2"
+
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
+
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
 	"github.com/gogo/protobuf/proto"
@@ -24,7 +28,6 @@ import (
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	chainConfConfig "chainmaker.org/chainmaker/pb-go/v2/config"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -151,13 +154,20 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 	// monitor config open case
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_VERIFIER, "metric_block_verify_time",
-			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 10}, "chainId")
+			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10}, "chainId")
 	}
 	// v220_compat Deprecated
 	config.ChainConf.AddWatch(v) //nolint: staticcheck
 	config.MsgBus.Register(msgbus.ChainConfig, v)
 
 	return v, nil
+}
+
+// VerifyBlockSync only maxbft use this method
+func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
+	mode protocol.VerifyMode) (*consensuspb.VerifyResult, error) {
+	//TODO implement me
+	panic("only maxbft use this method")
 }
 
 // VerifyBlock to check if block is valid
@@ -220,7 +230,22 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		if sqlErr := v.storeHelper.RollBack(newBlock, v.blockchainStore); sqlErr != nil {
 			v.log.Errorf("block [%d] rollback sql failed: %s", newBlock.Header.BlockHeight, sqlErr)
 		}
+
+		// clear snapshot when verify fail
+		if snapErr := v.snapshotManager.ClearSnapshot(block); snapErr != nil {
+			snapErr = fmt.Errorf("clear snapshot fail[%d](hash:%x), err: %s",
+				block.Header.BlockHeight, block.Header.BlockHash, snapErr.Error())
+			v.log.Error(snapErr)
+		}
+
 		return err
+	}
+
+	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
+			return err
+		}
 	}
 
 	// sync mode, need to verify consensus vote signature
@@ -254,14 +279,14 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	v.log.Infof("verify success [%d,%x]"+
-		"(blockSig:%d,vm:%d,dagVerify:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
+		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
 		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[common.BlockSig], timeLasts[common.VM],
-		timeLasts[common.DagVerify], timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool,
-		consensusCheckUsed, elapsed)
+		timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
+
 	return nil
 }
 
@@ -364,10 +389,9 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	v.log.Infof("verify success [%d,%x]"+
-		"(blockSig:%d,vm:%d,dagVerify:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
+		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
 		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[common.BlockSig], timeLasts[common.VM],
-		timeLasts[common.DagVerify], timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool,
-		consensusCheckUsed, elapsed)
+		timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
 
 	// monitor config open case
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
@@ -424,7 +448,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	timeLasts := make(map[string]int64)
 	var err error
 	var txCapacity uint32
-	if v.chainConf.ChainConfig().Core.EnableOptimizeChargeGas {
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
@@ -510,6 +534,14 @@ func parseVerifyResult(block *commonpb.Block, isValid bool,
 
 // cutBlocks cut blocks
 func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
+	if common.TxPoolType == batch.TxPoolType {
+		err := v.cutBlocksForBatchPool(blocksToCut, blockToKeep)
+		if err != nil {
+			v.log.Warnf(fmt.Sprintf("cut block[%d] failed, err:%v", blockToKeep.Header.BlockHeight, err))
+		}
+		return
+	}
+
 	cutTxs := make([]*commonpb.Transaction, 0)
 	txMap := make(map[string]interface{})
 	// make map, the key is tx id, and the value tx
@@ -518,7 +550,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 	// collect the tx map
 	for _, blockToCut := range blocksToCut {
-		v.log.Infof("cut block block hash: %s, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
+		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
 		for _, txToCut := range blockToCut.Txs {
 			if _, ok := txMap[txToCut.Payload.TxId]; ok {
 				// this transaction is kept, do NOT cut it.
@@ -532,6 +564,45 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	if len(cutTxs) > 0 {
 		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
 	}
+}
+
+func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) error {
+
+	keepBatchIdsMap := make(map[string]interface{})
+	batchIds, _, err := common.GetBatchIds(blockToKeep)
+	if err != nil {
+		v.log.Errorf("get batch ids from keep block[%d,%x] failed, err:%v",
+			blockToKeep.Header.BlockHeight, blockToKeep.Header.BlockHash, err)
+		return err
+	}
+	for _, batchId := range batchIds {
+		keepBatchIdsMap[batchId] = struct{}{}
+	}
+
+	finalCutBatchIds := make([]string, 0)
+	for _, blockToCut := range blocksToCut {
+		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
+		cutBatchIds, _, err := common.GetBatchIds(blockToCut)
+		if err != nil {
+			v.log.Warnf("get batch ids from removed block[%d,%x] failed, err:%v",
+				blockToCut.Header.BlockHeight, blockToCut.Header.BlockHash, err)
+			continue
+		}
+		for _, cutBatchId := range cutBatchIds {
+			if _, ok := keepBatchIdsMap[cutBatchId]; ok {
+				// this transaction is kept, do NOT cut it.
+				continue
+			}
+			v.log.Debugf("cut tx batchId: %s", cutBatchId)
+			finalCutBatchIds = append(finalCutBatchIds, cutBatchId)
+		}
+	}
+
+	if len(finalCutBatchIds) > 0 {
+		v.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
+	}
+
+	return nil
 }
 
 // verifyRepeat to check if the block has verified before
@@ -564,7 +635,7 @@ func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 		cutBlocks := v.proposalCache.KeepProposedBlock(lastBlock.Header.BlockHash, lastBlock.Header.BlockHeight)
 		if len(cutBlocks) > 0 {
 			v.log.Infof(
-				"cut block block hash: %s, height: %v",
+				"received block hash: %s, height: %v",
 				hex.EncodeToString(lastBlock.Header.BlockHash),
 				lastBlock.Header.BlockHeight,
 			)

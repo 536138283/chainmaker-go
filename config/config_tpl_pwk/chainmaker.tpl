@@ -52,7 +52,7 @@ node:
   # fast sync settings
   fast_sync:
     # Enable it or not
-    enabled: false  # [*]
+    enabled: true  # [*]
 
     # The number of blocks that did not perform fast synchronization at the end
     min_full_blocks: 10
@@ -135,7 +135,7 @@ txpool:
   # tx_pool type, can be single, normal, batch.
   # By default the tx_pool type is single.
   # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
-  pool_type: "single"
+  pool_type: "normal"
 
   # Max common transaction count in tx_pool.
   # If tx_pool is full, the following transactions will be discarded.
@@ -150,14 +150,14 @@ txpool:
 
   # Common transaction queue num, only for normal tx_pool.
   # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
-  # common_queue_num: 8
+  common_queue_num: 8
 
   # The number of transactions contained in a batch, for normal and batch tx_pool.
   # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
-  # batch_max_size: 100
+  batch_max_size: 100
 
   # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
-  # batch_create_timeout: 200
+  batch_create_timeout: 50
 
 # RPC service setting
 rpc:
@@ -215,8 +215,8 @@ rpc:
       # - "127.0.0.1"
 
   # RPC server max send/receive message size in MB
-  max_send_msg_size: 10
-  max_recv_msg_size: 10
+  max_send_msg_size: 100
+  max_recv_msg_size: 100
 
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
@@ -396,19 +396,23 @@ storage:
     tx_capacity: 1000000000   #support max transaction capacity
     fp_rate: 0.000000001      #false postive rate
   # RWC config               default 1000000
+  enable_rwc: true #default false
   rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
 
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0普通写模式，1快速写模式
-  # Whether to disable blockFileDb
-  disable_block_file_db: false
+  # state db cache
   state_cache_config:
-    life_window: 3000000000000   #key/value ttl 时间，单位 ns
+    # key/value ttl time, ns
+    life_window: 3000000000000
+    # interval between removing expired keys and values(clean up).
     clean_window: 1000000000
+    # max size of entry in bytes.
     max_entry_size: 500
-    hard_max_cache_size: 10240   #缓存大小，单位MB
+    # max cache size MB
+    hard_max_cache_size: 1024
 
   # Block db config
   blockdb_config:
@@ -485,50 +489,49 @@ storage:
       # Mysql connection info, such as:  root:admin@tcp(127.0.0.1:3306)/
       dsn: root:password@tcp(127.0.0.1:3306)/
 
-# Docker go virtual machine configuration
+# Contract Virtual Machine(VM) configs
 vm:
-  # Enable docker go virtual machine
-  enable_dockervm: {enable_dockervm}
-  # Mount point in chainmaker
-  dockervm_mount_path: ../data/{org_id}/docker-go
-  # Specify log file path
-  dockervm_log_path: ../log/{org_id}/docker-go
-  # Start docker vm right now
-  # 1. false: docker vm will not be started when starting the chain. docker vm needs to be started separately
-  # 2. true: when starting the chain, the script will start the docker vm first
-  start_now: {start_dockervm_now}
-  # Unix domain socket open, used for chainmaker and docker manager communication
-  # 1. false: docker vm uses TCP to communicate with chain
-  # 2. true: docker vm uses unix domain socket to communicate with chain
-  uds_open: {dockervm_uds_open}
-  # If use a customized VM configuration file, supplement it; else, do not configure
-  # dockervm_config_path: /config_path/vm.yml
-  # Whether to print log at terminal
-  log_in_console: false
-  # Log level
-  log_level: {dockervm_log_level}
-  #  Config items of docker runtime service
-  runtime_server:
-    # Runtime service port, default 32351
-    port: {dockervm_runtime_port}
-    # Grpc dialing timeout, default size is 10, Uint: s
+  # Golang runtime in docker container
+  go:
+    # Enable docker go virtual machine, default: false
+    enable: {enable_vm_go}
+    # Mount data path in chainmaker, include contracts, uds socks
+    data_mount_path: ../data/{org_id}/go
+    # Mount log path in chainmaker
+    log_mount_path: ../log/{org_id}/go
+    # Communication protocol, used for chainmaker and docker manager communication
+    # 1. tcp: docker vm uses TCP to communicate with chain
+    # 2. uds: docker vm uses unix domain socket to communicate with chain
+    protocol: {vm_go_protocol}
+    # If use a customized VM configuration file, supplement it; else, do not configure
+    # Priority: chainmaker.yml > vm.yml > default settings
+    # dockervm_config_path: /config_path/vm.yml
+    # Whether to print log on terminal
+    log_in_console: false
+    # Log level of docker vm
+    log_level: {vm_go_log_level}
+
+    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
+    max_send_msg_size: 100
+    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
+    max_recv_msg_size: 100
+    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
     dial_timeout: 10
-    # Grpc max send message size, Default size is 4, Unit: MB
-    max_send_msg_size: 20
-    # Grpc max receive message size, Default size is 4, Unit: MB
-    max_recv_msg_size: 20
-  # Config itrms of contract engine service
-  contract_engine:
-    # Docker vm contract service host, default 127.0.0.1
-    host: 127.0.0.1
-    # Docker vm contract service port, default 22351
-    port: {dockervm_engine_port}
-    # Grpc dialing timeout, default size is 10, Uint: s
-    dial_timeout: 10
-    # Grpc max send message size, Default size is 4, Unit: MB
-    max_send_msg_size: 20
-    # Grpc max receive message size, Default size is 4, Unit: MB
-    max_recv_msg_size: 20
-    # Max number of connection created to connect docker vm service
-    max_connection: 5
+
+    # max process num for execute original txs
+    max_concurrency: 20
+
+    #  Configs of docker runtime server (handle messages with contract sandbox)
+    runtime_server:
+      # Runtime server port, default 32351
+      port: {vm_go_runtime_port}
+
+    # Configs of contract engine server (handle messages with contract engine)
+    contract_engine:
+      # Docker vm contract engine server host, default 127.0.0.1
+      host: 127.0.0.1
+      # Docker vm contract engine server port, default 22351
+      port: {vm_go_engine_port}
+      # Max number of connection created to connect docker vm service
+      max_connection: 5
 

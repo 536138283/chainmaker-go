@@ -7,15 +7,12 @@ package gas
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
+	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
@@ -36,27 +33,15 @@ func newSetGasAdminCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Set gas admin
-			var adminKeys []string
-			if adminKeyFilePaths != "" {
-				adminKeys = strings.Split(adminKeyFilePaths, ",")
-			}
-			if len(adminKeys) == 0 {
-				return errors.New("admin key list is empty")
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
 			}
 
 			var adminAddr string
 			if len(args) == 0 {
-				pk, err := cc.GetPublicKey().String()
-				if err != nil {
-					return err
-				}
-				adminAddr, err = sdk.GetZXAddressFromPKPEM(pk)
+				adminAddr, err = getSelfAddress(cc)
 				if err != nil {
 					return err
 				}
@@ -68,21 +53,9 @@ func newSetGasAdminCMD() *cobra.Command {
 			if err != nil {
 				return err
 			}
-
-			endorsers := make([]*common.EndorsementEntry, len(adminKeys))
-			for i := range adminKeys {
-				var e *common.EndorsementEntry
-				var err error
-				e, err = sdkutils.MakePkEndorserWithPath(
-					adminKeys[i],
-					crypto.HashAlgoMap[cc.GetHashType()],
-					"",
-					payload,
-				)
-				if err != nil {
-					return err
-				}
-				endorsers[i] = e
+			endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+			if err != nil {
+				return err
 			}
 
 			resp, err := cc.SendGasManageRequest(payload, endorsers, -1, syncResult)
@@ -90,17 +63,19 @@ func newSetGasAdminCMD() *cobra.Command {
 				return err
 			}
 
-			output, err := prettyjson.Marshal(resp)
-			if err != nil {
-				return err
-			}
-			fmt.Println(string(output))
+			util.PrintPrettyJson(struct {
+				*common.TxResponse
+				GasAdminAddress string `json:"gas_admin_address"`
+			}{
+				resp,
+				adminAddr,
+			})
 			return nil
 		},
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAdminKeyFilePaths, flagSyncResult,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
@@ -123,11 +98,6 @@ func newGetGasAdminCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Get gas admin
 			addr, err := cc.GetGasAdmin()
@@ -164,11 +134,6 @@ func newRechargeGasCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Recharge gas
 			rechargeGasList := []*syscontract.RechargeGas{
@@ -220,18 +185,9 @@ func newGetGasBalanceCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Get gas balance
 			if address == "" {
-				pk, err := cc.GetPublicKey().String()
-				if err != nil {
-					return err
-				}
-				address, err = sdk.GetZXAddressFromPKPEM(pk)
+				address, err = getSelfAddress(cc)
 				if err != nil {
 					return err
 				}
@@ -275,11 +231,6 @@ func newRefundGasCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Refund gas
 			payload, err := cc.CreateRefundGasPayload(address, amount)
@@ -325,11 +276,6 @@ func newFrozenGasAccountCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Frozen gas account
 			payload, err := cc.CreateFrozenGasAccountPayload(address)
 			if err != nil {
@@ -373,11 +319,6 @@ func newUnfrozenGasAccountCMD() *cobra.Command {
 				return err
 			}
 			defer cc.Stop()
-
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
 
 			//// 2.Unfrozen gas account
 			payload, err := cc.CreateUnfrozenGasAccountPayload(address)
@@ -423,18 +364,9 @@ func newGetGasAccountStatusCMD() *cobra.Command {
 			}
 			defer cc.Stop()
 
-			// required public key mode
-			if sdk.AuthTypeToStringMap[cc.GetAuthType()] != protocol.Public {
-				return errors.New("chainmaker must be Public Key Mode")
-			}
-
 			//// 2.Get gas account status
 			if address == "" {
-				pk, err := cc.GetPublicKey().String()
-				if err != nil {
-					return err
-				}
-				address, err = sdk.GetZXAddressFromPKPEM(pk)
+				address, err = getSelfAddress(cc)
 				if err != nil {
 					return err
 				}
@@ -460,6 +392,87 @@ func newGetGasAccountStatusCMD() *cobra.Command {
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
 		flagSdkConfPath,
+	})
+	return cmd
+}
+
+func getSelfAddress(cc *sdk.ChainClient) (string, error) {
+	chainconf, err := cc.GetChainConfig()
+	if err != nil {
+		return "", err
+	}
+	pk, err := cc.GetPublicKey().String()
+	if err != nil {
+		return "", err
+	}
+	switch chainconf.Vm.AddrType {
+	case configpb.AddrType_CHAINMAKER:
+		address, err = sdk.GetCMAddressFromPKPEM(pk, cc.GetHashType())
+		if err != nil {
+			return "", err
+		}
+	case configpb.AddrType_ZXL:
+		address, err = sdk.GetZXAddressFromPKPEM(pk, cc.GetHashType())
+		if err != nil {
+			return "", err
+		}
+	case configpb.AddrType_ETHEREUM:
+		address, err = sdk.GetEVMAddressFromPKPEM(pk, cc.GetHashType())
+		if err != nil {
+			return "", err
+		}
+	default:
+		return "", errors.New("unknown address type")
+	}
+	return address, nil
+}
+
+// newSetInvokeBaseGasCMD set VM base gas of invoke tx
+// @return *cobra.Command
+func newSetInvokeBaseGasCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-base-gas",
+		Short: "set VM base gas of invoke tx",
+		Long:  "set VM base gas of invoke tx",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			//// 1.Chain Client
+			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
+			if err != nil {
+				return err
+			}
+			defer cc.Stop()
+
+			//// 2.Set base gas
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+
+			payload, err := cc.CreateSetInvokeBaseGasPayload(amount)
+			if err != nil {
+				return err
+			}
+			endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := cc.SendGasManageRequest(payload, endorsers, -1, syncResult)
+			if err != nil {
+				return err
+			}
+
+			util.PrintPrettyJson(resp)
+			return nil
+		},
+	}
+
+	util.AttachFlags(cmd, flags, []string{
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult,
+	})
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath, flagAmount,
 	})
 	return cmd
 }

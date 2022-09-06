@@ -144,7 +144,7 @@ func doPermissionResourceOperation(crud int) error {
 		return err
 	}
 	defer client.Stop()
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func doPermissionResourceOperation(crud int) error {
 		return errors.New("invalid permission resource operation")
 	}
 
-	endorsers, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}

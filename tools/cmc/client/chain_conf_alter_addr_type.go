@@ -49,7 +49,7 @@ func alterAddrType() error {
 	}
 	defer client.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func alterAddrType() error {
 		return err
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}

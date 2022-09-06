@@ -7,7 +7,7 @@ start() {
   pid=`ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep |  awk  '{print $2}'`
   if [ -z ${pid} ];then
       nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > panic.log &
-      echo "chainmaker is startting, pls check log..."
+      echo "chainmaker is starting, pls check log..."
   else
       echo "chainmaker is already started"
   fi

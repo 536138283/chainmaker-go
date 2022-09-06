@@ -37,6 +37,7 @@ const (
 
 var notEnoughParticipantsSupportError = "authentication fail: not enough participants support this action"
 
+// hsmHandleMap is a global handle map for pkcs11 or sdf hsm
 var hsmHandleMap = map[string]interface{}{}
 
 // List of access principals which should not be customized
@@ -51,6 +52,7 @@ var restrainedResourceList = map[string]bool{
 	common.TxType_ARCHIVE.String():         true,
 }
 
+// predifined policies
 var (
 	policyRead = newPolicy(
 		protocol.RuleAny,
@@ -91,6 +93,7 @@ var (
 		[]protocol.Role{
 			protocol.RoleClient,
 			protocol.RoleAdmin,
+			protocol.RoleConsensusNode,
 		},
 	)
 
@@ -204,6 +207,9 @@ type accessControlService struct {
 
 	lastestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
 
+	resourceNamePolicyMap220 *sync.Map
+	exceptionalPolicyMap220  *sync.Map
+
 	//local cache for member
 	memberCache *concurrentlru.Cache
 
@@ -215,6 +221,8 @@ type accessControlService struct {
 	hashType string
 
 	authType string
+
+	pwkNewMember func(member *pbac.Member) (protocol.Member, error)
 }
 
 type memberCached struct {
@@ -225,16 +233,18 @@ type memberCached struct {
 func initAccessControlService(hashType, authType string,
 	store protocol.BlockchainStore, log protocol.Logger) *accessControlService {
 	acService := &accessControlService{
-		orgNum:                0,
-		orgList:               &sync.Map{},
-		resourceNamePolicyMap: &sync.Map{},
-		exceptionalPolicyMap:  &sync.Map{},
-		lastestPolicyMap:      &sync.Map{},
-		memberCache:           concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
-		dataStore:             store,
-		log:                   log,
-		hashType:              hashType,
-		authType:              authType,
+		orgNum:                   0,
+		orgList:                  &sync.Map{},
+		resourceNamePolicyMap:    &sync.Map{},
+		exceptionalPolicyMap:     &sync.Map{},
+		lastestPolicyMap:         &sync.Map{},
+		resourceNamePolicyMap220: &sync.Map{},
+		exceptionalPolicyMap220:  &sync.Map{},
+		memberCache:              concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		dataStore:                store,
+		log:                      log,
+		hashType:                 hashType,
+		authType:                 authType,
 	}
 	return acService
 }
@@ -249,13 +259,6 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
-
-	// only used for test
-	acs.resourceNamePolicyMap.Store(protocol.ResourceNameAllTest, policyAllTest)
-	acs.resourceNamePolicyMap.Store("test_2", policyLimitTestAny)
-	acs.resourceNamePolicyMap.Store("test_2_admin", policyLimitTestAdmin)
-	acs.resourceNamePolicyMap.Store("test_3/4", policyPortionTestAny)
-	acs.resourceNamePolicyMap.Store("test_3/4_admin", policyPortionTestAnyAdmin)
 
 	// for txtype
 	acs.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
@@ -422,13 +425,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
 
-	// only used for test
-	acs.resourceNamePolicyMap.Store(protocol.ResourceNameAllTest, policyAllTest)
-	acs.resourceNamePolicyMap.Store("test_2", policyLimitTestAny)
-	acs.resourceNamePolicyMap.Store("test_2_admin", policyLimitTestAdmin)
-	acs.resourceNamePolicyMap.Store("test_3/4", policyPortionTestAny)
-	acs.resourceNamePolicyMap.Store("test_3/4_admin", policyPortionTestAnyAdmin)
-
 	// for txtype
 	acs.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
 	acs.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
@@ -585,7 +581,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
 	localOrgId string) {
-	switch acs.authType {
+	authType := strings.ToLower(acs.authType)
+	switch authType {
 	case protocol.PermissionedWithCert, protocol.Identity:
 		acs.createDefaultResourcePolicy(localOrgId)
 	case protocol.PermissionedWithKey:
@@ -788,6 +785,13 @@ func (acs *accessControlService) createPrincipalForTargetOrg(resourceName string
 }
 
 func (acs *accessControlService) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+	resourceName = policyResourceName
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpPolicyByResourceName220(resourceName)
+	}
+
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
 		return p.(*policy), nil
 	}
@@ -863,7 +867,27 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 		}
 		return cached.member
 	}
-	return nil
+
+	//handle false positive when member cache is cleared
+	var tmpMember protocol.Member
+	var err error
+	if acs.authType == protocol.PermissionedWithCert {
+		tmpMember, err = acs.newCertMember(member)
+	} else if acs.authType == protocol.PermissionedWithKey {
+		tmpMember, err = acs.pwkNewMember(member)
+	}
+	if err != nil {
+		acs.log.Debugf("new member failed, authType = %s, err = %s", acs.authType, err.Error())
+		return nil
+	}
+	//add to cache
+	cached = &memberCached{
+		member:    tmpMember,
+		certChain: nil,
+	}
+	acs.addMemberToCache(string(member.MemberInfo), cached)
+
+	return tmpMember
 }
 
 func (acs *accessControlService) verifyPrincipalPolicy(principal, refinedPrincipal protocol.Principal, p *policy) (
@@ -1111,6 +1135,12 @@ func buildOrgListRoleListOfPolicyForVerifyPrincipal(p *policy) (map[string]bool,
 }
 
 func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpPolicy220(policyResourceName)
+	}
+
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
@@ -1121,6 +1151,12 @@ func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy
 }
 
 func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpExceptionalPolicy220(policyResourceName)
+	}
+
 	if p, ok := acs.exceptionalPolicyMap.Load(resourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 

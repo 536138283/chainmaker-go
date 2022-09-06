@@ -24,7 +24,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-//dealContractEventSubscription - deal contract event subscribe request
+// dealContractEventSubscription - deal contract event subscribe request
 func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 	server apiPb.RpcNode_SubscribeServer) error {
 
@@ -321,7 +321,7 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 		historyBlockHeight int64
 	)
 
-	eventCh := make(chan model.NewContractEvent)
+	eventCh := make(chan model.NewContractEvent, 1000)
 
 	chainId := tx.Payload.ChainId
 	if eventSubscriber, err = s.chainMakerServer.GetEventSubscribe(chainId); err != nil {
@@ -376,7 +376,7 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 	}
 }
 
-//func (s *ApiService) getContractEventSubscribeResult(contractEventsInfoList *commonPb.ContractEventInfoList) (
+// func (s *ApiService) getContractEventSubscribeResult(contractEventsInfoList *commonPb.ContractEventInfoList) (
 func (s *ApiService) getContractEventSubscribeResult(contractEvents []*commonPb.ContractEventInfo) (
 	*commonPb.SubscribeResult, error) {
 

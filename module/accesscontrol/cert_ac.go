@@ -18,6 +18,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
@@ -48,6 +52,11 @@ type certACProvider struct {
 
 	//third-party trusted members
 	trustMembers *sync.Map
+
+	store protocol.BlockchainStore
+
+	//consensus type
+	consensusType consensus.ConsensusType
 }
 
 type trustMemberCached struct {
@@ -82,6 +91,7 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsRevoke, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasDelete, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
+	msgBus.Register(msgbus.MaxbftEpochConf, certACProvider)
 
 	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)   //nolint: staticcheck
@@ -101,9 +111,27 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 		},
 		localOrg:     nil,
 		trustMembers: &sync.Map{},
+		store:        store,
 	}
 
-	err := certACProvider.initTrustMembers(chainConfig.TrustMembers)
+	var maxbftCfg *maxbft.GovernanceContract
+	var err error
+	certACProvider.consensusType = chainConfig.Consensus.Type
+	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
+		maxbftCfg, err = certACProvider.loadChainConfigFromGovernance()
+		if err != nil {
+			return nil, err
+		}
+		//omit 1'st epoch, GovernanceContract don't save chainConfig in 1'st epoch
+		if maxbftCfg != nil && maxbftCfg.ChainConfig != nil {
+			chainConfig = maxbftCfg.ChainConfig
+		}
+	}
+	log.DebugDynamic(func() string {
+		return fmt.Sprintf("init ac from chainconfig: %+v", chainConfig)
+	})
+
+	err = certACProvider.initTrustMembers(chainConfig.TrustMembers)
 	if err != nil {
 		return nil, err
 	}
@@ -117,16 +145,23 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	}
 
 	certACProvider.acService.initResourcePolicy(chainConfig.ResourcePolicies, localOrgId)
+	certACProvider.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, localOrgId)
 
 	certACProvider.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	certACProvider.opts.KeyUsages[0] = x509.ExtKeyUsageAny
 
-	if err := certACProvider.loadCRL(); err != nil {
-		return nil, err
-	}
-
-	if err := certACProvider.loadCertFrozenList(); err != nil {
-		return nil, err
+	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT && maxbftCfg != nil {
+		err = certACProvider.updateFrozenAndCRL(maxbftCfg)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		if err := certACProvider.loadCRL(); err != nil {
+			return nil, err
+		}
+		if err := certACProvider.loadCertFrozenList(); err != nil {
+			return nil, err
+		}
 	}
 	return certACProvider, nil
 }
@@ -731,7 +766,7 @@ func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementE
 	return refinedEndorsement
 }
 
-// Cache for compressed certificate
+// lookUpCertCache Cache for compressed certificate
 func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 	ret, ok := cp.certCache.Get(string(certId))
 	if !ok {

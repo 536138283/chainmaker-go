@@ -27,6 +27,7 @@ node:
   priv_key_file:     ../config/wx-org4/certs/node/consensus1/consensus1.sign.key
   cert_file:         ../config/wx-org4/certs/node/consensus1/consensus1.sign.crt
   cert_cache_size:   1000
+  cert_key_usage_check: true
 
 net:
   provider: LibP2P
@@ -44,10 +45,34 @@ net:
     priv_key_file: ../config/wx-org4/certs/node/consensus1/consensus1.tls.key
     cert_file:     ../config/wx-org4/certs/node/consensus1/consensus1.tls.crt
 
+# Other txpool settings can be found in tx_Pool_config.go
 txpool:
-  max_txpool_size: 5120 # 普通交易池上限
-  max_config_txpool_size: 10 # config交易池的上限
-  full_notify_again_time: 30 # 交易池溢出后，再次通知的时间间隔(秒)
+  # tx_pool type, can be single, normal, batch.
+  # By default the tx_pool type is single.
+  # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
+  pool_type: "normal"
+
+  # Max common transaction count in tx_pool.
+  # If tx_pool is full, the following transactions will be discarded.
+  max_txpool_size: 50000
+
+  # Max config transaction count in tx_pool.
+  max_config_txpool_size: 10
+
+  # Whether dump unpacked config and common transactions in queue when stop node,
+  # and replay these transactions when restart node.
+  is_dump_txs_in_queue: true
+
+  # Common transaction queue num, only for normal tx_pool.
+  # Note: the num should be an exponent of 2 and less than 256, such as, 1, 2, 4, 8, 16, ..., 256
+  common_queue_num: 8
+
+  # The number of transactions contained in a batch, for normal and batch tx_pool.
+  # Note: make sure that block.block_tx_capacity in bc.yml is an integer multiple of batch_max_size
+  batch_max_size: 100
+
+  # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
+  batch_create_timeout: 50
 
 rpc:
   provider: grpc
@@ -108,8 +133,8 @@ vm:
   log_in_console: false
   log_level: INFO
   uds_open: false                             # default is unix domain socket connection
-  max_send_msg_size: 10
-  max_recv_msg_size: 10
+  max_send_msg_size: 100
+  max_recv_msg_size: 100
   docker_vm_host: 127.0.0.1
   docker_vm_port: 22351
   max_connection: 1

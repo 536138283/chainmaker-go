@@ -44,6 +44,8 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 	fingerPrint := utils.CalcBlockFingerPrintWithoutTx(block)
 	m.storeAndLinkSnapshotImpl(snapshotImpl, &prevFingerPrint, &fingerPrint)
 
+	snapshotImpl.SetBlockFingerprint(fingerPrint)
+
 	m.log.Infof(
 		"create snapshot@%s at height %d, fingerPrint[%v] -> prevFingerPrint[%v]",
 		block.Header.ChainId,
@@ -52,6 +54,16 @@ func (m *ManagerImpl) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Blo
 		prevFingerPrint,
 	)
 	return snapshotImpl
+}
+
+//GetSnapshot Get a Snapshot from SnapshotManager for read, don't modify any data.
+func (m *ManagerImpl) GetSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
+	fingerPrint := utils.CalcBlockFingerPrintWithoutTx(block)
+	snapshot, exist := m.snapshots[fingerPrint]
+	if !exist {
+		return m.NewSnapshot(prevBlock, block)
+	}
+	return snapshot
 }
 
 // NotifyBlockCommitted notify to block committed
@@ -122,4 +134,29 @@ func calcNotConsensusFingerPrint(block *commonPb.Block) utils.BlockFingerPrint {
 	}
 
 	return utils.CalcBlockFingerPrintWithoutTx(newBlock)
+}
+
+func (m *ManagerImpl) ClearSnapshot(block *commonPb.Block) error {
+	m.delegate.lock.Lock()
+	defer m.delegate.lock.Unlock()
+
+	m.log.Infof("clear snapshot@%s at height %d", block.Header.ChainId, block.Header.BlockHeight)
+
+	// 计算需要删除的区块指纹
+	deleteFp := utils.CalcBlockFingerPrintWithoutTx(block)
+	deleteFpEx := calcNotConsensusFingerPrint(block)
+
+	delete(m.snapshots, deleteFp)
+
+	// 删除未共识的区块指纹
+	if _, ok := m.snapshots[deleteFpEx]; ok {
+		delete(m.snapshots, deleteFpEx)
+		m.log.Infof("delete snapshot@%s %v & %v at height %d",
+			block.Header.ChainId, deleteFp, deleteFpEx, block.Header.BlockHeight)
+	} else {
+		m.log.Infof("delete snapshot@%s %v at height %d",
+			block.Header.ChainId, deleteFp, block.Header.BlockHeight)
+	}
+
+	return nil
 }

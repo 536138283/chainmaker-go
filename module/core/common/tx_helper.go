@@ -8,14 +8,15 @@ package common
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
+	"strconv"
 	"sync"
 
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/json"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -50,6 +51,15 @@ type VerifyStat struct {
 	SigLasts    int64
 	OthersLasts int64
 	SigCount    int
+	txfilter.Stat
+}
+
+func (stat *VerifyStat) Sum(filter *txfilter.Stat) {
+	if filter != nil {
+		stat.FpCount += filter.FpCount
+		stat.FilterCosts += filter.FilterCosts
+		stat.DbCosts += filter.DbCosts
+	}
 }
 
 // RwSetVerifyFailTx rw set verify fail tx struct
@@ -85,7 +95,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
 	consensusType consensuspb.ConsensusType, filter protocol.TxFilter,
 	chainId string, ac protocol.AccessControlProvider, proposalCache protocol.ProposalCache,
-	mode protocol.VerifyMode, verifyMode uint8) error {
+	mode protocol.VerifyMode, verifyMode uint8, options ...string) error {
 
 	if TxPoolType == batch.TxPoolType {
 		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
@@ -110,24 +120,30 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 			return err
 		}
 
-		return IsTxRequestValid(tx, txInPool)
+		// not necessary to verify tx hash when in SYNC_VERIFY
+		if mode == protocol.CONSENSUS_VERIFY {
+			return IsTxRequestValid(tx, txInPool)
+		}
 	}
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	var (
-		isExist bool
-		err     error
+		isExist    bool
+		err        error
+		filterStat *txfilter.Stat
 	)
 
 	if verifyMode != QuickSyncVerifyMode {
 		if mode == protocol.CONSENSUS_VERIFY {
-			isExist, err = filter.IsExists(tx.Payload.TxId, commonpb.RuleType_AbsoluteExpireTime)
+			isExist, filterStat, err = filter.IsExists(tx.Payload.TxId, commonpb.RuleType_AbsoluteExpireTime)
 		} else {
-			isExist, err = filter.IsExists(tx.Payload.TxId)
+			isExist, filterStat, err = filter.IsExists(tx.Payload.TxId)
 		}
 	}
 
 	// calc db use time
 	stat.DBLasts += utils.CurrentTimeMillisSeconds() - startDBTicker
+	stat.Sum(filterStat)
+
 	if err != nil || isExist {
 		err = fmt.Errorf("tx duplicate in DB (tx:%s) error: %v", tx.Payload.TxId, err)
 		return err
@@ -135,7 +151,7 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	stat.SigCount++
 	startSigTicker := utils.CurrentTimeMillisSeconds()
 	// if tx in txpool, means tx has already validated. tx noIt in txpool, need to validate.
-	if err = utils.VerifyTxWithoutPayload(tx, chainId, ac); err != nil {
+	if err = utils.VerifyTxWithoutPayload(tx, chainId, ac, options...); err != nil {
 		err = fmt.Errorf("acl error (tx:%s), %s", tx.Payload.TxId, err.Error())
 		return err
 	}
@@ -149,19 +165,18 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 
 // TxVerifyResultsMerge tx verify results merge
 func TxVerifyResultsMerge(resultTasks map[int]VerifyBlockBatch,
-	verifyBatchs map[int][]*commonpb.Transaction) ([][]byte, []*commonpb.Transaction, []*commonpb.Transaction, error) {
+	verifyBatchs map[int][]*commonpb.Transaction) ([][]byte, []*commonpb.Transaction, error) {
 
-	errTxs := make([]*commonpb.Transaction, 0)
 	txHashes := make([][]byte, 0)
 	txNewAdd := make([]*commonpb.Transaction, 0)
 	if len(resultTasks) < len(verifyBatchs) {
-		return nil, nil, errTxs, fmt.Errorf("tx verify error, batch num mismatch, received: %d,expected:%d",
+		return nil, nil, fmt.Errorf("tx verify error, batch num mismatch, received: %d,expected:%d",
 			len(resultTasks), len(verifyBatchs))
 	}
 	for i := 0; i < len(resultTasks); i++ {
 		batch := resultTasks[i]
 		if len(batch.txs) != len(batch.txHash) {
-			return nil, nil, errTxs,
+			return nil, nil,
 				fmt.Errorf("tx verify error, txs in batch mismatch, received: %d, expected:%d",
 					len(batch.txHash), len(batch.txs))
 		}
@@ -169,7 +184,7 @@ func TxVerifyResultsMerge(resultTasks map[int]VerifyBlockBatch,
 		txNewAdd = append(txNewAdd, batch.newAddTxs...)
 
 	}
-	return txHashes, txNewAdd, nil, nil
+	return txHashes, txNewAdd, nil
 }
 
 // RearrangeRWSet rearrange rw set
@@ -185,6 +200,7 @@ func RearrangeRWSet(block *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet
 		}
 	}
 	return rwSet
+
 }
 
 // IsTxRequestValid to check if transaction request payload is valid
@@ -307,8 +323,7 @@ func NewVerifierTx(conf *VerifierTxConfig) *VerifierTx {
 // verifierTxs verify transactions in block
 // include if transaction is double spent, transaction signature
 func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
-	[][]byte, []*commonpb.Transaction,
-	[]*commonpb.Transaction, *RwSetVerifyFailTx, error) {
+	[][]byte, []*commonpb.Transaction, *RwSetVerifyFailTx, error) {
 
 	verifyBatch := utils.DispatchTxVerifyTask(block.Txs)
 	resultTasks := make(map[int]VerifyBlockBatch)
@@ -345,13 +360,15 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			}
 			txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
 			if err1 != nil {
-				vt.log.Errorf("VerifyTx => verifyTx(...) failed, err = %v", err1)
+				vt.log.Errorf("verify tx failed, block height:%d, err:%v", block.Header.BlockHeight, err1)
 				err = err1
 
 				if rwSetVerifyFailTxIdsIncr != nil {
 					failTxLock.Lock()
 					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, rwSetVerifyFailTxIdsIncr...)
 					failTxLock.Unlock()
+					vt.log.Errorf("verify tx failed, block height:%d, rw set verify failed tx ids:%v, err:%v",
+						block.Header.BlockHeight, rwSetVerifyFailTxIds, err1)
 				}
 				return
 			}
@@ -379,27 +396,39 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 				"block height:%d, err: %s", len(rwSetVerifyFailTxIds),
 				block.Header.BlockHeight, err.Error())
 		})
-		return nil, nil, nil, rwSetVerifyFailTx, err
+		return nil, nil, rwSetVerifyFailTx, err
 	}
 
 	resultStart := utils.CurrentTimeMillisSeconds()
-	txHashes, txNewAdd, errTxs, err := TxVerifyResultsMerge(resultTasks, verifyBatch)
+	txHashes, txNewAdd, err := TxVerifyResultsMerge(resultTasks, verifyBatch)
 	if err != nil {
-		return txHashes, txNewAdd, errTxs, nil, err
+		return txHashes, txNewAdd, nil, err
 	}
 	// calc result use time
 	resultLasts := utils.CurrentTimeMillisSeconds() - resultStart
 
 	for i, stat := range stats {
 		if stat != nil {
-			vt.log.Debugf("verify stat (index:%d,sigcount:%d/%d,db:%d,sig:%d,other:%d,total:%d)",
-				i, stat.SigLasts, stat.TotalCount, stat.DBLasts, stat.SigLasts, stat.OthersLasts, concurrentLasts)
+			vt.log.Debugf(
+				"verify stat (index:%d,sigcount:%d/%d,db:%d,sig:%d,other:%d,total:%d) "+
+					"txfilter (fp:%d,exists:%d,fpdb:%d)",
+				i, stat.SigLasts, stat.TotalCount, stat.DBLasts, stat.SigLasts, stat.OthersLasts, concurrentLasts,
+				stat.FpCount, stat.FilterCosts, stat.DbCosts,
+			)
 		}
 	}
 
-	vt.log.Infof("verify txs,height: [%d] (pool:%d,txVerify:%d,results:%d)",
-		block.Header.BlockHeight, poolLasts, concurrentLasts, resultLasts)
-	return txHashes, txNewAdd, nil, nil, nil
+	total, sig, db, other, fp, filterCosts, dbCosts, totalFilterCosts, totalDbCosts := calStatsAvg(stats)
+
+	vt.log.Infof("verify txs,height: [%d] (count:%v,pool:%d,txVerify:%d,results:%d) "+
+		"avg(sigcount:%d/%d,db:%d,sig:%d,other:%d) "+
+		"filter total(fp:%d,exists:%d,fpdb:%d) filter avg(fp:%d,exists:%d,fpdb:%d)",
+		block.Header.BlockHeight, block.Header.TxCount, poolLasts, concurrentLasts, resultLasts,
+		sig, total, db, sig, other,
+		fp, totalFilterCosts, totalDbCosts,
+		fp, filterCosts, dbCosts,
+	)
+	return txHashes, txNewAdd, nil, nil
 }
 
 // verifyTx verify tx, return tx hashs, tx list, rw set verify failed tx tds, error
@@ -413,23 +442,12 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 	for _, tx := range txs {
 		// tx must in txpool when open consensus message turbo
 		if !IfOpenConsensusMessageTurbo(vt.chainConf) {
+			blockVersion := strconv.Itoa(int(vt.block.Header.BlockVersion))
 			if err := ValidateTx(txsRet, tx, stat, newAddTxs, block,
 				vt.chainConf.ChainConfig().Consensus.Type,
-				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac, vt.proposalCache, mode, verifyMode); err != nil {
+				vt.txFilter, vt.chainConf.ChainConfig().ChainId, vt.ac,
+				vt.proposalCache, mode, verifyMode, blockVersion); err != nil {
 				return nil, nil, nil, err
-			}
-		}
-
-		if mode == protocol.CONSENSUS_VERIFY {
-			if vt.chainConf.ChainConfig().Block.TxTimestampVerify {
-				currentTime := utils.CurrentTimeSeconds()
-				// tx timeout deal, return err message
-				if (tx.Payload.Timestamp + int64(vt.chainConf.ChainConfig().Block.TxTimeout)) < currentTime {
-					errMsg := fmt.Sprintf("verify tx timestamp fail, tx id:%s, tx payload timestamp:%d, current timestamp:%d",
-						tx.Payload.TxId, tx.Payload.Timestamp, currentTime)
-					vt.log.Errorf(errMsg)
-					return nil, nil, nil, errors.New(errMsg)
-				}
 			}
 		}
 
@@ -550,10 +568,50 @@ func IntegersContains(array []int, val int) bool {
 }
 
 // GetBatchIds get batch ids
-func GetBatchIds(block *commonpb.Block) ([]string, []uint32) {
-	batchIdsByte := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
+func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
+	if batchIdsByte, ok := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]; ok {
+		txBatchInfo, err := DeserializeTxBatchInfo(batchIdsByte)
+		if err != nil {
+			return nil, nil, err
+		}
 
-	txBatchInfo, _ := DeserializeTxBatchInfo(batchIdsByte)
+		return txBatchInfo.BatchIds, txBatchInfo.Index, nil
+	}
+	return []string{}, []uint32{}, nil
+}
 
-	return txBatchInfo.BatchIds, txBatchInfo.Index
+// calStatsAvg Calculate STATS averages
+func calStatsAvg(stats map[int]*VerifyStat) (total, sig, db, other int, fp uint32,
+	filterCosts, dbCosts, totalFilterCosts, totalDbCosts int64) {
+	var count int
+	if len(stats) == 0 {
+		return
+	}
+
+	for _, stat := range stats {
+		if stat != nil {
+			total += stat.TotalCount
+			sig += int(stat.SigLasts)
+			db += int(stat.DBLasts)
+			other += int(stat.OthersLasts)
+			fp += stat.FpCount
+			filterCosts += stat.FilterCosts
+			dbCosts += stat.DbCosts
+			count++
+		}
+	}
+	totalFilterCosts = filterCosts
+	totalDbCosts = dbCosts
+	if count == 0 {
+		return
+	}
+	total /= count
+	sig /= count
+	db /= count
+	other /= count
+	filterCosts /= int64(count)
+	if fp != 0 {
+		dbCosts /= int64(fp)
+	}
+	return
 }

@@ -99,6 +99,9 @@ type pkACProvider struct {
 	resourceNamePolicyMap *sync.Map
 
 	exceptionalPolicyMap *sync.Map
+
+	resourceNamePolicyMap220 *sync.Map
+	exceptionalPolicyMap220  *sync.Map
 }
 
 type publicAdminMemberModel struct {
@@ -123,22 +126,26 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 func newPkACProvider(chainConfig *config.ChainConfig,
 	store protocol.BlockchainStore, log protocol.Logger) (*pkACProvider, error) {
 	pkAcProvider := &pkACProvider{
-		adminNum:              0,
-		hashType:              chainConfig.Crypto.Hash,
-		authType:              chainConfig.AuthType,
-		adminMember:           &sync.Map{},
-		consensusMember:       &sync.Map{},
-		memberCache:           concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
-		log:                   log,
-		dataStore:             store,
-		resourceNamePolicyMap: &sync.Map{},
-		exceptionalPolicyMap:  &sync.Map{},
+		adminNum:                 0,
+		hashType:                 chainConfig.Crypto.Hash,
+		authType:                 chainConfig.AuthType,
+		adminMember:              &sync.Map{},
+		consensusMember:          &sync.Map{},
+		memberCache:              concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		log:                      log,
+		dataStore:                store,
+		resourceNamePolicyMap:    &sync.Map{},
+		exceptionalPolicyMap:     &sync.Map{},
+		resourceNamePolicyMap220: &sync.Map{},
+		exceptionalPolicyMap220:  &sync.Map{},
 	}
 
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
 		pkAcProvider.createDefaultResourcePolicyForDPoS()
+		pkAcProvider.createDefaultResourcePolicyForDPoS_220()
 	} else {
 		pkAcProvider.createDefaultResourcePolicy()
+		pkAcProvider.createDefaultResourcePolicy_220()
 	}
 
 	err := pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
@@ -247,6 +254,19 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 		p.log.Debugf("member found in local cache")
 		return cached.member
 	}
+	// handle false positive when member cache is cleared
+	if p.authType == protocol.Public {
+		tmpMember, err := p.NewMemberFromAcs(member)
+		if err != nil {
+			p.log.Debugf("new member failed, authType = %s, err = %s", p.authType, err.Error())
+			return nil
+		}
+		p.memberCache.Add(string(member.MemberInfo), &memberCached{
+			member:    tmpMember,
+			certChain: nil,
+		})
+		return tmpMember
+	}
 	return nil
 }
 
@@ -288,9 +308,23 @@ func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error)
 	return member, nil
 }
 
-func (p *pkACProvider) createDefaultResourcePolicy() {
+// NewMember creates a member from pb Member
+func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member, error) {
+	member, err := publicNewPkMemberFromAcs(pbMember, p.adminMember, p.consensusMember, p.hashType)
+	if err != nil {
+		return nil, fmt.Errorf("new member failed: %s", err.Error())
+	}
+	return member, nil
+}
 
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, pubPolicyConsensus)
+func (p *pkACProvider) createDefaultResourcePolicy() {
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameReadData, policyRead)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameWriteData, policyWrite)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateSelfConfig, policySelfConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
+
 	// for txtype
 	p.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
@@ -413,6 +447,9 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// for gas admin
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
+	// for charge gas in optimize mode
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 	// for set invoke base gas
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), pubPolicyMajorityAdmin)
@@ -423,8 +460,13 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 
 // need to consistent with 2.1.0 for dpos
 func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameReadData, policyRead)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameWriteData, policyWrite)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateSelfConfig, policySelfConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
+	p.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
 
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, pubPolicyConsensus)
 	// for txtype
 	p.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
@@ -544,6 +586,9 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyForbidden)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyForbidden)
+	// for charge gas in optimize mode
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 
 	// for admin management
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
@@ -614,6 +659,12 @@ func (p *pkACProvider) buildRoleListForVerifyPrincipal(pol *policy) map[protocol
 }
 
 func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return p.lookUpPolicyByResourceName220(policyResourceName)
+	}
+
 	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
 		if pol, ok = p.exceptionalPolicyMap.Load(resourceName); !ok {
@@ -720,6 +771,12 @@ func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePol
 
 // LookUpPolicy returns corresponding policy configured for the given resource name
 func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return p.lookUpPolicy220(policyResourceName)
+	}
+
 	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
 		return nil, fmt.Errorf("policy not found for resource %s", resourceName)
@@ -730,6 +787,12 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 
 // LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
 func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return p.lookUpExceptionalPolicy220(policyResourceName)
+	}
+
 	pol, ok := p.exceptionalPolicyMap.Load(resourceName)
 	if !ok {
 		return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)

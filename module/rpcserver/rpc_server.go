@@ -182,28 +182,11 @@ func (s *RPCServer) RegisterHandler() error {
 	return nil
 }
 
-// stopGrpcServer - stop grpc server gracefully with timeout
-func (s *RPCServer) stopGrpcServer() {
-	stopped := make(chan struct{})
-	go func() {
-		s.grpcServer.GracefulStop()
-		close(stopped)
-	}()
-
-	t := time.NewTimer(10 * time.Second)
-	defer t.Stop()
-	select {
-	case <-t.C:
-		s.grpcServer.Stop()
-	case <-stopped:
-	}
-}
-
 // Stop - stop RPCServer
 func (s *RPCServer) Stop() {
 	s.isShutdown = true
 	s.cancel()
-	s.stopGrpcServer()
+	s.grpcServer.Stop()
 	s.log.Info("RPCServer is stopped!")
 }
 
@@ -215,9 +198,9 @@ func (s *RPCServer) Restart(reason string) error {
 
 	s.log.Info("RPCServer is beginning to restart")
 
-	s.cancel()
-	s.stopGrpcServer()
 	_ = s.mixServer.Shutdown(s.ctx)
+	s.cancel()
+	s.grpcServer.Stop()
 
 	s.grpcServer, err = newGrpc(s.chainMakerServer)
 	if err != nil {

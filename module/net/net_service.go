@@ -327,7 +327,8 @@ func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
 		msgbus.CertManageCertsAliasUpdate,
 		msgbus.CertManageCertsAliasDelete,
 		msgbus.PubkeyManageAdd,
-		msgbus.PubkeyManageDelete:
+		msgbus.PubkeyManageDelete,
+		msgbus.MaxbftEpochConf:
 		n.ns.localNet.ReVerifyPeers(n.ns.chainId)
 	}
 }
@@ -734,6 +735,7 @@ func (ns *NetService) initBindMsgBus() error {
 	); err != nil {
 		return err
 	}
+
 	if err := ns.receiveMsgForMsgBus(
 		txPoolMsgHandler,
 		CreateFlagWithPrefixAndMsgType(

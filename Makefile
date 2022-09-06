@@ -12,9 +12,6 @@ VERSION=v2.3.0_alpha
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
 
-AARCH64="aarch64"
-CPU=$(shell uname -m)
-
 LOCALCONF_HOME=chainmaker.org/chainmaker-go/module/blockchain
 GOLDFLAGS += -X "${LOCALCONF_HOME}.CurrentVersion=${VERSION}"
 GOLDFLAGS += -X "${LOCALCONF_HOME}.BuildDateTime=${DATETIME}"
@@ -22,18 +19,13 @@ GOLDFLAGS += -X "${LOCALCONF_HOME}.GitBranch=${GIT_BRANCH}"
 GOLDFLAGS += -X "${LOCALCONF_HOME}.GitCommit=${GIT_COMMIT}"
 
 chainmaker:
-ifeq ("$(CPU)",$(AARCH64))
-ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.aarch64),)
-	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.x86_64
-	mv module/vm/wasmer/wasmer-go/libwasmer.so.aarch64 module/vm/wasmer/wasmer-go/libwasmer.so
-endif
-else
-ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.x86_64),)
-	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.aarch64
-	mv module/vm/wasmer/wasmer-go/libwasmer.so.x86_64 module/vm/wasmer/wasmer-go/libwasmer.so
-endif
-endif
-	@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
+    ifeq ($(PLATFORM),"Windows")
+		@echo "build for windows"
+		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker.exe
+    else
+		@echo "build for linux or mac"
+		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
+    endif
 
 chainmaker-vendor:
 	@cd main && go build -mod=vendor -o ../bin/chainmaker
@@ -55,7 +47,7 @@ compile:
 	@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
 
 cmc:
-	@cd tools/cmc && GOPATH=${GOPATH} go build -o ../../bin/cmc
+	@cd tools/cmc && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../../bin/cmc
 
 send-tool:
 	cd test/send_proposal_request_tool && go build -o ../../bin/send_proposal_request_tool
@@ -109,12 +101,4 @@ sql-qta:
 	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
 	cd test/send_proposal_request_ci && ./clean_sql_log.sh
 qta:
-	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
-	echo "start new qta test"
-	cd test/send_proposal_request_ci && ./build.sh
-	cd test/send_proposal_request_ci && ./start_solo.sh
-	cd test/send_proposal_request_ci && go run main.go
-	cd test/send_proposal_request_ci && ./stop_solo.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
+	echo "new version qta TODO"

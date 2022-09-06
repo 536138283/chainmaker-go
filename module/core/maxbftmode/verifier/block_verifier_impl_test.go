@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"testing"
@@ -31,7 +30,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var hashType = "SHA256"
+var (
+	hashType = "SHA256"
+	log      = logger.GetLoggerByChain(logger.MODULE_CORE, "Chain1")
+)
 
 func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	ctl := gomock.NewController(t)
@@ -42,7 +44,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	snapshotMgr := mock.NewMockSnapshotManager(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
 	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
-	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
+	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache, log)
 	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	txpool := mock.NewMockTxPool(ctl)
@@ -101,7 +103,8 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	txResultMap[tx.Payload.TxId] = tx.Result
 
 	snapshot := mock.NewMockSnapshot(ctl)
-	snapshot.EXPECT().GetBlockchainStore().AnyTimes()
+	blockchainStore := mock.NewMockBlockchainStore(ctl)
+	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockchainStore)
 	snapshot.EXPECT().Seal().AnyTimes()
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
@@ -110,6 +113,7 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
+	snapshotMgr.EXPECT().GetSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()
@@ -140,8 +144,16 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 				RetryTime:             0,
 				RetryInterval:         0,
 			},
-		}}
+			EnableSenderGroup:        false,
+			EnableConflictsBitWindow: false,
+		},
+		AuthType: protocol.Identity,
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_CHAINMAKER,
+		},
+	}
 	chainConf.EXPECT().ChainConfig().Return(&chainConfig).AnyTimes()
+	blockchainStore.EXPECT().GetLastChainConfig().AnyTimes().Return(&chainConfig, nil)
 
 	verifier := &BlockVerifierImpl{
 		chainId:         chainId,
@@ -185,15 +197,6 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 
 	err = verifier.VerifyBlock(b1, protocol.CONSENSUS_VERIFY)
 	require.Nil(t, err)
-
-	for block, ok := range testDagBlocks(t, b1) {
-		err = verifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY)
-		if ok {
-			require.Nil(t, err)
-		} else {
-			require.NotNil(t, err)
-		}
-	}
 }
 
 func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
@@ -205,7 +208,7 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshotMgr := mock.NewMockSnapshotManager(ctl)
 	ledgerCache := cache.NewLedgerCache(chainId)
 	blockchainStoreImpl := mock.NewMockBlockchainStore(ctl)
-	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache)
+	proposedCache := cache.NewProposalCache(mock.NewMockChainConf(ctl), ledgerCache, log)
 	chainConf := mock.NewMockChainConf(ctl)
 	ac := mock.NewMockAccessControlProvider(ctl)
 	txpool := mock.NewMockTxPool(ctl)
@@ -289,9 +292,11 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRwSetTable)
 	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
 	snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(b1.Dag)
+	snapshot.EXPECT().ApplyBlock(gomock.Any(), gomock.Any()).AnyTimes()
 	//netService.EXPECT().GetNodeUidByCertId(gomock.Any()).Return("123", nil)
 
 	snapshotMgr.EXPECT().NewSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
+	snapshotMgr.EXPECT().GetSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
 	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()
@@ -366,15 +371,6 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 
 	err = verifier.VerifyBlockWithRwSets(b1, rwSet, protocol.CONSENSUS_VERIFY)
 	require.Nil(t, err)
-
-	for block, ok := range testDagBlocks(t, b1) {
-		err = verifier.VerifyBlockWithRwSets(block, rwSet, protocol.CONSENSUS_VERIFY)
-		if ok {
-			require.Nil(t, err)
-		} else {
-			require.NotNil(t, err)
-		}
-	}
 }
 
 func Test_DispatchTask(t *testing.T) {
@@ -508,93 +504,6 @@ func createNewTestBlockWithoutProposer(height uint64) *commonpb.Block {
 	return block
 }
 
-func testDagBlocks(t *testing.T, b1 *commonpb.Block) map[*commonpb.Block]bool {
-	b2 := &commonpb.Block{
-		Header: &commonpb.BlockHeader{
-			BlockVersion:   b1.Header.BlockVersion,
-			BlockType:      b1.Header.BlockType,
-			ChainId:        b1.Header.ChainId,
-			BlockHeight:    b1.Header.BlockHeight,
-			BlockHash:      b1.Header.BlockHash,
-			PreBlockHash:   b1.Header.PreBlockHash,
-			PreConfHeight:  b1.Header.PreConfHeight,
-			TxCount:        b1.Header.TxCount,
-			TxRoot:         b1.Header.TxRoot,
-			DagHash:        b1.Header.DagHash,
-			RwSetRoot:      b1.Header.RwSetRoot,
-			BlockTimestamp: b1.Header.BlockTimestamp,
-			ConsensusArgs:  b1.Header.ConsensusArgs,
-			Proposer:       b1.Header.Proposer,
-			Signature:      b1.Header.Signature,
-		},
-		Dag:            b1.Dag,
-		Txs:            b1.Txs,
-		AdditionalData: b1.AdditionalData,
-	}
-
-	// empty dag
-	b2.Dag = &commonpb.DAG{}
-	fillHashesOfBlock(t, b2, nil)
-
-	b3 := &commonpb.Block{
-		Header: &commonpb.BlockHeader{
-			BlockVersion:   b1.Header.BlockVersion,
-			BlockType:      b1.Header.BlockType,
-			ChainId:        b1.Header.ChainId,
-			BlockHeight:    b1.Header.BlockHeight,
-			BlockHash:      b1.Header.BlockHash,
-			PreBlockHash:   b1.Header.PreBlockHash,
-			PreConfHeight:  b1.Header.PreConfHeight,
-			TxCount:        b1.Header.TxCount,
-			TxRoot:         b1.Header.TxRoot,
-			DagHash:        b1.Header.DagHash,
-			RwSetRoot:      b1.Header.RwSetRoot,
-			BlockTimestamp: b1.Header.BlockTimestamp,
-			ConsensusArgs:  b1.Header.ConsensusArgs,
-			Proposer:       b1.Header.Proposer,
-			Signature:      b1.Header.Signature,
-		},
-		Dag:            b1.Dag,
-		Txs:            b1.Txs,
-		AdditionalData: b1.AdditionalData,
-	}
-	// 0 tx block and dag of 1 vertex
-	b3.Txs = []*commonpb.Transaction{}
-	txHashs := make([][]byte, 0)
-	fillHashesOfBlock(t, b3, txHashs)
-
-	b4 := &commonpb.Block{
-		Header: &commonpb.BlockHeader{
-			BlockVersion:   b1.Header.BlockVersion,
-			BlockType:      b1.Header.BlockType,
-			ChainId:        b1.Header.ChainId,
-			BlockHeight:    b1.Header.BlockHeight,
-			BlockHash:      b1.Header.BlockHash,
-			PreBlockHash:   b1.Header.PreBlockHash,
-			PreConfHeight:  b1.Header.PreConfHeight,
-			TxCount:        b1.Header.TxCount,
-			TxRoot:         b1.Header.TxRoot,
-			DagHash:        b1.Header.DagHash,
-			RwSetRoot:      b1.Header.RwSetRoot,
-			BlockTimestamp: b1.Header.BlockTimestamp,
-			ConsensusArgs:  b1.Header.ConsensusArgs,
-			Proposer:       b1.Header.Proposer,
-			Signature:      b1.Header.Signature,
-		},
-		Dag:            b1.Dag,
-		Txs:            b1.Txs,
-		AdditionalData: b1.AdditionalData,
-	}
-	b4.Dag = b2.Dag
-	b4.Txs = b3.Txs
-	fillHashesOfBlock(t, b4, txHashs)
-	m := make(map[*commonpb.Block]bool)
-	m[b2] = false
-	m[b3] = false
-	m[b4] = true
-	return m
-}
-
 func fillHashesOfBlock(t *testing.T, b *commonpb.Block, txHashs [][]byte) {
 	b.Header.TxCount = uint32(len(b.Txs))
 
@@ -709,9 +618,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(nil)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(nil)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -741,9 +650,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(),
-						gomock.Any()).Return(errTest)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(),
+					//	gomock.Any()).Return(errTest)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -800,9 +709,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(nil)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(nil)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_TBFT, true, c),
@@ -832,9 +741,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(errTest)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(errTest)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_TBFT, true, c),
@@ -941,9 +850,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(nil)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(nil)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -973,9 +882,9 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 						Return(getBlock(), nil)
 					proposalCache.EXPECT().KeepProposedBlock(gomock.Any(), gomock.Any()).
 						Return(nil)
-					proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
-					proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
-						Return(errTest)
+					//proposalCache.EXPECT().IsProposedAt(gomock.Any()).Return(true)
+					//proposalCache.EXPECT().SetProposedBlock(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).
+					//	Return(errTest)
 					return proposalCache
 				}(),
 				chainConf: getCc(consensus.ConsensusType_SOLO, true, c),
@@ -1015,19 +924,13 @@ func TestBlockVerifierImpl_verifyRepeat(t *testing.T) {
 				storeHelper:           tt.fields.storeHelper,
 				metricBlockVerifyTime: tt.fields.metricBlockVerifyTime,
 			}
-			gotIsRepeat, err := v.verifyRepeat(tt.args.block, tt.args.startTick, tt.args.mode)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("verifyRepeat() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
+			_, gotIsRepeat := v.verifyRepeat(tt.args.block, tt.args.startTick, tt.args.mode)
 			if gotIsRepeat != tt.wantIsRepeat {
 				t.Errorf("verifyRepeat() = %v, want %v", gotIsRepeat, tt.wantIsRepeat)
 			}
 		})
 	}
 }
-
-var errTest = errors.New("test")
 
 func getBlock() *commonpb.Block {
 	return &commonpb.Block{Header: &commonpb.BlockHeader{

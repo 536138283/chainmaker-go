@@ -11,8 +11,11 @@ import (
 	"errors"
 	"math"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -22,7 +25,21 @@ type SnapshotEvidence struct {
 	log      protocol.Logger
 }
 
-// GetPreSnapshot get pre snapshot
+// GetBlockFingerprint returns current block fingerprint
+func (s *SnapshotEvidence) GetBlockFingerprint() string {
+	return s.delegate.GetBlockFingerprint()
+}
+
+// SetBlockFingerprint set block fingerprint
+func (s *SnapshotEvidence) SetBlockFingerprint(fp utils.BlockFingerPrint) {
+	s.delegate.SetBlockFingerprint(fp)
+}
+
+func (s *SnapshotEvidence) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
 func (s *SnapshotEvidence) GetPreSnapshot() protocol.Snapshot {
 	if s.delegate == nil {
 		return nil
@@ -192,4 +209,11 @@ func (s *SnapshotEvidence) GetBlockProposer() *accesscontrol.Member {
 		return nil
 	}
 	return s.delegate.blockProposer
+}
+
+func (s *SnapshotEvidence) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*commonPb.TxRWSet) {
+	if s.delegate == nil {
+		return
+	}
+	s.delegate.ApplyBlock(block, txRWSetMap)
 }

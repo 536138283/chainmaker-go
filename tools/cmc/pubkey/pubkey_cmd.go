@@ -14,17 +14,13 @@ import (
 	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
-
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 )
 
 var (
@@ -196,7 +192,7 @@ func cliAddPubKey() error {
 	for i := range adminKeys {
 		e, err := sdkutils.MakePkEndorserWithPath(
 			adminKeys[i],
-			crypto.HashAlgoMap[client.GetHashType()],
+			client.GetHashType(),
 			adminOrgs[i],
 			payload,
 		)
@@ -256,7 +252,7 @@ func cliDelPubKey() error {
 	for i := range adminKeys {
 		e, err := sdkutils.MakePkEndorserWithPath(
 			adminKeys[i],
-			crypto.HashAlgoMap[client.GetHashType()],
+			client.GetHashType(),
 			adminOrgs[i],
 			payload,
 		)

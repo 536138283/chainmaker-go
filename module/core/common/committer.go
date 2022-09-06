@@ -41,7 +41,7 @@ func (cb *CommitBlock) CommitBlock(
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEventLasts, filterLasts int64, blockInfo *commonpb.BlockInfo,
 	err error) {
 	// record block
-	rwSet := RearrangeRWSet(block, rwSetMap)
+	rwSet := utils.RearrangeRWSet(block, rwSetMap)
 	// record contract event
 	events := rearrangeContractEvent(block, conEventMap)
 

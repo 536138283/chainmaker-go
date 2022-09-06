@@ -81,7 +81,11 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 
 	var schedulerFactory scheduler.TxSchedulerFactory
 	// new tx scheduler to set the core engine
-	core.txScheduler = schedulerFactory.NewTxScheduler(cf.VmMgr, cf.ChainConf, cf.StoreHelper)
+	core.txScheduler = schedulerFactory.NewTxScheduler(
+		cf.VmMgr,
+		cf.ChainConf,
+		cf.StoreHelper,
+		cf.LedgerCache)
 	core.quitC = make(<-chan interface{})
 
 	var err error
@@ -222,6 +226,7 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.TxPoolSignal, c)
 	c.msgBus.Register(msgbus.RwSetVerifyFailTxs, c)
 	//c.msgBus.Register(msgbus.BuildProposal, c)
+	c.msgBus.Register(msgbus.RwSetVerifyFailTxs, c)
 	c.blockProposer.Start() //nolint: errcheck
 }
 

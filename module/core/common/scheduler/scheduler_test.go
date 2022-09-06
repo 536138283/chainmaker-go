@@ -16,6 +16,10 @@ import (
 	"strconv"
 	"testing"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+
+	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
+
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/localconf/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -30,6 +34,14 @@ import (
 	"github.com/golang/mock/gomock"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/require"
+)
+
+const (
+	txId0 = "a0000000000000000000000000000000"
+	txId1 = "a0000000000000000000000000000001"
+	txId2 = "a0000000000000000000000000000002"
+	txId3 = "a0000000000000000000000000000003"
+	txId4 = "a0000000000000000000000000000004"
 )
 
 var (
@@ -81,6 +93,7 @@ func newTx(txId string, contractId *commonPb.Contract, parameterMap map[string]s
 			Parameters:     parameters,
 			Timestamp:      0,
 			ExpirationTime: 0,
+			Limit:          &commonPb.Limit{GasLimit: 0},
 		},
 		Result: &commonPb.Result{
 			Code: commonPb.TxStatusCode_SUCCESS,
@@ -149,7 +162,7 @@ func newBlock() *commonPb.Block {
 	return &commonPb.Block{
 		Header: &commonPb.BlockHeader{
 			ChainId:        "",
-			BlockHeight:    0,
+			BlockHeight:    10,
 			PreBlockHash:   nil,
 			BlockHash:      nil,
 			BlockVersion:   2300,
@@ -172,17 +185,23 @@ func newBlock() *commonPb.Block {
 	}
 }
 
-func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
+func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txCount int, setVM bool) (*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
 	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	for i := 0; i < txCount; i++ {
+		txRWSetTable[i] = &commonPb.TxRWSet{TxId: fmt.Sprintf("a000000000000000000000000000%04d", i)}
+	}
 	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
+	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
 	chainConf := mock.NewMockChainConf(ctl)
+	ledgerCache := mock.NewMockLedgerCache(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -193,14 +212,17 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 			EnableConflictsBitWindow: enableConflictsBitWindow,
 		},
 		AuthType: protocol.Identity,
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_CHAINMAKER,
+		},
+		Consensus: &configpb.ConsensusConfig{Type: consensus.ConsensusType_TBFT},
 	}
-	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
-	//chainConf :=
+	chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -221,27 +243,37 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
+	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
 
-	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	if setVM {
+		vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	}
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
 // prepare4 is used only by TestSchedule4
-func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int, setVM bool) (
 	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
 	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	for i := 0; i < txCount; i++ {
+		txRWSetTable[i] = &commonPb.TxRWSet{TxId: fmt.Sprintf("a000000000000000000000000000%04d", i)}
+	}
 	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
+	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
 	chainConf := mock.NewMockChainConf(ctl)
+	ledgerCache := mock.NewMockLedgerCache(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -256,13 +288,17 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
 		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
+		},
+		Consensus: &configpb.ConsensusConfig{Type: consensus.ConsensusType_TBFT},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -293,27 +329,37 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
+	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
 
-	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	if setVM {
+		vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	}
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
 // prepare5 is used only by TestSchedule5
-func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int) (
+func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int, setVM bool) (
 	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
 	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	for i := 0; i < txCount; i++ {
+		txRWSetTable[i] = &commonPb.TxRWSet{TxId: fmt.Sprintf("a000000000000000000000000000%04d", i)}
+	}
 	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
+	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
 	chainConf := mock.NewMockChainConf(ctl)
+	ledgerCache := mock.NewMockLedgerCache(ctl)
 	crypto := configpb.CryptoConfig{
-		Hash: "SHA256",
+		Hash: crypto2.CRYPTO_ALGO_SHA256,
 	}
 	contractConf := configpb.ContractConfig{EnableSqlSupport: false}
 	chainConfig := &configpb.ChainConfig{
@@ -328,13 +374,17 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
 		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
+		},
+		Consensus: &configpb.ConsensusConfig{Type: consensus.ConsensusType_TBFT},
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -365,17 +415,21 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
+	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
 	//snapshot.EXPECT().Seal()
 
-	vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	if setVM {
+		vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
+	}
 	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
 }
 
 func TestSchedule(t *testing.T) {
 
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t, false, false, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t, false, false, 2, true)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTx("a0000000000000000000000000000001", contractId, parameters)
@@ -438,7 +492,7 @@ func TestSchedule(t *testing.T) {
 
 func TestSchedule2(t *testing.T) {
 
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t, true, false, 1)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t, true, false, 1, true)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTx("a0000000000000000000000000000001", contractId, parameters)
@@ -501,7 +555,7 @@ func TestSchedule2(t *testing.T) {
 
 func TestSchedule3(t *testing.T) {
 
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t, true, true, 1)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare(t, true, true, 1, true)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTx("a0000000000000000000000000000001", contractId, parameters)
@@ -569,7 +623,7 @@ func TestSchedule4(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 2, true)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
@@ -637,7 +691,7 @@ func TestSchedule5(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2)
+	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2, true)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
@@ -700,11 +754,6 @@ func TestSchedule5(t *testing.T) {
 
 func TestSimulateWithDag(t *testing.T) {
 
-	const (
-		txId0 = "a0000000000000000000000000000000"
-		txId1 = "a0000000000000000000000000000001"
-		txId2 = "a0000000000000000000000000000002"
-	)
 	dagNormal := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{
 			{
@@ -714,7 +763,7 @@ func TestSimulateWithDag(t *testing.T) {
 				Neighbors: []uint32{0},
 			},
 			{
-				Neighbors: []uint32{0},
+				Neighbors: []uint32{1},
 			},
 		},
 	}
@@ -778,23 +827,34 @@ func TestSimulateWithDag(t *testing.T) {
 			panic("Test shouldn't reach here")
 		}
 	}
+	contractResult := &commonPb.ContractResult{
+		Code:    0,
+		Result:  nil,
+		Message: "",
+	}
+	runContractNormal := func(*commonPb.Contract, string, []byte, map[string][]byte, protocol.TxSimContext,
+		uint64, commonPb.TxType) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+		return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+	}
 	tests := []struct {
 		name              string
 		dag               *commonPb.DAG
 		applyTxSimContext func(protocol.TxSimContext, protocol.ExecOrderTxType, bool, bool) (bool, int)
-		sealTimes         int
-		wantErr           bool
+		runContract       func(*commonPb.Contract, string, []byte, map[string][]byte, protocol.TxSimContext,
+			uint64, commonPb.TxType) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode)
+		sealTimes int
+		wantErr   bool
 	}{
 		{
 			name:              "test0",
 			dag:               dagNormal,
 			applyTxSimContext: applyTxSimContextNormal,
+			runContract:       runContractNormal,
 			sealTimes:         1,
 			wantErr:           false,
 		},
 		{
-			// no error in this test, as it errors in other verification part due to different txRWSet
-			name: "testApplyTxSimContextFailNoError",
+			name: "testApplyTxSimContextFail",
 			dag:  dagNormal,
 			applyTxSimContext: func(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 				runVmSuccess bool, applySpecialTx bool) (bool, int) {
@@ -810,13 +870,15 @@ func TestSimulateWithDag(t *testing.T) {
 					panic("Test shouldn't reach here")
 				}
 			},
-			sealTimes: 1,
-			wantErr:   false,
+			runContract: runContractNormal,
+			sealTimes:   1,
+			wantErr:     false, // in real case, compareDag will return err since buildDag will build a different dag!
 		},
 		{
 			name:              "testDagHasDuplicates",
 			dag:               dagDupVertex,
 			applyTxSimContext: applyTxSimContextNormal,
+			runContract:       runContractNormal,
 			sealTimes:         0,
 			wantErr:           true,
 		},
@@ -824,6 +886,7 @@ func TestSimulateWithDag(t *testing.T) {
 			name:              "testDagHasCycle",
 			dag:               dagCycle,
 			applyTxSimContext: applyTxSimContextNormal,
+			runContract:       runContractNormal,
 			sealTimes:         0,
 			wantErr:           true,
 		},
@@ -831,6 +894,7 @@ func TestSimulateWithDag(t *testing.T) {
 			name:              "testDagHasOutOfBoundIndex",
 			dag:               dagOutOfBound,
 			applyTxSimContext: applyTxSimContextNormal,
+			runContract:       runContractNormal,
 			sealTimes:         0,
 			wantErr:           true,
 		},
@@ -838,13 +902,46 @@ func TestSimulateWithDag(t *testing.T) {
 			name:              "testDagMissesVertex",
 			dag:               dagMissingVertex,
 			applyTxSimContext: applyTxSimContextNormal,
+			runContract:       runContractNormal,
 			sealTimes:         0,
 			wantErr:           true,
+		},
+		{
+			name:              "testIteratorTx",
+			dag:               dagNormal,
+			applyTxSimContext: applyTxSimContextNormal,
+			runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
+				txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
+				*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+				txId := txContext.GetTx().GetPayload().GetTxId()
+				if txId == txId0 {
+					return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+				}
+				return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
+			},
+			sealTimes: 1,
+			wantErr:   false,
+		},
+		{
+			name:              "testIteratorTxAtBeginning",
+			dag:               dagNormal,
+			applyTxSimContext: applyTxSimContextNormal,
+			runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
+				txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
+				*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+				txId := txContext.GetTx().GetPayload().GetTxId()
+				if txId != txId0 {
+					return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+				}
+				return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
+			},
+			sealTimes: 1,
+			wantErr:   true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, _, snapshot, scheduler, contractId, block := prepare(t, false, false, 2)
+			vmMgr, _, _, snapshot, scheduler, contractId, block := prepare(t, false, false, 3, false)
 
 			parameters := make(map[string]string, 8)
 			tx0 := newTx(txId0, contractId, parameters)
@@ -857,8 +954,23 @@ func TestSimulateWithDag(t *testing.T) {
 			snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 			snapshot.EXPECT().Seal().Return().Times(tt.sealTimes)
 			snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(tt.applyTxSimContext)
-			txRWSets := make(map[string]*commonPb.Result, len(block.Txs))
-			snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txRWSets)
+			txResults := make(map[string]*commonPb.Result, len(block.Txs))
+			snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResults)
+			dagCopy := &commonPb.DAG{}
+			dagBytes, _ := proto.Marshal(tt.dag)
+			proto.Unmarshal(dagBytes, dagCopy)
+			if tt.name == "testIteratorTx" {
+				dagCopy = &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+					},
+				}
+			}
+			snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(dagCopy)
+
+			vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(tt.runContract)
 
 			txRwSet, result, err := scheduler.SimulateWithDag(block, snapshot)
 			if tt.wantErr {
@@ -875,6 +987,139 @@ func TestSimulateWithDag(t *testing.T) {
 	}
 }
 
+func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
+
+	dagNormal := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: nil,
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+		},
+	}
+	applyTxSimContextNormal := func(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
+		runVmSuccess bool, applySpecialTx bool) (bool, int) {
+		switch txSimContext.GetTx().Payload.TxId {
+		case txId0:
+			return true, 1
+		case txId1:
+			return true, 2
+		case txId2:
+			return true, 3
+		default:
+			panic("Test shouldn't reach here")
+		}
+	}
+	contractResult := &commonPb.ContractResult{
+		Code:    0,
+		Result:  nil,
+		Message: "",
+	}
+	runContractNormal := func(*commonPb.Contract, string, []byte, map[string][]byte, protocol.TxSimContext,
+		uint64, commonPb.TxType) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+		return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+	}
+	tests := []struct {
+		name              string
+		dag               *commonPb.DAG
+		applyTxSimContext func(protocol.TxSimContext, protocol.ExecOrderTxType, bool, bool) (bool, int)
+		runContract       func(*commonPb.Contract, string, []byte, map[string][]byte, protocol.TxSimContext,
+			uint64, commonPb.TxType) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode)
+		sealTimes int
+		wantErr   bool
+	}{
+		{
+			name:              "test0",
+			dag:               dagNormal,
+			applyTxSimContext: applyTxSimContextNormal,
+			runContract:       runContractNormal,
+			sealTimes:         1,
+			wantErr:           true, // last tx should be gas type
+		},
+		{
+			name:              "test1",
+			dag:               dagNormal,
+			applyTxSimContext: applyTxSimContextNormal,
+			runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
+				txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
+				*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+				txId := txContext.GetTx().GetPayload().GetTxId()
+				if txId == txId0 {
+					return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+				} else if txId == txId1 {
+					return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
+				} else {
+					return contractResult, protocol.ExecOrderTxTypeChargeGas, commonPb.TxStatusCode_SUCCESS
+				}
+			},
+			sealTimes: 1,
+			wantErr:   false,
+		},
+		{
+			name:              "test2",
+			dag:               dagNormal,
+			applyTxSimContext: applyTxSimContextNormal,
+			runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
+				txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
+				*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+				txId := txContext.GetTx().GetPayload().GetTxId()
+				if txId == txId0 {
+					return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+				}
+				return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
+			},
+			sealTimes: 1,
+			wantErr:   true, // last tx should be gas type
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vmMgr, _, _, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 3, false)
+
+			parameters := make(map[string]string, 8)
+			tx0 := newTx(txId0, contractId, parameters)
+			tx1 := newTx(txId1, contractId, parameters)
+			tx2 := newTx(txId2, contractId, parameters)
+			tx2.Payload.ContractName = syscontract.SystemContract_ACCOUNT_MANAGER.String()
+
+			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
+			block.Dag = tt.dag
+
+			snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
+			snapshot.EXPECT().Seal().Return().Times(tt.sealTimes)
+			snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(tt.applyTxSimContext)
+			txResults := make(map[string]*commonPb.Result, len(block.Txs))
+			snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResults)
+			dagCopy := &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+				},
+			}
+			snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(dagCopy)
+
+			vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(tt.runContract)
+
+			txRwSet, result, err := scheduler.SimulateWithDag(block, snapshot)
+			if tt.wantErr {
+				require.NotNil(t, err)
+				fmt.Println("err: ", err)
+			} else {
+				require.Nil(t, err)
+				require.NotNil(t, txRwSet)
+				require.NotNil(t, result)
+				fmt.Println("txRWSet: ", txRwSet)
+				fmt.Println("result: ", result)
+			}
+		})
+	}
+}
 func TestMarshalDag(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{
@@ -1053,7 +1298,7 @@ func TestTxScheduler_parseParameter(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 			}
-			got, err := ts.parseParameter(tt.args.parameterPairs, false)
+			got, err := ts.parseParameter2220(tt.args.parameterPairs, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("parseParameter() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -1746,7 +1991,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 			wantPk: func() []byte {
 				return nil
 			}(),
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -1999,13 +2244,13 @@ func TestTxScheduler_getSenderPk(t *testing.T) {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: false,
 		},
@@ -2142,36 +2387,36 @@ func Test_publicKeyFromCert(t *testing.T) {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: false,
 		},
 		{
 			name: "test1",
 			args: args{
-				member: []byte("123456"),
+				member: []byte("-----BEGIN CERTIFICATE-----\\nMIICiTCCAi+gAwIBAgIDA+zYMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\\nb3JnMi5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\\nExljYS53eC1vcmcyLmNoYWlubWFrZXIub3JnMB4XDTIwMTIwODA2NTM0M1oXDTI1\\nMTIwNzA2NTM0M1owgZExCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcyLmNoYWlubWFrZXIub3Jn\\nMQ8wDQYDVQQLEwZjbGllbnQxLDAqBgNVBAMTI2NsaWVudDEuc2lnbi53eC1vcmcy\\nLmNoYWlubWFrZXIub3JnMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZd92CJez\\nCiOMzLSTrJfX5vIUArCycg05uKru2qFaX0uvZUCwNxbfSuNvkHRXE8qIBUhTbg1Q\\nR9rOlfDY1WfgMaN7MHkwDgYDVR0PAQH/BAQDAgGmMA8GA1UdJQQIMAYGBFUdJQAw\\nKQYDVR0OBCIEICfLatSyyebzRsLbnkNKZJULB2bZOtG+88NqvAHCsXa3MCsGA1Ud\\nIwQkMCKAIPGP1bPT4/Lns2PnYudZ9/qHscm0pGL6Kfy+1CAFWG0hMAoGCCqGSM49\\nBAMCA0gAMEUCIQDzHrEHrGNtoNfB8jSJrGJU1qcxhse74wmDgIdoGjvfTwIgabRJ\\nJNvZKRpa/VyfYi3TXa5nhHRIn91ioF1dQroHQFc=\\n-----END CERTIFICATE-----"),
 			},
 			want: func() []byte {
 
-				member := "123456"
+				member := "-----BEGIN CERTIFICATE-----\\nMIICiTCCAi+gAwIBAgIDA+zYMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\\nb3JnMi5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\\nExljYS53eC1vcmcyLmNoYWlubWFrZXIub3JnMB4XDTIwMTIwODA2NTM0M1oXDTI1\\nMTIwNzA2NTM0M1owgZExCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcyLmNoYWlubWFrZXIub3Jn\\nMQ8wDQYDVQQLEwZjbGllbnQxLDAqBgNVBAMTI2NsaWVudDEuc2lnbi53eC1vcmcy\\nLmNoYWlubWFrZXIub3JnMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZd92CJez\\nCiOMzLSTrJfX5vIUArCycg05uKru2qFaX0uvZUCwNxbfSuNvkHRXE8qIBUhTbg1Q\\nR9rOlfDY1WfgMaN7MHkwDgYDVR0PAQH/BAQDAgGmMA8GA1UdJQQIMAYGBFUdJQAw\\nKQYDVR0OBCIEICfLatSyyebzRsLbnkNKZJULB2bZOtG+88NqvAHCsXa3MCsGA1Ud\\nIwQkMCKAIPGP1bPT4/Lns2PnYudZ9/qHscm0pGL6Kfy+1CAFWG0hMAoGCCqGSM49\\nBAMCA0gAMEUCIQDzHrEHrGNtoNfB8jSJrGJU1qcxhse74wmDgIdoGjvfTwIgabRJ\\nJNvZKRpa/VyfYi3TXa5nhHRIn91ioF1dQroHQFc=\\n-----END CERTIFICATE-----"
 				certificate, err := utils.ParseCert([]byte(member))
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
-				pubKeyBytes, err := certificate.PublicKey.Bytes()
+				pubKeyStr, err := certificate.PublicKey.String()
 				if err != nil {
 					t.Log(err)
 					return nil
 				}
 
-				return pubKeyBytes
+				return []byte(pubKeyStr)
 			}(),
 			wantErr: true,
 		},
@@ -2253,7 +2498,7 @@ func TestNewSenderGroup(t *testing.T) {
 		txBatch []*commonPb.Transaction
 	}
 
-	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2)
+	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 
 	parameters := make(map[string]string, 8)
 
@@ -2306,7 +2551,7 @@ func Test_getSenderTxsMap(t *testing.T) {
 		txBatch []*commonPb.Transaction
 	}
 
-	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2)
+	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 
 	parameters := make(map[string]string, 8)
 	tests := []struct {
@@ -2363,7 +2608,7 @@ func Test_getSenderHashKey(t *testing.T) {
 		tx *commonPb.Transaction
 	}
 
-	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2)
+	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 
 	parameters := make(map[string]string, 8)
 	tests := []struct {
@@ -2578,7 +2823,7 @@ func TestCheckCycleExists(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, _, _, snapshot, scheduler, contractId, block := prepare(t, false, false, 2)
+			_, _, _, snapshot, scheduler, contractId, block := prepare(t, false, false, 2, true)
 
 			parameters := make(map[string]string, 8)
 			txs := make([]*commonPb.Transaction, len(tt.dag.Vertexes))
@@ -2606,6 +2851,371 @@ func TestCheckCycleExists(t *testing.T) {
 				require.NotNil(t, result)
 				fmt.Println("txRWSet: ", txRwSet)
 				fmt.Println("result: ", result)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
+	type fields struct {
+		EnableOptimizeChargeGas  bool
+		EnableConflictsBitWindow bool
+		EnableGas                bool
+	}
+	type args struct {
+		txExecOrderTypeMap map[string]protocol.ExecOrderTxType
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    uint32
+		want1   uint32
+		want2   uint32
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				EnableOptimizeChargeGas:  false,
+				EnableConflictsBitWindow: true,
+				EnableGas:                false,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeIterator,
+					txId2: protocol.ExecOrderTxTypeIterator,
+				},
+			},
+			want:    1,
+			want1:   2,
+			want2:   0,
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				EnableOptimizeChargeGas:  false,
+				EnableConflictsBitWindow: true,
+				EnableGas:                false,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeIterator,
+					txId2: protocol.ExecOrderTxTypeChargeGas,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeIterator,
+					txId2: protocol.ExecOrderTxTypeChargeGas,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: false,
+		},
+		{
+			name: "test3",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeChargeGas,
+					txId2: protocol.ExecOrderTxTypeIterator,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: true,
+		},
+		{
+			name: "test4",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeIterator,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeChargeGas,
+				},
+			},
+			want:    1,
+			want1:   1,
+			want2:   1,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctl := gomock.NewController(t)
+			chainConf := mock.NewMockChainConf(ctl)
+			chainConfig := &configpb.ChainConfig{
+				Core: &configpb.CoreConfig{
+					EnableOptimizeChargeGas:  tt.fields.EnableOptimizeChargeGas,
+					EnableConflictsBitWindow: tt.fields.EnableConflictsBitWindow,
+				},
+				AccountConfig: &configpb.GasAccountConfig{
+					EnableGas: tt.fields.EnableGas,
+				},
+			}
+			chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
+			ts := &TxScheduler{
+				chainConf: chainConf,
+			}
+			contractId := &commonPb.Contract{
+				Name:        "",
+				Version:     "",
+				RuntimeType: 0,
+				Status:      0,
+				Creator:     nil,
+				Address:     "",
+			}
+			parameters := make(map[string]string, 8)
+			tx0 := newTx(txId0, contractId, parameters)
+			tx1 := newTx(txId1, contractId, parameters)
+			tx2 := newTx(txId2, contractId, parameters)
+
+			block := &commonPb.Block{}
+			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
+			got, got1, got2, err := ts.verifyExecOrderTxType(block, tt.args.txExecOrderTypeMap)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("verifyExecOrderTxType() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("verifyExecOrderTxType() got = %v, want %v", got, tt.want)
+			}
+			if got1 != tt.want1 {
+				t.Errorf("verifyExecOrderTxType() got1 = %v, want %v", got1, tt.want1)
+			}
+			if got2 != tt.want2 {
+				t.Errorf("verifyExecOrderTxType() got2 = %v, want %v", got2, tt.want2)
+			}
+		})
+	}
+}
+
+func TestTxScheduler_compareDag(t *testing.T) {
+	type fields struct {
+		EnableOptimizeChargeGas  bool
+		EnableConflictsBitWindow bool
+		EnableGas                bool
+	}
+	type args struct {
+		txExecOrderTypeMap map[string]protocol.ExecOrderTxType
+		dag                *commonPb.DAG
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				EnableOptimizeChargeGas:  false,
+				EnableConflictsBitWindow: true,
+				EnableGas:                false,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeIterator,
+					txId3: protocol.ExecOrderTxTypeIterator,
+					txId4: protocol.ExecOrderTxTypeIterator,
+				},
+				dag: &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{0, 1},
+						},
+						{
+							Neighbors: []uint32{2},
+						},
+						{
+							Neighbors: []uint32{3},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "test1",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeIterator,
+					txId3: protocol.ExecOrderTxTypeIterator,
+					txId4: protocol.ExecOrderTxTypeIterator,
+				},
+				dag: &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{0, 1},
+						},
+						{
+							Neighbors: []uint32{2},
+						},
+						{
+							Neighbors: []uint32{3},
+						},
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "test2",
+			fields: fields{
+				EnableOptimizeChargeGas:  true,
+				EnableConflictsBitWindow: true,
+				EnableGas:                true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeIterator,
+					txId3: protocol.ExecOrderTxTypeIterator,
+					txId4: protocol.ExecOrderTxTypeChargeGas,
+				},
+				dag: &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{0, 1},
+						},
+						{
+							Neighbors: []uint32{2},
+						},
+						{
+							Neighbors: []uint32{0, 1, 2, 3},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctl := gomock.NewController(t)
+			snapshot := mock.NewMockSnapshot(ctl)
+			chainConf := mock.NewMockChainConf(ctl)
+			chainConfig := &configpb.ChainConfig{
+				Core: &configpb.CoreConfig{
+					EnableOptimizeChargeGas:  tt.fields.EnableOptimizeChargeGas,
+					EnableConflictsBitWindow: tt.fields.EnableConflictsBitWindow,
+				},
+				AccountConfig: &configpb.GasAccountConfig{
+					EnableGas: tt.fields.EnableGas,
+				},
+				Contract: &configpb.ContractConfig{
+					EnableSqlSupport: false,
+				},
+			}
+			dagCopy := &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{},
+					},
+				},
+			}
+			snapshot.EXPECT().BuildDAG(gomock.Any(), gomock.Any()).AnyTimes().Return(dagCopy)
+			snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(5) // only the 5th tx will call it
+			chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
+			logger := mock.NewMockLogger(ctl)
+			logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Infof(gomock.Any(), gomock.Any()).AnyTimes()
+			logger.EXPECT().Errorf(gomock.Any(), gomock.Any()).AnyTimes()
+			ts := &TxScheduler{
+				chainConf: chainConf,
+				log:       logger,
+			}
+			contractId := &commonPb.Contract{
+				Name:        "",
+				Version:     "",
+				RuntimeType: 0,
+				Status:      0,
+				Creator:     nil,
+				Address:     "",
+			}
+			parameters := make(map[string]string, 8)
+			tx0 := newTx(txId0, contractId, parameters)
+			tx1 := newTx(txId1, contractId, parameters)
+			tx2 := newTx(txId2, contractId, parameters)
+			tx3 := newTx(txId3, contractId, parameters)
+			tx4 := newTx(txId4, contractId, parameters)
+
+			block := &commonPb.Block{Header: &commonPb.BlockHeader{BlockVersion: blockVersion2300}}
+			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2, tx3, tx4}
+			block.Dag = tt.args.dag
+			txRWSetMap := make(map[string]*commonPb.TxRWSet)
+			for i := 0; i < 5; i++ {
+				txRWSetMap[fmt.Sprintf("a000000000000000000000000000%04d", i)] = &commonPb.TxRWSet{
+					TxId:     fmt.Sprintf("a000000000000000000000000000%04d", i),
+					TxReads:  nil,
+					TxWrites: nil,
+				}
+			}
+			err := ts.compareDag(block, snapshot, txRWSetMap, tt.args.txExecOrderTypeMap)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("compareDag() error = %v, wantErr %v", err, tt.wantErr)
+				return
 			}
 		})
 	}

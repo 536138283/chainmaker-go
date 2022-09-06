@@ -12,8 +12,8 @@ NODE_CNT=$1
 CHAIN_CNT=$2
 P2P_PORT=$3
 RPC_PORT=$4
-DOCKER_VM_RUNTIME_PORT=$5
-DOCKER_VM_ENGINE_PORT=$6
+VM_GO_RUNTIME_PORT=$5
+VM_GO_ENGINE_PORT=$6
 
 
 CURRENT_PATH=$(pwd)
@@ -32,7 +32,7 @@ VERSION=v2.3.0_alpha
 
 function show_help() {
     echo "Usage:  "
-    echo "  prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4) p2p_port(default:11301) rpc_port(default:12301) docker_vm_runtime_port(default:32351) docker_vm_engine_port(default:22351)"
+    echo "    prepare_pk.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4) p2p_port(default:11301) rpc_port(default:12301) vm_go_runtime_port(default:32351) vm_go_engine_port(default:22351)"
     echo "    eg1: prepare.sh 4 1"
     echo "    eg2: prepare.sh 4 1 11301 12301"
     echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351"
@@ -106,22 +106,22 @@ function check_params() {
         exit 1
     fi
 
-    if  [[ ! -n $DOCKER_VM_RUNTIME_PORT ]] ;then
-        DOCKER_VM_RUNTIME_PORT=32351
+    if  [[ ! -n $VM_GO_RUNTIME_PORT ]] ;then
+        VM_GO_RUNTIME_PORT=32351
     fi
 
-    if  [ ${DOCKER_VM_RUNTIME_PORT} -ge 60000 ] || [ ${DOCKER_VM_RUNTIME_PORT} -le 10000 ];then
-        echo "docker_vm_runtime_port should >=10000 && <=60000"
+    if  [ ${VM_GO_RUNTIME_PORT} -ge 60000 ] || [ ${VM_GO_RUNTIME_PORT} -le 10000 ];then
+        echo "vm_go_runtime_port should >=10000 && <=60000"
         show_help
         exit 1
     fi
 
-    if  [[ ! -n $DOCKER_VM_ENGINE_PORT ]] ;then
-        DOCKER_VM_ENGINE_PORT=22351
+    if  [[ ! -n $VM_GO_ENGINE_PORT ]] ;then
+        VM_GO_ENGINE_PORT=22351
     fi
 
-    if  [ ${DOCKER_VM_ENGINE_PORT} -ge 60000 ] || [ ${DOCKER_VM_ENGINE_PORT} -le 10000 ];then
-        echo "docker_vm_engine_port should >=10000 && <=60000"
+    if  [ ${VM_GO_ENGINE_PORT} -ge 60000 ] || [ ${VM_GO_ENGINE_PORT} -le 10000 ];then
+        echo "vm_go_engine_port should >=10000 && <=60000"
         show_help
         exit 1
     fi
@@ -152,13 +152,10 @@ function generate_config() {
     MONITOR_PORT=14321
     PPROF_PORT=24321
     TRUSTED_PORT=13301
-    DOCKER_VM_CONTAINER_NAME_PREFIX="chainmaker-vm-docker-go-container"
-    ENABLE_DOCKERVM="false"
-    DOCKER_VM_RUNTIME_PORT=32351
-    DOCKER_VM_ENGINE_PORT=22351
-    DOCKER_VM_LOG_LEVEL="INFO"
-    START_DOCKER_VM_NOW="true"
-    DOCKER_VM_TRANSPORT_PROTOCOL="false" # tcp: false, uds: true
+    VM_GO_CONTAINER_NAME_PREFIX="chainmaker-vm-go-container"
+    ENABLE_VM_GO="false"
+    VM_GO_LOG_LEVEL="INFO"
+    VM_GO_TRANSPORT_PROTOCOL="tcp" # tcp / uds
 
     read -p "input consensus type (1-TBFT(default),5-DPOS): " tmp
     if  [ ! -z "$tmp" ] ;then
@@ -187,44 +184,30 @@ function generate_config() {
       fi
     fi
 
-    read -p "enable docker vm (YES|NO(default))" enable_dockervm
-    if  [ ! -z "$enable_dockervm" ]; then
-      if  [ $enable_dockervm == "YES" ]; then
-          ENABLE_DOCKERVM="true"
-            
-          read -p "start docker vm with chain (Y(default)|N)" start_now
-          if  [ ! -z "$start_now" ] ;then
-              if [ $start_now == "Y" ] || [ $start_now == "y" ] || [ $start_now == "yes" ] || [ $start_now == "YES" ]; then
-                  START_DOCKER_VM_NOW="true"
-              elif [ $start_now == "N" ] || [ $start_now == "n" ] || [ $start_now == "NO" ] || [ $start_now == "no" ]; then
-                  START_DOCKER_VM_NOW="false"
+    read -p "enable vm go (YES|NO(default))" enable_vm_go
+    if  [ ! -z "$enable_vm_go" ]; then
+      if  [ $enable_vm_go == "yes" ] || [ $enable_vm_go == "YES" ]; then
+          ENABLE_VM_GO="true"
+
+          read -p "vm go transport protocol (uds|tcp(default))" transport_protocol
+          if [ ! -z "$transport_protocol" ]; then
+              if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
+                  VM_GO_TRANSPORT_PROTOCOL="tcp"
+              elif [ $transport_protocol == "uds" ] || [ $transport_protocol == "UDS" ]; then
+                  VM_GO_TRANSPORT_PROTOCOL="uds"
               else
-                  echo "unknown input [" $start_now "], so use default"
+                  echo "unknown input [" $transport_protocol "], so use default"
               fi
           fi
-            
-          if [ $START_DOCKER_VM_NOW == "true" ]; then
-                read -p "dockervm transport protocol (uds|tcp(default))" transport_protocol
-                if [ ! -z "$transport_protocol" ]; then
-                    if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
-                        DOCKER_VM_TRANSPORT_PROTOCOL="false"
-                    elif [ $transport_protocol == "uds" ] || [ $start_now == "UDS" ]; then
-                        DOCKER_VM_TRANSPORT_PROTOCOL="true"
-                    else
-                        echo "unknown input [" $transport_protocol "], so use default"
-                    fi
-                fi
 
-                read -p "input docker vm log level (DEBUG|INFO(default)|WARN|ERROR): " dockervm_log_level
-                if  [ ! -z "$dockervm_log_level" ] ;then
-                if  [ $dockervm_log_level == "DEBUG" ] || [ $dockervm_log_level == "INFO" ] || [ $dockervm_log_level == "WARN" ] || [ $dockervm_log_level == "ERROR" ];then
-                    DOCKER_VM_LOG_LEVEL=$dockervm_log_level
-                else
-                    echo "unknown dockervm log level [" $dockervm_log_level "], so use default"
-                fi
-            fi
-
+          read -p "input vm go log level (DEBUG|INFO(default)|WARN|ERROR): " vm_go_log_level
+          if  [ ! -z "$vm_go_log_level" ] ;then
+          if  [ $vm_go_log_level == "DEBUG" ] || [ $vm_go_log_level == "INFO" ] || [ $vm_go_log_level == "WARN" ] || [ $vm_go_log_level == "ERROR" ];then
+              VM_GO_LOG_LEVEL=$vm_go_log_level
+          else
+              echo "unknown vm go log level [" $vm_go_log_level "], so use default"
           fi
+        fi
       fi
     fi
 
@@ -252,13 +235,12 @@ function generate_config() {
         xsed "s%{monitor_port}%$(($MONITOR_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{pprof_port}%$(($PPROF_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{trusted_port}%$(($TRUSTED_PORT+$i-1))%g" node$i/chainmaker.yml
-        xsed "s%{enable_dockervm}%$ENABLE_DOCKERVM%g" node$i/chainmaker.yml
-        xsed "s%{dockervm_container_name}%"${DOCKER_VM_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
-        xsed "s%{dockervm_runtime_port}%$(($DOCKER_VM_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
-        xsed "s%{dockervm_engine_port}%$(($DOCKER_VM_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
-        xsed "s%{dockervm_log_level}%$DOCKER_VM_LOG_LEVEL%g" node$i/chainmaker.yml
-        xsed "s%{start_dockervm_now}%$START_DOCKER_VM_NOW%g" node$i/chainmaker.yml
-        xsed "s%{dockervm_uds_open}%$DOCKER_VM_TRANSPORT_PROTOCOL%g" node$i/chainmaker.yml
+        xsed "s%{enable_vm_go}%$ENABLE_VM_GO%g" node$i/chainmaker.yml
+        xsed "s%{dockervm_container_name}%"${VM_GO_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
+        xsed "s%{vm_go_runtime_port}%$(($VM_GO_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{vm_go_engine_port}%$(($VM_GO_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{vm_go_log_level}%$VM_GO_LOG_LEVEL%g" node$i/chainmaker.yml
+        xsed "s%{vm_go_protocol}%$VM_GO_TRANSPORT_PROTOCOL%g" node$i/chainmaker.yml
 
         system=$(uname)
 

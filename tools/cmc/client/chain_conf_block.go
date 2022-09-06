@@ -60,7 +60,7 @@ func updateBlockInterval() error {
 	}
 	defer client.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -80,7 +80,7 @@ func updateBlockInterval() error {
 		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}
@@ -129,7 +129,7 @@ func updateTxParameterSize() error {
 	}
 	defer client.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -141,7 +141,7 @@ func updateTxParameterSize() error {
 	txTimeout := chainConfig.Block.TxTimeout
 	blockTxCap := chainConfig.Block.BlockTxCapacity
 	blockSize := chainConfig.Block.BlockSize
-	blockInterval = chainConfig.Block.BlockSize
+	blockInterval = chainConfig.Block.BlockInterval
 
 	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, txTimeout, blockTxCap,
 		blockSize, blockInterval, txParameterSize)
@@ -149,7 +149,7 @@ func updateTxParameterSize() error {
 		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}

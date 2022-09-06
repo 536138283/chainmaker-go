@@ -176,7 +176,7 @@ func invokeContractTimesCMD() *cobra.Command {
 	return cmd
 }
 
-// getUserContractCMD get user contract info command
+// getUserContractCMD query user contract command
 // @return *cobra.Command
 func getUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
@@ -191,7 +191,7 @@ func getUserContractCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -332,7 +332,7 @@ func createUserContract() error {
 	}
 	defer client.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -405,7 +405,7 @@ func createUserContract() error {
 		payload = client.AttachGasLimit(payload, limit)
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}
@@ -413,22 +413,30 @@ func createUserContract() error {
 	if err != nil {
 		return err
 	}
-	err = util.CheckProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return err
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
+	return createUpgradeUserContractOutput(resp)
+}
+
+func createUpgradeUserContractOutput(resp *common.TxResponse) error {
+	if resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		var contract common.Contract
+		err := contract.Unmarshal(resp.ContractResult.Result)
+		if err != nil {
+			return err
+		}
+		util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.CreateUpgradeContractContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         &contract,
+			},
+		})
+	} else {
+		util.PrintPrettyJson(resp)
 	}
-	util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
-		TxResponse: resp,
-		ContractResult: &types.CreateUpgradeContractContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
 	return nil
 }
 
@@ -459,7 +467,6 @@ func invokeUserContract() error {
 
 	var kvs []*common.KeyValuePair
 	var contractAbi *abi.ABI
-	var evmMethodId string
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
 		abiBytes, err := ioutil.ReadFile(abiFilePath)
@@ -478,7 +485,6 @@ func invokeUserContract() error {
 		}
 
 		inputDataHexStr := hex.EncodeToString(inputData)
-		evmMethodId = inputDataHexStr[0:8]
 
 		kvs = []*common.KeyValuePair{
 			{
@@ -503,9 +509,9 @@ func invokeUserContract() error {
 	}
 
 	if txId != "" {
-		invokeContract(cc, contractName, method, evmMethodId, txId, kvs, contractAbi, limit)
+		invokeContract(cc, contractName, method, txId, kvs, contractAbi, limit)
 	} else {
-		Dispatch(cc, contractName, method, evmMethodId, kvs, contractAbi, limit)
+		Dispatch(cc, contractName, method, kvs, contractAbi, limit)
 	}
 	return nil
 }
@@ -590,21 +596,70 @@ func getUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
+	var kvs []*common.KeyValuePair
+	var contractAbi *abi.ABI
+
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
+
+		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return err
+		}
+
+		inputData, err := util.Pack(contractAbi, method, params)
+		if err != nil {
+			return err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+	} else {
+		if params != "" {
+			kvsMap := make(map[string]string)
+			err := json.Unmarshal([]byte(params), &kvsMap)
+			if err != nil {
+				return err
+			}
+			kvs = util.ConvertParameters(kvsMap)
+		}
 	}
 
-	resp, err := client.QueryContract(contractName, method, util.ConvertParameters(pairs), -1)
+	resp, err := client.QueryContract(contractName, method, kvs, -1)
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}
 
-	fmt.Printf("QUERY contract resp: %+v\n", resp)
+	if resp.Code != common.TxStatusCode_SUCCESS {
+		util.PrintPrettyJson(resp)
+		return nil
+	}
 
+	if contractAbi != nil && resp.ContractResult != nil {
+		output, err := contractAbi.Unpack(method, resp.ContractResult.Result)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		util.PrintPrettyJson(types.EvmTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.EvmContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         fmt.Sprintf("%v", output),
+			},
+		})
+	} else {
+		util.PrintPrettyJson(resp)
+	}
 	return nil
 }
 
@@ -623,7 +678,7 @@ func upgradeUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -652,7 +707,7 @@ func upgradeUserContract() error {
 		payload = client.AttachGasLimit(payload, limit)
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}
@@ -662,23 +717,11 @@ func upgradeUserContract() error {
 		return fmt.Errorf(SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT, err.Error())
 	}
 
-	err = util.CheckProposalRequestResp(resp, true)
+	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
 	}
-	var contract common.Contract
-	err = contract.Unmarshal(resp.ContractResult.Result)
-	if err != nil {
-		return err
-	}
-	util.PrintPrettyJson(types.CreateUpgradeContractTxResponse{
-		TxResponse: resp,
-		ContractResult: &types.CreateUpgradeContractContractResult{
-			ContractResult: resp.ContractResult,
-			Result:         &contract,
-		},
-	})
-	return nil
+	return createUpgradeUserContractOutput(resp)
 }
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {
@@ -696,7 +739,7 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -723,7 +766,7 @@ func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 		return fmt.Errorf("create cert manage %s payload failed, %s", whichOperation, err.Error())
 	}
 
-	endorsementEntrys, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
 	if err != nil {
 		return err
 	}

@@ -24,6 +24,7 @@ import (
 	normal "chainmaker.org/chainmaker/txpool-normal/v2"
 	single "chainmaker.org/chainmaker/txpool-single/v2"
 	dockergo "chainmaker.org/chainmaker/vm-docker-go/v2"
+	goEngine "chainmaker.org/chainmaker/vm-engine/v2"
 	evm "chainmaker.org/chainmaker/vm-evm/v2"
 	gasm "chainmaker.org/chainmaker/vm-gasm/v2"
 	wasmer "chainmaker.org/chainmaker/vm-wasmer/v2"
@@ -62,10 +63,20 @@ func init() {
 	vm.RegisterVmProvider(
 		"DOCKERGO",
 		func(chainId string, configs map[string]interface{}) (protocol.VmInstancesManager, error) {
-			return dockergo.NewInstancesManager(
+			return dockergo.NewDockerManager(
+				chainId,
+				localconf.ChainMakerConfig.VMConfig.DockerVMGo,
+			), nil
+		})
+
+	// chainId string, logger protocol.Logger, vmConfig map[string]interface{}
+	vm.RegisterVmProvider(
+		"GO",
+		func(chainId string, configs map[string]interface{}) (protocol.VmInstancesManager, error) {
+			return goEngine.NewInstancesManager(
 				chainId,
 				logger.GetLoggerByChain(logger.MODULE_VM, chainId),
-				localconf.ChainMakerConfig.VMConfig,
+				localconf.ChainMakerConfig.VMConfig.Go,
 			), nil
 		})
 
