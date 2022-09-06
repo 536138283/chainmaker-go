@@ -121,6 +121,49 @@ class ContractDeal(object):
         return result
 
 
+
+    def upgrade(self, runtime, wasm, abi=None, version=None,params=None, public_identity=None, sdk_config=None,endorserKeys =None,endorserCerts=None,endorserOrgs=None):
+        """
+        支持升级普通sql合约以及kv合约
+        :param runtime: GASM,WASMER,DOCKER_GO,EVM
+        :param wasm: 使用的是哪个wasm文件
+        :param params: 升级合约的时候的参数
+        :param public_identity: 是否选择公钥方式，共有三种模式，pk，pwk，cert模式
+        :param sdk_config: 默认是节点1，传入的这个sdk的配置文件表示在哪个节点上跑
+        :return:
+        """
+        wasm_path = gl.WASM_APTH + wasm
+        # params_new = params if params else "{}"
+        new_sdk_config = sdk_config if sdk_config else "sdk_config.yml"
+        # new_abi = abi if abi else wasm.split(".")[0] + ".abi"
+        sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
+        cmd = f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} upgrade --contract-name={self.contract_name} --runtime-type={runtime} --byte-code-path={wasm_path} --version={version} --sdk-conf-path={sdk_config_path}'
+        if public_identity == "pwk":
+            print("合约创建-pwk模式".center(50, "="))
+            cmd = cmd + f' --admin-org-ids={endorserOrgs} --admin-key-file-paths={endorserKeys}'
+        elif public_identity == "pk":
+            print("合约创建-pk模式".center(50, "="))
+            cmd = cmd + f' --admin-key-file-paths={endorserKeys}'
+        else:
+            print("合约创建-cert模式".center(50, "="))
+            cmd = cmd + f' --admin-key-file-paths={endorserKeys} --admin-crt-file-paths={endorserCerts}'
+        if gl.ENABLE_GAS:
+            cmd = cmd + " --gas-limit=99999999"
+        if params :
+            cmd = cmd + f' --params="{params}"'
+        if abi :
+            cmd = cmd + f" --abi-file-path={gl.WASM_APTH}{abi}"
+        if self.sync_result:
+            cmd = cmd + " --sync-result=true"
+        print(cmd)
+        result = TheServerHelper(cmd).ssh_connectionServer()
+        print(result)
+        return result
+
+
+
+
+
 if __name__ == "__main__":
     # cd = ContractDeal("feifei_test_001", sync_result=True)
     # cd.create("WASMER", "rust-fact-2.0.0.wasm", public_identity='pk', sdk_config='sdk_config_pk.yml')

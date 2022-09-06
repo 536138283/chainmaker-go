@@ -6,8 +6,10 @@ SPDX-License-Identifier: Apache-2.0
 """
 import base64
 import json
+import string
 import sys
 import unittest
+import re
 
 sys.path.append("..")
 
@@ -36,101 +38,140 @@ class Test(unittest.TestCase):
             cmd.recharge_gas(user_c_address)
             cmd.recharge_gas(user_d_address)
 
-        print("\n","rust asset 合约安装".center(50, "="))
-        cd_asset = ContractDeal("asset", sync_result=True)
-        result_erc = cd_asset.create("WASMER", "rust-asset-2.0.0.wasm",
-                                     params=r"{\"issue_limit\":\"10000000\",\"total_supply\":\"1000000000\"}",
-                                     public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',
-                                     endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
-                                     endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
-        asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
-        print("rust asset 合约地址:",asset_address,"\n")
+        print("\n","1.rust asset 合约安装".center(50, "="))
+        cd_asset = ContractDeal("rustsql", sync_result=True)
+        # result_erc = cd_asset.create("WASMER", "rust-sql-2.0.0.wasm",
+        #                              public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',
+        #                              endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
+        #                              endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        # asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
+        # print("rust asset 合约地址:",asset_address,"\n")
 
 
-        print("注册B账户".center(50, "="))
-        user_b_address_result = cd_asset.invoke("register", "",sdk_config="sdk_config2.yml")
-        user_b_address = str(base64.b64decode(json.loads(user_b_address_result).get("contract_result").get("result")),encoding='utf-8')
-
-
-        print("注册C账户".center(50, "="))
-        user_c_address_result = cd_asset.invoke("register", "",sdk_config="sdk_config3.yml")
-        user_c_address = str(base64.b64decode(json.loads(user_c_address_result).get("contract_result").get("result")),encoding='utf-8')
+        print("2.执行合约-sql insert".center(50, "="))
+        for i in range(1,10):
+            cd_asset.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(i),"长安链chainmaker",str(i+10),"510623199202023323"))
 
 
 
-        print("query UserA address: org1 admin".center(50, "="))
-        user_a_address_result = cd_asset.get("query_address", "", sdk_config="sdk_config.yml")
-        user_a_address = str(base64.b64decode(json.loads(user_a_address_result).get("contract_result").get("result")),encoding='utf-8')
+        print("3.查询age为11的记录".center(50, "="))
+        query_result=cd_asset.invoke("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
+        query=base64.b64decode(json.loads(query_result).get("contract_result").get("result"))
+        print("id:",str(base64.b64decode(json.loads(query).get("id")),encoding='utf-8'))
+        print("name:",str(base64.b64decode(json.loads(query).get("name")),encoding='utf-8'))
+        print("age:",str(base64.b64decode(json.loads(query).get("age")),encoding='utf-8'))
+        print("id_card_no:",str(base64.b64decode(json.loads(query).get("id_card_no")),encoding='utf-8'),"\n")
 
 
-        print("query UserB address: org2 admin".center(50, "="))
-        user_b_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config2.yml")
-        user_b_address2 = str(base64.b64decode(json.loads(user_b_address_result2).get("contract_result").get("result")),encoding='utf-8')
-        self.assertEqual(user_b_address2, user_b_address, "success")
-
-
-
-        print("query UserC address: org3 admin".center(50, "="))
-        user_c_address_result2 = cd_asset.get("query_address", "", sdk_config="sdk_config3.yml")
-        user_c_address2 = str(base64.b64decode(json.loads(user_c_address_result2).get("contract_result").get("result")),encoding='utf-8')
-        self.assertEqual(user_c_address2, user_c_address, "success")
-
-
-        print("\n","User A address:",user_a_address,"\n","User B address:",user_b_address2,"\n","User C address:",user_c_address2,"\n")
+        print("4.执行sql语: update name=长安链chainmaker_update where id=1".center(50, "="))
+        cd_asset.invoke("sql_update",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(1),"长安链chainmaker_update"))
 
 
 
-        print("给A账户增发代币100".center(50, "="))
-        cd_asset.invoke("issue_amount", "{{\"to\": \"{}\",\"amount\": \"{}\"}}".format(user_a_address,100),
-                        sdk_config="sdk_config.yml")
+        print("5.查询id=1的name是不是更新成了长安链chainmaker_update".center(50, "="))
+        name_update_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
+        name_update=base64.b64decode(json.loads(name_update_result).get("contract_result").get("result"))
+        print("id:",str(base64.b64decode(json.loads(name_update).get("id")),encoding='utf-8'))
+        print("name:",str(base64.b64decode(json.loads(name_update).get("name")),encoding='utf-8'))
+        print("age:",str(base64.b64decode(json.loads(name_update).get("age")),encoding='utf-8'))
+        print("id_card_no:",str(base64.b64decode(json.loads(name_update).get("id_card_no")),encoding='utf-8'),"\n")
 
 
-        print("给B账户增发代币100".center(50, "="))
-        cd_asset.invoke("issue_amount", "{{\"to\":\"{}\",\"amount\":\"{}\"}}".format(user_b_address2,100),
-                        sdk_config="sdk_config.yml")
+        print("6.范围查询 rang age 1~10".center(50, "="))
+        range_age_result=cd_asset.invoke("sql_query_range_of_age",sdk_config="sdk_config.yml",params="{{\"min_age\":\"{}\",\"max_age\":\"{}\"}}".format(str(13),str(17)))
+        range_age=str(base64.b64decode(json.loads(range_age_result).get("contract_result").get("result")),encoding='utf-8')
+        parts_range_age=re.split('{|}',range_age)
+        for part_range_age in parts_range_age:
+            if part_range_age=='':
+                continue
+            part_range_age='{'+part_range_age+'}'
+            print("id:",str(base64.b64decode(json.loads(part_range_age).get("id")),encoding='utf-8'))
+            print("name:",str(base64.b64decode(json.loads(part_range_age).get("name")),encoding='utf-8'))
+            print("age:",str(base64.b64decode(json.loads(part_range_age).get("age")),encoding='utf-8'))
+            print("id_card_no:",str(base64.b64decode(json.loads(part_range_age).get("id_card_no")),encoding='utf-8'),"\n")
 
 
-        print("A账户给B账户转账10".center(50, "="))
-        cd_asset.invoke("transfer", "{{\"to\":\"{}\",\"amount\":\"{}\"}}".format(user_b_address2,10),
-                        sdk_config="sdk_config.yml")
+        print("7.执行合约-sql delete by id age=11".center(50, "="))
+        cd_asset.invoke("sql_delete",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
 
 
-        print("B账户给A账户授权代转账金额为50".center(50, "="))
-        cd_asset.invoke("approve", "{{\"spender\":\"{}\",\"amount\":\"{}\"}}".format(user_a_address,50),sdk_config="sdk_config2.yml")
+        print("8.再次查询 id age=11，应该查不到".center(50, "="))
+        query_id_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
+        query_id=str(base64.b64decode(json.loads(query_id_result).get("contract_result").get("result")),encoding='utf-8')
+        print("再次查询 id age=11,结果为: ",query_id,"\n")
+        self.assertEqual(query_id, '{}', "success")
+
+
+        print("9.跨合约调用".center(50, "="))
+        sql_cross_call_result=cd_asset.get("sql_cross_call",sdk_config="sdk_config.yml",params="{{\"contract_name\":\"{}\",\"min_age\":\"{}\",\"max_age\":\"{}\"}}".format("rustsql",str(16),str(19)))
+        sql_cross_call=str(base64.b64decode(json.loads(sql_cross_call_result).get("contract_result").get("result")),encoding='utf-8')
+        parts_range_age=re.split('{|}',sql_cross_call)
+        for part_range_age in parts_range_age:
+            if part_range_age=='':
+                continue
+            part_range_age='{'+part_range_age+'}'
+            print("id:",str(base64.b64decode(json.loads(part_range_age).get("id")),encoding='utf-8'))
+            print("name:",str(base64.b64decode(json.loads(part_range_age).get("name")),encoding='utf-8'))
+            print("age:",str(base64.b64decode(json.loads(part_range_age).get("age")),encoding='utf-8'))
+            print("id_card_no:",str(base64.b64decode(json.loads(part_range_age).get("id_card_no")),encoding='utf-8'),"\n")
+
+
+        print("10.交易回退".center(50, "="))
+        cd_asset.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(20),"长安链chainmaker",str(2000),"510623199202023323"))
+
+        print("10.1 提交一笔执行会失败的交易".center(50, "="))
+        cd_asset.invoke("sql_insql_update_rollback_save_point",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(20),"chainmaker_save_point"))
+
+        print("10.2 查询提交的失败交易有没有对上一笔产生影响".center(50, "="))
+        query_id_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(20)))
+        query_id=str(base64.b64decode(json.loads(query_id_result).get("contract_result").get("result")),encoding='utf-8')
+
+        print("id:",str(base64.b64decode(json.loads(query_id).get("id")),encoding='utf-8'))
+        print("name:",str(base64.b64decode(json.loads(query_id).get("name")),encoding='utf-8'))
+        print("age:",str(base64.b64decode(json.loads(query_id).get("age")),encoding='utf-8'))
+        print("id_card_no:",str(base64.b64decode(json.loads(query_id).get("id_card_no")),encoding='utf-8'),"\n")
+
+        name=str(base64.b64decode(json.loads(query_id).get("name")),encoding='utf-8')
+        self.assertEqual(name, '长安链chainmaker_update', "success")
+
+
+        # print("11.升级合约".center(50, "="))
+        # result_erc = cd_asset.upgrade("WASMER", "rust-sql-2.0.0.wasm",
+        #                              public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',version="2.0.1",
+        #                              endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
+        #                              endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        # asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
+        # print("rust asset 合约地址:",asset_address,"\n")
+
+
+        print("12.升级合约后执行插入".center(50, "="))
+        cd_asset.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(21),"长安链chainmaker",str(100000),"510623199202023323"))
+
+        query_id_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(21)))
+        query_id=str(base64.b64decode(json.loads(query_id_result).get("contract_result").get("result")),encoding='utf-8')
+
+        print("id:",str(base64.b64decode(json.loads(query_id).get("id")),encoding='utf-8'))
+        print("name:",str(base64.b64decode(json.loads(query_id).get("name")),encoding='utf-8'))
+        print("age:",str(base64.b64decode(json.loads(query_id).get("age")),encoding='utf-8'))
+        print("id_card_no:",str(base64.b64decode(json.loads(query_id).get("id_card_no")),encoding='utf-8'),"\n")
+
+        age=str(base64.b64decode(json.loads(query_id).get("age")),encoding="utf-8")
+        self.assertEqual(age,str(100000),"success")
+
+
+        print("13.并发测试".center(50, "="))
+        for i in range(500,600):
+            cd_asset.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(i),"长安链chainmaker",str(i+10),"510623199202023323"))
 
 
 
-
-        print("A账户用B账户授权的金额给C账户转账10".center(50, "="))
-        cd_asset.invoke("transfer_from", "{{\"from\":\"{}\",\"to\":\"{}\",\"amount\":\"{}\"}}".format(user_b_address2,user_c_address2,10),
-                        sdk_config="sdk_config.yml")
-
-
-
-        print("查询B账户给A账户授权代转账的余额,应该为40".center(50, "="))
-        balance_b_allowance_a_result = cd_asset.get("allowance",
-                                                    "{{\"owner\":\"{}\",\"spender\":\"{}\"}}".format(user_b_address2,user_a_address),
-                                                    sdk_config="sdk_config.yml")
-
-        balance_b_allowance_a = base64.b64decode(json.loads(balance_b_allowance_a_result).get("contract_result").get("result"))
-        print("查询结果：B账户给A账户授权的代转账余额:",balance_b_allowance_a,"\n")
-
-        print("查询A账户余额，应该为90".center(50, "="))
-        balance_a_result = cd_asset.get("balance_of",
-                                        "{{\"owner\":\"{}\"}}".format(user_a_address),
-                                        sdk_config="sdk_config.yml", signkey="", signcrt="", org="")
-        balance_user_a = base64.b64decode(json.loads(balance_a_result).get("contract_result").get("result"))
-        print("查询结果:A账户余额:",balance_user_a,"\n")
-
-
-        print("查询B账户余额，应该为100".center(50, "="))
-        balance_b_result = cd_asset.get("balance_of","{{\"owner\":\"{}\"}}".format(user_b_address2),
-                                        sdk_config="sdk_config2.yml")
-
-
-
-        balance_user_b = base64.b64decode(json.loads(balance_b_result).get("contract_result").get("result"))
-        print("查询结果：B账户余额",balance_user_b,"\n")
+        # print("14.异常功能测试".center(50, "="))
+        # print("14.1 建表、索引、视图等DDL语句只能在合约安装init_contract 和合约升级upgrade中使用".center(50, "="))
+        # print("14.2 SQL中，禁止跨数据库操作，无需指定数据库名。比如select * from db.table 是禁止的； use db;是禁止的。".center(50, "="))
+        # print("14.3 SQL中，禁止使用事务相关操作的语句，比如commit 、rollback等，事务由ChainMaker框架自动控制。".center(50, "="))
+        # print("14.4 SQL中，禁止使用随机数、获得系统时间等不确定性函数，这些函数在不同节点产生的结果可能不一样，导致合约执行结果无法达成共识。".center(50, "="))
+        # print("14.5 SQL中，禁止多条SQL拼接成一个SQL字符串传入。".center(50, "="))
+        # print("14.6 禁止建立、修改或删除表名为“state_infos”的表，这是系统自带的提供KV数据存储的表，用于存放PutState函数对应的数据。".center(50, "="))
 
 
 
