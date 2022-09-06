@@ -137,9 +137,9 @@ class Test(unittest.TestCase):
 
         print("11.升级合约".center(50, "="))
         result_erc = cd_asset.upgrade("WASMER", "rust-sql-2.0.0.wasm",
-                                     public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',version="2.0.1",
-                                     endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
-                                     endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+                                      public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',version="2.0.1",
+                                      endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
+                                      endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
         print("rust asset 合约地址:",asset_address,"\n")
 
@@ -161,20 +161,47 @@ class Test(unittest.TestCase):
 
         print("13.并发测试".center(50, "="))
         for i in range(500,600):
-            cd_asset.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(i),"长安链chainmaker",str(i+10),"510623199202023323"))
+            cd_asset2 = ContractDeal("rustsql", sync_result=False)
+            cd_asset2.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(i),"长安链chainmaker",str(i+10),"510623199202023323"))
 
 
 
-        # print("14.异常功能测试".center(50, "="))
-        # print("14.1 建表、索引、视图等DDL语句只能在合约安装init_contract 和合约升级upgrade中使用".center(50, "="))
-        # print("14.2 SQL中，禁止跨数据库操作，无需指定数据库名。比如select * from db.table 是禁止的； use db;是禁止的。".center(50, "="))
-        # print("14.3 SQL中，禁止使用事务相关操作的语句，比如commit 、rollback等，事务由ChainMaker框架自动控制。".center(50, "="))
-        # print("14.4 SQL中，禁止使用随机数、获得系统时间等不确定性函数，这些函数在不同节点产生的结果可能不一样，导致合约执行结果无法达成共识。".center(50, "="))
-        # print("14.5 SQL中，禁止多条SQL拼接成一个SQL字符串传入。".center(50, "="))
-        # print("14.6 禁止建立、修改或删除表名为“state_infos”的表，这是系统自带的提供KV数据存储的表，用于存放PutState函数对应的数据。".center(50, "="))
+        print("14.异常功能测试".center(50, "="))
+
+
+        print("14.1 建表、索引、视图等DDL语句只能在合约安装init_contract 和合约升级upgrade中使用".center(50, "="))
+        ddl_result=cd_asset.invoke("sql_execute_ddl",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        print(ddl_result)
+
+
+        print("14.2 SQL中，禁止跨数据库操作，无需指定数据库名。比如select * from db.table 是禁止的； use db;是禁止的。".center(50, "="))
+        ddl_result=cd_asset.invoke("sql_dbname_table_name",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        print(ddl_result)
+
+        print("14.3 SQL中，禁止使用事务相关操作的语句，比如commit 、rollback等，事务由ChainMaker框架自动控制。".center(50, "="))
+        ddl_result=cd_asset.invoke("sql_execute_commit",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        print(ddl_result)
+
+        print("14.4 SQL中，禁止使用随机数、获得系统时间等不确定性函数，这些函数在不同节点产生的结果可能不一样，导致合约执行结果无法达成共识。".center(50, "="))
+        ddl_result=cd_asset.invoke("sql_random_key",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        ddl_result=cd_asset.invoke("sql_random_str",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        ddl_result=cd_asset.invoke("sql_random_query_str",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        print(ddl_result)
+
+
+        print("14.5 SQL中，禁止多条SQL拼接成一个SQL字符串传入。".center(50, "="))
+        ddl_result=cd_asset.invoke("sql_multi_sql",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        print(ddl_result)
+
+
+
+        print("14.6 禁止建立、修改或删除表名为“state_infos”的表，这是系统自带的提供KV数据存储的表，用于存放PutState函数对应的数据。".center(50, "="))
+        ddl_result=cd_asset.invoke("sql_update_state_info",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        print(ddl_result)
+        ddl_result=cd_asset.invoke("sql_query_state_info",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        print(ddl_result)
 
 
 
 if __name__ == '__main__':
     unittest.main()
-
