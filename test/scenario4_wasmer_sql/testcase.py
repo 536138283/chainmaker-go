@@ -40,12 +40,12 @@ class Test(unittest.TestCase):
 
         print("\n","1.rust asset 合约安装".center(50, "="))
         cd_asset = ContractDeal("rustsql", sync_result=True)
-        # result_erc = cd_asset.create("WASMER", "rust-sql-2.0.0.wasm",
-        #                              public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',
-        #                              endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
-        #                              endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
-        # asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
-        # print("rust asset 合约地址:",asset_address,"\n")
+        result_erc = cd_asset.create("WASMER", "rust-sql-2.0.0.wasm",
+                                     public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',
+                                     endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
+                                     endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
+        print("rust asset 合约地址:",asset_address,"\n")
 
 
         print("2.执行合约-sql insert".center(50, "="))
@@ -135,13 +135,13 @@ class Test(unittest.TestCase):
         self.assertEqual(name, '长安链chainmaker_update', "success")
 
 
-        # print("11.升级合约".center(50, "="))
-        # result_erc = cd_asset.upgrade("WASMER", "rust-sql-2.0.0.wasm",
-        #                              public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',version="2.0.1",
-        #                              endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
-        #                              endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
-        # asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
-        # print("rust asset 合约地址:",asset_address,"\n")
+        print("11.升级合约".center(50, "="))
+        result_erc = cd_asset.upgrade("WASMER", "rust-sql-2.0.0.wasm",
+                                     public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',version="2.0.1",
+                                     endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
+                                     endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        asset_address = json.loads(result_erc).get("contract_result").get("result").get("address")
+        print("rust asset 合约地址:",asset_address,"\n")
 
 
         print("12.升级合约后执行插入".center(50, "="))
