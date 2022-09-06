@@ -6,17 +6,17 @@ require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.0
 	chainmaker.org/chainmaker/common/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.0
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220906095354-6d9d99931f0a
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.0
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.1-0.20220905122933-60a75913d383
 	chainmaker.org/chainmaker/localconf/v2 v2.3.0
 	chainmaker.org/chainmaker/logger/v2 v2.3.0
 	chainmaker.org/chainmaker/net-common v1.2.0
 	chainmaker.org/chainmaker/net-libp2p v1.2.0
 	chainmaker.org/chainmaker/net-liquid v1.1.0
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.0
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.1-0.20220905122318-570944130b25
 	chainmaker.org/chainmaker/protocol/v2 v2.3.0
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.0
 	chainmaker.org/chainmaker/store/v2 v2.3.0
