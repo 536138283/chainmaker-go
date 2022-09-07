@@ -18,8 +18,8 @@ require (
 	chainmaker.org/chainmaker/net-liquid v1.1.0
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.0
 	chainmaker.org/chainmaker/protocol/v2 v2.3.0
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.0
-	chainmaker.org/chainmaker/store/v2 v2.3.0
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.1
+	chainmaker.org/chainmaker/store/v2 v2.3.1
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.0
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.0
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.0
@@ -27,9 +27,9 @@ require (
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.0
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.0
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.0
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.0
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.0
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.0
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.0
 	chainmaker.org/chainmaker/vm/v2 v2.3.0
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
