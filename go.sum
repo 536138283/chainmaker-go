@@ -6,8 +6,8 @@ chainmaker.org/chainmaker/common/v2 v2.3.0 h1:ZjJrDnHGQUSdCI7154zAiBAiLlmLkd+Dro
 chainmaker.org/chainmaker/common/v2 v2.3.0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0 h1:7dn8fg1WC0SfnLpgrIFboT8un5F/CueMXuimtLifHd4=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0/go.mod h1:S8tZsTGHzLAHhdm8n+aXtTobIB938CwT6rcQhyvFCr0=
-chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220906095354-6d9d99931f0a h1:ODV7LbORMipAWT6wxQHnU8WncQPq4aDljr2q3j5b2xY=
-chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220906095354-6d9d99931f0a/go.mod h1:huypze6St2miyydeCN/DGHADhgTPc7K4Kz5NoPyCgzw=
+chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220906114803-a7e5c9e4b4d1 h1:YSrC/QeliC4H6KV+b3N2pFx3HNPj6n//98+5d6jP+ks=
+chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220906114803-a7e5c9e4b4d1/go.mod h1:huypze6St2miyydeCN/DGHADhgTPc7K4Kz5NoPyCgzw=
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.0 h1:ekd1lmC58rgqJk04pkFjNwRRU+f2dBDsZaNbzu3JGUA=
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.0/go.mod h1:1mGogAc+/xIISWCb2WpPlra0ZsZD94vJNSI+1n3eo8c=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0 h1:mkqVcc4qknBDq3VZY/KSzo0leh6br2vjdTPxyc1nUEs=

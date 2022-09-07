@@ -10,10 +10,9 @@ import (
 	"fmt"
 	"strings"
 
-	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
-
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
+	"chainmaker.org/chainmaker-go/module/core/maxbftmode/committer"
 	"chainmaker.org/chainmaker-go/module/core/maxbftmode/helper"
 	"chainmaker.org/chainmaker-go/module/core/maxbftmode/proposer"
 	"chainmaker.org/chainmaker-go/module/core/maxbftmode/verifier"
@@ -23,6 +22,7 @@ import (
 	"chainmaker.org/chainmaker/localconf/v2"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -131,11 +131,14 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		StoreHelper:     cf.StoreHelper,
 		TxFilter:        cf.TxFilter,
 	}
-	core.BlockCommitter, err = common.NewBlockCommitter(committerConfig, cf.Log)
+	blockCommitter, err := common.NewBlockCommitter(committerConfig, cf.Log)
 	if err != nil {
 		return nil, err
 	}
-
+	core.BlockCommitter, err = committer.NewBLockCommitter(blockCommitter, cf.ChainConf, cf.MsgBus, cf.BlockchainStore)
+	if err != nil {
+		return nil, err
+	}
 	core.MaxbftHelper = helper.NewMaxbftHelper(cf.TxPool, cf.ChainConf, cf.ProposalCache, cf.Log)
 
 	// get the type of tx pool
