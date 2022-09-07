@@ -167,39 +167,67 @@ class Test(unittest.TestCase):
 
 
         print("14.异常功能测试".center(50, "="))
-
-
         print("14.1 建表、索引、视图等DDL语句只能在合约安装init_contract 和合约升级upgrade中使用".center(50, "="))
         ddl_result=cd_asset.invoke("sql_execute_ddl",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        print(ddl_result)
+        ddl_message=json.loads(ddl_result).get("contract_result").get("message");
+        b="符合预期" in ddl_message
+        if b:
+            print("result contains 符合预期 pass!!!\n")
 
 
         print("14.2 SQL中，禁止跨数据库操作，无需指定数据库名。比如select * from db.table 是禁止的； use db;是禁止的。".center(50, "="))
-        ddl_result=cd_asset.invoke("sql_dbname_table_name",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        print(ddl_result)
+        forbidden_result=cd_asset.invoke("sql_dbname_table_name",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        forbidden_message=json.loads(forbidden_result).get("contract_result").get("message");
+        b="符合预期" in forbidden_message
+        if b:
+            print("result contains 符合预期 pass!!!\n")
+
 
         print("14.3 SQL中，禁止使用事务相关操作的语句，比如commit 、rollback等，事务由ChainMaker框架自动控制。".center(50, "="))
-        ddl_result=cd_asset.invoke("sql_execute_commit",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        print(ddl_result)
+        tx_result=cd_asset.invoke("sql_execute_commit",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        tx_message=json.loads(tx_result).get("contract_result").get("message");
+        b="符合预期" in tx_message
+        if b:
+            print("result contains 符合预期 pass!!!\n")
+
 
         print("14.4 SQL中，禁止使用随机数、获得系统时间等不确定性函数，这些函数在不同节点产生的结果可能不一样，导致合约执行结果无法达成共识。".center(50, "="))
-        ddl_result=cd_asset.invoke("sql_random_key",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        ddl_result=cd_asset.invoke("sql_random_str",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        ddl_result=cd_asset.invoke("sql_random_query_str",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        print(ddl_result)
+        random_key_result=cd_asset.invoke("sql_random_key",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        random_key=json.loads(random_key_result).get("contract_result").get("message");
+        b="forbidden sql keyword" in random_key
+        if b:
+            print("result contains forbidden sql keyword, pass!!!\n")
 
+        random_str_result=cd_asset.invoke("sql_random_str",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(502),"长安链chainmaker"))
+        random_str=str(base64.b64decode(json.loads(random_str_result).get("contract_result").get("result")),encoding='utf-8')
+        self.assertEqual(random_str,"ok","success")
+        print("result:",random_str, "pass !!!\n")
+
+        random_query_str_result=cd_asset.get("sql_random_query_str",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        random_query_str=str(base64.b64decode(json.loads(random_query_str_result).get("contract_result").get("result")),encoding='utf-8')
+        self.assertEqual(random_query_str,"ok","success")
+        print("result:",random_query_str, "pass !!!\n")
 
         print("14.5 SQL中，禁止多条SQL拼接成一个SQL字符串传入。".center(50, "="))
-        ddl_result=cd_asset.invoke("sql_multi_sql",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        print(ddl_result)
-
+        multi_sql_result=cd_asset.invoke("sql_multi_sql",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        multi_sql=json.loads(multi_sql_result).get("contract_result").get("message");
+        b="符合预期" in multi_sql
+        if b:
+            print("result contains 符合预期 pass!!!\n")
 
 
         print("14.6 禁止建立、修改或删除表名为“state_infos”的表，这是系统自带的提供KV数据存储的表，用于存放PutState函数对应的数据。".center(50, "="))
-        ddl_result=cd_asset.invoke("sql_update_state_info",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        print(ddl_result)
-        ddl_result=cd_asset.invoke("sql_query_state_info",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
-        print(ddl_result)
+        update_state_info_result=cd_asset.invoke("sql_update_state_info",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        update_state_info=json.loads(update_state_info_result).get("contract_result").get("message");
+        b="you can't change table state_infos" in update_state_info
+        if b:
+            print("result contains you can't change table state_infos","pass!!!\n")
+
+        query_state_info_result=cd_asset.get("sql_query_state_info",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"长安链chainmaker"))
+        query_state_info=json.loads(query_state_info_result).get("contract_result").get("message");
+        b="符合预期" in query_state_info
+        if b:
+            print("result contains 符合预期 pass!!!\n")
 
 
 
