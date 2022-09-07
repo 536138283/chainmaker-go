@@ -21,8 +21,8 @@ class Test(unittest.TestCase):
 
         print("调用T合约存证数据".center(50, "="))
         contractT = ContractDeal("T", sync_result=True)
-        key = r'key%d' % time.time_ns()
-        value = r"value%d" % time.time_ns()
+        key = r'key%d' % time.time()
+        value = r"value%d" % time.time()
         result= contractT.invoke("P", "{{\"k\": \"{}\",\"v\": \"{}\"}}".format(key,value),
                            sdk_config="sdk_config.yml")
         txId=json.loads(result).get("tx_id")
