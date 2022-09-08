@@ -80,7 +80,8 @@ var permissionedPkResourcePolicy = map[string]*policy{
 	// add majority permission for gas enable/disable config under pwk mode
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(): policyConfig,
-
+	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(): policyConfig,
 	syscontract.SystemContract_CONTRACT_MANAGE.String() + "-" +
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(): policyConfig,
 	syscontract.SystemContract_CONTRACT_MANAGE.String() + "-" +

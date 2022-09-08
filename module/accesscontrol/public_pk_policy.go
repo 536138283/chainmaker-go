@@ -43,7 +43,8 @@ var pkResourcePolicy = map[string]*policy{
 		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(): pubPolicyMajorityAdmin,
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(): pubPolicyMajorityAdmin,
-
+	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(): pubPolicyMajorityAdmin,
 	// for admin management
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(): pubPolicyMajorityAdmin,
@@ -244,7 +245,8 @@ var pkExpResourcePolicyForDPOS = map[string]*policy{
 		syscontract.ChainConfigFunction_CORE_UPDATE.String(): pubPolicyManage,
 	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(): pubPolicyManage,
-
+	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(): pubPolicyManage,
 	syscontract.SystemContract_CONTRACT_MANAGE.String() + "-" +
 		syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(): pubPolicyManage,
 	syscontract.SystemContract_CONTRACT_MANAGE.String() + "-" +
