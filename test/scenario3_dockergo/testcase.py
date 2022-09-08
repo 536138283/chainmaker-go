@@ -43,7 +43,7 @@ class Test(unittest.TestCase):
 
         print("withdraw合约安装".center(50, "="))
         cd_withdraw = ContractDeal("withdraw", sync_result=True)
-        result_withdraw = cd_withdraw.create("DOCKER_GO", "withdraw.7z", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        result_withdraw = cd_withdraw.create("DOCKER_GO", "withdraw.7z", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config2.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
         print("withdraw contract address: ", withdraw_address)
 
