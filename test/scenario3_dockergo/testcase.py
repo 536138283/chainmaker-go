@@ -60,7 +60,7 @@ class Test(unittest.TestCase):
 
         print("B调用withdraw合约，提款10".center(50, "="))
 
-        cd_withdraw.invoke("withdraw", params="{{\"to\":\"{}\",\"amount\":\"{}\"}}".format(user_b_address,10),
+        cd_withdraw.invoke("withdraw", params="{{\"address\":\"{}\",\"amount\":\"{}\"}}".format(erc_address,10),
                         sdk_config="sdk_config.yml")
 
 
