@@ -59,9 +59,10 @@ class Test(unittest.TestCase):
         erc20.transfer(withdraw_address,200)
 
         print("B调用withdraw合约，提款10".center(50, "="))
-
         cd_withdraw.invoke("withdraw", params="{{\"address\":\"{}\",\"amount\":\"{}\"}}".format(erc_address,10),
-                        sdk_config="sdk_config2.yml")
+                        sdk_config="sdk_config.yml",signkey=gl.USER_B_KEY,
+                           signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
+                           org="wx-org2.chainmaker.org")
 
 
         print("UserA balance:".center(50, "="))
