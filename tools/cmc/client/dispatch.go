@@ -11,18 +11,14 @@ import (
 	"fmt"
 	"sync"
 
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	"chainmaker.org/chainmaker/utils/v2"
-
-	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
-
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdkPbCommon "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	ethabi "github.com/ethereum/go-ethereum/accounts/abi"
 )
 
-func Dispatch(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	evmMethod *ethabi.Method, limit *sdkPbCommon.Limit) {
+func Dispatch(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
+	evmMethod *ethabi.Method, limit *common.Limit) {
 	var (
 		wgSendReq sync.WaitGroup
 	)
@@ -34,7 +30,7 @@ func Dispatch(client *sdk.ChainClient, contractName, method string, kvs []*sdkPb
 
 	wgSendReq.Wait()
 }
-func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
 	evmMethod *ethabi.Method) {
 	var (
 		wgSendReq sync.WaitGroup
@@ -47,90 +43,53 @@ func DispatchTimes(client *sdk.ChainClient, contractName, method string, kvs []*
 	wgSendReq.Wait()
 }
 
-func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
-	wg *sync.WaitGroup, evmMethod *ethabi.Method, limit *sdkPbCommon.Limit) {
+func runInvokeContract(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
+	wg *sync.WaitGroup, evmMethod *ethabi.Method, limit *common.Limit) {
 
 	defer func() {
 		wg.Done()
 	}()
 
 	for i := 0; i < totalCntPerGoroutine; i++ {
-		if client.IsEnableNormalKey() {
-			txId = utils.GetRandTxId()
-		} else {
-			txId = utils.GetTimestampTxId()
-		}
-
-		resp, err := client.InvokeContractWithLimit(contractName, method, txId, kvs, timeout, syncResult, limit)
-		if err != nil {
-			fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
-			return
-		}
-
-		if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
-			fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
-			return
-		}
-
-		if evmMethod != nil && resp.ContractResult != nil {
-			output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
-			if err != nil {
-				fmt.Println(err)
-				return
-			}
-			resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
-		}
-
-		util.PrintPrettyJson(resp)
+		invokeContract(client, contractName, method, "", kvs, evmMethod, limit)
 	}
 }
 
-func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, kvs []*sdkPbCommon.KeyValuePair,
+func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string, kvs []*common.KeyValuePair,
 	wg *sync.WaitGroup, evmMethod *ethabi.Method) {
 
 	defer func() {
 		wg.Done()
 	}()
 
-	txId := sdkutils.GetTimestampTxId()
-	resp, err := client.InvokeContract(contractName, method, txId, kvs, timeout, syncResult)
-	if err != nil {
-		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
-		return
-	}
-
-	if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
-		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
-		return
-	}
-
-	if evmMethod != nil && resp.ContractResult != nil {
-		output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
-		if err != nil {
-			fmt.Println(err)
-			return
-		}
-		resp.ContractResult.Result = []byte(fmt.Sprintf("%v", output))
-	}
-
-	fmt.Printf("INVOKE contract resp, [code:%d]/[msg:%s]/[contractResult:%+v]/[txId:%s]\n", resp.Code, resp.Message,
-		resp.ContractResult, txId)
+	invokeContract(client, contractName, method, "", kvs, evmMethod, nil)
 }
 
-func invokeContract(client *sdk.ChainClient, contractName, method, txId string, kvs []*sdkPbCommon.KeyValuePair,
-	evmMethod *ethabi.Method, limit *sdkPbCommon.Limit) {
-	resp, err := client.InvokeContractWithLimit(contractName, method, txId, kvs, timeout, syncResult, limit)
+func invokeContract(client *sdk.ChainClient, contractName, method, txId string, kvs []*common.KeyValuePair,
+	evmMethod *ethabi.Method, limit *common.Limit) {
+	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	if err != nil {
+		fmt.Printf("makeAdminInfo failed, %s", err)
+		return
+	}
+	payload := client.CreatePayload(txId, common.TxType_INVOKE_CONTRACT, contractName, method, kvs, 0, limit)
+	endorsers, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		fmt.Printf("makeEndorsement failed, %s", err)
+		return
+	}
+	req, err := client.GenerateTxRequest(payload, endorsers)
+	if err != nil {
+		fmt.Printf("GenerateTxRequest failed, %s", err)
+		return
+	}
+	resp, err := client.SendTxRequest(req, timeout, syncResult)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 		return
 	}
 
-	if resp.Code != sdkPbCommon.TxStatusCode_SUCCESS {
-		fmt.Printf("[ERROR] invoke contract failed, [code:%d]/[msg:%s]/[txId:%s]\n", resp.Code, resp.Message, txId)
-		return
-	}
-
-	if evmMethod != nil && resp.ContractResult != nil {
+	if evmMethod != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
 		output, err := util.DecodeOutputs(evmMethod, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
