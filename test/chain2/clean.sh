@@ -8,7 +8,7 @@ rm -rf ./data
 rm -rf ./log
 rm -rf ./bin
 
-dsn="-h127.0.0.1 -P3306"
+dsn="-h127.0.0.1 -P3306 -uroot -p123"
 
 for((i=1;i<=4;i++))
 do
