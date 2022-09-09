@@ -72,7 +72,23 @@ func runInvokeContractOnce(client *sdk.ChainClient, contractName, method string,
 func invokeContract(client *sdk.ChainClient, contractName, methodName, txId string,
 	kvs []*common.KeyValuePair, abi *abi.ABI, limit *common.Limit) {
 
-	resp, err := client.InvokeContractWithLimit(contractName, methodName, txId, kvs, timeout, syncResult, limit)
+	payload := client.CreatePayload(txId, common.TxType_INVOKE_CONTRACT, contractName, methodName, kvs, 0, limit)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		fmt.Printf("MakeAdminInfo failed, %s", err)
+		return
+	}
+	endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		fmt.Printf("MakeEndorsement failed, %s", err)
+		return
+	}
+	req, err := client.GenerateTxRequest(payload, endorsers)
+	if err != nil {
+		fmt.Printf("GenerateTxRequest failed, %s", err)
+		return
+	}
+	resp, err := client.SendTxRequest(req, timeout, syncResult)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 		return
