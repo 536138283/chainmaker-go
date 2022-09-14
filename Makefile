@@ -110,9 +110,13 @@ sql-qta:
 	cd test/scenario0_native && python3 chain2.py
 	cd test/scenario1_evm && python3 chain2.py
 	cd test/scenario2_rust && python3 chain2.py
+	cd test/scenario4_wasmer_sql && python3 chain2.py
 	cd test/chain2 && ./stop.sh
 	cd test/chain2 && ./clean.sh
-qta:
+
+qta: cert-qta pub-qta docker-qta
+
+cert-qta:
 	echo "clear environment"
 	cd test/chain1 && ./stop.sh
 	cd test/chain1 && ./clean.sh
@@ -142,7 +146,6 @@ docker-qta:
 	echo "clear environment"
 	cd test/chain1 && ./stop.sh
 	cd test/chain1 && ./clean.sh
-	docker rm -f  `docker ps -aq -f name=ci-chain1`
 	echo "start new docker-qta test"
 	cd scripts/docker && ./build-dockergo.sh
 	cd test/chain1 && ./build.sh
