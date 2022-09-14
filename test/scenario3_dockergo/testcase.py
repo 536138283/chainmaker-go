@@ -39,28 +39,31 @@ class Test(unittest.TestCase):
         erc_address = json.loads(result_erc).get("contract_result").get("result").get("address")
         print("ERC20 contract address: ", erc_address)
         erc20 = Erc20(erc_address,None,True,sdk_config="sdk_config.yml")
+
+
         print("withdraw合约安装".center(50, "="))
         cd_withdraw = ContractDeal("withdraw", sync_result=True)
-        result_withdraw = cd_withdraw.create("EVM", "withdrawgo.bin", public_identity=f'{gl.ACCOUNT_TYPE}',abi="withdraw.abi",
-                                             endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        result_withdraw = cd_withdraw.create("DOCKER_GO", "withdraw.7z", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
         print("withdraw contract address: ", withdraw_address)
+
+
         print("A Mint 10亿".center(50, "="))
         cd_erc.invoke("mint", "{{\"account\": \"{}\",\"amount\": \"1000000000\"}}".format(user_a_address),
                            sdk_config="sdk_config.yml",stringResult=True)
+
         print("A转账给B".center(50, "="))
         erc20.transfer(user_b_address,100)
 
         print("A转账给withdraw合约".center(50, "="))
         erc20.transfer(withdraw_address,200)
 
-
         print("B调用withdraw合约，提款10".center(50, "="))
-        cd_withdraw.invoke("withdraw", r'[{"address": "%s"},{"uint256": "10"}]' % erc_address,
-                           sdk_config="sdk_config.yml",
-                           abi="withdraw.abi", signkey=gl.USER_B_KEY,
+        cd_withdraw.invoke("withdraw", params="{{\"address\":\"{}\",\"amount\":\"{}\"}}".format(erc_address,10),
+                        sdk_config="sdk_config.yml",signkey=gl.USER_B_KEY,
                            signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
                            org="wx-org2.chainmaker.org")
+
 
         print("UserA balance:".center(50, "="))
         balance_a =erc20.balanceOf(user_a_address)
@@ -78,6 +81,49 @@ class Test(unittest.TestCase):
         balance_withdraw =erc20.balanceOf(withdraw_address)
         expect_withdraw = "190"
         self.assertEqual(expect_withdraw, balance_withdraw, "success")
+
+
+
+        # TODO:EVM CROSSCALL DOKEER-GO
+        # print("withdraw合约安装".center(50, "="))
+        # cd_withdraw = ContractDeal("withdraw", sync_result=True)
+        # result_withdraw = cd_withdraw.create("EVM", "withdrawgo.bin", public_identity=f'{gl.ACCOUNT_TYPE}',abi="withdraw.abi",
+        #                                      endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
+        # withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
+        # print("withdraw contract address: ", withdraw_address)
+        # print("A Mint 10亿".center(50, "="))
+        # cd_erc.invoke("mint", "{{\"account\": \"{}\",\"amount\": \"1000000000\"}}".format(user_a_address),
+        #                    sdk_config="sdk_config.yml",stringResult=True)
+        # print("A转账给B".center(50, "="))
+        # erc20.transfer(user_b_address,100)
+        #
+        # print("A转账给withdraw合约".center(50, "="))
+        # erc20.transfer(withdraw_address,200)
+        #
+        #
+        # print("B调用withdraw合约，提款10".center(50, "="))
+        # cd_withdraw.invoke("withdraw", r'[{"address": "%s"},{"uint256": "10"}]' % erc_address,
+        #                    sdk_config="sdk_config.yml",
+        #                    abi="withdraw.abi", signkey=gl.USER_B_KEY,
+        #                    signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
+        #                    org="wx-org2.chainmaker.org")
+        #
+        # print("UserA balance:".center(50, "="))
+        # balance_a =erc20.balanceOf(user_a_address)
+        #
+        # expect_a = "999999700"
+        #
+        # self.assertEqual(expect_a, balance_a, "success")
+        #
+        # print("UserB balance:".center(50, "="))
+        # balance_b=erc20.balanceOf(user_b_address)
+        # expect_b = "110"
+        # self.assertEqual(expect_b, balance_b, "success")
+        #
+        # print("withdraw contract balance:".center(50, "="))
+        # balance_withdraw =erc20.balanceOf(withdraw_address)
+        # expect_withdraw = "190"
+        # self.assertEqual(expect_withdraw, balance_withdraw, "success")
 
 
 if __name__ == '__main__':

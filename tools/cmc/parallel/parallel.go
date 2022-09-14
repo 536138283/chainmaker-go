@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -99,6 +100,11 @@ type KeyValuePair struct {
 	Value      string `json:"value,omitempty"`
 	Unique     bool   `json:"unique,omitempty"`
 	RandomRate int64  `json:"randomRate,omitempty"`
+	Increase   bool   `json:"increase"`
+	Decrease   bool   `json:"decrease"`
+	// mu protect IntValue in Increase/Decrease scene.
+	mu       sync.Mutex
+	IntValue int64 `json:"-"`
 }
 
 type Detail struct {
@@ -551,6 +557,15 @@ func (t *Thread) getPairInfos() ([]*KeyValuePair, error) {
 		return nil, err
 	}
 
+	for _, p := range ps {
+		if p.Decrease || p.Increase {
+			p.IntValue, err = strconv.ParseInt(p.Value, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
 	return ps, nil
 }
 
@@ -607,8 +622,8 @@ var (
 )
 
 var randomRate int64
-var totalSentTxs int64 = 1
-var totalRandomSentTxs int64 = 1
+var totalSentTxs int64
+var totalRandomSentTxs int64
 var resp *commonPb.TxResponse
 
 type InvokerMsg struct {
@@ -626,48 +641,15 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := make([]*commonPb.KeyValuePair, 0)
-	var randomRateTmp int64
-	atomic.AddInt64(&totalSentTxs, 1)
-	for _, p := range ps {
-		if p.RandomRate > 100 || p.RandomRate < 0 {
-			panic("randomRate must int in [0,100]")
-		}
-
-		if p.RandomRate > 0 {
-			if randomRateTmp > 0 {
-				panic("randomRate used once by one key")
-			}
-			randomRateTmp = p.RandomRate
-			randomRate = p.RandomRate
-		}
-
-		key := p.Key
-		val := []byte(p.Value)
-		if randomRate > 0 && p.RandomRate > 0 {
-			if randomRate > (totalRandomSentTxs * 100 / totalSentTxs) {
-				val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
-				atomic.AddInt64(&totalRandomSentTxs, 1)
-			}
-		} else if p.Unique {
-			val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
-		}
-		pairs = append(pairs, &commonPb.KeyValuePair{
-			Key:   key,
-			Value: val,
-		})
-	}
+	pairs := makeKvs(ps, h.threadId, loopId)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
 			fmt.Println(err)
 		}
 		rate := totalRandomSentTxs * 100 / totalSentTxs
-		if totalRandomSentTxs == 1 {
-			rate = 0
-		}
 		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
-			totalSentTxs, totalRandomSentTxs-1, rate, string(j))
+			totalSentTxs, totalRandomSentTxs, rate, string(j))
 	}
 
 	// 支持evm
@@ -714,25 +696,15 @@ func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey,
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	//var ps []*KeyValuePair
-	//err := json.Unmarshal([]byte(pairsString), &ps)
-	//if err != nil {
-	//	return err
-	//}
-	pairs := []*commonPb.KeyValuePair{}
-	for _, p := range ps {
-		key := p.Key
-		val := []byte(p.Value)
-		if p.Unique {
-			val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
+	pairs := makeKvs(ps, h.threadId, loopId)
+	if showKey {
+		j, err := json.Marshal(pairs)
+		if err != nil {
+			fmt.Println(err)
 		}
-		pairs = append(pairs, &commonPb.KeyValuePair{
-			Key:   key,
-			Value: val,
-		})
-		if showKey {
-			fmt.Printf("key:%s val:%s\n", key, val)
-		}
+		rate := totalRandomSentTxs * 100 / totalSentTxs
+		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
+			totalSentTxs, totalRandomSentTxs, rate, string(j))
 	}
 
 	payloadBytes, err := constructQueryPayload(chainId, contractName, method, pairs, gasLimit)

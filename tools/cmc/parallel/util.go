@@ -8,16 +8,18 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
-	utils "chainmaker.org/chainmaker/utils/v2"
 	"errors"
 	"fmt"
+	"math/rand"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
+	utils "chainmaker.org/chainmaker/utils/v2"
 )
 
 const GRPCMaxCallRecvMsgSize = 16 * 1024 * 1024
@@ -153,4 +155,47 @@ func getHashType(hashType string) (crypto.HashType, error) {
 		return t, nil
 	}
 	return 0, fmt.Errorf("unknown hash algo %s", hashType)
+}
+
+func makeKvs(inKvs []*KeyValuePair, threadId, loopId int) []*commonPb.KeyValuePair {
+	var outKvs []*commonPb.KeyValuePair
+	atomic.AddInt64(&totalSentTxs, 1)
+	for _, p := range inKvs {
+		var val []byte
+		switch {
+		case p.Unique:
+			val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+		case 0 <= p.RandomRate && p.RandomRate <= 100:
+			if isRandom(p.RandomRate) {
+				val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+				atomic.AddInt64(&totalRandomSentTxs, 1)
+			} else {
+				val = []byte(p.Value)
+			}
+		case p.Decrease:
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue--
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		case p.Increase:
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue++
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		default:
+			val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+		}
+
+		outKvs = append(outKvs, &commonPb.KeyValuePair{
+			Key:   p.Key,
+			Value: val,
+		})
+	}
+	return outKvs
+}
+
+func isRandom(randomRate int64) bool {
+	return rand.Int63n(100) < randomRate
 }

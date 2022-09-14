@@ -71,8 +71,11 @@ function start_vm_go() {
 
 }
 
-echo "clean docker go"
-docker rm -f  `docker ps -aq -f name=ci-chain1`
+exist=$(docker ps -f name="ci-chain1" --format '{{.Names}}')
+  if [ "$exist" ]; then
+    echo "clean exist docker go"
+    docker rm -f  `docker ps -aq -f name=ci-chain1`
+  fi
 echo "start docker go"
 start_vm_go 1 "./data/wx-org1.chainmaker.org/go" "./log/wx-org1.chainmaker.org/go" 32351 22351
 start_vm_go 2 "./data/wx-org2.chainmaker.org/go" "./log/wx-org2.chainmaker.org/go" 32352 22352
