@@ -190,7 +190,7 @@ func (sch *scheduler) receiveMajorityBlocks() {
 	// 查看是否已达到区块同步的阈值范围
 	maxHeight := sch.maxHeight()
 	currBlockHeight, _ := sch.ledger.CurrentHeight()
-	if maxHeight-currBlockHeight > sch.thresholdBlocks {
+	if maxHeight > currBlockHeight && maxHeight-currBlockHeight > sch.thresholdBlocks {
 		return
 	}
 
