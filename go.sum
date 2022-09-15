@@ -75,6 +75,8 @@ chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1 h1:0fmQFwZ74y1JpxDuOE1GbjZr9E/EVVk
 chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1/go.mod h1:mYjyB5FYzwfclLWTlXfsZMVxiCPjYI33s1Emof5B1SA=
 chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.0 h1:bCbj4mOl1stAit2h5H9NT4tOI1d0TSE7IpGlD5j8h64=
 chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.0/go.mod h1:BguJxqL7rjDFGoW9rDjuWzuFevMC47uw+9S9iBotMpw=
+chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220915031819-1acc5b689443 h1:UuKjCUDgyxalzM78SESof68nOh8U5qOfTym6xgN8itk=
+chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220915031819-1acc5b689443/go.mod h1:BguJxqL7rjDFGoW9rDjuWzuFevMC47uw+9S9iBotMpw=
 chainmaker.org/chainmaker/vm/v2 v2.3.0 h1:uwH4+iSPlEnE3qowD7rPom1VeifJpzl3UIYFvOK97EU=
 chainmaker.org/chainmaker/vm/v2 v2.3.0/go.mod h1:C164YKxCYgzYdreuFtIrGX4gP/j3ggeyfkWUQKBZpJ8=
 chainmaker.org/third_party/badger/v3 v3.0.0 h1:8fPIUB8dyCCPu2QbQbp6r4QcixYVK7KOdfSEUeMZPVc=
