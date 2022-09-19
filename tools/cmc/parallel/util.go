@@ -157,15 +157,15 @@ func getHashType(hashType string) (crypto.HashType, error) {
 	return 0, fmt.Errorf("unknown hash algo %s", hashType)
 }
 
-func makeKvs(inKvs []*KeyValuePair, threadId, loopId int) []*commonPb.KeyValuePair {
+func makeKvs(threadId, loopId int) []*commonPb.KeyValuePair {
 	var outKvs []*commonPb.KeyValuePair
 	atomic.AddInt64(&totalSentTxs, 1)
-	for _, p := range inKvs {
+	for _, p := range globalPairs {
 		var val []byte
 		switch {
 		case p.Unique:
 			val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
-		case 0 <= p.RandomRate && p.RandomRate <= 100:
+		case 0 < p.RandomRate && p.RandomRate < 100:
 			if isRandom(p.RandomRate) {
 				val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
 				atomic.AddInt64(&totalRandomSentTxs, 1)
@@ -185,7 +185,7 @@ func makeKvs(inKvs []*KeyValuePair, threadId, loopId int) []*commonPb.KeyValuePa
 			p.mu.Unlock()
 			atomic.AddInt64(&totalRandomSentTxs, 1)
 		default:
-			val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+			val = []byte(p.Value)
 		}
 
 		outKvs = append(outKvs, &commonPb.KeyValuePair{
