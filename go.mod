@@ -6,7 +6,7 @@ require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.0
 	chainmaker.org/chainmaker/common/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220909064308-0e958e7b6e9a
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220919071731-0c6d59c14b7d
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.0
@@ -16,9 +16,9 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.0
 	chainmaker.org/chainmaker/net-libp2p v1.2.0
 	chainmaker.org/chainmaker/net-liquid v1.1.0
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.1-0.20220905122318-570944130b25
-	chainmaker.org/chainmaker/protocol/v2 v2.3.0
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.0
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.1-0.20220915114839-edf3ced60547
+	chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20220916034143-ca0fabf097d7
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220919075300-4f51e2ac21c9
 	chainmaker.org/chainmaker/store/v2 v2.3.0
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.0
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.0
@@ -76,6 +76,7 @@ require (
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
+	google.golang.org/protobuf v1.27.1
 )
 
 replace (

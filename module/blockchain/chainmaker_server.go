@@ -16,6 +16,8 @@ import (
 	"strings"
 	"sync"
 
+	"chainmaker.org/chainmaker/vm-evm/v2/evm-go/math"
+
 	"chainmaker.org/chainmaker-go/module/net"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -31,7 +33,10 @@ import (
 
 var log = logger.GetLogger(logger.MODULE_BLOCKCHAIN)
 
-const chainIdNotFoundErrorTemplate = "chain id %s not found"
+const (
+	chainIdNotFoundErrorTemplate = "chain id %s not found"
+	notConsensusNode             = "the current node does not belong to the consensus role"
+)
 
 // ChainMakerServer manage all blockchains
 type ChainMakerServer struct {
@@ -421,6 +426,51 @@ func (server *ChainMakerServer) GetTxsInPoolByTxIds(chainId string,
 		return blockchain.(*Blockchain).txPool.GetTxsInPoolByTxIds(txIds)
 	}
 	return nil, nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
+// GetConsensusStateJSON Get the status of the current consensus, including the height and view
+// of the block participating in the consensus, timeout, and identity of the consensus node
+func (server *ChainMakerServer) GetConsensusStateJSON(chainId string) ([]byte, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		if blockchain.(*Blockchain).consensus != nil {
+			return blockchain.(*Blockchain).consensus.GetConsensusStateJSON()
+		}
+		return nil, fmt.Errorf(notConsensusNode)
+	}
+	return nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
+// GetConsensusValidators Get the identity of all consensus nodes
+func (server *ChainMakerServer) GetConsensusValidators(chainId string) ([]string, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		if blockchain.(*Blockchain).consensus != nil {
+			return blockchain.(*Blockchain).consensus.GetValidators()
+		}
+		return nil, fmt.Errorf(notConsensusNode)
+	}
+	return nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
+// GetConsensusHeight Get the height of the block participating in the consensus
+func (server *ChainMakerServer) GetConsensusHeight(chainId string) (uint64, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		if blockchain.(*Blockchain).consensus != nil {
+			height := blockchain.(*Blockchain).consensus.GetLastHeight()
+			if height == math.MaxUint64 {
+				// Because the interface provided by the consensus module does not provide
+				// an error value when it returns. The consensus field in the MAXBFT consensus
+				// is always non-empty although the synchronous node, the consensus module
+				// internally maintains whether the node is a consensus node. In order to keep
+				// consistent with other consensus behaviors (in the case of non-consensus nodes,
+				// a specific error is returned), So MAXBFT Mandatory uint64 Maximum value
+				// indicates that the current node is a non-consensus node.
+				return 0, fmt.Errorf(notConsensusNode)
+			}
+			return height, nil
+		}
+		return 0, fmt.Errorf(notConsensusNode)
+	}
+	return 0, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
 }
 
 // GetStore get the store instance of chain which id is the given.

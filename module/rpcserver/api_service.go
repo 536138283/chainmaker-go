@@ -13,6 +13,9 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"google.golang.org/protobuf/types/known/wrapperspb"
+
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker-go/module/snapshot"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -544,4 +547,35 @@ func (s *ApiService) GetTxsInPoolByTxIds(ctx context.Context,
 		Txs:   txs,
 		TxIds: txIds,
 	}, nil
+}
+
+// GetConsensusStateJSON Gets the status of the current consensus, including the height and view
+// of the block participating in the consensus, timeout, and identity of the consensus node
+func (s *ApiService) GetConsensusStateJSON(ctx context.Context,
+	request *consensus.GetConsensusStatusRequest) (*wrapperspb.BytesValue, error) {
+	bz, err := s.chainMakerServer.GetConsensusStateJSON(request.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	return wrapperspb.Bytes(bz), nil
+}
+
+// GetConsensusValidators Gets the identity of all consensus nodes
+func (s *ApiService) GetConsensusValidators(ctx context.Context,
+	request *consensus.GetConsensusStatusRequest) (*consensus.Validators, error) {
+	nodes, err := s.chainMakerServer.GetConsensusValidators(request.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	return &consensus.Validators{Nodes: nodes}, nil
+}
+
+// GetConsensusHeight Gets the height of the block participating in the consensus
+func (s *ApiService) GetConsensusHeight(ctx context.Context,
+	request *consensus.GetConsensusStatusRequest) (*wrapperspb.UInt64Value, error) {
+	height, err := s.chainMakerServer.GetConsensusHeight(request.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	return wrapperspb.UInt64(height), nil
 }
