@@ -902,9 +902,16 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 		return nil
 	}
 	//add to cache
-	cached = &memberCached{
-		member:    tmpMember,
-		certChain: certChains[0],
+	if certChains != nil {
+		cached = &memberCached{
+			member:    tmpMember,
+			certChain: certChains[0],
+		}
+	} else {
+		cached = &memberCached{
+			member:    tmpMember,
+			certChain: nil,
+		}
 	}
 	acs.addMemberToCache(string(member.MemberInfo), cached)
 
