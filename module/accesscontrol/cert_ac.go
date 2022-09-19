@@ -138,6 +138,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 
 	certACProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
 		chainConfig.AuthType, store, log)
+	certACProvider.acService.setVerifyOptionsFunc(certACProvider.getVerifyOptions)
 
 	err = certACProvider.initTrustRoots(chainConfig.TrustRoots, localOrgId)
 	if err != nil {
@@ -164,6 +165,10 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 		}
 	}
 	return certACProvider, nil
+}
+
+func (cp *certACProvider) getVerifyOptions() *bcx509.VerifyOptions {
+	return &cp.opts
 }
 
 func (cp *certACProvider) initTrustRoots(roots []*config.TrustRootConfig, localOrgId string) error {
@@ -942,7 +947,7 @@ func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *conf
 		}
 
 		for _, root := range orgRoot.Root {
-			certificateChain, err := cp.buildCertificateChainForUpdatingChainConfig(root, orgRoot.OrgId, org)
+			certificateChain, err := cp.buildCertificateChain(root, orgRoot.OrgId, org)
 			if err != nil {
 				return err
 			}
@@ -980,28 +985,6 @@ func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *conf
 	}
 	cp.localOrg, _ = localOrg.(*organization)
 	return nil
-}
-
-func (cp *certACProvider) buildCertificateChainForUpdatingChainConfig(root, orgId string,
-	org *organization) ([]*bcx509.Certificate, error) {
-	var certificates, certificateChain []*bcx509.Certificate
-
-	pemBlock, rest := pem.Decode([]byte(root))
-	for pemBlock != nil {
-		cert, errCert := bcx509.ParseCertificate(pemBlock.Bytes)
-		if errCert != nil {
-			return nil, fmt.Errorf("update configuration failed, invalid certificate for organization %s", orgId)
-		}
-		if len(cert.Signature) == 0 {
-			return nil, fmt.Errorf("update configuration failed, invalid certificate [SN: %s]", cert.SerialNumber)
-		}
-
-		certificates = append(certificates, cert)
-		pemBlock, rest = pem.Decode(rest)
-	}
-
-	certificateChain = bcx509.BuildCertificateChain(certificates)
-	return certificateChain, nil
 }
 
 //GetValidEndorsements filters all endorsement entries and returns all valid ones
