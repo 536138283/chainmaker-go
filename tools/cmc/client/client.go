@@ -96,6 +96,9 @@ var (
 	permissionResourcePolicyOrgList  []string
 	permissionResourcePolicyRoleList []string
 	respResultToString               bool
+
+	consensusFrom string
+	consensusTo   string
 )
 
 const (
@@ -156,6 +159,8 @@ const (
 	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
+	flagConsensusFrom                    = "src-consensus"
+	flagConsensusTo                      = "dst-consensus"
 	flagRespResultToString               = "result-to-string"
 	flagOutFilePath                      = "out-file-path"
 
@@ -285,9 +290,11 @@ func init() {
 		"chain config permission resource policy org list")
 	flags.StringSliceVar(&permissionResourcePolicyRoleList, flagPermissionResourcePolicyRoleList, []string{},
 		"chain config permission resource policy role list")
+
+	flags.StringVar(&consensusFrom, flagConsensusFrom, "", "specify source consensus")
+	flags.StringVar(&consensusTo, flagConsensusTo, "", "specify destination consensus")
 	flags.BoolVar(&respResultToString, flagRespResultToString, false,
 		"enable convert TxResponse.ContractResult.Result to string for readable output")
-}
 
 func attachFlags(cmd *cobra.Command, names []string) {
 	cmdFlags := cmd.Flags()

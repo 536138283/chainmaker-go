@@ -247,8 +247,6 @@ func (sch *scheduler) handleLivinessMsg() {
 //whether the response data of the request needs to have a read-write set
 func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 	var (
-		err           error
-		bz            []byte
 		peer          string
 		pendingHeight uint64
 	)
@@ -257,42 +255,38 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 		//sch.log.Debugf("no need to sync block")
 		return nil, nil
 	}
-	//get the block height that needs to be synchronized
-	//the pendingHeight reaches math.MaxUint64  m
-	//means that there are currently no blocks that need to be synchronized
 	if pendingHeight = sch.nextHeightToReq(); pendingHeight == math.MaxUint64 {
 		sch.log.Debugf("pendingHeight: %d, block status %v", pendingHeight, sch.blockStates)
 		return nil, nil
 	}
-	//select a peer which the 'pendingHeight' can be requested to
 	if peer = sch.selectPeer(pendingHeight); len(peer) == 0 {
 		sch.log.Debugf("no peers have block [%d] ", pendingHeight)
 		return nil, nil
 	}
-	var bsr = syncPb.BlockSyncReq{
-		BlockHeight: pendingHeight,
-		BatchSize:   sch.BatchesizeInEachReq,
-		WithRwset:   localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable,
-	}
-	if bz, err = proto.Marshal(&bsr); err != nil {
-		return nil, err
-	}
-
 	sch.lastRequest = time.Now()
-	//update the data information corresponding to the requested block
-	//including the time of the request, the destination node of the request, and the block state
 	for i := pendingHeight; i <= sch.peers[peer] && i < sch.BatchesizeInEachReq+pendingHeight; i++ {
 		sch.blockStates[i] = pendingBlock
 		sch.pendingTime[i] = sch.lastRequest
 		sch.pendingBlocks[i] = peer
 	}
-	sch.log.Debugf("request block[height: %d] from node [%s], BatchesSizeInReq: %d", pendingHeight, peer,
-		sch.BatchesizeInEachReq)
-	if err := sch.sender.sendMsg(syncPb.SyncMsg_BLOCK_SYNC_REQ, bz, peer); err != nil {
-		sch.log.Warnf("send sync block request for height[%d], fail: %s", pendingHeight, err.Error())
-		return nil, nil //retutn nil prevent external printing errors, example:routine
+	if err := sch.sendSyncBlockRequest(peer, pendingHeight, sch.BatchesizeInEachReq, localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable); err != nil {
+		return nil, err
 	}
 	return nil, nil
+}
+
+func (sch *scheduler) sendSyncBlockRequest(toPeer string, fromHeight, batch uint64, withRwset bool) error {
+	req := syncPb.BlockSyncReq{
+		BlockHeight: fromHeight,
+		BatchSize:   batch,
+		WithRwset:   withRwset,
+	}
+	bz, err := proto.Marshal(&req)
+	if err != nil {
+		return err
+	}
+	sch.log.Debugf("request block[height: %d] from node [%s], BatchesSizeInReq: %d", fromHeight, toPeer, batch)
+	return sch.sender.sendMsg(syncPb.SyncMsg_BLOCK_SYNC_REQ, bz, toPeer)
 }
 
 //handleStopSyncMsg mark stop sync block and clean up records
@@ -489,22 +483,36 @@ func (sch *scheduler) isPeerArchivedTooHeight(localHeight, peerArchivedHeight ui
 //traverse the blocks that have been synchronized this time
 //if the state of corresponding height is not "receivedBlock", indicates the data need to be processed in the next step
 //set needToProcess to true moreover mark the state of corresponding height as "receivedBlock" in blockStates
+//if the block is a config block without rwset, need to reacquire for rwset
 func (sch *scheduler) updateSchedulerBySyncBlockBatch(msgFrom string, o interface{}, size int) bool {
-	var height uint64
-	var hash []byte
+	var (
+		height      uint64
+		hash        []byte
+		block       *commonPb.Block
+		hasRWset    bool
+		resyncBlock []uint64
+	)
 	needToProcess := false
+
 	for i := 0; i < size; i++ {
 		switch ty := o.(type) {
 		case []*commonPb.Block:
-			height = ty[i].Header.BlockHeight
-			hash = ty[i].Header.BlockHash
+			block = ty[i]
+			// height = ty[i].Header.BlockHeight
+			// hash = ty[i].Header.BlockHash
+			hasRWset = false
 		case []*commonPb.BlockInfo:
-			height = ty[i].Block.Header.BlockHeight
-			hash = ty[i].Block.Header.BlockHash
+			block = ty[i].Block
+			// height = ty[i].Block.Header.BlockHeight
+			// hash = ty[i].Block.Header.BlockHash
+			hasRWset = ty[i].RwsetList != nil
 		default:
 			sch.log.Errorf("received unrecognized block type: [%t]", ty)
 			continue
 		}
+		height = block.Header.BlockHeight
+		hash = block.Header.BlockHash
+
 		delete(sch.pendingBlocks, height)
 		delete(sch.pendingTime, height)
 		if state, exist := sch.blockStates[height]; exist {
@@ -513,11 +521,34 @@ func (sch *scheduler) updateSchedulerBySyncBlockBatch(msgFrom string, o interfac
 			// if state == receivedBlock do not put into the msg queue, maintain needToProcess = false
 			if state != receivedBlock {
 				sch.log.Infof("received block [height:%d:%x] needToProcess: %v from "+
-					"node [%s]", height, hash, true, msgFrom)
+					"node [%s], withRwset:%t", height, hash, true, msgFrom, hasRWset)
+				if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK && !hasRWset { //如果是不带读写集的配置块，则重新请求带读写集的配置块
+					resyncBlock = append(resyncBlock, height)
+					continue
+				}
 				sch.blockStates[height] = receivedBlock
 				sch.receivedBlocks[height] = msgFrom
 				needToProcess = true
 			}
+		}
+	}
+	if len(resyncBlock) > 0 { //重新请求带读写集的配置块
+		from := resyncBlock[0]
+		peer := sch.selectPeer(resyncBlock[0])
+		if len(peer) == 0 {
+			sch.log.Debugf("no peers have block [%d] ", from)
+			return needToProcess
+		}
+		batchs := resyncBlock[len(resyncBlock)-1] - resyncBlock[0] + 1
+		if err := sch.sendSyncBlockRequest(msgFrom, resyncBlock[0], batchs, true); err != nil {
+			sch.log.Warn("re-request config block[%d] with rwset from peer[%s] failed [%s]", resyncBlock[0], msgFrom, err)
+			return needToProcess
+		}
+		sch.lastRequest = time.Now()
+		for _, h := range resyncBlock {
+			sch.blockStates[h] = pendingBlock
+			sch.pendingTime[h] = sch.lastRequest
+			sch.pendingBlocks[h] = msgFrom
 		}
 	}
 	return needToProcess
