@@ -130,7 +130,7 @@ func newGetConsensusStateJSONCMD() *cobra.Command {
 				return err
 			}
 
-			fmt.Println(jsonState)
+			fmt.Println(string(jsonState))
 			return nil
 		},
 	}

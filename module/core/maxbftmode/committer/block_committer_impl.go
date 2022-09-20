@@ -12,14 +12,11 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/consensus-maxbft/v2/epoch"
-	consensusUtils "chainmaker.org/chainmaker/consensus-maxbft/v2/utils"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
 	systemPb "chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
-
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -48,23 +45,6 @@ func (bc *BLockCommitter) AddBlock(blk *commonPb.Block) error {
 	err := bc.delegate.AddBlock(blk)
 	if err != nil {
 		return err
-	}
-
-	// 如果是nilStrategy策略，表示不会再更新世代合约；
-	// 为了在其它模块屏蔽epoch的不同策略，所以在此处理epoch的不同策略
-	if bc.epochStrategy == epoch.NilStrategy {
-		if utils.IsConfBlock(blk) {
-			// publish governance contract
-			cfg, err := consensusUtils.GetChainConfigFromChainStore(bc.store)
-			if err != nil {
-				return err
-			}
-			contract := &maxbft.GovernanceContract{
-				ChainConfig: cfg,
-			}
-			bc.msgBus.PublishSafe(msgbus.MaxbftEpochConf, contract)
-		}
-		return nil
 	}
 
 	// 其它策略模式下，当且仅当区块头的ConsensusArgs包含数据时，表示存在世代合约内容.
