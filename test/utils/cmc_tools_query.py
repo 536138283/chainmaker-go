@@ -46,6 +46,13 @@ class ContractQuery(object):
         print(result)
         return result
 
+    def query_chain_config(self):
+        cmd = f'cd {gl.CMC_TOOL_PATH} && ./cmc client chainconfig query --sdk-conf-path={self.sdk_config_path}'
+        print(cmd)
+        result = TheServerHelper(cmd).ssh_connectionServer()
+        print(result)
+        return result
+
     # 指定在某个节点的txid查块儿高
     def query_tx_id_get_height(self):
         result = json.loads(self.query_block_tx_id())

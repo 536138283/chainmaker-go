@@ -65,6 +65,7 @@ var (
 	caPathsString      string
 	pairsFile          string
 	pairsString        string
+	globalPairs        []*KeyValuePair
 	abiPath            string
 	method             string
 	orgIds             string // 组织列表(多个用逗号隔开)
@@ -190,6 +191,10 @@ func ParallelCMD() *cobra.Command {
 					panic(err)
 				}
 				pairsString = string(bytes)
+				globalPairs, err = getPairInfos()
+				if err != nil {
+					panic(err)
+				}
 			}
 			fmt.Println("tx content: ", pairsString)
 		},
@@ -504,12 +509,6 @@ func (t *Thread) Init() error {
 
 // Start thread start
 func (t *Thread) Start() {
-	infos, err := t.getPairInfos()
-	if err != nil {
-		t.doneChan <- struct{}{}
-		return
-	}
-
 	for i := 0; i < t.loopNum; i++ {
 		select {
 		case <-t.timeoutChan:
@@ -519,11 +518,11 @@ func (t *Thread) Start() {
 			start := time.Now()
 			var err error
 			if authType == sdk.Public {
-				err = t.handler.handle(t.client, t.sk3, "", "", i, infos)
+				err = t.handler.handle(t.client, t.sk3, "", "", i)
 			} else if authType == sdk.PermissionedWithKey {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i, infos)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i)
 			} else {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], userCrtPaths[t.index], i, infos)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], userCrtPaths[t.index], i)
 			}
 
 			elapsed := time.Since(start)
@@ -545,15 +544,11 @@ func (t *Thread) Start() {
 	t.doneChan <- struct{}{}
 }
 
-func (t *Thread) getPairInfos() ([]*KeyValuePair, error) {
-	if t.operationName == createContractStr || t.operationName == upgradeContractStr {
-		return nil, nil
-	}
+func getPairInfos() ([]*KeyValuePair, error) {
 	var ps []*KeyValuePair
 	err := json.Unmarshal([]byte(pairsString), &ps)
 	if err != nil {
-		log.Errorf("unmarshal pair content failed, origin content: %s, "+
-			"threadId: %d, nodeId: %d, err: %s", pairsString, t.id, t.index, err)
+		log.Errorf("unmarshal pair content failed, origin content: %s, err: %s", pairsString, err)
 		return nil, err
 	}
 
@@ -606,8 +601,7 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, erro
 
 // Handler do multi-thread operation action
 type Handler interface {
-	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int,
-		ps []*KeyValuePair) error
+	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int) error
 }
 
 // invokeHandler contract invoke handler
@@ -621,7 +615,6 @@ var (
 	resultStr   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
 )
 
-var randomRate int64
 var totalSentTxs int64
 var totalRandomSentTxs int64
 var resp *commonPb.TxResponse
@@ -637,11 +630,11 @@ type InvokerMsg struct {
 }
 
 func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvs(ps, h.threadId, loopId)
+	pairs := makeKvs(h.threadId, loopId)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -692,11 +685,11 @@ type queryHandler struct {
 }
 
 func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvs(ps, h.threadId, loopId)
+	pairs := makeKvs(h.threadId, loopId)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -731,7 +724,7 @@ type createContractHandler struct {
 }
 
 func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)
@@ -787,7 +780,7 @@ type upgradeContractHandler struct {
 }
 
 func (h *upgradeContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)

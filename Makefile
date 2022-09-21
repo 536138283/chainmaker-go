@@ -128,7 +128,7 @@ pub-qta:
 	cd test/chain3 && ./start.sh
 	cd test/scenario0_native && python3 chain3.py
 	cd test/scenario1_evm && python3 chain3.py
-	cd test/scenario2_rust && python3 chain3.py
+	#cd test/scenario2_rust && python3 chain3.py  #Rust合约不能启用Gas
 	cd test/chain3 && ./stop.sh
 	cd test/chain3 && ./clean.sh
 
@@ -139,8 +139,8 @@ docker-qta:
 	echo "start new docker-qta test"
 	cd scripts/docker && ./build-dockergo.sh
 	cd test/chain1 && ./build.sh
-	cd test/chain1 && ./start.sh
 	cd test/chain1 && ./docker-start.sh
+	cd test/chain1 && ./start.sh
 	cd test/scenario3_dockergo && python3 chain1.py
 	cd test/chain1 && ./stop.sh
 	cd test/chain1 && ./clean.sh
