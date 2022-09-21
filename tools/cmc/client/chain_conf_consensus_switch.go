@@ -4,6 +4,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package client
 
 import (
@@ -23,25 +24,33 @@ type (
 )
 
 var (
+	//switchActions mapping actionIdx which based on consens from and to type and switchAction
 	switchActions = map[actionIdx]switchAction{
-		actionIndex(consensus.ConsensusType_TBFT, consensus.ConsensusType_RAFT): func(cc *sdk.ChainClient, extConfig, specificConf []*common.KeyValuePair) (*common.Payload, error) {
+		actionIndex(consensus.ConsensusType_TBFT, consensus.ConsensusType_RAFT): func(
+			cc *sdk.ChainClient, extConfig, specificConf []*common.KeyValuePair) (*common.Payload, error) {
 			return cc.CreateTbftToRaftPayload(extConfig)
 		},
-		actionIndex(consensus.ConsensusType_RAFT, consensus.ConsensusType_TBFT): func(cc *sdk.ChainClient, extConfig, specificConf []*common.KeyValuePair) (*common.Payload, error) {
+		actionIndex(consensus.ConsensusType_RAFT, consensus.ConsensusType_TBFT): func(
+			cc *sdk.ChainClient, extConfig, specificConf []*common.KeyValuePair) (*common.Payload, error) {
 			return cc.CreateRaftToTbftPayload(extConfig)
 		},
 	}
 )
 
+//actionIndex get an int16 value
+//upper 8 bits represent the consensus from type
+//and lower 8 bits represent the consensus to type
 func actionIndex(from, to consensus.ConsensusType) actionIdx {
 	return actionIdx(int16(from<<8) | int16(to))
 }
 
+//getConsensusType convert consensus name to consensus type
 func getConsensusType(name string) (consensus.ConsensusType, bool) {
 	t, ok := consensus.ConsensusType_value[strings.ToUpper(name)]
 	return consensus.ConsensusType(t), ok
 }
 
+//getSwitchAction get the switching action based on the consensus from and to value
 func getSwitchAction(from, to consensus.ConsensusType) (switchAction, error) {
 	a, ok := switchActions[actionIndex(from, to)]
 	if !ok {
@@ -91,7 +100,7 @@ func switchConsensus() error {
 	}
 	defer cc.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(cc)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -117,7 +126,7 @@ func switchConsensus() error {
 		return err
 	}
 
-	endors, err := makeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+	endors, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
 	if err != nil {
 		return err
 	}

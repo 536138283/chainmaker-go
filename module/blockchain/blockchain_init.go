@@ -801,7 +801,10 @@ func (bc *Blockchain) initConsensus() (err error) {
 	}
 	//create and regist consensus switch subscriber
 	if bc.consensusSwitchSubscriber == nil {
-		bc.consensusSwitchSubscriber = cutover.NewConsensusSwitchSubscriber(bc, bc.chainConf.ChainConfig().GetConsensus(), bc.log)
+		bc.consensusSwitchSubscriber = cutover.NewConsensusSwitchSubscriber(
+			bc,
+			bc.chainConf.ChainConfig().GetConsensus(),
+			bc.log)
 	}
 	bc.msgBus.Register(msgbus.ChainConfig, bc.consensusSwitchSubscriber)
 

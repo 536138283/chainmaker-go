@@ -107,18 +107,19 @@ func (bc *Blockchain) RebuildDbs(needVerify bool) {
 	os.Exit(0)
 }
 
+//SwitchConsensus switch consensus algorithm， stop the old consensus and start the new consensus
 func (bc *Blockchain) SwitchConsensus(consensusConfig *config.ConsensusConfig) error {
 	// chainConf := bc.chainConf.ChainConfig()
 	// chainConf.Consensus = consensusConfig
 	delete(bc.initModules, moduleNameConsensus)
 	bc.StopOnRequirements()
 	if err := bc.Init(); err != nil {
-		bc.log.Errorf("blockchain init failed when the configuration of blockchain updating, %s", err)
+		bc.log.Errorf("blockchain init failed when switching consensus, %s", err)
 		return err
 	}
 	bc.StopOnRequirements()
 	if err := bc.Start(); err != nil {
-		bc.log.Errorf("blockchain start failed when the configuration of blockchain updating, %s", err)
+		bc.log.Errorf("blockchain start failed when witching consensus, %s", err)
 		return err
 	}
 	return nil

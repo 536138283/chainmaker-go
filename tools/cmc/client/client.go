@@ -295,6 +295,7 @@ func init() {
 	flags.StringVar(&consensusTo, flagConsensusTo, "", "specify destination consensus")
 	flags.BoolVar(&respResultToString, flagRespResultToString, false,
 		"enable convert TxResponse.ContractResult.Result to string for readable output")
+}
 
 func attachFlags(cmd *cobra.Command, names []string) {
 	cmdFlags := cmd.Flags()
