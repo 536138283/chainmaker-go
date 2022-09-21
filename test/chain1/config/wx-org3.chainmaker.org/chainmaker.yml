@@ -521,7 +521,7 @@ vm:
   # Golang runtime in docker container
   go:
     # Enable docker go virtual machine, default: false
-    enable: true
+    enable: false
     # Mount data path in chainmaker, include contracts, uds socks
     data_mount_path: ../data/wx-org3.chainmaker.org/go
     # Mount log path in chainmaker

@@ -13,11 +13,18 @@ sys.path.append("..")
 
 from utils.cmc_tools_contract import ContractDeal
 from utils.cmc_tools_query import ContractQuery
-
+from utils.cmc_command import Command
+import config.public_import as gl
 
 
 class Test(unittest.TestCase):
     def test_invoke_native_contract(self):
+        print("更新ChainConfig，产块间隔为20".center(50, "="))
+        cmd = Command(sync_result=True)
+        cmd.update_chain_config(subcmd="block updateblockinterval", params="--block-interval 20",
+                                public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',
+                                endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}', endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
+                                endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
 
         print("调用T合约存证数据".center(50, "="))
         contractT = ContractDeal("T", sync_result=True)
@@ -39,6 +46,10 @@ class Test(unittest.TestCase):
         print("UserD 查询:Block".center(50, "="))
         queryCmd4 = ContractQuery(sdk_config="sdk_config4.yml")
         queryCmd4.query_block_height(block_height)
+
+        result= queryCmd4.query_chain_config()
+        queryValue = json.loads(result).get("block").get("block_interval")
+        self.assertEqual(20, queryValue, "success")
 
 if __name__ == '__main__':
     unittest.main()

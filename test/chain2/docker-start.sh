@@ -7,7 +7,15 @@
 VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.0"
 
 set -x
+function xsed() {
+    system=$(uname)
 
+    if [ "${system}" = "Linux" ]; then
+        sed -i "$@"
+    else
+        sed -i '' "$@"
+    fi
+}
 # if enable docker vm service and use unix domain socket, run a vm docker container
 #参数： 1 orgId，2 mountPath，3 logPath，4 节点端口，5，$contract_engine_portDocker映射端口
 function start_vm_go() {
@@ -68,6 +76,7 @@ function start_vm_go() {
   fi
 
   echo "start docker vm service container succeed: $container_name"
+  xsed "s%enable: false%enable: true%g" ./config/wx-org$1.chainmaker.org/chainmaker.yml
 
 }
 
