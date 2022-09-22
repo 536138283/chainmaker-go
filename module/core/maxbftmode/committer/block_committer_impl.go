@@ -20,7 +20,8 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-type BLockCommitter struct {
+// BlockCommitter Decorator for the maxBft block commit feature
+type BlockCommitter struct {
 	conf     protocol.ChainConf
 	msgBus   msgbus.MessageBus
 	store    protocol.BlockchainStore
@@ -29,10 +30,11 @@ type BLockCommitter struct {
 	epochStrategy string
 }
 
+// NewBLockCommitter new feature
 func NewBLockCommitter(delegate protocol.BlockCommitter,
-	conf protocol.ChainConf, msgBus msgbus.MessageBus, store protocol.BlockchainStore) (*BLockCommitter, error) {
+	conf protocol.ChainConf, msgBus msgbus.MessageBus, store protocol.BlockchainStore) (*BlockCommitter, error) {
 
-	bc := &BLockCommitter{delegate: delegate, conf: conf, msgBus: msgBus, store: store}
+	bc := &BlockCommitter{delegate: delegate, conf: conf, msgBus: msgBus, store: store}
 	strategy, _, err := epoch.GetEpochStrategyFromConfig(conf.ChainConfig())
 	if err != nil {
 		return nil, err
@@ -41,7 +43,8 @@ func NewBLockCommitter(delegate protocol.BlockCommitter,
 	return bc, nil
 }
 
-func (bc *BLockCommitter) AddBlock(blk *commonPb.Block) error {
+// AddBlock add block to db and do some things with maxbft
+func (bc *BlockCommitter) AddBlock(blk *commonPb.Block) error {
 	err := bc.delegate.AddBlock(blk)
 	if err != nil {
 		return err
@@ -63,7 +66,7 @@ func (bc *BLockCommitter) AddBlock(blk *commonPb.Block) error {
 	return nil
 }
 
-func (bc *BLockCommitter) getGovernanceFromBlock(block *commonPb.Block) (*maxbft.GovernanceContract, error) {
+func (bc *BlockCommitter) getGovernanceFromBlock(block *commonPb.Block) (*maxbft.GovernanceContract, error) {
 	var (
 		err  error
 		args = new(consensus.BlockHeaderConsensusArgs)
