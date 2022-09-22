@@ -1298,7 +1298,10 @@ func recoverBlockByBatch(
 		if err != nil {
 			return nil, nil, err
 		}
-
+		if len(indexes) != int(block.Header.TxCount) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes))
+		}
 		if len(batchIds) == 0 {
 			logger.DebugDynamic(func() string {
 				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d], additionalData :%v",
