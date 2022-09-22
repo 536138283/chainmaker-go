@@ -56,7 +56,7 @@ chainmaker.org/chainmaker/store/v2 v2.3.2-0.20220909035807-a3f7cb68ec2e h1:E5TkV
 chainmaker.org/chainmaker/store/v2 v2.3.2-0.20220909035807-a3f7cb68ec2e/go.mod h1:XvVQSpWoRAbhnvNYSSZjsg4eo82Gwpr5Kwng8isQKHM=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.0 h1:fEpHri8amCiq2jM8JuMw/ONakondyQitTK1RH6jBwpA=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.0/go.mod h1:0NOBo4WLoWEQUTNDuqGSO9Sfi76EOQt3BRueVLfIWgs=
-chainmaker.org/chainmaker/txpool-normal/v2 v2.3.0 h1:evdbm0KR4ECVGvmbqTf/ryD6mKMQuxlz2QUE3B/v2gc=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.3.0 h1:05slmKODg5OOJUi/RWcg21dpkkoIwNSERMPSZVruNx0=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.3.0/go.mod h1:RFuPiOo26t1t79a+DxYBX9r7fH2WQiJ3zKz5erB2xf0=
 chainmaker.org/chainmaker/txpool-single/v2 v2.3.0 h1:p3ynAo1Md2zuVi5+YfQQu1p+lngrm/R28JwxBxrrTr0=
 chainmaker.org/chainmaker/txpool-single/v2 v2.3.0/go.mod h1:3aiXxj9e4Il/HLgAeUCGCyVPA1mkqAZiatJSeZTVNQU=
