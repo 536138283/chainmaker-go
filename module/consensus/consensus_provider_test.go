@@ -33,6 +33,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"github.com/gogo/protobuf/proto"
 
+	msgbusMock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
 	"github.com/golang/mock/gomock"
 )
 
@@ -110,6 +111,11 @@ func (bc *TestBlockchain) MockInit(ctrl *gomock.Controller, consensusType consen
 			119, 122, 111, 56, 57, 105, 56, 83, 55, 107, 104, 85, 99, 111, 122, 83, 78, 76, 118, 65, 115, 16, 3}, nil)
 	bc.store = store
 	bc.logger = newMockLogger()
+	bc.msgBus = func() msgbus.MessageBus {
+		msgbus := msgbusMock.NewMockMessageBus(ctrl)
+		msgbus.EXPECT().Register(gomock.Any(), gomock.Any()).AnyTimes()
+		return msgbus
+	}()
 }
 
 func TestNewConsensusEngine(t *testing.T) {

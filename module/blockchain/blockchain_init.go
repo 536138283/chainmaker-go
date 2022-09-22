@@ -13,16 +13,18 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker-go/module/consensus/cutover"
 	"chainmaker.org/chainmaker-go/module/txfilter"
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	"chainmaker.org/chainmaker/chainconf/v2"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	"chainmaker.org/chainmaker/vm/v2"
+
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
@@ -597,7 +599,12 @@ func (bc *Blockchain) initVM() (err error) {
 				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
-
+		consensusStateWrapper := consensus.NewConsensusStateWrapper()
+		if bc.consensus != nil {
+			if state, ok := bc.consensus.(protocol.ConsensusState); ok {
+				consensusStateWrapper.Wrap(state)
+			}
+		}
 		bc.vmMgr = vm.NewVmManager(
 			supportedVmManagerList,
 			localconf.ChainMakerConfig.GetStorePath(),
@@ -605,8 +612,8 @@ func (bc *Blockchain) initVM() (err error) {
 			&soloChainNodesInfoProvider{},
 			bc.chainConf,
 			vmlog,
+			consensusStateWrapper,
 		)
-
 	} else {
 		/*
 			bc.vmMgr = vm.NewVmManager(
@@ -644,7 +651,12 @@ func (bc *Blockchain) initVM() (err error) {
 				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
-
+		consensusStateWrapper := consensus.NewConsensusStateWrapper()
+		if bc.consensus != nil {
+			if state, ok := bc.consensus.(protocol.ConsensusState); ok {
+				consensusStateWrapper.Wrap(state)
+			}
+		}
 		bc.vmMgr = vm.NewVmManager(
 			supportedVmManagerList,
 			localconf.ChainMakerConfig.GetStorePath(),
@@ -652,6 +664,7 @@ func (bc *Blockchain) initVM() (err error) {
 			bc.netService.GetChainNodesInfoProvider(),
 			bc.chainConf,
 			vmlog,
+			consensusStateWrapper,
 		)
 	}
 	bc.initModules[moduleNameVM] = struct{}{}
@@ -744,6 +757,12 @@ func (bc *Blockchain) initConsensus() (err error) {
 		bc.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_MAXBFT {
 		// this node is not a consensus node
 		delete(bc.initModules, moduleNameConsensus)
+		if bc.vmMgr != nil {
+			bc.vmMgr.GetConsensusStateWrapper().Wrap(nil) //如果转为非共识节点，则将共识状态剔除
+		}
+		if bc.consensusSwitchSubscriber != nil { //非共识节点不需要监听共识切换消息
+			bc.msgBus.UnRegister(msgbus.ChainConfig, bc.consensusSwitchSubscriber)
+		}
 		return nil
 	}
 	_, ok := bc.initModules[moduleNameConsensus]
@@ -774,6 +793,21 @@ func (bc *Blockchain) initConsensus() (err error) {
 		return err
 	}
 	bc.initModules[moduleNameConsensus] = struct{}{}
+	//if vmmgr has been initialized, then put the consensus state into ConsensusStateWrapper
+	if bc.vmMgr != nil {
+		if state, ok := bc.consensus.(protocol.ConsensusState); ok {
+			bc.vmMgr.GetConsensusStateWrapper().Wrap(state)
+		}
+	}
+	//create and regist consensus switch subscriber
+	if bc.consensusSwitchSubscriber == nil {
+		bc.consensusSwitchSubscriber = cutover.NewConsensusSwitchSubscriber(
+			bc,
+			bc.chainConf.ChainConfig().GetConsensus(),
+			bc.log)
+	}
+	bc.msgBus.Register(msgbus.ChainConfig, bc.consensusSwitchSubscriber)
+
 	return
 }
 
