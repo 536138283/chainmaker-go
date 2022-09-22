@@ -26,7 +26,7 @@ CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/crypto_config_template.yml
 CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
 
-VERSION=v2.3.0_alpha
+VERSION=2400
 
 BC_YML_TRUST_ROOT_LINE=$(awk '/trust roots list start/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
 BC_YML_TRUST_ROOT_LINE_END=$(awk '/trust roots list end/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
@@ -292,7 +292,7 @@ function generate_config() {
             fi
 
             xsed "s%{chain_id}%chain$j%g" node$i/chainconfig/bc$j.yml
-            xsed "s%{version}%$VERSION%g" node$i/chainconfig/bc$j.yml
+            xsed "s%{version}%\"$VERSION\"%g" node$i/chainconfig/bc$j.yml
             xsed "s%{org_top_path}%$file%g" node$i/chainconfig/bc$j.yml
 
             if  [ $NODE_CNT -eq 7 ] || [ $NODE_CNT -eq 13 ] || [ $NODE_CNT -eq 16 ]; then

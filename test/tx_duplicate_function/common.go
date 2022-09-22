@@ -4,12 +4,21 @@
 package tx_duplicate_function
 
 import (
+	"context"
+	"fmt"
+	"io/ioutil"
+	"log"
+	"os"
+	"strconv"
+	"time"
+
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	native "chainmaker.org/chainmaker-go/test/chainconfig_test"
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/container"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/json"
 	"chainmaker.org/chainmaker/common/v2/random/uuid"
 	"chainmaker.org/chainmaker/localconf/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -21,17 +30,9 @@ import (
 	"chainmaker.org/chainmaker/store/v2"
 	"chainmaker.org/chainmaker/store/v2/conf"
 	"chainmaker.org/chainmaker/utils/v2"
-	"context"
-	"encoding/json"
-	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"io/ioutil"
-	"log"
-	"os"
-	"strconv"
-	"time"
 )
 
 var (

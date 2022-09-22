@@ -28,7 +28,7 @@ CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/pk_config_template.yml
 #CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
 
-VERSION=v2.3.0_alpha
+VERSION=2400
 
 function show_help() {
     echo "Usage:  "
@@ -291,7 +291,7 @@ function generate_config() {
             fi
 
             xsed "s%{chain_id}%chain$j%g" node$i/chainconfig/bc$j.yml
-            xsed "s%{version}%$VERSION%g" node$i/chainconfig/bc$j.yml
+            xsed "s%{version}%\"$VERSION\"%g" node$i/chainconfig/bc$j.yml
             xsed "s%{hash_type}%$HASH_TYPE%g" node$i/chainconfig/bc$j.yml
 
             if  [ $NODE_CNT -eq 7 ] || [ $NODE_CNT -eq 13 ]; then

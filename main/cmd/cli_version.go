@@ -16,6 +16,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// VersionCMD version命令的实现
+// @return *cobra.Command
 func VersionCMD() *cobra.Command {
 	return &cobra.Command{
 		Use:   "version",
@@ -50,6 +52,7 @@ func logo() string {
 	return fmt.Sprintf("\n%s\n%s%s\n%s\n", fragment, s, fragment, versionInfo)
 }
 
+// PrintVersion 打印ChainMaker version,build time, git commit等信息
 func PrintVersion() {
 	//fmt.Printf("ChainMaker version: %s\n", CurrentVersion)
 	fmt.Println(logo())

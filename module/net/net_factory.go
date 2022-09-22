@@ -15,6 +15,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// ErrorNetType error net type
 var ErrorNetType = errors.New("error net type")
 
 // NetFactory provide a way to create net instance.
@@ -27,6 +28,9 @@ type NetFactory struct {
 // NetOption is a function apply options to net instance.
 type NetOption func(cfg *NetFactory) error
 
+// WithReadySignalC set ready signal channel
+// @param signalC
+// @return NetOption
 func WithReadySignalC(signalC chan struct{}) NetOption {
 	return func(nf *NetFactory) error {
 		switch nf.netType {
@@ -256,6 +260,9 @@ func WithMsgCompression(enable bool) NetOption {
 	}
 }
 
+// WithInsecurity need security or not
+// @param isInsecurity
+// @return NetOption
 func WithInsecurity(isInsecurity bool) NetOption {
 	return func(nf *NetFactory) error {
 		switch nf.netType {
@@ -270,6 +277,9 @@ func WithInsecurity(isInsecurity bool) NetOption {
 	}
 }
 
+// WithPktEnable enable Pkt
+// @param pktEnable
+// @return NetOption
 func WithPktEnable(pktEnable bool) NetOption {
 	return func(nf *NetFactory) error {
 		switch nf.netType {

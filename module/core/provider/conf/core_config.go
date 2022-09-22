@@ -13,27 +13,48 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// CoreEngineConfig core engine config struct
 type CoreEngineConfig struct {
-	ChainId         string
-	TxPool          protocol.TxPool
+	// chain id
+	ChainId string
+	// tx pool
+	TxPool protocol.TxPool
+	// snapshot manager
 	SnapshotManager protocol.SnapshotManager
-	MsgBus          msgbus.MessageBus
-	Identity        protocol.SigningMember
-	LedgerCache     protocol.LedgerCache
-	ProposalCache   protocol.ProposalCache
-	ChainConf       protocol.ChainConf
-	AC              protocol.AccessControlProvider
+	// message bus
+	MsgBus msgbus.MessageBus
+	// sininging member
+	Identity protocol.SigningMember
+	// ledger cache
+	LedgerCache protocol.LedgerCache
+	// proposal cache
+	ProposalCache protocol.ProposalCache
+	// chain config
+	ChainConf protocol.ChainConf
+	// access control provider
+	AC protocol.AccessControlProvider
+	// block chain store
 	BlockchainStore protocol.BlockchainStore
-	Log             protocol.Logger
-	VmMgr           protocol.VmManager
-	Subscriber      *subscriber.EventSubscriber // block subsriber
-	StoreHelper     StoreHelper
-	NetService      protocol.NetService
-	TxFilter        protocol.TxFilter
+	// logger
+	Log protocol.Logger
+	// vm manager
+	VmMgr protocol.VmManager
+	// block subscriber
+	Subscriber *subscriber.EventSubscriber
+	// store helper
+	StoreHelper StoreHelper
+	// net service
+	NetService protocol.NetService
+	// tx filter
+	TxFilter protocol.TxFilter
 }
 
+// StoreHelper store heloer interface
 type StoreHelper interface {
+	// RollBack roll back func return error
 	RollBack(*commonpb.Block, protocol.BlockchainStore) error
+	// BeginDbTransaction begin db transaction
 	BeginDbTransaction(protocol.BlockchainStore, string)
+	// GetPoolCapacity get pool capacity
 	GetPoolCapacity() int
 }

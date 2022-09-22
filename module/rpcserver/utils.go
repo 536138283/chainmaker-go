@@ -3,6 +3,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package rpcserver
 
 import (
@@ -16,7 +17,7 @@ import (
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	cmx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 func createVerifyPeerCertificateFunc(

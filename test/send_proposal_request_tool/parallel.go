@@ -9,7 +9,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -17,6 +16,8 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 

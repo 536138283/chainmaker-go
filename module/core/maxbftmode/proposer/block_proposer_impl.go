@@ -32,65 +32,101 @@ import (
 // BlockProposerImpl implements BlockProposer interface.
 // In charge of propose a new block.
 type BlockProposerImpl struct {
-	chainId string // chain id, to identity this chain
-
-	txPool          protocol.TxPool          // tx pool provides tx batch
-	txScheduler     protocol.TxScheduler     // scheduler orders tx batch into DAG form and returns a block
-	snapshotManager protocol.SnapshotManager // snapshot manager
-	identity        protocol.SigningMember   // identity manager
-	ledgerCache     protocol.LedgerCache     // ledger cache
-	msgBus          msgbus.MessageBus        // channel to give out proposed block
-	ac              protocol.AccessControlProvider
+	// chain id, to identity this chain
+	chainId string
+	// tx pool provides tx batch
+	txPool protocol.TxPool
+	// scheduler orders tx batch into DAG form and returns a block
+	txScheduler protocol.TxScheduler
+	// snapshot manager
+	snapshotManager protocol.SnapshotManager
+	// identity manager
+	identity protocol.SigningMember
+	// ledger cache
+	ledgerCache protocol.LedgerCache
+	// channel to give out proposed block
+	msgBus msgbus.MessageBus
+	// access controller provider
+	ac protocol.AccessControlProvider
+	// block chain store
 	blockchainStore protocol.BlockchainStore
-	txFilter        protocol.TxFilter // Verify the transaction rules with TxFilter
-
-	isProposer   bool        // whether current node can propose block now
-	idle         bool        // whether current node is proposing or not
-	proposeTimer *time.Timer // timer controls the proposing periods
-
-	//canProposeC   chan bool                   // channel to handle propose status change from consensus module
-	txPoolSignalC chan *txpoolpb.TxPoolSignal // channel to handle propose signal from tx pool
-	exitC         chan bool                   // channel to stop proposing loop
+	// Verify the transaction rules with TxFilter
+	txFilter protocol.TxFilter
+	// whether current node can propose block now
+	isProposer bool
+	//idle whether current node is proposing or not
+	idle bool
+	//proposeTimer timer controls the proposing periods
+	proposeTimer *time.Timer
+	//canProposeC channel to handle propose status change from consensus module
+	//canProposeC chan bool
+	//txPoolSignalC channel to handle propose signal from tx pool
+	txPoolSignalC chan *txpoolpb.TxPoolSignal
+	//exitC channel to stop proposing loop
+	exitC chan bool
+	//proposalCache proposal cache
 	proposalCache protocol.ProposalCache
-
-	chainConf protocol.ChainConf // chain config
-
-	idleMu         sync.Mutex   // for proposeBlock reentrant lock
-	statusMu       sync.Mutex   // for propose status change lock
-	proposerMu     sync.RWMutex // for isProposer lock, avoid race
-	log            protocol.Logger
-	finishProposeC chan bool // channel to receive signal to yield propose block
-
+	//chainConf chain config
+	chainConf protocol.ChainConf
+	//idleMu for proposeBlock reentrant lock
+	idleMu sync.Mutex
+	//statusMu for propose status change lock
+	statusMu sync.Mutex
+	//proposerMu for isProposer lock, avoid race
+	proposerMu sync.RWMutex
+	log        protocol.Logger
+	//finishProposeC channel to receive signal to yield propose block
+	finishProposeC chan bool
+	// metric block package time
 	metricBlockPackageTime *prometheus.HistogramVec
-	proposer               *pbac.Member
-
+	// proposer from pbac member
+	proposer *pbac.Member
+	// block builder
 	blockBuilder *common.BlockBuilder
-	storeHelper  conf.StoreHelper
+	// store helper
+	storeHelper conf.StoreHelper
 }
 
+// BlockProposerConfig block proposer config
 type BlockProposerConfig struct {
-	ChainId         string
-	TxPool          protocol.TxPool
+	// chain id
+	ChainId string
+	// tx pool
+	TxPool protocol.TxPool
+	// snapshot manager
 	SnapshotManager protocol.SnapshotManager
-	MsgBus          msgbus.MessageBus
-	Identity        protocol.SigningMember
-	LedgerCache     protocol.LedgerCache
-	TxScheduler     protocol.TxScheduler
-	ProposalCache   protocol.ProposalCache
-	ChainConf       protocol.ChainConf
-	AC              protocol.AccessControlProvider
+	// message bus
+	MsgBus msgbus.MessageBus
+	// sign member
+	Identity protocol.SigningMember
+	// leger cache
+	LedgerCache protocol.LedgerCache
+	// tx scheduler
+	TxScheduler protocol.TxScheduler
+	// proposal cache
+	ProposalCache protocol.ProposalCache
+	// chain config
+	ChainConf protocol.ChainConf
+	// access control provider
+	AC protocol.AccessControlProvider
+	// block chain store
 	BlockchainStore protocol.BlockchainStore
-	StoreHelper     conf.StoreHelper
-	TxFilter        protocol.TxFilter
+	// store heloer
+	StoreHelper conf.StoreHelper
+	// tx filter
+	TxFilter protocol.TxFilter
 }
 
 const (
-	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
-
-	RETRY  = 0
+	//DEFAULTDURATION default proposal duration, millis seconds
+	DEFAULTDURATION = 1000
+	//RETRY 0
+	RETRY = 0
+	//REMOVE 1
 	REMOVE = 1
 )
 
+// NewBlockProposer return block proposer error
 func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol.BlockProposer, error) {
 	blockProposerImpl := &BlockProposerImpl{
 		chainId:         config.ChainId,
@@ -116,6 +152,8 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 	}
 
 	var err error
+
+	// get proposer from identity
 	blockProposerImpl.proposer, err = blockProposerImpl.identity.GetMember()
 	if err != nil {
 		blockProposerImpl.log.Warnf("identity serialize failed, %s", err)
@@ -128,6 +166,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 		blockProposerImpl.proposeTimer.Stop()
 	}
 
+	// monitor open case
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		blockProposerImpl.metricBlockPackageTime = monitor.NewHistogramVec(
 			monitor.SUBSYSTEM_CORE_PROPOSER,
@@ -138,6 +177,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 		)
 	}
 
+	// construct block builder config
 	bbConf := &common.BlockBuilderConf{
 		ChainId:         blockProposerImpl.chainId,
 		TxPool:          blockProposerImpl.txPool,
@@ -151,24 +191,26 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 		StoreHelper:     blockProposerImpl.storeHelper,
 	}
 
+	// new block builder at blockProposerImpl.blockBuilder
 	blockProposerImpl.blockBuilder = common.NewBlockBuilder(bbConf)
 
 	return blockProposerImpl, nil
 }
 
-// Start proposer
+// Start start proposer
 func (bp *BlockProposerImpl) Start() error {
 	defer bp.log.Info("block proposer starts")
-
+	// use one goroutine to startProposingLoop
 	go bp.startProposingLoop()
 
 	return nil
 }
 
-// Start proposing loop
+// startProposingLoop, start proposing loop
 func (bp *BlockProposerImpl) startProposingLoop() {
 	for {
 		select {
+		// deal proposer timer case
 		case <-bp.proposeTimer.C:
 			if !bp.isSelfProposer() {
 				break
@@ -193,7 +235,9 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 				break
 			}
 			go bp.msgBus.Publish(msgbus.ProposeBlock, &maxbft.ProposeBlock{IsPropose: true})
+		// deal with exit channal
 		case <-bp.exitC:
+			// propose timer stop
 			bp.proposeTimer.Stop()
 			bp.log.Info("block proposer loop stopped")
 			return
@@ -201,7 +245,7 @@ func (bp *BlockProposerImpl) startProposingLoop() {
 	}
 }
 
-// Stop proposing loop
+// Stop stop proposing loop
 func (bp *BlockProposerImpl) Stop() error {
 	defer bp.log.Infof("block proposer stopped")
 	bp.exitC <- true
@@ -254,12 +298,13 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		fetchLasts               int64
 		fetchFromOtherBlockLasts int64
 		filterValidateLasts      int64
-		fetchTotalLasts          int64 // The total time consuming
-		totalTimes               int   // loop count
-		fetchBatch               []*commonpb.Transaction
-		batchIds                 []string
-		fetchBatches             [][]*commonpb.Transaction // record the order about transaction in tx pool
-		err                      error
+		// The total time consuming
+		fetchTotalLasts int64
+		// loop count
+		totalTimes   int
+		fetchBatch   []*commonpb.Transaction
+		batchIds     []string
+		fetchBatches [][]*commonpb.Transaction // record the order about transaction in tx poolerr                      error
 	)
 	// 根据TxFilter时间规则过滤交易，如果剩余的交易为0，则再次从交易池拉取交易，重复执行
 	// The transaction is filtered according to txFilter time rule. If the remaining transaction is 0, the transaction
@@ -376,10 +421,8 @@ func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPool
 	bp.txPoolSignalC <- txPoolSignal
 }
 
-/*
- * OnReceiveProposeStatusChange, to update isProposer status when received proposeStatus from consensus
- * if node is proposer, then reset the timer, otherwise stop the timer
- */
+// OnReceiveProposeStatusChange to update isProposer status when received proposeStatus from consensus
+// if node is proposer, then reset the timer, otherwise stop the timer
 func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 	bp.log.Debugf("OnReceiveProposeStatusChange(%t)", proposeStatus)
 	bp.statusMu.Lock()
@@ -399,7 +442,7 @@ func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 }
 
 // OnReceiveMaxBFTProposal to check if this proposer should propose a new block
-// Only for maxbft consensus
+// Only for max bft consensus
 func (bp *BlockProposerImpl) OnReceiveMaxBFTProposal(proposal *maxbft.BuildProposal) {
 	proposingHeight := proposal.Height
 	preHash := proposal.PreHash
@@ -436,51 +479,11 @@ func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
 	}
 }
 
-// OnReceiveRwSetVerifyFailTxs remove verify fail txs
-func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
-
-	// maxbft not support deal with the tx,which rw set verify fail.
-
-	//if common.TxPoolType == batch.TxPoolType {
-	//	bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
-	//	return
-	//}
-	//height := rwSetVerifyFailTxs.BlockHeight
-	//block := bp.proposalCache.GetSelfProposedBlockAt(height)
-	//
-	//if block == nil {
-	//	txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
-	//	txs := make([]*commonpb.Transaction, 0)
-	//	for _, v := range txsRet {
-	//		txs = append(txs, v)
-	//	}
-	//	bp.txPool.RetryAndRemoveTxs(nil, txs)
-	//	return
-	//}
-	//
-	//retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	//removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	//txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
-	//for _, tx := range block.Txs {
-	//	for _, txId := range rwSetVerifyFailTxs.TxIds {
-	//		if tx.Payload.TxId == txId {
-	//			txsMap[txId] = tx
-	//			removeTxs = append(removeTxs, tx)
-	//			break
-	//		}
-	//	}
-	//}
-	//
-	//for _, tx := range block.Txs {
-	//	if _, ok := txsMap[tx.Payload.TxId]; !ok {
-	//		retryTxs = append(retryTxs, tx)
-	//	}
-	//}
-	//
-	//bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
-	//bp.proposalCache.ClearProposedBlockAt(height)
-}
-
+// FetchTxFromOtherBlock fetch tx
+// @param height
+// @param preHash
+// @return []*commonpb.Transaction
+// @return []string
 func (bp *BlockProposerImpl) FetchTxFromOtherBlock(height uint64, preHash []byte) (
 	[]*commonpb.Transaction, []string) {
 
@@ -568,11 +571,11 @@ func (bp *BlockProposerImpl) getDuration() time.Duration {
 // @Deprecated
 //nolint: unused
 func (bp *BlockProposerImpl) getChainVersion() uint32 {
-	//if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
-	//	return []byte(protocol.DefaultBlockVersion)
-	//}
-	//return []byte(bp.chainConf.ChainConfig().Version)
-	return protocol.DefaultBlockVersion
+	if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
+		bp.log.Warnf("No chain config found, use default block version:%d", protocol.DefaultBlockVersion)
+		return protocol.DefaultBlockVersion
+	}
+	return bp.chainConf.ChainConfig().GetBlockVersion()
 }
 
 // setNotIdle, set not idle status
@@ -621,7 +624,7 @@ func (bp *BlockProposerImpl) isSelfProposer() bool {
 
 /*
  * shouldProposeByMaxBFT, check if node should propose new block
- * Only for maxbft consensus
+ * Only for max bft consensus
  */
 func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte) bool {
 	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
@@ -652,6 +655,7 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte
 	return b != nil
 }
 
+// ProposeBlock proposer block
 func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
 	defer func() {
 		// change proposed status when call proposing by consensus.
@@ -722,6 +726,62 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFTSync(height uint64, preHash []
 	return true, nil
 }
 
+// OnReceiveRwSetVerifyFailTxs remove verify fail txs, deal with rw set verify fail txs
+func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
+	// deal case tx pool type not equal tx pool type batch
+
+	if common.TxPoolType == batch.TxPoolType {
+		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
+		return
+	}
+
+	// get block by height from proposal cache
+	height := rwSetVerifyFailTxs.BlockHeight
+	block := bp.proposalCache.GetSelfProposedBlockAt(height)
+
+	bp.log.DebugDynamic(func() string {
+		return fmt.Sprintf("remove rw set verify failed txs, block height:%d", height)
+	})
+
+	// if block is nil, remove tx from tx pool
+	if block == nil {
+		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
+		txs := make([]*commonpb.Transaction, 0)
+		for _, v := range txsRet {
+			txs = append(txs, v)
+		}
+		bp.txPool.RetryAndRemoveTxs(nil, txs)
+		return
+	}
+
+	// collect retry txs and remove txs
+	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
+	for _, tx := range block.Txs {
+		for _, txId := range rwSetVerifyFailTxs.TxIds {
+			if tx.Payload.TxId == txId {
+				txsMap[txId] = tx
+				removeTxs = append(removeTxs, tx)
+				break
+			}
+		}
+	}
+
+	for _, tx := range block.Txs {
+		if _, ok := txsMap[tx.Payload.TxId]; !ok {
+			retryTxs = append(retryTxs, tx)
+		}
+	}
+
+	// retry txs and remove txs in tx pool
+	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
+	// clear proposal cache at the height
+	bp.proposalCache.ClearProposedBlockAt(height)
+
+}
+
+// getFetchBatchFromPool fetch txs from tx pool at the height, return batch ids, fetch batch txs, fetch batches
 func (bp *BlockProposerImpl) getFetchBatchFromPool(
 	height uint64) ([]string, []*commonpb.Transaction, [][]*commonpb.Transaction) {
 	if common.TxPoolType == batch.TxPoolType {
@@ -887,6 +947,7 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, p
 //	return currentHeight+1 == height
 //}
 
+// getFetchBatch return fetchBatch
 func getFetchBatch(fetchBatches [][]*commonpb.Transaction) []*commonpb.Transaction {
 
 	fetchBatch := make([]*commonpb.Transaction, 0)

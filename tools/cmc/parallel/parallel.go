@@ -10,15 +10,17 @@ package parallel
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/crypto"
@@ -63,6 +65,7 @@ var (
 	caPathsString      string
 	pairsFile          string
 	pairsString        string
+	globalPairs        []*KeyValuePair
 	abiPath            string
 	method             string
 	orgIds             string // 组织列表(多个用逗号隔开)
@@ -98,6 +101,11 @@ type KeyValuePair struct {
 	Value      string `json:"value,omitempty"`
 	Unique     bool   `json:"unique,omitempty"`
 	RandomRate int64  `json:"randomRate,omitempty"`
+	Increase   bool   `json:"increase"`
+	Decrease   bool   `json:"decrease"`
+	// mu protect IntValue in Increase/Decrease scene.
+	mu       sync.Mutex
+	IntValue int64 `json:"-"`
 }
 
 type Detail struct {
@@ -183,6 +191,10 @@ func ParallelCMD() *cobra.Command {
 					panic(err)
 				}
 				pairsString = string(bytes)
+				globalPairs, err = getPairInfos()
+				if err != nil {
+					panic(err)
+				}
 			}
 			fmt.Println("tx content: ", pairsString)
 		},
@@ -497,12 +509,6 @@ func (t *Thread) Init() error {
 
 // Start thread start
 func (t *Thread) Start() {
-	infos, err := t.getPairInfos()
-	if err != nil {
-		t.doneChan <- struct{}{}
-		return
-	}
-
 	for i := 0; i < t.loopNum; i++ {
 		select {
 		case <-t.timeoutChan:
@@ -512,11 +518,11 @@ func (t *Thread) Start() {
 			start := time.Now()
 			var err error
 			if authType == sdk.Public {
-				err = t.handler.handle(t.client, t.sk3, "", "", i, infos)
+				err = t.handler.handle(t.client, t.sk3, "", "", i)
 			} else if authType == sdk.PermissionedWithKey {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i, infos)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i)
 			} else {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], userCrtPaths[t.index], i, infos)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], userCrtPaths[t.index], i)
 			}
 
 			elapsed := time.Since(start)
@@ -538,16 +544,21 @@ func (t *Thread) Start() {
 	t.doneChan <- struct{}{}
 }
 
-func (t *Thread) getPairInfos() ([]*KeyValuePair, error) {
-	if t.operationName == createContractStr || t.operationName == upgradeContractStr {
-		return nil, nil
-	}
+func getPairInfos() ([]*KeyValuePair, error) {
 	var ps []*KeyValuePair
 	err := json.Unmarshal([]byte(pairsString), &ps)
 	if err != nil {
-		log.Errorf("unmarshal pair content failed, origin content: %s, "+
-			"threadId: %d, nodeId: %d, err: %s", pairsString, t.id, t.index, err)
+		log.Errorf("unmarshal pair content failed, origin content: %s, err: %s", pairsString, err)
 		return nil, err
+	}
+
+	for _, p := range ps {
+		if p.Decrease || p.Increase {
+			p.IntValue, err = strconv.ParseInt(p.Value, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	return ps, nil
@@ -590,8 +601,7 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, erro
 
 // Handler do multi-thread operation action
 type Handler interface {
-	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int,
-		ps []*KeyValuePair) error
+	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int) error
 }
 
 // invokeHandler contract invoke handler
@@ -605,9 +615,8 @@ var (
 	resultStr   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
 )
 
-var randomRate int64
-var totalSentTxs int64 = 1
-var totalRandomSentTxs int64 = 1
+var totalSentTxs int64
+var totalRandomSentTxs int64
 var resp *commonPb.TxResponse
 
 type InvokerMsg struct {
@@ -621,52 +630,19 @@ type InvokerMsg struct {
 }
 
 func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := make([]*commonPb.KeyValuePair, 0)
-	var randomRateTmp int64
-	atomic.AddInt64(&totalSentTxs, 1)
-	for _, p := range ps {
-		if p.RandomRate > 100 || p.RandomRate < 0 {
-			panic("randomRate must int in [0,100]")
-		}
-
-		if p.RandomRate > 0 {
-			if randomRateTmp > 0 {
-				panic("randomRate used once by one key")
-			}
-			randomRateTmp = p.RandomRate
-			randomRate = p.RandomRate
-		}
-
-		key := p.Key
-		val := []byte(p.Value)
-		if randomRate > 0 && p.RandomRate > 0 {
-			if randomRate > (totalRandomSentTxs * 100 / totalSentTxs) {
-				val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
-				atomic.AddInt64(&totalRandomSentTxs, 1)
-			}
-		} else if p.Unique {
-			val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
-		}
-		pairs = append(pairs, &commonPb.KeyValuePair{
-			Key:   key,
-			Value: val,
-		})
-	}
+	pairs := makeKvs(h.threadId, loopId)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
 			fmt.Println(err)
 		}
 		rate := totalRandomSentTxs * 100 / totalSentTxs
-		if totalRandomSentTxs == 1 {
-			rate = 0
-		}
 		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
-			totalSentTxs, totalRandomSentTxs-1, rate, string(j))
+			totalSentTxs, totalRandomSentTxs, rate, string(j))
 	}
 
 	// 支持evm
@@ -709,29 +685,19 @@ type queryHandler struct {
 }
 
 func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	//var ps []*KeyValuePair
-	//err := json.Unmarshal([]byte(pairsString), &ps)
-	//if err != nil {
-	//	return err
-	//}
-	pairs := []*commonPb.KeyValuePair{}
-	for _, p := range ps {
-		key := p.Key
-		val := []byte(p.Value)
-		if p.Unique {
-			val = []byte(fmt.Sprintf(templateStr, p.Value, h.threadId, loopId, time.Now().UnixNano()))
+	pairs := makeKvs(h.threadId, loopId)
+	if showKey {
+		j, err := json.Marshal(pairs)
+		if err != nil {
+			fmt.Println(err)
 		}
-		pairs = append(pairs, &commonPb.KeyValuePair{
-			Key:   key,
-			Value: val,
-		})
-		if showKey {
-			fmt.Printf("key:%s val:%s\n", key, val)
-		}
+		rate := totalRandomSentTxs * 100 / totalSentTxs
+		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
+			totalSentTxs, totalRandomSentTxs, rate, string(j))
 	}
 
 	payloadBytes, err := constructQueryPayload(chainId, contractName, method, pairs, gasLimit)
@@ -758,7 +724,7 @@ type createContractHandler struct {
 }
 
 func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)
@@ -814,7 +780,7 @@ type upgradeContractHandler struct {
 }
 
 func (h *upgradeContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int, ps []*KeyValuePair) error {
+	userCrtPath string, loopId int) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)

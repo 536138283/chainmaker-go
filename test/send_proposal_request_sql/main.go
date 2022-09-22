@@ -14,7 +14,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -22,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/test/common"

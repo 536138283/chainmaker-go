@@ -4,6 +4,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package rpcserver
 
 import (
@@ -18,8 +19,8 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
-	utils "chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

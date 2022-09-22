@@ -12,6 +12,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// GlobalNetLogger logger
 var GlobalNetLogger protocol.Logger
 
 func init() {

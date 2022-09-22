@@ -24,13 +24,8 @@ import (
 // is qulified with the consensus algorithm. It should return nil
 // error when verify successfully, and return corresponding error
 // when failed.
-func VerifyBlockSignatures(
-	chainConf protocol.ChainConf,
-	ac protocol.AccessControlProvider,
-	store protocol.BlockchainStore,
-	block *commonpb.Block,
-	ledger protocol.LedgerCache,
-) error {
+func VerifyBlockSignatures(chainConf protocol.ChainConf, ac protocol.AccessControlProvider,
+	store protocol.BlockchainStore, block *commonpb.Block, ledger protocol.LedgerCache) error {
 	consensusType := chainConf.ChainConfig().Consensus.Type
 	switch consensusType {
 	case consensuspb.ConsensusType_TBFT:
@@ -44,7 +39,8 @@ func VerifyBlockSignatures(
 	case consensuspb.ConsensusType_MAXBFT:
 		return maxbft.VerifyBlockSignatures(chainConf, ac, store, block, ledger)
 	case consensuspb.ConsensusType_SOLO:
-		return nil //for rebuild-dbs
+		return nil
+		//for rebuild-dbs
 	default:
 	}
 	return fmt.Errorf("error consensusType: %s", consensusType)

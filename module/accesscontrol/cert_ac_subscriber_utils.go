@@ -17,6 +17,7 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 )
 
+// CONSENSUS "consensus"
 const CONSENSUS = "consensus"
 
 func (cp *certACProvider) messageChainConfig(chainConfig *config.ChainConfig, fromMaxBFT bool) {

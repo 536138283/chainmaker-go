@@ -14,19 +14,29 @@ import (
 )
 
 const (
-	AdjustWindowSize   = 64
-	MinAdjustTimes     = 2
-	MinPoolCapacity    = 2
-	BaseConflictRate   = 0.05
-	TopConflictRate    = 0.2
+	// AdjustWindowSize adjust window size
+	AdjustWindowSize = 64
+	// MinAdjustTimes min adjust times
+	MinAdjustTimes = 2
+	// MinPoolCapacity min pool capacity
+	MinPoolCapacity = 2
+	// BaseConflictRate base conflict rate
+	BaseConflictRate = 0.05
+	// TopConflictRate top conflict rate
+	TopConflictRate = 0.2
+	// DescendCoefficient descend coefficient
 	DescendCoefficient = 0.25
-	AscendCoefficient  = 3
+	// AscendCoefficient ascend coefficient
+	AscendCoefficient = 3
 )
 
+// TxExecType tx exec type
 type TxExecType int
 
 const (
+	// ConflictTx conflict tx value 0
 	ConflictTx TxExecType = iota
+	// NormalTx normail tx value 1
 	NormalTx
 )
 
@@ -95,9 +105,11 @@ func (q *ConflictsBitWindow) getConflictsRate() float64 {
 	return float64(q.conflictsNum) / float64(q.bitWindowCapacity)
 }
 
+// setMaxPoolCapacity set max pool capacity
 func (q *ConflictsBitWindow) setMaxPoolCapacity(maxPoolCapacity int) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
+	// if max pool capcacity less than min pool capacity, set the max pool capacity equal min pool capacity
 	if maxPoolCapacity < MinPoolCapacity {
 		maxPoolCapacity = MinPoolCapacity
 	}

@@ -9,10 +9,11 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	_ "flag"
 	"fmt"
 	"io/ioutil"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/gogo/protobuf/proto"

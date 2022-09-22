@@ -31,6 +31,7 @@ var (
 	adminKeyFilePaths  string
 	adminCrtFilePaths  string
 	adminOrgIds        string
+	outFilePath        string
 )
 
 var (
@@ -63,6 +64,8 @@ func NewTeeCMD() *cobra.Command {
 		"specify admin cert file paths, use ',' to separate")
 	teeFlags.StringVar(&adminOrgIds, "admin-org-ids", "",
 		"specify admin org-ids, use ',' to separate")
+	teeFlags.StringVar(&outFilePath, "out-file-path", "",
+		"out file path")
 
 	teeCmd.AddCommand(uploadCaCertCmd())
 	teeCmd.AddCommand(uploadReportCmd())

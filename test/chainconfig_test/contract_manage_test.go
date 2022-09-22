@@ -1,10 +1,11 @@
 package native_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 	"testing"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"

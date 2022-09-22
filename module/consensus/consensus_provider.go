@@ -13,14 +13,21 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// Provider ConsensusEngine provider
 type Provider func(config *utils.ConsensusImplConfig) (protocol.ConsensusEngine, error)
 
 var consensusProviders = make(map[consensusPb.ConsensusType]Provider)
 
+// RegisterConsensusProvider register
+// @param t
+// @param f
 func RegisterConsensusProvider(t consensusPb.ConsensusType, f Provider) {
 	consensusProviders[t] = f
 }
 
+// GetConsensusProvider  get a provider by consensus type
+// @param t
+// @return Provider
 func GetConsensusProvider(t consensusPb.ConsensusType) Provider {
 	provider, ok := consensusProviders[t]
 	if !ok {

@@ -10,7 +10,7 @@ package mapimpl
 import (
 	"sync"
 
-	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
 )
 
@@ -23,7 +23,7 @@ type TxFilter struct {
 }
 
 // ValidateRule validate rules
-func (f *TxFilter) ValidateRule(_ string, _ ...bn.RuleType) error {
+func (f *TxFilter) ValidateRule(_ string, _ ...common.RuleType) error {
 	return nil
 }
 
@@ -43,7 +43,7 @@ func (f *TxFilter) SetHeight(height uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f *TxFilter) IsExistsAndReturnHeight(txId string, _ ...bn.RuleType) (bool, uint64, *txfilter.Stat, error) {
+func (f *TxFilter) IsExistsAndReturnHeight(txId string, _ ...common.RuleType) (bool, uint64, *txfilter.Stat, error) {
 	exists, stat, err := f.IsExists(txId)
 	if err != nil {
 		return false, 0, nil, err
@@ -76,7 +76,7 @@ func (f *TxFilter) AddsAndSetHeight(txId []string, height uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f *TxFilter) IsExists(txId string, _ ...bn.RuleType) (bool, *txfilter.Stat, error) {
+func (f *TxFilter) IsExists(txId string, _ ...common.RuleType) (bool, *txfilter.Stat, error) {
 	_, ok := f.m.Load(txId)
 	return ok, nil, nil
 }

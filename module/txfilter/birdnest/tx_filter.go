@@ -14,9 +14,12 @@ import (
 
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
+
+var _ protocol.TxFilter = &TxFilter{}
 
 // TxFilter bn.BirdsNestImpl transaction filter
 type TxFilter struct {
@@ -33,13 +36,13 @@ type TxFilter struct {
 }
 
 // ValidateRule validate rules
-func (f *TxFilter) ValidateRule(txId string, ruleType ...bn.RuleType) error {
+func (f *TxFilter) ValidateRule(txId string, ruleType ...common.RuleType) error {
 	// Convert the transaction ID to TimestampKey
 	key, err := bn.ToTimestampKey(txId)
 	if err != nil {
 		return nil
 	}
-	err = f.bn.ValidateRule(key, ruleType...)
+	err = f.bn.ValidateRule(key, convertRuleType(ruleType)...)
 	if err != nil {
 		return err
 	}
@@ -91,7 +94,8 @@ func (f *TxFilter) SetHeight(height uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...bn.RuleType) (bool, uint64, *txfilter.Stat, error) {
+func (f *TxFilter) IsExistsAndReturnHeight(txId string, ruleType ...common.RuleType) (
+	bool, uint64, *txfilter.Stat, error) {
 	exists, stat, err := f.IsExists(txId, ruleType...)
 	if err != nil {
 		return false, 0, stat, err
@@ -168,7 +172,7 @@ func (f *TxFilter) AddsAndSetHeight(txIds []string, height uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (exists bool, stat *txfilter.Stat, err error) {
+func (f *TxFilter) IsExists(txId string, ruleType ...common.RuleType) (exists bool, stat *txfilter.Stat, err error) {
 	var costs time.Duration
 	// Convert the transaction ID to TimestampKey
 	key, err := bn.ToTimestampKey(txId)
@@ -184,7 +188,7 @@ func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (exists bool, 
 	defer f.l.RUnlock()
 	// If the transaction ID is of the time type, the transaction filter exists
 	start := time.Now()
-	contains, err := f.bn.Contains(key, ruleType...)
+	contains, err := f.bn.Contains(key, convertRuleType(ruleType)...)
 	filterCosts := time.Since(start)
 	if err != nil {
 		// If not, query DB
@@ -214,6 +218,13 @@ func (f *TxFilter) IsExists(txId string, ruleType ...bn.RuleType) (exists bool, 
 // Close transaction filter
 func (f *TxFilter) Close() {
 	close(f.exitC)
+}
+func convertRuleType(ruleType []common.RuleType) []bn.RuleType {
+	bnRuleType := make([]bn.RuleType, len(ruleType))
+	for i, r := range ruleType {
+		bnRuleType[i] = (bn.RuleType)(r)
+	}
+	return bnRuleType
 }
 
 func (f *TxFilter) findDb(txId string) (bool, time.Duration, error) {

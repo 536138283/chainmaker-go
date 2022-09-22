@@ -1,10 +1,11 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"strings"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/pb-go/v2/common"

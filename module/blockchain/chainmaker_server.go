@@ -24,11 +24,11 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto/engine"
 	"chainmaker.org/chainmaker/common/v2/helper"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	localconf "chainmaker.org/chainmaker/localconf/v2"
-	logger "chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/txpool"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 var log = logger.GetLogger(logger.MODULE_BLOCKCHAIN)
@@ -71,7 +71,7 @@ func (server *ChainMakerServer) Init() error {
 	return nil
 }
 
-// Init ChainMakerServer.
+// InitForRebuildDbs Init ChainMakerServer.
 func (server *ChainMakerServer) InitForRebuildDbs(chainId string) error {
 	var err error
 	log.Debug("begin init chain maker rebuild dbs server...")
@@ -345,7 +345,7 @@ func (server *ChainMakerServer) Start() error {
 	return nil
 }
 
-// Start ChainMakerServer for rebuild dbs.
+// StartForRebuildDbs Start ChainMakerServer for rebuild dbs.
 func (server *ChainMakerServer) StartForRebuildDbs(needVerify bool) error {
 	// 1) start Net
 	//if err := server.net.Start(); err != nil {

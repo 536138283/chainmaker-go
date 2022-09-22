@@ -9,6 +9,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// IsOptimizeChargeGasEnabled is optimized charge gas enable
 func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
 	enableGas := false
 	enableOptimizeChargeGas := false
@@ -22,6 +23,10 @@ func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
 	return enableGas && enableOptimizeChargeGas
 }
 
+// VerifyOptimizeChargeGasTx verify gas tx
+// @param block
+// @param snapshot
+// @return error
 func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot) error {
 	// gas to charge from validator
 	gasCalc := make(map[string]uint64, 24)

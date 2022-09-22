@@ -23,6 +23,15 @@ var (
 
 	sdkConfPath string // SDK配置路径
 
+	outFilePath string
+
+	dbHost string
+	dbUser string
+	dbPass string
+	dbPort string
+	dbName string
+	sm4Key string
+
 	// 合约参数
 	abiFilePath     string
 	contractName    string
@@ -86,6 +95,10 @@ var (
 	permissionResourcePolicyRule     string
 	permissionResourcePolicyOrgList  []string
 	permissionResourcePolicyRoleList []string
+	respResultToString               bool
+
+	consensusFrom string
+	consensusTo   string
 )
 
 const (
@@ -146,6 +159,17 @@ const (
 	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
+	flagConsensusFrom                    = "src-consensus"
+	flagConsensusTo                      = "dst-consensus"
+	flagRespResultToString               = "result-to-string"
+	flagOutFilePath                      = "out-file-path"
+
+	flagDbHost = "db-host"
+	flagDbUser = "db-user"
+	flagDbPass = "db-pass"
+	flagDbPort = "db-port"
+	flagDbName = "db-name"
+	flagSm4Key = "sm4_key"
 )
 
 // ClientCMD new client series command
@@ -178,6 +202,14 @@ func init() {
 
 	// sdk配置路径
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")
+
+	flags.StringVar(&outFilePath, flagOutFilePath, "./testdata/aaa.txt", "specify out_file path")
+	flags.StringVar(&dbHost, flagDbHost, "127.0.0.1", "specify db host")
+	flags.StringVar(&dbUser, flagDbUser, "root", "specify db user")
+	flags.StringVar(&dbPass, flagDbPass, "passw0rd", "specify db password")
+	flags.StringVar(&dbPort, flagDbPort, "3306", "specify db port")
+	flags.StringVar(&dbName, flagDbName, "out_file", "specify db name")
+	flags.StringVar(&sm4Key, flagSm4Key, "BFQ22EDBw1KUz7pfgKzGc1", "specify sm4_key")
 
 	// 用户合约
 	flags.StringVar(&abiFilePath, flagAbiFilePath, "", "specify user EVM contract abi file path, eg: /home/abi.json")
@@ -258,6 +290,11 @@ func init() {
 		"chain config permission resource policy org list")
 	flags.StringSliceVar(&permissionResourcePolicyRoleList, flagPermissionResourcePolicyRoleList, []string{},
 		"chain config permission resource policy role list")
+
+	flags.StringVar(&consensusFrom, flagConsensusFrom, "", "specify source consensus")
+	flags.StringVar(&consensusTo, flagConsensusTo, "", "specify destination consensus")
+	flags.BoolVar(&respResultToString, flagRespResultToString, false,
+		"enable convert TxResponse.ContractResult.Result to string for readable output")
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {

@@ -8,7 +8,7 @@ else
     endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=v2.3.0_alpha
+VERSION=v2.4.0
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
 
@@ -21,10 +21,10 @@ GOLDFLAGS += -X "${LOCALCONF_HOME}.GitCommit=${GIT_COMMIT}"
 chainmaker:
     ifeq ($(PLATFORM),"Windows")
 		@echo "build for windows"
-		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker.exe
+		@rm -rf go.sum && cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker.exe
     else
 		@echo "build for linux or mac"
-		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
+		@rm -rf go.sum && cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
     endif
 
 chainmaker-vendor:
@@ -81,34 +81,67 @@ ut:
 
 lint:
 	cd main && golangci-lint run ./...
-	cd module/accesscontrol && golangci-lint run .
-	cd module/blockchain && golangci-lint run .
-	cd module/core && golangci-lint run ./...
-	cd module/consensus && golangci-lint run ./...
-	cd module/net && golangci-lint run ./...
-	cd module/rpcserver && golangci-lint run ./...
-	cd module/snapshot && golangci-lint run ./...
-	cd module/subscriber && golangci-lint run ./...
-	cd module/sync && golangci-lint run ./...
-	cd module/txfilter && golangci-lint run ./...
-	golangci-lint run ./tools/cmc/...
-	cd tools/scanner && golangci-lint run ./...
+	cd scripts && ./lint_check.sh
 
 gomod:
 	cd scripts && ./gomod_update.sh
+	cd scripts && ./gomod_replace.sh
 
 test-deploy:
 	cd scripts/test/ && ./quick_deploy.sh
 
 sql-qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
-	cd test/send_proposal_request_ci && ./clean_sql_log.sh
+	cd test/chain2 && ./stop.sh
+	cd test/chain2 && ./clean.sh
 	echo "start new sql-qta test"
-	cd test/send_proposal_request_ci && ./build.sh
-	cd test/send_proposal_request_ci && ./start_sql_tbft_4.sh
-	cd test/send_proposal_request_sql && go run main.go
-	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
-	cd test/send_proposal_request_ci && ./clean_sql_log.sh
-qta:
-	echo "new version qta TODO"
+	cd test/chain2 && ./build.sh
+	cd test/chain2 && ./start.sh
+	cd test/scenario0_native && python3 chain2.py
+	cd test/scenario1_evm && python3 chain2.py
+	cd test/scenario2_rust && python3 chain2.py
+	cd test/scenario4_wasmer_sql && python3 chain2.py
+	cd test/chain2 && ./stop.sh
+	cd test/chain2 && ./clean.sh
+
+qta: cert-qta pub-qta docker-qta
+
+cert-qta:
+	echo "clear environment"
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+	echo "start new cert-qta test"
+	cd test/chain1 && ./build.sh
+	cd test/chain1 && ./start.sh
+	cd test/scenario0_native && python3 chain1.py
+	cd test/scenario1_evm && python3 chain1.py
+	cd test/scenario2_rust && python3 chain1.py
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+
+pub-qta:
+	echo "clear environment"
+	cd test/chain3 && ./stop.sh
+	cd test/chain3 && ./clean.sh
+	echo "start new pub-qta test"
+	cd test/chain3 && ./build.sh
+	cd test/chain3 && ./start.sh
+	cd test/scenario0_native && python3 chain3.py
+	cd test/scenario1_evm && python3 chain3.py
+	#cd test/scenario2_rust && python3 chain3.py  #Rust合约不能启用Gas
+	cd test/chain3 && ./stop.sh
+	cd test/chain3 && ./clean.sh
+
+docker-qta:
+	echo "clear environment"
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+	echo "start new docker-qta test"
+	cd scripts/docker && ./build-dockergo.sh
+	cd test/chain1 && ./build.sh
+	cd test/chain1 && ./docker-start.sh
+	cd test/chain1 && ./start.sh
+	cd test/scenario3_dockergo && python3 chain1.py
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+	docker rm -f  `docker ps -aq -f name=ci-chain1`

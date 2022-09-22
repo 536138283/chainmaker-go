@@ -223,6 +223,8 @@ type accessControlService struct {
 	authType string
 
 	pwkNewMember func(member *pbac.Member) (protocol.Member, error)
+
+	getCertVerifyOptions func() *bcx509.VerifyOptions
 }
 
 type memberCached struct {
@@ -320,10 +322,12 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	// system contract interface resource definitions
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CORE_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
@@ -376,6 +380,8 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
@@ -502,10 +508,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	// system contract interface resource definitions
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CORE_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
@@ -551,6 +559,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
@@ -871,8 +881,23 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 	//handle false positive when member cache is cleared
 	var tmpMember protocol.Member
 	var err error
+	var certChains [][]*bcx509.Certificate
 	if acs.authType == protocol.PermissionedWithCert {
 		tmpMember, err = acs.newCertMember(member)
+		certMember, ok := tmpMember.(*certificateMember)
+		if !ok {
+			return nil
+		}
+		certChains, err = certMember.cert.Verify(*acs.getCertVerifyOptions())
+		if err != nil {
+			acs.log.Debugf("certMember verify cert chain failed, err = %s", err.Error())
+			return nil
+		}
+		if len(certChains) == 0 {
+			acs.log.Debugf("certMember verify cert chain failed, len(certChains) = %d", len(certChains))
+			return nil
+		}
+
 	} else if acs.authType == protocol.PermissionedWithKey {
 		tmpMember, err = acs.pwkNewMember(member)
 	}
@@ -881,9 +906,16 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 		return nil
 	}
 	//add to cache
-	cached = &memberCached{
-		member:    tmpMember,
-		certChain: nil,
+	if certChains != nil {
+		cached = &memberCached{
+			member:    tmpMember,
+			certChain: certChains[0],
+		}
+	} else {
+		cached = &memberCached{
+			member:    tmpMember,
+			certChain: nil,
+		}
 	}
 	acs.addMemberToCache(string(member.MemberInfo), cached)
 
@@ -1162,4 +1194,9 @@ func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*
 
 	}
 	return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
+}
+
+// setVerifyOptionsFunc used to set verifyOptionsFunc which will check if  certificate chain valid
+func (acs *accessControlService) setVerifyOptionsFunc(verifyOptionsFunc func() *bcx509.VerifyOptions) {
+	acs.getCertVerifyOptions = verifyOptionsFunc
 }

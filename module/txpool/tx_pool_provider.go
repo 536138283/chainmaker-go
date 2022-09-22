@@ -8,11 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 package txpool
 
 import (
-	normal "chainmaker.org/chainmaker/txpool-normal/v2"
 	"strings"
 
+	normal "chainmaker.org/chainmaker/txpool-normal/v2"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/protocol/v2" // nolint: typecheck
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 const (
@@ -20,7 +21,7 @@ const (
 	TypeDefault = normal.TxPoolType
 )
 
-// Provider provide protocol.TxPool implement
+// Provider txpool instance provider
 type Provider func(
 	nodeId string,
 	chainId string,
@@ -37,7 +38,7 @@ type Provider func(
 
 var txPoolProviders = make(map[string]Provider)
 
-// RegisterTxPoolProvider register tx pool provider
+// RegisterTxPoolProvider register
 // @param t
 // @param f
 func RegisterTxPoolProvider(t string, f Provider) {

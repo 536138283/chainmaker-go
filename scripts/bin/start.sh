@@ -223,7 +223,7 @@ function start_docker_vm_go() {
   # ENV_PPROF_PORT=
   docker run -itd \
     -e ENV_LOG_IN_CONSOLE="$docker_vm_log_in_console" -e ENV_LOG_LEVEL="$docker_vm_log_level" -e ENV_ENABLE_UDS=true \
-    -e ENV_USER_NUM=10000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
+    -e ENV_USER_NUM=9000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
     -v "$docker_vm_mount_path":/mount \
     -v "$docker_vm_log_path":/log \
     --name DOCKERVM-{org_id} \

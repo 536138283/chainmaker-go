@@ -8,10 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"strings"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/hibe"

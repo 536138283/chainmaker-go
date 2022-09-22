@@ -9,9 +9,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker/common/v2/evmutils"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	prettyjson "github.com/hokaccha/go-prettyjson"
+	"github.com/hokaccha/go-prettyjson"
 )
 
 // MaxInt returns the greater one between two integer
@@ -37,6 +38,22 @@ func ConvertParameters(pars map[string]string) []*common.KeyValuePair {
 // CalcEvmContractName calc contract name of EVM kind
 func CalcEvmContractName(contractName string) string {
 	return hex.EncodeToString(evmutils.Keccak256([]byte(contractName)))[24:]
+}
+
+// RespResultToString convert result from bytes to string
+// @param resp
+// @return interface{}
+func RespResultToString(resp *common.TxResponse) interface{} {
+	if resp == nil || resp.ContractResult == nil {
+		return resp
+	}
+	return types.TxResponse{
+		TxResponse: resp,
+		ContractResult: &types.ContractResult{
+			ContractResult: resp.ContractResult,
+			Result:         string(resp.ContractResult.Result),
+		},
+	}
 }
 
 // PrintPrettyJson print pretty json of data

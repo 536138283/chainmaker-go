@@ -11,7 +11,6 @@ import (
 	"reflect"
 	"testing"
 
-	"chainmaker.org/chainmaker/common/v2/birdsnest"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -55,7 +54,7 @@ func TestTxFilter_IsExistsAndReturnHeight(t *testing.T) {
 	}
 	type args struct {
 		in0 string
-		in1 []birdsnest.RuleType
+		in1 []common.RuleType
 	}
 	tests := []struct {
 		name    string
@@ -238,7 +237,7 @@ func TestTxFilter_IsExists(t *testing.T) {
 	}
 	type args struct {
 		txId string
-		in1  []birdsnest.RuleType
+		in1  []common.RuleType
 	}
 
 	var (

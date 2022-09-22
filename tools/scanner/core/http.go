@@ -9,11 +9,12 @@ package core
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 )
 
 const (

@@ -14,6 +14,7 @@ import (
 
 var errBadChannel = errors.New("event: Subscribe argument does not have sendable channel type")
 
+// Subscription 订阅接口
 type Subscription interface {
 	Err() <-chan error // returns the error channel
 	Unsubscribe()

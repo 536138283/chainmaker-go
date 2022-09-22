@@ -42,33 +42,46 @@ import (
 )
 
 const (
-	ScheduleTimeout        = 10
+	// ScheduleTimeout schedule timeout
+	ScheduleTimeout = 10
+	// ScheduleWithDagTimeout  schedule with dag timeout
 	ScheduleWithDagTimeout = 20
-	blockVersion2300       = uint32(2300)
+	// blockVersion2300 block version 2.3.0
+	blockVersion2300 = uint32(2300)
 )
 
 const (
+	// ErrMsgOfGasLimitNotSet error message
 	ErrMsgOfGasLimitNotSet = "field `GasLimit` must be set in payload."
 )
 
 // TxScheduler transaction scheduler structure
 type TxScheduler struct {
-	lock            sync.Mutex
-	VmManager       protocol.VmManager
+	// lock
+	lock sync.Mutex
+	// vm manager
+	VmManager protocol.VmManager
+	// schedule finish channel
 	scheduleFinishC chan bool
-	log             protocol.Logger
-	chainConf       protocol.ChainConf // chain config
-
+	// logger
+	log protocol.Logger
+	// chain config
+	chainConf protocol.ChainConf
+	// metric vm runtime
 	metricVMRunTime *prometheus.HistogramVec
-	StoreHelper     conf.StoreHelper
-	keyReg          *regexp.Regexp
-	signer          protocol.SigningMember
-	ledgerCache     protocol.LedgerCache
+	// store helper
+	StoreHelper conf.StoreHelper
+	// regexp
+	keyReg *regexp.Regexp
+	// signing member
+	signer      protocol.SigningMember
+	ledgerCache protocol.LedgerCache
 }
 
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]bool
 
+// TxIdAndExecOrderType txid and ExecOrderTxType
 type TxIdAndExecOrderType struct {
 	string
 	protocol.ExecOrderTxType
@@ -206,7 +219,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
-		"dag building cost %v, total used %v, tps %v\n", len(block.Dag.Vertexes), timeCostA,
+		"dag building cost %v, total used %v, tps %v", len(block.Dag.Vertexes), timeCostA,
 		timeCostB-timeCostA, timeCostB, float64(len(block.Dag.Vertexes))/(float64(timeCostB)/1e9))
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
@@ -270,13 +283,14 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	}
 }
 
+// initOptimizeTools init optimize tools
 func (ts *TxScheduler) initOptimizeTools(
 	txBatch []*commonPb.Transaction) (bool, *ConflictsBitWindow) {
 	txBatchSize := len(txBatch)
 	var conflictsBitWindow *ConflictsBitWindow
 	enableConflictsBitWindow := ts.chainConf.ChainConfig().Core.EnableConflictsBitWindow
 
-	ts.log.Infof("enable conflicts bit window: [%t]\n", enableConflictsBitWindow)
+	ts.log.Infof("enable conflicts bit window: [%t]", enableConflictsBitWindow)
 
 	if AdjustWindowSize*MinAdjustTimes > txBatchSize {
 		enableConflictsBitWindow = false
@@ -313,7 +327,7 @@ func (ts *TxScheduler) sendTxBySenderGroup(conflictsBitWindow *ConflictsBitWindo
 	}
 }
 
-// apply the read/write set to txSimContext,
+// handleApplyResult apply the read/write set to txSimContext,
 // and adjust the go routine size
 func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSenderGroup bool,
 	conflictsBitWindow *ConflictsBitWindow, senderGroup *SenderGroup, goRoutinePool *ants.Pool,
@@ -331,6 +345,7 @@ func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSe
 	}
 }
 
+// getTxRWSetTable get tx rw set table, return tx rw set map
 func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *commonPb.Block) map[string]*commonPb.TxRWSet {
 	txRWSetMap := make(map[string]*commonPb.TxRWSet)
 	block.Txs = snapshot.GetTxTable()
@@ -348,6 +363,7 @@ func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *common
 	return txRWSetMap
 }
 
+// getContractEventMap get contract event map
 func (ts *TxScheduler) getContractEventMap(block *commonPb.Block) map[string][]*commonPb.ContractEvent {
 	contractEventMap := make(map[string][]*commonPb.ContractEvent)
 	for _, tx := range block.Txs {
@@ -453,7 +469,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	<-ts.scheduleFinishC
 	snapshot.Seal()
 	timeUsed := time.Since(startTime)
-	ts.log.Infof("simulate with dag finished, size %d, time used %v, tps %v\n", len(block.Txs),
+	ts.log.Infof("simulate with dag finished, size %d, time used %v, tps %v", len(block.Txs),
 		timeUsed, float64(len(block.Txs))/(float64(timeUsed)/1e9))
 
 	// Return the read and write set after the scheduled execution
@@ -474,6 +490,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	if err != nil {
 		return nil, nil, err
 	}
+
+	// local conf config logger rw set log
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		result, _ := prettyjson.Marshal(txRWSetMap)
 		ts.log.Infof("simulate with dag rwset :%s, dag: %+v", result, block.Dag)
@@ -481,6 +499,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
 
+// initSimulateDag init simulate dag
 func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 	[]int, map[int]dagNeighbors, map[int]dagNeighbors, error) {
 	dagRemain := make(map[int]dagNeighbors)
@@ -542,6 +561,7 @@ func handleTxInSimulateWithDag(
 	}
 }
 
+// adjustPoolSize adjust pool size
 func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *ConflictsBitWindow, txExecType TxExecType) {
 	newPoolSize := conflictsBitWindow.Enqueue(txExecType, pool.Cap())
 	if newPoolSize == -1 {
@@ -550,6 +570,7 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 	pool.Tune(newPoolSize)
 }
 
+// executeTx execute tx
 func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
@@ -586,7 +607,8 @@ func (ts *TxScheduler) executeTx(
 	} else if blockVersion >= 2220 {
 		if txResult, specialTxType, err = ts.runVM2220(tx, txSimContext, enableOptimizeChargeGas); err != nil {
 			runVmSuccess = false
-			ts.log.Errorf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
+			//合约运行失败是常态，不需要ERROR级别的日志，Warn级别就行了
+			ts.log.Warnf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
 				tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
 		}
 	} else {
@@ -661,6 +683,7 @@ func (ts *TxScheduler) simulateSpecialTxs(dag *commonPb.DAG, snapshot protocol.S
 	<-scheduleFinishC
 }
 
+// shrinkDag shrink dag
 func (ts *TxScheduler) shrinkDag(txIndex int, dagRemain map[int]dagNeighbors,
 	reverseDagRemain map[int]dagNeighbors) []int {
 	var txIndexBatch []int
@@ -675,6 +698,7 @@ func (ts *TxScheduler) shrinkDag(txIndex int, dagRemain map[int]dagNeighbors,
 	return txIndexBatch
 }
 
+// Halt halt
 func (ts *TxScheduler) Halt() {
 	ts.scheduleFinishC <- true
 }
@@ -1207,11 +1231,15 @@ func wholeCertInfo(txSimContext protocol.TxSimContext, certHash string) (*common
 	}, nil
 }
 
+// SenderGroup sender group
 type SenderGroup struct {
 	txsMap     map[[32]byte][]*commonPb.Transaction
 	doneTxKeyC chan [32]byte
 }
 
+// NewSenderGroup 构造SenderGroup
+// @param txBatch
+// @return *SenderGroup
 func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
 	return &SenderGroup{
 		txsMap:     getSenderTxsMap(txBatch),

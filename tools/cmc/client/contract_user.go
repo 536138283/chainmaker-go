@@ -61,11 +61,13 @@ func userContractCMD() *cobra.Command {
 	userContractCmd.AddCommand(createUserContractCMD())
 	userContractCmd.AddCommand(invokeContractTimesCMD())
 	userContractCmd.AddCommand(invokeUserContractCMD())
+	userContractCmd.AddCommand(invokeOutUserContractCMD())
 	userContractCmd.AddCommand(upgradeUserContractCMD())
 	userContractCmd.AddCommand(freezeUserContractCMD())
 	userContractCmd.AddCommand(unfreezeUserContractCMD())
 	userContractCmd.AddCommand(revokeUserContractCMD())
 	userContractCmd.AddCommand(getUserContractCMD())
+	userContractCmd.AddCommand(getOutUserContractCMD())
 
 	return userContractCmd
 }
@@ -110,14 +112,39 @@ func invokeUserContractCMD() *cobra.Command {
 		},
 	}
 
+	util.AttachFlags(cmd, flags, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
+		flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId, flagSendTimes,
+		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
+		flagGasLimit, flagTxId, flagContractAddress, flagRespResultToString,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
+	})
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
+	return cmd
+}
+
+func invokeOutUserContractCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "invoke-out",
+		Short: "invoke-out user contract command",
+		Long:  "invoke-out user contract command",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return invokeOutUserContract()
+		},
+	}
+
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
-		flagGasLimit, flagTxId, flagContractAddress,
+		flagOutFilePath, flagDbHost, flagDbUser, flagDbPort, flagDbName, flagSm4Key,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagOutFilePath)
+	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagMethod)
 
 	return cmd
@@ -136,16 +163,16 @@ func invokeContractTimesCMD() *cobra.Command {
 		},
 	}
 
-	attachFlags(cmd, []string{
+	util.AttachFlags(cmd, flags, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
-		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
+		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
-		flagContractAddress,
+		flagContractAddress, flagGasLimit, flagRespResultToString,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
-	cmd.MarkFlagRequired(flagMethod)
-
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	return cmd
 }
 
@@ -165,10 +192,36 @@ func getUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagContractAddress, flagAbiFilePath,
+		flagRespResultToString,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagMethod)
+
+	return cmd
+}
+
+func getOutUserContractCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get-out",
+		Short: "get-out user contract command",
+		Long:  "get-out user contract command",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return getOutUserContract()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
+		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
+		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout,
+		flagOutFilePath, flagDbHost, flagDbUser, flagDbPort, flagDbName, flagSm4Key,
+	})
+
+	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagContractName)
+	cmd.MarkFlagRequired(flagMethod)
+	cmd.MarkFlagRequired(flagOutFilePath)
 
 	return cmd
 }
@@ -525,7 +578,12 @@ func invokeContractTimes() error {
 		}
 	}
 
-	DispatchTimes(client, contractName, method, kvs, evmMethod)
+	var limit *common.Limit
+	if gasLimit > 0 {
+		limit = &common.Limit{GasLimit: gasLimit}
+	}
+
+	DispatchTimes(client, contractName, method, kvs, evmMethod, limit)
 	return nil
 }
 
@@ -592,22 +650,28 @@ func getUserContract() error {
 		return nil
 	}
 
-	if contractAbi != nil && resp.ContractResult != nil {
-		output, err := contractAbi.Unpack(method, resp.ContractResult.Result)
+	var output interface{}
+	if contractAbi != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		unpackedData, err := contractAbi.Unpack(method, resp.ContractResult.Result)
 		if err != nil {
 			fmt.Println(err)
 			return nil
 		}
-		util.PrintPrettyJson(types.EvmTxResponse{
+		output = types.EvmTxResponse{
 			TxResponse: resp,
 			ContractResult: &types.EvmContractResult{
 				ContractResult: resp.ContractResult,
-				Result:         fmt.Sprintf("%v", output),
+				Result:         fmt.Sprintf("%v", unpackedData),
 			},
-		})
+		}
 	} else {
-		util.PrintPrettyJson(resp)
+		if respResultToString {
+			output = util.RespResultToString(resp)
+		} else {
+			output = resp
+		}
 	}
+	util.PrintPrettyJson(output)
 	return nil
 }
 

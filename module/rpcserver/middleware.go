@@ -20,8 +20,8 @@ import (
 	"golang.org/x/net/http2"
 	"golang.org/x/net/http2/h2c"
 
-	localconf "chainmaker.org/chainmaker/localconf/v2"
-	logger "chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -40,6 +40,9 @@ const (
 	rateLimitTypeGlobal = 0
 )
 
+// GetClientAddr get client address
+// @param ctx
+// @return string
 func GetClientAddr(ctx context.Context) string {
 	pr, ok := peer.FromContext(ctx)
 	if !ok {
@@ -232,6 +235,10 @@ func splitMethodName(fullMethodName string) (string, string) {
 	return UNKNOWN, UNKNOWN
 }
 
+// GrpcHandlerFunc handle grpc
+// @param grpcServer
+// @param otherHandler
+// @return http.Handler
 func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
 	if otherHandler == nil {
 		return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

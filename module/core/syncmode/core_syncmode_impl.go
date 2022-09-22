@@ -4,7 +4,7 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-// syncmode means commit new block in sync way
+// Package syncmode means commit new block in sync way
 package syncmode
 
 import (
@@ -29,26 +29,39 @@ import (
 // One core engine for one chain.
 //nolint: structcheck,unused
 type CoreEngine struct {
-	chainId   string             // chainId, identity of a chain
-	chainConf protocol.ChainConf // chain config
-
-	msgBus         msgbus.MessageBus       // message bus, transfer messages with other modules
-	blockProposer  protocol.BlockProposer  // block proposer, to generate new block when node is proposer
-	BlockVerifier  protocol.BlockVerifier  // block verifier, to verify block that proposer generated
-	BlockCommitter protocol.BlockCommitter // block committer, to commit block to store after consensus
-	txScheduler    protocol.TxScheduler    // transaction scheduler, schedule transactions run in vm
-	MaxbftHelper   protocol.MaxbftHelper
-
-	txPool          protocol.TxPool          // transaction pool, cache transactions to be pack in block
-	vmMgr           protocol.VmManager       // vm manager
-	blockchainStore protocol.BlockchainStore // blockchain store, to store block, transactions in DB
-	snapshotManager protocol.SnapshotManager // snapshot manager, manage state data that not store yet
-
-	quitC         <-chan interface{}          // quit chan, reserved for stop core engine running
-	proposedCache protocol.ProposalCache      // cache proposed block and proposal status
-	log           protocol.Logger             // logger
-	subscriber    *subscriber.EventSubscriber // block subsriber
-
+	// chainId, identity of a chain
+	chainId string
+	// chain config
+	chainConf protocol.ChainConf
+	// message bus, transfer messages with other modules
+	msgBus msgbus.MessageBus
+	// block proposer, to generate new block when node is proposer
+	blockProposer protocol.BlockProposer
+	// block verifier, to verify block that proposer generated
+	BlockVerifier protocol.BlockVerifier
+	// block committer, to commit block to store after consensus
+	BlockCommitter protocol.BlockCommitter
+	// transaction scheduler, schedule transactions run in vm
+	txScheduler protocol.TxScheduler
+	// max bft helper
+	MaxbftHelper protocol.MaxbftHelper
+	// transaction pool, cache transactions to be pack in block
+	txPool protocol.TxPool
+	// vm manager
+	vmMgr protocol.VmManager
+	// blockchain store, to store block, transactions in DB
+	blockchainStore protocol.BlockchainStore
+	// snapshot manager, manage state data that not store yet
+	snapshotManager protocol.SnapshotManager
+	// quit chan, reserved for stop core engine running
+	quitC <-chan interface{}
+	// cache proposed block and proposal status
+	proposedCache protocol.ProposalCache
+	// logger
+	log protocol.Logger
+	// block subscriber
+	subscriber *subscriber.EventSubscriber
+	// net service
 	netService protocol.NetService
 }
 
@@ -67,6 +80,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 	}
 
 	var schedulerFactory scheduler.TxSchedulerFactory
+	// new tx scheduler to set the core engine
 	core.txScheduler = schedulerFactory.NewTxScheduler(
 		cf.VmMgr,
 		cf.ChainConf,
@@ -91,6 +105,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		StoreHelper:     cf.StoreHelper,
 		TxFilter:        cf.TxFilter,
 	}
+	// new block proposer to set the core engine
 	core.blockProposer, err = proposer.NewBlockProposer(proposerConfig, cf.Log)
 	if err != nil {
 		return nil, err
@@ -113,6 +128,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		NetService:      cf.NetService,
 		TxFilter:        cf.TxFilter,
 	}
+	// new block verifier to set the core engine
 	core.BlockVerifier, err = verifier.NewBlockVerifier(verifierConfig, cf.Log)
 	if err != nil {
 		return nil, err
@@ -133,6 +149,7 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		StoreHelper:     cf.StoreHelper,
 		TxFilter:        cf.TxFilter,
 	}
+	// new block committer to set the core engine
 	core.BlockCommitter, err = common.NewBlockCommitter(committerConfig, cf.Log)
 	if err != nil {
 		return nil, err
@@ -158,7 +175,7 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	// 2. receive verify block from consensus
 	// 3. receive commit block message from consensus
 	// 4. receive propose signal from txpool
-	// 5. receive build proposal signal from maxbft consensus
+	// 5. receive rw set verify fail txs from maxbft consensus
 
 	switch message.Topic {
 	case msgbus.ProposeState:
@@ -196,8 +213,13 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	}
 }
 
-// Start, initialize core engine
+// Start initialize core engine
 func (c *CoreEngine) Start() {
+	// 1. register msgbus ProposeState
+	// 2. register msgbus VerifyBlock
+	// 3. register msgbus CommitBlock
+	// 4. register msgbus TxPoolSignal
+	// 5. register msgbus RwSetVerifyFailTxs
 	c.msgBus.Register(msgbus.ProposeState, c)
 	c.msgBus.Register(msgbus.VerifyBlock, c)
 	c.msgBus.Register(msgbus.CommitBlock, c)
@@ -208,24 +230,28 @@ func (c *CoreEngine) Start() {
 	c.blockProposer.Start() //nolint: errcheck
 }
 
-// Stop, stop core engine
+// Stop core engine
 func (c *CoreEngine) Stop() {
 	defer c.log.Infof("core stopped.")
 	c.blockProposer.Stop() //nolint: errcheck
 }
 
+// GetBlockProposer get block proposer
 func (c *CoreEngine) GetBlockProposer() protocol.BlockProposer {
 	return c.blockProposer
 }
 
+// GetBlockCommitter get block committer
 func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
 	return c.BlockCommitter
 }
 
+// GetBlockVerifier get block verifier
 func (c *CoreEngine) GetBlockVerifier() protocol.BlockVerifier {
 	return c.BlockVerifier
 }
 
+// GetMaxbftHelper get max bft helper
 func (c *CoreEngine) GetMaxbftHelper() protocol.MaxbftHelper {
 	return c.MaxbftHelper
 }

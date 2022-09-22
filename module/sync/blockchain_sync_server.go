@@ -184,7 +184,7 @@ func (sync *BlockChainSyncServer) initSyncConfIfRequire() {
 //do the corresponding processing according to the type of the message
 func (sync *BlockChainSyncServer) blockSyncMsgHandler(from string, msg []byte, msgType netPb.NetMsg_MsgType) error {
 	if atomic.LoadInt32(&sync.start) != 1 {
-		return commonErrors.ErrSyncServiceHasStoped
+		return commonErrors.ErrSyncServiceHasStopped
 	}
 	if msgType != netPb.NetMsg_SYNC_BLOCK_MSG {
 		return nil
@@ -261,9 +261,9 @@ func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from s
 		sync.log.Errorf("fail to proto.Unmarshal the syncPb.SyncMsg:%s", err.Error())
 		return err
 	}
-	// 针对 `SyncMsg_BLOCK_SYNC_REQ` 消息处理函数，添加处理状态检查，要求同一个 `请求来源 + 高度` 不会重复返回多次数据
+	// 针对 `SyncMsg_BLOCK_SYNC_REQ` 消息处理函数，添加处理状态检查，要求同一个 `请求来源 + 高度 + rwset` 不会重复返回多次数据
 	// create a key-value pair when receive block request, ignore repeat request
-	processKey := fmt.Sprintf("%s_%d", from, req.BlockHeight)
+	processKey := fmt.Sprintf("%s_%d_%t", from, req.BlockHeight, req.WithRwset)
 	if _, loaded := sync.requestCache.LoadOrStore(processKey, time.Now()); loaded {
 		sync.log.Warnf("received duplicate request to get block [height: %d, batch_size: %d] from "+
 			"node [%s]", req.BlockHeight, req.BatchSize, from)

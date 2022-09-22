@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
-	"chainmaker.org/chainmaker/common/v2/birdsnest"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
@@ -23,7 +23,7 @@ type TxFilter struct {
 }
 
 // ValidateRule validate transaction rules
-func (f TxFilter) ValidateRule(_ string, _ ...birdsnest.RuleType) error {
+func (f TxFilter) ValidateRule(_ string, _ ...common.RuleType) error {
 	return nil
 }
 
@@ -46,7 +46,7 @@ func (f TxFilter) SetHeight(_ uint64) {
 }
 
 // IsExistsAndReturnHeight is exists and return height
-func (f TxFilter) IsExistsAndReturnHeight(txId string, _ ...birdsnest.RuleType) (bool, uint64, *txfilter.Stat, error) {
+func (f TxFilter) IsExistsAndReturnHeight(txId string, _ ...common.RuleType) (bool, uint64, *txfilter.Stat, error) {
 	start := time.Now()
 	exists, height, err := f.store.TxExistsInFullDB(txId)
 	costs := time.Since(start)
@@ -69,7 +69,7 @@ func (f TxFilter) AddsAndSetHeight(_ []string, _ uint64) error {
 }
 
 // IsExists Check whether TxId exists in the transaction filter
-func (f TxFilter) IsExists(txId string, _ ...birdsnest.RuleType) (bool, *txfilter.Stat, error) {
+func (f TxFilter) IsExists(txId string, _ ...common.RuleType) (bool, *txfilter.Stat, error) {
 	start := time.Now()
 	exists, err := f.store.TxExists(txId)
 	costs := time.Since(start)

@@ -10,21 +10,19 @@ package rpcserver
 import (
 	"context"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
-
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"google.golang.org/protobuf/types/known/wrapperspb"
 
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker-go/module/snapshot"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
+	"chainmaker.org/chainmaker/common/v2/json"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2/archive"
@@ -33,6 +31,7 @@ import (
 	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/time/rate"
+	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
 const (

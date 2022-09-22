@@ -9,9 +9,10 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/json"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"

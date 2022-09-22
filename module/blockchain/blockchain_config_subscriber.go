@@ -34,6 +34,7 @@ func (bc *Blockchain) OnMessage(msg *msgbus.Message) {
 	}
 }
 
+// OnQuit nothing
 func (bc *Blockchain) OnQuit() {
 	// nothing for implement interface msgbus.Subscriber
 }
