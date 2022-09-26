@@ -748,6 +748,7 @@ func (ts *TxScheduler) checkRefundGas(accountMangerContract *commonPb.Contract, 
 		result.ContractResult.Message = err.Error()
 		result.ContractResult.GasUsed = limit
 		result.ContractResult.Result = nil
+		result.ContractResult.ContractEvent = nil
 		return err
 	}
 
@@ -760,6 +761,7 @@ func (ts *TxScheduler) checkRefundGas(accountMangerContract *commonPb.Contract, 
 				result.Message = err.Error()
 				result.ContractResult.Code = uint32(1)
 				result.ContractResult.Message = err.Error()
+				result.ContractResult.ContractEvent = nil
 				return err
 			}
 		}
