@@ -53,3 +53,14 @@ chain_client:
     password: 11111111 # password to logon the HSM(Hardware security module)
     session_cache_size: 10 # size of HSM session cache, default to 10
     hash: "SHA256" # hash algorithm used to compute SKI
+  # KMS settings
+  kms:
+    enabled: false            # kms enable flag, set true if use kms
+    is_public: true           # private cloud kms or public cloud kms, set true if use public kms
+    secret_id: ""             # cloud kms SecretId
+    secret_key: ""            # cloud kms SecretKey
+    address: "127.0.0.1:8080" # kms server address, ip or dns
+    region: "ap-guangzhou"    # kms server region
+    sdk_scheme: "https"       # kms sdk scheme, http or https
+    ext_params: ""            # optional，this is a map string, like "{k1:v1, k2:v2}".
+
