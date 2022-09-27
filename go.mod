@@ -77,7 +77,6 @@ require (
 
 replace (
 	chainmaker.org/chainmaker/net-libp2p => /Users/kunkkawu/Documents/mod_pkg/net-libp2p
-	//chainmaker.org/chainmaker/sdk-go/v2 => /Users/tedcxwang/Documents/tencent.com-dpos/sdk-go
 
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v0.0.0-20220429030713-9efb559f09ad
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.2103.3-0.20220507023220-88f2a60cb489
