@@ -98,7 +98,7 @@ node:
     secret_key: ""
 
     # KMS server address, ip or dns
-    address: "127.0.0.1:8090"
+    address: "kms.tencentcloudapi.com"
 
     # KMS server region
     region: "ap-guangzhou"

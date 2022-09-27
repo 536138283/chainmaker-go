@@ -55,10 +55,10 @@ chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20220922034003-d9f495d7b811 h1:tW
 chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20220922034003-d9f495d7b811/go.mod h1:MHSu0PslTszGboOsXE+9snEOSmXaTbCqhA27T0WYJJQ=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0 h1:8TNEw1XtWBZkjqoNgcc9qoD/0xFkSb0SDXyzM2rQxjo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220922060509-bef3a2805842 h1:NVwAsHIqNP31QboQYsmYHgnc+Ax9n1NQtz+36hGw3Qk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220922060509-bef3a2805842/go.mod h1:n/q8hrvwtBfTkoKMS1Qze9IlXb0anpKzaOd1nSfZktc=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220926123023-236553124e8a h1:aZ6qeH+m7Ewawvx9n3W+gmQZz7dpvc7NOJiNvYrT1eY=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220926123023-236553124e8a/go.mod h1:Vd0E1QiJoSnG5Kcw4ZspQK4YqI3AFnObuc5NcVy/wgU=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220927023404-6b2819f39c2c h1:nNB2+zExHuFg20AVVWH+3jMvpZ/zJC1Z/ZYxkchkQd8=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220927023404-6b2819f39c2c/go.mod h1:rvZ0wVEO3pBEEhN/bbfC4UKGeg+gxjmManI2LTu+c7c=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220927065800-6d7bc3754544 h1:BQc+Fq/2v+yoS1PeGr/ngU/9QF4D/shSTRa854rS3UM=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220927065800-6d7bc3754544/go.mod h1:rvZ0wVEO3pBEEhN/bbfC4UKGeg+gxjmManI2LTu+c7c=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0 h1:Q5tNXukq+B+9asB/PJxOd/d7HltJDyw2scVT008deBQ=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0/go.mod h1:8uuLFeyjEs1jHK2jEvLJBRhfoV6KymFw49PowTduimY=
 chainmaker.org/chainmaker/store-leveldb/v2 v2.3.0 h1:4Y55PFsnNC25LkiDbaV3NBpiWoEMWf/irKoWSBipcWc=
@@ -270,8 +270,6 @@ github.com/bradfitz/go-smtpd v0.0.0-20170404230938-deb6d6237625/go.mod h1:HYsPBT
 github.com/btcsuite/btcd v0.20.1-beta/go.mod h1:wVuoA8VJLEcwgqHBwHmzLRazpKxTv13Px/pDuV7OomQ=
 github.com/btcsuite/btcd v0.21.0-beta h1:At9hIZdJW0s9E/fAz28nrz6AmcNlSVucCH796ZteX1M=
 github.com/btcsuite/btcd v0.21.0-beta/go.mod h1:ZSWyehm27aAuS9bvkATT+Xte3hjHZ+MRgMY/8NJ7K94=
-github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1 h1:q0rUy8C/TYNBQS1+CGKw68tLOFYSNEs0TFnxxnS9+4U=
-github.com/btcsuite/btcd/chaincfg/chainhash v1.0.1/go.mod h1:7SFka0XMvUgj3hfZtydOrQY2mwhPclbT2snogU7SQQc=
 github.com/btcsuite/btclog v0.0.0-20170628155309-84c8d2346e9f/go.mod h1:TdznJufoqS23FtqVCzL0ZqgP5MqXbb4fg/WgDys70nA=
 github.com/btcsuite/btcutil v0.0.0-20190425235716-9e5f4b9a998d/go.mod h1:+5NJ2+qvTyV9exUAL/rxXi3DcLg2Ts+ymUAY5y4NvMg=
 github.com/btcsuite/btcutil v1.0.2 h1:9iZ1Terx9fMIOtq1VrwdqfsATL9MC2l8ZrUY6YZ2uts=
