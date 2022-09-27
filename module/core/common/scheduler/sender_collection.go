@@ -15,6 +15,7 @@ type SenderCollection struct {
 	txsMap map[string]*TxCollection
 }
 
+// TxCollection tx collection struct
 type TxCollection struct {
 	// public key to generate address
 	publicKey crypto.PublicKey
@@ -32,6 +33,7 @@ func (g *TxCollection) String() string {
 		pubKeyStr, g.accountBalance, g.totalGasUsed, len(g.txs))
 }
 
+// NewSenderCollection new sender collection
 func NewSenderCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
@@ -48,17 +50,24 @@ func getSenderTxCollection(
 	log protocol.Logger) map[string]*TxCollection {
 	txCollectionMap := make(map[string]*TxCollection)
 
+	var err error
+	chainCfg, err := snapshot.GetBlockchainStore().GetLastChainConfig()
+	if err != nil {
+		log.Error(err.Error())
+		return txCollectionMap
+	}
+
 	for _, tx := range txBatch {
 		// get the public key from tx
-		pk, err := getPkFromTx(tx, snapshot)
-		if err != nil {
+		pk, err2 := getPkFromTx(tx, snapshot)
+		if err2 != nil {
 			log.Errorf("getPkFromTx failed: err = %v", err)
 			continue
 		}
 
-		// convert the public key to `ZX` address
-		address, err := publicKeyToAddress(pk)
-		if err != nil {
+		// convert the public key to `ZX` or `CM` or `EVM` address
+		address, err2 := publicKeyToAddress(pk, chainCfg)
+		if err2 != nil {
 			log.Error("publicKeyToAddress failed: err = %v", err)
 			continue
 		}
@@ -76,7 +85,6 @@ func getSenderTxCollection(
 		txCollection.txs = append(txCollection.txs, tx)
 	}
 
-	var err error
 	for senderAddress, txCollection := range txCollectionMap {
 		// get the account balance from snapshot
 		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot)
@@ -102,6 +110,7 @@ func getSenderTxCollection(
 	return txCollectionMap
 }
 
+// Clear clear addr in txs map
 func (s SenderCollection) Clear() {
 	for addr := range s.txsMap {
 		delete(s.txsMap, addr)

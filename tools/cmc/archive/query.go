@@ -6,13 +6,11 @@
 package archive
 
 import (
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
-	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/store"
@@ -159,18 +157,8 @@ func newQueryBlockByHeightOffChainCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				var blkWithRWSet = &types.BlockWithRWSet{
-					BlockWithRWSet: &blkWithRWSetOffChain,
-					Block: &types.Block{
-						Block: blkWithRWSetOffChain.Block,
-						Header: &types.BlockHeader{
-							BlockHeader: blkWithRWSetOffChain.Block.Header,
-							BlockHash:   hex.EncodeToString(blkWithRWSetOffChain.Block.Header.BlockHash),
-						},
-					},
-				}
 
-				output, err = prettyjson.Marshal(blkWithRWSet)
+				output, err = prettyjson.Marshal(blkWithRWSetOffChain)
 				if err != nil {
 					return err
 				}
@@ -232,18 +220,8 @@ func newQueryBlockByHashOffChainCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				var blkWithRWSet = &types.BlockWithRWSet{
-					BlockWithRWSet: &blkWithRWSetOffChain,
-					Block: &types.Block{
-						Block: blkWithRWSetOffChain.Block,
-						Header: &types.BlockHeader{
-							BlockHeader: blkWithRWSetOffChain.Block.Header,
-							BlockHash:   hex.EncodeToString(blkWithRWSetOffChain.Block.Header.BlockHash),
-						},
-					},
-				}
 
-				output, err = prettyjson.Marshal(blkWithRWSet)
+				output, err = prettyjson.Marshal(blkWithRWSetOffChain)
 				if err != nil {
 					return err
 				}
@@ -305,18 +283,8 @@ func newQueryBlockByTxIdOffChainCMD() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				var blkWithRWSet = &types.BlockWithRWSet{
-					BlockWithRWSet: &blkWithRWSetOffChain,
-					Block: &types.Block{
-						Block: blkWithRWSetOffChain.Block,
-						Header: &types.BlockHeader{
-							BlockHeader: blkWithRWSetOffChain.Block.Header,
-							BlockHash:   hex.EncodeToString(blkWithRWSetOffChain.Block.Header.BlockHash),
-						},
-					},
-				}
 
-				output, err = prettyjson.Marshal(blkWithRWSet)
+				output, err = prettyjson.Marshal(blkWithRWSetOffChain)
 				if err != nil {
 					return err
 				}

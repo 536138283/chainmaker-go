@@ -12,13 +12,17 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// ConsensusTypeMAXBFT consensus type max bft
 const ConsensusTypeMAXBFT = "MAXBFT"
 
+// NilTMAXBFTProvider nil max bft provider
 var NilTMAXBFTProvider provider.CoreProvider = (*maxbftProvider)(nil)
 
+// maxbftProvider max bft provider
 type maxbftProvider struct {
 }
 
+// NewCoreEngine new core engine by max bft provider return core engine, error
 func (hp *maxbftProvider) NewCoreEngine(config *conf.CoreEngineConfig) (protocol.CoreEngine, error) {
 	return NewCoreEngine(config)
 }

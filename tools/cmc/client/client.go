@@ -23,6 +23,15 @@ var (
 
 	sdkConfPath string // SDK配置路径
 
+	outFilePath string
+
+	dbHost string
+	dbUser string
+	dbPass string
+	dbPort string
+	dbName string
+	sm4Key string
+
 	// 合约参数
 	abiFilePath     string
 	contractName    string
@@ -40,6 +49,7 @@ var (
 	enableCertHash  bool
 	blockHeight     uint64
 	withRWSet       bool
+	truncateValue   bool
 	isAgree         bool
 	txId            string
 
@@ -85,6 +95,10 @@ var (
 	permissionResourcePolicyRule     string
 	permissionResourcePolicyOrgList  []string
 	permissionResourcePolicyRoleList []string
+	respResultToString               bool
+
+	consensusFrom string
+	consensusTo   string
 
 	minSelfDelegation        int
 	epochValidatorNumber     int
@@ -110,6 +124,7 @@ const (
 	flagEnableCertHash                   = "enable-cert-hash"
 	flagBlockHeight                      = "block-height"
 	flagWithRWSet                        = "with-rw-set"
+	flagTruncateValue                    = "truncate-value"
 	flagIsAgree                          = "is-agree"
 	flagTxId                             = "tx-id"
 	flagByteCodePath                     = "byte-code-path"
@@ -152,6 +167,9 @@ const (
 	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
+	flagConsensusFrom                    = "src-consensus"
+	flagConsensusTo                      = "dst-consensus"
+	flagRespResultToString               = "result-to-string"
 	flagMinSelfDelegation                = "min-self-delegation"
 	flagEpochValidatorNumber             = "epoch-validator-number"
 	flagEpochBlockNumber                 = "epoch-block-number"
@@ -159,6 +177,15 @@ const (
 	flagSlashingPerBlock                 = "slashing-per-block"
 	flagDistributionFromSlashing         = "distribution-from-slashing"
 	flagGasExchangeRate                  = "gas-exchange-rate"
+	flagOutFilePath                      = "out-file-path"
+
+	flagDbHost = "db-host"
+	flagDbUser = "db-user"
+	flagDbPass = "db-pass"
+	flagDbPort = "db-port"
+	flagDbName = "db-name"
+	flagSm4Key = "sm4_key"
+
 )
 
 // ClientCMD new client series command
@@ -193,6 +220,14 @@ func init() {
 	// sdk配置路径
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")
 
+	flags.StringVar(&outFilePath, flagOutFilePath, "./testdata/aaa.txt", "specify out_file path")
+	flags.StringVar(&dbHost, flagDbHost, "127.0.0.1", "specify db host")
+	flags.StringVar(&dbUser, flagDbUser, "root", "specify db user")
+	flags.StringVar(&dbPass, flagDbPass, "passw0rd", "specify db password")
+	flags.StringVar(&dbPort, flagDbPort, "3306", "specify db port")
+	flags.StringVar(&dbName, flagDbName, "out_file", "specify db name")
+	flags.StringVar(&sm4Key, flagSm4Key, "BFQ22EDBw1KUz7pfgKzGc1", "specify sm4_key")
+
 	// 用户合约
 	flags.StringVar(&abiFilePath, flagAbiFilePath, "", "specify user EVM contract abi file path, eg: /home/abi.json")
 	flags.StringVar(&contractName, flagContractName, "", "specify user contract name, eg: counter-go-1")
@@ -200,7 +235,7 @@ func init() {
 	flags.StringVar(&version, flagVersion, "", "specify user contract version, eg: 1.0.0")
 	flags.StringVar(&byteCodePath, flagByteCodePath, "", "specify user contract byte code path")
 	flags.StringVar(&runtimeType, flagRuntimeType, "", "specify user contract runtime type, such as: "+
-		"NATIVE | WASMER | WXVM | GASM | EVM | DOCKER_GO | DOCKER_JAVA")
+		"NATIVE | WASMER | WXVM | GASM | EVM | DOCKER_GO | JAVA")
 	flags.StringVar(&chainId, flagChainId, "", "specify the chain id, such as: chain1, chain2 etc.")
 	flags.IntVar(&sendTimes, flagSendTimes, 1, "specify SendTimes , default once")
 	flags.Int64Var(&timeout, flagTimeout, 10, "specify timeout in seconds, default 10s")
@@ -211,6 +246,7 @@ func init() {
 	flags.BoolVar(&syncResult, flagSyncResult, false, "whether wait the result of the transaction, default false")
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash, default true")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet, default true")
+	flags.BoolVar(&truncateValue, flagTruncateValue, false, "enable truncate value, default false")
 	flags.Uint64Var(&blockHeight, flagBlockHeight, 0, "specify block height, default 0")
 	flags.StringVar(&txId, flagTxId, "", "specify tx id")
 	flags.BoolVar(&isAgree, flagIsAgree, true, "specify multi sign vote choice")
@@ -271,6 +307,11 @@ func init() {
 		"chain config permission resource policy org list")
 	flags.StringSliceVar(&permissionResourcePolicyRoleList, flagPermissionResourcePolicyRoleList, []string{},
 		"chain config permission resource policy role list")
+
+	flags.StringVar(&consensusFrom, flagConsensusFrom, "", "specify source consensus")
+	flags.StringVar(&consensusTo, flagConsensusTo, "", "specify destination consensus")
+	flags.BoolVar(&respResultToString, flagRespResultToString, false,
+		"enable convert TxResponse.ContractResult.Result to string for readable output")
 
 	flags.IntVar(&minSelfDelegation, flagMinSelfDelegation, 250000, "the validator minimum staking amount (default 250000)")
 	flags.IntVar(&epochBlockNumber, flagEpochBlockNumber, 32, "the number of blocks contained in a epoch (default 32)")

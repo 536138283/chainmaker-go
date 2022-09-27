@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/protocol/v2/mock"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 	"chainmaker.org/chainmaker/protocol/v2/test"
@@ -24,8 +27,10 @@ func TestNodeStatusMsg(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// 1. the peer status is old
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 90}})
@@ -68,9 +73,11 @@ func TestNodeStatusMsg(t *testing.T) {
 func TestNextHeightToReq(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// 1. add block status
 	for i := uint64(0); i < 5; i++ {
@@ -95,8 +102,10 @@ func TestIsNeedSync(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// 1. add peer status
 	sch.peers["node1"] = 110
@@ -123,8 +132,10 @@ func TestSchedulerMsg(t *testing.T) {
 	defer ctrl.Finish()
 	mockSender := NewMockSender()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	sch := newScheduler(mockSender, mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// 1. add peer status
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 151}})
@@ -142,8 +153,10 @@ func TestSyncedBlockMsg(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	msg := &syncPb.SyncBlockBatch{
 		Data: &syncPb.SyncBlockBatch_BlockinfoBatch{
@@ -173,8 +186,10 @@ func TestProcessedBlockResp(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// 1. add ok process result and check result
 	_, err := sch.handler(&ProcessedBlockResp{height: 6, status: ok, from: "node1"})
@@ -199,8 +214,10 @@ func TestLivenessMsg(t *testing.T) {
 	ctrl := gomock.NewController(t)
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// 1. no any status
 	_, _ = sch.handler(&LivenessMsg{})
@@ -225,8 +242,10 @@ func TestSchedulerFlow(t *testing.T) {
 	defer ctrl.Finish()
 	mockSender := NewMockSender()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
 	sch := newScheduler(mockSender, mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// 1. add peers status
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 100}})
@@ -280,8 +299,12 @@ func TestAddPendingBlocksAndUpdatePendingHeight(t *testing.T) {
 	defer ctrl.Finish()
 	mockSender := NewMockSender()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 0}})
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{
+		Consensus: &config.ConsensusConfig{},
+	}).AnyTimes()
 	sch := newScheduler(mockSender, mockLedger, 128, time.Second, time.Second*3,
-		1, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		1, &test.GoLogger{}, make(chan struct{}), 10, 10, mockConf)
 
 	// init sch
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 256}})

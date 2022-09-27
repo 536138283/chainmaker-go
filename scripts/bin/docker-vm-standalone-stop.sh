@@ -5,17 +5,17 @@
 # SPDX-License-Identifier: Apache-2.0
 #
 
-CONTAINER_NAME=chainmaker-docker-vm
+CONTAINER_NAME=chainmaker-vm-go
 
 docker ps
 
 echo
 
-read -r -p "input container name to stop(default 'chainmaker-docker-vm'): " tmp
+read -r -p "input container name to stop(default 'chainmaker-vm-go'): " tmp
 if  [ -n "$tmp" ] ;then
   CONTAINER_NAME=$tmp
 else
-  echo "container name use default: 'chainmaker-docker-vm'"
+  echo "container name use default: 'chainmaker-vm-go'"
 fi
 
 echo "stop docker vm container"

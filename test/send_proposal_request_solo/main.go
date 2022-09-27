@@ -163,7 +163,7 @@ func runTest() {
 	// 14) 合约执行
 	testUpgradeInvokeSum(sk3, &client, CHAIN1)
 
-	// 15) 批量执行
+	// 15) 批量执行(100/1000并发)
 	txId = testInvokeFactSave(sk3, &client, CHAIN1)
 	time.Sleep(2 * time.Second)
 	testWaitTx(sk3, &client, CHAIN1, txId)

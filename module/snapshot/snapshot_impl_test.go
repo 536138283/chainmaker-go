@@ -22,6 +22,7 @@ import (
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	uatomic "go.uber.org/atomic"
@@ -37,6 +38,15 @@ type MockSimContextImpl struct {
 	txRwSet      *commonPb.TxRWSet
 	currentDepth int
 	txResult     *commonPb.Result
+}
+
+func (s *MockSimContextImpl) GetBlockFingerprint() string {
+	//TODO implement me
+	panic("implement me")
+}
+func (s *MockSimContextImpl) GetKeys(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *MockSimContextImpl) GetSnapshot() protocol.Snapshot {
@@ -203,6 +213,13 @@ func (s *MockSimContextImpl) RemoveRuntimeTypeFromCrossInfo() {
 	panic("impl me")
 }
 
+func (s *MockSimContextImpl) GetConsensusStateWrapper() protocol.ConsensusStateWrapper {
+	return nil
+}
+// GetStrAddrFromPbMember calculate string address from pb Member
+func (s *MockSimContextImpl) GetStrAddrFromPbMember(pbMember *acPb.Member) (string, error) {
+	panic("impl me")
+}
 func TestKey(t *testing.T) {
 	s0 := "你好"
 	b0 := []byte(s0)

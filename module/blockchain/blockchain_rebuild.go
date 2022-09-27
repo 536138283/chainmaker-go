@@ -11,21 +11,22 @@ import (
 	"os"
 
 	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 )
 
 // RebuildDbs Start all the modules.
-func (bc *Blockchain) RebuildDbs() {
+func (bc *Blockchain) RebuildDbs(needVerify bool) {
 	fmt.Printf("###########################")
 	fmt.Printf("###start rebuild-dbs....###")
 	fmt.Printf("###########################")
 	bc.log.Infof("###########################")
 	bc.log.Infof("###start rebuild-dbs....###")
 	bc.log.Infof("###########################")
-	lastBlock, err := bc.oldStore.GetLastBlock()
-	if err != nil {
-		bc.log.Errorf("get lastblockerr(%s)", err.Error())
+	lastBlock, err1 := bc.oldStore.GetLastBlock()
+	if err1 != nil {
+		bc.log.Errorf("get lastblockerr(%s)", err1.Error())
 	} else {
 		bc.log.Infof("lastBlock=%d", lastBlock.Header.BlockHeight)
 	}
@@ -43,9 +44,9 @@ func (bc *Blockchain) RebuildDbs() {
 		}
 	}
 	for i = 1; i <= height; i++ {
-		block, err := bc.oldStore.GetBlock(i)
-		if err != nil {
-			bc.log.Errorf("get block %d err(%s)", i, err.Error())
+		block, err2 := bc.oldStore.GetBlock(i)
+		if err2 != nil {
+			bc.log.Errorf("get block %d err(%s)", i, err2.Error())
 		}
 		bc.log.Debugf("block %d hash is %x", i, block.GetHeader().BlockHash)
 		bc.log.Debugf("block %d prehash is %x", i, block.GetHeader().PreBlockHash)
@@ -57,8 +58,19 @@ func (bc *Blockchain) RebuildDbs() {
 		}
 		preHash = block.GetHeader().BlockHash
 
-		if err := bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1); err != nil {
-			if err == commonErrors.ErrBlockHadBeenCommited {
+		var err3 error
+		if needVerify {
+			err3 = bc.coreEngine.GetBlockVerifier().VerifyBlock(block, -1)
+		} else {
+			blockRwSets, err31 := bc.oldStore.GetBlockWithRWSets(block.Header.BlockHeight)
+			if err31 == nil {
+				err3 = bc.coreEngine.GetBlockVerifier().VerifyBlockWithRwSets(
+					blockRwSets.GetBlock(), blockRwSets.GetTxRWSets(), -1)
+			}
+		}
+
+		if err3 != nil {
+			if err3 == commonErrors.ErrBlockHadBeenCommited {
 				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			} else {
 				fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
@@ -70,8 +82,8 @@ func (bc *Blockchain) RebuildDbs() {
 		}
 
 		//time.Sleep(500*time.Millisecond)
-		if err := bc.coreEngine.GetBlockCommitter().AddBlock(block); err != nil {
-			if err == commonErrors.ErrBlockHadBeenCommited {
+		if err4 := bc.coreEngine.GetBlockCommitter().AddBlock(block); err4 != nil {
+			if err4 == commonErrors.ErrBlockHadBeenCommited {
 				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			} else {
 				fmt.Printf("block[%d] rebuild success.", block.Header.BlockHeight)
@@ -93,4 +105,22 @@ func (bc *Blockchain) RebuildDbs() {
 	bc.log.Infof("###########################")
 	bc.Stop()
 	os.Exit(0)
+}
+
+//SwitchConsensus switch consensus algorithm， stop the old consensus and start the new consensus
+func (bc *Blockchain) SwitchConsensus(consensusConfig *config.ConsensusConfig) error {
+	// chainConf := bc.chainConf.ChainConfig()
+	// chainConf.Consensus = consensusConfig
+	delete(bc.initModules, moduleNameConsensus)
+	bc.StopOnRequirements()
+	if err := bc.Init(); err != nil {
+		bc.log.Errorf("blockchain init failed when switching consensus, %s", err)
+		return err
+	}
+	bc.StopOnRequirements()
+	if err := bc.Start(); err != nil {
+		bc.log.Errorf("blockchain start failed when witching consensus, %s", err)
+		return err
+	}
+	return nil
 }

@@ -37,6 +37,7 @@ const (
 
 var notEnoughParticipantsSupportError = "authentication fail: not enough participants support this action"
 
+// hsmHandleMap is a global handle map for pkcs11 or sdf hsm
 var hsmHandleMap = map[string]interface{}{}
 
 // List of access principals which should not be customized
@@ -51,6 +52,7 @@ var restrainedResourceList = map[string]bool{
 	common.TxType_ARCHIVE.String():         true,
 }
 
+// predifined policies
 var (
 	policyRead = newPolicy(
 		protocol.RuleAny,
@@ -91,6 +93,7 @@ var (
 		[]protocol.Role{
 			protocol.RoleClient,
 			protocol.RoleAdmin,
+			protocol.RoleConsensusNode,
 		},
 	)
 
@@ -204,6 +207,9 @@ type accessControlService struct {
 
 	lastestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
 
+	resourceNamePolicyMap220 *sync.Map
+	exceptionalPolicyMap220  *sync.Map
+
 	//local cache for member
 	memberCache *concurrentlru.Cache
 
@@ -215,6 +221,10 @@ type accessControlService struct {
 	hashType string
 
 	authType string
+
+	pwkNewMember func(member *pbac.Member) (protocol.Member, error)
+
+	getCertVerifyOptions func() *bcx509.VerifyOptions
 }
 
 type memberCached struct {
@@ -225,16 +235,18 @@ type memberCached struct {
 func initAccessControlService(hashType, authType string,
 	store protocol.BlockchainStore, log protocol.Logger) *accessControlService {
 	acService := &accessControlService{
-		orgNum:                0,
-		orgList:               &sync.Map{},
-		resourceNamePolicyMap: &sync.Map{},
-		exceptionalPolicyMap:  &sync.Map{},
-		lastestPolicyMap:      &sync.Map{},
-		memberCache:           concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
-		dataStore:             store,
-		log:                   log,
-		hashType:              hashType,
-		authType:              authType,
+		orgNum:                   0,
+		orgList:                  &sync.Map{},
+		resourceNamePolicyMap:    &sync.Map{},
+		exceptionalPolicyMap:     &sync.Map{},
+		lastestPolicyMap:         &sync.Map{},
+		resourceNamePolicyMap220: &sync.Map{},
+		exceptionalPolicyMap220:  &sync.Map{},
+		memberCache:              concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		dataStore:                store,
+		log:                      log,
+		hashType:                 hashType,
+		authType:                 authType,
 	}
 	return acService
 }
@@ -249,13 +261,6 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
-
-	// only used for test
-	acs.resourceNamePolicyMap.Store(protocol.ResourceNameAllTest, policyAllTest)
-	acs.resourceNamePolicyMap.Store("test_2", policyLimitTestAny)
-	acs.resourceNamePolicyMap.Store("test_2_admin", policyLimitTestAdmin)
-	acs.resourceNamePolicyMap.Store("test_3/4", policyPortionTestAny)
-	acs.resourceNamePolicyMap.Store("test_3/4_admin", policyPortionTestAnyAdmin)
 
 	// for txtype
 	acs.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
@@ -317,10 +322,12 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	// system contract interface resource definitions
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CORE_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
@@ -373,6 +380,8 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
@@ -421,13 +430,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
 	acs.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
-
-	// only used for test
-	acs.resourceNamePolicyMap.Store(protocol.ResourceNameAllTest, policyAllTest)
-	acs.resourceNamePolicyMap.Store("test_2", policyLimitTestAny)
-	acs.resourceNamePolicyMap.Store("test_2_admin", policyLimitTestAdmin)
-	acs.resourceNamePolicyMap.Store("test_3/4", policyPortionTestAny)
-	acs.resourceNamePolicyMap.Store("test_3/4_admin", policyPortionTestAnyAdmin)
 
 	// for txtype
 	acs.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
@@ -506,10 +508,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	// system contract interface resource definitions
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CORE_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), policyConfig)
-
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
@@ -555,6 +559,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
@@ -585,7 +591,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
 	localOrgId string) {
-	switch acs.authType {
+	authType := strings.ToLower(acs.authType)
+	switch authType {
 	case protocol.PermissionedWithCert, protocol.Identity:
 		acs.createDefaultResourcePolicy(localOrgId)
 	case protocol.PermissionedWithKey:
@@ -788,6 +795,13 @@ func (acs *accessControlService) createPrincipalForTargetOrg(resourceName string
 }
 
 func (acs *accessControlService) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+	resourceName = policyResourceName
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpPolicyByResourceName220(resourceName)
+	}
+
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
 		return p.(*policy), nil
 	}
@@ -863,7 +877,49 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 		}
 		return cached.member
 	}
-	return nil
+
+	//handle false positive when member cache is cleared
+	var tmpMember protocol.Member
+	var err error
+	var certChains [][]*bcx509.Certificate
+	if acs.authType == protocol.PermissionedWithCert {
+		tmpMember, err = acs.newCertMember(member)
+		certMember, ok := tmpMember.(*certificateMember)
+		if !ok {
+			return nil
+		}
+		certChains, err = certMember.cert.Verify(*acs.getCertVerifyOptions())
+		if err != nil {
+			acs.log.Debugf("certMember verify cert chain failed, err = %s", err.Error())
+			return nil
+		}
+		if len(certChains) == 0 {
+			acs.log.Debugf("certMember verify cert chain failed, len(certChains) = %d", len(certChains))
+			return nil
+		}
+
+	} else if acs.authType == protocol.PermissionedWithKey {
+		tmpMember, err = acs.pwkNewMember(member)
+	}
+	if err != nil {
+		acs.log.Debugf("new member failed, authType = %s, err = %s", acs.authType, err.Error())
+		return nil
+	}
+	//add to cache
+	if certChains != nil {
+		cached = &memberCached{
+			member:    tmpMember,
+			certChain: certChains[0],
+		}
+	} else {
+		cached = &memberCached{
+			member:    tmpMember,
+			certChain: nil,
+		}
+	}
+	acs.addMemberToCache(string(member.MemberInfo), cached)
+
+	return tmpMember
 }
 
 func (acs *accessControlService) verifyPrincipalPolicy(principal, refinedPrincipal protocol.Principal, p *policy) (
@@ -1111,6 +1167,12 @@ func buildOrgListRoleListOfPolicyForVerifyPrincipal(p *policy) (map[string]bool,
 }
 
 func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpPolicy220(policyResourceName)
+	}
+
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
@@ -1121,9 +1183,20 @@ func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy
 }
 
 func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
+	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
+
+	if blockVersion > 0 && blockVersion <= 220 {
+		return acs.lookUpExceptionalPolicy220(policyResourceName)
+	}
+
 	if p, ok := acs.exceptionalPolicyMap.Load(resourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 
 	}
 	return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
+}
+
+// setVerifyOptionsFunc used to set verifyOptionsFunc which will check if  certificate chain valid
+func (acs *accessControlService) setVerifyOptionsFunc(verifyOptionsFunc func() *bcx509.VerifyOptions) {
+	acs.getCertVerifyOptions = verifyOptionsFunc
 }

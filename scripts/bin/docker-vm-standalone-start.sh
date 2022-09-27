@@ -10,8 +10,8 @@ MOUNT_PATH=$(pwd)/docker-go
 LOG_LEVEL=INFO
 EXPOSE_PORT=22351
 RUNTIME_PORT=32351
-CONTAINER_NAME=chainmaker-docker-vm
-IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0"
+CONTAINER_NAME=chainmaker-vm-go
+IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.0"
 
 
 read -r -p "input path to cache contract files(must be absolute path, default:'./docker-go'): " tmp
@@ -104,12 +104,20 @@ fi
 
 echo "start docker vm container"
 
-docker run -itd --rm \
-  -v "$MOUNT_PATH":/mount \
-  -v "$LOG_PATH":/log \
-  -p "$EXPOSE_PORT":22351 \
-  -e SANDBOX_RPC_PORT="$RUNTIME_PORT" \
-  --name "$CONTAINER_NAME" \
-  --privileged $IMAGE_NAME
+if [ "$DOCKER_VM_CONFIG_FILE" == "" ]; then
+	docker run -itd --net=host \
+		-v "$MOUNT_PATH":/mount \
+		-v "$LOG_PATH":/log \
+		-e CHAIN_RPC_PORT="$EXPOSE_PORT" \
+		-e SANDBOX_RPC_PORT="$RUNTIME_PORT" \
+		--name "$CONTAINER_NAME" \
+		--privileged $IMAGE_NAME
+else
+	docker run -itd --net=host \
+		-v "$MOUNT_PATH":/mount \
+		-v "$LOG_PATH":/log \
+		--name "$CONTAINER_NAME" \
+		--privileged $IMAGE_NAME
+fi
 
 docker ps -a -f name="$CONTAINER_NAME"

@@ -24,28 +24,42 @@ type ProposalCache struct {
 	// block height -> block hash -> block with rw set
 	// since one block height may have multiple block proposals
 	lastProposedBlock map[uint64]map[string]*blockProposal
-	rwMu              sync.RWMutex
-	chainConf         protocol.ChainConf
-	ledgerCache       protocol.LedgerCache
+	// rw lock
+	rwMu sync.RWMutex
+	// chain config
+	chainConf protocol.ChainConf
+	// ledger cache
+	ledgerCache protocol.LedgerCache
+	logger      protocol.Logger
 }
 
 // blockProposal is a struct cached in ProposalCache.
 // Include block, read write set map and other flags needed in Proposer module.
 type blockProposal struct {
-	block                *commonpb.Block              // proposal block
-	rwSetMap             map[string]*commonpb.TxRWSet // read write set of this proposal block
+	// proposal block
+	block *commonpb.Block
+	// read write set of this proposal block
+	rwSetMap map[string]*commonpb.TxRWSet
+	// contract event info map
 	contractEventInfoMap map[string][]*commonpb.ContractEvent
-	isSelfProposed       bool // is this block proposed by this node
-	hasProposedThisRound bool // for *BFT consensus, only propose once at a round.
+	// is this block proposed by this node
+	isSelfProposed bool
+	// for *BFT consensus, only propose once at a round.
+	hasProposedThisRound bool
 }
 
 // NewProposalCache get a ProposalCache.
 // One ProposalCache for one chain.
-func NewProposalCache(chainConf protocol.ChainConf, ledgerCache protocol.LedgerCache) protocol.ProposalCache {
+func NewProposalCache(
+	chainConf protocol.ChainConf,
+	ledgerCache protocol.LedgerCache,
+	logger protocol.Logger) protocol.ProposalCache {
+	// construct proposal cache
 	pc := &ProposalCache{
 		lastProposedBlock: make(map[uint64]map[string]*blockProposal),
 		chainConf:         chainConf,
 		ledgerCache:       ledgerCache,
+		logger:            logger,
 	}
 	return pc
 }
@@ -55,15 +69,20 @@ func (pc *ProposalCache) ClearProposedBlockAt(height uint64) {
 	pc.rwMu.Lock()
 	defer pc.rwMu.Unlock()
 	delete(pc.lastProposedBlock, height)
+	pc.logger.DebugDynamic(func() string {
+		return fmt.Sprintf("clear proposed block from proposal cache, height: %d", height)
+	})
 }
 
 // GetProposedBlock get proposed block with specific block hash in current consensus height.
+// return propose block, reset map, contract event info map
 func (pc *ProposalCache) GetProposedBlock(b *commonpb.Block) (
 	*commonpb.Block, map[string]*commonpb.TxRWSet, map[string][]*commonpb.ContractEvent) {
 	if b == nil || b.Header == nil {
 		return nil, nil, nil
 	}
 	height := b.Header.BlockHeight
+	// calc block fingerprint
 	fingerPrint := utils.CalcBlockFingerPrint(b)
 	// starting lock when we read the map
 	pc.rwMu.RLock()
@@ -78,9 +97,11 @@ func (pc *ProposalCache) GetProposedBlock(b *commonpb.Block) (
 // GetProposedBlocksAt get all proposed blocks at a specific height.
 // It is possible that generate several proposal blocks in one height
 // because of some unpredictable situation of consensus.
+// return proposer blocks at the height
 func (pc *ProposalCache) GetProposedBlocksAt(height uint64) []*commonpb.Block {
 	pc.rwMu.RLock()
 	defer pc.rwMu.RUnlock()
+	// match last propose blocks by height
 	if proposedBlocks, ok := pc.lastProposedBlock[height]; ok {
 		blocks := make([]*commonpb.Block, 0)
 		for _, proposedBlock := range proposedBlocks {
@@ -92,6 +113,7 @@ func (pc *ProposalCache) GetProposedBlocksAt(height uint64) []*commonpb.Block {
 }
 
 // GetProposedBlockByHashAndHeight get proposed block by block hash and block height.
+// return propose block, rw set map
 func (pc *ProposalCache) GetProposedBlockByHashAndHeight(hash []byte, height uint64) (
 	*commonpb.Block, map[string]*commonpb.TxRWSet) {
 	if hash == nil {
@@ -100,6 +122,7 @@ func (pc *ProposalCache) GetProposedBlockByHashAndHeight(hash []byte, height uin
 	// starting lock when we read the map
 	pc.rwMu.RLock()
 	defer pc.rwMu.RUnlock()
+	// match last propose blocks by height and block hash
 	if proposedBlocks, ok := pc.lastProposedBlock[height]; ok {
 		for _, proposedBlock := range proposedBlocks {
 			if bytes.Equal(proposedBlock.block.Header.BlockHash, hash) {
@@ -125,6 +148,7 @@ func (pc *ProposalCache) SetProposedBlock(b *commonpb.Block, rwSetMap map[string
 		// this height has committed, ignore this block
 		return fmt.Errorf("block with invalid height, currentHeight: %d, blockHeight: %d", currentHeight, height)
 	}
+	// calc block fingerprint
 	fingerPrint := utils.CalcBlockFingerPrint(b)
 	bs := &blockProposal{
 		block:                b,
@@ -138,17 +162,33 @@ func (pc *ProposalCache) SetProposedBlock(b *commonpb.Block, rwSetMap map[string
 	if _, ok := pc.lastProposedBlock[height]; !ok {
 		pc.lastProposedBlock[height] = make(map[string]*blockProposal)
 	}
+	// set last proposer block map [height, fingerPrint]
 	pc.lastProposedBlock[height][string(fingerPrint)] = bs
+
+	pc.logger.DebugDynamic(func() string {
+		return fmt.Sprintf(
+			"set proposed block, height: %d, fingerPrint:%s, hash: %x",
+			b.Header.BlockHeight, string(fingerPrint), b.Header.BlockHash)
+	})
+
 	return nil
 }
 
+// ClearTheBlock clear the block in proposed blocks
 func (pc *ProposalCache) ClearTheBlock(block *commonpb.Block) {
 	pc.rwMu.Lock()
 	defer pc.rwMu.Unlock()
 
 	if proposedBlocks, ok := pc.lastProposedBlock[block.Header.BlockHeight]; ok {
+		// calc block fingerprint
 		fingerPrint := utils.CalcBlockFingerPrint(block)
+		// delete fingerprint block in proposed blocks
 		delete(proposedBlocks, string(fingerPrint))
+		pc.logger.DebugDynamic(func() string {
+			return fmt.Sprintf(
+				"clear the block from proposal cache, height: %d, fingerPrint:%s, hash: %x",
+				block.Header.BlockHeight, string(fingerPrint), block.Header.BlockHash)
+		})
 	}
 }
 
@@ -159,6 +199,7 @@ func (pc *ProposalCache) GetSelfProposedBlockAt(height uint64) *commonpb.Block {
 	if proposedBlocks, ok := pc.lastProposedBlock[height]; ok {
 		for _, proposedBlock := range proposedBlocks {
 			if proposedBlock.isSelfProposed {
+				// return self node proposed block
 				return proposedBlock.block
 			}
 		}
@@ -170,6 +211,7 @@ func (pc *ProposalCache) GetSelfProposedBlockAt(height uint64) *commonpb.Block {
 func (pc *ProposalCache) HasProposedBlockAt(height uint64) bool {
 	pc.rwMu.RLock()
 	defer pc.rwMu.RUnlock()
+	// if proposer block has existed, return true
 	_, ok := pc.lastProposedBlock[height]
 	return ok
 }
@@ -216,7 +258,7 @@ func (pc *ProposalCache) ResetProposedAt(height uint64) {
 	}
 }
 
-// Remove proposed block in height except the specific block.
+// KeepProposedBlock Remove proposed block in height except the specific block.
 func (pc *ProposalCache) KeepProposedBlock(hash []byte, height uint64) []*commonpb.Block {
 	blocks := make([]*commonpb.Block, 0)
 	pc.rwMu.Lock()
@@ -226,13 +268,21 @@ func (pc *ProposalCache) KeepProposedBlock(hash []byte, height uint64) []*common
 			if !bytes.Equal(hash, proposedBlock.block.Header.BlockHash) {
 				// remove blocks except this block
 				blocks = append(blocks, proposedBlock.block)
-				delete(proposedBlocks, string(utils.CalcBlockFingerPrint(proposedBlock.block)))
+				fingerPrint := string(utils.CalcBlockFingerPrint(proposedBlock.block))
+				delete(proposedBlocks, fingerPrint)
+
+				pc.logger.DebugDynamic(func() string {
+					return fmt.Sprintf(
+						"remove proposed block from proposal cache, height: %d, fingerPrint:%s, hash: %x",
+						proposedBlock.block.Header.BlockHeight, fingerPrint, proposedBlock.block.Header.BlockHash)
+				})
 			}
 		}
 	}
 	return blocks
 }
 
+// DiscardBlocks discard the block when height > baseHeight, delete the block in lastProposedBlock at the height
 func (pc *ProposalCache) DiscardBlocks(baseHeight uint64) []*commonpb.Block {
 	pc.rwMu.Lock()
 	defer pc.rwMu.Unlock()
@@ -242,6 +292,13 @@ func (pc *ProposalCache) DiscardBlocks(baseHeight uint64) []*commonpb.Block {
 			continue
 		}
 		delete(pc.lastProposedBlock, height)
+
+		pc.logger.DebugDynamic(func() string {
+			return fmt.Sprintf(
+				"discard blocks and remove from proposal cache,remove height: %d, base height: %d",
+				height, baseHeight)
+		})
+
 		for _, blkInfo := range blks {
 			delBlocks = append(delBlocks, blkInfo.block)
 		}
@@ -251,8 +308,10 @@ func (pc *ProposalCache) DiscardBlocks(baseHeight uint64) []*commonpb.Block {
 
 // getHashType return hash type claimed in this chain.
 func (pc *ProposalCache) getHashType() string { //nolint: unused
+	// if chain config not set hash type, return default hash type SHA256
 	if pc.chainConf == nil || pc.chainConf.ChainConfig() == nil {
 		return defaultHashType
 	}
+	// return chain config set the crypto hash
 	return pc.chainConf.ChainConfig().Crypto.Hash
 }

@@ -36,8 +36,21 @@ contract:
   # If it is true, storage.statedb_config.provider in chainmaker.yml should be sql.
   enable_sql_support: false
 
+# Virtual machine related settings
+vm:
+  #0:chainmaker, 1:zxl, 2:ethereum
+  addr_type: 2
+  # support vm list
+  support_list:
+    - "wasmer"
+    - "gasm"
+    - "evm"
+    - "dockergo"
+    - "wxvm"
+
 # Block proposing related settings
 block:
+  # To enable this attribute, ensure that the clock of the node is consistent
   # Verify the transaction timestamp or not
   tx_timestamp_verify: true
 
@@ -51,8 +64,8 @@ block:
   # Max block size, in MB
   block_size: 10
 
-  # The interval of block proposing attempts
-  block_interval: 2000
+  # The interval of block proposing attempts, in millisecond
+  block_interval: 10
 
 # Core settings
 core:
@@ -178,6 +191,11 @@ resource_policies:
       org_list:
       role_list:
         - admin
+  - resource_name: CONTRACT_MANAGE-INIT_CONTRACT
+    policy:
+      rule: ANY
+      org_list:
+      role_list:
 
 # The disabled native contract list
 # Disable the system contract by specifying the system contract name

@@ -36,9 +36,10 @@ contract:
   # If it is true, storage.statedb_config.provider in chainmaker.yml should be sql.
   enable_sql_support: false
 
+# Virtual machine related settings
 vm:
-  #0:chainmaker, 1:zxl, 2:ethereum(reserved)
-  addr_type: 0
+  #0:chainmaker, 1:zxl, 2:ethereum
+  addr_type: 2
   # support vm list
   support_list:
     - "wasmer"
@@ -49,6 +50,7 @@ vm:
 
 # Block proposing related settings
 block:
+  # To enable this attribute, ensure that the clock of the node is consistent
   # Verify the transaction timestamp or not
   tx_timestamp_verify: true
 
@@ -62,8 +64,8 @@ block:
   # Max block size, in MB
   block_size: 10
 
-  # The interval of block proposing attempts
-  block_interval: 2000
+  # The interval of block proposing attempts, in millisecond
+  block_interval: 10
 
 # Core settings
 core:
@@ -96,7 +98,6 @@ core:
 account_config:
   enable_gas: false
   gas_count: 0
-  gas_admin_address: "ZXff78ca3b84e3f5f91ff18b45fc1ecfda2d5990db"
   default_gas: 0
 
 # Consensus settings

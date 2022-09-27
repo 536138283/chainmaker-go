@@ -40,6 +40,7 @@ import (
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	discoveryPb "chainmaker.org/chainmaker/pb-go/v2/discovery"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -783,7 +784,15 @@ func initGRPCConnect(useTLS bool) (*grpc.ClientConn, error) {
 	}
 }
 
-func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, txId string) {
+func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId string, txId string, count ...int) {
+	if count != nil {
+		if count[0] > 200 {
+			panic("等待交易超时")
+		}
+	} else {
+		count = []int{1}
+	}
+	time.Sleep(100 * time.Millisecond)
 	fmt.Printf("\n============ testWaitTx [%s] ============%s\n", txId, time.Now().Format("2006-01-02 15:04:05"))
 	// 构造Payload
 	pair := &commonPb.KeyValuePair{Key: "txId", Value: []byte(txId)}
@@ -795,8 +804,7 @@ func testWaitTx(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId stri
 	resp := common.ProposalRequest(sk3, client, commonPb.TxType_QUERY_CONTRACT,
 		chainId, txId, payloadBytes, nil)
 	if resp == nil || resp.ContractResult == nil || strings.Contains(resp.Message, "no such transaction") {
-		time.Sleep(time.Second * 2)
-		testWaitTx(sk3, client, chainId, txId)
+		testWaitTx(sk3, client, chainId, txId, count[0]+1)
 	} else if resp != nil && len(resp.Message) != 0 {
 		fmt.Println(resp.Message)
 	}
@@ -850,7 +858,7 @@ func evmtest() {
 
 	balanceA := testQueryBalance(sk3, client, CHAIN1, userCrtPath)
 	if balanceA != "1000000000000000000000000000" {
-		fmt.Println("balance A not equal 1000000000000000000000000000 will skip evmtest for later fix")
+		panic("balance A not equal 1000000000000000000000000000 will skip evmtest for later fix")
 		return
 	}
 	balanceB := testQueryBalance(sk3, client, CHAIN1, adminCrtPath)
@@ -909,12 +917,11 @@ func testQueryBalance(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 
 		myAbi, err := abi.JSON(strings.NewReader(AbiJson))
 		checkErr(err)
-		client1Addr, err := getSKI(certPath)
+		client1Addr, err := getUserCert2Address(certPath)
 		checkErr(err)
-		fmt.Printf("User1 SKI:%s\n", client1Addr)
-		addr, err := evm.MakeAddressFromHex(client1Addr)
-
-		dataByte, err := myAbi.Pack(method, evm.BigToAddress(addr))
+		fmt.Printf("User1 address:%s\n", client1Addr)
+		addr, _ := evmutils.HexToAddress(client1Addr)
+		dataByte, err := myAbi.Pack(method, addr)
 
 		checkErr(err)
 
@@ -949,6 +956,24 @@ func testQueryBalance(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainI
 	fmt.Printf("send tx resp: code:%d, msg:%s, payload:%+v\n", resp.Code, resp.Message, resp.ContractResult)
 	return result
 }
+
+func getUserCert2Address(certPath string) (string, error) {
+	certBytes, err := ioutil.ReadFile(certPath)
+	if err != nil {
+		return "", fmt.Errorf("read cert file [%s] failed, %s", certPath, err)
+	}
+
+	block, rest := pem.Decode(certBytes)
+	if len(rest) != 0 {
+		return "", errors.New("pem.Decode failed, invalid cert")
+	}
+	cert, err := bcx509.ParseCertificate(block.Bytes)
+	if err != nil {
+		return "", fmt.Errorf("parseCertificate cert failed, %s", err)
+	}
+	return utils.CertToAddrStr(cert, config.AddrType_ETHEREUM)
+}
+
 func getSKI(certPath string) (string, error) {
 	certBytes, err := ioutil.ReadFile(certPath)
 	if err != nil {
@@ -981,11 +1006,11 @@ func testTransfer(sk3 crypto.PrivateKey, client *apiPb.RpcNodeClient, chainId st
 		method = method0
 		myAbi, err := abi.JSON(strings.NewReader(AbiJson))
 		checkErr(err)
-		toSki, err := getSKI(adminCrtPath)
+		addressStr, err := getUserCert2Address(adminCrtPath)
 		checkErr(err)
-		addr, err := evm.MakeAddressFromHex(toSki)
+		addr, err := evm.HexToAddress(addressStr)
 		checkErr(err)
-		dataByte, err := myAbi.Pack(method, evm.BigToAddress(addr), big.NewInt(10))
+		dataByte, err := myAbi.Pack(method, addr, big.NewInt(10))
 		checkErr(err)
 
 		data := hex.EncodeToString(dataByte)

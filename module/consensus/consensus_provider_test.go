@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker/logger/v2"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	dPos "chainmaker.org/chainmaker/consensus-dpos/v2"
 
@@ -31,6 +33,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"github.com/gogo/protobuf/proto"
 
+	msgbusMock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
 	"github.com/golang/mock/gomock"
 )
 
@@ -49,6 +52,7 @@ type TestBlockchain struct {
 	ledgerCache   protocol.LedgerCache
 	proposalCache protocol.ProposalCache
 	chainConf     protocol.ChainConf
+	logger        protocol.Logger
 }
 
 func (bc *TestBlockchain) MockInit(ctrl *gomock.Controller, consensusType consensuspb.ConsensusType) {
@@ -106,6 +110,12 @@ func (bc *TestBlockchain) MockInit(ctrl *gomock.Controller, consensusType consen
 			97, 86, 97, 55, 74, 75, 117, 101, 54, 74, 75, 82, 74, 90, 113, 121, 106, 77, 97, 77, 57, 104, 104,
 			119, 122, 111, 56, 57, 105, 56, 83, 55, 107, 104, 85, 99, 111, 122, 83, 78, 76, 118, 65, 115, 16, 3}, nil)
 	bc.store = store
+	bc.logger = newMockLogger()
+	bc.msgBus = func() msgbus.MessageBus {
+		msgbus := msgbusMock.NewMockMessageBus(ctrl)
+		msgbus.EXPECT().Register(gomock.Any(), gomock.Any()).AnyTimes()
+		return msgbus
+	}()
 }
 
 func TestNewConsensusEngine(t *testing.T) {
@@ -167,14 +177,15 @@ func TestNewConsensusEngine(t *testing.T) {
 				LedgerCache:   bc.ledgerCache,
 				ProposalCache: bc.proposalCache,
 				MsgBus:        bc.msgBus,
+				Logger:        bc.logger,
 			}
 			got, err := provider(config)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("NewConsensusEngine() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("NewCoreEngine() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if reflect.TypeOf(got) != reflect.TypeOf(tt.want) {
-				t.Errorf("NewConsensusEngine() = %v, want %v", got, tt.want)
+				t.Errorf("NewCoreEngine() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -221,4 +232,8 @@ func registerConsensuses() {
 	//		return maxbft.New(config)
 	//	},
 	//)
+}
+
+func newMockLogger() protocol.Logger {
+	return logger.GetLoggerByChain(logger.MODULE_CONSENSUS, "test_chain_id")
 }

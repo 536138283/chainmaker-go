@@ -13,8 +13,10 @@ import (
 
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
+	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -100,7 +102,9 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
 	mockCommit := newMockCommitter(ctrl, mockLedger)
 	log := &test.GoLogger{}
-	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, log)
+	mockConf := mock.NewMockChainConf(ctrl)
+	mockConf.EXPECT().ChainConfig().Return(&config.ChainConfig{Consensus: &config.ConsensusConfig{}}).AnyTimes()
+	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, log, mockConf)
 	require.NoError(t, service.Start())
 	return service, func() {
 		service.Stop()

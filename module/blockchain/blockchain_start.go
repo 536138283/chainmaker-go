@@ -35,7 +35,7 @@ func (bc *Blockchain) Start() error {
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
 	}
-	if bc.isModuleInit(moduleNameVM) && !bc.isModuleStartUp(moduleNameVM) {
+	if bc.isModuleInit(moduleNameVM) {
 		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVM})
 	}
 
@@ -81,7 +81,7 @@ func (bc *Blockchain) StartForRebuildDbs() error {
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
 	}
-	if bc.isModuleInit(moduleNameVM) && !bc.isModuleStartUp(moduleNameVM) {
+	if bc.isModuleInit(moduleNameVM) {
 		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVM})
 	}
 	total := len(startModules)

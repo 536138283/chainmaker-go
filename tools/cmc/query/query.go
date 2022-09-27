@@ -16,6 +16,7 @@ var (
 	chainId        string
 	enableCertHash bool
 	withRWSet      bool
+	truncateValue  bool
 )
 
 const (
@@ -23,6 +24,7 @@ const (
 	flagChainId        = "chain-id"
 	flagEnableCertHash = "enable-cert-hash"
 	flagWithRWSet      = "with-rw-set"
+	flagTruncateValue  = "truncate-value"
 )
 
 // NewQueryOnChainCMD new query on-chain blockchain data command
@@ -52,4 +54,5 @@ func init() {
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet")
+	flags.BoolVar(&truncateValue, flagTruncateValue, true, "enable truncate value, default true")
 }

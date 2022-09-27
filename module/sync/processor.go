@@ -13,7 +13,6 @@ import (
 
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 
-	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/Workiva/go-datastructures/queue"
@@ -31,12 +30,15 @@ type blockWithPeerInfo struct {
 	rwsets     []*commonPb.TxRWSet
 }
 
+//processor used to verify that the received block data that needs to be verified is valid
 type processor struct {
-	queue          map[uint64]blockWithPeerInfo // Information about the blocks will be processed
-	hasCommitBlock uint64                       // Number of blocks that have been commit
-
-	log         protocol.Logger
-	ledgerCache protocol.LedgerCache // Provides the latest chain state for the node
+	// Information about the blocks will be processed
+	queue map[uint64]blockWithPeerInfo
+	// Number of blocks that have been commit
+	hasCommitBlock uint64
+	log            protocol.Logger
+	// Provides the latest chain state for the node
+	ledgerCache protocol.LedgerCache
 	verifyAndAddBlock
 }
 
@@ -66,6 +68,7 @@ func (pro *processor) handler(event queue.Item) (queue.Item, error) {
 	return nil, nil
 }
 
+//handleReceivedBlockInfos put the received block data into its own queue
 func (pro *processor) handleReceivedBlockInfos(msg *ReceivedBlockInfos) {
 	pro.log.Info("handleReceivedBlockInfos start")
 	lastCommitBlockHeight := pro.lastCommitBlockHeight()
@@ -110,6 +113,8 @@ func (pro *processor) handleStopSyncMsg() {
 	pro.queue = make(map[uint64]blockWithPeerInfo)
 }
 
+//handleProcessBlockMsg validate and commit block data
+//spit out the result of the verification for the next step
 func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
 	var (
 		exist  bool
@@ -122,7 +127,7 @@ func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
 		return nil, nil
 	}
 	pro.log.Debugf("process block [height: %d] start, status [%d]", info.blk.Header.BlockHeight, status)
-	if info.withRWSets && localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable {
+	if info.withRWSets {
 		if status = pro.validateAndCommitBlockWithRwSets(info.blk, info.rwsets); status == ok || status == hasProcessed {
 			pro.hasCommitBlock++
 		}
@@ -131,6 +136,7 @@ func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
 			pro.hasCommitBlock++
 		}
 	}
+	//Clear processed data
 	delete(pro.queue, pendingBlockHeight)
 	pro.log.Infof("process block [height: %d] success, status [%d]", info.blk.Header.BlockHeight, status)
 	pro.log.DebugDynamic(pro.getServiceState)
@@ -141,6 +147,7 @@ func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
 	}, nil
 }
 
+//handleDataDetection eliminate invalid data from the maintained data list
 func (pro *processor) handleDataDetection() {
 	pendingBlockHeight := pro.lastCommitBlockHeight() + 1
 	for height := range pro.queue {

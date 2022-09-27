@@ -10,10 +10,12 @@ import (
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
+// GenerateNewBlock generate new block, return block, timeList used by all steps, or error
 func (bp *BlockProposerImpl) generateNewBlock(proposingHeight uint64, preHash []byte,
 	txBatch []*commonpb.Transaction, batchIds []string, fetchBatches [][]*commonpb.Transaction) (
 	*commonpb.Block, []int64, error) {
 
+	// return block, timeList used by all steps, or error
 	return bp.blockBuilder.GenerateNewBlock(
 		proposingHeight,
 		preHash,

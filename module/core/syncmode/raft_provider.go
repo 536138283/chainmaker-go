@@ -12,13 +12,17 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// ConsensusTypeRAFT consensus type raft
 const ConsensusTypeRAFT = "RAFT"
 
+// NilRAFTProvider nil raft provider
 var NilRAFTProvider provider.CoreProvider = (*raftProvider)(nil)
 
+// raft provider
 type raftProvider struct {
 }
 
+// NewCoreEngine by raft provider
 func (rp *raftProvider) NewCoreEngine(config *conf.CoreEngineConfig) (protocol.CoreEngine, error) {
 	return NewCoreEngine(config)
 }

@@ -48,6 +48,11 @@ type certificateMember struct {
 	isCompressed bool
 }
 
+// GetPk returns the public key
+func (cm *certificateMember) GetPk() bccrypto.PublicKey {
+	return cm.cert.PublicKey
+}
+
 // GetMemberId returns the identity of this member (non-uniqueness)
 func (cm *certificateMember) GetMemberId() string {
 	return cm.id

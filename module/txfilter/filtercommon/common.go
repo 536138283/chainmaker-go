@@ -93,10 +93,14 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 			AbsoluteExpireTime: conf.BirdsNest.Rules.AbsoluteExpireTime,
 		}
 		snapshot := &bn.SnapshotSerializerConfig{
-			Type:        bn.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
-			Timed:       &bn.TimedSerializeIntervalConfig{Interval: int64(conf.BirdsNest.Snapshot.Timed.Interval)},
-			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: uint64(conf.BirdsNest.Snapshot.Timed.Interval)},
-			Path:        conf.BirdsNest.Snapshot.Path,
+			Type: bn.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
+			Timed: &bn.TimedSerializeIntervalConfig{
+				Interval: int64(conf.BirdsNest.Snapshot.Timed.Interval),
+			},
+			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{
+				Interval: uint64(conf.BirdsNest.Snapshot.BlockHeight.Interval),
+			},
+			Path: conf.BirdsNest.Snapshot.Path,
 		}
 		c.BirdsNest = &bn.BirdsNestConfig{
 			Length:   conf.BirdsNest.Length,
@@ -117,10 +121,14 @@ func ToPbConfig(conf localconf.TxFilterConfig, chainId string) (*TxFilterConfig,
 			return nil, errors.New(err)
 		}
 		snapshot := &bn.SnapshotSerializerConfig{
-			Type:        bn.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
-			Timed:       &bn.TimedSerializeIntervalConfig{Interval: int64(conf.BirdsNest.Snapshot.Timed.Interval)},
-			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{Interval: uint64(conf.BirdsNest.Snapshot.Timed.Interval)},
-			Path:        conf.ShardingBirdsNest.Snapshot.Path,
+			Type: bn.SerializeIntervalType(conf.BirdsNest.Snapshot.Type),
+			Timed: &bn.TimedSerializeIntervalConfig{
+				Interval: int64(conf.ShardingBirdsNest.Snapshot.Timed.Interval),
+			},
+			BlockHeight: &bn.BlockHeightSerializeIntervalConfig{
+				Interval: uint64(conf.ShardingBirdsNest.Snapshot.BlockHeight.Interval),
+			},
+			Path: conf.ShardingBirdsNest.Snapshot.Path,
 		}
 		rules := &bn.RulesConfig{
 			AbsoluteExpireTime: conf.ShardingBirdsNest.BirdsNest.Rules.AbsoluteExpireTime,

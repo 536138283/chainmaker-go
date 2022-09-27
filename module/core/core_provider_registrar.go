@@ -12,6 +12,7 @@ import (
 	syncMode "chainmaker.org/chainmaker-go/module/core/syncmode"
 )
 
+// init core init provider with consensus type
 func init() {
 	provider.RegisterCoreEngineProvider(syncMode.ConsensusTypeSOLO, syncMode.NilSOLOProvider)
 	provider.RegisterCoreEngineProvider(syncMode.ConsensusTypeRAFT, syncMode.NilRAFTProvider)

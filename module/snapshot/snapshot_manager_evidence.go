@@ -13,13 +13,14 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// ManagerEvidence manager evidence
 type ManagerEvidence struct {
 	delegate  *ManagerDelegate
 	snapshots map[utils.BlockFingerPrint]*SnapshotEvidence
 	log       protocol.Logger
 }
 
-// When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
+// NewSnapshot When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
 func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
@@ -42,6 +43,8 @@ func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb
 		evidenceSnapshot.SetPreSnapshot(prevSnapshot)
 	}
 
+	evidenceSnapshot.SetBlockFingerprint(fingerPrint)
+
 	m.log.Infof(
 		"create snapshot at height %d, fingerPrint[%v] -> prevFingerPrint[%v]",
 		blockHeight,
@@ -51,6 +54,17 @@ func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb
 	return evidenceSnapshot
 }
 
+// GetSnapshot Get a Snapshot from SnapshotManager for read, don't modify any data.
+func (m *ManagerEvidence) GetSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
+	fingerPrint := utils.CalcBlockFingerPrint(block)
+	snapshot, exist := m.snapshots[fingerPrint]
+	if !exist {
+		return m.NewSnapshot(prevBlock, block)
+	}
+	return snapshot
+}
+
+// NotifyBlockCommitted notify to block committed
 func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
@@ -86,5 +100,33 @@ func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 			snapshot.SetPreSnapshot(nil)
 		}
 	}
+	return nil
+}
+
+// ClearSnapshot clear snapshot by block
+// @param block
+// @return error
+func (m *ManagerEvidence) ClearSnapshot(block *commonPb.Block) error {
+	m.delegate.lock.Lock()
+	defer m.delegate.lock.Unlock()
+
+	m.log.Infof("clear snapshot@%s at height %d", block.Header.ChainId, block.Header.BlockHeight)
+
+	// 计算需要删除的区块指纹
+	deleteFp := utils.CalcBlockFingerPrintWithoutTx(block)
+	deleteFpEx := calcNotConsensusFingerPrint(block)
+
+	delete(m.snapshots, deleteFp)
+
+	// 删除未共识的区块指纹
+	if _, ok := m.snapshots[deleteFpEx]; ok {
+		delete(m.snapshots, deleteFpEx)
+		m.log.Infof("delete snapshot@%s %v & %v at height %d",
+			block.Header.ChainId, deleteFp, deleteFpEx, block.Header.BlockHeight)
+	} else {
+		m.log.Infof("delete snapshot@%s %v at height %d",
+			block.Header.ChainId, deleteFp, block.Header.BlockHeight)
+	}
+
 	return nil
 }

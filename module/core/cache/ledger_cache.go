@@ -4,7 +4,7 @@ Copyright (C) BABEC. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-// Package ledger is cache for current block and proposal blocks
+// Package cache Package ledger is cache for current block and proposal blocks
 package cache
 
 import (
@@ -18,9 +18,12 @@ import (
 
 // LedgerCache is used for cache current block info
 type LedgerCache struct {
-	chainId            string
+	// chain id
+	chainId string
+	// last committed block
 	lastCommittedBlock *commonpb.Block
-	rwMu               sync.RWMutex
+	// rw lock used by LedgerCache
+	rwMu sync.RWMutex
 }
 
 // NewLedgerCache get a ledger cache.

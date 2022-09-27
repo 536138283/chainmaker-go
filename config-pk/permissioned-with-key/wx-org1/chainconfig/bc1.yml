@@ -17,13 +17,24 @@ crypto:
 contract:
   enable_sql_support: false
 
+# 虚拟机配置
+vm:
+  addr_type: 2 #0:chainmaker, 1:zxl, 2:ethereum
+  # 虚拟机支持列表
+  support_list:
+    - "wasmer"
+    - "gasm"
+    - "evm"
+    - "dockergo"
+    - "wxvm"
+
 # 交易、区块相关配置
 block:
   tx_timestamp_verify: true # 是否需要开启交易时间戳校验
   tx_timeout: 600  # 交易时间戳的过期时间(秒)
   block_tx_capacity: 100  # 区块中最大交易数
   block_size: 10  # 区块最大限制，单位MB
-  block_interval: 2000 # 出块间隔，单位:ms
+  block_interval: 10 # 出块间隔，单位:ms
 
 # core模块
 core:
@@ -34,6 +45,11 @@ core:
     retry_time: 500 # 根据交易ID列表从交易池获取交易的重试次数
     retry_interval: 20 # 重试间隔，单位:ms
 
+# gas account config
+account_config:
+  enable_gas: false
+  gas_count: 0
+  default_gas: 0
 
 #共识配置
 consensus:
@@ -92,3 +108,8 @@ resource_policies:
       org_list:
       role_list:
         - admin
+  - resource_name: CONTRACT_MANAGE-INIT_CONTRACT
+    policy:
+      rule: ANY
+      org_list:
+      role_list:

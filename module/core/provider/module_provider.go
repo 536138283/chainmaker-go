@@ -11,6 +11,8 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// CoreProvider core provider interface
 type CoreProvider interface {
+	// NewCoreEngine return core engine, error
 	NewCoreEngine(config *conf.CoreEngineConfig) (protocol.CoreEngine, error)
 }

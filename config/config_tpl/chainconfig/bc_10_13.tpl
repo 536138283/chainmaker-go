@@ -39,8 +39,8 @@ contract:
 # Virtual machine related settings
 vm:
   # Address type
-  # 0-chainmaker, 1-zxl, 3-ethereum(reserved value, which is not supported in the current version)
-  addr_type: 0
+  # 0-chainmaker, 1-zxl, 2-ethereum
+  addr_type: 2
   # Virtual machine support list, In the current version, there are wasmer, gasm, evm and dockergo
   # virtual machines to choose from. One or more virtual machines can be configured to be started
   support_list:
@@ -52,6 +52,7 @@ vm:
 
 # Block proposing related settings
 block:
+  # To enable this attribute, ensure that the clock of the node is consistent
   # Verify the transaction timestamp or not
   tx_timestamp_verify: true
 
@@ -65,8 +66,8 @@ block:
   # Max block size, in MB
   block_size: 10
 
-  # The interval of block proposing attempts
-  block_interval: 2000
+  # The interval of block proposing attempts, in millisecond
+  block_interval: 10
 
 # Core settings
 core:
@@ -94,6 +95,12 @@ core:
 
     # Retry interval of fetching transaction in txpool by txid, in ms.
     # retry_interval: 20
+
+# gas account config
+account_config:
+  enable_gas: false
+  gas_count: 0
+  default_gas: 0
 
 # snapshot settings
 # snapshot:
@@ -235,6 +242,11 @@ resource_policies:
       org_list:
       role_list:
         - admin
+  - resource_name: CONTRACT_MANAGE-INIT_CONTRACT
+    policy:
+      rule: ANY
+      org_list:
+      role_list:
 
 # The disabled native contract list
 # Disable the system contract by specifying the system contract name

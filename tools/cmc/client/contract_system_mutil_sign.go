@@ -8,13 +8,11 @@ import (
 	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
@@ -240,13 +238,13 @@ func multiSignVote() error {
 			return fmt.Errorf("multi sign vote failed, %s", err.Error())
 		}
 	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, crypto.HashAlgoMap[client.GetHashType()],
+		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
 			adminOrg, payload)
 		if err != nil {
 			return fmt.Errorf("multi sign vote failed, %s", err.Error())
 		}
 	} else {
-		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, crypto.HashAlgoMap[client.GetHashType()],
+		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
 			"", payload)
 		if err != nil {
 			return fmt.Errorf("multi sign vote failed, %s", err.Error())

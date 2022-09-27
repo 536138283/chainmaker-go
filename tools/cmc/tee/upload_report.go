@@ -14,7 +14,6 @@ import (
 	"os"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
@@ -100,7 +99,7 @@ func cliUploadReport() error {
 
 			endorsementEntrys[i] = e
 		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(adminKeys[i], crypto.HashAlgoMap[client.GetHashType()],
+			e, err := sdkutils.MakePkEndorserWithPath(adminKeys[i], client.GetHashType(),
 				adminOrgs[i], payload)
 			if err != nil {
 				return err

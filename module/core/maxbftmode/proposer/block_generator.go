@@ -10,6 +10,7 @@ import (
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
+// generateNewBlock generate new block
 func (bp *BlockProposerImpl) generateNewBlock(proposingHeight uint64, preHash []byte,
 	txBatch []*commonpb.Transaction, batchIds []string, fetchBatches [][]*commonpb.Transaction) (
 	*commonpb.Block, []int64, error) {

@@ -15,7 +15,7 @@ RELEASE_PATH=${PROJECT_PATH}/build/release
 BACKUP_PATH=${PROJECT_PATH}/build/backup
 BUILD_CRYPTO_CONFIG_PATH=${BUILD_PATH}/crypto-config
 BUILD_CONFIG_PATH=${BUILD_PATH}/config
-VERSION=v2.3.0_alpha
+VERSION=v2.4.0_alpha
 DATETIME=$(date "+%Y%m%d%H%M%S")
 PLATFORM=$(uname -m)
 system=$(uname)
@@ -59,10 +59,12 @@ function package() {
     tar -zcf crypto-config-$DATETIME.tar.gz ../crypto-config
 
     c=0
+    dirNames[0]=""
     for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
     do
-        c=$(($c+1))
         chainmaker_file=chainmaker-$VERSION-$file
+        dirNames[$c]=$chainmaker_file
+        c=$(($c+1))
         mkdir $chainmaker_file
         mkdir $chainmaker_file/bin
         mkdir $chainmaker_file/lib
@@ -91,8 +93,15 @@ function package() {
         xsed "s%{org_id}%$file%g"         $chainmaker_file/bin/restart.sh
         xsed "s%{org_id}%$file%g"         $chainmaker_file/bin/run.sh
         echo "tar zcf ${chainmaker_file}..."
-        tar -zcf chainmaker-$VERSION-$file-$DATETIME-$PLATFORM.tar.gz $chainmaker_file
-        rm -rf $chainmaker_file
+        tar -zcf chainmaker-$VERSION-$file-$DATETIME-$PLATFORM.tar.gz $chainmaker_file &
+#        rm -rf $chainmaker_file
+    done
+    echo "wait tar..."
+    wait
+    for dirName in ${dirNames[@]}
+    do
+      # echo "rm -rf $PROJECT_PATH/build/release/$dirName"
+      rm -rf $PROJECT_PATH/build/release/$dirName
     done
 }
 

@@ -33,13 +33,15 @@ fi
 function start_chainmaker() {
   cd $SCRIPT_PATH
   ./cluster_quick_stop.sh clean
+  if [ "${alreadyBuild}" != "true" ]; then
   echo -e "\n\n【generate】 certs and config..."
-#  echo -e "\nINFO\n\n\n" | ./prepare_pk.sh $node_count $chain_count
+    echo -e "\nINFO\n\n\n" | ./prepare_pk.sh $node_count $chain_count
   echo -e "\n\n【build】 release..."
   ./build_release.sh
+  fi
   echo -e "\n\n【start】 chainmaker..."
   ./cluster_quick_start.sh normal
-  sleep 1
+  sleep 3
 
   echo "【chainmaker】 process..."
   ps -ef | grep chainmaker
@@ -93,7 +95,6 @@ function cmc_test() {
     --params="{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" \
     --sync-result=true
 
-  sleep 31
 
 #  for ((i=1;i<11;i++))
 #  do
@@ -121,4 +122,4 @@ function cat_log() {
 start_chainmaker
 prepare_cmc
 cmc_test
-#cat_log
+cat_log

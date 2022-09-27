@@ -13,7 +13,6 @@ import (
 	"io/ioutil"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
@@ -124,7 +123,7 @@ func configTrustRoot(op int) error {
 	}
 	defer client.Stop()
 
-	adminKeys, adminCrts, adminOrgs, err := makeAdminInfo(client)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
 		return err
 	}
@@ -171,7 +170,7 @@ func configTrustRoot(op int) error {
 		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
 			e, err := sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
+				client.GetHashType(),
 				adminOrgs[i],
 				payload,
 			)
@@ -183,7 +182,7 @@ func configTrustRoot(op int) error {
 		} else {
 			e, err := sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
+				client.GetHashType(),
 				"",
 				payload,
 			)

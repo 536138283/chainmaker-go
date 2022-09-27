@@ -46,6 +46,10 @@ type pkMember struct {
 	hashType string
 }
 
+func (pm *pkMember) GetPk() bccrypto.PublicKey {
+	return pm.pk
+}
+
 // GetMemberId returns the identity of this member (non-uniqueness)
 func (pm *pkMember) GetMemberId() string {
 	return pm.id

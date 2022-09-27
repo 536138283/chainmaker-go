@@ -8,12 +8,9 @@ else
     endif
 endif
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
-VERSION=v2.3.0_alpha
+VERSION=v2.4.0
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
-
-AARCH64="aarch64"
-CPU=$(shell uname -m)
 
 LOCALCONF_HOME=chainmaker.org/chainmaker-go/module/blockchain
 GOLDFLAGS += -X "${LOCALCONF_HOME}.CurrentVersion=${VERSION}"
@@ -22,18 +19,13 @@ GOLDFLAGS += -X "${LOCALCONF_HOME}.GitBranch=${GIT_BRANCH}"
 GOLDFLAGS += -X "${LOCALCONF_HOME}.GitCommit=${GIT_COMMIT}"
 
 chainmaker:
-ifeq ("$(CPU)",$(AARCH64))
-ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.aarch64),)
-	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.x86_64
-	mv module/vm/wasmer/wasmer-go/libwasmer.so.aarch64 module/vm/wasmer/wasmer-go/libwasmer.so
-endif
-else
-ifneq ($(wildcard module/vm/wasmer/wasmer-go/libwasmer.so.x86_64),)
-	mv module/vm/wasmer/wasmer-go/libwasmer.so module/vm/wasmer/wasmer-go/libwasmer.so.aarch64
-	mv module/vm/wasmer/wasmer-go/libwasmer.so.x86_64 module/vm/wasmer/wasmer-go/libwasmer.so
-endif
-endif
-	@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
+    ifeq ($(PLATFORM),"Windows")
+		@echo "build for windows"
+		@rm -rf go.sum && cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker.exe
+    else
+		@echo "build for linux or mac"
+		@rm -rf go.sum && cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
+    endif
 
 chainmaker-vendor:
 	@cd main && go build -mod=vendor -o ../bin/chainmaker
@@ -55,7 +47,7 @@ compile:
 	@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
 
 cmc:
-	@cd tools/cmc && GOPATH=${GOPATH} go build -o ../../bin/cmc
+	@cd tools/cmc && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../../bin/cmc
 
 send-tool:
 	cd test/send_proposal_request_tool && go build -o ../../bin/send_proposal_request_tool
@@ -100,21 +92,56 @@ test-deploy:
 
 sql-qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
-	cd test/send_proposal_request_ci && ./clean_sql_log.sh
+	cd test/chain2 && ./stop.sh
+	cd test/chain2 && ./clean.sh
 	echo "start new sql-qta test"
-	cd test/send_proposal_request_ci && ./build.sh
-	cd test/send_proposal_request_ci && ./start_sql_tbft_4.sh
-	cd test/send_proposal_request_sql && go run main.go
-	cd test/send_proposal_request_ci && ./stop_sql_tbft_4.sh
-	cd test/send_proposal_request_ci && ./clean_sql_log.sh
-qta:
+	cd test/chain2 && ./build.sh
+	cd test/chain2 && ./start.sh
+	cd test/scenario0_native && python3 chain2.py
+	cd test/scenario1_evm && python3 chain2.py
+	cd test/scenario2_rust && python3 chain2.py
+	cd test/scenario4_wasmer_sql && python3 chain2.py
+	cd test/chain2 && ./stop.sh
+	cd test/chain2 && ./clean.sh
+
+qta: cert-qta pub-qta docker-qta
+
+cert-qta:
 	echo "clear environment"
-	cd test/send_proposal_request_ci && ./stop_force.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
-	echo "start new qta test"
-	cd test/send_proposal_request_ci && ./build.sh
-	cd test/send_proposal_request_ci && ./start_solo.sh
-	cd test/send_proposal_request_ci && go run main.go
-	cd test/send_proposal_request_ci && ./stop_solo.sh
-	cd test/send_proposal_request_ci && ./clean_data_log.sh
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+	echo "start new cert-qta test"
+	cd test/chain1 && ./build.sh
+	cd test/chain1 && ./start.sh
+	cd test/scenario0_native && python3 chain1.py
+	cd test/scenario1_evm && python3 chain1.py
+	cd test/scenario2_rust && python3 chain1.py
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+
+pub-qta:
+	echo "clear environment"
+	cd test/chain3 && ./stop.sh
+	cd test/chain3 && ./clean.sh
+	echo "start new pub-qta test"
+	cd test/chain3 && ./build.sh
+	cd test/chain3 && ./start.sh
+	cd test/scenario0_native && python3 chain3.py
+	cd test/scenario1_evm && python3 chain3.py
+	#cd test/scenario2_rust && python3 chain3.py  #Rust合约不能启用Gas
+	cd test/chain3 && ./stop.sh
+	cd test/chain3 && ./clean.sh
+
+docker-qta:
+	echo "clear environment"
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+	echo "start new docker-qta test"
+	cd scripts/docker && ./build-dockergo.sh
+	cd test/chain1 && ./build.sh
+	cd test/chain1 && ./docker-start.sh
+	cd test/chain1 && ./start.sh
+	cd test/scenario3_dockergo && python3 chain1.py
+	cd test/chain1 && ./stop.sh
+	cd test/chain1 && ./clean.sh
+	docker rm -f  `docker ps -aq -f name=ci-chain1`

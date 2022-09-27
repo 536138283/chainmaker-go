@@ -3,6 +3,7 @@ Copyright (C) BABEC. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package common
 
 import (
@@ -21,6 +22,7 @@ const (
 	blockVersion230 = uint32(2300)
 )
 
+// CommitBlock commit block struct
 type CommitBlock struct {
 	store           protocol.BlockchainStore
 	log             protocol.Logger
@@ -39,7 +41,7 @@ func (cb *CommitBlock) CommitBlock(
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEventLasts, filterLasts int64, blockInfo *commonpb.BlockInfo,
 	err error) {
 	// record block
-	rwSet := RearrangeRWSet(block, rwSetMap)
+	rwSet := utils.RearrangeRWSet(block, rwSetMap)
 	// record contract event
 	events := rearrangeContractEvent(block, conEventMap)
 

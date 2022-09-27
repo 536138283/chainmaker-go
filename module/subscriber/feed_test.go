@@ -1,5 +1,4 @@
 /*
-Copyright (C) BABEC. All rights reserved.
 Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
@@ -9,144 +8,317 @@ package subscriber
 
 import (
 	"fmt"
+	"reflect"
 	"sync"
 	"testing"
+	"time"
 )
 
-const LEN = 3
-
-type eventSubTest struct {
-	wg              sync.WaitGroup
-	bytesCh         chan []byte
-	bytesSub        Subscription
-	bytesSubscribed chan bool
-	bytesFeed       Feed
-	stringCh        []chan string
-	stringSub       []Subscription
-	strSubscribed   []chan bool
-	stringFeed      Feed
+func TestFeedPanics(t *testing.T) {
+	{
+		var f Feed
+		f.Send(2)
+		want := feedTypeError{op: "Send", got: reflect.TypeOf(uint64(0)), want: reflect.TypeOf(0)}
+		if err := checkPanic(want, func() { f.Send(uint64(2)) }); err != nil {
+			t.Error(err)
+		}
+	}
+	{
+		var f Feed
+		ch := make(chan int)
+		f.Subscribe(ch)
+		want := feedTypeError{op: "Send", got: reflect.TypeOf(uint64(0)), want: reflect.TypeOf(0)}
+		if err := checkPanic(want, func() { f.Send(uint64(2)) }); err != nil {
+			t.Error(err)
+		}
+	}
+	{
+		var f Feed
+		f.Send(2)
+		want := feedTypeError{op: "Subscribe", got: reflect.TypeOf(make(chan uint64)), want: reflect.TypeOf(make(chan<- int))}
+		if err := checkPanic(want, func() { f.Subscribe(make(chan uint64)) }); err != nil {
+			t.Error(err)
+		}
+	}
+	{
+		var f Feed
+		if err := checkPanic(errBadChannel, func() { f.Subscribe(make(<-chan int)) }); err != nil {
+			t.Error(err)
+		}
+	}
+	{
+		var f Feed
+		if err := checkPanic(errBadChannel, func() { f.Subscribe(0) }); err != nil {
+			t.Error(err)
+		}
+	}
 }
 
-func (s *eventSubTest) SendStrMsg(msg string) {
-	s.stringFeed.Send(msg)
-	fmt.Printf("send string msg: %s\n", msg)
-}
-
-func (s *eventSubTest) SendBytesMsg(msg []byte) {
-	s.bytesFeed.Send(msg)
-	fmt.Printf("send bytes msg: %s\n", string(msg))
-}
-
-func (s *eventSubTest) SubscribeStringEvent(ch chan<- string, index int) {
-	s.stringSub[index] = s.stringFeed.Subscribe(ch)
-	s.strSubscribed[index] <- true
-	fmt.Printf("subscribe string[%v] event: %v\n", index, s.stringSub)
-}
-
-func (s *eventSubTest) SubscribeBytesEvent(ch chan<- []byte) {
-	s.bytesSub = s.bytesFeed.Subscribe(ch)
-	s.bytesSubscribed <- true
-	fmt.Printf("subscribe bytes event: %v\n", s.bytesSub)
+func checkPanic(want error, fn func()) (err error) {
+	defer func() {
+		p := recover()
+		if p == nil {
+			err = fmt.Errorf("didn't panic")
+		} else if !reflect.DeepEqual(p, want) {
+			err = fmt.Errorf("panicked with wrong error: got %q, want %q", p, want)
+		}
+	}()
+	fn()
+	return nil
 }
 
 func TestFeed(t *testing.T) {
-	et := &eventSubTest{
-		stringFeed:      Feed{},
-		bytesFeed:       Feed{},
-		stringCh:        make([]chan string, LEN),
-		bytesCh:         make(chan []byte),
-		strSubscribed:   make([]chan bool, LEN),
-		bytesSubscribed: make(chan bool),
-		stringSub:       make([]Subscription, LEN),
+	var feed Feed
+	var done, subscribed sync.WaitGroup
+	subscriber := func(i int) {
+		defer done.Done()
+
+		subchan := make(chan int)
+		sub := feed.Subscribe(subchan)
+		timeout := time.NewTimer(2 * time.Second)
+		defer timeout.Stop()
+		subscribed.Done()
+
+		select {
+		case v := <-subchan:
+			if v != 1 {
+				t.Errorf("%d: received value %d, want 1", i, v)
+			}
+		case <-timeout.C:
+			t.Errorf("%d: receive timeout", i)
+		}
+
+		sub.Unsubscribe()
+		select {
+		case _, ok := <-sub.Err():
+			if ok {
+				t.Errorf("%d: error channel not closed after unsubscribe", i)
+			}
+		case <-timeout.C:
+			t.Errorf("%d: unsubscribe timeout", i)
+		}
 	}
 
-	for i := 0; i < LEN; i++ {
-		et.stringCh[i] = make(chan string)
-		et.strSubscribed[i] = make(chan bool)
+	const n = 1000
+	done.Add(n)
+	subscribed.Add(n)
+	for i := 0; i < n; i++ {
+		go subscriber(i)
+	}
+	subscribed.Wait()
+	if nsent := feed.Send(1); nsent != n {
+		t.Errorf("first send delivered %d times, want %d", nsent, n)
+	}
+	if nsent := feed.Send(2); nsent != 0 {
+		t.Errorf("second send delivered %d times, want 0", nsent)
+	}
+	done.Wait()
+}
+
+func TestFeedSubscribeSameChannel(t *testing.T) {
+	var (
+		feed Feed
+		done sync.WaitGroup
+		ch   = make(chan int)
+		sub1 = feed.Subscribe(ch)
+		sub2 = feed.Subscribe(ch)
+		_    = feed.Subscribe(ch)
+	)
+	expectSends := func(value, n int) {
+		if nsent := feed.Send(value); nsent != n {
+			t.Errorf("send delivered %d times, want %d", nsent, n)
+		}
+		done.Done()
+	}
+	expectRecv := func(wantValue, n int) {
+		for i := 0; i < n; i++ {
+			if v := <-ch; v != wantValue {
+				t.Errorf("received %d, want %d", v, wantValue)
+			}
+		}
 	}
 
-	et.wg.Add(1)
-	go func() {
-		cnt := 0
-		for {
-			select {
-			case x0 := <-et.stringCh[0]:
-				fmt.Printf("string chan0 read data[%s]\n", x0)
-				cnt++
-			case x1 := <-et.stringCh[1]:
-				fmt.Printf("string chan1 read data[%s]\n", x1)
-				cnt++
-			case x2 := <-et.stringCh[2]:
-				fmt.Printf("string chan2 read data[%s]\n", x2)
-				cnt++
-			case y0 := <-et.bytesCh:
-				fmt.Printf("bytes chan read data[%s]\n", string(y0))
-				et.bytesSub.Unsubscribe()
-				cnt++
-			default:
+	done.Add(1)
+	go expectSends(1, 3)
+	expectRecv(1, 3)
+	done.Wait()
 
-			}
+	sub1.Unsubscribe()
 
-			if cnt == LEN+1 {
-				for i := 0; i < LEN; i++ {
-					et.stringSub[i].Unsubscribe()
-				}
-				fmt.Printf("unsubscribe select, cnt:%v\n", cnt)
-				break
-			}
+	done.Add(1)
+	go expectSends(2, 2)
+	expectRecv(2, 2)
+	done.Wait()
+
+	sub2.Unsubscribe()
+
+	done.Add(1)
+	go expectSends(3, 1)
+	expectRecv(3, 1)
+	done.Wait()
+}
+
+func TestFeedSubscribeBlockedPost(t *testing.T) {
+	var (
+		feed   Feed
+		nsends = 2000
+		ch1    = make(chan int)
+		ch2    = make(chan int)
+		wg     sync.WaitGroup
+	)
+	defer wg.Wait()
+
+	feed.Subscribe(ch1)
+	wg.Add(nsends)
+	for i := 0; i < nsends; i++ {
+		go func() {
+			feed.Send(99)
+			wg.Done()
+		}()
+	}
+
+	sub2 := feed.Subscribe(ch2)
+	defer sub2.Unsubscribe()
+
+	// We're done when ch1 has received N times.
+	// The number of receives on ch2 depends on scheduling.
+	for i := 0; i < nsends; {
+		select {
+		case <-ch1:
+			i++
+		case <-ch2:
 		}
-		et.wg.Done()
+	}
+}
+
+func TestFeedUnsubscribeBlockedPost(t *testing.T) {
+	var (
+		feed   Feed
+		nsends = 200
+		chans  = make([]chan int, 2000)
+		subs   = make([]Subscription, len(chans))
+		bchan  = make(chan int)
+		bsub   = feed.Subscribe(bchan)
+		wg     sync.WaitGroup
+	)
+	for i := range chans {
+		chans[i] = make(chan int, nsends)
+	}
+
+	// Queue up some Sends. None of these can make progress while bchan isn't read.
+	wg.Add(nsends)
+	for i := 0; i < nsends; i++ {
+		go func() {
+			feed.Send(99)
+			wg.Done()
+		}()
+	}
+	// Subscribe the other channels.
+	for i, ch := range chans {
+		subs[i] = feed.Subscribe(ch)
+	}
+	// Unsubscribe them again.
+	for _, sub := range subs {
+		sub.Unsubscribe()
+	}
+	// Unblock the Sends.
+	bsub.Unsubscribe()
+	wg.Wait()
+}
+
+// Checks that unsubscribing a channel during Send works even if that
+// channel has already been sent on.
+func TestFeedUnsubscribeSentChan(t *testing.T) {
+	var (
+		feed Feed
+		ch1  = make(chan int)
+		ch2  = make(chan int)
+		sub1 = feed.Subscribe(ch1)
+		sub2 = feed.Subscribe(ch2)
+		wg   sync.WaitGroup
+	)
+	defer sub2.Unsubscribe()
+
+	wg.Add(1)
+	go func() {
+		feed.Send(0)
+		wg.Done()
 	}()
 
-	et.wg.Add(1)
+	// Wait for the value on ch1.
+	<-ch1
+	// Unsubscribe ch1, removing it from the send cases.
+	sub1.Unsubscribe()
+
+	// Receive ch2, finishing Send.
+	<-ch2
+	wg.Wait()
+
+	// Send again. This should send to ch2 only, so the wait group will unblock
+	// as soon as a value is received on ch2.
+	wg.Add(1)
 	go func() {
-		cnt := 0
-		subedCnt := 0
-		for {
-			select {
-			case <-et.strSubscribed[0]:
-				fmt.Println("receive subscribed string chan0")
-				subedCnt++
-			case <-et.strSubscribed[1]:
-				fmt.Println("receive subscribed string chan1")
-				subedCnt++
-			case <-et.strSubscribed[2]:
-				fmt.Println("receive subscribed string chan2")
-				subedCnt++
-			case <-et.bytesSubscribed:
-				et.SendBytesMsg([]byte("test bytes feed"))
-				cnt++
-			default:
+		feed.Send(0)
+		wg.Done()
+	}()
+	<-ch2
+	wg.Wait()
+}
 
-			}
+func TestFeedUnsubscribeFromInbox(t *testing.T) {
+	var (
+		feed Feed
+		ch1  = make(chan int)
+		ch2  = make(chan int)
+		sub1 = feed.Subscribe(ch1)
+		sub2 = feed.Subscribe(ch1)
+		sub3 = feed.Subscribe(ch2)
+	)
+	if len(feed.inbox) != 3 {
+		t.Errorf("inbox length != 3 after subscribe")
+	}
+	if len(feed.sendCases) != 1 {
+		t.Errorf("sendCases is non-empty after unsubscribe")
+	}
 
-			if subedCnt == LEN {
-				et.SendStrMsg("test string feed")
-				subedCnt = 0
-				cnt++
-			}
+	sub1.Unsubscribe()
+	sub2.Unsubscribe()
+	sub3.Unsubscribe()
+	if len(feed.inbox) != 0 {
+		t.Errorf("inbox is non-empty after unsubscribe")
+	}
+	if len(feed.sendCases) != 1 {
+		t.Errorf("sendCases is non-empty after unsubscribe")
+	}
+}
 
-			if cnt == 2 {
-				break
-			}
+func BenchmarkFeedSend1000(b *testing.B) {
+	var (
+		done  sync.WaitGroup
+		feed  Feed
+		nsubs = 1000
+	)
+	subscriber := func(ch <-chan int) {
+		for i := 0; i < b.N; i++ {
+			<-ch
 		}
-		et.wg.Done()
-	}()
+		done.Done()
+	}
+	done.Add(nsubs)
+	for i := 0; i < nsubs; i++ {
+		ch := make(chan int, 200)
+		feed.Subscribe(ch)
+		go subscriber(ch)
+	}
 
-	et.wg.Add(1)
-	go func() {
-		et.SubscribeStringEvent(et.stringCh[0], 0)
-		et.SubscribeStringEvent(et.stringCh[1], 1)
-		et.SubscribeStringEvent(et.stringCh[2], 2)
-		et.wg.Done()
-	}()
+	// The actual benchmark.
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if feed.Send(i) != nsubs {
+			panic("wrong number of sends")
+		}
+	}
 
-	et.wg.Add(1)
-	go func() {
-		et.SubscribeBytesEvent(et.bytesCh)
-		et.wg.Done()
-	}()
-
-	et.wg.Wait()
-	fmt.Printf("chan cnt of string: %v, bytes: %v\n", len(et.stringCh), len(et.bytesCh))
+	b.StopTimer()
+	done.Wait()
 }
