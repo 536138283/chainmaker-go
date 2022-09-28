@@ -875,6 +875,7 @@ func (ts *TxScheduler) checkGasEnable() bool {
 	return false
 }
 
+// unused
 func (ts *TxScheduler) checkCoinbaseEnable() bool {
 	//TODO：增加coinbase配置
 	return false
@@ -1165,6 +1166,7 @@ func (ts *TxScheduler) createChargeGasTx(
 	}, nil
 }
 
+// unused
 func (ts *TxScheduler) createCoinbaseTx(
 	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
 
@@ -1518,6 +1520,7 @@ func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*co
 	}, nil
 }
 
+// unused
 func (ts *TxScheduler) appendCoinbaseToDAG(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot) {
