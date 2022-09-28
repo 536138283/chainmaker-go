@@ -100,13 +100,13 @@ var (
 	consensusFrom string
 	consensusTo   string
 
-	minSelfDelegation        int
-	epochValidatorNumber     int
-	epochBlockNumber         int
-	distributionPerBlock     int
-	slashingPerBlock         int
-	distributionFromSlashing int // nolint: unused
-	gasExchangeRate          int
+	minSelfDelegation    int
+	epochValidatorNumber int
+	epochBlockNumber     int
+	distributionPerBlock int
+	slashingPerBlock     int
+	//distributionFromSlashing int // nolint: unused
+	gasExchangeRate int
 )
 
 const (
@@ -175,9 +175,9 @@ const (
 	flagEpochBlockNumber                 = "epoch-block-number"
 	flagDistributionPerBlock             = "distribution-per-block"
 	flagSlashingPerBlock                 = "slashing-per-block"
-	flagDistributionFromSlashing         = "distribution-from-slashing" // nolint: unused
-	flagGasExchangeRate                  = "gas-exchange-rate"
-	flagOutFilePath                      = "out-file-path"
+	//flagDistributionFromSlashing         = "distribution-from-slashing" // nolint: unused
+	flagGasExchangeRate = "gas-exchange-rate"
+	flagOutFilePath     = "out-file-path"
 
 	flagDbHost = "db-host"
 	flagDbUser = "db-user"

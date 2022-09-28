@@ -39,9 +39,9 @@ func dposConfigCMD() *cobra.Command {
 	chainConfigCmd.AddCommand(readGasExchangeRateCMD())
 
 	//多签操作
-	//chainConfigCmd.AddCommand(setMinSelfDelegationCMD())
-	//chainConfigCmd.AddCommand(setEpochBlockNumberCMD())
-	//chainConfigCmd.AddCommand(setEpochValidatorNumberCMD())
+	chainConfigCmd.AddCommand(setMinSelfDelegationCMD())
+	chainConfigCmd.AddCommand(setEpochBlockNumberCMD())
+	chainConfigCmd.AddCommand(setEpochValidatorNumberCMD())
 	chainConfigCmd.AddCommand(setEpochBlockNumberAndValidatorNumberCMD())
 	chainConfigCmd.AddCommand(setDistributionPerBlockCMD())
 	chainConfigCmd.AddCommand(setSlashingPerBlockCMD())
@@ -50,8 +50,8 @@ func dposConfigCMD() *cobra.Command {
 	//erc20 管理员操作
 	//不再使用，改用多签方式操作
 	//chainConfigCmd.AddCommand(updateEpochBlocNumberCMD())
-	//chainConfigCmd.AddCommand(updateDistributionPerBlockCMD())
-	//chainConfigCmd.AddCommand(updateGasExchangeRateCMD())
+	chainConfigCmd.AddCommand(updateDistributionPerBlockCMD())
+	chainConfigCmd.AddCommand(updateGasExchangeRateCMD())
 
 	return chainConfigCmd
 }
@@ -60,24 +60,24 @@ func dposConfigCMD() *cobra.Command {
 // readMinSelfDelegationCMD returns the minimum number of delegates,
 // this method is not available for the time being
 // @return *cobra.Command
-func readMinSelfDelegationCMD() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "read-min-self-delegation",
-		Short: "read min self delegation",
-		Long:  "read min self delegation",
-		RunE: func(_ *cobra.Command, _ []string) error {
-			return getMinSelfDelegation()
-		},
-	}
-
-	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
-		flagSdkConfPath, flagOrgId, flagEnableCertHash,
-		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
-	})
-
-	return cmd
-}
+//func readMinSelfDelegationCMD() *cobra.Command {
+//	cmd := &cobra.Command{
+//		Use:   "read-min-self-delegation",
+//		Short: "read min self delegation",
+//		Long:  "read min self delegation",
+//		RunE: func(_ *cobra.Command, _ []string) error {
+//			return getMinSelfDelegation()
+//		},
+//	}
+//
+//	attachFlags(cmd, []string{
+//		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+//		flagSdkConfPath, flagOrgId, flagEnableCertHash,
+//		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
+//	})
+//
+//	return cmd
+//}
 
 // readEpochBlocNumberCMD returns the configuration of the number of blocks in an epoch
 // @return *cobra.Command
@@ -421,44 +421,43 @@ func updateGasExchangeRateCMD() *cobra.Command {
 // Realize that the erc20 contract administrator can perform this operation.
 // This time, the multi-signature method is used to perform this operation.
 // @return *cobra.Command
-//nolint: unused
-func updateEpochBlocNumber(epochBlockNumber int) error {
-	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
-	if err != nil {
-		return fmt.Errorf("create user client failed, %s", err.Error())
-	}
-	defer client.Stop()
-	resp, err := client.SetEpochBlockNumber(epochBlockNumber)
-	if err != nil {
-		return fmt.Errorf("update epoch bloc number failed, %s", err.Error())
-	}
-
-	fmt.Printf("response %+v\n", resp)
-	return nil
-}
+//func updateEpochBlocNumber(epochBlockNumber int) error {
+//	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+//		userSignCrtFilePath, userSignKeyFilePath)
+//	if err != nil {
+//		return fmt.Errorf("create user client failed, %s", err.Error())
+//	}
+//	defer client.Stop()
+//	resp, err := client.SetEpochBlockNumber(epochBlockNumber)
+//	if err != nil {
+//		return fmt.Errorf("update epoch bloc number failed, %s", err.Error())
+//	}
+//
+//	fmt.Printf("response %+v\n", resp)
+//	return nil
+//}
 
 // getMinSelfDelegation returns the minimum number of delegates,
 // this method is not available for the time being
-func getMinSelfDelegation() error {
-	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
-	if err != nil {
-		return fmt.Errorf("create user client failed, %s", err.Error())
-	}
-	defer client.Stop()
-	chainConfig, err := client.GetMinSelfDelegation()
-	if err != nil {
-		return fmt.Errorf("get chain config failed, %s", err.Error())
-	}
-
-	output, err := prettyjson.Marshal(chainConfig)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(output))
-	return nil
-}
+//func getMinSelfDelegation() error {
+//	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+//		userSignCrtFilePath, userSignKeyFilePath)
+//	if err != nil {
+//		return fmt.Errorf("create user client failed, %s", err.Error())
+//	}
+//	defer client.Stop()
+//	chainConfig, err := client.GetMinSelfDelegation()
+//	if err != nil {
+//		return fmt.Errorf("get chain config failed, %s", err.Error())
+//	}
+//
+//	output, err := prettyjson.Marshal(chainConfig)
+//	if err != nil {
+//		return err
+//	}
+//	fmt.Println(string(output))
+//	return nil
+//}
 
 // getEpochBlockNumber returns the configuration of the number of blocks in an epoch
 func getEpochBlockNumber() error {
