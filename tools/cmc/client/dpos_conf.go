@@ -8,13 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 package client
 
 import (
+	"fmt"
+	"strings"
+
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	"fmt"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/hokaccha/go-prettyjson"
@@ -55,6 +56,7 @@ func dposConfigCMD() *cobra.Command {
 	return chainConfigCmd
 }
 
+// nolint: unused
 // readMinSelfDelegationCMD returns the minimum number of delegates,
 // this method is not available for the time being
 // @return *cobra.Command
@@ -182,6 +184,7 @@ func readGasExchangeRateCMD() *cobra.Command {
 	return cmd
 }
 
+//nolint: unused
 // setMinSelfDelegationCMD set the minimum number of delegates,
 // this method is not available for the time being
 // @return *cobra.Command
@@ -207,6 +210,7 @@ func setMinSelfDelegationCMD() *cobra.Command {
 	return cmd
 }
 
+//nolint: unused
 // setEpochBlockNumberCMD set the configuration of the number of blocks in an epoch
 // this method is not available for the time being
 // need to use setEpochBlockNumberAndValidatorNumberCMD, modify 2 configurations at the same time,
@@ -234,6 +238,7 @@ func setEpochBlockNumberCMD() *cobra.Command {
 	return cmd
 }
 
+//nolint: unused
 // setEpochBlockNumberCMD set the configuration of the number of validators in an epoch
 // this method is not available for the time being
 // need to use setEpochBlockNumberAndValidatorNumberCMD, modify 2 configurations at the same time,
@@ -416,6 +421,7 @@ func updateGasExchangeRateCMD() *cobra.Command {
 // Realize that the erc20 contract administrator can perform this operation.
 // This time, the multi-signature method is used to perform this operation.
 // @return *cobra.Command
+//nolint: unused
 func updateEpochBlocNumber(epochBlockNumber int) error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
@@ -646,6 +652,7 @@ func getEndorsementEntrys(client *sdk.ChainClient,
 
 // setMinSelfDelegation set the minimum number of delegates,
 // this method is not available for the time being
+//nolint: unused
 func setMinSelfDelegation() error {
 	client, adminKeys, adminCrts, adminOrgs, err := getClientAndAdmin(
 		sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -714,6 +721,7 @@ func setEpochBlocNumber() error {
 	return nil
 }
 
+//nolint: unused
 // setEpochValidatorNumber set the configuration of the number of validators in an epoch
 // this method is not available for the time being
 func setEpochValidatorNumber() error {
@@ -890,6 +898,7 @@ func setGasExchangeRate() error {
 // updateDistributionPerBlock
 // Realize that the erc20 contract administrator can perform this operation.
 // This time, the multi-signature method is used to perform this operation.
+//nolint: unused
 func updateDistributionPerBlock(distributionPerBlock int) error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
@@ -909,6 +918,7 @@ func updateDistributionPerBlock(distributionPerBlock int) error {
 // updateGasExchangeRate
 // Realize that the erc20 contract administrator can perform this operation.
 // This time, the multi-signature method is used to perform this operation.
+//nolint: unused
 func updateGasExchangeRate(gasExchangeRate int) error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)

@@ -8,11 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 package cert
 
 import (
-	"chainmaker.org/chainmaker/utils/v2"
 	"encoding/pem"
 	"errors"
 	"fmt"
 	"io/ioutil"
+
+	"chainmaker.org/chainmaker/utils/v2"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -57,7 +58,7 @@ func certToUserAddrInStake() *cobra.Command {
 				}
 			}
 
-			addr,err := utils.PkToAddrStr(pk, pbconfig.AddrType_CHAINMAKER, hashType)
+			addr, err := utils.PkToAddrStr(pk, pbconfig.AddrType_CHAINMAKER, hashType)
 			if err != nil {
 				return fmt.Errorf("pk to addr str failed, reason: %s", err)
 			}
@@ -89,5 +90,5 @@ func getPubkeyFromCert(certContent []byte) (crypto.PublicKey, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse cert failed, reason: %s", err)
 	}
-	return cert.PublicKey,nil
+	return cert.PublicKey, nil
 }

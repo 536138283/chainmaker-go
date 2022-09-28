@@ -105,7 +105,7 @@ var (
 	epochBlockNumber         int
 	distributionPerBlock     int
 	slashingPerBlock         int
-	distributionFromSlashing int
+	distributionFromSlashing int // nolint: unused
 	gasExchangeRate          int
 )
 
@@ -175,7 +175,7 @@ const (
 	flagEpochBlockNumber                 = "epoch-block-number"
 	flagDistributionPerBlock             = "distribution-per-block"
 	flagSlashingPerBlock                 = "slashing-per-block"
-	flagDistributionFromSlashing         = "distribution-from-slashing"
+	flagDistributionFromSlashing         = "distribution-from-slashing" // nolint: unused
 	flagGasExchangeRate                  = "gas-exchange-rate"
 	flagOutFilePath                      = "out-file-path"
 
@@ -185,7 +185,6 @@ const (
 	flagDbPort = "db-port"
 	flagDbName = "db-name"
 	flagSm4Key = "sm4_key"
-
 )
 
 // ClientCMD new client series command
@@ -313,9 +312,11 @@ func init() {
 	flags.BoolVar(&respResultToString, flagRespResultToString, false,
 		"enable convert TxResponse.ContractResult.Result to string for readable output")
 
-	flags.IntVar(&minSelfDelegation, flagMinSelfDelegation, 250000, "the validator minimum staking amount (default 250000)")
+	flags.IntVar(&minSelfDelegation, flagMinSelfDelegation, 250000,
+		"the validator minimum staking amount (default 250000)")
 	flags.IntVar(&epochBlockNumber, flagEpochBlockNumber, 32, "the number of blocks contained in a epoch (default 32)")
-	flags.IntVar(&epochValidatorNumber, flagEpochValidatorNumber, 4, "the number of validators in a epoch (default 4)")
+	flags.IntVar(&epochValidatorNumber, flagEpochValidatorNumber, 4,
+		"the number of validators in a epoch (default 4)")
 	flags.IntVar(&distributionPerBlock, flagDistributionPerBlock, 100, "amount of reward per block (default 100)")
 	flags.IntVar(&slashingPerBlock, flagSlashingPerBlock, 100, "penalty amount for each less proposed block (default 100)")
 	flags.IntVar(&gasExchangeRate, flagGasExchangeRate, 1, "gas exchange rate")

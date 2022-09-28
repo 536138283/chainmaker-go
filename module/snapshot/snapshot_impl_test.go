@@ -216,6 +216,7 @@ func (s *MockSimContextImpl) RemoveRuntimeTypeFromCrossInfo() {
 func (s *MockSimContextImpl) GetConsensusStateWrapper() protocol.ConsensusStateWrapper {
 	return nil
 }
+
 // GetStrAddrFromPbMember calculate string address from pb Member
 func (s *MockSimContextImpl) GetStrAddrFromPbMember(pbMember *acPb.Member) (string, error) {
 	panic("impl me")
