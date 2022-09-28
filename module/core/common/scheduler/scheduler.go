@@ -212,15 +212,16 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	// if the block is not empty, append the charging gas tx
-	//if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
-	//	ts.log.Debug("append charge gas tx to block ...")
-	//	ts.appendChargeGasTx(block, snapshot, senderCollection)
-	//}
-
-	if ts.checkCoinbaseEnable() {
-		ts.log.Debug("append coinbase tx to block ...")
-		ts.appendCoinbaseTx(block, snapshot, senderCollection)
+	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+		ts.log.Debug("append charge gas tx to block ...")
+		ts.appendChargeGasTx(block, snapshot, senderCollection)
 	}
+
+	//TODO: gastx 需要与 coinbasetx合并
+	//if ts.checkCoinbaseEnable() {
+	//	ts.log.Debug("append coinbase tx to block ...")
+	//	ts.appendCoinbaseTx(block, snapshot, senderCollection)
+	//}
 
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
@@ -876,7 +877,7 @@ func (ts *TxScheduler) checkGasEnable() bool {
 
 func (ts *TxScheduler) checkCoinbaseEnable() bool {
 	//TODO：增加coinbase配置
-	return true
+	return false
 }
 
 func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
@@ -1059,6 +1060,7 @@ func (ts *TxScheduler) appendChargeGasTx(
 	ts.appendChargeGasTxToDAG(block.Dag, snapshot)
 }
 
+// unused
 func (ts *TxScheduler) appendCoinbaseTx(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot,
