@@ -1135,12 +1135,23 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 		}
 		for _, tx := range b.Txs {
 			if _, ok := keepTxs[tx.Payload.TxId]; !ok {
-				txRetry = append(txRetry, tx)
+				if !isOptimizedChargingGasTx(tx) {
+					txRetry = append(txRetry, tx)
+				}
 			}
 		}
 	}
 
 	return txRetry, batchRetry, nil, nil
+}
+
+func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
+	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
+		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
+		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+		return true
+	}
+	return false
 }
 
 //nolint: ineffassign, staticcheck
