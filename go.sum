@@ -3,7 +3,6 @@ chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20220906150733-4aa890ffe987 h1:l
 chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20220906150733-4aa890ffe987/go.mod h1:qZjUItz5s34378MkcLkO56Taa57hN3Y8q+5rjYFgf60=
 chainmaker.org/chainmaker/common/v2 v2.2.2-0.20220601090655-ddcadbaf280f/go.mod h1:9XlRMLjG6V4JlovJA0zjsz9NZRDV8Em6mCQQ1DZNnQA=
 chainmaker.org/chainmaker/common/v2 v2.3.0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
-chainmaker.org/chainmaker/common/v2 v2.3.1-0.20220906083046-5489258f3450 h1:aj8TaRAtEWvNjcJglgLgwryabMVh9rohoK7ESAay7Ag=
 chainmaker.org/chainmaker/common/v2 v2.3.1-0.20220906083046-5489258f3450/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/common/v2 v2.3.1-0.20220919093133-6733cb52da50 h1:baUnkQnURNfo+YBIl0b27b0uMHc3ZW3qqwlBEskvlPM=
 chainmaker.org/chainmaker/common/v2 v2.3.1-0.20220919093133-6733cb52da50/go.mod h1:3PxYuojcH5aYIbJTxm4SXIZOxkqaPbjYKmY1HacEzig=
@@ -63,14 +62,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20220922073312-97e7e7dffe71 h1:cR
 chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20220922073312-97e7e7dffe71/go.mod h1:MHSu0PslTszGboOsXE+9snEOSmXaTbCqhA27T0WYJJQ=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0 h1:8TNEw1XtWBZkjqoNgcc9qoD/0xFkSb0SDXyzM2rQxjo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220922060509-bef3a2805842 h1:NVwAsHIqNP31QboQYsmYHgnc+Ax9n1NQtz+36hGw3Qk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220922060509-bef3a2805842/go.mod h1:n/q8hrvwtBfTkoKMS1Qze9IlXb0anpKzaOd1nSfZktc=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220927092026-c3b973731047 h1:yAkGIrbJ0rqcWlWb1wM2lgC7bnmfLkofgE28KCS9cjY=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220927092026-c3b973731047/go.mod h1:rvZ0wVEO3pBEEhN/bbfC4UKGeg+gxjmManI2LTu+c7c=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220928071040-d427b4b5333a h1:QRElVFaSzBqrYTQPHcqm27MBHMaf0nprf9UCLYFqHRI=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220928071040-d427b4b5333a/go.mod h1:jUAw3i6+ED7+jomKsyt+EAdYdkr9RcisQtjS4TkAjHY=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220928071828-5f6bcb93b840 h1:JHKyXtJ44hOb/xBgHFScV7dAEF8F7I+5ynR9yKr/GOw=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220928071828-5f6bcb93b840/go.mod h1:jUAw3i6+ED7+jomKsyt+EAdYdkr9RcisQtjS4TkAjHY=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220928073418-5f131d79ec92 h1:Cu/vi8O+JW7M0bsOK2GhAJ3WWNIy/k6f5qJ34AhKwD8=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20220928073418-5f131d79ec92/go.mod h1:jUAw3i6+ED7+jomKsyt+EAdYdkr9RcisQtjS4TkAjHY=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0 h1:Q5tNXukq+B+9asB/PJxOd/d7HltJDyw2scVT008deBQ=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0/go.mod h1:8uuLFeyjEs1jHK2jEvLJBRhfoV6KymFw49PowTduimY=
 chainmaker.org/chainmaker/store-leveldb/v2 v2.3.0 h1:4Y55PFsnNC25LkiDbaV3NBpiWoEMWf/irKoWSBipcWc=
