@@ -618,7 +618,7 @@ func getEndorsementEntrys(client *sdk.ChainClient,
 		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
 			e, err := sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
+				crypto.HashAlgoMap[string(client.GetHashType())],
 				adminOrgs[i],
 				payload,
 			)
@@ -630,7 +630,7 @@ func getEndorsementEntrys(client *sdk.ChainClient,
 		} else {
 			e, err := sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],
-				crypto.HashAlgoMap[client.GetHashType()],
+				crypto.HashAlgoMap[string(client.GetHashType())],
 				"",
 				payload,
 			)

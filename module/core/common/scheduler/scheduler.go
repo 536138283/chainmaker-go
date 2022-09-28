@@ -212,10 +212,10 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	// if the block is not empty, append the charging gas tx
-	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
-		ts.log.Debug("append charge gas tx to block ...")
-		ts.appendChargeGasTx(block, snapshot, senderCollection)
-	}
+	//if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+	//	ts.log.Debug("append charge gas tx to block ...")
+	//	ts.appendChargeGasTx(block, snapshot, senderCollection)
+	//}
 
 	if ts.checkCoinbaseEnable() {
 		ts.log.Debug("append coinbase tx to block ...")
