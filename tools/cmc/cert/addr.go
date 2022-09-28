@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package cert
 
 import (
+	"chainmaker.org/chainmaker/utils/v2"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -15,10 +16,9 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	hashAlo "chainmaker.org/chainmaker/common/v2/crypto/hash"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
+	pbconfig "chainmaker.org/chainmaker/pb-go/v2/config"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	"github.com/mr-tron/base58"
 	"github.com/spf13/cobra"
 )
 
@@ -38,8 +38,6 @@ func certToUserAddrInStake() *cobra.Command {
 			}
 
 			var (
-				pubkey   []byte
-				hashBz   []byte
 				authType = chainClient.GetAuthType()
 				hashType = chainClient.GetHashType()
 			)
@@ -47,27 +45,23 @@ func certToUserAddrInStake() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("read cert content failed, reason: %s", err)
 			}
+
+			var pk crypto.PublicKey
 			if authType == sdk.PermissionedWithCert {
-				if pubkey, err = getPubkeyFromCert(content); err != nil {
+				if pk, err = getPubkeyFromCert(content); err != nil {
 					return err
 				}
 			} else if authType == sdk.PermissionedWithKey || authType == sdk.Public {
-				pk, err := asym.PublicKeyFromPEM(content)
-				if err != nil {
-					return err
-				}
-				pkStr, err := pk.String()
-				if err != nil {
-					return err
-				}
-				pubkey = []byte(pkStr)
-			}
-			if hashType == crypto.HASH_TYPE_SM3 || hashType == crypto.HASH_TYPE_SHA256 {
-				if hashBz, err = hashAlo.Get(hashType, pubkey); err != nil {
+				if pk, err = asym.PublicKeyFromPEM(content); err != nil {
 					return err
 				}
 			}
-			addr := base58.Encode(hashBz[:])
+
+			addr,err := utils.PkToAddrStr(pk, pbconfig.AddrType_CHAINMAKER, hashType)
+			if err != nil {
+				return fmt.Errorf("pk to addr str failed, reason: %s", err)
+			}
+
 			fmt.Printf("address: %s \n\nfrom cert: %s\n", addr, pubkeyOrCertPath)
 			return nil
 		},
@@ -86,7 +80,7 @@ func certToUserAddrInStake() *cobra.Command {
 // @param certContent
 // @return []byte
 // @return error
-func getPubkeyFromCert(certContent []byte) ([]byte, error) {
+func getPubkeyFromCert(certContent []byte) (crypto.PublicKey, error) {
 	block, _ := pem.Decode(certContent)
 	if block == nil {
 		return nil, errors.New("pem.Decode failed, invalid cert")
@@ -95,9 +89,5 @@ func getPubkeyFromCert(certContent []byte) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse cert failed, reason: %s", err)
 	}
-	pubkey, err := cert.PublicKey.Bytes()
-	if err != nil {
-		return nil, fmt.Errorf("get pubkey failed from cert, reason: %s", err)
-	}
-	return pubkey, nil
+	return cert.PublicKey,nil
 }
