@@ -122,7 +122,7 @@ consensus:
     - key: stake.epochValidatorNum
       value: "4"
     - key: stake.epochBlockNum
-      value: "10"
+      value: "12"
     - key: stake.completionUnbondingEpochNum
       value: "1"
     - key: stake.candidate:EVHDmhMBjMfwL6ZLXWw7gVpf2aHzJYZTFx7VfjsE1XrF

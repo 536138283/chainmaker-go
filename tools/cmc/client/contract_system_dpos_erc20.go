@@ -303,6 +303,7 @@ func erc20Total() *cobra.Command {
 	return cmd
 }
 
+// mint ERC20合约中的Mint发行Token
 func mint(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
 	params := map[string]string{
@@ -327,6 +328,7 @@ func mint(cc *sdk.ChainClient, address, amount string, txId string, timeout int6
 	return resp, nil
 }
 
+// transfer ERC20的transfer操作
 func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
 	params := map[string]string{
@@ -351,6 +353,7 @@ func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout 
 	return resp, nil
 }
 
+// balanceOf query balance-of feature of the DPoS erc20
 func balanceOf(cc *sdk.ChainClient, address string, timeout int64) (*common.TxResponse, error) {
 	params := map[string]string{
 		"owner": address,
@@ -368,6 +371,7 @@ func balanceOf(cc *sdk.ChainClient, address string, timeout int64) (*common.TxRe
 	return resp, nil
 }
 
+// owner query DPoS erc20 owner(admin)
 func owner(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
@@ -382,6 +386,7 @@ func owner(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	return resp, nil
 }
 
+// decimals query DPoS erc20 decimal
 func decimals(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
@@ -396,6 +401,7 @@ func decimals(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	return resp, nil
 }
 
+// total query total amount of DPoS erc20 token
 func total(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
