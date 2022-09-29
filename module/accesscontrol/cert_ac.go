@@ -940,7 +940,7 @@ func (cp *certACProvider) verifyMember(mem protocol.Member) ([]*bcx509.Certifica
 	org := cp.acService.getOrgInfoByOrgId(orgIdFromCert)
 
 	// the Third-party CA
-	if certMember.cert.IsCA == true && org == nil {
+	if certMember.cert.IsCA && org == nil {
 		cp.acService.log.Info("the Third-party CA verify the member")
 		certChain := []*bcx509.Certificate{certMember.cert}
 		err := cp.checkCRL(certChain)
