@@ -303,7 +303,7 @@ func createUpgradeUserContract(op createUpgradeContractOp) error {
 
 	if runtimeType != "EVM" {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
@@ -458,7 +458,7 @@ func invokeUserContract() error {
 		}
 	} else {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
@@ -532,7 +532,7 @@ func invokeContractTimes() error {
 		}
 	} else {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
@@ -594,7 +594,7 @@ func getUserContract() error {
 		}
 	} else {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
