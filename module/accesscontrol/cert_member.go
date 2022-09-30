@@ -278,6 +278,14 @@ func NewCertSigningMember(hashType string, member *pbac.Member, privateKeyPem,
 		if err != nil {
 			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 		}
+	} else if nodeConfig.KMSConfig.Enabled {
+		if err = initKMS(); err != nil {
+			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
+		}
+		sk, err = cert.ParseKMSPrivKey([]byte(privateKeyPem))
+		if err != nil {
+			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
+		}
 	} else {
 		sk, err = asym.PrivateKeyFromPEM([]byte(privateKeyPem), []byte(password))
 		if err != nil {

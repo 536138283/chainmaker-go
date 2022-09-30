@@ -5,6 +5,8 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	"chainmaker.org/chainmaker/protocol/v2"
+
 	"chainmaker.org/chainmaker/common/v2/json"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
@@ -96,9 +98,9 @@ func isConsensusCert(raw interface{}) bool {
 }
 
 //loadChainConfigFromGovernance used to load config from system contract, only for maxbft
-func (cp *certACProvider) loadChainConfigFromGovernance() (*maxbft.GovernanceContract, error) {
+func loadChainConfigFromGovernance(store protocol.BlockchainStore) (*maxbft.GovernanceContract, error) {
 	contractName := syscontract.SystemContract_GOVERNANCE.String()
-	bz, err := cp.store.ReadObject(contractName, []byte(contractName))
+	bz, err := store.ReadObject(contractName, []byte(contractName))
 	if err != nil {
 		return nil, fmt.Errorf("get contractName=%s from db failed, reason: %s", contractName, err)
 	}

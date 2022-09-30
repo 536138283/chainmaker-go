@@ -118,7 +118,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	var err error
 	certACProvider.consensusType = chainConfig.Consensus.Type
 	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT {
-		maxbftCfg, err = certACProvider.loadChainConfigFromGovernance()
+		maxbftCfg, err = loadChainConfigFromGovernance(certACProvider.store)
 		if err != nil {
 			return nil, err
 		}
