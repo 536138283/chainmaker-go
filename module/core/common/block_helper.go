@@ -1137,6 +1137,8 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 			if _, ok := keepTxs[tx.Payload.TxId]; !ok {
 				if !isOptimizedChargingGasTx(tx) {
 					txRetry = append(txRetry, tx)
+				} else {
+					chain.log.Debugf("discard charge gas tx, id = %v", tx.Payload.TxId)
 				}
 			}
 		}
