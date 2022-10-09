@@ -29,8 +29,8 @@ chainmaker.org/chainmaker/net-common v1.2.0/go.mod h1:o+uQGFfylEb/qgFx03j7zSymRL
 chainmaker.org/chainmaker/net-common v1.2.1-0.20220909025951-ea07c51f1bb3 h1:rCjtlrHqwsic7uDoxe0jsmDiZ9zT/2Vgf8PT1u8meYg=
 chainmaker.org/chainmaker/net-common v1.2.1-0.20220909025951-ea07c51f1bb3/go.mod h1:o+uQGFfylEb/qgFx03j7zSymRLt/3FmKQg8eN2k6m34=
 chainmaker.org/chainmaker/net-libp2p v1.2.0/go.mod h1:gqYbyevyMOhh81ny3Y1t7ZPdByuDbVRbC/w/3NOLHxk=
-chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20220909035300-e42e25f399b3 h1:eh/VxPEUwL2qHGZGnKIwZz/EZ+mauJRYhRBFc4MkbaU=
-chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20220909035300-e42e25f399b3/go.mod h1:zy/r+SNuyVCcrJABNqTpeyUymy5UgxILryJhPbqqQOw=
+chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20221009081316-079f553304da h1:UuQBUz6+4/KvRWGTEjuNwQH3Hqaepa6xyoLoaNpcGd0=
+chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20221009081316-079f553304da/go.mod h1:6A8fIxchvaA/KSPPH3PY1wbhkQeO0bVxBjOji0d14kQ=
 chainmaker.org/chainmaker/net-liquid v1.1.0 h1:WElaY7ZAcIXcIYnkBy2Zi6tTrkZ/uVBo2h3kOi5VlAk=
 chainmaker.org/chainmaker/net-liquid v1.1.0/go.mod h1:A1fjmgLv7ejD1eFh320+ZxGB4OWKYi1wgh56TJZ8b/A=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.0/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
@@ -86,8 +86,8 @@ chainmaker.org/third_party/badger/v3 v3.0.0 h1:8fPIUB8dyCCPu2QbQbp6r4QcixYVK7KOd
 chainmaker.org/third_party/badger/v3 v3.0.0/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 chainmaker.org/third_party/cuckoo-filter v1.0.0 h1:YLeHR9IxaIxZDoODQSRDe7glygrWYEGGMbiDDxoYufw=
 chainmaker.org/third_party/cuckoo-filter v1.0.0/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
-chainmaker.org/third_party/go-conn-security-multistream v1.0.0 h1:0711HqAff+ne98dIJ28opQj0qZiZk9HNSP0xiXG5FNQ=
-chainmaker.org/third_party/go-conn-security-multistream v1.0.0/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
+chainmaker.org/third_party/go-conn-security-multistream v1.0.2 h1:N7uO41Ie6oe35/Y+YBjmEk37+ciKAw+NLcCZJGMfF7E=
+chainmaker.org/third_party/go-conn-security-multistream v1.0.2/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
 chainmaker.org/third_party/goleveldb v1.1.0 h1:W6xG1ysvaI4aX4uI7ZB6FMPmWg7abkEv9FoLl5lB9kM=
 chainmaker.org/third_party/goleveldb v1.1.0/go.mod h1:7aC8mnQ0XjdIgSSoZfGGBE8QHMPl7QKbJVSzPavj47Y=
 chainmaker.org/third_party/q-tls-common v1.0.0 h1:lp4v/aPRqM63vkZTAcGEOEfUOB7ouci0bU9R9+2AHYY=
