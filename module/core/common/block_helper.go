@@ -1090,7 +1090,11 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	return nil
 }
 
-func RetryAndRemoveTxs(txPool protocol.TxPool, txsRetry []*commonPb.Transaction, txsRem []*commonPb.Transaction, log protocol.Logger) {
+func RetryAndRemoveTxs(
+	txPool protocol.TxPool,
+	txsRetry []*commonPb.Transaction,
+	txsRem []*commonPb.Transaction,
+	log protocol.Logger) {
 	var txs []*commonPb.Transaction
 	if len(txsRetry) > 0 {
 		txs = filterTxsForTxPool(txsRetry, log)
