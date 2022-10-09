@@ -1095,12 +1095,16 @@ func RetryAndRemoveTxs(
 	txsRetry []*commonPb.Transaction,
 	txsRem []*commonPb.Transaction,
 	log protocol.Logger) {
-	txs := filterTxsForTxPool(txsRetry, log)
+	var txs []*commonPb.Transaction
+	if len(txsRetry) > 0 {
+		txs = filterTxsForTxPool(txsRetry, log)
+	}
+	log.Debugf("txs = %v", txs)
 	txPool.RetryAndRemoveTxs(txs, txsRem)
 }
 
 func filterTxsForTxPool(txs []*commonPb.Transaction, log protocol.Logger) []*commonPb.Transaction {
-	filteredTxs := make([]*commonPb.Transaction, len(txs))
+	filteredTxs := make([]*commonPb.Transaction, 0, len(txs))
 	for _, tx := range txs {
 		if !isOptimizedChargingGasTx(tx) {
 			filteredTxs = append(filteredTxs, tx)
