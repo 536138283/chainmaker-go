@@ -246,7 +246,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
 			} else {
-				bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+				common.RetryAndRemoveTxs(bp.txPool, nil, selfProposedBlock.Txs, bp.log)
 			}
 		}
 	}
@@ -315,7 +315,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		fetchBatch = fetchBatch[:txCapacity]
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryAndRemoveTxs(txRetry, nil)
+			common.RetryAndRemoveTxs(bp.txPool, txRetry, nil, bp.log)
 		} else {
 			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
 			fetchBatch = getFetchBatch(fetchBatches)
@@ -339,7 +339,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		}
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryAndRemoveTxs(fetchBatch, nil) // put txs back to txpool
+			common.RetryAndRemoveTxs(bp.txPool, fetchBatch, nil, bp.log) // put txs back to txpool
 		} else {
 			bp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
 		}
@@ -827,7 +827,7 @@ func (bp *BlockProposerImpl) removeAndRetryTx(
 		return newBatchIds, newFetchBatch, fetchBatches
 
 	}
-	bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+	common.RetryAndRemoveTxs(bp.txPool, nil, removeTxs, bp.log)
 	return batchIds, fetchBatch, nil
 
 }
