@@ -39,5 +39,5 @@ else
   lint_check "module/txfilter" 15
   lint_check "module/subscriber" 10
   lint_check "module/txpool" 15
-  lint_check "tools/cmc" 6.8
+  lint_check "tools/cmc" 6
 fi
