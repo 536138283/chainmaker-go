@@ -1090,6 +1090,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	return nil
 }
 
+// RetryAndRemoveTxs filter charging gas tx out before call tx pool
 func RetryAndRemoveTxs(
 	txPool protocol.TxPool,
 	txsRetry []*commonPb.Transaction,
@@ -1099,10 +1100,10 @@ func RetryAndRemoveTxs(
 	if len(txsRetry) > 0 {
 		txs = filterTxsForTxPool(txsRetry, log)
 	}
-	log.Debugf("txs = %v", txs)
 	txPool.RetryAndRemoveTxs(txs, txsRem)
 }
 
+// filterTxsForTxPool filter charging gas tx out
 func filterTxsForTxPool(txs []*commonPb.Transaction, log protocol.Logger) []*commonPb.Transaction {
 	filteredTxs := make([]*commonPb.Transaction, 0, len(txs))
 	for _, tx := range txs {
