@@ -58,5 +58,5 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 		txs = append(txs, blk.Txs...)
 	}
 
-	hp.txPool.RetryAndRemoveTxs(txs, nil)
+	common.RetryAndRemoveTxs(hp.txPool, txs, nil)
 }

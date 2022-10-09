@@ -188,7 +188,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds,
 				txsTimeout)
 		} else {
-			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+			RetryAndRemoveTxs(bb.txPool, txsTimeout, nil, bb.log)
 		}
 		block.Header.TxCount = uint32(len(block.Txs))
 	}
@@ -1051,7 +1051,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
 	} else {
 		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
-		chain.txPool.RetryAndRemoveTxs(txRetry, lastProposed.Txs)
+		RetryAndRemoveTxs(chain.txPool, txRetry, lastProposed.Txs, chain.log)
 	}
 
 	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick
@@ -1088,6 +1088,26 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		go chain.updateMetrics(blockInfo, elapsed, interval)
 	}
 	return nil
+}
+
+func RetryAndRemoveTxs(txPool protocol.TxPool, txsRetry []*commonPb.Transaction, txsRem []*commonPb.Transaction, log protocol.Logger) {
+	var txs []*commonPb.Transaction = nil
+	if len(txsRetry) > 0 {
+		txs = filterTxsForTxPool(txsRetry, log)
+	}
+	txPool.RetryAndRemoveTxs(txs, txsRem)
+}
+
+func filterTxsForTxPool(txs []*commonPb.Transaction, log protocol.Logger) []*commonPb.Transaction {
+	filteredTxs := make([]*commonPb.Transaction, len(txs))
+	for _, tx := range txs {
+		if !isOptimizedChargingGasTx(tx) {
+			filteredTxs = append(filteredTxs, tx)
+		} else {
+			log.Debugf("discard charging gas tx, id = %v", tx.Payload.TxId)
+		}
+	}
+	return filteredTxs
 }
 
 func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) (
@@ -1135,11 +1155,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 		}
 		for _, tx := range b.Txs {
 			if _, ok := keepTxs[tx.Payload.TxId]; !ok {
-				if !isOptimizedChargingGasTx(tx) {
-					txRetry = append(txRetry, tx)
-				} else {
-					chain.log.Debugf("discard charge gas tx, id = %v", tx.Payload.TxId)
-				}
+				txRetry = append(txRetry, tx)
 			}
 		}
 	}

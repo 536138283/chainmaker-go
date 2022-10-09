@@ -434,7 +434,12 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make(map[string]int64)
 	var err error
-	txCapacity := uint32(v.chainConf.ChainConfig().Block.BlockTxCapacity)
+	var txCapacity uint32
+	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
+	} else {
+		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
+	}
 	if block.Header.TxCount > txCapacity {
 		return nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
 	}
@@ -507,7 +512,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 		}
 	}
 	if len(cutTxs) > 0 {
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
+		common.RetryAndRemoveTxs(v.txPool, cutTxs, nil, v.log)
 	}
 }
 

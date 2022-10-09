@@ -334,7 +334,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		fetchBatch = fetchBatch[:txCapacity]
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryAndRemoveTxs(txRetry, nil)
+			common.RetryAndRemoveTxs(bp.txPool, txRetry, nil, bp.log)
 		} else {
 			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, txRetry)
 			fetchBatch = getFetchBatch(fetchBatches)
@@ -357,7 +357,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		}
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryAndRemoveTxs(fetchBatch, nil) // put txs back to txpool
+			common.RetryAndRemoveTxs(bp.txPool, fetchBatch, nil, bp.log) // put txs back to txpool
 		} else {
 			bp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
 		}
@@ -450,7 +450,7 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		for _, v := range txsRet {
 			txs = append(txs, v)
 		}
-		bp.txPool.RetryAndRemoveTxs(nil, txs)
+		common.RetryAndRemoveTxs(bp.txPool, nil, txs, bp.log)
 		return
 	}
 
@@ -473,7 +473,7 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		}
 	}
 
-	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
+	common.RetryAndRemoveTxs(bp.txPool, retryTxs, removeTxs, bp.log)
 	bp.proposalCache.ClearProposedBlockAt(height)
 }
 
@@ -632,7 +632,7 @@ func (bp *BlockProposerImpl) removeTx(
 
 		return batchIds, fetchBatches, fetchBatch
 	}
-	bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+	common.RetryAndRemoveTxs(bp.txPool, nil, removeTxs, bp.log)
 	return batchIds, fetchBatches, fetchBatch
 }
 
@@ -658,7 +658,7 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 				return true
 			}
 
-			bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+			common.RetryAndRemoveTxs(bp.txPool, nil, selfProposedBlock.Txs, bp.log)
 			return true
 		}
 
@@ -712,7 +712,7 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 		return true
 	}
 
-	bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+	common.RetryAndRemoveTxs(bp.txPool, nil, selfProposedBlock.Txs, bp.log)
 
 	return true
 }

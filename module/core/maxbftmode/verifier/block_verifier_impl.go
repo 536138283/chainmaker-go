@@ -504,7 +504,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 		}
 	}
 	if len(cutTxs) > 0 {
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
+		common.RetryAndRemoveTxs(v.txPool, cutTxs, nil, v.log)
 	}
 }
 
