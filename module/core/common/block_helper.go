@@ -1095,10 +1095,7 @@ func RetryAndRemoveTxs(
 	txsRetry []*commonPb.Transaction,
 	txsRem []*commonPb.Transaction,
 	log protocol.Logger) {
-	var txs []*commonPb.Transaction
-	if len(txsRetry) > 0 {
-		txs = filterTxsForTxPool(txsRetry, log)
-	}
+	txs := filterTxsForTxPool(txsRetry, log)
 	txPool.RetryAndRemoveTxs(txs, txsRem)
 }
 
