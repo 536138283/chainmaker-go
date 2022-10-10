@@ -292,6 +292,7 @@ func (sch *scheduler) sendSyncBlockRequest(toPeer string, fromHeight, batch uint
 //handleStopSyncMsg mark stop sync block and clean up records
 func (sch *scheduler) handleStopSyncMsg() {
 	sch.stopSyncBlock = true
+	sch.peers = make(map[string]uint64)
 	sch.blockStates = make(map[uint64]blockState)
 	sch.pendingTime = make(map[uint64]time.Time)
 	sch.pendingBlocks = make(map[uint64]string)
