@@ -213,15 +213,19 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	// if the block is not empty, append the charging gas tx
 	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
-		ts.log.Debug("append charge gas tx to block ...")
+		ts.log.DebugDynamic(func() string {
+			return "append charge gas tx to block ..."
+		})
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
 	}
 
 	//TODO: gastx 需要与 coinbasetx合并
-	//if ts.checkCoinbaseEnable() {
-	//	ts.log.Debug("append coinbase tx to block ...")
-	//	ts.appendCoinbaseTx(block, snapshot, senderCollection)
-	//}
+	if ts.checkCoinbaseEnable() {
+		ts.log.DebugDynamic(func() string {
+			return "append coinbase tx to block ..."
+		})
+		ts.appendCoinbaseTx(block, snapshot, senderCollection)
+	}
 
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
@@ -877,8 +881,9 @@ func (ts *TxScheduler) checkGasEnable() bool {
 
 //nolint: unused
 func (ts *TxScheduler) checkCoinbaseEnable() bool {
-	//TODO：增加coinbase配置
-	return false
+	return ts.chainConf.ChainConfig().AccountConfig.EnableGas ||
+		ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_DPOS ||
+		ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MAXBFT
 }
 
 func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
@@ -1077,7 +1082,7 @@ func (ts *TxScheduler) appendCoinbaseTx(
 	tx.Result = txSimContext.GetTxResult()
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendCCoinbaseToDAG() begin ")
-	ts.appendCoinbaseToDAG(block, snapshot)
+	ts.appendCoinbaseToDAG(block.Dag, snapshot)
 }
 
 // signTxPayload sign charging tx with node's private key
@@ -1523,7 +1528,7 @@ func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*co
 
 //nolint: unused
 func (ts *TxScheduler) appendCoinbaseToDAG(
-	block *commonPb.Block,
+	dag *commonPb.DAG,
 	snapshot protocol.Snapshot) {
 
 	dagNeighbors := &commonPb.DAG_Neighbor{
@@ -1532,7 +1537,7 @@ func (ts *TxScheduler) appendCoinbaseToDAG(
 	for i := uint32(0); i < uint32(snapshot.GetSnapshotSize()-1); i++ {
 		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
 	}
-	block.Dag.Vertexes = append(block.Dag.Vertexes, dagNeighbors)
+	dag.Vertexes = append(dag.Vertexes, dagNeighbors)
 }
 
 // getTxGasLimit get the gas limit field from tx, and will return err when the gas limit field is not set.
@@ -1621,6 +1626,12 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if IsOptimizeChargeGasEnabled(ts.chainConf) && snapshot.GetSnapshotSize() > 0 {
 		ts.appendChargeGasTxToDAG(dag, snapshot)
 	}
+
+	// coinbase Tx
+	if ts.checkCoinbaseEnable() {
+		ts.appendCoinbaseToDAG(dag, snapshot)
+	}
+
 	equal, err := utils.IsDagEqual(block.Dag, dag)
 	if err != nil {
 		return err
