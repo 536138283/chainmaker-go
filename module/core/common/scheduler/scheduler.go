@@ -216,7 +216,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.log.Debug("append charge gas tx to block ...")
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
 		//TODO: 使用blocktype时候 需要做相应处理
-		block.Header.BlockType = block.Header.BlockType + 10
+		block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
 	}
 
 	//TODO: gastx 需要与 coinbasetx合并
