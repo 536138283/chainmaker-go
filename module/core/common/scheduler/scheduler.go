@@ -217,6 +217,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 			return "append charge gas tx to block ..."
 		})
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
+		//TODO: 使用blocktype时候 需要做相应处理
+		block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
 	}
 
 	//TODO: gastx 需要与 coinbasetx合并
@@ -1196,7 +1198,7 @@ func (ts *TxScheduler) createCoinbaseTx(
 	// 构造 Payload
 	payload := &commonPb.Payload{
 		ChainId:        ts.chainConf.ChainConfig().ChainId,
-		TxType:         commonPb.TxType_INVOKE_CONTRACT,
+		TxType:         commonPb.TxType_COINBASE_CONTRACT,
 		TxId:           utils.GetRandTxId(),
 		Timestamp:      time.Now().Unix(),
 		ExpirationTime: time.Now().Add(time.Second * 1).Unix(),
