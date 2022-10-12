@@ -49,6 +49,8 @@ chainmaker.org/chainmaker/raftwal/v2 v2.1.0 h1:8TNEw1XtWBZkjqoNgcc9qoD/0xFkSb0SD
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.1 h1:SEul/39ShT6uIR34zt2WDAa1Ssrki93niZE3yJXUbkk=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.1/go.mod h1:HgvWmkULx3dW2siWhQUTXK+C07tZ3QMDWuwTvBgGD+Q=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221012064034-9d0fb0c8757d h1:80ZlIWdYCfFojeI/iauEQrE7O3iqNLmXWmAbvM76I94=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221012064034-9d0fb0c8757d/go.mod h1:GEt5cobq9MQV4aPmbBCVOyse6p/KR3u4cBtpKfuzzPg=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0 h1:Q5tNXukq+B+9asB/PJxOd/d7HltJDyw2scVT008deBQ=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0/go.mod h1:8uuLFeyjEs1jHK2jEvLJBRhfoV6KymFw49PowTduimY=
 chainmaker.org/chainmaker/store-leveldb/v2 v2.3.1 h1:rd6CDjhqaZfGXRTfA+M0cN8ijucphB0d51Ss+Ksc1Mc=
