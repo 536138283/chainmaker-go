@@ -36,6 +36,7 @@ func systemContractMultiSignCMD() *cobra.Command {
 	systemContractMultiSignCmd.AddCommand(multiSignReqCMD())
 	systemContractMultiSignCmd.AddCommand(multiSignVoteCMD())
 	systemContractMultiSignCmd.AddCommand(multiSignQueryCMD())
+	systemContractMultiSignCmd.AddCommand(multiSignTrigCMD())
 
 	return systemContractMultiSignCmd
 }
@@ -98,6 +99,30 @@ func multiSignQueryCMD() *cobra.Command {
 		Long:  "multi sign query",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return multiSignQuery()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
+		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
+	})
+
+	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagTxId)
+
+	return cmd
+}
+
+// multiSignTrigCMD multi sign trig
+// @return *cobra.Command
+func multiSignTrigCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "trig",
+		Short: "multi sign trig",
+		Long:  "multi sign trig",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return multiSignTrig()
 		},
 	}
 
@@ -303,5 +328,102 @@ func multiSignQuery() error {
 		return err
 	}
 	fmt.Printf("multi sign query resp: %s\n", string(output))
+	return nil
+}
+
+func multiSignTrig() error {
+	var (
+		adminKey  string
+		adminCrt  string
+		adminOrg  string
+		adminKeys []string
+		adminCrts []string
+		adminOrgs []string
+		err       error
+		resp      *common.TxResponse
+		client    *sdk.ChainClient
+		output    []byte
+
+		payload  *common.Payload
+		endorser *common.EndorsementEntry
+		tx       *common.TransactionInfo
+	)
+
+	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return err
+	}
+	defer client.Stop()
+
+	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminCrtFilePaths != "" {
+			adminCrts = strings.Split(adminCrtFilePaths, ",")
+		}
+		if len(adminKeys) != len(adminCrts) {
+			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
+		}
+		adminKey = adminKeys[0]
+		adminCrt = adminCrts[0]
+	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminOrgIds != "" {
+			adminOrgs = strings.Split(adminOrgIds, ",")
+		}
+		if len(adminKeys) != len(adminOrgs) {
+			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+		}
+		adminKey = adminKeys[0]
+		adminOrg = adminOrgs[0]
+	} else {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if len(adminKeys) == 0 {
+			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+		}
+		adminKey = adminKeys[0]
+	}
+
+	tx, err = client.GetTxByTxId(txId)
+	if err != nil {
+		return fmt.Errorf("get tx by txid failed, %s", err.Error())
+	}
+	payload = tx.Transaction.Payload
+	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+		endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
+		if err != nil {
+			return fmt.Errorf("multi sign vote failed, %s", err.Error())
+		}
+	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
+			adminOrg, payload)
+		if err != nil {
+			return fmt.Errorf("multi sign vote failed, %s", err.Error())
+		}
+	} else {
+		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
+			"", payload)
+		if err != nil {
+			return fmt.Errorf("multi sign vote failed, %s", err.Error())
+		}
+
+	}
+
+	resp, err = client.MultiSignContractTrig(payload, endorser)
+	if err != nil {
+		return fmt.Errorf("multi sign vote failed, %s", err.Error())
+	}
+	output, err = prettyjson.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("multi sign vote resp: %s\n", string(output))
+
 	return nil
 }
