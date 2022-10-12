@@ -344,9 +344,9 @@ func multiSignTrig() error {
 		client *sdk.ChainClient
 		output []byte
 
-		payload  *common.Payload
-		endorser *common.EndorsementEntry
-		tx       *common.TransactionInfo
+		payload *common.Payload
+		tx      *common.TransactionInfo
+		//endorser *common.EndorsementEntry
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -414,8 +414,7 @@ func multiSignTrig() error {
 	//	}
 	//
 	//}
-
-	resp, err = client.MultiSignContractTrig(payload, endorser)
+	resp, err = client.MultiSignContractTrig(payload)
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}
