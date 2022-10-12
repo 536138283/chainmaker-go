@@ -83,8 +83,8 @@ chainmaker.org/chainmaker/utils/v2 v2.3.1-0.20220908091825-31a726ad40d5 h1:SjBzj
 chainmaker.org/chainmaker/utils/v2 v2.3.1-0.20220908091825-31a726ad40d5/go.mod h1:X9rKPdy8+J0TqQusYuznH/ylaKQGSSnDX+ZX9tVcOzU=
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.0 h1:QPvMzQcuh66Uw3462c5OBCHLHuUuP4P6EaVT1lhllMo=
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.0/go.mod h1:Ioyw/8eF65y3jZ+YNUK08PBSjYYuY32zwUDwX5hDNpU=
-chainmaker.org/chainmaker/vm-engine/v2 v2.3.0 h1:qe4wZFPc9KcLxBfkawYcqblZab4enrZOzPWqlNgpriY=
-chainmaker.org/chainmaker/vm-engine/v2 v2.3.0/go.mod h1:vRmuQnkE+nF7pw0l9gwznxAMQCqBqgrTuSDgfqx3l1k=
+chainmaker.org/chainmaker/vm-engine/v2 v2.3.1-0.20221012075021-4d575e4ff66e h1:nlW5GHYQBLueEdvGR+u6A9SdU/ZA+KXXp3vEVbwRWig=
+chainmaker.org/chainmaker/vm-engine/v2 v2.3.1-0.20221012075021-4d575e4ff66e/go.mod h1:HCHzl2B/XvSBsvN/p3mGY0CspXG+BG4XOE4ZH5DpRKc=
 chainmaker.org/chainmaker/vm-evm/v2 v2.3.0 h1:O6Hgq2iITLv7mWJoUUNelit8kWZYFNc1/Q0r4DGmDYE=
 chainmaker.org/chainmaker/vm-evm/v2 v2.3.0/go.mod h1:q+njutTGqE2EK0r01bmEUJwsdSTXK+TVuQSTbKHZRu0=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1-0.20220906161626-e1ccd9b65594 h1:nSUb2PiD3+hjk/KzdUgb4rq+Me3huQe4HsQcTFsCykQ=
@@ -1295,6 +1295,8 @@ github.com/openzipkin/zipkin-go v0.1.1/go.mod h1:NtoC/o8u3JlF1lSlyPNswIbeQH9bJTm
 github.com/openzipkin/zipkin-go v0.1.6/go.mod h1:QgAqvLzwWbR/WpD4A3cGpPtJrZXNIiJc5AZX7/PBEpw=
 github.com/openzipkin/zipkin-go v0.2.1/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnhQw8ySjnjRyN4=
 github.com/openzipkin/zipkin-go v0.2.2/go.mod h1:NaW6tEwdmWMaCDZzg8sh+IBNOxHMPnhQw8ySjnjRyN4=
+github.com/orcaman/concurrent-map v1.0.0 h1:I/2A2XPCb4IuQWcQhBhSwGfiuybl/J0ev9HDbW65HOY=
+github.com/orcaman/concurrent-map v1.0.0/go.mod h1:Lu3tH6HLW3feq74c2GC+jIMS/K2CFcDWnWD9XkenwhI=
 github.com/pact-foundation/pact-go v1.0.4/go.mod h1:uExwJY4kCzNPcHRj+hCR/HBbOOIwwtUjcrb0b5/5kLM=
 github.com/panjf2000/ants/v2 v2.4.8 h1:JgTbolX6K6RreZ4+bfctI0Ifs+3mrE5BIHudQxUDQ9k=
 github.com/panjf2000/ants/v2 v2.4.8/go.mod h1:f6F0NZVFsGCp5A7QW/Zj/m92atWwOkY0OIhFxRNFr4A=
