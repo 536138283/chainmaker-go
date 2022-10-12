@@ -35,15 +35,6 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
 	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
-	val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
-		chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
-		return chainCfg, err
-	})
-	if err != nil {
-		ts.log.Errorf("get LastChainConfig error: %v", err)
-		return false
-	}
-	chainCfg := val.(*config.ChainConfig)
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
@@ -79,6 +70,18 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  2) tx.Result should be set in `runVM()` later
 			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
 				pk, _ := getPkFromTx(tx, snapshot)
+				val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
+					chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+					return chainCfg, err
+				})
+				if err != nil {
+					ts.log.Errorf("get LastChainConfig error: %v", err)
+					return false
+				}
+				chainCfg, ok := val.(*config.ChainConfig)
+				if !ok {
+					ts.log.Errorf("failed to transfer chainConfig from interface to struct")
+				}
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
@@ -176,7 +179,12 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 		return errResult(result, err)
 	}
-	contract := ct.(*commonPb.Contract)
+	contract, ok := ct.(*commonPb.Contract)
+	if !ok {
+		err = errors.New("failed to transfer contract from interface to struct")
+		ts.log.Error(err)
+		return errResult(result, err)
+	}
 
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
 		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
