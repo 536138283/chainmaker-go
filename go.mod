@@ -25,7 +25,7 @@ require (
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.1-0.20220906152644-4445b875e826
 	chainmaker.org/chainmaker/utils/v2 v2.3.1-0.20220908091825-31a726ad40d5
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.0
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.0
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.1-0.20221012075021-4d575e4ff66e
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.0
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1-0.20220906161626-e1ccd9b65594
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.1-0.20220926031819-2aa7e964b5db
@@ -75,6 +75,7 @@ require (
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
+	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/protobuf v1.27.1
 )
 
