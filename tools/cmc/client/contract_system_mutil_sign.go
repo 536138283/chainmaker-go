@@ -333,16 +333,16 @@ func multiSignQuery() error {
 
 func multiSignTrig() error {
 	var (
-		adminKey  string
-		adminCrt  string
-		adminOrg  string
-		adminKeys []string
-		adminCrts []string
-		adminOrgs []string
-		err       error
-		resp      *common.TxResponse
-		client    *sdk.ChainClient
-		output    []byte
+		//adminKey  string
+		//adminCrt  string
+		//adminOrg  string
+		//adminKeys []string
+		//adminCrts []string
+		//adminOrgs []string
+		err    error
+		resp   *common.TxResponse
+		client *sdk.ChainClient
+		output []byte
 
 		payload  *common.Payload
 		endorser *common.EndorsementEntry
@@ -356,64 +356,64 @@ func multiSignTrig() error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-		adminKey = adminKeys[0]
-		adminCrt = adminCrts[0]
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-		adminKey = adminKeys[0]
-		adminOrg = adminOrgs[0]
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if len(adminKeys) == 0 {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-		adminKey = adminKeys[0]
-	}
+	//if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+	//	if adminKeyFilePaths != "" {
+	//		adminKeys = strings.Split(adminKeyFilePaths, ",")
+	//	}
+	//	if adminCrtFilePaths != "" {
+	//		adminCrts = strings.Split(adminCrtFilePaths, ",")
+	//	}
+	//	if len(adminKeys) != len(adminCrts) {
+	//		return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
+	//	}
+	//	adminKey = adminKeys[0]
+	//	adminCrt = adminCrts[0]
+	//} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+	//	if adminKeyFilePaths != "" {
+	//		adminKeys = strings.Split(adminKeyFilePaths, ",")
+	//	}
+	//	if adminOrgIds != "" {
+	//		adminOrgs = strings.Split(adminOrgIds, ",")
+	//	}
+	//	if len(adminKeys) != len(adminOrgs) {
+	//		return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+	//	}
+	//	adminKey = adminKeys[0]
+	//	adminOrg = adminOrgs[0]
+	//} else {
+	//	if adminKeyFilePaths != "" {
+	//		adminKeys = strings.Split(adminKeyFilePaths, ",")
+	//	}
+	//	if len(adminKeys) == 0 {
+	//		return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+	//	}
+	//	adminKey = adminKeys[0]
+	//}
 
 	tx, err = client.GetTxByTxId(txId)
 	if err != nil {
 		return fmt.Errorf("get tx by txid failed, %s", err.Error())
 	}
 	payload = tx.Transaction.Payload
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
-		if err != nil {
-			return fmt.Errorf("multi sign vote failed, %s", err.Error())
-		}
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
-			adminOrg, payload)
-		if err != nil {
-			return fmt.Errorf("multi sign vote failed, %s", err.Error())
-		}
-	} else {
-		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
-			"", payload)
-		if err != nil {
-			return fmt.Errorf("multi sign vote failed, %s", err.Error())
-		}
-
-	}
+	//if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+	//	endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
+	//	if err != nil {
+	//		return fmt.Errorf("multi sign vote failed, %s", err.Error())
+	//	}
+	//} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+	//	endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
+	//		adminOrg, payload)
+	//	if err != nil {
+	//		return fmt.Errorf("multi sign vote failed, %s", err.Error())
+	//	}
+	//} else {
+	//	endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
+	//		"", payload)
+	//	if err != nil {
+	//		return fmt.Errorf("multi sign vote failed, %s", err.Error())
+	//	}
+	//
+	//}
 
 	resp, err = client.MultiSignContractTrig(payload, endorser)
 	if err != nil {
