@@ -1350,6 +1350,14 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 
 	}
 	turboBlock.Txs = newTxs
+
+	// todo 如果开启了coinbase交易，coinbase交易不得裁剪
+	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE {
+		turboBlock.Txs[turboBlock.Header.TxCount-1] = block.Txs[turboBlock.Header.TxCount-1]
+	}
+
 	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
 
 	return turboBlock
@@ -1494,6 +1502,19 @@ func recoverBlock(
 			return nil, nil, err
 		}
 
+		// todo coinbase就不需要到提案节点要了，直接从block中取即可。
+		if CheckCoinbaseEnable(chainConf) {
+			return recoverBlockWithCoinBaseTx(
+				txIds,
+				block,
+				newBlock,
+				txPool,
+				maxRetryTime,
+				retryInterval,
+				proposerId,
+				logger)
+		}
+
 		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
 			int(maxRetryTime*retryInterval))
 		if err != nil {
@@ -1518,6 +1539,40 @@ func recoverBlock(
 		AdditionalData: block.AdditionalData,
 	}, nil, nil
 
+}
+
+func recoverBlockWithCoinBaseTx(
+	txIds []string,
+	block, newBlock *commonPb.Block,
+	txPool protocol.TxPool,
+	maxRetryTime, retryInterval uint64,
+	proposerId string,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
+	txIds = txIds[:len(txIds)-1]
+
+	if block.Txs[block.Header.TxCount-1].Payload.TxType != commonPb.TxType_COINBASE_CONTRACT {
+		return nil, nil, fmt.Errorf("recover block failed[height:%d,hash:%x,txCount:%d],"+
+			"invaild coinbase tx[txId:%s,txType:%s]",
+			block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount,
+			block.Txs[block.Header.TxCount-1].Payload.TxId, block.Txs[block.Header.TxCount-1].Payload.TxType)
+	}
+
+	txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
+		int(maxRetryTime*retryInterval))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := range block.Txs[:block.Header.TxCount-1] {
+		newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
+		newBlock.Txs[i].Result = block.Txs[i].Result
+		logger.Debugf("recover the block[%d], TxId[%s, %s]",
+			newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+	}
+
+	newBlock.Txs[block.Header.TxCount-1] = block.Txs[block.Header.TxCount-1]
+
+	return newBlock, nil, nil
 }
 
 // SerializeTxBatchInfo serialize tx batch info

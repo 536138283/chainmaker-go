@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker-go/module/core/common"
+
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
@@ -222,7 +224,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	//TODO: gastx 需要与 coinbasetx合并
-	if ts.checkCoinbaseEnable() {
+	if common.CheckCoinbaseEnable(ts.chainConf) {
 		ts.log.DebugDynamic(func() string {
 			return "append coinbase tx to block ..."
 		})
