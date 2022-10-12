@@ -5,9 +5,14 @@ import (
 	"errors"
 	"fmt"
 
+	"golang.org/x/sync/singleflight"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
+
+var sf singleflight.Group
 
 // guardForExecuteTx2220
 // filter out txs that need not go into runVM(...)
@@ -30,11 +35,15 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
 	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
-	chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+	val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
+		chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+		return chainCfg, err
+	})
 	if err != nil {
 		ts.log.Errorf("get LastChainConfig error: %v", err)
 		return false
 	}
+	chainCfg := val.(*config.ChainConfig)
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
@@ -160,11 +169,14 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	}
 
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
-	contract, err := txSimContext.GetContractByName(contractName)
+	ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
+		return txSimContext.GetContractByName(contractName)
+	})
 	if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 		return errResult(result, err)
 	}
+	contract := ct.(*commonPb.Contract)
 
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
 		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
