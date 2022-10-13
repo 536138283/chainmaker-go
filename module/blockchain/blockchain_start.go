@@ -26,6 +26,9 @@ func (bc *Blockchain) Start() error {
 	if bc.isModuleInit(moduleNameCore) && !bc.isModuleStartUp(moduleNameCore) {
 		startModules = append(startModules, map[string]func() error{moduleNameCore: bc.startCoreEngine})
 	}
+	if bc.isModuleInit(moduleNameVM) {
+		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVM})
+	}
 	if bc.isModuleInit(moduleNameConsensus) && !bc.isModuleStartUp(moduleNameConsensus) {
 		startModules = append(startModules, map[string]func() error{moduleNameConsensus: bc.startConsensus})
 	}
@@ -34,9 +37,6 @@ func (bc *Blockchain) Start() error {
 	}
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
-	}
-	if bc.isModuleInit(moduleNameVM) {
-		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVM})
 	}
 
 	total := len(startModules)
