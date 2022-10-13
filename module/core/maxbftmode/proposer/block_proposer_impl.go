@@ -394,8 +394,9 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(block)
 
 	cutBlock := new(commonpb.Block)
-	if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
-		common.TxPoolType == batch.TxPoolType {
+	// 空块场景下不需要区块压缩
+	if (common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
+		common.TxPoolType == batch.TxPoolType) && len(block.Txs) != 0 {
 		cutBlock = common.GetTurboBlock(block, cutBlock, bp.chainConf, bp.log)
 	} else {
 		cutBlock = block

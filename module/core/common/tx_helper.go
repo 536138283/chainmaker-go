@@ -620,6 +620,5 @@ func calStatsAvg(stats map[int]*VerifyStat) (total, sig, db, other int, fp uint3
 
 func CheckCoinbaseEnable(chainConf protocol.ChainConf) bool {
 	return chainConf.ChainConfig().AccountConfig.EnableGas ||
-		chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_DPOS ||
-		chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_MAXBFT
+		chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_DPOS
 }
