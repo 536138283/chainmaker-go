@@ -128,7 +128,7 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 // GenerateNewBlock generate new block, return block, timeList used by all steps, or error
 func (bb *BlockBuilder) GenerateNewBlock(
 	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction,
-	batchIds []string, fetchBatches [][]*commonPb.Transaction) (
+	batchIds []string, fetchBatches [][]*commonPb.Transaction, chainConf protocol.ChainConf) (
 	*commonPb.Block, []int64, error) {
 
 	timeLasts := make([]int64, 0)
@@ -230,7 +230,14 @@ func (bb *BlockBuilder) GenerateNewBlock(
 	if TxPoolType == batch.TxPoolType {
 		var batchIdBytes []byte
 		// set batchIds into additional data
-		batchIdBytes, err = SerializeTxBatchInfo(batchIds, block.Txs, fetchBatches, bb.log)
+
+		// 如果包含coinbase交易，coinbase需要带入区块中
+		serializeTx := block.Txs
+		if CheckCoinbaseEnable(chainConf) {
+			serializeTx = block.Txs[:len(block.Txs)-1]
+		}
+
+		batchIdBytes, err = SerializeTxBatchInfo(batchIds, serializeTx, fetchBatches, bb.log)
 		if err != nil {
 			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
@@ -1325,13 +1332,19 @@ func GetProposerId(
 }
 
 // GetTurboBlock get turbo block
-func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
+func GetTurboBlock(block, turboBlock *commonPb.Block,chainConf protocol.ChainConf, logger protocol.Logger) *commonPb.Block {
 	turboBlock.Header = block.Header
 	turboBlock.Dag = block.Dag
 	turboBlock.AdditionalData = block.AdditionalData
 
 	if TxPoolType == batch.TxPoolType {
 		logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+
+		// 如果开启coinbase交易，则保留coinbase交易
+		if CheckCoinbaseEnable(chainConf) {
+			turboBlock.Txs = []*commonPb.Transaction{block.Txs[block.Header.TxCount-1]}
+		}
+
 		return turboBlock
 	}
 
@@ -1351,7 +1364,7 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 	}
 	turboBlock.Txs = newTxs
 
-	// todo 如果开启了coinbase交易，coinbase交易不得裁剪
+	// 如果开启了coinbase交易，coinbase交易不得裁剪
 	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE ||
 		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE ||
 		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE {
@@ -1390,7 +1403,7 @@ func recoverBlockByBatch(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if len(block.Txs) == 0 && block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
+	if block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
 
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
@@ -1442,6 +1455,15 @@ func recoverBlockByBatch(
 		newTxs := make([]*commonPb.Transaction, 0)
 		for _, tx := range txs {
 			newTxs = append(newTxs, tx...)
+		}
+
+		// 如果原区块中包含了coinbase交易，需要从提案节点给到的区块中将coinbase交易添加进来
+		if CheckCoinbaseEnable(chainConf) {
+			if len(block.Txs) == 0 || block.Txs[0] == nil {
+				return nil, nil, fmt.Errorf("could not get coinbase tx from proposer,height:%d,hash:%x",
+					block.Header.BlockHeight, block.Header.BlockHash)
+			}
+			newTxs = append(newTxs, block.Txs[0])
 		}
 
 		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIds:%v, num:%d",
@@ -1502,7 +1524,7 @@ func recoverBlock(
 			return nil, nil, err
 		}
 
-		// todo coinbase就不需要到提案节点要了，直接从block中取即可。
+		// coinbase就不需要到提案节点要了，直接从block中取即可。
 		if CheckCoinbaseEnable(chainConf) {
 			return recoverBlockWithCoinBaseTx(
 				txIds,
