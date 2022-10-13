@@ -81,8 +81,8 @@ chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1/go.mod h1:mYjyB5FYzwfclLWTlXfsZMVx
 chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220915060746-11b2378b6379 h1:N8vHRjtmhNCLoCP/u6CMLtib920oRwdh65O++WpMiVE=
 chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220915060746-11b2378b6379/go.mod h1:BguJxqL7rjDFGoW9rDjuWzuFevMC47uw+9S9iBotMpw=
 chainmaker.org/chainmaker/vm/v2 v2.3.0/go.mod h1:C164YKxCYgzYdreuFtIrGX4gP/j3ggeyfkWUQKBZpJ8=
-chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20220927031236-7f6dea62a730 h1:F5Tc1t/kEfq/IEZTFiwQKTzR4C9Uqb2DoFfNotv02iw=
-chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20220927031236-7f6dea62a730/go.mod h1:itE2kWFivp7o8UHrFpGp4Un/BFsExaW1PElrp8jIEEc=
+chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20221013111225-fd7a2d1897cc h1:f+4YvLzXp487SWbHQ19Fjn/QRaJ3pib9/7K63rWXk74=
+chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20221013111225-fd7a2d1897cc/go.mod h1:itE2kWFivp7o8UHrFpGp4Un/BFsExaW1PElrp8jIEEc=
 chainmaker.org/third_party/badger/v3 v3.0.0 h1:8fPIUB8dyCCPu2QbQbp6r4QcixYVK7KOdfSEUeMZPVc=
 chainmaker.org/third_party/badger/v3 v3.0.0/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 chainmaker.org/third_party/cuckoo-filter v1.0.0 h1:YLeHR9IxaIxZDoODQSRDe7glygrWYEGGMbiDDxoYufw=

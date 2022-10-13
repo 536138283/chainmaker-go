@@ -237,6 +237,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// 1) the read/write set
 	// 2) the result that telling if the invoke success.
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
+	defer func() {
+		vm.PutTxSimContext(txSimContext)
+	}()
 	tx.Result = txSimContext.GetTxResult()
 	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 
@@ -553,7 +556,7 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
-	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
+	txSimContext := vm.GetTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
 	ts.log.Debugf("tx.Result = %v", tx.Result)
 
@@ -1021,6 +1024,9 @@ func (ts *TxScheduler) appendChargeGasTx(
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => executeGhargeGasTx() begin ")
 	txSimContext := ts.executeChargeGasTx(tx, block, snapshot)
+	defer func() {
+		vm.PutTxSimContext(txSimContext)
+	}()
 	tx.Result = txSimContext.GetTxResult()
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendChargeGasTxToDAG() begin ")
@@ -1113,7 +1119,7 @@ func (ts *TxScheduler) executeChargeGasTx(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot) protocol.TxSimContext {
 
-	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
+	txSimContext := vm.GetTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("new tx for charging gas, id = %s", tx.Payload.GetTxId())
 
 	result := &commonPb.Result{

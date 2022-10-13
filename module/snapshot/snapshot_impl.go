@@ -12,7 +12,7 @@ import (
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"go.uber.org/atomic"
 
 	"chainmaker.org/chainmaker/common/v2/bitmap"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -20,7 +20,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"go.uber.org/atomic"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
 // The record value is written by the SEQ corresponding to TX
