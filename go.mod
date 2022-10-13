@@ -9,8 +9,8 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20220922072457-7e01d4b5bfa9
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1-0.20220919093419-1679188d5e4d
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.1-0.20220922064243-9ec81c55196d
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.1-0.20220919094215-bca6d614c578
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.1-0.20220922071416-089ae2e08b57
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.1-0.20221013115919-d65107dd7205
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.1-0.20220922081421-9b0dee4733e8
 	chainmaker.org/chainmaker/localconf/v2 v2.3.1-0.20220919085548-6b46debace29
 	chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20220906085151-3fe59a8a3fe5
 	chainmaker.org/chainmaker/net-common v1.2.0
@@ -55,7 +55,7 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
@@ -76,7 +76,7 @@ require (
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	google.golang.org/protobuf v1.27.1
+	google.golang.org/protobuf v1.28.0
 )
 
 replace (
