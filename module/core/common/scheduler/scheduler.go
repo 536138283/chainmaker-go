@@ -1557,9 +1557,9 @@ func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 }
 
 func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
-	txExecOrderTypeMap map[string]protocol.ExecOrderTxType) (uint32, uint32, uint32, error) {
+	txExecOrderTypeMap map[string]protocol.ExecOrderTxType) (uint32, uint32, uint32, uint32, error) {
 
-	var txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount uint32
+	var txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount uint32
 	for _, v := range txExecOrderTypeMap {
 		switch v {
 		case protocol.ExecOrderTxTypeNormal:
@@ -1573,14 +1573,14 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 	if (IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
 		(!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
 		return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-			fmt.Errorf("charge gas enabled but charge gas tx is not 1")
+			txExecOrderCoinBaseCount, fmt.Errorf("charge gas enabled but charge gas tx is not 1")
 	}
 	// check type are all correct
 	for i, tx := range block.Txs {
 		t, ok := txExecOrderTypeMap[tx.Payload.GetTxId()]
 		if !ok {
 			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-				fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
+				txExecOrderCoinBaseCount, fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
 		}
 		var typeShouldBe protocol.ExecOrderTxType
 		if uint32(i) < txExecOrderNormalCount {
@@ -1593,10 +1593,18 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 		}
 		if t != typeShouldBe {
 			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-				fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+				txExecOrderCoinBaseCount, fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+		}
+
+		// 如果开启coinbase交易，返回coinbase交易个数
+		if common.CheckCoinbaseEnable(ts.chainConf) {
+			if tx.Payload.TxType == commonPb.TxType_COINBASE_CONTRACT {
+				txExecOrderCoinBaseCount++
+			}
 		}
 	}
-	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, nil
+	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+		txExecOrderCoinBaseCount, nil
 }
 
 func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snapshot,
@@ -1605,7 +1613,7 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 		return nil
 	}
 	startTime := time.Now()
-	txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, err :=
+	txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount, err :=
 		ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
 	if err != nil {
 		ts.log.Errorf("verifyExecOrderTxType has err:%s, tx type count:%d,%d,%d, block tx count:%d", err,
@@ -1614,9 +1622,9 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	}
 	// rebuild and verify dag
 	txRWSetTable := utils.RearrangeRWSet(block, txRWSetMap)
-	if uint32(len(txRWSetTable)) != txExecOrderNormalCount+txExecOrderIteratorCount+txExecOrderChargeGasCount {
-		return fmt.Errorf("txRWSetTable:%d != txExecOrderTypeCount:%d+%d+%d", len(txRWSetTable),
-			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount)
+	if uint32(len(txRWSetTable)) != txExecOrderNormalCount+txExecOrderIteratorCount+txExecOrderChargeGasCount+txExecOrderCoinBaseCount {
+		return fmt.Errorf("txRWSetTable:%d != txExecOrderTypeCount:%d+%d+%d+%d", len(txRWSetTable),
+			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount)
 	}
 
 	// first, only build dag for normal tx
@@ -1634,6 +1642,13 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	// coinbase Tx
 	if ts.checkCoinbaseEnable() {
 		ts.appendCoinbaseToDAG(dag, snapshot)
+
+		// 检查coinbase交易个数
+		if txExecOrderCoinBaseCount != 1 {
+			return fmt.Errorf("check coinbase tx num failed,height: %d,hash:%x,coinbaseCount:%d",
+				block.Header.BlockHeight, block.Header.BlockHash, txExecOrderCoinBaseCount)
+		}
+
 	}
 
 	equal, err := utils.IsDagEqual(block.Dag, dag)
@@ -1643,8 +1658,7 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if !equal {
 		ts.log.Warnf("compare block dag (vertex:%d) with simulate dag (vertex:%d)",
 			len(block.Dag.Vertexes), len(dag.Vertexes))
-		//TODO：coinbase交易，dag校验需要特殊处理
-		//return fmt.Errorf("simulate dag not equal to block dag")
+		return fmt.Errorf("simulate dag not equal to block dag")
 	}
 	timeUsed := time.Since(startTime)
 	ts.log.Infof("compare dag finished, time used %v", timeUsed)
