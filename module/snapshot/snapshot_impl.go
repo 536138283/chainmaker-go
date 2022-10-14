@@ -316,8 +316,11 @@ func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.Batch
 func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, applySpecialTx bool) (bool, int) {
 	tx := txSimContext.GetTx()
-	s.log.Debugf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
-		specialTxType, runVmSuccess, applySpecialTx)
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
+			specialTxType, runVmSuccess, applySpecialTx)
+	})
+
 	if !applySpecialTx && s.IsSealed() {
 		return false, s.GetSnapshotSize()
 	}

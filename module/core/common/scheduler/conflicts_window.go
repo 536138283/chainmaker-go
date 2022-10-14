@@ -1,5 +1,5 @@
 /*
-Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
@@ -30,7 +30,7 @@ const (
 	NormalTx
 )
 
-// ConflictsBitWindow holds a bitWindow to adjust goroutine pool size for runtime.
+// ConflictsBitWindow holds a bitWindow to adjust goroutine pool Size for runtime.
 type ConflictsBitWindow struct {
 	bitWindow         *uint256.Int
 	bitWindowCapacity int
