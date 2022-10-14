@@ -1,0 +1,54 @@
+2022-10-14 11:26:56.599	[DEBUG]	[Core]	scheduler/scheduler_factory.go:41	use the common TxScheduler.
+2022-10-14 11:26:56.599	[DEBUG]	[Core] @Chain1	verifier/block_verifier_impl.go:188	verify receive [1](1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30,1,1), from sync 0
+2022-10-14 11:26:56.599	[DEBUG]	[Core] @Chain1	common/block_helper.go:726	verify block 
+ -------------------block begins-----------------
+ChainId:	Chain1
+BlockHeight:	1
+PreBlockHash:	30313233343536373839
+PreConfHeight:	0
+BlockVersion:	0
+DagHash:	4bac8d7b5b0412d39eaf17d41a2ecf95fc59b7317726408b437f913e2f1a5222
+RwSetRoot:	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+TxRoot:	0bda54570ef5743d32ef5dc0b9c952c5264735bfdef4cd64c72b0ac60fa7af11
+BlockTimestamp:	0
+Proposer:	6f72675f69643a226f72673122206d656d6265725f696e666f3a22313233343536373839302220
+ConsensusArgs:	
+TxCount:	1
+------------block signed part ends-------------
+BlockHash:	1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30
+Signature:	30313233343536373839
+------------block unsigned part ends-----------
+
+2022-10-14 11:26:56.599	[INFO]	[Core] @Chain1	common/block_helper.go:776	Validate block[1](txs:1), time used(new snapshot:0, start DB transaction:0, vm:0)
+2022-10-14 11:26:56.599	[DEBUG]	[Core] @Chain1	common/tx_helper.go:414	verify stat (index:0,sigcount:0/1,db:0,sig:0,other:0,total:0) txfilter (fp:0,exists:0,fpdb:0)
+2022-10-14 11:26:56.599	[INFO]	[Core] @Chain1	common/tx_helper.go:425	verify txs,height: [1] (count:1,pool:0,txVerify:0,results:0) avg(sigcount:0/1,db:0,sig:0,other:0) filter total(fp:0,exists:0,fpdb:0) filter avg(fp:0,exists:0,fpdb:0)
+2022-10-14 11:26:56.599	[DEBUG]	[Core] @Chain1	verifier/block_verifier_impl.go:261	set proposed block(1,1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30)
+2022-10-14 11:26:56.599	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:a84d8718b5fc438bb8ab7a8fbb4153c3d57ff1d05aad9149bc5a6378605e7c94, hash: 1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30
+2022-10-14 11:26:56.599	[INFO]	[Core] @Chain1	verifier/block_verifier_impl.go:279	verify success [1,1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30](blockSig:0,vm:0,txVerify:0,txRoot:0,pool:0,consensusCheckUsed:0,total:0)
+2022-10-14 11:26:56.600	[DEBUG]	[Core]	scheduler/scheduler_factory.go:41	use the common TxScheduler.
+2022-10-14 11:26:56.600	[DEBUG]	[Core] @Chain1	verifier/block_verifier_impl.go:305	VerifyBlockWithRwSets receive [1](1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30,1,1), from sync 0
+2022-10-14 11:26:56.600	[DEBUG]	[Core] @Chain1	common/block_helper.go:851	verify block 
+ -------------------block begins-----------------
+ChainId:	Chain1
+BlockHeight:	1
+PreBlockHash:	30313233343536373839
+PreConfHeight:	0
+BlockVersion:	0
+DagHash:	4bac8d7b5b0412d39eaf17d41a2ecf95fc59b7317726408b437f913e2f1a5222
+RwSetRoot:	e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+TxRoot:	0bda54570ef5743d32ef5dc0b9c952c5264735bfdef4cd64c72b0ac60fa7af11
+BlockTimestamp:	0
+Proposer:	6f72675f69643a226f72673122206d656d6265725f696e666f3a22313233343536373839302220
+ConsensusArgs:	
+TxCount:	1
+------------block signed part ends-------------
+BlockHash:	1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30
+Signature:	30313233343536373839
+------------block unsigned part ends-----------
+
+2022-10-14 11:26:56.600	[DEBUG]	[Core] @Chain1	common/tx_helper.go:414	verify stat (index:0,sigcount:0/1,db:0,sig:0,other:0,total:0) txfilter (fp:0,exists:0,fpdb:0)
+2022-10-14 11:26:56.600	[INFO]	[Core] @Chain1	common/tx_helper.go:425	verify txs,height: [1] (count:1,pool:0,txVerify:0,results:0) avg(sigcount:0/1,db:0,sig:0,other:0) filter total(fp:0,exists:0,fpdb:0) filter avg(fp:0,exists:0,fpdb:0)
+2022-10-14 11:26:56.600	[INFO]	[Core] @Chain1	common/block_helper.go:921	verifierTxs txHashCount:1, txCount:1, 0bda54570ef5743d32ef5dc0b9c952c5264735bfdef4cd64c72b0ac60fa7af11
+2022-10-14 11:26:56.600	[DEBUG]	[Core] @Chain1	verifier/block_verifier_impl.go:371	set proposed block(1,1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30)
+2022-10-14 11:26:56.600	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:a84d8718b5fc438bb8ab7a8fbb4153c3d57ff1d05aad9149bc5a6378605e7c94, hash: 1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30
+2022-10-14 11:26:56.600	[INFO]	[Core] @Chain1	verifier/block_verifier_impl.go:390	verify success [1,1301b5a9ac1229e05177628c88956f0c255de67e0fff89b5ce76163258bc6b30](blockSig:0,vm:0,txVerify:0,txRoot:0,pool:0,consensusCheckUsed:0,total:0)

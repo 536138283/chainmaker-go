@@ -224,12 +224,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	//TODO: gastx 需要与 coinbasetx合并
-	if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
-		ts.log.DebugDynamic(func() string {
-			return "append coinbase tx to block ..."
-		})
-		ts.appendCoinbaseTx(block, snapshot, senderCollection)
-	}
+	//if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
+	//	ts.log.DebugDynamic(func() string {
+	//		return "append coinbase tx to block ..."
+	//	})
+	//	ts.appendCoinbaseTx(block, snapshot, senderCollection)
+	//}
 
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
@@ -881,13 +881,6 @@ func (ts *TxScheduler) checkGasEnable() bool {
 		return ts.chainConf.ChainConfig().AccountConfig.EnableGas
 	}
 	return false
-}
-
-//nolint: unused
-func (ts *TxScheduler) checkCoinbaseEnable() bool {
-	return ts.chainConf.ChainConfig().AccountConfig.EnableGas ||
-		ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_DPOS ||
-		ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MAXBFT
 }
 
 func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
@@ -1640,7 +1633,7 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	}
 
 	// coinbase Tx
-	if ts.checkCoinbaseEnable() {
+	if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
 		ts.appendCoinbaseToDAG(dag, snapshot)
 
 		// 检查coinbase交易个数

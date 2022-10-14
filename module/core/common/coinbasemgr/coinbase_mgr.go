@@ -6,6 +6,11 @@ import (
 )
 
 func CheckCoinbaseEnable(chainConf protocol.ChainConf) bool {
+
+	if chainConf.ChainConfig().AccountConfig == nil {
+		return false
+	}
+
 	return chainConf.ChainConfig().AccountConfig.EnableGas ||
 		chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_DPOS
 }

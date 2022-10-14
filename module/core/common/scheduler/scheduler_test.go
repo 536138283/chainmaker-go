@@ -311,6 +311,12 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 		RuntimeType: commonPb.RuntimeType_NATIVE,
 	}
 
+	coinbaseContractId := &commonPb.Contract{
+		Name:        syscontract.SystemContract_COINBASE.String(),
+		Version:     "1",
+		RuntimeType: commonPb.RuntimeType_NATIVE,
+	}
+
 	contractResult := &commonPb.ContractResult{
 		Code:    0,
 		Result:  nil,
@@ -327,8 +333,10 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	// simulate calling GetContractByName(...) 3 times
 	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
 	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
+	blockChainStore.EXPECT().GetContractByName(coinbaseContractId.Name).After(reqCall1).Return(sysContractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetContractBytecode(coinbaseContractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
@@ -1086,6 +1094,7 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 			tx1 := newTx(txId1, contractId, parameters)
 			tx2 := newTx(txId2, contractId, parameters)
 			tx2.Payload.ContractName = syscontract.SystemContract_ACCOUNT_MANAGER.String()
+			tx2.Payload.Method = syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
 
 			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
 			block.Dag = tt.dag
@@ -1120,6 +1129,7 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 		})
 	}
 }
+
 func TestMarshalDag(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{
@@ -2982,6 +2992,9 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 				AccountConfig: &configpb.GasAccountConfig{
 					EnableGas: tt.fields.EnableGas,
 				},
+				Consensus: &configpb.ConsensusConfig{
+					Type: consensus.ConsensusType_TBFT,
+				},
 			}
 			chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 			ts := &TxScheduler{
@@ -3002,7 +3015,7 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 
 			block := &commonPb.Block{}
 			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
-			got, got1, got2, err := ts.verifyExecOrderTxType(block, tt.args.txExecOrderTypeMap)
+			got, got1, got2, _, err := ts.verifyExecOrderTxType(block, tt.args.txExecOrderTypeMap)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("verifyExecOrderTxType() error = %v, wantErr %v", err, tt.wantErr)
 				return

@@ -1,0 +1,8 @@
+2022-10-14 11:11:56.959	[DEBUG]	[Core] @Chain1	proposer/block_proposer_impl.go:314	syncmode::BlockProposerImpl::proposing() => tx_pool status = &mock.MockTxPool{ctrl:(*gomock.Controller)(0xc00047eed0), recorder:(*mock.MockTxPoolMockRecorder)(0xc000010448)}, height:1
+2022-10-14 11:11:56.960	[DEBUG]	[Core] @Chain1	proposer/block_proposer_impl.go:342	begin proposing block[1], fetch tx num[5]
+2022-10-14 11:11:56.960	[WARN]	[Core] @Chain1	proposer/block_proposer_impl.go:409	generate new block failed, no txs in scheduled block, proposing block ends
+2022-10-14 11:26:56.707	[DEBUG]	[Core] @Chain1	proposer/block_proposer_impl.go:314	syncmode::BlockProposerImpl::proposing() => tx_pool status = &mock.MockTxPool{ctrl:(*gomock.Controller)(0xc0001e4960), recorder:(*mock.MockTxPoolMockRecorder)(0xc000010410)}, height:1
+2022-10-14 11:26:56.709	[DEBUG]	[Core] @Chain1	proposer/block_proposer_impl.go:342	begin proposing block[1], fetch tx num[5]
+2022-10-14 11:26:56.709	[WARN]	[Core] @Chain1	proposer/block_proposer_impl.go:409	generate new block failed, no txs in scheduled block, proposing block ends
+2022-10-14 11:26:56.709	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:1364b271d5f06920f675f56002741453ae0140445a804eb790aa6397b5e8eb1e, hash: 30313233343536373839
+2022-10-14 11:26:56.709	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:1364b271d5f06920f675f56002741453ae0140445a804eb790aa6397b5e8eb1e, hash: 
