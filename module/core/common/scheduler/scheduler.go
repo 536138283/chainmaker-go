@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker-go/module/core/common"
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
@@ -224,7 +224,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	//TODO: gastx 需要与 coinbasetx合并
-	if common.CheckCoinbaseEnable(ts.chainConf) {
+	if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
 		ts.log.DebugDynamic(func() string {
 			return "append coinbase tx to block ..."
 		})
@@ -1597,7 +1597,7 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 		}
 
 		// 如果开启coinbase交易，返回coinbase交易个数
-		if common.CheckCoinbaseEnable(ts.chainConf) {
+		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
 			if tx.Payload.TxType == commonPb.TxType_COINBASE_CONTRACT {
 				txExecOrderCoinBaseCount++
 			}

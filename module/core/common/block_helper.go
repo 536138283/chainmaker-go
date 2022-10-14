@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
@@ -234,7 +236,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 
 		// 如果包含coinbase交易，coinbase需要带入区块中
 		serializeTx := block.Txs
-		if CheckCoinbaseEnable(chainConf) {
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
 			serializeTx = block.Txs[:len(block.Txs)-1]
 		}
 
@@ -1342,7 +1344,7 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, chainConf protocol.ChainCo
 		logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
 
 		// 如果开启coinbase交易，则保留coinbase交易
-		if CheckCoinbaseEnable(chainConf) {
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
 			turboBlock.Txs = []*commonPb.Transaction{block.Txs[block.Header.TxCount-1]}
 		}
 
@@ -1463,7 +1465,7 @@ func recoverBlockByBatch(
 		}
 
 		// 如果原区块中包含了coinbase交易，需要从提案节点给到的区块中将coinbase交易添加进来
-		if CheckCoinbaseEnable(chainConf) {
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
 			if len(block.Txs) == 0 || block.Txs[0] == nil {
 				return nil, nil, fmt.Errorf("could not get coinbase tx from proposer,height:%d,hash:%x",
 					block.Header.BlockHeight, block.Header.BlockHash)
@@ -1530,7 +1532,7 @@ func recoverBlock(
 		}
 
 		// coinbase就不需要到提案节点要了，直接从block中取即可。
-		if CheckCoinbaseEnable(chainConf) {
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
 			return recoverBlockWithCoinBaseTx(
 				txIds,
 				block,
