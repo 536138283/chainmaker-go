@@ -17,6 +17,7 @@ var (
 	txType      int32
 	txStage     int32
 	txIds       []string
+	txId        string
 )
 
 const (
@@ -24,6 +25,7 @@ const (
 	flagType        = "type"
 	flagStage       = "stage"
 	flagTxIds       = "tx-ids"
+	flagTxId        = "tx-id"
 )
 
 // NewTxPoolCMD new txpool command
@@ -37,6 +39,7 @@ func NewTxPoolCMD() *cobra.Command {
 	cmd.AddCommand(newGetPoolStatusCMD())
 	cmd.AddCommand(newGetTxIdsByTypeAndStageCMD())
 	cmd.AddCommand(newGetTxsInPoolByTxIdsCMD())
+	cmd.AddCommand(newGetTxStatusCMD())
 	return cmd
 }
 
@@ -49,6 +52,7 @@ func init() {
 	flags.Int32Var(&txType, flagType, 3, "tx type, config tx type:1, common tx type:2, all tx type:3")
 	flags.Int32Var(&txStage, flagStage, 3, "tx stage, in queue stage:1, in pending stage:2, all stage:3")
 	flags.StringSliceVar(&txIds, flagTxIds, []string{}, "tx id list. --tx-ids=\"abc,xyz\"")
+	flags.StringVar(&txId, flagTxId, "", "tx id")
 }
 
 // newGetPoolStatusCMD get tx pool status
@@ -147,6 +151,40 @@ func newGetTxsInPoolByTxIdsCMD() *cobra.Command {
 
 	util.AttachFlags(cmd, flags, []string{
 		flagTxIds,
+	})
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
+	return cmd
+}
+
+// newGetTxStatusCMD get tx status by tx id
+// @return *cobra.Command
+func newGetTxStatusCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "txStatus",
+		Short: "get tx status by tx id",
+		Long:  "get tx status by tx id",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
+			if err != nil {
+				return err
+			}
+			defer cc.Stop()
+
+			txStatus, err := cc.GetTxStatus(txId)
+			if err != nil {
+				return err
+			}
+
+			util.PrintPrettyJson(txStatus)
+			return nil
+		},
+	}
+
+	util.AttachFlags(cmd, flags, []string{
+		flagTxId,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{

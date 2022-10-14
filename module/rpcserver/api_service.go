@@ -53,6 +53,19 @@ type ApiService struct {
 	ctx                         context.Context
 }
 
+// GetTxStatus - get status of tx
+func (s *ApiService) GetTxStatus(ctx context.Context,
+	request *txpoolPb.GetTxStatusRequest) (*txpoolPb.GetTxStatusResponse, error) {
+	txStatus, err := s.chainMakerServer.GetTxStatus(request.ChainId, request.TxId)
+	if err != nil {
+		return nil, err
+	}
+	return &txpoolPb.GetTxStatusResponse{
+		TxStatus: txStatus,
+		TxId:     request.TxId,
+	}, nil
+}
+
 // NewApiService - new ApiService object
 func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerServer) *ApiService {
 	log := logger.GetLogger(logger.MODULE_RPC)

@@ -288,9 +288,9 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 					return nil, err
 				}
 
-				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
+				bp.txPool.RemoveTxBatches(batchIds, protocol.OTHER)
 			} else {
-				bp.txPool.RetryAndRemoveTxs(nil, selfProposedBlock.Txs)
+				bp.txPool.RemoveTxs(selfProposedBlock.Txs, protocol.OTHER)
 			}
 		}
 	}
@@ -360,7 +360,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		fetchBatch = fetchBatch[:txCapacity]
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryAndRemoveTxs(txRetry, nil)
+			bp.txPool.RetryTxs(txRetry)
 		} else {
 			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
 			fetchBatch = getFetchBatch(fetchBatches)
@@ -384,9 +384,9 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		}
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryAndRemoveTxs(fetchBatch, nil) // put txs back to txpool
+			bp.txPool.RetryTxs(fetchBatch) // put txs back to txpool
 		} else {
-			bp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
+			bp.txPool.RetryTxBatches(batchIds)
 		}
 
 		return nil, err
@@ -750,7 +750,7 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		for _, v := range txsRet {
 			txs = append(txs, v)
 		}
-		bp.txPool.RetryAndRemoveTxs(nil, txs)
+		bp.txPool.RemoveTxs(txs, protocol.EVIL)
 		return
 	}
 
@@ -775,7 +775,8 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 	}
 
 	// retry txs and remove txs in tx pool
-	bp.txPool.RetryAndRemoveTxs(retryTxs, removeTxs)
+	bp.txPool.RetryTxs(retryTxs)
+	bp.txPool.RemoveTxs(removeTxs, protocol.EVIL)
 	// clear proposal cache at the height
 	bp.proposalCache.ClearProposedBlockAt(height)
 
@@ -881,13 +882,13 @@ func (bp *BlockProposerImpl) removeAndRetryTx(
 			return newBatchIds, newFetchBatch, fetchBatches
 		}
 
-		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
+		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs, protocol.EVIL)
 		newFetchBatch := getFetchBatch(fetchBatches)
 
 		return newBatchIds, newFetchBatch, fetchBatches
 
 	}
-	bp.txPool.RetryAndRemoveTxs(nil, removeTxs)
+	bp.txPool.RemoveTxs(removeTxs, protocol.EVIL)
 	return batchIds, fetchBatch, nil
 
 }
@@ -903,7 +904,7 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, p
 			}
 		}
 		if len(dupTxs) != 0 {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs, protocol.DOUBLE_SPEND)
 			fetchBatch = getFetchBatch(fetchBatches)
 		}
 		return batchIds, fetchBatch, fetchBatches

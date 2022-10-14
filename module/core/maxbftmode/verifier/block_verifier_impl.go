@@ -569,7 +569,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 	// if cut txs not nil, retry txs to tx pool
 	if len(cutTxs) > 0 {
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
+		v.txPool.RetryTxs(cutTxs)
 	}
 }
 
@@ -607,7 +607,7 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 	}
 
 	if len(finalCutBatchIds) > 0 {
-		v.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
+		v.txPool.RetryTxBatches(finalCutBatchIds)
 	}
 
 	return nil

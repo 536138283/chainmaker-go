@@ -71,7 +71,8 @@ func TestProposeStatusChange(t *testing.T) {
 	txPool.EXPECT().FetchTxs(gomock.Any()).Return(txs).AnyTimes()
 	txPool.EXPECT().GetPoolStatus().Return(&txpoolpb.TxPoolStatus{}).AnyTimes()
 	//msgBus.EXPECT().Publish(gomock.Any(), gomock.Any())
-	txPool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any())
+	txPool.EXPECT().RetryTxs(gomock.Any()).AnyTimes()
+	txPool.EXPECT().RemoveTxs(gomock.Any(), gomock.Any()).AnyTimes()
 	filter.EXPECT().ValidateRule(gomock.Any(), gomock.Any()).Return(nil).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
