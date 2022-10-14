@@ -842,6 +842,8 @@ func (p *pkACProvider) CreatePrincipal(resourceName string, endorsements []*comm
 	}, nil
 }
 
+// CreatePrincipalForTargetOrg creates a principal for "SELF" type policy,
+// which needs to convert SELF to a sepecific organization id in one authentication
 func (p *pkACProvider) CreatePrincipalForTargetOrg(resourceName string,
 	endorsements []*common.EndorsementEntry, message []byte, targetOrgId string) (protocol.Principal, error) {
 

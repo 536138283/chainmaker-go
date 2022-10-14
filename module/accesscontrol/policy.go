@@ -20,10 +20,12 @@ type policy struct {
 	roleList []protocol.Role
 }
 
+//GetRule returns rule
 func (p *policy) GetRule() protocol.Rule {
 	return p.rule
 }
 
+// GetPbPolicy return policy
 func (p *policy) GetPbPolicy() *pbac.Policy {
 	var pbRoleList []string
 	for _, role := range p.roleList {
@@ -37,10 +39,12 @@ func (p *policy) GetPbPolicy() *pbac.Policy {
 	}
 }
 
+//GetOrgList return org list
 func (p *policy) GetOrgList() []string {
 	return p.orgList
 }
 
+//GetRoleList return role list
 func (p *policy) GetRoleList() []protocol.Role {
 	return p.roleList
 }
