@@ -159,7 +159,6 @@ func newGetTxsInPoolByTxIdsCMD() *cobra.Command {
 	return cmd
 }
 
-
 // newGetTxStatusCMD get tx status by tx id
 // @return *cobra.Command
 func newGetTxStatusCMD() *cobra.Command {
