@@ -37,10 +37,14 @@ var _ protocol.VmWatcher = (*permissionedPkACProvider)(nil)
 var _ protocol.Watcher = (*certACProvider)(nil)
 var _ protocol.VmWatcher = (*certACProvider)(nil)
 
+// Module watcher module name
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (cp *certACProvider) Module() string {
 	return ModuleNameAccessControl
 }
 
+//Watch Watcher chainconfig watcher
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (cp *certACProvider) Watch(chainConfig *config.ChainConfig) error {
 	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
 	err := cp.initTrustRootsForUpdatingChainConfig(chainConfig, cp.localOrg.id)
@@ -63,10 +67,14 @@ func (cp *certACProvider) Watch(chainConfig *config.ChainConfig) error {
 	return nil
 }
 
+// ContractNames to be watched
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (cp *certACProvider) ContractNames() []string {
 	return []string{syscontract.SystemContract_CERT_MANAGE.String()}
 }
 
+// Callback watcher callback
+//Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (cp *certACProvider) Callback(contractName string, payloadBytes []byte) error {
 	switch contractName {
 	case syscontract.SystemContract_CERT_MANAGE.String():
@@ -221,10 +229,14 @@ func (cp *certACProvider) systemContractCallbackCertManagementAliasUpdateCase(pa
 	return nil
 }
 
+// Module watcher module name
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (p *pkACProvider) Module() string {
 	return ModuleNameAccessControl
 }
 
+//Watch Watcher chainconfig watcher
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
 
 	p.hashType = chainConfig.GetCrypto().GetHash()
@@ -241,10 +253,14 @@ func (p *pkACProvider) Watch(chainConfig *config.ChainConfig) error {
 	return nil
 }
 
+// Module watcher module name
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (pp *permissionedPkACProvider) Module() string {
 	return ModuleNameAccessControl
 }
 
+//Watch Watcher chainconfig watcher
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (pp *permissionedPkACProvider) Watch(chainConfig *config.ChainConfig) error {
 	pp.acService.hashType = chainConfig.GetCrypto().GetHash()
 
@@ -266,10 +282,14 @@ func (pp *permissionedPkACProvider) Watch(chainConfig *config.ChainConfig) error
 	return nil
 }
 
+// ContractNames to be watched
+// Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (pp *permissionedPkACProvider) ContractNames() []string {
 	return []string{syscontract.SystemContract_PUBKEY_MANAGE.String()}
 }
 
+// Callback watcher callback
+//Deprecated: Since version 2.3.0, it has been replaced by implementing msgBus.Subscriber interface.
 func (pp *permissionedPkACProvider) Callback(contractName string, payloadBytes []byte) error {
 	switch contractName {
 	case syscontract.SystemContract_PUBKEY_MANAGE.String():
