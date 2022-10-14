@@ -28,6 +28,7 @@ func (p *pkACProvider) OnMessage(msg *msgbus.Message) {
 	}
 }
 
+//OnQuit When the message bus is shutting down,
 func (p *pkACProvider) OnQuit() {
 
 }

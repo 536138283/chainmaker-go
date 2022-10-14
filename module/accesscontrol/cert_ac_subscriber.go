@@ -49,6 +49,7 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 
 }
 
+// OnQuit  when the message bus is shutting down,
 func (cp *certACProvider) OnQuit() {
 	// nothing
 }
