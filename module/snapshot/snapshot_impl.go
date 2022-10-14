@@ -111,8 +111,8 @@ func (s *SnapshotImpl) GetBlockchainStore() protocol.BlockchainStore {
 
 // GetSnapshotSize return the len of the txTable
 func (s *SnapshotImpl) GetSnapshotSize() int {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	//s.lock.RLock()
+	//defer s.lock.RUnlock()
 	return len(s.txTable)
 }
 
@@ -174,12 +174,13 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 	// get key before txExecSeq
 	snapshotSize := s.GetSnapshotSize()
 
-	s.lock.RLock()
-	defer s.lock.RUnlock()
 	if txExecSeq > snapshotSize || txExecSeq < 0 {
 		txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
 	}
 	finalKey := constructKey(contractName, key)
+
+	s.lock.RLock()
+
 	if sv, ok := s.writeTable[finalKey]; ok {
 		return sv.value, nil
 	}
@@ -195,6 +196,8 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 		}
 		iter = iter.GetPreSnapshot()
 	}
+
+	s.lock.RUnlock()
 
 	return s.blockchainStore.ReadObject(contractName, key)
 }
@@ -213,11 +216,11 @@ func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.Ba
 	// get key before txExecSeq
 	snapshotSize := s.GetSnapshotSize()
 
-	s.lock.RLock()
-	defer s.lock.RUnlock()
 	if txExecSeq > snapshotSize || txExecSeq < 0 {
 		txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
 	}
+
+	s.lock.RLock()
 
 	if writeSetValues, emptyWriteSetKeys, done = s.getBatchFromWriteSet(keys); done {
 		return writeSetValues, nil
@@ -234,6 +237,8 @@ func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.Ba
 		}
 		iter = iter.GetPreSnapshot()
 	}
+
+	s.lock.RUnlock()
 
 	objects, err := s.getObjects(emptyReadSetKeys)
 	if err != nil {
@@ -325,21 +330,21 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 		return false, s.GetSnapshotSize()
 	}
 
-	s.lock.Lock()
-	defer s.lock.Unlock()
 	// it is necessary to check sealed secondly
 	if !applySpecialTx && s.IsSealed() {
 		return false, len(s.txTable)
 	}
 
-	txExecSeq := txSimContext.GetTxExecSeq()
-	var txRWSet *commonPb.TxRWSet
-	var txResult *commonPb.Result
-
 	if !applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator {
+		s.lock.Lock()
+		defer s.lock.Unlock()
 		s.specialTxTable = append(s.specialTxTable, tx)
 		return true, len(s.txTable) + len(s.specialTxTable)
 	}
+
+	txExecSeq := txSimContext.GetTxExecSeq()
+	var txRWSet *commonPb.TxRWSet
+	var txResult *commonPb.Result
 
 	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
 	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
@@ -380,6 +385,8 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 	runVmSuccess bool) {
 	// Append to read table
 	applySeq := len(s.txTable)
+	s.lock.Lock()
+	defer s.lock.Unlock()
 	// compatible with version lower than 2201
 	if s.blockVersion < 2201 || runVmSuccess {
 		for _, txRead := range txRWSet.TxReads {
