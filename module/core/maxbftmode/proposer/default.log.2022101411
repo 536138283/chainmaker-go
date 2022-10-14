@@ -1,4 +1,0 @@
-2022-10-14 11:26:56.305	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:1364b271d5f06920f675f56002741453ae0140445a804eb790aa6397b5e8eb1e, hash: 30313233343536373839
-2022-10-14 11:26:56.305	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:1364b271d5f06920f675f56002741453ae0140445a804eb790aa6397b5e8eb1e, hash: 
-2022-10-14 11:26:56.305	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:1364b271d5f06920f675f56002741453ae0140445a804eb790aa6397b5e8eb1e, hash: 30313233343536373839
-2022-10-14 11:26:56.305	[DEBUG]	[Core] @Chain1	cache/proposal_cache.go:168	set proposed block, height: 1, fingerPrint:1364b271d5f06920f675f56002741453ae0140445a804eb790aa6397b5e8eb1e, hash: 
