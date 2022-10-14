@@ -27,7 +27,6 @@ node:
   priv_key_file:     ../config/wx-org6/certs/node/consensus1/consensus1.sign.key
   cert_file:         ../config/wx-org6/certs/node/consensus1/consensus1.sign.crt
   cert_cache_size:   1000
-  cert_key_usage_check: true
 
 net:
   provider: LibP2P
@@ -127,16 +126,48 @@ debug:
   is_http_open: false
 
 vm:
-  enable_dockervm: false
-  dockervm_mount_path: ../data/org6/docker-go     # mount point in chain maker
-  dockervm_log_path: ../log/org6/dockervm
-  log_in_console: false
-  log_level: INFO
-  uds_open: false                             # default is unix domain socket connection
-  max_send_msg_size: 100
-  max_recv_msg_size: 100
-  docker_vm_host: 127.0.0.1
-  docker_vm_port: 22351
-  max_connection: 1
+  # Golang runtime in docker container
+  go:
+    # Enable docker go virtual machine, default: false
+    enable: false
+    # Mount data path in chainmaker, include contracts, uds socks
+    data_mount_path: ../data/org6/go
+    # Mount log path in chainmaker
+    log_mount_path: ../log/org6/go
+    # Communication protocol, used for chainmaker and docker manager communication
+    # 1. tcp: docker vm uses TCP to communicate with chain
+    # 2. uds: docker vm uses unix domain socket to communicate with chain
+    protocol: tcp
+    # If use a customized VM configuration file, supplement it; else, do not configure
+    # Priority: chainmaker.yml > vm.yml > default settings
+    # dockervm_config_path: /config_path/vm.yml
+    # Whether to print log on terminal
+    log_in_console: false
+    # Log level of docker vm go
+    log_level: INFO
+
+    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
+    max_send_msg_size: 100
+    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
+    max_recv_msg_size: 100
+    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
+    dial_timeout: 10
+
+    # max process num for execute original txs
+    max_concurrency: 20
+
+    #  Configs of docker runtime server (handle messages with contract sandbox)
+    runtime_server:
+      # Runtime server port, default 32351
+      port: 32356
+
+    # Configs of contract engine server (handle messages with contract engine)
+    contract_engine:
+      # Docker vm contract engine server host, default 127.0.0.1
+      host: 127.0.0.1
+      # Docker vm contract engine server port, default 22351
+      port: 22356
+      # Max number of connection created to connect docker vm service
+      max_connection: 5
 
 

@@ -145,16 +145,6 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		return
 	}
 
-	if localconf.ChainMakerConfig.NodeConfig.CertKeyUsageCheck {
-		err = checkTxSignCert(tx)
-		if err != nil {
-			errCode = commonErr.ERR_CODE_TX_VERIFY_FAILED
-			errMsg = s.getErrMsg(errCode, err)
-			s.log.Error(errMsg)
-			return
-		}
-	}
-
 	bc, err = s.chainMakerServer.GetBlockchain(tx.Payload.ChainId)
 	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_BLOCKCHAIN

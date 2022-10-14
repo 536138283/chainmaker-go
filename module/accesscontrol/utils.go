@@ -12,9 +12,11 @@ import (
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"strings"
 
+	"chainmaker.org/chainmaker/common/v2/crypto/kms"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 
 	"chainmaker.org/chainmaker/common/v2/cert"
@@ -53,6 +55,39 @@ func getHSMHandle() (interface{}, error) {
 		hsmHandleMap[hsmKey] = handle
 	}
 	return handle, nil
+}
+
+func initKMS() error {
+	config := localconf.ChainMakerConfig.NodeConfig.KMSConfig
+	if !config.Enabled {
+		kmsEnable := os.Getenv("KMS_ENABLE")
+		if strings.EqualFold(strings.ToLower(kmsEnable), "true") {
+			config.SecretId = os.Getenv("KMS_SECRET_ID")
+			config.SecretKey = os.Getenv("KMS_SECRET_KEY")
+			config.Address = os.Getenv("KMS_ADDRESS")
+			config.Region = os.Getenv("KMS_REGION")
+			config.SdkScheme = os.Getenv("SMK_SDK_SCHEME")
+			isPublicStr := os.Getenv("KMS_IS_PUBLIC")
+			if strings.EqualFold(strings.ToLower(isPublicStr), "true") {
+				config.Enabled = true
+			}
+		}
+	}
+	if !config.Enabled {
+		return nil
+	}
+	cert.InitKMS(cert.KMSConfig{
+		Enable: config.Enabled,
+		Config: kms.Config{
+			IsPublic:  config.IsPublic,
+			SecretId:  config.SecretId,
+			SecretKey: config.SecretKey,
+			Address:   config.Address,
+			Region:    config.Region,
+			SDKScheme: config.SdkScheme,
+		},
+	})
+	return nil
 }
 
 func pubkeyHash(pubkey []byte) string {
@@ -111,8 +146,8 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 		}
 
 		var sk bccrypto.PrivateKey
-		cfg := localconf.ChainMakerConfig.NodeConfig.P11Config
-		if cfg.Enabled {
+		cfg := localconf.ChainMakerConfig.NodeConfig
+		if cfg.P11Config.Enabled {
 			var handle interface{}
 			handle, err = getHSMHandle()
 			if err != nil {
@@ -122,6 +157,15 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
 			}
+		} else if cfg.KMSConfig.Enabled {
+			if err = initKMS(); err != nil {
+				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
+			}
+			sk, err = cert.ParseKMSPrivKey(skPEM)
+			if err != nil {
+				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
+			}
+
 		} else {
 			sk, err = asym.PrivateKeyFromPEM(skPEM, []byte(localPrivKeyPwd))
 			if err != nil {
@@ -154,14 +198,22 @@ func InitPKSigningMember(hashType,
 		}
 
 		var sk bccrypto.PrivateKey
-		p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
-		if p11Config.Enabled {
+		cfg := localconf.ChainMakerConfig.NodeConfig
+		if cfg.P11Config.Enabled {
 			var handle interface{}
 			handle, err = getHSMHandle()
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
 			sk, err = cert.ParseP11PrivKey(handle, skPEM)
+			if err != nil {
+				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
+			}
+		} else if cfg.KMSConfig.Enabled {
+			if err = initKMS(); err != nil {
+				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
+			}
+			sk, err = cert.ParseKMSPrivKey(skPEM)
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}

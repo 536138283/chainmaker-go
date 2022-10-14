@@ -10,6 +10,7 @@ package parallel
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -19,8 +20,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"chainmaker.org/chainmaker/common/v2/json"
 
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/crypto"
@@ -60,6 +59,8 @@ var (
 	hostnamesString    string
 	userCrtPathsString string
 	userKeyPathsString string
+	signCrtPathsString string
+	signKeyPathsString string
 	orgIDsString       string
 	hashAlgo           string
 	caPathsString      string
@@ -81,6 +82,8 @@ var (
 	hostnames    []string
 	userCrtPaths []string
 	userKeyPaths []string
+	signCrtPaths []string
+	signKeyPaths []string
 	orgIDs       []string
 
 	nodeNum int
@@ -88,7 +91,6 @@ var (
 	fileCache = NewFileCacheReader()
 	certCache = NewCertFileCacheReader()
 
-	abiCache     = NewFileCacheReader()
 	outputResult bool
 
 	authTypeUint32 uint32
@@ -166,6 +168,8 @@ func ParallelCMD() *cobra.Command {
 			hostnames = strings.Split(hostnamesString, ",")
 			userCrtPaths = strings.Split(userCrtPathsString, ",")
 			userKeyPaths = strings.Split(userKeyPathsString, ",")
+			signCrtPaths = strings.Split(signCrtPathsString, ",")
+			signKeyPaths = strings.Split(signKeyPathsString, ",")
 			orgIDs = strings.Split(orgIDsString, ",")
 
 			if authType == sdk.Public {
@@ -191,10 +195,11 @@ func ParallelCMD() *cobra.Command {
 					panic(err)
 				}
 				pairsString = string(bytes)
-				globalPairs, err = getPairInfos()
-				if err != nil {
-					panic(err)
-				}
+			}
+			var err error
+			globalPairs, err = getPairInfos()
+			if err != nil {
+				panic(err)
 			}
 			fmt.Println("tx content: ", pairsString)
 		},
@@ -208,8 +213,10 @@ func ParallelCMD() *cobra.Command {
 	flags.IntVarP(&sleepTime, "sleepTime", "S", 100, "specify sleep time(unit: ms)")
 	flags.IntVarP(&climbTime, "climbTime", "L", 10, "specify climb time(unit: s)")
 	flags.StringVarP(&hostsString, "hosts", "H", "localhost:17988,localhost:27988", "specify hosts")
-	flags.StringVarP(&userCrtPathsString, "user-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify user crt path")
-	flags.StringVarP(&userKeyPathsString, "user-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify user key path")
+	flags.StringVarP(&userCrtPathsString, "user-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify user tls crt path")
+	flags.StringVarP(&userKeyPathsString, "user-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify user tls key path")
+	flags.StringVar(&signCrtPathsString, "sign-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.crt", "specify user sign crt path")
+	flags.StringVar(&signKeyPathsString, "sign-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.key", "specify user sign key path")
 	flags.StringVarP(&orgIDsString, "org-IDs", "I", "wx-org1,wx-org2", "specify user key path")
 	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
 	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
@@ -494,12 +501,19 @@ func (t *Thread) Init() error {
 	}
 	t.client = apiPb.NewRpcNodeClient(t.conn)
 
-	file, err := ioutil.ReadFile(userKeyPaths[t.index])
-	if err != nil {
-		return err
+	var signKeyBz []byte
+	if authType == sdk.PermissionedWithCert {
+		signKeyBz, err = ioutil.ReadFile(signKeyPaths[t.index])
+		if err != nil {
+			return err
+		}
+	} else {
+		signKeyBz, err = ioutil.ReadFile(userKeyPaths[t.index])
+		if err != nil {
+			return err
+		}
 	}
-
-	t.sk3, err = asym.PrivateKeyFromPEM(file, nil)
+	t.sk3, err = asym.PrivateKeyFromPEM(signKeyBz, nil)
 	if err != nil {
 		return err
 	}
@@ -522,7 +536,7 @@ func (t *Thread) Start() {
 			} else if authType == sdk.PermissionedWithKey {
 				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i)
 			} else {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], userCrtPaths[t.index], i)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], signCrtPaths[t.index], i)
 			}
 
 			elapsed := time.Since(start)
@@ -646,17 +660,16 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	}
 
 	// 支持evm
-	//var err error
-	var abiData *[]byte
+	var err error
 	if abiPath != "" {
-		abiData = abiCache.Read(abiPath)
-		runTime = 5 //evm
+		pairs, err = makeInvokeEvmKvs(method, abiPath, pairs)
+		if err != nil {
+			return err
+		}
 	}
 
-	method1, pairs1, err := makePairs(method, abiPath, pairs, commonPb.RuntimeType(runTime), abiData)
-
 	//fmt.Println("[exec_handle]orgId: ", orgId, ", userCrtPath: ", userCrtPath, ", loopId: ", loopId, ", method1: ", method1, ", pairs1: ", pairs1, ", method: ", method, ", pairs: ", pairs)
-	payloadBytes, err := constructInvokePayload(chainId, contractName, method1, pairs1, gasLimit)
+	payloadBytes, err := constructInvokePayload(chainId, contractName, method, pairs, gasLimit)
 	if err != nil {
 		return err
 	}
@@ -668,7 +681,7 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	}
 
 	if outputResult {
-		msg := fmt.Sprintf(resultStr, orgId, loopId, method1, txId, resp)
+		msg := fmt.Sprintf(resultStr, orgId, loopId, method, txId, resp)
 		fmt.Println(msg)
 	}
 
@@ -873,7 +886,7 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 			sender = &acPb.Member{
 				OrgId:      orgId,
 				MemberInfo: *file,
-				//IsFullCert: true,
+				MemberType: acPb.MemberType_CERT,
 			}
 		}
 	}
@@ -886,21 +899,14 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 			Signer: sender,
 		},
 	}
-	if len(endorsers) > 0 {
-		req.Endorsers = endorsers
-	}
-	// 拼接后，计算Hash，对hash计算签名
-	rawTxBytes, err := utils.CalcUnsignedTxRequestBytes(req)
-	if err != nil {
-		return nil, err
-	}
+	req.Endorsers = endorsers
 
 	hashType, err := getHashType(hashAlgo)
 	if err != nil {
 		return nil, err
 	}
 
-	signBytes, err := sdkutils.SignPayloadBytesWithHashType(sk3, hashType, rawTxBytes)
+	signBytes, err := sdkutils.SignPayloadWithHashType(sk3, hashType, payload)
 	if err != nil {
 		return nil, err
 	}
