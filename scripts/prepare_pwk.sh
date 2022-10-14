@@ -51,7 +51,7 @@ function show_help() {
     echo "    prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4)"
     echo "               p2p_port(default:11301) rpc_port(default:12301)"
     echo "               vm_go_runtime_port(default:32351) vm_go_engine_port(default:22351)"
-    echo "               -c consense-type: 1-TBFT,4-RAFT "
+    echo "               -c consense-type: 0-SOLO,1-TBFT,3-MAXBFT,4-RAFT "
     echo "               -l log-level: DEBUG,INFO,WARN,ERROR"
     echo "               -v docker-vm-enable: true,false"
     echo "                  --vtp  vm go transport protocol: tcp,uds"
