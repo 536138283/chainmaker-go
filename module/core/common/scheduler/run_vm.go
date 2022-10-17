@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 
 	"golang.org/x/sync/singleflight"
 
@@ -171,6 +173,10 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		)
 	}
 
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx start get contract time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+	}
+
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
 	ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
 		return txSimContext.GetContractByName(contractName)
@@ -219,6 +225,9 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		}
 	}
 
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx start run vm time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+	}
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
 		parameters, txSimContext, 0, tx.Payload.TxType)
 	result.Code = txStatusCode

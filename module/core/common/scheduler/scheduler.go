@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -223,6 +224,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	enableConflictsBitWindow bool, conflictsBitWindow *ConflictsBitWindow,
 	enableSenderGroup bool, senderGroup *SenderGroup) {
 
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx start guard execute time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+	}
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
 		ts.log.DebugDynamic(func() string {
@@ -247,6 +251,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 		return fmt.Sprintf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 	})
 
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx start apply simContext time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+	}
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
@@ -254,6 +261,10 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 		return fmt.Sprintf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
 			tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
 	})
+
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx start apply result time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+	}
 
 	// reduce the conflictsBitWindow Size to eliminate the read/write set conflict
 	if !applyResult {
@@ -280,6 +291,10 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// If all transactions have been successfully added to dag
 	if applySize >= txBatchSize {
 		finishC <- true
+	}
+
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx end time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
 	}
 }
 
@@ -596,6 +611,10 @@ func (ts *TxScheduler) executeTx(
 		if !ts.guardForExecuteTx2220(tx, txSimContext, enableGas, enableOptimizeChargeGas) {
 			return txSimContext, protocol.ExecOrderTxTypeNormal, false
 		}
+	}
+
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx start parse params time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
 	}
 
 	runVmSuccess := true
