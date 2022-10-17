@@ -225,7 +225,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	enableSenderGroup bool, senderGroup *SenderGroup) {
 
 	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start guard execute time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+		ts.log.Infof("sample tx start guard execute time")
 	}
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
@@ -246,7 +246,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	defer func() {
 		vm.PutTxSimContext(txSimContext)
 		if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-			ts.log.Infof("sample tx end time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+			ts.log.Infof("sample tx end time")
 		}
 	}()
 	tx.Result = txSimContext.GetTxResult()
@@ -255,7 +255,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	})
 
 	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start apply simContext time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+		ts.log.Infof("sample tx start apply simContext time")
 	}
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
@@ -266,7 +266,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	})
 
 	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start apply result time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+		ts.log.Infof("sample tx start apply result time")
 	}
 
 	// reduce the conflictsBitWindow Size to eliminate the read/write set conflict
@@ -613,7 +613,7 @@ func (ts *TxScheduler) executeTx(
 	}
 
 	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start parse params time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+		ts.log.Infof("sample tx start parse params time")
 	}
 
 	runVmSuccess := true

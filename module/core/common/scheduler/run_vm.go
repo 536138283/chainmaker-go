@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
-	"time"
-
 	"golang.org/x/sync/singleflight"
+	"strings"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
@@ -174,13 +172,16 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	}
 
 	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start get contract time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+		ts.log.Infof("sample tx start get contract time")
 	}
 
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
 	ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
 		return txSimContext.GetContractByName(contractName)
 	})
+	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+		ts.log.Infof("sample tx end get contract time")
+	}
 	if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 		return errResult(result, err)
@@ -226,7 +227,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	}
 
 	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start run vm time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+		ts.log.Infof("sample tx start run vm time")
 	}
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
 		parameters, txSimContext, 0, tx.Payload.TxType)
