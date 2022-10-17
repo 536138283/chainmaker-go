@@ -245,6 +245,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
 	defer func() {
 		vm.PutTxSimContext(txSimContext)
+		if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
+			ts.log.Infof("sample tx end time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
+		}
 	}()
 	tx.Result = txSimContext.GetTxResult()
 	ts.log.DebugDynamic(func() string {
@@ -291,10 +294,6 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// If all transactions have been successfully added to dag
 	if applySize >= txBatchSize {
 		finishC <- true
-	}
-
-	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx end time, %v", time.Now().Format("2006-02-01 15:04:05.000"))
 	}
 }
 
