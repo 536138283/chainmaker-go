@@ -48,7 +48,8 @@ const (
 )
 
 const (
-	ErrMsgOfGasLimitNotSet = "field `GasLimit` must be set in payload."
+	ErrMsgOfGasLimitNotSet   = "field `GasLimit` must be set in payload."
+	ErrMsgOfGasLimitTooSmall = "field `GasLimit` is small than `default_gas` in bc1.yml."
 )
 
 // TxScheduler transaction scheduler structure
@@ -942,6 +943,9 @@ func (ts *TxScheduler) dispatchTxs(
 // if the balance less than gas limit, set the result of tx and dispatch this tx.
 func (ts *TxScheduler) dispatchTxsInSenderCollection(
 	senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
+
+	// 过去基础扣费数值
+	defaultGas := ts.chainConf.ChainConfig().AccountConfig.DefaultGas
 	ts.log.Debugf("begin dispatchTxsInSenderCollection(...)")
 	for addr, txCollection := range senderCollection.txsMap {
 		ts.log.Debugf("%v => {balance: %v, tx size: %v}",
@@ -980,6 +984,23 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 				gasLimit = int64(limit.GasLimit)
 			}
 
+			// ensure gasLimit > defaultGas
+			if gasLimit < int64(defaultGas) && txNeedChargeGas {
+				errMsg := fmt.Sprintf("the gasLimit of tx is too small, txId = %v", tx.Payload.TxId)
+				tx.Result = &commonPb.Result{
+					Code: commonPb.TxStatusCode_GAS_LIMIT_TOO_SMALL,
+					ContractResult: &commonPb.ContractResult{
+						Code:    uint32(1),
+						Result:  nil,
+						Message: errMsg,
+						GasUsed: uint64(0),
+					},
+					RwSetHash: nil,
+					Message:   errMsg,
+				}
+			}
+
+			// ensure balance > gasLimit
 			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
 			if balance-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()

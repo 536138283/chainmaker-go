@@ -62,13 +62,29 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 				return false
 			}
 		} else if txNeedChargeGas && tx.Payload.Limit != nil {
-			// in `proposer node`:
-			// 	1) tx.Result should be set by `dispatchTxsInSenderCollection()`
-			//  2) tx.Result should be set by `runVM()`
-			// in `verify node`:
-			//  1) tx.Result should be set in this place
-			//  2) tx.Result should be set in `runVM()` later
-			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
+
+			if tx.Payload.Limit.GasLimit < chainCfg.AccountConfig.DefaultGas {
+				txResult := &commonPb.Result{
+					Code: commonPb.TxStatusCode_GAS_LIMIT_TOO_SMALL,
+					ContractResult: &commonPb.ContractResult{
+						Code:    uint32(1),
+						Result:  nil,
+						Message: ErrMsgOfGasLimitTooSmall,
+						GasUsed: uint64(0),
+					},
+					RwSetHash: nil,
+					Message:   ErrMsgOfGasLimitTooSmall,
+				}
+				txSimContext.SetTxResult(txResult)
+				return false
+				
+			} else if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
+				// in `proposer node`:
+				// 	1) tx.Result should be set by `dispatchTxsInSenderCollection()`
+				//  2) tx.Result should be set by `runVM()`
+				// in `verify node`:
+				//  1) tx.Result should be set in this place
+				//  2) tx.Result should be set in `runVM()` later
 				pk, _ := getPkFromTx(tx, snapshot)
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
@@ -102,6 +118,25 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 				},
 				RwSetHash: nil,
 				Message:   ErrMsgOfGasLimitNotSet,
+			}
+			// `proposer node` need set result into tx and txSimContext
+			// `verify node` need set result into txSimContext
+			txSimContext.SetTxResult(txResult)
+			if tx.Result == nil {
+				tx.Result = txResult
+			}
+			return false
+		} else if txNeedChargeGas && tx.Payload.Limit.GasLimit < chainCfg.AccountConfig.DefaultGas {
+			txResult := &commonPb.Result{
+				Code: commonPb.TxStatusCode_GAS_LIMIT_TOO_SMALL,
+				ContractResult: &commonPb.ContractResult{
+					Code:    uint32(1),
+					Result:  nil,
+					Message: ErrMsgOfGasLimitTooSmall,
+					GasUsed: uint64(0),
+				},
+				RwSetHash: nil,
+				Message:   ErrMsgOfGasLimitTooSmall,
 			}
 			// `proposer node` need set result into tx and txSimContext
 			// `verify node` need set result into txSimContext
