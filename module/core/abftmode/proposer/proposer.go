@@ -213,7 +213,7 @@ func (bp *BlockProposerImpl) doPropose(lastBlock, blockBatch *commonpb.Block) er
 				txsTimeout = append(txsTimeout, tx)
 			}
 		}
-		bp.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+		bp.txPool.RetryTxs(txsTimeout)
 	}
 
 	bp.log.Debugf("schedule success [%d](txs:%d), time used(vm:%d,finalizeBlock:%d)",

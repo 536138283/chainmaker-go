@@ -259,7 +259,10 @@ func (bv *BlockVerifier) VerifyBlockWithRwSets(block *commonPb.Block,
 
 	// mark transactions in block as pending status in txpool
 	if common.TxPoolType == batch.TxPoolType {
-		batchIds, _ := common.GetBatchIds(block)
+		batchIds, _, err := common.GetBatchIds(block)
+		if err != nil {
+			return err
+		}
 		bv.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
 		bv.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
@@ -429,14 +432,14 @@ func (bv *BlockVerifier) cutBlocks(blocksToCut []*commonPb.Block, blockToKeep *c
 		}
 	}
 	if len(cutTxs) > 0 {
-		bv.txPool.RetryAndRemoveTxs(cutTxs, nil)
+		bv.txPool.RetryTxs(cutTxs)
 	}
 }
 
 func (bv *BlockVerifier) cutBlocksForBatchPool(blocksToCut []*commonPb.Block, blockToKeep *commonPb.Block) {
 
 	keepBatchIdsMap := make(map[string]interface{})
-	batchIds, _ := common.GetBatchIds(blockToKeep)
+	batchIds, _, _ := common.GetBatchIds(blockToKeep)
 	for _, batchId := range batchIds {
 		keepBatchIdsMap[batchId] = struct{}{}
 	}
@@ -444,7 +447,7 @@ func (bv *BlockVerifier) cutBlocksForBatchPool(blocksToCut []*commonPb.Block, bl
 	finalCutBatchIds := make([]string, 0)
 	for _, blockToCut := range blocksToCut {
 		bv.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
-		cutBatchIds, _ := common.GetBatchIds(blockToCut)
+		cutBatchIds, _, _ := common.GetBatchIds(blockToCut)
 		for _, cutBatchId := range cutBatchIds {
 			if _, ok := keepBatchIdsMap[cutBatchId]; ok {
 				// this transaction is kept, do NOT cut it.
@@ -456,7 +459,7 @@ func (bv *BlockVerifier) cutBlocksForBatchPool(blocksToCut []*commonPb.Block, bl
 	}
 
 	if len(finalCutBatchIds) > 0 {
-		bv.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
+		bv.txPool.RetryTxBatches(finalCutBatchIds)
 	}
 
 }

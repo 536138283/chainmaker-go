@@ -145,7 +145,8 @@ func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	if len(retryTxs) != 0 {
 		bc.retryList = append(bc.retryList, retryTxs...)
 	}
-	bc.txPool.RetryAndRemoveTxs(bc.retryList, block.Txs)
+	bc.txPool.RetryTxs(bc.retryList)
+	bc.txPool.RemoveTxs(block.Txs, protocol.NORMAL)
 
 	//clear abft catche
 	bc.abftCache.ClearAbftCache()
@@ -287,7 +288,7 @@ func (bc *BlockCommitter) AddBlock(block *commonpb.Block) error {
 	bc.msgbus.PublishSafe(msgbus.BlockInfo, blockInfo)
 
 	//sync txpool(put retryList back txpool & delete blocked tx)
-	bc.txPool.RetryAndRemoveTxs(nil, block.Txs)
+	bc.txPool.RemoveTxs(block.Txs, protocol.NORMAL)
 
 	//clear abft catche
 	bc.abftCache.ClearAbftCache()

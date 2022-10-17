@@ -30,12 +30,12 @@ type CoreEngine struct {
 	vmMgr           protocol.VmManager
 	ac              protocol.AccessControlProvider
 	blockchainStore protocol.BlockchainStore
-	chainConf       protocol.ChainConf // chain config
-	log             protocol.Logger    // logger
-	blockProposer  *proposer.BlockProposerImpl  // block proposer, to generate new block when node is proposer
-	BlockVerifier  protocol.BlockVerifier  // block verifier, to verify block that proposer generated
-	BlockCommitter *commiter.BlockCommitter // block committer, to commit block to store after consensus
-	MaxbftHelper   protocol.MaxbftHelper
+	chainConf       protocol.ChainConf          // chain config
+	log             protocol.Logger             // logger
+	blockProposer   *proposer.BlockProposerImpl // block proposer, to generate new block when node is proposer
+	BlockVerifier   protocol.BlockVerifier      // block verifier, to verify block that proposer generated
+	BlockCommitter  *commiter.BlockCommitter    // block committer, to commit block to store after consensus
+	MaxbftHelper    protocol.MaxbftHelper
 }
 
 func NewCoreEngine(ceConfig *conf.CoreEngineConfig) (*CoreEngine, error) {
@@ -55,7 +55,11 @@ func NewCoreEngine(ceConfig *conf.CoreEngineConfig) (*CoreEngine, error) {
 	}
 
 	var schedulerFactory scheduler.TxSchedulerFactory
-	txScheduler := schedulerFactory.NewTxScheduler(ceConfig.VmMgr, ceConfig.ChainConf, ceConfig.StoreHelper)
+	txScheduler := schedulerFactory.NewTxScheduler(
+		ceConfig.VmMgr,
+		ceConfig.ChainConf,
+		ceConfig.StoreHelper,
+		ceConfig.LedgerCache)
 
 	var err error
 	// init block proposer
@@ -103,7 +107,7 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 			return
 		}
 		c.log.Debugf("handle verify block signal, block height [%d]", block.Header.BlockHeight)
-		if err := c.BlockVerifier.VerifyBlock(block,  protocol.CONSENSUS_VERIFY); err != nil {
+		if err := c.BlockVerifier.VerifyBlock(block, protocol.CONSENSUS_VERIFY); err != nil {
 			c.log.Warnf("verify failed, error %s", err.Error())
 		}
 	case msgbus.CommitedTxBatchs:
