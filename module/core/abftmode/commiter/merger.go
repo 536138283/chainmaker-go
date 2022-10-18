@@ -7,15 +7,16 @@ SPDX-License-Identifier: Apache-2.0
 package commiter
 
 import (
-	"chainmaker.org/chainmaker/common/v2/bitmap"
-	"chainmaker.org/chainmaker/utils/v2"
 	"encoding/hex"
 	"sync"
 
+	"chainmaker.org/chainmaker/common/v2/bitmap"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// Merger struct
 type Merger struct {
 	rwSetMap      map[string]*commonpb.TxRWSet
 	lock          sync.Mutex
@@ -25,11 +26,13 @@ type Merger struct {
 	log           protocol.Logger                  // logger
 }
 
+// TxBatchInfo struct
 type TxBatchInfo struct {
 	txBatch  *commonpb.Block
 	rwSetMap map[string]*commonpb.TxRWSet // key->txId
 }
 
+// NewMerger return merger
 func NewMerger() *Merger {
 	return &Merger{
 		lock:        sync.Mutex{},
@@ -38,6 +41,7 @@ func NewMerger() *Merger {
 	}
 }
 
+// Merge params block, txBatchIDList, return tx list, error
 func (m *Merger) Merge(block *commonpb.Block, txBatchIDList []string) ([]*commonpb.Transaction, error) {
 
 	var isConfigBlock bool
@@ -138,7 +142,8 @@ func (m *Merger) doMerge(
 	rwSetMap map[string]*commonpb.TxRWSet,
 	baseWriteTable map[string]struct{}) {
 
-	m.log.Debugf("merge branch, branchID[%s], height[%d]", hex.EncodeToString(txBatch.Header.BlockHash), txBatch.Header.BlockHeight)
+	m.log.Debugf("merge branch, branchID[%s], height[%d]",
+		hex.EncodeToString(txBatch.Header.BlockHash), txBatch.Header.BlockHeight)
 	failTxWriteTable := make(map[string]struct{})
 	repeatTx := int64(0)
 	for _, tx := range txBatch.Txs {
@@ -173,32 +178,33 @@ func (m *Merger) doMerge(
 		m.allTxsMap[txId] = tx
 	}
 	m.log.Debugf("merge tx branch, height[%d], branchId[%s], repeatTx[%d], totalTx[%d], proposer[%s], ",
-		baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash), repeatTx, txBatch.Header.TxCount, hex.EncodeToString(txBatch.Header.Proposer.MemberInfo))
+		baseTxBatch.Header.BlockHeight, hex.EncodeToString(txBatch.Header.BlockHash),
+		repeatTx, txBatch.Header.TxCount, hex.EncodeToString(txBatch.Header.Proposer.MemberInfo))
 }
 
-func (m *Merger) getRepeatTx(txBatchID string) ([]int, map[string]struct{}) {
-
-	// record the deleted & repeated transaction(BatchID->deleted transaction 's position)
-	repeatTxIndexs := make([]int, 0)
-	repeatTxIDMap := make(map[string]struct{})
-
-	if info, ok := m.txBatchInfo[txBatchID]; ok {
-		txs := info.txBatch.Txs
-		for i, _ := range txs {
-			txID := txs[i].Payload.TxId
-
-			// set all Transaction to a Map(txId=>tx)
-			if _, ok := m.allTxsMap[txID]; !ok {
-				m.allTxsMap[txID] = txs[i]
-			} else {
-				repeatTxIndexs = append(repeatTxIndexs, i)
-				repeatTxIDMap[txID] = struct{}{}
-			}
-		}
-	}
-
-	return repeatTxIndexs, repeatTxIDMap
-}
+//func (m *Merger) getRepeatTx(txBatchID string) ([]int, map[string]struct{}) {
+//
+//	// record the deleted & repeated transaction(BatchID->deleted transaction 's position)
+//	repeatTxIndexs := make([]int, 0)
+//	repeatTxIDMap := make(map[string]struct{})
+//
+//	if info, ok := m.txBatchInfo[txBatchID]; ok {
+//		txs := info.txBatch.Txs
+//		for i, _ := range txs {
+//			txID := txs[i].Payload.TxId
+//
+//			// set all Transaction to a Map(txId=>tx)
+//			if _, ok := m.allTxsMap[txID]; !ok {
+//				m.allTxsMap[txID] = txs[i]
+//			} else {
+//				repeatTxIndexs = append(repeatTxIndexs, i)
+//				repeatTxIDMap[txID] = struct{}{}
+//			}
+//		}
+//	}
+//
+//	return repeatTxIndexs, repeatTxIDMap
+//}
 
 func (m *Merger) buildDAG(txBatch *commonpb.Block, rwSetMap map[string]*commonpb.TxRWSet) *commonpb.DAG {
 	m.lock.Lock()
@@ -264,16 +270,16 @@ func ifConflict(rwSet *commonpb.TxRWSet, writeTable, failTxWriteTable map[string
 	return isWRConflict(rwSet, writeTable) || isWRConflict(rwSet, failTxWriteTable)
 }
 
-func getRepeatTxIndexFromBaseBatch(baseTxBatch *commonpb.Block, repeatTxMap map[string]struct{}) map[string]int {
-	repeatTxIndexInBaseBatch := make(map[string]int, 0)
-	for index, tx := range baseTxBatch.Txs {
-		txId := tx.Payload.TxId
-		if _, ok := repeatTxMap[txId]; ok {
-			repeatTxIndexInBaseBatch[txId] = index
-		}
-	}
-	return repeatTxIndexInBaseBatch
-}
+//func getRepeatTxIndexFromBaseBatch(baseTxBatch *commonpb.Block, repeatTxMap map[string]struct{}) map[string]int {
+//	repeatTxIndexInBaseBatch := make(map[string]int, 0)
+//	for index, tx := range baseTxBatch.Txs {
+//		txId := tx.Payload.TxId
+//		if _, ok := repeatTxMap[txId]; ok {
+//			repeatTxIndexInBaseBatch[txId] = index
+//		}
+//	}
+//	return repeatTxIndexInBaseBatch
+//}
 
 func constructKey(contractName string, key []byte) string {
 	return contractName + string(key)
@@ -297,14 +303,14 @@ func updateWriteTable(writeTable map[string]struct{}, rwSet *commonpb.TxRWSet) {
 	}
 }
 
-func getWriteTable(rwSet *commonpb.TxRWSet) map[string]struct{} {
-	writeTable := make(map[string]struct{})
-	for _, txWrite := range rwSet.TxWrites {
-		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
-		writeTable[finalKey] = struct{}{}
-	}
-	return writeTable
-}
+//func getWriteTable(rwSet *commonpb.TxRWSet) map[string]struct{} {
+//	writeTable := make(map[string]struct{})
+//	for _, txWrite := range rwSet.TxWrites {
+//		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+//		writeTable[finalKey] = struct{}{}
+//	}
+//	return writeTable
+//}
 
 func isWRConflict(rwSet *commonpb.TxRWSet, writeTable map[string]struct{}) bool {
 	for _, txRead := range rwSet.TxReads {
@@ -317,16 +323,16 @@ func isWRConflict(rwSet *commonpb.TxRWSet, writeTable map[string]struct{}) bool 
 	return false
 }
 
-func isWWConflict(rwSet *commonpb.TxRWSet, writeTable map[string]struct{}) bool {
-	for _, txWrite := range rwSet.TxWrites {
-		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
-		// check if RWSet conflict
-		if _, ok := writeTable[finalKey]; ok {
-			return true
-		}
-	}
-	return false
-}
+//func isWWConflict(rwSet *commonpb.TxRWSet, writeTable map[string]struct{}) bool {
+//	for _, txWrite := range rwSet.TxWrites {
+//		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+//		// check if RWSet conflict
+//		if _, ok := writeTable[finalKey]; ok {
+//			return true
+//		}
+//	}
+//	return false
+//}
 
 func modifyTxResult(tx *commonpb.Transaction) {
 	tx.Result = &commonpb.Result{
@@ -382,7 +388,8 @@ func buildRWBitmaps(txCount int, txRWSetTable []*commonpb.TxRWSet) ([]*bitmap.Bi
 	return readBitmap, writeBitmap
 }
 
-func buildCumulativeBitmap(readBitmap []*bitmap.Bitmap, writeBitmap []*bitmap.Bitmap) ([]*bitmap.Bitmap, []*bitmap.Bitmap) {
+func buildCumulativeBitmap(readBitmap []*bitmap.Bitmap, writeBitmap []*bitmap.Bitmap) (
+	[]*bitmap.Bitmap, []*bitmap.Bitmap) {
 	cumulativeReadBitmap := make([]*bitmap.Bitmap, len(readBitmap))
 	cumulativeWriteBitmap := make([]*bitmap.Bitmap, len(writeBitmap))
 
@@ -403,7 +410,9 @@ func buildCumulativeBitmap(readBitmap []*bitmap.Bitmap, writeBitmap []*bitmap.Bi
 
 // fast conflict cases: I read & J write; I write & J read; I write & J write
 func fastConflicted(readBitmapForI, writeBitmapForI, cumulativeReadBitmap, cumulativeWriteBitmap *bitmap.Bitmap) bool {
-	if readBitmapForI.InterExist(cumulativeWriteBitmap) || writeBitmapForI.InterExist(cumulativeWriteBitmap) || writeBitmapForI.InterExist(cumulativeReadBitmap) {
+	if readBitmapForI.InterExist(cumulativeWriteBitmap) ||
+		writeBitmapForI.InterExist(cumulativeWriteBitmap) ||
+		writeBitmapForI.InterExist(cumulativeReadBitmap) {
 		return true
 	}
 	return false
@@ -430,7 +439,9 @@ func buildReach(i int, reachFromI *bitmap.Bitmap,
 
 // Conflict cases: I read & J write; I write & J read; I write & J write
 func conflicted(readBitmapForI, writeBitmapForI, readBitmapForJ, writeBitmapForJ *bitmap.Bitmap) bool {
-	if readBitmapForI.InterExist(writeBitmapForJ) || writeBitmapForI.InterExist(writeBitmapForJ) || writeBitmapForI.InterExist(readBitmapForJ) {
+	if readBitmapForI.InterExist(writeBitmapForJ) ||
+		writeBitmapForI.InterExist(writeBitmapForJ) ||
+		writeBitmapForI.InterExist(readBitmapForJ) {
 		return true
 	}
 	return false

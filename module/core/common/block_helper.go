@@ -724,7 +724,8 @@ func (vb *VerifierBlock) ValidateBlock(
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 		}
 	} else {
-		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil", vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil",
+			vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
 
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
@@ -856,7 +857,8 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 		}
 	} else {
-		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil", vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil",
+			vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
 
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick

@@ -49,7 +49,7 @@ type CoreEngineConfig struct {
 	// tx filter
 	TxFilter protocol.TxFilter
 	// abft cache
-	ABFTCache       *cache.AbftCache
+	ABFTCache *cache.AbftCache
 }
 
 // StoreHelper store heloer interface

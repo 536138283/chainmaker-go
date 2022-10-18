@@ -26,8 +26,10 @@ import (
 	"chainmaker.org/chainmaker/utils/v2"
 )
 
+// DEFAULT_WAIT_TXS_TIMEOUT default wait txs timeout
 const DEFAULT_WAIT_TXS_TIMEOUT = time.Second * 2
 
+// BlockProposerImpl struct
 type BlockProposerImpl struct {
 	lock            sync.Mutex
 	chainId         string
@@ -46,6 +48,7 @@ type BlockProposerImpl struct {
 	txScheduler     protocol.TxScheduler
 }
 
+// NewBlockProposer params CoreEngineConfig, TxScheduler, return BlockProposerImpl, error
 func NewBlockProposer(ceConfig *conf.CoreEngineConfig, txScheduler protocol.TxScheduler) (*BlockProposerImpl, error) {
 	blockProposerImpl := &BlockProposerImpl{
 		lock:            sync.Mutex{},
@@ -69,7 +72,7 @@ func NewBlockProposer(ceConfig *conf.CoreEngineConfig, txScheduler protocol.TxSc
 	return blockProposerImpl, nil
 }
 
-// Start, start proposer
+// Start proposer
 func (bp *BlockProposerImpl) Start() error {
 	defer bp.log.Info("block proposer starts")
 
@@ -78,49 +81,47 @@ func (bp *BlockProposerImpl) Start() error {
 	return nil
 }
 
-// Stop, stop proposing loop
+// Stop proposing loop
 func (bp *BlockProposerImpl) Stop() error {
 	defer bp.log.Infof("block proposer stopped")
 	//bp.exitC <- true
 	return nil
 }
 
-// OnReceiveTxPoolSignal, receive txpool signal and deliver to chan txpool signal
+// OnReceiveTxPoolSignal receive txpool signal and deliver to chan txpool signal
 func (bp *BlockProposerImpl) OnReceiveTxPoolSignal(txPoolSignal *txpoolpb.TxPoolSignal) {
 	//bp.txPoolSignalC <- txPoolSignal
 }
 
-/*
- * OnReceiveProposeStatusChange, to update isProposer status when received proposeStatus from consensus
- * if node is proposer, then reset the timer, otherwise stop the timer
- */
+// OnReceiveProposeStatusChange to update isProposer status when received proposeStatus from consensus
+// if node is proposer, then reset the timer, otherwise stop the timer
 func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 
 }
 
-// OnReceiveMaxBFTProposal, to check if this proposer should propose a new block
+// OnReceiveMaxBFTProposal to check if this proposer should propose a new block
 // Only for maxbft consensus
 func (bp *BlockProposerImpl) OnReceiveMaxBFTProposal(proposal *maxbft.BuildProposal) {
 
 }
 
-// OnReceiveYieldProposeSignal, receive yield propose signal
+// OnReceiveYieldProposeSignal receive yield propose signal
 func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
 
 }
 
-/*
- * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
- */
+// OnReceiveRwSetVerifyFailTxs remove verify fail txs
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
 
 }
 
+// ProposeBlock params BuildProposal, return ProposalBlock, error
 func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*consensuspb.ProposalBlock, error) {
 
 	return nil, nil
 }
 
+// getTxBatchFromABFTCache return Block
 func (bp *BlockProposerImpl) getTxBatchFromABFTCache() *commonpb.Block {
 	txBatch := bp.abftCache.GetProposedTxBatch()
 	if txBatch == nil {
@@ -129,6 +130,7 @@ func (bp *BlockProposerImpl) getTxBatchFromABFTCache() *commonpb.Block {
 	return txBatch.GetTxBatch()
 }
 
+// Propose params PackagedSignal, return error
 func (bp *BlockProposerImpl) Propose(proposedSignal *abft.PackagedSignal) error {
 	bp.lock.Lock()
 	defer bp.lock.Unlock()
@@ -157,11 +159,12 @@ func (bp *BlockProposerImpl) Propose(proposedSignal *abft.PackagedSignal) error 
 	//get a random number of transactions
 	ticker := time.NewTicker(DEFAULT_WAIT_TXS_TIMEOUT)
 	ctx, cancel := context.WithCancel(context.Background())
-	go bp.getTxBatchFromTxPool(proposedSignal.BlockHeight, ctx)
+	go bp.getTxBatchFromTxPool(ctx, proposedSignal.BlockHeight)
 	select {
 	case <-ticker.C:
 		cancel()
-		bp.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)", emptyBlockBatch.Header.BlockHeight)
+		bp.log.Debugf("there are no transactions in the tx pool, proposing an empty tx batch, height: (%d)",
+			emptyBlockBatch.Header.BlockHeight)
 		err = common.FinalizeBlock(blockBatch, nil, nil, bp.chainConf.ChainConfig().Crypto.Hash, bp.log)
 		if err != nil {
 			return err
@@ -172,6 +175,7 @@ func (bp *BlockProposerImpl) Propose(proposedSignal *abft.PackagedSignal) error 
 		bp.log.Infof("proposer success [%d](txs:%d)", emptyBlockBatch.Header.BlockHeight, emptyBlockBatch.Header.TxCount)
 		return nil
 	case <-bp.getTxBatchC:
+		cancel()
 		if err := bp.doPropose(lastBlock, blockBatch); err != nil {
 			return err
 		}
@@ -179,6 +183,7 @@ func (bp *BlockProposerImpl) Propose(proposedSignal *abft.PackagedSignal) error 
 	return nil
 }
 
+// doPropose params lastBlock, blockBatch, return error
 func (bp *BlockProposerImpl) doPropose(lastBlock, blockBatch *commonpb.Block) error {
 	emptyBlockBatch := *blockBatch
 	snapshot := bp.snapshotManager.NewSnapshot(lastBlock, blockBatch)
@@ -226,7 +231,7 @@ func (bp *BlockProposerImpl) doPropose(lastBlock, blockBatch *commonpb.Block) er
 	return nil
 }
 
-func (bp *BlockProposerImpl) getTxBatchFromTxPool(height uint64, ctx context.Context) {
+func (bp *BlockProposerImpl) getTxBatchFromTxPool(ctx context.Context, height uint64) {
 	for {
 		select {
 		case <-ctx.Done():

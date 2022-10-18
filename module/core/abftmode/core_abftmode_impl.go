@@ -19,6 +19,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// CoreEngine struct
 type CoreEngine struct {
 	chainId         string // chain id, to identity this chain
 	abftCache       *cache.AbftCache
@@ -38,6 +39,7 @@ type CoreEngine struct {
 	MaxbftHelper    protocol.MaxbftHelper
 }
 
+// NewCoreEngine params CoreEngineConfig, return CoreEngine, error
 func NewCoreEngine(ceConfig *conf.CoreEngineConfig) (*CoreEngine, error) {
 	ce := &CoreEngine{
 		chainId:         ceConfig.ChainId,
@@ -113,7 +115,7 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	case msgbus.CommitedTxBatchs:
 		txBatchAfterABA, ok := message.Payload.(*abft.TxBatchAfterABA)
 		if !ok {
-			c.log.Warnf("commited txBatch failed, Invalid Signal Type")
+			c.log.Warnf("committed txBatch failed, Invalid Signal Type")
 			return
 		}
 		c.log.Debugf("handle commit tx batch signal, block height [%d]", txBatchAfterABA.BlockHeight)
@@ -123,11 +125,12 @@ func (c *CoreEngine) OnMessage(message *msgbus.Message) {
 	}
 }
 
+// Stop CoreEngine stop
 func (c *CoreEngine) Stop() {
 	c.log.Info("on quit")
 }
 
-// OnMessage consume a message from message bus
+// Start OnMessage consume a message from message bus
 func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.ProposeState, c)
 	c.msgBus.Register(msgbus.VerifyBlock, c)
@@ -136,18 +139,22 @@ func (c *CoreEngine) Start() {
 	c.msgBus.Register(msgbus.CommitedTxBatchs, c)
 }
 
+// GetBlockProposer return BlockProposer
 func (c *CoreEngine) GetBlockProposer() protocol.BlockProposer {
 	return c.blockProposer
 }
 
+// GetBlockCommitter return BlockCommitter
 func (c *CoreEngine) GetBlockCommitter() protocol.BlockCommitter {
 	return c.BlockCommitter
 }
 
+// GetBlockVerifier return BlockVerifier
 func (c *CoreEngine) GetBlockVerifier() protocol.BlockVerifier {
 	return c.BlockVerifier
 }
 
+// GetMaxbftHelper return MaxbftHelper
 func (c *CoreEngine) GetMaxbftHelper() protocol.MaxbftHelper {
 	return c.MaxbftHelper
 }

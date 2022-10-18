@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker-go/module/consensus"
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 
@@ -32,8 +31,10 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// DEFAULT_VERIFY_TIMEOUT default verify timeout
 const DEFAULT_VERIFY_TIMEOUT = time.Second * 10
 
+// BlockVerifier struct
 type BlockVerifier struct {
 	chainId               string
 	wg                    sync.WaitGroup
@@ -54,6 +55,7 @@ type BlockVerifier struct {
 	metricBlockVerifyTime *prometheus.HistogramVec // metrics monitor
 }
 
+// NewVerifier params CoreEngineConfig, TxScheduler, return BlockVerifier, error
 func NewVerifier(ceConfig *conf.CoreEngineConfig, txScheduler protocol.TxScheduler) (protocol.BlockVerifier, error) {
 	verifier := &BlockVerifier{
 		chainId:         ceConfig.ChainId,
@@ -89,7 +91,8 @@ func NewVerifier(ceConfig *conf.CoreEngineConfig, txScheduler protocol.TxSchedul
 	}
 	verifier.verifierBlock = common.NewVerifierBlock(conf)
 	var err error
-	verifier.goRoutinePool, err = ants.NewPool(len(ceConfig.ChainConf.ChainConfig().Consensus.Nodes), ants.WithPreAlloc(true))
+	verifier.goRoutinePool, err = ants.NewPool(
+		len(ceConfig.ChainConf.ChainConfig().Consensus.Nodes), ants.WithPreAlloc(true))
 	if err != nil {
 		return nil, fmt.Errorf("new verifier failed: %s", err.Error())
 	}
@@ -100,7 +103,8 @@ func NewVerifier(ceConfig *conf.CoreEngineConfig, txScheduler protocol.TxSchedul
 	return verifier, nil
 }
 
-func (bv *BlockVerifier) verifyBlock(block *commonPb.Block, mode protocol.VerifyMode) (bool, map[string]*commonPb.TxRWSet, error) {
+func (bv *BlockVerifier) verifyBlock(block *commonPb.Block,
+	mode protocol.VerifyMode) (bool, map[string]*commonPb.TxRWSet, error) {
 	startTick := utils.CurrentTimeMillisSeconds()
 	emptyTxRwSetMap := make(map[string]*commonPb.TxRWSet)
 	if err := utils.IsEmptyBlock(block); err != nil {
@@ -155,11 +159,14 @@ func parseVerifyResult(block *commonPb.Block, isValid bool) *consensuspb.VerifyR
 	return verifyResult
 }
 
+// VerifyBlock params block, VerifyMode, return error
 func (bv *BlockVerifier) VerifyBlock(block *commonPb.Block, mode protocol.VerifyMode) error {
 	return bv.goRoutinePool.Submit(bv.verifyTask(block, mode))
 }
 
-func (bv *BlockVerifier) VerifyBlockSync(block *commonPb.Block, mode protocol.VerifyMode) (*consensuspb.VerifyResult, error) {
+// VerifyBlockSync params Block, VerifyMode, return VerifyResult, error
+func (bv *BlockVerifier) VerifyBlockSync(block *commonPb.Block,
+	mode protocol.VerifyMode) (*consensuspb.VerifyResult, error) {
 	panic("implement me")
 }
 
@@ -303,6 +310,7 @@ func (bv *BlockVerifier) validateBlockWithRWSets(block, lastBlock *commonPb.Bloc
 	return bv.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap, mode)
 }
 
+// Verify params Block, VerifyMode, return error
 func (bv *BlockVerifier) Verify(block *commonPb.Block, mode protocol.VerifyMode) error {
 	if block == nil {
 		return fmt.Errorf("verify failed, block is nil")
@@ -335,7 +343,8 @@ func (bv *BlockVerifier) Verify(block *commonPb.Block, mode protocol.VerifyMode)
 	}
 	verifyResult, rwSetMap, err := bv.verifyBlock(block, mode)
 	if err != nil {
-		bv.log.Errorf("verify failed:%s,[%d],(%s)", err.Error(), block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
+		bv.log.Errorf("verify failed:%s,[%d],(%s)", err.Error(),
+			block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
 	}
 
 	err = bv.abftCache.AddVerifiedTxBatch(block, verifyResult, rwSetMap)
@@ -405,9 +414,9 @@ func (bv *BlockVerifier) verifyRepeat(block *commonPb.Block, startTick int64,
 	return false
 }
 
-func (bv *BlockVerifier) verifyVoteSig(block *commonPb.Block) error {
-	return consensus.VerifyBlockSignatures(bv.chainConf, bv.ac, bv.blockchainStore, block, bv.ledgerCache)
-}
+//func (bv *BlockVerifier) verifyVoteSig(block *commonPb.Block) error {
+//	return consensus.VerifyBlockSignatures(bv.chainConf, bv.ac, bv.blockchainStore, block, bv.ledgerCache)
+//}
 
 func (bv *BlockVerifier) cutBlocks(blocksToCut []*commonPb.Block, blockToKeep *commonPb.Block) {
 	if common.TxPoolType == batch.TxPoolType {

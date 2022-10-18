@@ -24,6 +24,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// BlockCommitter block committer
 type BlockCommitter struct {
 	chainID       string
 	blockHeight   int64
@@ -41,6 +42,7 @@ type BlockCommitter struct {
 	lock          sync.Mutex
 }
 
+// NewCommitter param ceconfig, return BlockCommitter
 func NewCommitter(ceConfig *conf.CoreEngineConfig) *BlockCommitter {
 	committer := &BlockCommitter{
 		chainID:       ceConfig.ChainId,
@@ -62,6 +64,7 @@ func NewCommitter(ceConfig *conf.CoreEngineConfig) *BlockCommitter {
 	return committer
 }
 
+// Commit BlockCommitter Commit func, return error
 func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	startTick := utils.CurrentTimeMillisSeconds()
 
@@ -88,7 +91,7 @@ func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	bc.log.Debugf("receive tx batch id [%s], height[%d], length[%d]", bc.txBatchIDList, blockHeight, len(bc.txBatchIDList))
 
 	//var block *commonpb.Block
-	rwSetMap := make(map[string]*commonpb.TxRWSet, 0)
+	rwSetMap := make(map[string]*commonpb.TxRWSet)
 	// new block
 	lastBlock := bc.ledgerCache.GetLastCommittedBlock()
 	block, err := common.InitNewBlock(lastBlock, bc.identity, bc.chainID, bc.chainConf, false)
@@ -114,7 +117,8 @@ func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 		rwSetMap = bc.merger.rwSetMap
 		var aclFailTxs = make([]*commonpb.Transaction, 0) // No need to ACL check, this slice is empty
-		if err = common.FinalizeBlock(block, rwSetMap, aclFailTxs, bc.chainConf.ChainConfig().Crypto.Hash, bc.log); err != nil {
+		if err = common.FinalizeBlock(block,
+			rwSetMap, aclFailTxs, bc.chainConf.ChainConfig().Crypto.Hash, bc.log); err != nil {
 			bc.log.Error("finalize block fail,err: %s, height: (%d)", err.Error(), blockHeight)
 			return err
 		}
@@ -122,7 +126,8 @@ func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 
 	// set proposer nil
 	block.Header.Proposer = &accesscontrol.Member{}
-	hash, sig, err := utils.SignBlock(bc.chainConf.ChainConfig().Crypto.Hash, bc.identity, block)
+	hash, sig, err := utils.SignBlock(
+		bc.chainConf.ChainConfig().Crypto.Hash, bc.identity, block)
 	if err != nil {
 		bc.log.Errorf("[%s]sign block failed, %s", bc.identity.GetMemberId(), err)
 	}
@@ -132,7 +137,8 @@ func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
 		bc.commonCommit.CommitBlock(block, rwSetMap, nil)
 	if err != nil {
-		bc.log.Errorf("block common commit failed: %s, blockHeight: (%d)", err.Error(), block.Header.BlockHeight)
+		bc.log.Errorf("block common commit failed: %s, blockHeight: (%d)",
+			err.Error(), block.Header.BlockHeight)
 	}
 
 	// synchronize new block height to consensus and sync module
@@ -152,8 +158,10 @@ func (bc *BlockCommitter) Commit(txBatchAfterABA *abft.TxBatchAfterABA) error {
 	bc.abftCache.ClearAbftCache()
 
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	bc.log.Infof("commit block [%d](count:%d,hash:%x), time used(db:%d,ss:%d,conf:%d,pubConEvent:%d, filter:%d,other:%d,total:%d)",
-		blockHeight, block.Header.TxCount, block.Header.BlockHash, dbLasts, snapshotLasts, confLasts, pubEvent, filterLasts, otherLasts, elapsed)
+	bc.log.Infof("commit block [%d](count:%d,hash:%x), "+
+		"time used(db:%d,ss:%d,conf:%d,pubConEvent:%d, filter:%d,other:%d,total:%d)",
+		blockHeight, block.Header.TxCount, block.Header.BlockHash, dbLasts,
+		snapshotLasts, confLasts, pubEvent, filterLasts, otherLasts, elapsed)
 
 	return nil
 }
@@ -204,9 +212,9 @@ func (bc *BlockCommitter) setTxBatchInfo(txBatchHash []byte) bool {
 
 func (bc *BlockCommitter) setRetryList(failTxBatchIDList []string, txBatchMapBeforeABA map[string]*commonpb.Block) {
 	// find the repeat tx and delete it and put the other tx back to the txpool
-	for _, BatchID := range failTxBatchIDList {
-		Batch := txBatchMapBeforeABA[BatchID]
-		for _, tx := range Batch.Txs {
+	for _, batchID := range failTxBatchIDList {
+		batch := txBatchMapBeforeABA[batchID]
+		for _, tx := range batch.Txs {
 			if _, ok := bc.merger.allTxsMap[tx.Payload.TxId]; !ok {
 				bc.retryList = append(bc.retryList, tx)
 			}
@@ -257,6 +265,7 @@ func getABAFailTxBatchIDs(txBatchIDListBeforeABA []string, txBatchInfo map[strin
 	return failedBatchIDs
 }
 
+// AddBlock params block, return error
 func (bc *BlockCommitter) AddBlock(block *commonpb.Block) error {
 	startTick := utils.CurrentTimeMillisSeconds()
 	bc.lock.Lock()
@@ -273,7 +282,8 @@ func (bc *BlockCommitter) AddBlock(block *commonpb.Block) error {
 		return err
 	}
 	if abftBlock == nil {
-		return fmt.Errorf("[AddBlock] the block is not in the cache, blockHeight(%d), blockHash(%s)", block.Header.BlockHeight,
+		return fmt.Errorf("[AddBlock] the block is not in the cache, "+
+			"blockHeight(%d), blockHash(%s)", block.Header.BlockHeight,
 			hex.EncodeToString(block.Header.BlockHash))
 	}
 
@@ -294,8 +304,10 @@ func (bc *BlockCommitter) AddBlock(block *commonpb.Block) error {
 	bc.abftCache.ClearAbftCache()
 
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	bc.log.Infof("add block [%d](count:%d,hash:%x), time used(db:%d,ss:%d,conf:%d,pubConEvent:%d,filter:%d,other:%d,total:%d)",
-		block.Header.BlockHeight, block.Header.TxCount, block.Header.BlockHash, dbLasts, snapshotLasts, confLasts, pubEvent, filterLasts, otherLasts, elapsed)
+	bc.log.Infof("add block [%d](count:%d,hash:%x), "+
+		"time used(db:%d,ss:%d,conf:%d,pubConEvent:%d,filter:%d,other:%d,total:%d)",
+		block.Header.BlockHeight, block.Header.TxCount, block.Header.BlockHash,
+		dbLasts, snapshotLasts, confLasts, pubEvent, filterLasts, otherLasts, elapsed)
 
 	return nil
 }

@@ -12,8 +12,10 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// ConsensusTypeABFT consensus type ABFT
 const ConsensusTypeABFT = "ABFT"
 
+// NilABFTProvider nil variable provider
 var NilABFTProvider provider.CoreProvider = (*abftProvider)(nil)
 
 type abftProvider struct {

@@ -7,10 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
-	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"fmt"
 	"strconv"
 
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -34,6 +34,7 @@ type CommitBlock struct {
 	msgBus          msgbus.MessageBus
 }
 
+// NewCommitBlock params CoreEngineConfig, return CommitBlock
 func NewCommitBlock(ceConfig *conf.CoreEngineConfig) *CommitBlock {
 	return &CommitBlock{
 		store:           ceConfig.BlockchainStore,
