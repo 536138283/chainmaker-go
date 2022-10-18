@@ -29,11 +29,10 @@ chainmaker.org/chainmaker/net-common v1.2.0/go.mod h1:o+uQGFfylEb/qgFx03j7zSymRL
 chainmaker.org/chainmaker/net-common v1.2.1-0.20220909025951-ea07c51f1bb3 h1:rCjtlrHqwsic7uDoxe0jsmDiZ9zT/2Vgf8PT1u8meYg=
 chainmaker.org/chainmaker/net-common v1.2.1-0.20220909025951-ea07c51f1bb3/go.mod h1:o+uQGFfylEb/qgFx03j7zSymRLt/3FmKQg8eN2k6m34=
 chainmaker.org/chainmaker/net-libp2p v1.2.0/go.mod h1:gqYbyevyMOhh81ny3Y1t7ZPdByuDbVRbC/w/3NOLHxk=
-chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20221018031637-1287c2c44977 h1:i1MRgxljGJf5fbxrvpHWqgkX4bofy8XgkEUwoimShUk=
-chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20221018031637-1287c2c44977/go.mod h1:6A8fIxchvaA/KSPPH3PY1wbhkQeO0bVxBjOji0d14kQ=
+chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20221011033725-d8504edbd357 h1:JQetv9vlCllB1wXL0YGT54knUNzKBl9gOSNCT5DYDfY=
+chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20221011033725-d8504edbd357/go.mod h1:6A8fIxchvaA/KSPPH3PY1wbhkQeO0bVxBjOji0d14kQ=
+chainmaker.org/chainmaker/net-liquid v1.1.0 h1:WElaY7ZAcIXcIYnkBy2Zi6tTrkZ/uVBo2h3kOi5VlAk=
 chainmaker.org/chainmaker/net-liquid v1.1.0/go.mod h1:A1fjmgLv7ejD1eFh320+ZxGB4OWKYi1wgh56TJZ8b/A=
-chainmaker.org/chainmaker/net-liquid v1.1.1-0.20221018031421-6255f111102b h1:BA0pXDKPk5d46YHamyAvmkevV1KFQj3RjR+plSMe0fw=
-chainmaker.org/chainmaker/net-liquid v1.1.1-0.20221018031421-6255f111102b/go.mod h1:6ifIndbzN7biVd9x5E0JmNWEYaG1Yunj/9R36HdL1rQ=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.0/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.1-0.20220913100238-5eb76540b5c8 h1:cblgc1ewURIhQoOcxKGHTc6ms3SBOuJkYldGYt2OXVA=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.1-0.20220913100238-5eb76540b5c8/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
@@ -102,8 +101,8 @@ chainmaker.org/third_party/qtls-go1-17 v1.0.0 h1:NIpC1yOZ0J29NhgKNZWqgJDtKy09Mlz
 chainmaker.org/third_party/qtls-go1-17 v1.0.0/go.mod h1:iOVG/Wb71HM6sraACS53a4RgfiuhOC95JflStJ6WvpE=
 chainmaker.org/third_party/qtls-go1-18 v1.0.0 h1:lCcW7UGLmjesCQlCu+aDMWr6uELs8l83iiYN7vR6uRI=
 chainmaker.org/third_party/qtls-go1-18 v1.0.0/go.mod h1:EnMlWSlfWqkvD6PLf0gxKKwkfDzJt2/K8aBoBtWjzhg=
-chainmaker.org/third_party/quic-go v1.0.1 h1:2RnJ+bYuutmJ539l3elB9zfaSvG+OiiJL2tPtXOAAYY=
-chainmaker.org/third_party/quic-go v1.0.1/go.mod h1:/tFFfreeXYIq/GPhdCuJpgoJg1rxc/5umDDoAxuj+60=
+chainmaker.org/third_party/quic-go v1.0.0 h1:DDK2hFfLYslw/WdymW8cajMHJH6BawIiL67fDs5GBVY=
+chainmaker.org/third_party/quic-go v1.0.0/go.mod h1:/tFFfreeXYIq/GPhdCuJpgoJg1rxc/5umDDoAxuj+60=
 chainmaker.org/third_party/redisbloom-go v1.0.0 h1:R5I2K9zYfOoAMJP4Qn3Rk6OVpt+1s84KHHFiZWCX+q4=
 chainmaker.org/third_party/redisbloom-go v1.0.0/go.mod h1:l3Qe0jvaVir3n3IsuB2RfAtSKg7Zb/FxeV4XB1dyWjU=
 chainmaker.org/third_party/tikv-client-go v1.0.0 h1:3EtxVgVbqvC473GsdvzwfSit/C4fjRx7mmJ6erLQors=
