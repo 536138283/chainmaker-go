@@ -50,6 +50,9 @@ const (
 	ScheduleWithDagTimeout = 20
 	// blockVersion2300 block version 2.3.0
 	blockVersion2300 = uint32(2300)
+
+	// blockVersion2400 block version 2.4.0
+	blockVersion2400 = uint32(2400)
 )
 
 const (
@@ -125,7 +128,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
 
-	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
+	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
 	var senderGroup *SenderGroup
@@ -593,7 +596,7 @@ func (ts *TxScheduler) executeTx(
 	ts.log.Debugf("tx.Result = %v", tx.Result)
 
 	enableGas := ts.checkGasEnable()
-	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
+	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 	blockVersion := block.GetHeader().BlockVersion
 
 	if blockVersion >= 2300 {
@@ -1562,13 +1565,31 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 			txExecOrderIteratorCount++
 		case protocol.ExecOrderTxTypeChargeGas:
 			txExecOrderChargeGasCount++
+		case protocol.ExecOrderTxTypeCoinbase:
+			txExecOrderCoinBaseCount++
 		}
 	}
-	if (IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
-		(!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
-		return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-			txExecOrderCoinBaseCount, fmt.Errorf("charge gas enabled but charge gas tx is not 1")
+
+	// 检查gas或coinbase交易个数
+	// 240后 gas交易变更为coinbase交易,且gas交易数应为0
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion2400 {
+		if (coinbasemgr.CheckCoinbaseEnable(ts.chainConf)) && txExecOrderCoinBaseCount != 1 ||
+			(!coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && txExecOrderCoinBaseCount != 0) ||
+			txExecOrderChargeGasCount != 0 {
+			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+				txExecOrderCoinBaseCount, fmt.Errorf("verify coinbase's tx(%d) or gas's tx(%d) count failed",
+					txExecOrderCoinBaseCount, txExecOrderChargeGasCount)
+		}
+	} else {
+		if (coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
+			(!coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
+			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+				txExecOrderCoinBaseCount, fmt.Errorf("verify gas's tx(%d) count failed",
+					txExecOrderChargeGasCount)
+		}
 	}
+
 	// check type are all correct
 	for i, tx := range block.Txs {
 		t, ok := txExecOrderTypeMap[tx.Payload.GetTxId()]
@@ -1582,20 +1603,22 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 		} else {
 			typeShouldBe = protocol.ExecOrderTxTypeIterator
 		}
-		if IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
-			typeShouldBe = protocol.ExecOrderTxTypeChargeGas
+
+		// 240 以后，gas交易变更为coinbase交易
+		if blockVersion >= blockVersion2400 {
+			if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
+				typeShouldBe = protocol.ExecOrderTxTypeCoinbase
+			}
+
+		} else {
+			if coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
+				typeShouldBe = protocol.ExecOrderTxTypeChargeGas
+			}
 		}
+
 		if t != typeShouldBe {
 			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
 				txExecOrderCoinBaseCount, fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
-		}
-
-		// 如果开启coinbase交易，返回coinbase交易个数
-		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
-			if tx.Payload.TxType == commonPb.TxType_COINBASE_CONTRACT {
-				//TODO: 虚拟机对coinbase单独处理后，修改这里对统计。
-				//txExecOrderCoinBaseCount++
-			}
 		}
 	}
 	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,

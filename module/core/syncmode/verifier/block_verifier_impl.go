@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package verifier
 
 import (
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 	"encoding/hex"
 	"fmt"
 
@@ -242,7 +243,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
 			return err
 		}
@@ -449,7 +450,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	timeLasts := make(map[string]int64)
 	var err error
 	var txCapacity uint32
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity

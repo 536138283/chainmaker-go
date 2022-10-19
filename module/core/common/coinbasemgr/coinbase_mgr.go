@@ -7,10 +7,24 @@ import (
 
 func CheckCoinbaseEnable(chainConf protocol.ChainConf) bool {
 
-	if chainConf.ChainConfig().AccountConfig == nil {
+	return IsOptimizeChargeGasEnabled(chainConf) ||
+		chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_DPOS
+}
+
+// IsOptimizeChargeGasEnabled is optimized charge gas enable
+func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
+	enableGas := false
+	enableOptimizeChargeGas := false
+	if chainConf.ChainConfig() == nil || chainConf.ChainConfig().AccountConfig == nil {
 		return false
 	}
 
-	return chainConf.ChainConfig().AccountConfig.EnableGas ||
-		chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_DPOS
+	if chainConf.ChainConfig() == nil || chainConf.ChainConfig().Core == nil {
+		return false
+	}
+
+	enableGas = chainConf.ChainConfig().AccountConfig.EnableGas
+	enableOptimizeChargeGas = chainConf.ChainConfig().Core.EnableOptimizeChargeGas
+
+	return enableGas && enableOptimizeChargeGas
 }
