@@ -13,6 +13,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"encoding/hex"
@@ -42,6 +45,9 @@ type permissionedPkACProvider struct {
 
 	// consensus list in permissioned public key mode
 	consensusMember *sync.Map
+
+	//consensus type
+	consensusType consensus.ConsensusType
 }
 
 type adminMemberModel struct {
@@ -64,6 +70,7 @@ func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, 
 	}
 	msgBus.Register(msgbus.ChainConfig, pPkACProvider)
 	msgBus.Register(msgbus.PubkeyManageDelete, pPkACProvider)
+	msgBus.Register(msgbus.MaxbftEpochConf, pPkACProvider)
 	// v220_compat Deprecated
 	{
 		chainConf.AddWatch(pPkACProvider)   //nolint: staticcheck
@@ -79,12 +86,27 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 		consensusMember: &sync.Map{},
 		localOrg:        localOrgId,
 	}
+
+	var maxbftCfg *maxbft.GovernanceContract
+	var err error
+	ppacProvider.consensusType = chainConfig.Consensus.Type
+	if ppacProvider.consensusType == consensus.ConsensusType_MAXBFT {
+		maxbftCfg, err = loadChainConfigFromGovernance(store)
+		if err != nil {
+			return nil, err
+		}
+		//omit 1'st epoch, GovernanceContract don't save chainConfig in 1'st epoch
+		if maxbftCfg != nil && maxbftCfg.ChainConfig != nil {
+			chainConfig = maxbftCfg.ChainConfig
+		}
+	}
+
 	chainConfig.AuthType = strings.ToLower(chainConfig.AuthType)
 	ppacProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
 		chainConfig.AuthType, store, log)
 	ppacProvider.acService.pwkNewMember = ppacProvider.NewMemberFromAcs
 
-	err := ppacProvider.initAdminMembers(chainConfig.TrustRoots)
+	err = ppacProvider.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {
 		return nil, err
 	}

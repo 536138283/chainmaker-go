@@ -157,9 +157,7 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 func getNodes(conf *config.ChainConfig) []string {
 	nodes := make([]string, 0, 4)
 	for _, org := range conf.Consensus.Nodes {
-		for _, id := range org.NodeId {
-			nodes = append(nodes, id)
-		}
+		nodes = append(nodes, org.NodeId...)
 	}
 	return nodes
 }
@@ -298,7 +296,8 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 		sch.pendingTime[i] = sch.lastRequest
 		sch.pendingBlocks[i] = peer
 	}
-	if err := sch.sendSyncBlockRequest(peer, pendingHeight, sch.BatchesizeInEachReq, localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable); err != nil {
+	if err := sch.sendSyncBlockRequest(peer, pendingHeight, sch.BatchesizeInEachReq,
+		localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable); err != nil {
 		return nil, err
 	}
 	return nil, nil
@@ -321,6 +320,7 @@ func (sch *scheduler) sendSyncBlockRequest(toPeer string, fromHeight, batch uint
 //handleStopSyncMsg mark stop sync block and clean up records
 func (sch *scheduler) handleStopSyncMsg() {
 	sch.stopSyncBlock = true
+	sch.peers = make(map[string]uint64)
 	sch.blockStates = make(map[uint64]blockState)
 	sch.pendingTime = make(map[uint64]time.Time)
 	sch.pendingBlocks = make(map[uint64]string)

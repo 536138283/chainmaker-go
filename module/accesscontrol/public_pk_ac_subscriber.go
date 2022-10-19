@@ -9,7 +9,6 @@ package accesscontrol
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
@@ -20,14 +19,16 @@ var _ msgbus.Subscriber = (*pkACProvider)(nil)
 
 // OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
 func (p *pkACProvider) OnMessage(msg *msgbus.Message) {
+	p.log.Infof("[AC_PK] receive msg, topic: %s", msg.Topic.String())
 	switch msg.Topic {
 	case msgbus.ChainConfig:
-		p.log.Infof("[AC_PK] receive msg, topic: %s", msg.Topic.String())
 		p.onMessageChainConfig(msg)
+	case msgbus.MaxbftEpochConf:
+		p.onMessageMaxbftChainconfigInEpoch(msg)
 	}
-
 }
 
+//OnQuit When the message bus is shutting down,
 func (p *pkACProvider) OnQuit() {
 
 }
@@ -43,18 +44,5 @@ func (p *pkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	chainConfig := &config.ChainConfig{}
 	_ = proto.Unmarshal(dataBytes, chainConfig)
 
-	p.hashType = chainConfig.GetCrypto().GetHash()
-	err = p.initAdminMembers(chainConfig.TrustRoots)
-	if err != nil {
-		err = fmt.Errorf("new public AC provider failed: %s", err.Error())
-		p.log.Error(err)
-	}
-
-	err = p.initConsensusMember(chainConfig)
-	if err != nil {
-		err = fmt.Errorf("new public AC provider failed: %s", err.Error())
-		p.log.Error(err)
-	}
-	p.memberCache.Clear()
-
+	p.messageChainConfig(chainConfig, false)
 }

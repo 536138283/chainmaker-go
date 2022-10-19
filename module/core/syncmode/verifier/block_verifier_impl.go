@@ -278,10 +278,11 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, true, txRWSetMap, nil))
 	}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
-	v.log.Infof("verify success [%d,%x]"+
+	v.log.Infof("verify success [height:%d,hash:%x,txCount:%d]"+
 		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
-		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[common.BlockSig], timeLasts[common.VM],
-		timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
+		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, len(newBlock.Txs),
+		timeLasts[common.BlockSig], timeLasts[common.VM], timeLasts[common.TxVerify],
+		timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
@@ -562,7 +563,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 	// if cut txs not nil, retry txs to tx pool
 	if len(cutTxs) > 0 {
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
+		v.txPool.RetryTxs(cutTxs)
 	}
 }
 
@@ -599,7 +600,7 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 	}
 
 	if len(finalCutBatchIds) > 0 {
-		v.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
+		v.txPool.RetryTxBatches(finalCutBatchIds)
 	}
 
 	return nil

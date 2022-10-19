@@ -224,7 +224,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 				txsTimeout)
 		} else {
 			// retry txs timeout in tx pool
-			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+			bb.txPool.RetryTxs(txsTimeout)
 		}
 		block.Header.TxCount = uint32(len(block.Txs))
 	}
@@ -1200,10 +1200,12 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	if TxPoolType == batch.TxPoolType {
 		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
-		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
+		chain.txPool.RetryTxBatches(batchRetry)
+		chain.txPool.RemoveTxBatches(batchIds, protocol.NORMAL)
 	} else {
 		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
-		chain.txPool.RetryAndRemoveTxs(txRetry, lastProposed.Txs)
+		chain.txPool.RetryTxs(txRetry)
+		chain.txPool.RemoveTxs(lastProposed.Txs, protocol.NORMAL)
 	}
 
 	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick

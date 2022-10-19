@@ -26,12 +26,24 @@ import (
 
 // Special characters allowed to define customized access rules
 const (
-	LIMIT_DELIMITER              = "/"
-	PARAM_CERTS                  = "certs"
-	PARAM_CERTHASHES             = "cert_hashes"
-	PARAM_ALIASES                = "aliases"
-	PARAM_ALIAS                  = "alias"
-	PUBLIC_KEYS                  = "pubkey"
+	// LIMIT_DELIMITER for policy list 3/4
+	LIMIT_DELIMITER = "/"
+
+	// PARAM_CERTS param key
+	PARAM_CERTS = "certs"
+
+	// PARAM_CERTHASHES param key
+	PARAM_CERTHASHES = "cert_hashes"
+
+	// PARAM_ALIASES  param key
+	PARAM_ALIASES = "aliases"
+
+	// PARAM_ALIAS  param key
+	PARAM_ALIAS = "alias"
+
+	// PUBLIC_KEYS  param key
+	PUBLIC_KEYS = "pubkey"
+
 	unsupportedRuleErrorTemplate = "bad configuration: unsupported rule [%s]"
 )
 

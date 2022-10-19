@@ -35,9 +35,10 @@ else
   lint_check "module/net" 12
   lint_check "module/rpcserver" 3.8
   lint_check "module/snapshot" 15
-#  lint_check "module/sync" 15
+  lint_check "module/subscriber" 15
+  lint_check "module/sync" 15
   lint_check "module/txfilter" 15
-  lint_check "module/subscriber" 10
+  lint_check "module/subscriber" 15
   lint_check "module/txpool" 15
-  lint_check "tools/cmc" 6.8
+  lint_check "tools/cmc" 6
 fi

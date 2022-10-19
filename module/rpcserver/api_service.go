@@ -53,6 +53,19 @@ type ApiService struct {
 	ctx                         context.Context
 }
 
+// GetTxStatus - get status of tx
+func (s *ApiService) GetTxStatus(ctx context.Context,
+	request *txpoolPb.GetTxStatusRequest) (*txpoolPb.GetTxStatusResponse, error) {
+	txStatus, err := s.chainMakerServer.GetTxStatus(request.ChainId, request.TxId)
+	if err != nil {
+		return nil, err
+	}
+	return &txpoolPb.GetTxStatusResponse{
+		TxStatus: txStatus,
+		TxId:     request.TxId,
+	}, nil
+}
+
 // NewApiService - new ApiService object
 func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerServer) *ApiService {
 	log := logger.GetLogger(logger.MODULE_RPC)
@@ -130,16 +143,6 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
 		return
-	}
-
-	if localconf.ChainMakerConfig.NodeConfig.CertKeyUsageCheck {
-		err = checkTxSignCert(tx)
-		if err != nil {
-			errCode = commonErr.ERR_CODE_TX_VERIFY_FAILED
-			errMsg = s.getErrMsg(errCode, err)
-			s.log.Error(errMsg)
-			return
-		}
 	}
 
 	bc, err = s.chainMakerServer.GetBlockchain(tx.Payload.ChainId)

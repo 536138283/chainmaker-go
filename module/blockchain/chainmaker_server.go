@@ -566,3 +566,12 @@ func (server *ChainMakerServer) GetAllAC() ([]protocol.AccessControlProvider, er
 func (server *ChainMakerServer) Version() string {
 	return CurrentVersion
 }
+
+// GetTxStatus Get the transaction status by txId.
+// return TxStatus.
+func (server *ChainMakerServer) GetTxStatus(chainId string, txId string) (txpool.TxStatus, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		return blockchain.(*Blockchain).txPool.GetTxStatus(txId), nil
+	}
+	return txpool.TxStatus_UNKNOWN_STATUS, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}

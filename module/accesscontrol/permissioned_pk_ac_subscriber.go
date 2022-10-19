@@ -22,17 +22,19 @@ var _ msgbus.Subscriber = (*permissionedPkACProvider)(nil)
 
 // OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
 func (pp *permissionedPkACProvider) OnMessage(msg *msgbus.Message) {
+	pp.acService.log.Infof("[AC_PWK] receive msg, topic: %s", msg.Topic.String())
 	switch msg.Topic {
 	case msgbus.ChainConfig:
-		pp.acService.log.Infof("[AC_PWK] receive msg, topic: %s", msg.Topic.String())
 		pp.onMessageChainConfig(msg)
 	case msgbus.PubkeyManageDelete:
-		pp.acService.log.Infof("[AC_PWK] receive msg, topic: %s", msg.Topic.String())
 		pp.onMessagePublishKeyManageDelete(msg)
+	case msgbus.MaxbftEpochConf:
+		pp.onMessageMaxbftChainconfigInEpoch(msg)
 	}
 
 }
 
+// OnQuit when the message bus is shutting down
 func (pp *permissionedPkACProvider) OnQuit() {
 
 }
@@ -47,25 +49,11 @@ func (pp *permissionedPkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	chainConfig := &config.ChainConfig{}
 	_ = proto.Unmarshal(dataBytes, chainConfig)
 
-	pp.acService.hashType = chainConfig.GetCrypto().GetHash()
-
-	err = pp.initAdminMembers(chainConfig.TrustRoots)
-	if err != nil {
-		err = fmt.Errorf("update chainconfig error: %s", err.Error())
-		pp.acService.log.Error(err)
-	}
-
-	err = pp.initConsensusMember(chainConfig.Consensus.Nodes)
-	if err != nil {
-		err = fmt.Errorf("update chainconfig error: %s", err.Error())
-		pp.acService.log.Error(err)
-	}
-
-	pp.acService.initResourcePolicy(chainConfig.ResourcePolicies, pp.localOrg)
-
-	pp.acService.memberCache.Clear()
+	pp.messageChainConfig(chainConfig, false)
 }
 
+// onMessagePublishKeyManageDelete delete pk from memberCache immediately.
+// TODO: MaxBFT node pk must be delayed
 func (pp *permissionedPkACProvider) onMessagePublishKeyManageDelete(msg *msgbus.Message) {
 	data, _ := msg.Payload.([]string)
 	publishKey := data[1]

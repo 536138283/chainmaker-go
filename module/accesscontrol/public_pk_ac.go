@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
@@ -102,6 +104,9 @@ type pkACProvider struct {
 
 	resourceNamePolicyMap220 *sync.Map
 	exceptionalPolicyMap220  *sync.Map
+
+	//consensus type
+	consensusType consensus.ConsensusType
 }
 
 type publicAdminMemberModel struct {
@@ -116,8 +121,8 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	if err != nil {
 		return nil, err
 	}
-
 	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
+	msgBus.Register(msgbus.MaxbftEpochConf, pkAcProvider)
 	//v220_compat Deprecated
 	chainConf.AddWatch(pkAcProvider) //nolint: staticcheck
 	return pkAcProvider, nil
@@ -148,7 +153,21 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 		pkAcProvider.createDefaultResourcePolicy_220()
 	}
 
-	err := pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
+	var maxbftCfg *maxbft.GovernanceContract
+	var err error
+	pkAcProvider.consensusType = chainConfig.Consensus.Type
+	if pkAcProvider.consensusType == consensus.ConsensusType_MAXBFT {
+		maxbftCfg, err = loadChainConfigFromGovernance(store)
+		if err != nil {
+			return nil, err
+		}
+		//omit 1'st epoch, GovernanceContract don't save chainConfig in 1'st epoch
+		if maxbftCfg != nil && maxbftCfg.ChainConfig != nil {
+			chainConfig = maxbftCfg.ChainConfig
+		}
+	}
+
+	err = pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {
 		return nil, fmt.Errorf("new public AC provider failed: %s", err.Error())
 	}
@@ -823,6 +842,8 @@ func (p *pkACProvider) CreatePrincipal(resourceName string, endorsements []*comm
 	}, nil
 }
 
+// CreatePrincipalForTargetOrg creates a principal for "SELF" type policy,
+// which needs to convert SELF to a sepecific organization id in one authentication
 func (p *pkACProvider) CreatePrincipalForTargetOrg(resourceName string,
 	endorsements []*common.EndorsementEntry, message []byte, targetOrgId string) (protocol.Principal, error) {
 

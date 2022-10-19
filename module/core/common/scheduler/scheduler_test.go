@@ -240,6 +240,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
+	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
@@ -328,12 +329,12 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
+	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	// simulate calling GetContractByName(...) 3 times
-	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
-	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
-	blockChainStore.EXPECT().GetContractByName(coinbaseContractId.Name).After(reqCall1).Return(sysContractId, nil).AnyTimes()
+	blockChainStore.EXPECT().GetContractByName(gomock.Eq(contractId.Name)).Return(contractId, nil).AnyTimes()
+	blockChainStore.EXPECT().GetContractByName(gomock.Eq(sysContractId.Name)).Return(sysContractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(coinbaseContractId.Name).AnyTimes()
@@ -416,11 +417,12 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
+	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	// simulate calling GetContractByName(...) 3 times
-	reqCall1 := blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).Times(2)
-	blockChainStore.EXPECT().GetContractByName(sysContractId.Name).After(reqCall1).Return(sysContractId, nil).Times(1)
+	blockChainStore.EXPECT().GetContractByName(gomock.Eq(contractId.Name)).Return(contractId, nil).AnyTimes()
+	blockChainStore.EXPECT().GetContractByName(gomock.Eq(sysContractId.Name)).Return(sysContractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
@@ -1094,7 +1096,6 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 			tx1 := newTx(txId1, contractId, parameters)
 			tx2 := newTx(txId2, contractId, parameters)
 			tx2.Payload.ContractName = syscontract.SystemContract_ACCOUNT_MANAGER.String()
-			tx2.Payload.Method = syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
 
 			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
 			block.Dag = tt.dag
@@ -1129,7 +1130,6 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 		})
 	}
 }
-
 func TestMarshalDag(t *testing.T) {
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{

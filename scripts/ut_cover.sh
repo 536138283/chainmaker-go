@@ -14,7 +14,7 @@ function ut_cover() {
   rm cover.out
   coverage=$(echo ${total} | grep -P '\d+\.\d+(?=\%)' -o) #如果macOS 不支持grep -P选项，可以通过brew install grep更新grep
   #计算注释覆盖率，需要安装gocloc： go install github.com/hhatto/gocloc/cmd/gocloc@latest
-  comment_coverage=$(gocloc --include-lang=Go --output-type=json --not-match=".*_test\.go" . | jq '(.total.comment-.total.files*6)/(.total.code+.total.comment)*100')
+  comment_coverage=$(gocloc --include-lang=Go --output-type=json --not-match=".*_test\.go" . | jq '(.total.comment-.total.files*5)/(.total.code+.total.comment)*100')
   echo "注释率：${comment_coverage}%"
 
   # 如果测试覆盖率低于N，认为ut执行失败
@@ -39,22 +39,16 @@ if [ -n "$1" ] ;then
   echo "check UT cover: $1."
   ut_cover "$1" 40 10
 else
-   ut_cover "module/accesscontrol" 47 3
-   ut_cover "module/blockchain" 40 1.3
-#  ut_cover "module/conf/chainconf" 26
-#  ut_cover "module/conf/localconf" 11
-  ut_cover "module/consensus" 30 5.8
-  #ut_cover "module/consensus/dpos" 50
-  #ut_cover "module/consensus/raft" 0
-#  ut_cover "module/consensus/solo" 0
-  #ut_cover "module/consensus/tbft" 10
-  ut_cover "module/core" 37 7
-  ut_cover "module/net" 29 8
+   ut_cover "module/accesscontrol" 49 3
+   ut_cover "module/blockchain" 43 15
+  ut_cover "module/consensus" 41 15
+  ut_cover "module/core" 38 14
+  ut_cover "module/net" 35 12
   ut_cover "module/rpcserver" 0 2.8
-  ut_cover "module/snapshot" 47 9.7
-  ut_cover "module/sync" 69 2.5
-  ut_cover "module/txfilter" 40 0
-  ut_cover "module/subscriber" 70 0.9
+  ut_cover "module/snapshot" 50 15
+  ut_cover "module/sync" 70 15
+  ut_cover "module/txfilter" 48 15
+  ut_cover "module/subscriber" 80 15
 #  ut_cover "module/txpool" 0
-  ut_cover "tools/cmc" 7 2.3
+  ut_cover "tools/cmc" 7 6
 fi

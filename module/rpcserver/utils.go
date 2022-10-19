@@ -11,9 +11,6 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"github.com/pkg/errors"
-
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	cmx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
@@ -145,28 +142,4 @@ func checkMemberStatusIsRevoked(accessControls []protocol.AccessControlProvider,
 	}
 
 	return false, nil
-}
-
-// checkTxSignCert check if sign cert is valid
-func checkTxSignCert(tx *common.Transaction) error {
-	if tx.Sender.Signer.MemberType != pbac.MemberType_CERT {
-		return nil
-	}
-	b, rest := pem.Decode(tx.Sender.Signer.MemberInfo)
-	if len(rest) != 0 {
-		return errors.New("failed to decode sign cert, rest not nil")
-	}
-	cert, err := cmx509.ParseCertificate(b.Bytes)
-	if err != nil {
-		return errors.WithMessage(err, "failed to parse sign cert")
-	}
-	//signCert's keyUsage: 	Digital Signature, Non Repudiation
-	if cert.KeyUsage == 0 || (cert.KeyUsage&(x509.KeyUsageDigitalSignature) == 0) {
-		return errors.New("tx sign certificate is not valid for Digital Signature")
-	}
-	//tlsCert's keyUsage:   Digital Signature, Non Repudiation, Key Encipherment, Data Encipherment, Key Agreement
-	if cert.KeyUsage != 0 && (cert.KeyUsage&(x509.KeyUsageKeyAgreement) != 0) {
-		return errors.New("tls certificate is misused for tx sign")
-	}
-	return nil
 }
