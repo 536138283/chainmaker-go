@@ -1370,9 +1370,9 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, chainConf protocol.ChainCo
 	turboBlock.Txs = newTxs
 
 	// 如果开启了coinbase交易，coinbase交易不得裁剪
-	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE ||
-		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE ||
-		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE {
+	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK | commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK | commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK | commonPb.BlockType_HAS_COINBASE {
 		turboBlock.Txs[turboBlock.Header.TxCount-1] = block.Txs[turboBlock.Header.TxCount-1]
 	}
 
@@ -1581,7 +1581,7 @@ func recoverBlockWithCoinBaseTx(
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 	txIds = txIds[:len(txIds)-1]
 
-	if block.Txs[block.Header.TxCount-1].Payload.TxType != commonPb.TxType_COINBASE_CONTRACT {
+	if !coinbasemgr.IsCoinBaseTx(block.Txs[block.Header.TxCount-1]) {
 		return nil, nil, fmt.Errorf("recover block failed[height:%d,hash:%x,txCount:%d],"+
 			"invaild coinbase tx[txId:%s,txType:%s]",
 			block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount,

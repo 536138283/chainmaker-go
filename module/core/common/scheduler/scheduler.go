@@ -216,22 +216,24 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
-	// if the block is not empty, append the charging gas tx
-	//if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
-	//	ts.log.DebugDynamic(func() string {
-	//		return "append charge gas tx to block ..."
-	//	})
-	//	ts.appendChargeGasTx(block, snapshot, senderCollection)
-	//	//TODO: 使用blocktype时候 需要做相应处理
-	//	block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
-	//}
-
-	if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
-		ts.log.DebugDynamic(func() string {
-			return "append coinbase tx to block ..."
-		})
-		ts.appendCoinbaseTx(block, snapshot, senderCollection)
-		block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
+	// 软分叉处理，240版本后gas交易变更为coinbase交易
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion2400 {
+		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
+			ts.log.DebugDynamic(func() string {
+				return "append coinbase tx to block ..."
+			})
+			ts.appendCoinbaseTx(block, snapshot, senderCollection)
+			block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
+		}
+	} else {
+		if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+			ts.log.DebugDynamic(func() string {
+				return "append charge gas tx to block ..."
+			})
+			ts.appendChargeGasTx(block, snapshot, senderCollection)
+			// gas交易没有对应的blockType
+		}
 	}
 
 	timeCostB := time.Since(startTime)
@@ -1196,7 +1198,7 @@ func (ts *TxScheduler) createCoinbaseTx(
 	// 构造 Payload
 	payload := &commonPb.Payload{
 		ChainId:        ts.chainConf.ChainConfig().ChainId,
-		TxType:         commonPb.TxType_COINBASE_CONTRACT,
+		TxType:         commonPb.TxType_INVOKE_CONTRACT,
 		TxId:           utils.GetRandTxId(),
 		Timestamp:      time.Now().Unix(),
 		ExpirationTime: time.Now().Add(time.Second * 1).Unix(),
@@ -1652,23 +1654,18 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if txExecOrderIteratorCount > 0 {
 		appendSpecialTxsToDag(dag, txExecOrderIteratorCount)
 	}
-	// snapshot.GetSnapshotSize() > 0 prevent snapshot.GetSnapshotSize() - 1 overflow
-	// v240之后使用coinbase实现，不再有GasTx
-	//if IsOptimizeChargeGasEnabled(ts.chainConf) && snapshot.GetSnapshotSize() > 0 {
-	//	ts.appendChargeGasTxToDAG(dag, snapshot)
-	//}
 
-	// coinbase Tx
-	if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
-		ts.appendCoinbaseToDAG(dag, snapshot)
-
-		//TODO: 虚拟机对coinbase交易特殊处理后，再校验。
-		// 检查coinbase交易个数
-		//if txExecOrderCoinBaseCount != 1 {
-		//	return fmt.Errorf("check coinbase tx num failed,height: %d,hash:%x,coinbaseCount:%d",
-		//		block.Header.BlockHeight, block.Header.BlockHash, txExecOrderCoinBaseCount)
-		//}
-
+	// 软分叉处理，v240之后使用coinbase实现，不再有GasTx
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion2400 {
+		// coinbase Tx
+		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
+			ts.appendCoinbaseToDAG(dag, snapshot)
+		}
+	} else {
+		if coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && snapshot.GetSnapshotSize() > 0 {
+			ts.appendChargeGasTxToDAG(dag, snapshot)
+		}
 	}
 
 	equal, err := utils.IsDagEqual(block.Dag, dag)
@@ -1678,8 +1675,7 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if !equal {
 		ts.log.Warnf("compare block dag (vertex:%d) with simulate dag (vertex:%d)",
 			len(block.Dag.Vertexes), len(dag.Vertexes))
-		//TODO: 校验有问题，需要修改
-		//return fmt.Errorf("simulate dag not equal to block dag")
+		return fmt.Errorf("simulate dag not equal to block dag")
 	}
 	timeUsed := time.Since(startTime)
 	ts.log.Infof("compare dag finished, time used %v", timeUsed)

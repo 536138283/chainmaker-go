@@ -1,7 +1,9 @@
 package coinbasemgr
 
 import (
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -27,4 +29,14 @@ func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
 	enableOptimizeChargeGas = chainConf.ChainConfig().Core.EnableOptimizeChargeGas
 
 	return enableGas && enableOptimizeChargeGas
+}
+
+func IsCoinBaseTx(tx *commonPb.Transaction) bool {
+	if tx == nil || tx.Payload == nil ||
+		tx.Payload.ContractName != syscontract.SystemContract_COINBASE.String() ||
+		tx.Payload.Method == syscontract.CoinbaseFunction_RUN_COINBASE.String() {
+		return false
+	}
+
+	return false
 }
