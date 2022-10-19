@@ -142,7 +142,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		RwSetHash: nil,
 	}
 	payload := tx.Payload
-	if payload.TxType != commonPb.TxType_QUERY_CONTRACT && payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
+	if payload.TxType != commonPb.TxType_QUERY_CONTRACT &&
+		payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
 		return errResult(result, fmt.Errorf("no such tx type: %s", tx.Payload.TxType))
 	}
 
@@ -201,6 +202,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
 		parameters, txSimContext, 0, tx.Payload.TxType)
+
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 

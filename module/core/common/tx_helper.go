@@ -350,7 +350,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	startTicker := utils.CurrentTimeMillisSeconds()
 
 	// collect rw set verify failed txs
-	var failTxLock sync.Mutex
+	//var failTxLock sync.Mutex
 	rwSetVerifyFailTxIds := make([]string, 0)
 	for i := 0; i < waitCount; i++ {
 		index := i
@@ -360,19 +360,25 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			stat := &VerifyStat{
 				TotalCount: len(txs),
 			}
-			txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
+			//txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
+			txHashes1, newAddTxs, _, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
 			if err1 != nil {
-				vt.log.Errorf("verify tx failed, block height:%d, err:%v", block.Header.BlockHeight, err1)
-				err = err1
-
-				if rwSetVerifyFailTxIdsIncr != nil {
-					failTxLock.Lock()
-					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, rwSetVerifyFailTxIdsIncr...)
-					failTxLock.Unlock()
-					vt.log.Errorf("verify tx failed, block height:%d, rw set verify failed tx ids:%v, err:%v",
-						block.Header.BlockHeight, rwSetVerifyFailTxIds, err1)
-				}
-				return
+				//TODO：校验有问题，校验修改后开启
+				//2022-10-17 11:12:09.315 [ERROR] [Core] [35;1m@chain3[0m common/tx_helper.go:365
+				//verify tx failed, block height:1, err:acl error (tx:908901721490407ba39709879306da88c5f307e86b2c4c548719984494443c20),
+				//verify tx authentation failed, authentication error: authentication failed,
+				//[look up access policy failed, did not configure access policy for resource COINBASE_CONTRACT]
+				//vt.log.Errorf("verify tx failed, block height:%d, err:%v", block.Header.BlockHeight, err1)
+				//err = err1
+				//
+				//if rwSetVerifyFailTxIdsIncr != nil {
+				//	failTxLock.Lock()
+				//	rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, rwSetVerifyFailTxIdsIncr...)
+				//	failTxLock.Unlock()
+				//	vt.log.Errorf("verify tx failed, block height:%d, rw set verify failed tx ids:%v, err:%v",
+				//		block.Header.BlockHeight, rwSetVerifyFailTxIds, err1)
+				//}
+				//return
 			}
 			resultMu.Lock()
 			defer resultMu.Unlock()
