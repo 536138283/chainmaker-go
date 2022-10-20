@@ -17,7 +17,7 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20220906155423-3c724ff823aa
 	chainmaker.org/chainmaker/net-liquid v1.1.1-0.20220906155617-b0a95c2cd5c0
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.1-0.20221017030441-e3241137ff7a
-	chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20221017034712-6f21be7c45f6
+	chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20221020063942-5107bf4201ea
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221014062330-f257d8973d4e
 	chainmaker.org/chainmaker/store/v2 v2.3.1-0.20220906172244-de50f24e1bbb
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.1-0.20221014095540-f06072edd787
@@ -68,7 +68,7 @@ require (
 )
 
 require (
-	chainmaker.org/chainmaker/consensus-abft/v2 v2.0.0-20221017055623-bfa8a7bd71e4
+	chainmaker.org/chainmaker/consensus-abft/v2 v2.0.0-20221020064225-9ff9d0ec5a39
 	chainmaker.org/chainmaker/lws v1.1.1-0.20220713075428-5bed3f300ef9 // indirect
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
