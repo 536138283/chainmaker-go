@@ -724,6 +724,7 @@ func (bc *Blockchain) initCore() (err error) {
 		Subscriber:      bc.eventSubscriber,
 		NetService:      bc.netService,
 		TxFilter:        bc.txFilter,
+		ABFTCache:       cache.NewAbftCache(),
 	}
 	// 时间戳
 	coreEngineFactory := core.Factory()

@@ -462,11 +462,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 		return nil, nil, timeLasts, nil, err
 	}
 
-	// proposed height == proposing height - 1
-	proposedHeight := lastBlock.Header.BlockHeight
-	// check if this block height is 1 bigger than last block height
-	lastBlockHash := lastBlock.Header.BlockHash
-	err = common.CheckPreBlock(block, lastBlock, err, lastBlockHash, proposedHeight)
+	err = common.CheckPreBlock(block, lastBlock)
 	if err != nil {
 		return nil, nil, timeLasts, nil, err
 	}
@@ -491,11 +487,7 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 		return nil, timeLasts, nil, err
 	}
 
-	// proposed height == proposing height - 1
-	proposedHeight := lastBlock.Header.BlockHeight
-	// check if this block height is 1 bigger than last block height
-	lastBlockHash := lastBlock.Header.BlockHash
-	err = common.CheckPreBlock(block, lastBlock, err, lastBlockHash, proposedHeight)
+	err = common.CheckPreBlock(block, lastBlock)
 	if err != nil {
 		return nil, timeLasts, nil, err
 	}

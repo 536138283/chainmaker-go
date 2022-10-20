@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"strconv"
 
+	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -31,6 +32,19 @@ type CommitBlock struct {
 	chainConf       protocol.ChainConf
 	txFilter        protocol.TxFilter
 	msgBus          msgbus.MessageBus
+}
+
+// NewCommitBlock params CoreEngineConfig, return CommitBlock
+func NewCommitBlock(ceConfig *conf.CoreEngineConfig) *CommitBlock {
+	return &CommitBlock{
+		store:           ceConfig.BlockchainStore,
+		log:             ceConfig.Log,
+		snapshotManager: ceConfig.SnapshotManager,
+		ledgerCache:     ceConfig.LedgerCache,
+		chainConf:       ceConfig.ChainConf,
+		txFilter:        ceConfig.TxFilter,
+		msgBus:          ceConfig.MsgBus,
+	}
 }
 
 // CommitBlock the action that all consensus types do when a block is committed
