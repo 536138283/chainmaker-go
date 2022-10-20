@@ -477,6 +477,10 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// move set admin method to chain config module
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
+
+	// for coinbase in optimize mode or tbft
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_COINBASE.String()+"-"+
+		syscontract.CoinbaseFunction_RUN_COINBASE.String(), policyConsensus)
 }
 
 // need to consistent with 2.1.0 for dpos
@@ -487,6 +491,10 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
 	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
 	p.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
+
+	// for coinbase in optimize mode or tbft
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_COINBASE.String()+"-"+
+		syscontract.CoinbaseFunction_RUN_COINBASE.String(), policyConsensus)
 
 	// for txtype
 	p.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), pubPolicyTransaction)
@@ -612,9 +620,16 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 
+	// for coinbase in optimize mode or tbft
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_COINBASE.String()+"-"+
+		syscontract.CoinbaseFunction_RUN_COINBASE.String(), policyConsensus)
+
 	// for admin management
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pubPolicyMajorityAdmin)
+
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_ERC20.String()+"-"+
+		syscontract.DPoSERC20Function_MINT.String(), pubPolicyMajorityAdmin)
 }
 
 func (p *pkACProvider) verifyPrincipalPolicy(principal,

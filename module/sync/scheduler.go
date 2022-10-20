@@ -552,7 +552,7 @@ func (sch *scheduler) updateSchedulerBySyncBlockBatch(msgFrom string, o interfac
 				sch.log.Infof("received block [height:%d:%x] needToProcess: %v from "+
 					"node [%s], withRwset:%t", height, hash, true, msgFrom, hasRWset)
 				if (block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK ||
-					block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK_WITH_COINBASE|commonPb.BlockType_HAS_COINBASE) &&
+					block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK|commonPb.BlockType_HAS_COINBASE) &&
 					!hasRWset { //如果是不带读写集的配置块，则重新请求带读写集的配置块
 					resyncBlock = append(resyncBlock, height)
 					continue
