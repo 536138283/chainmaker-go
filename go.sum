@@ -10,11 +10,11 @@ chainmaker.org/chainmaker/consensus-raft/v2 v2.3.0 h1:ekd1lmC58rgqJk04pkFjNwRRU+
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.0/go.mod h1:1mGogAc+/xIISWCb2WpPlra0ZsZD94vJNSI+1n3eo8c=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0 h1:mkqVcc4qknBDq3VZY/KSzo0leh6br2vjdTPxyc1nUEs=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0/go.mod h1:OXtOwnLA27c3FP2KnCfb+HHlZGph3vXBgtXhBGQpSKA=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.1-0.20220922030334-5edec164c03d h1:VKnMtbQrquH19L0l8+7m4DwinxreDdyIvtTsvb7wnCY=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.1-0.20220922030334-5edec164c03d/go.mod h1:PbIHkzIZUUz7ik+l0+efSIhFIMyzXWmQWmWO817/sNE=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20221020075102-17aeb223d05d h1:IuieT78z1YBF/LpJCqXpURV5O/H82RHf25IDW3GHJKY=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20221020075102-17aeb223d05d/go.mod h1:ukY4YnlF0OLe0DINb3Cn9zIBdcATleSR1tC8uJVx/kg=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.0/go.mod h1:9KowPGC3NRiswF0xzvpktKP4s6v/4MI52JCCUiimduM=
-chainmaker.org/chainmaker/consensus-utils/v2 v2.3.1-0.20220921093319-1fb0817e3d0e h1:RJPpo/jE36eq5f5mgYtyYeNNajg5zJdpI8iTqBr4NSE=
-chainmaker.org/chainmaker/consensus-utils/v2 v2.3.1-0.20220921093319-1fb0817e3d0e/go.mod h1:9KowPGC3NRiswF0xzvpktKP4s6v/4MI52JCCUiimduM=
+chainmaker.org/chainmaker/consensus-utils/v2 v2.3.1 h1:UXI/IKqT+5EvutbGyZ1k8fiPTzB/BrTi5OBWkJ6O+8s=
+chainmaker.org/chainmaker/consensus-utils/v2 v2.3.1/go.mod h1:9KowPGC3NRiswF0xzvpktKP4s6v/4MI52JCCUiimduM=
 chainmaker.org/chainmaker/libp2p-core v1.0.0 h1:0wUc81wt6VwbmhcEswcwZ96f6NWo6Dtbl4wM6Q2TN/U=
 chainmaker.org/chainmaker/libp2p-core v1.0.0/go.mod h1:o5hZnNkN7gMbfe34vRKlgAtndDw2OtLUAS9+bUSz4SU=
 chainmaker.org/chainmaker/libp2p-pubsub v1.1.3 h1:4bHPT1swsPmUdJr2EsLyOdb83FTPHf7MEqZr9a9uqu0=
