@@ -179,6 +179,7 @@ func rebuildDbsStart() {
 	if errC != nil {
 		log.Error("chainmaker encounters error ", errC)
 	}
+
 	//rpcServer.Stop()
 	chainMakerServer.Stop()
 	log.Info("All is stopped!")
