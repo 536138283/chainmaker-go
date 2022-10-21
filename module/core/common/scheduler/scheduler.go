@@ -95,7 +95,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	txBatchSize := len(txBatch)
-	ts.log.Infof("schedule tx batch start, block_number = %v, size = %d", block.Header.BlockHeight, txBatchSize)
+	ts.log.Infof("schedule tx batch start, block %d, size = %d", block.Header.BlockHeight, txBatchSize)
 
 	var goRoutinePool *ants.Pool
 	poolCapacity := ts.StoreHelper.GetPoolCapacity()
@@ -206,8 +206,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	timeCostB := time.Since(startTime)
-	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
-		"dag building cost %v, total used %v, tps %v\n", len(block.Dag.Vertexes), timeCostA,
+	ts.log.Infof("schedule tx batch finished, block %d, success %d, txs execution cost %v, "+
+		"dag building cost %v, total used %v, tps %v", block.Header.BlockHeight, len(block.Dag.Vertexes), timeCostA,
 		timeCostB-timeCostA, timeCostB, float64(len(block.Dag.Vertexes))/(float64(timeCostB)/1e9))
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
@@ -454,8 +454,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	<-ts.scheduleFinishC
 	snapshot.Seal()
 	timeUsed := time.Since(startTime)
-	ts.log.Infof("simulate with dag finished, size %d, time used %v, tps %v\n", len(block.Txs),
-		timeUsed, float64(len(block.Txs))/(float64(timeUsed)/1e9))
+	ts.log.Infof("simulate with dag finished, block %d, size %d, time used %v, tps %v", block.Header.BlockHeight,
+		len(block.Txs), timeUsed, float64(len(block.Txs))/(float64(timeUsed)/1e9))
 
 	// Return the read and write set after the scheduled execution
 	for _, txRWSet := range snapshot.GetTxRWSetTable() {

@@ -355,6 +355,12 @@ func createUpgradeUserContract(op createUpgradeContractOp) error {
 			return err
 		}
 	case upgradeContractOp:
+		if contractAddress != "" {
+			contractName = contractAddress
+		}
+		if contractName == "" {
+			return errors.New("either contract-name or contract-address must be set")
+		}
 		payload, err = client.CreateContractUpgradePayload(contractName, version,
 			byteCodePath, common.RuntimeType(rt), kvs)
 		if err != nil {

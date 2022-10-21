@@ -1138,7 +1138,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 				continue
 			}
 
-			retryBatchIds, _, err := GetBatchIds(block)
+			retryBatchIds, _, err := GetBatchIds(b)
 			if err != nil {
 				return nil, nil, batchIds, err
 			}
