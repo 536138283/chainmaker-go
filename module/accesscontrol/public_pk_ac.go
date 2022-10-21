@@ -628,8 +628,25 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pubPolicyMajorityAdmin)
 
+	// for erc20 contract
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_ERC20.String()+"-"+
-		syscontract.DPoSERC20Function_MINT.String(), pubPolicyMajorityAdmin)
+		syscontract.DPoSERC20Function_MINT.String(), pubPolicyManage)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_ERC20.String()+"-"+
+		syscontract.DPoSERC20Function_TRANSFER_OWNERSHIP.String(), pubPolicyManage)
+
+	// for stake contract
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_STAKE.String()+"-"+
+		syscontract.DPoSStakeFunction_UPDATE_EPOCH_VALIDATOR_NUMBER_AND_EPOCH_BLOCK_NUMBER.String(), pubPolicyManage)
+
+	// for distribution contract
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_DISTRIBUTION.String()+"-"+
+		syscontract.DPoSDistributionFunction_SET_DISTRIBUTION_PER_BLOCK.String(), pubPolicyManage)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_DISTRIBUTION.String()+"-"+
+		syscontract.DPoSDistributionFunction_SET_GAS_EXCHANGE_RATE.String(), pubPolicyManage)
+
+	// for slashing contract
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_SLASHING.String()+"-"+
+		syscontract.DPoSSlashingFunction_SET_SLASHING_PER_BLOCK.String(), pubPolicyManage)
 }
 
 func (p *pkACProvider) verifyPrincipalPolicy(principal,

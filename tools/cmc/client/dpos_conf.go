@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"strings"
 
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
@@ -623,7 +622,7 @@ func getEndorsementEntrys(client *sdk.ChainClient,
 		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
 			e, err := sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],
-				crypto.HashAlgoMap[fmt.Sprintf("%d", client.GetHashType())],
+				client.GetHashType(),
 				adminOrgs[i],
 				payload,
 			)
@@ -635,7 +634,7 @@ func getEndorsementEntrys(client *sdk.ChainClient,
 		} else {
 			e, err := sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],
-				crypto.HashAlgoMap[fmt.Sprintf("%d", client.GetHashType())],
+				client.GetHashType(),
 				"",
 				payload,
 			)

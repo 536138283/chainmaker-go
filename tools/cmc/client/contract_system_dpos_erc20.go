@@ -28,31 +28,7 @@ func erc20Mint() *cobra.Command {
 		Use:   "mint",
 		Short: "mint feature of the erc20",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			var (
-				err error
-			)
-			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
-			if err != nil {
-				return err
-			}
-			defer client.Stop()
-			pairs := make(map[string]string)
-			if params != "" {
-				err := json.Unmarshal([]byte(params), &pairs)
-				if err != nil {
-					return err
-				}
-			}
-			txId = sdkutils.GetTimestampTxId()
-			resp, err := mint(client, address, amount, txId, DEFAULT_TIMEOUT, syncResult)
-			if err != nil {
-				return fmt.Errorf("mint failed, %s", err.Error())
-			}
-
-			fmt.Printf("resp: %+v\n", resp)
-
-			return nil
+			return mint()
 		},
 	}
 
@@ -62,7 +38,33 @@ func erc20Mint() *cobra.Command {
 		flagOrgId, flagChainId,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
-		flagSyncResult,
+		flagSyncResult, flagAdminKeyFilePaths, flagAdminOrgIds,
+	})
+
+	cmd.MarkFlagRequired(flagAddress)
+	cmd.MarkFlagRequired(flagAmount)
+
+	return cmd
+}
+
+// erc20TransferOwnership DPos ERC20合约中的转移owner权限
+// @return *cobra.Command
+func erc20TransferOwnership() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "mint",
+		Short: "transfer owner ship of the erc20",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return transferOwnership()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagAddress, flagAmount,
+		flagSdkConfPath,
+		flagOrgId, flagChainId,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
+		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
+		flagSyncResult, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
 
 	cmd.MarkFlagRequired(flagAddress)
@@ -303,29 +305,74 @@ func erc20Total() *cobra.Command {
 	return cmd
 }
 
-// mint ERC20合约中的Mint发行Token
-func mint(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
-	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
-		"to":    address,
-		"value": amount,
-	}
-	if txId == "" {
-		txId = sdkutils.GetTimestampTxId()
-	}
-	resp, err := cc.InvokeSystemContract(
-		syscontract.SystemContract_DPOS_ERC20.String(),
-		syscontract.DPoSERC20Function_MINT.String(),
-		txId,
-		util.ConvertParameters(params),
-		timeout,
-		withSyncResult,
-	)
+func mint() error {
+
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("%s failed, %s", common.TxType_INVOKE_CONTRACT.String(), err.Error())
+		return err
+	}
+	defer client.Stop()
+
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
 	}
 
-	return resp, nil
+	payload, err := client.Mint(address, amount)
+	if err != nil {
+		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
+	}
+
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	if err != nil {
+		return fmt.Errorf("send chain config update request failed, %s", err.Error())
+	}
+	err = util.CheckProposalRequestResp(resp, false)
+	if err != nil {
+		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
+	}
+	fmt.Printf("response %+v\n", resp)
+	return nil
+}
+
+func transferOwnership() error {
+
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return err
+	}
+	defer client.Stop()
+
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
+	}
+
+	payload, err := client.TransferOwnership(address, amount)
+	if err != nil {
+		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
+	}
+
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	if err != nil {
+		return fmt.Errorf("send chain config update request failed, %s", err.Error())
+	}
+	err = util.CheckProposalRequestResp(resp, false)
+	if err != nil {
+		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
+	}
+	fmt.Printf("response %+v\n", resp)
+	return nil
 }
 
 // transfer ERC20的transfer操作
