@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -36,6 +36,21 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 
 	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
 
+	// moved out by hongdazhcai
+	pk, _ := getPkFromTx(tx, snapshot)
+	val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
+		chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+		return chainCfg, err
+	})
+	if err != nil {
+		ts.log.Errorf("get LastChainConfig error: %v", err)
+		return false
+	}
+	chainCfg, ok := val.(*config.ChainConfig)
+	if !ok {
+		ts.log.Errorf("failed to transfer chainConfig from interface to struct")
+	}
+	
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
 
@@ -68,6 +83,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			// in `verify node`:
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
+
 			if tx.Payload.Limit.GasLimit < chainCfg.AccountConfig.DefaultGas {
 				txResult := &commonPb.Result{
 					Code: commonPb.TxStatusCode_GAS_LIMIT_TOO_SMALL,
@@ -84,19 +100,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 				return false
 
 			} else if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
-				pk, _ := getPkFromTx(tx, snapshot)
-				val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
-					chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
-					return chainCfg, err
-				})
-				if err != nil {
-					ts.log.Errorf("get LastChainConfig error: %v", err)
-					return false
-				}
-				chainCfg, ok := val.(*config.ChainConfig)
-				if !ok {
-					ts.log.Errorf("failed to transfer chainConfig from interface to struct")
-				}
+
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
