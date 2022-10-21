@@ -1337,7 +1337,9 @@ func GetProposerId(
 }
 
 // GetTurboBlock get turbo block
-func GetTurboBlock(block, turboBlock *commonPb.Block, chainConf protocol.ChainConf, logger protocol.Logger) *commonPb.Block {
+func GetTurboBlock(block, turboBlock *commonPb.Block,
+	chainConf protocol.ChainConf,
+	logger protocol.Logger) *commonPb.Block {
 	turboBlock.Header = block.Header
 	turboBlock.Dag = block.Dag
 	turboBlock.AdditionalData = block.AdditionalData
@@ -1370,9 +1372,9 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, chainConf protocol.ChainCo
 	turboBlock.Txs = newTxs
 
 	// 如果开启了coinbase交易，coinbase交易不得裁剪
-	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK | commonPb.BlockType_HAS_COINBASE ||
-		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK | commonPb.BlockType_HAS_COINBASE ||
-		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK | commonPb.BlockType_HAS_COINBASE {
+	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK|commonPb.BlockType_HAS_COINBASE {
 		turboBlock.Txs[turboBlock.Header.TxCount-1] = block.Txs[turboBlock.Header.TxCount-1]
 	}
 

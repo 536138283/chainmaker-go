@@ -1642,7 +1642,8 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	}
 	// rebuild and verify dag
 	txRWSetTable := utils.RearrangeRWSet(block, txRWSetMap)
-	if uint32(len(txRWSetTable)) != txExecOrderNormalCount+txExecOrderIteratorCount+txExecOrderChargeGasCount+txExecOrderCoinBaseCount {
+	if uint32(len(txRWSetTable)) !=
+		txExecOrderNormalCount+txExecOrderIteratorCount+txExecOrderChargeGasCount+txExecOrderCoinBaseCount {
 		return fmt.Errorf("txRWSetTable:%d != txExecOrderTypeCount:%d+%d+%d+%d", len(txRWSetTable),
 			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount)
 	}

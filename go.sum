@@ -73,6 +73,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20221019032113-d662d4943f72 h1:24
 chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20221019032113-d662d4943f72/go.mod h1:QulH2E5wCvMzvFe1/Q5uFsogSEXJ/dRwCioWaToivpY=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0 h1:8TNEw1XtWBZkjqoNgcc9qoD/0xFkSb0SDXyzM2rQxjo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221021080512-53f4df22c850 h1:bhCB4R3MMfGJsFBbBREjCO1yLA9+aH/pTTxLHkjVlcQ=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221021080512-53f4df22c850/go.mod h1:qTLzk6L7pEvflFHCaAZ0sZL+GuuZ53ANKJO2Zvw/2U4=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0 h1:Q5tNXukq+B+9asB/PJxOd/d7HltJDyw2scVT008deBQ=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0/go.mod h1:8uuLFeyjEs1jHK2jEvLJBRhfoV6KymFw49PowTduimY=
 chainmaker.org/chainmaker/store-leveldb/v2 v2.3.0 h1:4Y55PFsnNC25LkiDbaV3NBpiWoEMWf/irKoWSBipcWc=

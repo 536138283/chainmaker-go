@@ -360,12 +360,14 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			stat := &VerifyStat{
 				TotalCount: len(txs),
 			}
-			//txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
+			//txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 :=
+			//vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
 			txHashes1, newAddTxs, _, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
 			if err1 != nil {
 				//TODO：校验有问题，校验修改后开启
 				//2022-10-17 11:12:09.315 [ERROR] [Core] [35;1m@chain3[0m common/tx_helper.go:365
-				//verify tx failed, block height:1, err:acl error (tx:908901721490407ba39709879306da88c5f307e86b2c4c548719984494443c20),
+				//verify tx failed, block height:1, err:acl error
+				//(tx:908901721490407ba39709879306da88c5f307e86b2c4c548719984494443c20),
 				//verify tx authentation failed, authentication error: authentication failed,
 				//[look up access policy failed, did not configure access policy for resource COINBASE_CONTRACT]
 				//vt.log.Errorf("verify tx failed, block height:%d, err:%v", block.Header.BlockHeight, err1)
@@ -379,6 +381,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 				//		block.Header.BlockHeight, rwSetVerifyFailTxIds, err1)
 				//}
 				//return
+				vt.log.Warn(err.Error())
 			}
 			resultMu.Lock()
 			defer resultMu.Unlock()

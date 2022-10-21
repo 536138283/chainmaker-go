@@ -7,6 +7,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+// CheckCoinbaseEnable Check if coinbase is enabled
 func CheckCoinbaseEnable(chainConf protocol.ChainConf) bool {
 
 	return IsOptimizeChargeGasEnabled(chainConf) ||
@@ -31,6 +32,7 @@ func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
 	return enableGas && enableOptimizeChargeGas
 }
 
+// IsCoinBaseTx Returns true if it is a coinbase transaction
 func IsCoinBaseTx(tx *commonPb.Transaction) bool {
 	if tx == nil || tx.Payload == nil ||
 		tx.Payload.ContractName != syscontract.SystemContract_COINBASE.String() ||
