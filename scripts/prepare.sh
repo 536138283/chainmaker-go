@@ -8,14 +8,16 @@
 
 # check mac gun-getopt
 function checkEnv() {
-  getopt --test
-  if [ "$?" != "4" ];then
-    brew -v > /dev/null
-    if [ "$?" != "0" ];then
-      echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
+  if [ "$(uname)" == "Darwin" ];then
+    getopt --test
+    if [ "$?" != "4" ];then
+      brew -v > /dev/null
+      if [ "$?" != "0" ];then
+        echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
+      fi
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt'
+      exit
     fi
-    echo 'Please install gnu-getopt for Mac: brew install gnu-getopt'
-    exit
   fi
 }
 checkEnv
@@ -40,7 +42,7 @@ BUILD_CONFIG_PATH=${BUILD_PATH}/config
 CRYPTOGEN_TOOL_PATH=${PROJECT_PATH}/tools/chainmaker-cryptogen
 CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/crypto_config_template.yml
-CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
+CRYPTOGEN_TOOL_TEST_KEYS=${CRYPTOGEN_TOOL_PATH}/config/test_keys.yml
 
 
 BC_YML_TRUST_ROOT_LINE=$(awk '/trust roots list start/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
