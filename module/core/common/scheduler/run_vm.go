@@ -1,10 +1,11 @@
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 
 	"golang.org/x/sync/singleflight"
 
@@ -50,7 +51,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 	if !ok {
 		ts.log.Errorf("failed to transfer chainConfig from interface to struct")
 	}
-	
+
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
 
