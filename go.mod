@@ -81,9 +81,6 @@ require (
 )
 
 replace (
-	// google.golang.org/grpc => google.golang.org/grpc v1.26.0
-
-	chainmaker.org/chainmaker/sdk-go/v2 => /Users/tedcxwang/Documents/tencent.com-dpos/sdk-go
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.0
