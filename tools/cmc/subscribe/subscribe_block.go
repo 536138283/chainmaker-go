@@ -33,16 +33,6 @@ func newSubBlockCMD() *cobra.Command {
 			defer cancel()
 			payload := cc.CreateSubscribeBlockPayload(startBlock, endBlock, withRWSet, onlyHeader)
 
-			// make endorsers
-			//adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
-			//if err != nil {
-			//	return err
-			//}
-			//endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
-			//if err != nil {
-			//	return err
-			//}
-
 			// subscribing data
 			dataC, err := cc.Subscribe(ctx, payload)
 			if err != nil {
@@ -77,7 +67,6 @@ func newSubBlockCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		//flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds,
 		flagStartBlock, flagEndBlock, flagWithRWSet, flagOnlyHeader,
 	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{

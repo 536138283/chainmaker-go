@@ -33,16 +33,6 @@ func newSubContractEventCMD() *cobra.Command {
 			defer cancel()
 			payload := cc.CreateSubscribeContractEventPayload(startBlock, endBlock, contractName, topic)
 
-			// make endorsers
-			//adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
-			//if err != nil {
-			//	return err
-			//}
-			//endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
-			//if err != nil {
-			//	return err
-			//}
-
 			// subscribing data
 			dataC, err := cc.Subscribe(ctx, payload)
 			if err != nil {
@@ -69,7 +59,6 @@ func newSubContractEventCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		//flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds,
 		flagStartBlock, flagEndBlock, flagContractName, flagTopic,
 	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{

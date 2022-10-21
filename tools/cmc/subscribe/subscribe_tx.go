@@ -33,16 +33,6 @@ func newSubTxCMD() *cobra.Command {
 			defer cancel()
 			payload := cc.CreateSubscribeTxPayload(startBlock, endBlock, contractName, txIds)
 
-			// make endorsers
-			//adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
-			//if err != nil {
-			//	return err
-			//}
-			//endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
-			//if err != nil {
-			//	return err
-			//}
-
 			// subscribing data
 			dataC, err := cc.Subscribe(ctx, payload)
 			if err != nil {
@@ -72,7 +62,6 @@ func newSubTxCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		//flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds,
 		flagStartBlock, flagEndBlock, flagContractName, flagTxIds,
 		flagResultToString,
 	})
