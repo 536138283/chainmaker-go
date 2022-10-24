@@ -25,6 +25,7 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	systemPb "chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -1264,7 +1265,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 				continue
 			}
 
-			retryBatchIds, _, err := GetBatchIds(block)
+			retryBatchIds, _, err := GetBatchIds(b)
 			if err != nil {
 				return nil, nil, batchIds, err
 			}
@@ -1293,6 +1294,15 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	}
 
 	return txRetry, batchRetry, nil, nil
+}
+
+func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
+	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
+		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
+		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+		return true
+	}
+	return false
 }
 
 // checkLastProposedBlock check last propose block nolint: ineffassign, staticcheck
@@ -1428,7 +1438,10 @@ func recoverBlockByBatch(
 		if err != nil {
 			return nil, nil, err
 		}
-
+		if len(indexes) != int(block.Header.TxCount) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes))
+		}
 		if len(batchIds) == 0 {
 			logger.DebugDynamic(func() string {
 				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d], additionalData :%v",

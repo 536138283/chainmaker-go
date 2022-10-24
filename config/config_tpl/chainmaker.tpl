@@ -277,7 +277,7 @@ tx_filter:
     # sharding number
     length: 5
     # sharding task timeout in seconds
-    timeout: 3
+    timeout: 60
     snapshot:
       # serialize type
       # 0 Serialization by height interval
