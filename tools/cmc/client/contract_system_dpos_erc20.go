@@ -51,7 +51,7 @@ func erc20Mint() *cobra.Command {
 // @return *cobra.Command
 func erc20TransferOwnership() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "mint",
+		Use:   "transfer-owner-ship",
 		Short: "transfer owner ship of the erc20",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return transferOwnership()

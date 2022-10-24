@@ -143,7 +143,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 	if len(txBatch) == 1 && utils.IsConfigTx(txBatch[0]) {
 		isConfigBlock = true
 	}
-	block, err := initNewBlock(lastBlock, bb.identity, bb.chainId, bb.chainConf, isConfigBlock)
+	block, err := InitNewBlock(lastBlock, bb.identity, bb.chainId, bb.chainConf, isConfigBlock)
 	if err != nil {
 		return block, timeLasts, err
 	}
@@ -281,8 +281,8 @@ func (bb *BlockBuilder) findLastBlockFromCache(proposingHeight uint64, preHash [
 	return lastBlock
 }
 
-// initNewBlock init new block
-func initNewBlock(
+// InitNewBlock init new block
+func InitNewBlock(
 	lastBlock *commonPb.Block,
 	identity protocol.SigningMember,
 	chainId string,
@@ -726,10 +726,18 @@ func (vb *VerifierBlock) ValidateBlock(
 	vb.log.DebugDynamic(func() string {
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	// abft's block proposer is nil
+	if block.Header.Proposer.MemberInfo != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil",
+			vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts[BlockSig] = sigLasts
 
@@ -851,11 +859,18 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	vb.log.DebugDynamic(func() string {
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		vb.log.Errorf("verify block signature fail,err:%s", err.Error())
-		return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	if block.Header.Proposer.MemberInfo != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			vb.log.Errorf("verify block signature fail,err:%s", err.Error())
+			return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil",
+			vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts[BlockSig] = sigLasts
 
@@ -873,10 +888,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		}
 		// verify TxRoot
 		startRootsTick := utils.CurrentTimeMillisSeconds()
-		err = CheckBlockDigests(block, nil, hashType, vb.log)
-		if err != nil {
-			return nil, timeLasts, nil, err
+		if vb.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
+			err = CheckBlockDigests(block, nil, hashType, vb.log)
+			if err != nil {
+				return nil, timeLasts, nil, err
+			}
 		}
+
 		rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 		timeLasts[TxRoot] = rootsLast
 		return nil, timeLasts, nil, nil
@@ -953,10 +971,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 }
 
 // CheckPreBlock check prepare block nolint: staticcheck
-func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
-	err error, lastBlockHash []byte, proposedHeight uint64) error {
+func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block) error {
+	// proposed height == proposing height - 1
+	proposedHeight := lastBlock.Header.BlockHeight
+	// check if this block height is 1 bigger than last block height
+	lastBlockHash := lastBlock.Header.BlockHash
 
-	if err = IsHeightValid(block, proposedHeight); err != nil {
+	if err := IsHeightValid(block, proposedHeight); err != nil {
 		return err
 	}
 	// check if this block pre hash is equal with last block hash

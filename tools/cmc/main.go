@@ -25,6 +25,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/payload"
 	"chainmaker.org/chainmaker-go/tools/cmc/pubkey"
 	"chainmaker.org/chainmaker-go/tools/cmc/query"
+	"chainmaker.org/chainmaker-go/tools/cmc/subscribe"
 	"chainmaker.org/chainmaker-go/tools/cmc/tee"
 	"chainmaker.org/chainmaker-go/tools/cmc/txpool"
 	"chainmaker.org/chainmaker-go/tools/cmc/version"
@@ -58,10 +59,7 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(txpool.NewTxPoolCMD())
 	mainCmd.AddCommand(version.VersionCMD())
 	mainCmd.AddCommand(consensus.NewConsensusCMD())
-
-	// 后续改成go-sdk
-	//mainCmd.AddCommand(payload.PayloadCMD())
-	//mainCmd.AddCommand(log.LogCMD())
+	mainCmd.AddCommand(subscribe.NewSubscribeCMD())
 
 	mainCmd.Execute()
 }

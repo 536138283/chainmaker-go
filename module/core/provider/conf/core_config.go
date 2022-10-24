@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package conf
 
 import (
+	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -47,6 +48,8 @@ type CoreEngineConfig struct {
 	NetService protocol.NetService
 	// tx filter
 	TxFilter protocol.TxFilter
+	// abft cache
+	ABFTCache *cache.AbftCache
 }
 
 // StoreHelper store heloer interface
