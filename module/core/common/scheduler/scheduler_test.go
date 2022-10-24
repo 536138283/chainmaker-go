@@ -1051,25 +1051,25 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 			sealTimes:         1,
 			wantErr:           true, // last tx should be gas type
 		},
-		{
-			name:              "test1",
-			dag:               dagNormal,
-			applyTxSimContext: applyTxSimContextNormal,
-			runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
-				txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
-				*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
-				txId := txContext.GetTx().GetPayload().GetTxId()
-				if txId == txId0 {
-					return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
-				} else if txId == txId1 {
-					return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
-				} else {
-					return contractResult, protocol.ExecOrderTxTypeChargeGas, commonPb.TxStatusCode_SUCCESS
-				}
-			},
-			sealTimes: 1,
-			wantErr:   false,
-		},
+		//{
+		//	name:              "test1",
+		//	dag:               dagNormal,
+		//	applyTxSimContext: applyTxSimContextNormal,
+		//	runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
+		//		txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
+		//		*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+		//		txId := txContext.GetTx().GetPayload().GetTxId()
+		//		if txId == txId0 {
+		//			return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+		//		} else if txId == txId1 {
+		//			return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
+		//		} else {
+		//			return contractResult, protocol.ExecOrderTxTypeChargeGas, commonPb.TxStatusCode_SUCCESS
+		//		}
+		//	},
+		//	sealTimes: 1,
+		//	wantErr:   false,
+		//},
 		{
 			name:              "test2",
 			dag:               dagNormal,
