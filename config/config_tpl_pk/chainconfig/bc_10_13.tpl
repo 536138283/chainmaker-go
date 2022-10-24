@@ -140,7 +140,7 @@ consensus:
     - key: stake.epochValidatorNum
       value: "{epochValidatorNum}"
     - key: stake.epochBlockNum
-      value: "10"
+      value: "{epochBlockNum}"
     - key: stake.completionUnbondingEpochNum
       value: "1"
     # Distribution and slashing config
