@@ -100,15 +100,9 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 	var err error
-	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
-	if err != nil {
-		return nil, nil, err
-	}
 
-	if ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_TBFT &&
-		int64(block.Header.BlockHeight)-int64(lastCommittedHeight) < 1 {
-		return nil, nil, fmt.Errorf("no need to schedule old block, ledger height: %d, block height: %d",
-			lastCommittedHeight, block.Header.BlockHeight)
+	if err = ts.checkTBFTLastBLock(block); err != nil {
+		return nil, nil, err
 	}
 
 	txBatchSize := len(txBatch)
@@ -245,6 +239,21 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	contractEventMap := ts.getContractEventMap(block)
 
 	return txRWSetMap, contractEventMap, nil
+}
+
+func (ts *TxScheduler) checkTBFTLastBLock(block *commonPb.Block) error {
+	var err error
+	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
+	if err != nil {
+		return err
+	}
+
+	if ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_TBFT &&
+		int64(block.Header.BlockHeight)-int64(lastCommittedHeight) < 1 {
+		return fmt.Errorf("no need to schedule old block, ledger height: %d, block height: %d",
+			lastCommittedHeight, block.Header.BlockHeight)
+	}
+	return nil
 }
 
 // handleTx: run tx and apply tx sim context to snapshot
@@ -1606,18 +1615,7 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 			typeShouldBe = protocol.ExecOrderTxTypeIterator
 		}
 
-		// 240 以后，gas交易变更为coinbase交易
-		if blockVersion >= blockVersion2400 {
-			if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
-				typeShouldBe = protocol.ExecOrderTxTypeCoinbase
-			}
-
-		} else {
-			if coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
-				typeShouldBe = protocol.ExecOrderTxTypeChargeGas
-			}
-		}
-
+		typeShouldBe = ts.getTypeShouldBeByBlockVersion(blockVersion, i, block, typeShouldBe)
 		if t != typeShouldBe {
 			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
 				txExecOrderCoinBaseCount, fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
@@ -1625,6 +1623,22 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 	}
 	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
 		txExecOrderCoinBaseCount, nil
+}
+
+func (ts *TxScheduler) getTypeShouldBeByBlockVersion(blockVersion uint32, i int,
+	block *commonPb.Block, typeShouldBe protocol.ExecOrderTxType) protocol.ExecOrderTxType {
+	// 240 以后，gas交易变更为coinbase交易
+	if blockVersion >= blockVersion2400 {
+		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
+			typeShouldBe = protocol.ExecOrderTxTypeCoinbase
+		}
+
+	} else {
+		if coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
+			typeShouldBe = protocol.ExecOrderTxTypeChargeGas
+		}
+	}
+	return typeShouldBe
 }
 
 func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snapshot,
