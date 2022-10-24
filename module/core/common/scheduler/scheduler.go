@@ -65,6 +65,7 @@ type TxScheduler struct {
 	keyReg          *regexp.Regexp
 	signer          protocol.SigningMember
 	ledgerCache     protocol.LedgerCache
+	contractCache   *sync.Map
 }
 
 // Transaction dependency in adjacency table representation
@@ -212,6 +213,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
 	contractEventMap := ts.getContractEventMap(block)
+
+	ts.releaseContractCache()
 
 	return txRWSetMap, contractEventMap, nil
 }
@@ -509,6 +512,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		result, _ := prettyjson.Marshal(txRWSetMap)
 		ts.log.Infof("simulate with dag rwset :%s, dag: %+v", result, block.Dag)
 	}
+	ts.releaseContractCache()
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
 
@@ -1488,6 +1492,13 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	timeUsed := time.Since(startTime)
 	ts.log.Infof("compare dag finished, time used %v", timeUsed)
 	return nil
+}
+
+func (ts *TxScheduler) releaseContractCache() {
+	ts.contractCache.Range(func(key interface{}, value interface{}) bool {
+		ts.contractCache.Delete(key)
+		return true
+	})
 }
 
 // appendSpecialTxsToDag similar to ts.simulateSpecialTxs except do not execute tx, only handle dag

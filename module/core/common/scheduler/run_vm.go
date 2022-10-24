@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -70,18 +69,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  2) tx.Result should be set in `runVM()` later
 			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
 				pk, _ := getPkFromTx(tx, snapshot)
-				val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
-					chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
-					return chainCfg, err
-				})
-				if err != nil {
-					ts.log.Errorf("get LastChainConfig error: %v", err)
-					return false
-				}
-				chainCfg, ok := val.(*config.ChainConfig)
-				if !ok {
-					ts.log.Errorf("failed to transfer chainConfig from interface to struct")
-				}
+				chainCfg := txSimContext.GetLastChainConfig()
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
@@ -176,21 +164,35 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	}
 
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
-	ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
-		return txSimContext.GetContractByName(contractName)
-	})
+
+	var contract *commonPb.Contract
+	// if contract exists in contract cache, assign to contract
+	if ct, ok := ts.contractCache.Load(contractName); ok {
+		if contract, ok = ct.(*commonPb.Contract); !ok {
+			err = errors.New("failed to transfer contract from interface to struct")
+			ts.log.Error(err)
+			return errResult(result, err)
+		}
+	} else {
+		// contract not exists, use singleflight to get contract
+		ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
+			return txSimContext.GetContractByName(contractName)
+		})
+		if err != nil {
+			ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
+			return errResult(result, err)
+		}
+		if contract, ok = ct.(*commonPb.Contract); !ok {
+			err = errors.New("failed to transfer contract from interface to struct")
+			ts.log.Error(err)
+			return errResult(result, err)
+		}
+		// store to contract cache after get contract
+		ts.contractCache.Store(contractName, contract)
+	}
+
 	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
 		ts.log.Infof("sample tx end get contract time")
-	}
-	if err != nil {
-		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
-		return errResult(result, err)
-	}
-	contract, ok := ct.(*commonPb.Contract)
-	if !ok {
-		err = errors.New("failed to transfer contract from interface to struct")
-		ts.log.Error(err)
-		return errResult(result, err)
 	}
 
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&

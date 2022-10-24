@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"fmt"
 	"strings"
 	"sync"
@@ -46,6 +47,7 @@ type SnapshotImpl struct {
 	preSnapshot protocol.Snapshot
 
 	blockFingerprint string
+	lastChainConfig  *config.ChainConfig
 
 	// applied data, please lock it before using
 	txRWSetTable   []*commonPb.TxRWSet
@@ -67,6 +69,10 @@ func NewQuerySnapshot(store protocol.BlockchainStore, log protocol.Logger) (*Sna
 	if err != nil {
 		return nil, err
 	}
+	lastChainConfig, err := store.GetLastChainConfig()
+	if err != nil {
+		return nil, err
+	}
 
 	querySnapshot := &SnapshotImpl{
 		blockchainStore: store,
@@ -74,12 +80,13 @@ func NewQuerySnapshot(store protocol.BlockchainStore, log protocol.Logger) (*Sna
 		log:             log,
 		txResultMap:     make(map[string]*commonPb.Result, txCount),
 
-		chainId:        lastBlock.Header.ChainId,
-		blockHeight:    lastBlock.Header.BlockHeight,
-		blockVersion:   lastBlock.Header.BlockVersion,
-		blockTimestamp: lastBlock.Header.BlockTimestamp,
-		blockProposer:  lastBlock.Header.Proposer,
-		preBlockHash:   lastBlock.Header.PreBlockHash,
+		chainId:         lastBlock.Header.ChainId,
+		blockHeight:     lastBlock.Header.BlockHeight,
+		blockVersion:    lastBlock.Header.BlockVersion,
+		blockTimestamp:  lastBlock.Header.BlockTimestamp,
+		blockProposer:   lastBlock.Header.Proposer,
+		preBlockHash:    lastBlock.Header.PreBlockHash,
+		lastChainConfig: lastChainConfig,
 
 		txTable: nil,
 
@@ -107,6 +114,11 @@ func (s *SnapshotImpl) SetPreSnapshot(snapshot protocol.Snapshot) {
 // GetBlockchainStore return the blockchainStore of the snapshot
 func (s *SnapshotImpl) GetBlockchainStore() protocol.BlockchainStore {
 	return s.blockchainStore
+}
+
+// GetLastChainConfig return the last chain config
+func (s *SnapshotImpl) GetLastChainConfig() *config.ChainConfig {
+	return s.lastChainConfig
 }
 
 // GetSnapshotSize return the len of the txTable

@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"errors"
 	"math"
 
@@ -58,6 +59,13 @@ func (s *SnapshotEvidence) GetBlockchainStore() protocol.BlockchainStore {
 		return nil
 	}
 	return s.delegate.GetBlockchainStore()
+}
+
+func (s *SnapshotEvidence) GetLastChainConfig() *config.ChainConfig {
+	if s.delegate == nil {
+		return nil
+	}
+	return s.delegate.GetLastChainConfig()
 }
 
 func (s *SnapshotEvidence) GetSnapshotSize() int {

@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -128,6 +129,10 @@ func (s *MockSimContextImpl) GetSender() *acPb.Member {
 }
 
 func (s *MockSimContextImpl) GetBlockchainStore() protocol.BlockchainStore {
+	panic(implement_me)
+}
+
+func (s *MockSimContextImpl) GetLastChainConfig() *config.ChainConfig {
 	panic(implement_me)
 }
 
