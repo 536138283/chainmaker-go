@@ -3013,7 +3013,11 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 			tx1 := newTx(txId1, contractId, parameters)
 			tx2 := newTx(txId2, contractId, parameters)
 
-			block := &commonPb.Block{}
+			block := &commonPb.Block{
+				Header: &commonPb.BlockHeader{
+					BlockVersion: blockVersion2400,
+				},
+			}
 			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
 			got, got1, got2, _, err := ts.verifyExecOrderTxType(block, tt.args.txExecOrderTypeMap)
 			if (err != nil) != tt.wantErr {
