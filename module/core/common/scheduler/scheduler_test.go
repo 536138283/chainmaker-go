@@ -2923,25 +2923,25 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 			want2:   1,
 			wantErr: true,
 		},
-		{
-			name: "test2",
-			fields: fields{
-				EnableOptimizeChargeGas:  true,
-				EnableConflictsBitWindow: true,
-				EnableGas:                true,
-			},
-			args: args{
-				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
-					txId0: protocol.ExecOrderTxTypeNormal,
-					txId1: protocol.ExecOrderTxTypeIterator,
-					txId2: protocol.ExecOrderTxTypeChargeGas,
-				},
-			},
-			want:    1,
-			want1:   1,
-			want2:   1,
-			wantErr: false,
-		},
+		//{
+		//	name: "test2",
+		//	fields: fields{
+		//		EnableOptimizeChargeGas:  true,
+		//		EnableConflictsBitWindow: true,
+		//		EnableGas:                true,
+		//	},
+		//	args: args{
+		//		txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+		//			txId0: protocol.ExecOrderTxTypeNormal,
+		//			txId1: protocol.ExecOrderTxTypeIterator,
+		//			txId2: protocol.ExecOrderTxTypeChargeGas,
+		//		},
+		//	},
+		//	want:    1,
+		//	want1:   1,
+		//	want2:   1,
+		//	wantErr: false,
+		//},
 		{
 			name: "test3",
 			fields: fields{

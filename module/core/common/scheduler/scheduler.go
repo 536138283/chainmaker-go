@@ -213,10 +213,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	// 软分叉处理，240版本后gas交易变更为coinbase交易
 	blockVersion := block.GetHeader().BlockVersion
 	if blockVersion >= blockVersion2400 {
+		//dpos或开启gas时，启用coinbase
 		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
 			ts.log.DebugDynamic(func() string {
 				return "append coinbase tx to block ..."
 			})
+			//添加coinbaseTx到区块中，并修改dag
 			ts.appendCoinbaseTx(block, snapshot, senderCollection)
 			block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
 		}
@@ -1077,22 +1079,28 @@ func (ts *TxScheduler) appendChargeGasTx(
 	ts.appendChargeGasTxToDAG(block.Dag, snapshot)
 }
 
-//nolint: unused
+// appendCoinbaseTx include 3 step:
+// 1) create a new coinbase tx
+// 2) execute tx by calling native contract
+// 3) append tx to DAG struct
 func (ts *TxScheduler) appendCoinbaseTx(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot,
 	senderCollection *SenderCollection) {
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => creaCoinbaseTx() begin ")
+	//创建coinbase交易
 	tx, err := ts.createCoinbaseTx(senderCollection)
 	if err != nil {
 		return
 	}
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => executeCoinbaseTx() begin ")
+	//执行coinbase交易
 	txSimContext := ts.executeCoinbaseTx(tx, block, snapshot)
 	tx.Result = txSimContext.GetTxResult()
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendCCoinbaseToDAG() begin ")
+	//coinbase交易添加到dag中
 	ts.appendCoinbaseToDAG(block.Dag, snapshot)
 }
 
