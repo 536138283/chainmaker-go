@@ -8,6 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/sdk-go/v2/utils"
+	"chainmaker.org/chainmaker/vm/v2"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -21,13 +24,9 @@ import (
 
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
-	"chainmaker.org/chainmaker/vm/v2"
-
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/localconf/v2"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/hokaccha/go-prettyjson"
@@ -555,7 +554,7 @@ func (ts *TxScheduler) executeTx(
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
-	ts.log.Debugf("tx.Result = %v", tx.Result)
+	//ts.log.Debugf("tx.Result = %v", tx.Result)
 
 	enableGas := ts.checkGasEnable()
 	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
@@ -679,7 +678,7 @@ func (ts *TxScheduler) Halt() {
 	ts.scheduleFinishC <- true
 }
 
-//nolint: unused
+// nolint: unused
 func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 	dagString := "digraph DAG {\n"
 	for i, ns := range dag.Vertexes {
@@ -901,9 +900,10 @@ func (ts *TxScheduler) getSenderPk(txSimContext protocol.TxSimContext) ([]byte, 
 }
 
 // dispatchTxs dispatch txs from:
-// 	1) senderCollection when flag `enableOptimizeChargeGas` was set
-// 	2) senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
-// 	3) txBatch directly where no flags was set
+//  1. senderCollection when flag `enableOptimizeChargeGas` was set
+//  2. senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
+//  3. txBatch directly where no flags was set
+//
 // to runningTxC
 func (ts *TxScheduler) dispatchTxs(
 	txBatch []*commonPb.Transaction,
