@@ -1,14 +1,12 @@
 package scheduler
 
 import (
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"golang.org/x/sync/singleflight"
-	"strings"
-
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 var sf singleflight.Group
@@ -159,10 +157,6 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		)
 	}
 
-	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start get contract time")
-	}
-
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
 
 	var contract *commonPb.Contract
@@ -189,10 +183,6 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		}
 		// store to contract cache after get contract
 		ts.contractCache.Store(contractName, contract)
-	}
-
-	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx end get contract time")
 	}
 
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
@@ -228,9 +218,6 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		}
 	}
 
-	if strings.HasSuffix(tx.Payload.GetTxId(), "0000") {
-		ts.log.Infof("sample tx start run vm time")
-	}
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
 		parameters, txSimContext, 0, tx.Payload.TxType)
 	result.Code = txStatusCode

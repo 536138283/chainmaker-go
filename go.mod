@@ -17,7 +17,7 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20221011033725-d8504edbd357
 	chainmaker.org/chainmaker/net-liquid v1.1.0
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.1-0.20221020020235-feef3c9ed047
-	chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221024063329-358ba4364a8a
+	chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221024093623-fc7569579a3f
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.1
 	chainmaker.org/chainmaker/store/v2 v2.3.2-0.20220923035128-7aa3b97d614a
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.0
@@ -25,13 +25,13 @@ require (
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.0
 	chainmaker.org/chainmaker/utils/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.1-0.20220923021934-5c61122967ac
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.1-0.20221014063833-6850bddecde6
-	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2-0.20221024065656-4d08cf462afe
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221024070203-d38ee44d54c8
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2-0.20221024064513-96939381ca42
-	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220915060746-11b2378b6379
-	chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20221024071522-31db5350216b
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.2-0.20221025035325-56e780c716a2
+	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2-0.20221025032551-69708ccade88
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2-0.20221025034210-a40bd91f6cf2
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221024124606-c4c3e73fea7b
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2-0.20221025035041-8442dda584a4
+	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2-0.20221025034622-03ea3afa0c70
+	chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20221025034024-a5c8b8fcd669
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -55,7 +55,7 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.7.1
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
