@@ -354,7 +354,7 @@ func transferOwnership() error {
 		return err
 	}
 
-	payload, err := client.TransferOwnership(address, amount)
+	payload, err := client.TransferOwnership(address)
 	if err != nil {
 		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
 	}
