@@ -7,8 +7,9 @@ else
         PLATFORM="Linux"
     endif
 endif
-DATETIME=$(shell date "+%Y%m%d%H%M%S")
+
 VERSION=v2.3.0
+DATETIME=$(shell date "+%Y%m%d%H%M%S")
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
 
