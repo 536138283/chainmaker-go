@@ -25,13 +25,13 @@ require (
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.0
 	chainmaker.org/chainmaker/utils/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.1-0.20220923021934-5c61122967ac
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.2-0.20221025035325-56e780c716a2
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.2-0.20221025072421-5e5aeed93936
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2-0.20221025032551-69708ccade88
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2-0.20221025034210-a40bd91f6cf2
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2-0.20221025072756-8dce22455c5f
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221024124606-c4c3e73fea7b
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2-0.20221025035041-8442dda584a4
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2-0.20221025091602-29b2a1bbac4b
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2-0.20221025034622-03ea3afa0c70
-	chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20221025034024-a5c8b8fcd669
+	chainmaker.org/chainmaker/vm/v2 v2.3.1-0.20221025084456-7ae56575c604
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
