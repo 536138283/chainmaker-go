@@ -6,7 +6,7 @@ SPDX-License-Identifier: Apache-2.0
 """
 import base64
 import json
-import string
+import time
 import sys
 import unittest
 import re
@@ -53,7 +53,7 @@ class Test(unittest.TestCase):
             cd_asset.invoke("sql_insert",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\",\"age\":\"{}\",\"id_card_no\":\"{}\"}}".format(str(i),"长安链chainmaker",str(i+10),"510623199202023323"))
 
 
-
+        time.sleep(1)
         print("3.查询age为11的记录".center(50, "="))
         query_result=cd_asset.invoke("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
         query=base64.b64decode(json.loads(query_result).get("contract_result").get("result"))
@@ -69,7 +69,7 @@ class Test(unittest.TestCase):
 
 
         print("5.查询id=1的name是不是更新成了长安链chainmaker_update".center(50, "="))
-        name_update_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
+        name_update_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config2.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
         name_update=base64.b64decode(json.loads(name_update_result).get("contract_result").get("result"))
         print("id:",str(base64.b64decode(json.loads(name_update).get("id")),encoding='utf-8'))
         print("name:",str(base64.b64decode(json.loads(name_update).get("name")),encoding='utf-8'))
@@ -96,14 +96,14 @@ class Test(unittest.TestCase):
 
 
         print("8.再次查询 id age=11，应该查不到".center(50, "="))
-        query_id_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
+        query_id_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config3.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
         query_id=str(base64.b64decode(json.loads(query_id_result).get("contract_result").get("result")),encoding='utf-8')
         print("再次查询 id age=11,结果为: ",query_id,"\n")
         self.assertEqual(query_id, '{}', "success")
 
 
         print("9.跨合约调用".center(50, "="))
-        sql_cross_call_result=cd_asset.get("sql_cross_call",sdk_config="sdk_config.yml",params="{{\"contract_name\":\"{}\",\"min_age\":\"{}\",\"max_age\":\"{}\"}}".format("rustsql",str(16),str(19)))
+        sql_cross_call_result=cd_asset.get("sql_cross_call",sdk_config="sdk_config4.yml",params="{{\"contract_name\":\"{}\",\"min_age\":\"{}\",\"max_age\":\"{}\"}}".format("rustsql",str(16),str(19)))
         sql_cross_call=str(base64.b64decode(json.loads(sql_cross_call_result).get("contract_result").get("result")),encoding='utf-8')
         parts_range_age=re.split('{|}',sql_cross_call)
         for part_range_age in parts_range_age:

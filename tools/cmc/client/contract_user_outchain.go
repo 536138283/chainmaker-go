@@ -151,7 +151,7 @@ func getOutUserContract() error {
 	db.SetMaxIdleConns(20)
 	filterList := getFilterList(db)
 
-	pairs := make(map[string]string)
+	pairs := make(map[string]interface{})
 	if params != "" {
 		err := json.Unmarshal([]byte(params), &pairs)
 		if err != nil {

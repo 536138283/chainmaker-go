@@ -15,7 +15,7 @@ rm -rf ./data
 #host=127.0.0.1
 #user=root
 #password=123
-dsn="-h127.0.0.1 -P3306"
+dsn="-h127.0.0.1 -P3306 -uroot -p123"
 
 for((i=1;i<=4;i++))
 do

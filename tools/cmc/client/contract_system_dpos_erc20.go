@@ -305,7 +305,7 @@ func erc20Total() *cobra.Command {
 
 func mint(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"to":    address,
 		"value": amount,
 	}
@@ -329,7 +329,7 @@ func mint(cc *sdk.ChainClient, address, amount string, txId string, timeout int6
 
 func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"to":    address,
 		"value": amount,
 	}
@@ -352,7 +352,7 @@ func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout 
 }
 
 func balanceOf(cc *sdk.ChainClient, address string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"owner": address,
 	}
 	resp, err := cc.QuerySystemContract(
