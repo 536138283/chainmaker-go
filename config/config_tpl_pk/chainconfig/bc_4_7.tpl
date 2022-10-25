@@ -134,7 +134,11 @@ consensus:
     - key: stake.epochValidatorNum
       value: "{epochValidatorNum}"
     - key: stake.epochBlockNum
-      value: "8"
+      value: "{epochBlockNum}"
+    - key: stake.epochMaxValidatorNum
+      value: "100"
+    - key: slashing.epochMaxBlockNum
+      value: "10000"
     - key: stake.completionUnbondingEpochNum
       value: "1"
     # Distribution and slashing config
