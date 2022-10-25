@@ -82,6 +82,9 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
+
+	defer ts.releaseContractCache()
+
 	var err error
 	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
 	if err != nil {
@@ -212,8 +215,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
 	contractEventMap := ts.getContractEventMap(block)
-
-	ts.releaseContractCache()
 
 	return txRWSetMap, contractEventMap, nil
 }
@@ -378,15 +379,16 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	map[string]*commonPb.TxRWSet, map[string]*commonPb.Result, error) {
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
+	defer ts.releaseContractCache()
 
 	var (
 		startTime  = time.Now()
 		txRWSetMap = make(map[string]*commonPb.TxRWSet, len(block.Txs))
 	)
 	if block.Header.BlockVersion >= blockVersion2300 && len(block.Txs) != len(block.Dag.Vertexes) {
-		ts.log.Warnf("found dag Size mismatch txs length in "+
+		ts.log.Warnf("found dag size mismatch txs length in "+
 			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
-		return nil, nil, fmt.Errorf("found dag Size mismatch txs length in "+
+		return nil, nil, fmt.Errorf("found dag size mismatch txs length in "+
 			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
 	}
 	if len(block.Txs) == 0 {
@@ -425,7 +427,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	defer goRoutinePool.Release()
 
 	ts.log.DebugDynamic(func() string {
-		return fmt.Sprintf("block [%d] simulate with dag first batch Size:%d, total batch Size:%d",
+		return fmt.Sprintf("block [%d] simulate with dag first batch size:%d, total batch size:%d",
 			block.Header.BlockHeight, len(txIndexBatch), txBatchSize)
 	})
 
@@ -453,7 +455,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 				}
 			case doneTxIndex := <-doneTxC:
 				txIndexBatchAfterShrink := ts.shrinkDag(doneTxIndex, dagRemain, reverseDagRemain)
-				ts.log.Debugf("block [%d] simulate with dag, pop next tx index batch Size:%d, dagRemain Size:%d",
+				ts.log.Debugf("block [%d] simulate with dag, pop next tx index batch size:%d, dagRemain size:%d",
 					block.Header.BlockHeight, len(txIndexBatchAfterShrink), len(dagRemain))
 				for _, tx := range txIndexBatchAfterShrink {
 					runningTxC <- tx
@@ -498,7 +500,6 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		result, _ := prettyjson.Marshal(txRWSetMap)
 		ts.log.Infof("simulate with dag rwset :%s, dag: %+v", result, block.Dag)
 	}
-	ts.releaseContractCache()
 	return txRWSetMap, snapshot.GetTxResultMap(), nil
 }
 
@@ -677,7 +678,7 @@ func (ts *TxScheduler) simulateSpecialTxs(dag *commonPb.DAG, snapshot protocol.S
 					dag.Vertexes = append(dag.Vertexes, dagNeighbors)
 				}
 				if applySize >= txBatchSize {
-					ts.log.Debugf("block [%d] schedule special txs finished, apply Size:%d, len of txs:%d, "+
+					ts.log.Debugf("block [%d] schedule special txs finished, apply size:%d, len of txs:%d, "+
 						"len of special txs:%d", block.Header.BlockHeight, applySize, txBatchSize, specialTxsLen)
 					scheduleFinishC <- true
 					return

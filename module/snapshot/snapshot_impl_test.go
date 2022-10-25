@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -21,6 +20,7 @@ import (
 	"chainmaker.org/chainmaker/logger/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
@@ -90,7 +90,7 @@ func (s *MockSimContextImpl) GetBlockVersion() uint32 {
 	return protocol.DefaultBlockVersion
 }
 
-func (s *MockSimContextImpl) CallContract(contract *commonPb.Contract, method string, byteCode []byte,
+func (s *MockSimContextImpl) CallContract(caller *commonPb.Contract, contract *commonPb.Contract, method string, byteCode []byte,
 	parameter map[string][]byte, gasUsed uint64, refTxType commonPb.TxType) (*commonPb.ContractResult,
 	protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 	panic(implement_me)

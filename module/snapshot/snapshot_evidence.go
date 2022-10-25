@@ -8,16 +8,15 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"errors"
 	"math"
 
-	"chainmaker.org/chainmaker/utils/v2"
-
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
 type SnapshotEvidence struct {
@@ -168,8 +167,8 @@ func (s *SnapshotEvidence) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet
 	if !s.IsSealed() {
 		s.log.Warnf("you need to execute Seal before you can build DAG of snapshot with height %d", s.delegate.blockHeight)
 	}
-	//s.delegate.lock.Lock()
-	//defer s.delegate.lock.Unlock()
+	s.delegate.lock.Lock()
+	defer s.delegate.lock.Unlock()
 
 	txCount := len(s.delegate.txTable)
 	s.log.Debugf("start building DAG(all vertexes are nil) for block %d with %d txs", s.delegate.blockHeight, txCount)

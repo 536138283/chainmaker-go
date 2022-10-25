@@ -1,12 +1,14 @@
 package scheduler
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
 	"encoding/json"
 	"errors"
 	"fmt"
+
 	"golang.org/x/sync/singleflight"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 var sf singleflight.Group

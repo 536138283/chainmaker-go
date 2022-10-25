@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"fmt"
 	"strings"
 	"sync"
@@ -19,6 +18,7 @@ import (
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"

@@ -30,7 +30,7 @@ const (
 	NormalTx
 )
 
-// ConflictsBitWindow holds a bitWindow to adjust goroutine pool Size for runtime.
+// ConflictsBitWindow holds a bitWindow to adjust goroutine pool size for runtime.
 type ConflictsBitWindow struct {
 	bitWindow         *uint256.Int
 	bitWindowCapacity int
