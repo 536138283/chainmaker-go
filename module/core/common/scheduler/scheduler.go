@@ -17,17 +17,17 @@ import (
 	"sync"
 	"time"
 
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/sdk-go/v2/utils"
-	"chainmaker.org/chainmaker/vm/v2"
-
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/vm/v2"
+
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/localconf/v2"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/hokaccha/go-prettyjson"
@@ -904,8 +904,7 @@ func (ts *TxScheduler) getSenderPk(txSimContext protocol.TxSimContext) ([]byte, 
 //  1. senderCollection when flag `enableOptimizeChargeGas` was set
 //  2. senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
 //  3. txBatch directly where no flags was set
-//
-// to runningTxC
+//     to runningTxC
 func (ts *TxScheduler) dispatchTxs(
 	txBatch []*commonPb.Transaction,
 	runningTxC chan *commonPb.Transaction,
