@@ -80,12 +80,12 @@ func enableMultiSignManualRunCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachFlags(cmd, flags, []string{
+	attachFlags(cmd, []string{
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult,
 	})
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagMultiSignEnableManualRun,
-	})
+	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagMultiSignEnableManualRun)
+	
 	return cmd
 }
