@@ -57,6 +57,8 @@ chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221026040308-53851adbcef7 h1:qxDP
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221026040308-53851adbcef7/go.mod h1:pupJpBj6fbznnDIDa5G8Om/A9dMdkE0+esjEL+jSei4=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221026072120-e144ab3e32f5 h1:KiYhCe7rAPU4WFNf8K0zqJRjq9nMaBXxE8mzAv8+BUk=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221026072120-e144ab3e32f5/go.mod h1:5nBLJ3inu63Erga/kF9SaAbsskubEZVit3DHlz1Wtjg=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221026081607-c4eba25972ec h1:Kw4uZZyUobpUP4X89RwFFG9qDTg6Q/PpiOXEQRoEvPg=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221026081607-c4eba25972ec/go.mod h1:5nBLJ3inu63Erga/kF9SaAbsskubEZVit3DHlz1Wtjg=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0 h1:Q5tNXukq+B+9asB/PJxOd/d7HltJDyw2scVT008deBQ=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0/go.mod h1:8uuLFeyjEs1jHK2jEvLJBRhfoV6KymFw49PowTduimY=
 chainmaker.org/chainmaker/store-leveldb/v2 v2.3.1 h1:rd6CDjhqaZfGXRTfA+M0cN8ijucphB0d51Ss+Ksc1Mc=
@@ -93,6 +95,8 @@ chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221024091143-44052f1efebd h1:M
 chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221024091143-44052f1efebd/go.mod h1:XoR03q2yyPGgapCiVxamoOTXKh8s9lzq8z+DkkdnEvw=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221026051233-2901cd25ad31 h1:BRA38t7+LvD5t1Gmqx8TTba/P/fMNICF7cXrHCiBV78=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221026051233-2901cd25ad31/go.mod h1:njZ/M8zAKPggmdFxYM8liqgw79vfMZIrKd9UDdoo6h0=
+chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221026083543-61a7f2d93cc7 h1:/rzWvQ+XlOmprZ14aLkZ12LHdhMi4BI6OxAHTLdf4mw=
+chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221026083543-61a7f2d93cc7/go.mod h1:njZ/M8zAKPggmdFxYM8liqgw79vfMZIrKd9UDdoo6h0=
 chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1 h1:0fmQFwZ74y1JpxDuOE1GbjZr9E/EVVkRzZ2Adf0XMY0=
 chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1/go.mod h1:mYjyB5FYzwfclLWTlXfsZMVxiCPjYI33s1Emof5B1SA=
 chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220915060746-11b2378b6379 h1:N8vHRjtmhNCLoCP/u6CMLtib920oRwdh65O++WpMiVE=
