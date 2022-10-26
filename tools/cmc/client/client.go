@@ -87,6 +87,8 @@ var (
 	permissionResourcePolicyOrgList  []string
 	permissionResourcePolicyRoleList []string
 	respResultToString               bool
+
+	multiSignEnableManualRun bool
 )
 
 const (
@@ -148,6 +150,7 @@ const (
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
 	flagRespResultToString               = "result-to-string"
+	flagMultiSignEnableManualRun         = "multi-sign-enable-manual-run"
 )
 
 // ClientCMD new client series command
@@ -262,6 +265,9 @@ func init() {
 		"chain config permission resource policy role list")
 	flags.BoolVar(&respResultToString, flagRespResultToString, false,
 		"enable convert TxResponse.ContractResult.Result to string for readable output")
+
+	// multi-sign enable manual_run
+	flags.BoolVar(&multiSignEnableManualRun, flagMultiSignEnableManualRun, false, "enable or disable manual run feature of multi-sign")
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {
