@@ -171,7 +171,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		}
 	} else {
 		// contract not exists, use singleflight to get contract
-		ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
+		ct, err, _ = sf.Do(contractName, func() (interface{}, error) {
 			return txSimContext.GetContractByName(contractName)
 		})
 		if err != nil {

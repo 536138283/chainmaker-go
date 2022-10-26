@@ -8,14 +8,16 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
-	"chainmaker.org/chainmaker/protocol/v2/mock"
-	"github.com/golang/mock/gomock"
 	"testing"
 
 	"chainmaker.org/chainmaker/pb-go/v2/common"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	"chainmaker.org/chainmaker/utils/v2"
+
+	"github.com/golang/mock/gomock"
 )
 
 var snapshotMgr = &ManagerEvidence{
@@ -50,7 +52,10 @@ func TestNotifyBlockCommitted(t *testing.T) {
 
 func createNewBlockGroup(t *testing.T) ([]protocol.Snapshot, []*common.Block) {
 
-	snapshotMgr.delegate.blockchainStore = mock.NewMockBlockchainStore(gomock.NewController(t))
+	//snapshotMgr.delegate.
+	blockchainStore := mock.NewMockBlockchainStore(gomock.NewController(t))
+	blockchainStore.EXPECT().GetLastChainConfig().Return(&configPb.ChainConfig{}, nil).AnyTimes()
+	snapshotMgr.delegate.blockchainStore = blockchainStore
 
 	genesis := createNewBlock(0, 0)
 

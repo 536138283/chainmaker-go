@@ -379,6 +379,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	map[string]*commonPb.TxRWSet, map[string]*commonPb.Result, error) {
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
+
 	defer ts.releaseContractCache()
 
 	var (

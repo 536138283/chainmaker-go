@@ -17,6 +17,7 @@ import (
 type Factory struct {
 }
 
+// NewSnapshotManager returns new snapshot manager
 func (f *Factory) NewSnapshotManager(blockchainStore protocol.BlockchainStore,
 	log protocol.Logger) protocol.SnapshotManager {
 	log.Debugf("use the common Snapshot.")
@@ -30,6 +31,7 @@ func (f *Factory) NewSnapshotManager(blockchainStore protocol.BlockchainStore,
 	}
 }
 
+// NewSnapshotEvidenceMgr returns new snapshot evidence manager
 func (f *Factory) NewSnapshotEvidenceMgr(blockchainStore protocol.BlockchainStore,
 	log protocol.Logger) protocol.SnapshotManager {
 	log.Debugf("use the evidence Snapshot.")
