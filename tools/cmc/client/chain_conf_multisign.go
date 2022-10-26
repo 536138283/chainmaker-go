@@ -1,10 +1,11 @@
 package client
 
 import (
-	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"errors"
 	"fmt"
+
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
