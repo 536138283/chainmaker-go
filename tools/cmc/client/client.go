@@ -267,7 +267,10 @@ func init() {
 		"enable convert TxResponse.ContractResult.Result to string for readable output")
 
 	// multi-sign enable manual_run
-	flags.BoolVar(&multiSignEnableManualRun, flagMultiSignEnableManualRun, false, "enable or disable manual run feature of multi-sign")
+	flags.BoolVar(&multiSignEnableManualRun,
+		flagMultiSignEnableManualRun,
+		false,
+		"enable or disable manual run feature of multi-sign")
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {
