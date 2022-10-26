@@ -55,7 +55,8 @@ func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block) *SnapshotImpl 
 	// If the corresponding Snapshot does not exist, create one
 	txCount := len(block.Txs) // as map init size
 	lastChainConfig, err := m.blockchainStore.GetLastChainConfig()
-	if err != nil {
+	if err != nil || lastChainConfig == nil {
+		m.log.Errorf("failed to get last chain config, %v", err)
 		return nil
 	}
 	snapshotImpl := &SnapshotImpl{

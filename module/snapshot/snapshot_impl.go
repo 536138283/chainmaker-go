@@ -70,8 +70,8 @@ func NewQuerySnapshot(store protocol.BlockchainStore, log protocol.Logger) (*Sna
 		return nil, err
 	}
 	lastChainConfig, err := store.GetLastChainConfig()
-	if err != nil {
-		return nil, err
+	if err != nil || lastChainConfig == nil {
+		return nil, fmt.Errorf("failed to get last chain config, %v", err)
 	}
 
 	querySnapshot := &SnapshotImpl{

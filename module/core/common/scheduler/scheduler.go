@@ -83,8 +83,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 
-	defer ts.releaseContractCache()
-
 	var err error
 	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
 	if err != nil {
@@ -243,9 +241,6 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// 1) the read/write set
 	// 2) the result that telling if the invoke success.
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
-	defer func() {
-		vm.PutTxSimContext(txSimContext)
-	}()
 	tx.Result = txSimContext.GetTxResult()
 	ts.log.DebugDynamic(func() string {
 		return fmt.Sprintf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
@@ -379,8 +374,6 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	map[string]*commonPb.TxRWSet, map[string]*commonPb.Result, error) {
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
-
-	defer ts.releaseContractCache()
 
 	var (
 		startTime  = time.Now()
@@ -582,7 +575,7 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
-	txSimContext := vm.GetTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
+	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.DebugDynamic(func() string {
 		return fmt.Sprintf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
 	})
@@ -1473,13 +1466,6 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	timeUsed := time.Since(startTime)
 	ts.log.Infof("compare dag finished, time used %v", timeUsed)
 	return nil
-}
-
-func (ts *TxScheduler) releaseContractCache() {
-	ts.contractCache.Range(func(key interface{}, value interface{}) bool {
-		ts.contractCache.Delete(key)
-		return true
-	})
 }
 
 // appendSpecialTxsToDag similar to ts.simulateSpecialTxs except do not execute tx, only handle dag

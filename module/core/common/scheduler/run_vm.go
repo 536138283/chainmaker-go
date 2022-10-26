@@ -172,19 +172,25 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	} else {
 		// contract not exists, use singleflight to get contract
 		ct, err, _ = sf.Do(contractName, func() (interface{}, error) {
-			return txSimContext.GetContractByName(contractName)
+			ctTmp, err := txSimContext.GetContractByName(contractName)
+			if err != nil {
+				ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
+				return nil, err
+			}
+			// store to contract cache after get contract
+			ts.contractCache.Store(contractName, contract)
+			return ctTmp, nil
 		})
+
 		if err != nil {
-			ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 			return errResult(result, err)
 		}
+
 		if contract, ok = ct.(*commonPb.Contract); !ok {
 			err = errors.New("failed to transfer contract from interface to struct")
 			ts.log.Error(err)
 			return errResult(result, err)
 		}
-		// store to contract cache after get contract
-		ts.contractCache.Store(contractName, contract)
 	}
 
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
