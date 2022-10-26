@@ -13,7 +13,7 @@ import (
 // @return *cobra.Command
 func enableMultiSignManualRunCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "gas",
+		Use:   "enable_manual_run",
 		Short: "enable or disable manual_run feature of multi-sign",
 		Long:  "enable or disable manual_run feature of multi-sign",
 		RunE: func(_ *cobra.Command, _ []string) error {
