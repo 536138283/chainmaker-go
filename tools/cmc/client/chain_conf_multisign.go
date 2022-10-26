@@ -13,7 +13,7 @@ import (
 // @return *cobra.Command
 func enableMultiSignManualRunCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "enable_manual_run",
+		Use:   "enable-manual-run",
 		Short: "enable or disable manual_run feature of multi-sign",
 		Long:  "enable or disable manual_run feature of multi-sign",
 		RunE: func(_ *cobra.Command, _ []string) error {
@@ -52,7 +52,7 @@ func enableMultiSignManualRunCMD() *cobra.Command {
 				chainConfig.Vm.Native.Multisign.EnableManualRun = multiSignEnableManualRun
 			}
 
-			payload, err := cc.CreateChainConfigEnableOrDisableGasPayload()
+			payload, err := cc.CreateChainConfigEnableMultiSignManualRunPayload(multiSignEnableManualRun)
 			if err != nil {
 				return err
 			}
