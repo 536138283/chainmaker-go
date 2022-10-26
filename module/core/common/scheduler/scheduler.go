@@ -556,7 +556,7 @@ func (ts *TxScheduler) executeTx(
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
-	ts.log.Debugf("tx.Result = %v", tx.Result)
+	//ts.log.Debugf("tx.Result = %v", tx.Result)
 
 	enableGas := ts.checkGasEnable()
 	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
@@ -680,7 +680,7 @@ func (ts *TxScheduler) Halt() {
 	ts.scheduleFinishC <- true
 }
 
-//nolint: unused
+// nolint: unused
 func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 	dagString := "digraph DAG {\n"
 	for i, ns := range dag.Vertexes {
@@ -902,10 +902,10 @@ func (ts *TxScheduler) getSenderPk(txSimContext protocol.TxSimContext) ([]byte, 
 }
 
 // dispatchTxs dispatch txs from:
-// 	1) senderCollection when flag `enableOptimizeChargeGas` was set
-// 	2) senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
-// 	3) txBatch directly where no flags was set
-// to runningTxC
+//  1. senderCollection when flag `enableOptimizeChargeGas` was set
+//  2. senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
+//  3. txBatch directly where no flags was set
+//     to runningTxC
 func (ts *TxScheduler) dispatchTxs(
 	txBatch []*commonPb.Transaction,
 	runningTxC chan *commonPb.Transaction,
