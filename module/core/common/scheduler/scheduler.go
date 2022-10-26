@@ -259,7 +259,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 			tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
 	})
 
-	// reduce the conflictsBitWindow Size to eliminate the read/write set conflict
+	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
 	if !applyResult {
 		if enableConflictsBitWindow {
 			ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, ConflictTx)
@@ -586,9 +586,9 @@ func (ts *TxScheduler) executeTx(
 	ts.log.DebugDynamic(func() string {
 		return fmt.Sprintf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
 	})
-	ts.log.DebugDynamic(func() string {
-		return fmt.Sprintf("tx.Result = %v", tx.Result)
-	})
+	//ts.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("tx.Result = %v", tx.Result)
+	//})
 
 	enableGas := ts.checkGasEnable()
 	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
@@ -712,7 +712,7 @@ func (ts *TxScheduler) Halt() {
 	ts.scheduleFinishC <- true
 }
 
-//nolint: unused
+// nolint: unused
 func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 	dagString := "digraph DAG {\n"
 	for i, ns := range dag.Vertexes {
@@ -934,10 +934,10 @@ func (ts *TxScheduler) getSenderPk(txSimContext protocol.TxSimContext) ([]byte, 
 }
 
 // dispatchTxs dispatch txs from:
-// 	1) senderCollection when flag `enableOptimizeChargeGas` was set
-// 	2) senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
-// 	3) txBatch directly where no flags was set
-// to runningTxC
+//  1. senderCollection when flag `enableOptimizeChargeGas` was set
+//  2. senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
+//  3. txBatch directly where no flags was set
+//     to runningTxC
 func (ts *TxScheduler) dispatchTxs(
 	txBatch []*commonPb.Transaction,
 	runningTxC chan *commonPb.Transaction,
@@ -1054,9 +1054,6 @@ func (ts *TxScheduler) appendChargeGasTx(
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => executeGhargeGasTx() begin ")
 	txSimContext := ts.executeChargeGasTx(tx, block, snapshot)
-	defer func() {
-		vm.PutTxSimContext(txSimContext)
-	}()
 	tx.Result = txSimContext.GetTxResult()
 
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendChargeGasTxToDAG() begin ")
@@ -1149,7 +1146,7 @@ func (ts *TxScheduler) executeChargeGasTx(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot) protocol.TxSimContext {
 
-	txSimContext := vm.GetTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
+	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.Debugf("new tx for charging gas, id = %s", tx.Payload.GetTxId())
 
 	result := &commonPb.Result{

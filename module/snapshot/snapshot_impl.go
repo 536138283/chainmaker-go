@@ -416,12 +416,12 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 
 	// Append to read-write-set table
 	s.txRWSetTable = append(s.txRWSetTable, txRWSet)
-	s.log.DebugDynamic(func() string {
-		return fmt.Sprintf("apply tx: %s, rwset.TxReads: %v", tx.Payload.TxId, txRWSet.TxReads)
-	})
-	s.log.DebugDynamic(func() string {
-		return fmt.Sprintf("apply tx: %s, rwset.TxWrites: %v", tx.Payload.TxId, txRWSet.TxWrites)
-	})
+	//s.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("apply tx: %s, rwset.TxReads: %v", tx.Payload.TxId, txRWSet.TxReads)
+	//})
+	//s.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("apply tx: %s, rwset.TxWrites: %v", tx.Payload.TxId, txRWSet.TxWrites)
+	//})
 	s.log.DebugDynamic(func() string {
 		return fmt.Sprintf("apply tx: %s, rwset table size %d", tx.Payload.TxId, len(s.txRWSetTable))
 	})
