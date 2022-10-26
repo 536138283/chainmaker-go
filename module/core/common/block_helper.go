@@ -258,7 +258,7 @@ func initNewBlock(
 			PreBlockHash:   lastBlock.Header.BlockHash,
 			BlockHash:      nil,
 			PreConfHeight:  preConfHeight,
-			BlockVersion:   chainConf.ChainConfig().GetBlockVersion(),
+			BlockVersion:   protocol.DefaultBlockVersion,
 			DagHash:        nil,
 			RwSetRoot:      nil,
 			TxRoot:         nil,
