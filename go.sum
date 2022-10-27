@@ -97,8 +97,6 @@ chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20221017034712-6f21be7c45f6/go.mo
 chainmaker.org/chainmaker/protocol/v2 v2.3.1-0.20221020063942-5107bf4201ea/go.mod h1:VwJdL3R1Z972x6wPHhhOixDLvkB1YliFzDAft+zpVRw=
 chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221021075557-d411feaae9c2 h1:Mm9maYw7/Zmgyok70ZdAI2stBLAgrLKGNDrEcGEk0yg=
 chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221021075557-d411feaae9c2/go.mod h1:6qstKgkVBt4rlyfpmFLplSkjYvc8AmchD+ckAFkEJRw=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221021080512-53f4df22c850 h1:bhCB4R3MMfGJsFBbBREjCO1yLA9+aH/pTTxLHkjVlcQ=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221021080512-53f4df22c850/go.mod h1:qTLzk6L7pEvflFHCaAZ0sZL+GuuZ53ANKJO2Zvw/2U4=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221027062602-6ae6ab425052 h1:nmypVm6MDv/sD3t6Y1pin5OlB8gCtzmHTV9gKRc94vQ=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221027062602-6ae6ab425052/go.mod h1:i5XF6HiFM4XdXOSPKvp7sBJJ9hMotHMaLmqsvjKlHJY=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0 h1:Q5tNXukq+B+9asB/PJxOd/d7HltJDyw2scVT008deBQ=
@@ -143,8 +141,6 @@ chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1-0.20220906161626-e1ccd9b65594/go.mod
 chainmaker.org/chainmaker/vm-native/v2 v2.3.0/go.mod h1:4pJrMVuqt5C/cordDjC1xSqjxGTawdFDkJMOfIRSfT0=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.1-0.20220928121853-8e7655829b62/go.mod h1:LNRJ57mTL1i91Zch3a9SFk+WuDiSgzEmXqoGQz7Xok8=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221021080217-cfce5a333a9b/go.mod h1:tY96v8JpIyFCZO3uKMwxnahaJ6tcXDeutCXfkZcKlx4=
-chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221024065958-c2632c3cef04 h1:xGVyLjOVcY+gVgB5gweZuSmh4WtFKX8sNT/QPswLA+M=
-chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221024065958-c2632c3cef04/go.mod h1:tY96v8JpIyFCZO3uKMwxnahaJ6tcXDeutCXfkZcKlx4=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221026100349-628a05327845 h1:j+vwnnl4s580Q7xRwLRbFXMRiqL8/kcbMZrEwYMgniQ=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221026100349-628a05327845/go.mod h1:WARvAZebJawhXwutuaTeXuiaeZepLOwL7Qak4SGdd/M=
 chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1 h1:0fmQFwZ74y1JpxDuOE1GbjZr9E/EVVkRzZ2Adf0XMY0=

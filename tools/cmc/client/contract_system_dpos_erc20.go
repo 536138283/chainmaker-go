@@ -378,9 +378,15 @@ func transferOwnership() error {
 // transfer ERC20的transfer操作
 func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
-		"to":    address,
-		"value": amount,
+	pairs := []*common.KeyValuePair{
+		{
+			Key:   "to",
+			Value: []byte(address),
+		},
+		{
+			Key:   "value",
+			Value: []byte(amount),
+		},
 	}
 	if txId == "" {
 		txId = sdkutils.GetTimestampTxId()
@@ -389,7 +395,7 @@ func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout 
 		syscontract.SystemContract_DPOS_ERC20.String(),
 		syscontract.DPoSERC20Function_TRANSFER.String(),
 		txId,
-		util.ConvertParameters(params),
+		pairs,
 		timeout,
 		withSyncResult,
 	)
@@ -402,13 +408,16 @@ func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout 
 
 // balanceOf query balance-of feature of the DPoS erc20
 func balanceOf(cc *sdk.ChainClient, address string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
-		"owner": address,
+	pairs := []*common.KeyValuePair{
+		{
+			Key:   "owner",
+			Value: []byte(address),
+		},
 	}
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
 		syscontract.DPoSERC20Function_GET_BALANCEOF.String(),
-		util.ConvertParameters(params),
+		pairs,
 		timeout,
 	)
 	if err != nil {

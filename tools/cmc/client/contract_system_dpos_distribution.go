@@ -69,13 +69,16 @@ func distributionGetDetail() *cobra.Command {
 
 // getDistributionDetail get distribution detail
 func getDistributionDetail(cc *sdk.ChainClient, epochId string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
-		"epoch_id": epochId,
+	pairs := []*common.KeyValuePair{
+		{
+			Key:   "epoch_id",
+			Value: []byte(epochId),
+		},
 	}
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_DISTRIBUTION.String(),
 		syscontract.DPoSDistributionFunction_GET_DISTRIBUTION_DETAIL.String(),
-		util.ConvertParameters(params),
+		pairs,
 		timeout,
 	)
 	if err != nil {
