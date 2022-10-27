@@ -5,8 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-
 	"golang.org/x/sync/singleflight"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -34,22 +32,11 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
-
 	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
-
-	// moved out by hongdazhcai
-	pk, _ := getPkFromTx(tx, snapshot)
-	val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
-		chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
-		return chainCfg, err
-	})
+	chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
 	if err != nil {
 		ts.log.Errorf("get LastChainConfig error: %v", err)
 		return false
-	}
-	chainCfg, ok := val.(*config.ChainConfig)
-	if !ok {
-		ts.log.Errorf("failed to transfer chainConfig from interface to struct")
 	}
 
 	if enableOptimizeChargeGas {
@@ -84,24 +71,8 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			// in `verify node`:
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
-
-			if tx.Payload.Limit.GasLimit < chainCfg.AccountConfig.DefaultGas {
-				txResult := &commonPb.Result{
-					Code: commonPb.TxStatusCode_GAS_LIMIT_TOO_SMALL,
-					ContractResult: &commonPb.ContractResult{
-						Code:    uint32(1),
-						Result:  nil,
-						Message: ErrMsgOfGasLimitTooSmall,
-						GasUsed: uint64(0),
-					},
-					RwSetHash: nil,
-					Message:   ErrMsgOfGasLimitTooSmall,
-				}
-				txSimContext.SetTxResult(txResult)
-				return false
-
-			} else if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
-
+			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
+				pk, _ := getPkFromTx(tx, snapshot)
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
@@ -134,25 +105,6 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 				},
 				RwSetHash: nil,
 				Message:   ErrMsgOfGasLimitNotSet,
-			}
-			// `proposer node` need set result into tx and txSimContext
-			// `verify node` need set result into txSimContext
-			txSimContext.SetTxResult(txResult)
-			if tx.Result == nil {
-				tx.Result = txResult
-			}
-			return false
-		} else if txNeedChargeGas && tx.Payload.Limit.GasLimit < chainCfg.AccountConfig.DefaultGas {
-			txResult := &commonPb.Result{
-				Code: commonPb.TxStatusCode_GAS_LIMIT_TOO_SMALL,
-				ContractResult: &commonPb.ContractResult{
-					Code:    uint32(1),
-					Result:  nil,
-					Message: ErrMsgOfGasLimitTooSmall,
-					GasUsed: uint64(0),
-				},
-				RwSetHash: nil,
-				Message:   ErrMsgOfGasLimitTooSmall,
 			}
 			// `proposer node` need set result into tx and txSimContext
 			// `verify node` need set result into txSimContext
