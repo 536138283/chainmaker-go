@@ -193,6 +193,8 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		return s.dealTransact(tx, source)
 	case commonPb.TxType_ARCHIVE:
 		return s.doArchive(tx)
+	case commonPb.TxType_ETH_TX:
+		return s.dealEthTx(tx, source)
 	default:
 		return &commonPb.TxResponse{
 			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,
