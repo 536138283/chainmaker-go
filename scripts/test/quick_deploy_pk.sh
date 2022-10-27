@@ -70,7 +70,7 @@ function prepare_cmc() {
   rm -rf testdata
   mkdir testdata
   cp $PROJECT_PATH/tools/cmc/testdata/sdk_config_pk.yml testdata/
-  cp -r $PROJECT_PATH/build/crypto-config/ testdata/crypto-config
+  cp -r $PROJECT_PATH/build/crypto-config/ testdata/
 }
 
 function cmc_test() {

@@ -20,7 +20,7 @@ function checkEnv() {
     fi
   fi
 }
-#checkEnv
+checkEnv
 
 set -e
 
@@ -181,27 +181,27 @@ function generate_config() {
     VM_GO_LOG_LEVEL="" # default INFO
     VM_GO_TRANSPORT_PROTOCOL="" # default tcp, uds
 
-#    set -- $(getopt -u -o c:l:v: -l vtp:,vlog:,hash: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
-#    while [ -n "$1" ]; do
-#        case "$1" in
-#            -c) CONSENSUS_TYPE=$2
-#                 shift ;;
-#            -l) LOG_LEVEL=$2
-#                shift ;;
-#            --hash)
-#                HASH_TYPE=$2
-#                shift ;;
-#            -v) ENABLE_VM_GO=$2
-#                shift ;;
-#            --vtp)
-#                VM_GO_TRANSPORT_PROTOCOL=$2
-#                shift ;;
-#            --vlog)
-#                VM_GO_LOG_LEVEL=$2
-#                shift
-#        esac
-#        shift
-#    done
+    set -- $(getopt -u -o c:l:v: -l vtp:,vlog:,hash: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
+    while [ -n "$1" ]; do
+        case "$1" in
+            -c) CONSENSUS_TYPE=$2
+                 shift ;;
+            -l) LOG_LEVEL=$2
+                shift ;;
+            --hash)
+                HASH_TYPE=$2
+                shift ;;
+            -v) ENABLE_VM_GO=$2
+                shift ;;
+            --vtp)
+                VM_GO_TRANSPORT_PROTOCOL=$2
+                shift ;;
+            --vlog)
+                VM_GO_LOG_LEVEL=$2
+                shift
+        esac
+        shift
+    done
 
     # set CONSENSUS_TYPE
     if [ $CONSENSUS_TYPE == 0 ] ;then
