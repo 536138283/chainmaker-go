@@ -129,6 +129,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		accountMangerContract *commonPb.Contract
 		contractResultPayload *commonPb.ContractResult
 		txStatusCode          commonPb.TxStatusCode
+		contract              *commonPb.Contract
 	)
 
 	ts.log.Debugf("runVM =>  for tx `%v`", tx.GetPayload().TxId)
@@ -161,52 +162,12 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
 
-	var contract *commonPb.Contract
-	// if contract exists in contract cache, assign to contract
-	if ct, ok := ts.contractCache.Load(contractName); ok {
-		if contract, ok = ct.(*commonPb.Contract); !ok {
-			err = errors.New("failed to transfer contract from interface to struct")
-			ts.log.Error(err)
-			return errResult(result, err)
-		}
-	} else {
-		// contract not exists, use singleflight to get contract
-		ct, err, _ = sf.Do(contractName, func() (interface{}, error) {
-			ctTmp, err := txSimContext.GetContractByName(contractName)
-			if err != nil {
-				ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
-				return nil, err
-			}
-			// store to contract cache after get contract
-			ts.contractCache.Store(contractName, contract)
-			return ctTmp, nil
-		})
-
-		if err != nil {
-			return errResult(result, err)
-		}
-
-		if contract, ok = ct.(*commonPb.Contract); !ok {
-			err = errors.New("failed to transfer contract from interface to struct")
-			ts.log.Error(err)
-			return errResult(result, err)
-		}
+	if contract, err = ts.getContractFromCache(txSimContext, contractName); err != nil {
+		return errResult(result, err)
 	}
 
-	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
-		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
-		contract.RuntimeType != commonPb.RuntimeType_GO {
-		byteCode, err = txSimContext.GetContractBytecode(contract.Name)
-		if err != nil {
-			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
-			return errResult(result, err)
-		}
-	} else {
-		ts.log.DebugDynamic(func() string {
-			contractData, _ := json.Marshal(contract)
-			return fmt.Sprintf("contract[%s] is a native contract, definition:%s",
-				contractName, string(contractData))
-		})
+	if byteCode, err = ts.getContractBytecode(txSimContext, contract); err != nil {
+		return errResult(result, err)
 	}
 
 	if ts.checkGasEnable() && !enableOptimizeChargeGas {
@@ -549,4 +510,62 @@ func (ts *TxScheduler) parseParameter2210(parameterPairs []*commonPb.KeyValuePai
 		parameters[key] = value
 	}
 	return parameters, nil
+}
+
+func (ts *TxScheduler) getContractFromCache(txSimContext protocol.TxSimContext,
+	contractName string) (*commonPb.Contract, error) {
+	var contract *commonPb.Contract
+	var err error
+	// if contract exists in cache, assign to contract
+	if ct, ok := ts.contractCache.Load(contractName); ok {
+		if contract, ok = ct.(*commonPb.Contract); !ok {
+			err = errors.New("failed to transfer contract from interface to struct")
+			ts.log.Error(err)
+			return nil, err
+		}
+	} else {
+		// contract not exists in cache, use single flight to get contract
+		ct, err, _ = sf.Do(contractName, func() (interface{}, error) {
+			var ctTmp *commonPb.Contract
+			ctTmp, err = txSimContext.GetContractByName(contractName)
+			if err != nil {
+				ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
+				return nil, err
+			}
+			// store to contract cache after get contract
+			ts.contractCache.Store(contractName, ctTmp)
+			return ctTmp, nil
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if contract, ok = ct.(*commonPb.Contract); !ok {
+			err = errors.New("failed to transfer contract from interface to struct")
+			ts.log.Error(err)
+			return nil, err
+		}
+	}
+	return contract, nil
+}
+
+func (ts *TxScheduler) getContractBytecode(txSimContext protocol.TxSimContext,
+	contract *commonPb.Contract) ([]byte, error) {
+	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
+		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
+		contract.RuntimeType != commonPb.RuntimeType_GO {
+		byteCode, err := txSimContext.GetContractBytecode(contract.Name)
+		if err != nil {
+			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
+			return nil, err
+		}
+		return byteCode, nil
+	}
+	ts.log.DebugDynamic(func() string {
+		contractData, _ := json.Marshal(contract)
+		return fmt.Sprintf("contract[%s] is a native contract, definition:%s",
+			contract.Name, string(contractData))
+	})
+	return nil, nil
 }
