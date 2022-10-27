@@ -231,7 +231,7 @@ func (f *TxFilter) IsExists(txId string, ruleType ...common.RuleType) (exists bo
 
 	f.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("[%v] does not exist in filter, cost: %v",
 		txId, time.Since(start)))
-	return contains, filtercommon.NewStat1(filterCosts, 0), nil
+	return contains, filtercommon.NewStat0(filterCosts, 0), nil
 }
 
 // Close transaction filter

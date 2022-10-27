@@ -880,7 +880,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	}
 	// we must new a snapshot for the vacant block,
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
-	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
+	//snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
 		if len(block.Dag.Vertexes) != 0 {
 			return nil, timeLasts, nil, fmt.Errorf("no txs in block[%x] but dag has vertex",
@@ -906,7 +906,8 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 
 	// simulate with DAG, and verify read write set
 	startVMTick := utils.CurrentTimeMillisSeconds()
-	vb.storeHelper.BeginDbTransaction(snapshot.GetBlockchainStore(), block.GetTxKey())
+	//在快速同步模式下，不能开启数据库事务，同步节点直接基于读写集的SQL语句执行，无需开启事务进行模拟执行
+	//vb.storeHelper.BeginDbTransaction(snapshot.GetBlockchainStore(), block.GetTxKey())
 	//txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(block, snapshot)
 	//if err != nil {
 	//	return nil, nil, timeLasts, fmt.Errorf("simulate %s", err)
@@ -1276,7 +1277,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 				continue
 			}
 
-			retryBatchIds, _, err := GetBatchIds(block)
+			retryBatchIds, _, err := GetBatchIds(b)
 			if err != nil {
 				return nil, nil, batchIds, err
 			}
@@ -1306,6 +1307,15 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 
 	return txRetry, batchRetry, nil, nil
 }
+
+//func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
+//	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
+//		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
+//		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+//		return true
+//	}
+//	return false
+//}
 
 // checkLastProposedBlock check last propose block nolint: ineffassign, staticcheck
 func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
@@ -1460,7 +1470,10 @@ func recoverBlockByBatch(
 		if err != nil {
 			return nil, nil, err
 		}
-
+		if len(indexes) != int(block.Header.TxCount) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes))
+		}
 		if len(batchIds) == 0 {
 			logger.DebugDynamic(func() string {
 				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d], additionalData :%v",
