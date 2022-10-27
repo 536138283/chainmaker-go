@@ -26,7 +26,7 @@ require (
 	chainmaker.org/chainmaker/utils/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.1-0.20220923021934-5c61122967ac
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.1-0.20221012080607-6ebf94233e07
-	chainmaker.org/chainmaker/vm-evm/v2 v2.3.1-0.20220916035217-ddfe498f2a97
+	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2-0.20221027122133-abd80e4d4e44
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221026083543-61a7f2d93cc7
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1
