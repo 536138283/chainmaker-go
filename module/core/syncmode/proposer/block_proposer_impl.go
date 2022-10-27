@@ -647,7 +647,7 @@ func (bp *BlockProposerImpl) getCutBlock(block *commonpb.Block) *commonpb.Block 
 	cutBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
 		common.TxPoolType == batch.TxPoolType {
-		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
+		cutBlock = common.GetTurboBlock(block, cutBlock, bp.chainConf, bp.log)
 	} else {
 		cutBlock = block
 	}
@@ -744,7 +744,7 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 			cutBlock := new(commonpb.Block)
 			if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
 				common.TxPoolType == batch.TxPoolType {
-				cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.log)
+				cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.chainConf, bp.log)
 			} else {
 				cutBlock = selfProposedBlock
 			}

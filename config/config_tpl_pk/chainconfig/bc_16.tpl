@@ -143,9 +143,18 @@ consensus:
     - key: stake.epochValidatorNum
       value: "{epochValidatorNum}"
     - key: stake.epochBlockNum
-      value: "10"
+      value: "{epochBlockNum}"
     - key: stake.completionUnbondingEpochNum
       value: "1"
+    # Distribution and slashing config
+    - key: distribution.fromSlashing
+      value: "0"
+    - key: distribution.perBlock
+      value: "100"
+    - key: distribution.gasExchangeRate
+      value: "1"
+    - key: slashing.perBlock
+      value: "100"
     - key: stake.candidate:{org1_peeraddr}
       value: "2500000"
     - key: stake.candidate:{org2_peeraddr}

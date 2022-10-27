@@ -1,0 +1,4 @@
+2022-10-14 11:26:54.250	[DEBUG]	[Core] @chain1	cache/proposal_cache.go:168	set proposed block, height: 0, fingerPrint:fdee660cefdad0c393c918e41a2b34def4cd2d478bd114630ca5388c17e6f4ea, hash: 313233
+2022-10-14 11:26:54.261	[DEBUG]	[Core] @chain1	cache/proposal_cache.go:72	clear proposed block from proposal cache, height: 0
+2022-10-14 11:26:54.261	[DEBUG]	[Core] @chain1	cache/proposal_cache.go:168	set proposed block, height: 0, fingerPrint:fdee660cefdad0c393c918e41a2b34def4cd2d478bd114630ca5388c17e6f4ea, hash: 313233
+2022-10-14 11:26:54.262	[DEBUG]	[Core] @chain1	cache/proposal_cache.go:274	remove proposed block from proposal cache, height: 0, fingerPrint:c3e8a98d414487027bb4cd3cce7074fba2fe9137f0e81f53291eb436a4a40928, hash: 3132333435

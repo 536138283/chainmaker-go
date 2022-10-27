@@ -17,6 +17,8 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
@@ -48,6 +50,9 @@ const (
 	ScheduleWithDagTimeout = 20
 	// blockVersion2300 block version 2.3.0
 	blockVersion2300 = uint32(2300)
+
+	// blockVersion2400 block version 2.4.0
+	blockVersion2400 = uint32(2400)
 )
 
 const (
@@ -95,15 +100,9 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 	var err error
-	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
-	if err != nil {
-		return nil, nil, err
-	}
 
-	if ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_TBFT &&
-		int64(block.Header.BlockHeight)-int64(lastCommittedHeight) < 1 {
-		return nil, nil, fmt.Errorf("no need to schedule old block, ledger height: %d, block height: %d",
-			lastCommittedHeight, block.Header.BlockHeight)
+	if err = ts.checkTBFTLastBLock(block); err != nil {
+		return nil, nil, err
 	}
 
 	txBatchSize := len(txBatch)
@@ -123,7 +122,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
 
-	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
+	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
 	var senderGroup *SenderGroup
@@ -211,10 +210,26 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
 	}
 
-	// if the block is not empty, append the charging gas tx
-	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
-		ts.log.Debug("append charge gas tx to block ...")
-		ts.appendChargeGasTx(block, snapshot, senderCollection)
+	// 软分叉处理，240版本后gas交易变更为coinbase交易
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion2400 {
+		//dpos或开启gas时，启用coinbase
+		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
+			ts.log.DebugDynamic(func() string {
+				return "append coinbase tx to block ..."
+			})
+			//添加coinbaseTx到区块中，并修改dag
+			ts.appendCoinbaseTx(block, snapshot, senderCollection)
+			block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
+		}
+	} else {
+		if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+			ts.log.DebugDynamic(func() string {
+				return "append charge gas tx to block ..."
+			})
+			ts.appendChargeGasTx(block, snapshot, senderCollection)
+			// gas交易没有对应的blockType
+		}
 	}
 
 	timeCostB := time.Since(startTime)
@@ -226,6 +241,21 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	contractEventMap := ts.getContractEventMap(block)
 
 	return txRWSetMap, contractEventMap, nil
+}
+
+func (ts *TxScheduler) checkTBFTLastBLock(block *commonPb.Block) error {
+	var err error
+	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
+	if err != nil {
+		return err
+	}
+
+	if ts.chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_TBFT &&
+		int64(block.Header.BlockHeight)-int64(lastCommittedHeight) < 1 {
+		return fmt.Errorf("no need to schedule old block, ledger height: %d, block height: %d",
+			lastCommittedHeight, block.Header.BlockHeight)
+	}
+	return nil
 }
 
 // handleTx: run tx and apply tx sim context to snapshot
@@ -579,7 +609,7 @@ func (ts *TxScheduler) executeTx(
 	ts.log.Debugf("tx.Result = %v", tx.Result)
 
 	enableGas := ts.checkGasEnable()
-	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
+	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 	blockVersion := block.GetHeader().BlockVersion
 
 	if blockVersion >= 2300 {
@@ -1051,6 +1081,31 @@ func (ts *TxScheduler) appendChargeGasTx(
 	ts.appendChargeGasTxToDAG(block.Dag, snapshot)
 }
 
+// appendCoinbaseTx include 3 step:
+// 1) create a new coinbase tx
+// 2) execute tx by calling native contract
+// 3) append tx to DAG struct
+func (ts *TxScheduler) appendCoinbaseTx(
+	block *commonPb.Block,
+	snapshot protocol.Snapshot,
+	senderCollection *SenderCollection) {
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => creaCoinbaseTx() begin ")
+	//创建coinbase交易
+	tx, err := ts.createCoinbaseTx(senderCollection)
+	if err != nil {
+		return
+	}
+
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => executeCoinbaseTx() begin ")
+	//执行coinbase交易
+	txSimContext := ts.executeCoinbaseTx(tx, block, snapshot)
+	tx.Result = txSimContext.GetTxResult()
+
+	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendCCoinbaseToDAG() begin ")
+	//coinbase交易添加到dag中
+	ts.appendCoinbaseToDAG(block.Dag, snapshot)
+}
+
 // signTxPayload sign charging tx with node's private key
 func (ts *TxScheduler) signTxPayload(
 	payload *commonPb.Payload) ([]byte, error) {
@@ -1062,6 +1117,11 @@ func (ts *TxScheduler) signTxPayload(
 
 	// using the default hash type of the chain
 	hashType := ts.chainConf.ChainConfig().GetCrypto().Hash
+	ts.log.Infof("hashType=%s,payloadBytes=%s", hashType, payloadBytes)
+	if ts.signer == nil {
+		//TODO:这里为nil，签名失败，但是整体流程成功。
+		return nil, errors.New("ts.signer is nil")
+	}
 	return ts.signer.Sign(hashType, payloadBytes)
 }
 
@@ -1132,6 +1192,67 @@ func (ts *TxScheduler) createChargeGasTx(
 	}, nil
 }
 
+//nolint: unused
+func (ts *TxScheduler) createCoinbaseTx(
+	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
+
+	parameters := make([]*commonPb.KeyValuePair, 0)
+	if senderCollection != nil {
+		// 构造gas参数
+		for address, txCollection := range senderCollection.txsMap {
+			totalGasUsed := int64(0)
+			for _, tx := range txCollection.txs {
+				if tx.Result != nil {
+					totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
+				}
+			}
+			keyValuePair := commonPb.KeyValuePair{
+				Key:   address,
+				Value: []byte(fmt.Sprintf("%d", totalGasUsed)),
+			}
+			parameters = append(parameters, &keyValuePair)
+		}
+	}
+
+	// 构造 Payload
+	payload := &commonPb.Payload{
+		ChainId:        ts.chainConf.ChainConfig().ChainId,
+		TxType:         commonPb.TxType_INVOKE_CONTRACT,
+		TxId:           utils.GetRandTxId(),
+		Timestamp:      time.Now().Unix(),
+		ExpirationTime: time.Now().Add(time.Second * 1).Unix(),
+		ContractName:   syscontract.SystemContract_COINBASE.String(),
+		Method:         syscontract.CoinbaseFunction_RUN_COINBASE.String(),
+		Parameters:     parameters,
+		Sequence:       uint64(0),
+		Limit:          &commonPb.Limit{GasLimit: uint64(0)},
+	}
+
+	// 对 Payload 签名
+	signature, err := ts.signTxPayload(payload)
+	if err != nil {
+		ts.log.Errorf("createCoinbaseTx => signTxPayload() error: %v", err.Error())
+		return nil, err
+	}
+
+	// 构造 Transaction
+	signingMember, err := ts.signer.GetMember()
+	if err != nil {
+		ts.log.Errorf("createCoinbaseTx => GetMember() error: %v", err.Error())
+		return nil, err
+	}
+
+	return &commonPb.Transaction{
+		Payload: payload,
+		Sender: &commonPb.EndorsementEntry{
+			Signer:    signingMember,
+			Signature: signature,
+		},
+		Endorsers: make([]*commonPb.EndorsementEntry, 0),
+		Result:    nil,
+	}, nil
+}
+
 func (ts *TxScheduler) executeChargeGasTx(
 	tx *commonPb.Transaction,
 	block *commonPb.Block,
@@ -1172,6 +1293,63 @@ func (ts *TxScheduler) executeChargeGasTx(
 	contractResultPayload, _, txStatusCode := ts.VmManager.RunContract(contract, tx.Payload.Method, nil,
 		params, txSimContext, 0, tx.Payload.TxType)
 	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
+		panic("running the tx of charging gas will never failed.")
+	}
+	result.Code = txStatusCode
+	result.ContractResult = contractResultPayload
+	ts.log.Debugf("finished tx for charging gas, id = :%s, txStatusCode = %v", tx.Payload.TxId, txStatusCode)
+
+	txSimContext.SetTxResult(result)
+	snapshot.ApplyTxSimContext(
+		txSimContext,
+		protocol.ExecOrderTxTypeChargeGas,
+		true, true)
+
+	return txSimContext
+}
+
+//nolint: unused
+func (ts *TxScheduler) executeCoinbaseTx(
+	tx *commonPb.Transaction,
+	block *commonPb.Block,
+	snapshot protocol.Snapshot) protocol.TxSimContext {
+
+	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
+	ts.log.Debugf("new tx for charging gas, id = %s", tx.Payload.GetTxId())
+
+	result := &commonPb.Result{
+		Code: commonPb.TxStatusCode_SUCCESS,
+		ContractResult: &commonPb.ContractResult{
+			Code:    uint32(0),
+			Result:  nil,
+			Message: "",
+		},
+		RwSetHash: nil,
+	}
+
+	ts.log.Debugf("executeCoinbaseTx => txSimContext.GetContractByName(`%s`)", tx.Payload.ContractName)
+	contract, err := txSimContext.GetContractByName(tx.Payload.ContractName)
+	if err != nil {
+		ts.log.Errorf("Get contract info by name[%s] error:%s", tx.Payload.ContractName, err)
+		result.ContractResult.Message = err.Error()
+		result.Code = commonPb.TxStatusCode_INVALID_PARAMETER
+		result.ContractResult.Code = 1
+		txSimContext.SetTxResult(result)
+		return txSimContext
+	}
+
+	params := make(map[string][]byte)
+	for _, item := range tx.Payload.Parameters {
+		address := item.Key
+		data := item.Value
+		params[address] = data
+	}
+
+	// this native contract call will never failed
+	contractResultPayload, _, txStatusCode := ts.VmManager.RunContract(contract, tx.Payload.Method, nil,
+		params, txSimContext, 0, commonPb.TxType_INVOKE_CONTRACT)
+	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
+		ts.log.Errorf("txStatusCode = %d", txStatusCode)
 		panic("running the tx of charging gas will never failed.")
 	}
 	result.Code = txStatusCode
@@ -1370,6 +1548,20 @@ func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*co
 	}, nil
 }
 
+//nolint: unused
+func (ts *TxScheduler) appendCoinbaseToDAG(
+	dag *commonPb.DAG,
+	snapshot protocol.Snapshot) {
+
+	dagNeighbors := &commonPb.DAG_Neighbor{
+		Neighbors: make([]uint32, 0, snapshot.GetSnapshotSize()-1),
+	}
+	for i := uint32(0); i < uint32(snapshot.GetSnapshotSize()-1); i++ {
+		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, i)
+	}
+	dag.Vertexes = append(dag.Vertexes, dagNeighbors)
+}
+
 // getTxGasLimit get the gas limit field from tx, and will return err when the gas limit field is not set.
 func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 	var limit uint64
@@ -1383,9 +1575,9 @@ func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 }
 
 func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
-	txExecOrderTypeMap map[string]protocol.ExecOrderTxType) (uint32, uint32, uint32, error) {
+	txExecOrderTypeMap map[string]protocol.ExecOrderTxType) (uint32, uint32, uint32, uint32, error) {
 
-	var txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount uint32
+	var txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount uint32
 	for _, v := range txExecOrderTypeMap {
 		switch v {
 		case protocol.ExecOrderTxTypeNormal:
@@ -1394,19 +1586,37 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 			txExecOrderIteratorCount++
 		case protocol.ExecOrderTxTypeChargeGas:
 			txExecOrderChargeGasCount++
+		case protocol.ExecOrderTxTypeCoinbase:
+			txExecOrderCoinBaseCount++
 		}
 	}
-	if (IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
-		(!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
-		return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-			fmt.Errorf("charge gas enabled but charge gas tx is not 1")
+
+	// 检查gas或coinbase交易个数
+	// 240后 gas交易变更为coinbase交易,且gas交易数应为0
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion2400 {
+		if (coinbasemgr.CheckCoinbaseEnable(ts.chainConf)) && txExecOrderCoinBaseCount != 1 ||
+			(!coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && txExecOrderCoinBaseCount != 0) ||
+			txExecOrderChargeGasCount != 0 {
+			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+				txExecOrderCoinBaseCount, fmt.Errorf("verify coinbase's tx(%d) or gas's tx(%d) count failed",
+					txExecOrderCoinBaseCount, txExecOrderChargeGasCount)
+		}
+	} else {
+		if (coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
+			(!coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
+			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+				txExecOrderCoinBaseCount, fmt.Errorf("verify gas's tx(%d) count failed",
+					txExecOrderChargeGasCount)
+		}
 	}
+
 	// check type are all correct
 	for i, tx := range block.Txs {
 		t, ok := txExecOrderTypeMap[tx.Payload.GetTxId()]
 		if !ok {
 			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-				fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
+				txExecOrderCoinBaseCount, fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
 		}
 		var typeShouldBe protocol.ExecOrderTxType
 		if uint32(i) < txExecOrderNormalCount {
@@ -1414,15 +1624,31 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 		} else {
 			typeShouldBe = protocol.ExecOrderTxTypeIterator
 		}
-		if IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
-			typeShouldBe = protocol.ExecOrderTxTypeChargeGas
-		}
+
+		typeShouldBe = ts.getTypeShouldBeByBlockVersion(blockVersion, i, block, typeShouldBe)
 		if t != typeShouldBe {
 			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-				fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+				txExecOrderCoinBaseCount, fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
 		}
 	}
-	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, nil
+	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+		txExecOrderCoinBaseCount, nil
+}
+
+func (ts *TxScheduler) getTypeShouldBeByBlockVersion(blockVersion uint32, i int,
+	block *commonPb.Block, typeShouldBe protocol.ExecOrderTxType) protocol.ExecOrderTxType {
+	// 240 以后，gas交易变更为coinbase交易
+	if blockVersion >= blockVersion2400 {
+		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
+			typeShouldBe = protocol.ExecOrderTxTypeCoinbase
+		}
+
+	} else {
+		if coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
+			typeShouldBe = protocol.ExecOrderTxTypeChargeGas
+		}
+	}
+	return typeShouldBe
 }
 
 func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snapshot,
@@ -1431,7 +1657,7 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 		return nil
 	}
 	startTime := time.Now()
-	txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, err :=
+	txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount, err :=
 		ts.verifyExecOrderTxType(block, txExecOrderTypeMap)
 	if err != nil {
 		ts.log.Errorf("verifyExecOrderTxType has err:%s, tx type count:%d,%d,%d, block tx count:%d", err,
@@ -1440,9 +1666,10 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	}
 	// rebuild and verify dag
 	txRWSetTable := utils.RearrangeRWSet(block, txRWSetMap)
-	if uint32(len(txRWSetTable)) != txExecOrderNormalCount+txExecOrderIteratorCount+txExecOrderChargeGasCount {
-		return fmt.Errorf("txRWSetTable:%d != txExecOrderTypeCount:%d+%d+%d", len(txRWSetTable),
-			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount)
+	if uint32(len(txRWSetTable)) !=
+		txExecOrderNormalCount+txExecOrderIteratorCount+txExecOrderChargeGasCount+txExecOrderCoinBaseCount {
+		return fmt.Errorf("txRWSetTable:%d != txExecOrderTypeCount:%d+%d+%d+%d", len(txRWSetTable),
+			txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount)
 	}
 
 	// first, only build dag for normal tx
@@ -1452,10 +1679,20 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if txExecOrderIteratorCount > 0 {
 		appendSpecialTxsToDag(dag, txExecOrderIteratorCount)
 	}
-	// snapshot.GetSnapshotSize() > 0 prevent snapshot.GetSnapshotSize() - 1 overflow
-	if IsOptimizeChargeGasEnabled(ts.chainConf) && snapshot.GetSnapshotSize() > 0 {
-		ts.appendChargeGasTxToDAG(dag, snapshot)
+
+	// 软分叉处理，v240之后使用coinbase实现，不再有GasTx
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion2400 {
+		// coinbase Tx
+		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
+			ts.appendCoinbaseToDAG(dag, snapshot)
+		}
+	} else {
+		if coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf) && snapshot.GetSnapshotSize() > 0 {
+			ts.appendChargeGasTxToDAG(dag, snapshot)
+		}
 	}
+
 	equal, err := utils.IsDagEqual(block.Dag, dag)
 	if err != nil {
 		return err

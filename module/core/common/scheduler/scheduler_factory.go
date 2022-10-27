@@ -57,7 +57,6 @@ func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
 	if err != nil {
 		log.Fatalf("init signer of TxScheduler failed: err = %v", err)
 	}
-
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		txScheduler.metricVMRunTime = monitor.NewHistogramVec(monitor.SUBSYSTEM_CORE_PROPOSER_SCHEDULER, "metric_vm_run_time",
 			"VM run time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10}, "chainId")

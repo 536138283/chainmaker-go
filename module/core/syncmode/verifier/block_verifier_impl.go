@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker/protocol/v2"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
@@ -242,7 +244,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
 			return err
 		}
@@ -449,7 +451,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	timeLasts := make(map[string]int64)
 	var err error
 	var txCapacity uint32
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
@@ -478,15 +480,15 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make(map[string]int64)
 	var err error
-	var txCapacity uint32
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
-		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
-	} else {
-		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
-	}
-	if block.Header.TxCount > txCapacity {
-		return nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
-	}
+	//var txCapacity uint32
+	//if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	//	txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
+	//} else {
+	//	txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
+	//}
+	//if block.Header.TxCount > txCapacity {
+	//	return nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+	//}
 
 	if err = common.IsTxCountValid(block); err != nil {
 		return nil, timeLasts, nil, err

@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -239,7 +241,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
 			return nil, err
 		}
@@ -425,7 +427,7 @@ func (v *BlockVerifierImpl) validateBlock(block,
 	timeLasts := make(map[string]int64)
 	var err error
 	var txCapacity uint32
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
