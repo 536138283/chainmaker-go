@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -33,11 +34,6 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
-	chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
-	if err != nil {
-		ts.log.Errorf("get LastChainConfig error: %v", err)
-		return false
-	}
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
@@ -73,6 +69,18 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  2) tx.Result should be set in `runVM()` later
 			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
 				pk, _ := getPkFromTx(tx, snapshot)
+				val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
+					chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+					return chainCfg, err
+				})
+				if err != nil {
+					ts.log.Errorf("get LastChainConfig error: %v", err)
+					return false
+				}
+				chainCfg, ok := val.(*config.ChainConfig)
+				if !ok {
+					ts.log.Errorf("failed to transfer chainConfig from interface to struct")
+				}
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)

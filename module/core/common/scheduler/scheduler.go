@@ -48,8 +48,7 @@ const (
 )
 
 const (
-	ErrMsgOfGasLimitNotSet   = "field `GasLimit` must be set in payload."
-	ErrMsgOfGasLimitTooSmall = "field `GasLimit` is small than `default_gas` in bc1.yml."
+	ErrMsgOfGasLimitNotSet = "field `GasLimit` must be set in payload."
 )
 
 // TxScheduler transaction scheduler structure
@@ -981,8 +980,9 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 				gasLimit = int64(limit.GasLimit)
 			}
 
+			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
 			if balance-gasLimit < 0 {
-				// ensure balance > gasLimit
+
 				pkStr, _ := txCollection.publicKey.String()
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
