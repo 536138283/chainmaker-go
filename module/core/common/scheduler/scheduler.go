@@ -982,7 +982,6 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 
 			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
 			if balance-gasLimit < 0 {
-
 				pkStr, _ := txCollection.publicKey.String()
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)

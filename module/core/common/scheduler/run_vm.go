@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +8,7 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -33,6 +33,7 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
+
 	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
 
 	if enableOptimizeChargeGas {
