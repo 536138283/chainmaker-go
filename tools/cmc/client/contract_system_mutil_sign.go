@@ -36,6 +36,7 @@ func systemContractMultiSignCMD() *cobra.Command {
 	systemContractMultiSignCmd.AddCommand(multiSignReqCMD())
 	systemContractMultiSignCmd.AddCommand(multiSignVoteCMD())
 	systemContractMultiSignCmd.AddCommand(multiSignQueryCMD())
+	systemContractMultiSignCmd.AddCommand(multiSignTrigCMD())
 
 	return systemContractMultiSignCmd
 }
@@ -98,6 +99,30 @@ func multiSignQueryCMD() *cobra.Command {
 		Long:  "multi sign query",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return multiSignQuery()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
+		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
+	})
+
+	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagTxId)
+
+	return cmd
+}
+
+// multiSignTrigCMD multi sign trig
+// @return *cobra.Command
+func multiSignTrigCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "trig",
+		Short: "multi sign trig",
+		Long:  "multi sign trig",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return multiSignTrig()
 		},
 	}
 
@@ -303,5 +328,42 @@ func multiSignQuery() error {
 		return err
 	}
 	fmt.Printf("multi sign query resp: %s\n", string(output))
+	return nil
+}
+
+func multiSignTrig() error {
+	var (
+		err    error
+		resp   *common.TxResponse
+		client *sdk.ChainClient
+		output []byte
+
+		payload *common.Payload
+		tx      *common.TransactionInfo
+		//endorser *common.EndorsementEntry
+	)
+
+	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return err
+	}
+	defer client.Stop()
+
+	tx, err = client.GetTxByTxId(txId)
+	if err != nil {
+		return fmt.Errorf("get tx by txid failed, %s", err.Error())
+	}
+	payload = tx.Transaction.Payload
+	resp, err = client.MultiSignContractTrig(payload)
+	if err != nil {
+		return fmt.Errorf("multi sign vote failed, %s", err.Error())
+	}
+	output, err = prettyjson.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	fmt.Println(output)
+
 	return nil
 }
