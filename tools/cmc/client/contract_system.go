@@ -62,6 +62,9 @@ func systemContractCMD() *cobra.Command {
 	//DPoS.Distribution
 	systemContractCmd.AddCommand(distributionGetDetail())
 
+	//DPoS.Slashing
+	systemContractCmd.AddCommand(slashingGetDetail())
+
 	// system contract manage
 	systemContractCmd.AddCommand(systemContractManageCMD())
 

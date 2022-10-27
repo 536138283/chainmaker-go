@@ -35,6 +35,7 @@ func dposConfigCMD() *cobra.Command {
 	chainConfigCmd.AddCommand(readEpochValidatorNumberCMD())
 	chainConfigCmd.AddCommand(readDistributionPerBlockCMD())
 	chainConfigCmd.AddCommand(readSlashingPerBlockCMD())
+	chainConfigCmd.AddCommand(readSlashingBalanceCMD())
 	chainConfigCmd.AddCommand(readGasExchangeRateCMD())
 
 	//多签操作
@@ -150,6 +151,27 @@ func readSlashingPerBlockCMD() *cobra.Command {
 		Long:  "read slashing per block",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return getSlashingPerBlock()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagSdkConfPath, flagOrgId, flagEnableCertHash,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
+	})
+
+	return cmd
+}
+
+// readSlashingBalanceCMD return penalty account balance
+// @return *cobra.Command
+func readSlashingBalanceCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "read-slashing-balance",
+		Short: "read slashing balance",
+		Long:  "read slashing balance",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return getSlashingBalance()
 		},
 	}
 
@@ -535,6 +557,27 @@ func getSlashingPerBlock() error {
 	}
 
 	output, err := prettyjson.Marshal(chainConfig)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(output))
+	return nil
+}
+
+// getSlashingBalance return penalty account balance
+func getSlashingBalance() error {
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return fmt.Errorf("create user client failed, %s", err.Error())
+	}
+	defer client.Stop()
+	balance, err := client.GetSlashingBalance()
+	if err != nil {
+		return fmt.Errorf("get chain config failed, %s", err.Error())
+	}
+
+	output, err := prettyjson.Marshal(balance)
 	if err != nil {
 		return err
 	}
