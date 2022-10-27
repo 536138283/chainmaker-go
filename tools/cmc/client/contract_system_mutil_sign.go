@@ -363,7 +363,7 @@ func multiSignTrig() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("multi sign vote resp: %s\n", string(output))
+	fmt.Println(output)
 
 	return nil
 }
