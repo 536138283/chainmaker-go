@@ -49,11 +49,7 @@ func getSenderTxCollection(
 	txCollectionMap := make(map[string]*TxCollection)
 
 	var err error
-	chainCfg, err := snapshot.GetBlockchainStore().GetLastChainConfig()
-	if err != nil {
-		log.Error(err.Error())
-		return txCollectionMap
-	}
+	chainCfg := snapshot.GetLastChainConfig()
 
 	for _, tx := range txBatch {
 		// get the public key from tx

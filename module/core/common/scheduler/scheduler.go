@@ -64,6 +64,7 @@ type TxScheduler struct {
 	keyReg          *regexp.Regexp
 	signer          protocol.SigningMember
 	ledgerCache     protocol.LedgerCache
+	contractCache   *sync.Map
 }
 
 // Transaction dependency in adjacency table representation
@@ -81,6 +82,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
+
 	var err error
 	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
 	if err != nil {
@@ -225,7 +227,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
-		ts.log.Debugf("handleTx(`%v`) snapshot has already sealed.", tx.GetPayload().TxId)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("handleTx(`%v`) snapshot has already sealed.", tx.GetPayload().TxId)
+		})
 		return
 	}
 	var start time.Time
@@ -238,13 +242,17 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// 2) the result that telling if the invoke success.
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
 	tx.Result = txSimContext.GetTxResult()
-	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
+	})
 
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
-	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
-		tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
+			tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
+	})
 
 	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
 	if !applyResult {
@@ -254,15 +262,19 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 
 		runningTxC <- tx
 
-		ts.log.Debugf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
-			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
+				tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		})
 
 	} else {
 		ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
 			conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
 
-		ts.log.Debugf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
-			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
+				tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		})
 	}
 	// If all transactions have been successfully added to dag
 	if applySize >= txBatchSize {
@@ -332,9 +344,9 @@ func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSe
 }
 
 func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *commonPb.Block) map[string]*commonPb.TxRWSet {
-	txRWSetMap := make(map[string]*commonPb.TxRWSet)
 	block.Txs = snapshot.GetTxTable()
 	txRWSetTable := snapshot.GetTxRWSetTable()
+	txRWSetMap := make(map[string]*commonPb.TxRWSet, len(txRWSetTable))
 	for _, txRWSet := range txRWSetTable {
 		if txRWSet != nil {
 			txRWSetMap[txRWSet.TxId] = txRWSet
@@ -365,7 +377,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	var (
 		startTime  = time.Now()
-		txRWSetMap = make(map[string]*commonPb.TxRWSet)
+		txRWSetMap = make(map[string]*commonPb.TxRWSet, len(block.Txs))
 	)
 	if block.Header.BlockVersion >= blockVersion2300 && len(block.Txs) != len(block.Dag.Vertexes) {
 		ts.log.Warnf("found dag size mismatch txs length in "+
@@ -374,7 +386,9 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
 	}
 	if len(block.Txs) == 0 {
-		ts.log.Debugf("no txs in block[%x] when simulate", block.Header.BlockHash)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("no txs in block[%x] when simulate", block.Header.BlockHash)
+		})
 		return txRWSetMap, snapshot.GetTxResultMap(), nil
 	}
 	ts.log.Infof("simulate with dag start, size %d", len(block.Txs))
@@ -406,8 +420,10 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	}
 	defer goRoutinePool.Release()
 
-	ts.log.Debugf("block [%d] simulate with dag first batch size:%d, total batch size:%d",
-		block.Header.BlockHeight, len(txIndexBatch), txBatchSize)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("block [%d] simulate with dag first batch size:%d, total batch size:%d",
+			block.Header.BlockHeight, len(txIndexBatch), txBatchSize)
+	})
 
 	blockFingerPrint := string(utils.CalcBlockFingerPrintWithoutTx(block))
 	ts.VmManager.BeforeSchedule(blockFingerPrint, block.Header.BlockHeight)
@@ -462,7 +478,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			txRWSetMap[txRWSet.TxId] = txRWSet
 		}
 	}
-	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType)
+	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType, len(block.Txs))
 	// we only receive fixed number of elements from this channel since we process unreceived things
 	// and return error in later parts
 	length := len(txExecOrderTypeC)
@@ -527,17 +543,23 @@ func handleTxInSimulateWithDag(
 	// if apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
 	if !applyResult {
-		ts.log.Debugf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
+		})
 		// apply fails in verification, make it done rather than retry it
 		doneTxC <- txIndex
 	} else {
-		ts.log.Debugf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
-			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
+				tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
+		})
 		doneTxC <- txIndex
 	}
 	// If all transactions in current batch have been successfully added to dag
 	if applySize >= txBatchSize {
-		ts.log.Debugf("finished 1 batch, apply size:%d, tx batch size:%d", applySize, txBatchSize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("finished 1 batch, apply size:%d, tx batch size:%d", applySize, txBatchSize)
+		})
 		finishC <- true
 	}
 }
@@ -554,8 +576,12 @@ func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
-	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
-	//ts.log.Debugf("tx.Result = %v", tx.Result)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
+	})
+	//ts.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("tx.Result = %v", tx.Result)
+	//})
 
 	enableGas := ts.checkGasEnable()
 	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)

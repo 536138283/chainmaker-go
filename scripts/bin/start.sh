@@ -106,9 +106,10 @@ function start_vm_go() {
   rpc_max_recv_size=$chainmaker_vm_go_max_recv_msg_size
   log_in_console=$chainmaker_vm_go_log_in_console
   max_concurrency=$chainmaker_vm_go_max_concurrency
-  slow_tx_step_time=$chainmaker_vm_slow_tx_log_step_base_time
-  slow_tx_time=$chainmaker_vm_slow_tx_log_tx_base_time
-  process_timeout=$chainmaker_vm_process_timeout
+  slow_tx_disable=$chainmaker_vm_go_slow_tx_log_disable
+  slow_tx_step_time=$chainmaker_vm_go_slow_tx_log_step_base_time
+  slow_tx_time=$chainmaker_vm_go_slow_tx_log_tx_base_time
+  process_timeout=$chainmaker_vm_go_process_timeout
 
   if [[ $protocol = "uds" ]]
   then
@@ -124,6 +125,7 @@ function start_vm_go() {
     -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
     -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
     -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+    -e SLOW_TX_DISABLE="$slow_tx_disable" \
     -e SLOW_TX_STEP_TIME="$slow_tx_step_time" \
     -e SLOW_TX_TIME="$slow_tx_time" \
     -e PROCESS_TIMEOUT="$process_timeout" \
@@ -149,6 +151,7 @@ function start_vm_go() {
       -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+      -e SLOW_TX_DISABLE="$slow_tx_disable" \
       -e SLOW_TX_STEP_TIME="$slow_tx_step_time" \
       -e SLOW_TX_TIME="$slow_tx_time" \
       -e PROCESS_TIMEOUT="$process_timeout" \

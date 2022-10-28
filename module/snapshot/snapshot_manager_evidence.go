@@ -19,7 +19,7 @@ type ManagerEvidence struct {
 	log       protocol.Logger
 }
 
-// When generating blocks, generate a Snapshot for each block, which is used as read-write set cache
+// NewSnapshot when generating blocks, generate a Snapshot for each block, which is used as read-write set cache
 func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
@@ -53,7 +53,7 @@ func (m *ManagerEvidence) NewSnapshot(prevBlock *commonPb.Block, block *commonPb
 	return evidenceSnapshot
 }
 
-// Get a Snapshot from SnapshotManager for read, don't modify any data.
+// GetSnapshot return a Snapshot from SnapshotManager for read, don't modify any data.
 func (m *ManagerEvidence) GetSnapshot(prevBlock *commonPb.Block, block *commonPb.Block) protocol.Snapshot {
 	fingerPrint := utils.CalcBlockFingerPrint(block)
 	snapshot, exist := m.snapshots[fingerPrint]
@@ -63,6 +63,7 @@ func (m *ManagerEvidence) GetSnapshot(prevBlock *commonPb.Block, block *commonPb
 	return snapshot
 }
 
+// NotifyBlockCommitted notify block committed info
 func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()
@@ -101,6 +102,7 @@ func (m *ManagerEvidence) NotifyBlockCommitted(block *commonPb.Block) error {
 	return nil
 }
 
+// ClearSnapshot remove block and unused snapshots
 func (m *ManagerEvidence) ClearSnapshot(block *commonPb.Block) error {
 	m.delegate.lock.Lock()
 	defer m.delegate.lock.Unlock()

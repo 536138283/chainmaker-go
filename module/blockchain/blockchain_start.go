@@ -23,11 +23,11 @@ func (bc *Blockchain) Start() error {
 	if bc.isModuleInit(moduleNameNetService) && !bc.isModuleStartUp(moduleNameNetService) {
 		startModules = append(startModules, map[string]func() error{moduleNameNetService: bc.startNetService})
 	}
-	if bc.isModuleInit(moduleNameCore) && !bc.isModuleStartUp(moduleNameCore) {
-		startModules = append(startModules, map[string]func() error{moduleNameCore: bc.startCoreEngine})
-	}
 	if bc.isModuleInit(moduleNameVM) {
 		startModules = append(startModules, map[string]func() error{moduleNameVM: bc.startVM})
+	}
+	if bc.isModuleInit(moduleNameCore) && !bc.isModuleStartUp(moduleNameCore) {
+		startModules = append(startModules, map[string]func() error{moduleNameCore: bc.startCoreEngine})
 	}
 	if bc.isModuleInit(moduleNameConsensus) && !bc.isModuleStartUp(moduleNameConsensus) {
 		startModules = append(startModules, map[string]func() error{moduleNameConsensus: bc.startConsensus})
