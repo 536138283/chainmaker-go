@@ -195,7 +195,6 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 	if sv, ok := s.writeTable[finalKey]; ok {
 		return sv.value, nil
 	}
-
 	if sv, ok := s.readTable[finalKey]; ok {
 		return sv.value, nil
 	}
