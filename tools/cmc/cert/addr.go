@@ -58,7 +58,7 @@ func certToUserAddrInStake() *cobra.Command {
 				}
 			}
 
-			addr, err := utils.PkToAddrStr(pk, pbconfig.AddrType_CHAINMAKER, hashType)
+			addr, err := utils.PkToAddrStr(pk, pbconfig.AddrType_ETHEREUM, hashType)
 			if err != nil {
 				return fmt.Errorf("pk to addr str failed, reason: %s", err)
 			}
