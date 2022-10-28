@@ -11,6 +11,9 @@ import (
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 )
 
+//  organization
+//  @Description: represents organization
+//
 type organization struct {
 	// Name of this group
 	id string

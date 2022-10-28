@@ -26,6 +26,10 @@ import (
 var _ msgbus.Subscriber = (*certACProvider)(nil)
 
 // OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
+//  @Description:
+//  @receiver cp
+//  @param msg
+// contract event data is a []string, hexToString(proto.Marshal(data))
 func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 	cp.acService.log.Infof("[AC] receive msg, topic: %s", msg.Topic.String())
 	switch msg.Topic {
@@ -49,11 +53,18 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 
 }
 
-// OnQuit  when the message bus is shutting down,
+// OnQuit  when the message bus is shutting down
+//  @Description:
+//  @receiver cp
 func (cp *certACProvider) OnQuit() {
 	// nothing
 }
 
+// onMessageChainConfig
+//  @Description: handle chainconfig message
+//  @receiver cp
+//  @param msg
+//
 func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	dataStr, _ := msg.Payload.([]string)
 	dataBytes, err := hex.DecodeString(dataStr[0])
@@ -67,6 +78,11 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	cp.messageChainConfig(chainConfig, false)
 }
 
+// onMessageCertFreeze
+//  @Description: handle cert freeze message
+//  @receiver cp
+//  @param msg
+//
 func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
 	data, _ := msg.Payload.([]string)
 	certs := data[0]
@@ -84,6 +100,12 @@ func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
 	}
 }
 
+//
+// onMessageCertUnFreeze
+//  @Description: handle cert unfreeze msg
+//  @receiver cp
+//  @param msg
+//
 func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 	// full or hash cert
 	data, _ := msg.Payload.([]string)
@@ -126,6 +148,12 @@ func (cp *certACProvider) onMessageCertUnFreeze(msg *msgbus.Message) {
 
 }
 
+//
+// onMessageCertRevoke
+//  @Description: handle cert revoke message
+//  @receiver cp
+//  @param msg
+//
 func (cp *certACProvider) onMessageCertRevoke(msg *msgbus.Message) {
 	crl := msg.Payload.([]string)[0]
 	crl = strings.Replace(crl, ",", "\n", -1)
@@ -145,6 +173,11 @@ func (cp *certACProvider) onMessageCertRevoke(msg *msgbus.Message) {
 	}
 }
 
+// onMessageCertDelete
+//  @Description: handle cert delete message
+//  @receiver cp
+//  @param msg
+//
 func (cp *certACProvider) onMessageCertDelete(msg *msgbus.Message) {
 	hashes := msg.Payload.([]string)[0]
 
@@ -165,6 +198,12 @@ func (cp *certACProvider) onMessageCertDelete(msg *msgbus.Message) {
 	}
 }
 
+//
+// onMessageCertAliasDelete
+//  @Description: handle cert aliase delete message
+//  @receiver cp
+//  @param msg
+//
 func (cp *certACProvider) onMessageCertAliasDelete(msg *msgbus.Message) {
 	aliases := msg.Payload.([]string)[0]
 
@@ -180,6 +219,12 @@ func (cp *certACProvider) onMessageCertAliasDelete(msg *msgbus.Message) {
 	}
 }
 
+//
+// onMessageCertAliasUpdate
+//  @Description: handle cert alias update message
+//  @receiver cp
+//  @param msg
+//
 func (cp *certACProvider) onMessageCertAliasUpdate(msg *msgbus.Message) {
 	alias := msg.Payload.([]string)[0]
 

@@ -52,7 +52,7 @@ var notEnoughParticipantsSupportError = "authentication fail: not enough partici
 // hsmHandleMap is a global handle map for pkcs11 or sdf hsm
 var hsmHandleMap = map[string]interface{}{}
 
-// List of access principals which should not be customized
+// restrainedResourceList List of access principals which should not be customized
 var restrainedResourceList = map[string]bool{
 	protocol.ResourceNameAllTest:       true,
 	protocol.ResourceNameP2p:           true,
@@ -208,42 +208,69 @@ var (
 	)
 )
 
+//
+//  accessControlService
+//  @Description: ac provider's accessControl for cert and pwk mode
+//
 type accessControlService struct {
 	orgNum int32
 
-	orgList *sync.Map // map[string]interface{} , orgId -> interface{}
+	// orgList map[string]interface{} , orgId -> interface{}
+	orgList *sync.Map
 
-	resourceNamePolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
+	// resourceNamePolicyMap map[string]*policy , resourceName -> *policy
+	resourceNamePolicyMap *sync.Map
 
-	exceptionalPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
+	// exceptionalPolicyMap map[string]*policy , resourceName -> *policy
+	exceptionalPolicyMap *sync.Map
 
-	lastestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
+	// lastestPolicyMap map[string]*policy , resourceName -> *policy
+	lastestPolicyMap *sync.Map
 
+	// resourceNamePolicyMap220	compatible to version 220
 	resourceNamePolicyMap220 *sync.Map
-	exceptionalPolicyMap220  *sync.Map
+	// exceptionalPolicyMap220	compatible to version 220
+	exceptionalPolicyMap220 *sync.Map
 
-	//local cache for member
+	//memberCache local cache for member
 	memberCache *concurrentlru.Cache
 
+	// dataStore blockchain data store
 	dataStore protocol.BlockchainStore
 
 	log protocol.Logger
 
-	// hash algorithm for chains
+	// hashType hash algorithm for chains
 	hashType string
 
+	// authType ac authentication type
 	authType string
 
+	// pwkNewMember used to new member for pwk when memberCache is cleared concurrently
 	pwkNewMember func(member *pbac.Member) (protocol.Member, error)
 
+	// getCertVerifyOptions used to verify certificate chain when new member for cert mode
 	getCertVerifyOptions func() *bcx509.VerifyOptions
 }
 
+//
+//  memberCached
+//  @Description: member cache struct
+//
 type memberCached struct {
 	member    protocol.Member
 	certChain []*bcx509.Certificate
 }
 
+//
+// initAccessControlService
+//  @Description: access control instantiate
+//  @param hashType
+//  @param authType
+//  @param store
+//  @param log
+//  @return *accessControlService
+//
 func initAccessControlService(hashType, authType string,
 	store protocol.BlockchainStore, log protocol.Logger) *accessControlService {
 	acService := &accessControlService{
@@ -263,6 +290,12 @@ func initAccessControlService(hashType, authType string,
 	return acService
 }
 
+//
+// createDefaultResourcePolicy
+//  @Description: create default resource policies for certificate mode!
+//  @receiver acs
+//  @param localOrgId
+//
 func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) {
 
 	policyArchive.orgList = []string{localOrgId}
@@ -601,6 +634,13 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 }
 
+//
+// initResourcePolicy
+//  @Description: initialize resource policy when restart or handle chainconfig msg from msgbus
+//  @receiver acs
+//  @param resourcePolicies
+//  @param localOrgId
+//
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
 	localOrgId string) {
 	authType := strings.ToLower(acs.authType)
@@ -620,6 +660,13 @@ func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.R
 	acs.lastestPolicyMap = lastestPolicyMap
 }
 
+//
+// checkResourcePolicyOrgList
+//  @Description: check if resource policy valid
+//  @receiver acs
+//  @param policy
+//  @return bool
+//
 func (acs *accessControlService) checkResourcePolicyOrgList(policy *pbac.Policy) bool {
 	orgCheckList := map[string]bool{}
 	for _, org := range policy.OrgList {
@@ -636,6 +683,13 @@ func (acs *accessControlService) checkResourcePolicyOrgList(policy *pbac.Policy)
 	return true
 }
 
+//
+// checkResourcePolicyRule
+//  @Description: check resource policy roles
+//  @receiver acs
+//  @param resourcePolicy
+//  @return bool
+//
 func (acs *accessControlService) checkResourcePolicyRule(resourcePolicy *config.ResourcePolicy) bool {
 	switch resourcePolicy.Policy.Rule {
 	case string(protocol.RuleAny), string(protocol.RuleAll), string(protocol.RuleForbidden):
@@ -652,6 +706,12 @@ func (acs *accessControlService) checkResourcePolicyRule(resourcePolicy *config.
 	}
 }
 
+// checkResourcePolicyRuleSelfCase
+//  @Description: check resource policy of 'self'
+//  @receiver acs
+//  @param resourcePolicy
+//  @return bool
+//
 func (acs *accessControlService) checkResourcePolicyRuleSelfCase(resourcePolicy *config.ResourcePolicy) bool {
 	switch resourcePolicy.ResourceName {
 	case syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
@@ -666,6 +726,12 @@ func (acs *accessControlService) checkResourcePolicyRuleSelfCase(resourcePolicy 
 	}
 }
 
+// checkResourcePolicyRuleMajorityCase
+//  @Description: check resource policy for 'majority'
+//  @receiver acs
+//  @param policy
+//  @return bool
+//
 func (acs *accessControlService) checkResourcePolicyRuleMajorityCase(policy *pbac.Policy) bool {
 	if len(policy.OrgList) != int(atomic.LoadInt32(&acs.orgNum)) {
 		acs.log.Warnf("[%s] rule considers all the organizations on the chain, any customized configuration for "+
@@ -689,6 +755,12 @@ func (acs *accessControlService) checkResourcePolicyRuleMajorityCase(policy *pba
 	}
 }
 
+// checkResourcePolicyRuleDefaultCase
+//  @Description: check resource policy of 'default' case
+//  @receiver acs
+//  @param policy
+//  @return bool
+//
 func (acs *accessControlService) checkResourcePolicyRuleDefaultCase(policy *pbac.Policy) bool {
 	nums := strings.Split(policy.Rule, LIMIT_DELIMITER)
 	switch len(nums) {
@@ -721,6 +793,13 @@ func (acs *accessControlService) checkResourcePolicyRuleDefaultCase(policy *pbac
 	}
 }
 
+// lookUpMemberInCache
+//  @Description: lookup member in cache by memberInfo
+//  @receiver acs
+//  @param memberInfo
+//  @return *memberCached
+//  @return bool
+//
 func (acs *accessControlService) lookUpMemberInCache(memberInfo string) (*memberCached, bool) {
 	ret, ok := acs.memberCache.Get(memberInfo)
 	if ok {
@@ -729,10 +808,22 @@ func (acs *accessControlService) lookUpMemberInCache(memberInfo string) (*member
 	return nil, false
 }
 
+// addMemberToCache
+//  @Description: add a member into cache
+//  @receiver acs
+//  @param memberInfo
+//  @param member
+//
 func (acs *accessControlService) addMemberToCache(memberInfo string, member *memberCached) {
 	acs.memberCache.Add(memberInfo, member)
 }
 
+// addOrg
+//  @Description: add one org into orgList
+//  @receiver acs
+//  @param orgId
+//  @param orgInfo
+//
 func (acs *accessControlService) addOrg(orgId string, orgInfo interface{}) {
 	_, loaded := acs.orgList.LoadOrStore(orgId, orgInfo)
 	if loaded {
@@ -742,6 +833,12 @@ func (acs *accessControlService) addOrg(orgId string, orgInfo interface{}) {
 	}
 }
 
+// getOrgInfoByOrgId
+//  @Description: get organization details by org id
+//  @receiver acs
+//  @param orgId
+//  @return interface{}
+//
 func (acs *accessControlService) getOrgInfoByOrgId(orgId string) interface{} {
 	orgInfo, ok := acs.orgList.Load(orgId)
 	if !ok {
@@ -750,6 +847,11 @@ func (acs *accessControlService) getOrgInfoByOrgId(orgId string) interface{} {
 	return orgInfo
 }
 
+// getAllOrgInfos
+//  @Description: get all organization details
+//  @receiver acs
+//  @return []interface{}
+//
 func (acs *accessControlService) getAllOrgInfos() []interface{} {
 	orgInfos := make([]interface{}, 0)
 	acs.orgList.Range(func(_, value interface{}) bool {
@@ -759,6 +861,12 @@ func (acs *accessControlService) getAllOrgInfos() []interface{} {
 	return orgInfos
 }
 
+// validateResourcePolicy
+//  @Description: check if resource policy is valid
+//  @receiver acs
+//  @param resourcePolicy
+//  @return bool
+//
 func (acs *accessControlService) validateResourcePolicy(resourcePolicy *config.ResourcePolicy) bool {
 	if _, ok := restrainedResourceList[resourcePolicy.ResourceName]; ok {
 		acs.log.Errorf("bad configuration: should not modify the access policy of the resource: %s",
@@ -778,6 +886,15 @@ func (acs *accessControlService) validateResourcePolicy(resourcePolicy *config.R
 	return acs.checkResourcePolicyRule(resourcePolicy)
 }
 
+// createPrincipal
+//  @Description: create a principal, used to valid hereafter
+//  @receiver acs
+//  @param resourceName
+//  @param endorsements
+//  @param message
+//  @return protocol.Principal
+//  @return error
+//
 func (acs *accessControlService) createPrincipal(resourceName string, endorsements []*common.EndorsementEntry,
 	message []byte) (protocol.Principal, error) {
 
@@ -796,6 +913,16 @@ func (acs *accessControlService) createPrincipal(resourceName string, endorsemen
 	}, nil
 }
 
+// createPrincipalForTargetOrg
+//  @Description: create a principal for specific organization
+//  @receiver acs
+//  @param resourceName
+//  @param endorsements
+//  @param message
+//  @param targetOrgId
+//  @return protocol.Principal
+//  @return error
+//
 func (acs *accessControlService) createPrincipalForTargetOrg(resourceName string,
 	endorsements []*common.EndorsementEntry, message []byte, targetOrgId string) (protocol.Principal, error) {
 	p, err := acs.createPrincipal(resourceName, endorsements, message)
@@ -806,19 +933,33 @@ func (acs *accessControlService) createPrincipalForTargetOrg(resourceName string
 	return p, nil
 }
 
+// lookUpPolicyByResourceName
+//  @Description: query resource policy by resource name
+//  @receiver acs
+//  @param resourceName
+//  @return *policy
+//  @return error
+//
 func (acs *accessControlService) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 	resourceName = policyResourceName
+
+	//  check block version
+	// if blockerVersion <= 220, query policy from Policy220 map
 
 	if blockVersion > 0 && blockVersion <= 220 {
 		return acs.lookUpPolicyByResourceName220(resourceName)
 	}
 
+	// first, query from latest policyMap
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
 		return p.(*policy), nil
 	}
+	// second, query from default resource policy map
 	p, ok := acs.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
+
+		// thirdly, query from default exceptional policy map
 		if p, ok = acs.exceptionalPolicyMap.Load(resourceName); !ok {
 			return nil, fmt.Errorf("look up access policy failed, did not configure access policy "+
 				"for resource %s", resourceName)
@@ -827,21 +968,42 @@ func (acs *accessControlService) lookUpPolicyByResourceName(resourceName string)
 	return p.(*policy), nil
 }
 
+// newCertMember
+//  @Description: new member of certificate mode by protocol member
+//  @receiver acs
+//  @param pbMember
+//  @return protocol.Member
+//  @return error
+//
 func (acs *accessControlService) newCertMember(pbMember *pbac.Member) (protocol.Member, error) {
 	return newCertMemberFromPb(pbMember, acs)
 }
 
+// newPkMember
+//  @Description: new member of pwk mode by protocol member
+//  @receiver acs
+//  @param member
+//  @param adminList
+//  @param consensusList
+//  @return protocol.Member
+//  @return error
+//
 func (acs *accessControlService) newPkMember(member *pbac.Member, adminList,
 	consensusList *sync.Map) (protocol.Member, error) {
 
+	// check member cache
 	memberCache := acs.getMemberFromCache(member)
 	if memberCache != nil {
 		return memberCache, nil
 	}
+
+	// new member if not found in cache
 	pkMember, err := newPkMemberFromAcs(member, adminList, consensusList, acs)
 	if err != nil {
 		return nil, fmt.Errorf("new public key member failed: %s", err.Error())
 	}
+
+	// check member's org
 	if pkMember.GetOrgId() != member.OrgId && member.OrgId != "" {
 		return nil, fmt.Errorf("new public key member failed: member orgId does not match on chain")
 	}
@@ -849,10 +1011,20 @@ func (acs *accessControlService) newPkMember(member *pbac.Member, adminList,
 		member:    pkMember,
 		certChain: nil,
 	}
+
+	// add member to cache if a new one
 	acs.addMemberToCache(string(member.MemberInfo), cached)
 	return pkMember, nil
 }
 
+// newNodePkMember
+//  @Description:  new node member of pwk mode by protocol member
+//  @receiver acs
+//  @param member
+//  @param consensusList
+//  @return protocol.Member
+//  @return error
+//
 func (acs *accessControlService) newNodePkMember(member *pbac.Member,
 	consensusList *sync.Map) (protocol.Member, error) {
 
@@ -879,7 +1051,14 @@ func (acs *accessControlService) newNodePkMember(member *pbac.Member,
 	return pkMember, nil
 }
 
+// getMemberFromCache
+//  @Description: get member from cache, if not found, new it
+//  @receiver acs
+//  @param member
+//  @return protocol.Member
+//
 func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protocol.Member {
+	// lookup in member cache
 	cached, ok := acs.lookUpMemberInCache(string(member.MemberInfo))
 	if ok {
 		acs.log.Debugf("member found in local cache")
@@ -894,6 +1073,7 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 	var tmpMember protocol.Member
 	var err error
 	var certChains [][]*bcx509.Certificate
+	// new member of cert mode
 	if acs.authType == protocol.PermissionedWithCert {
 		tmpMember, err = acs.newCertMember(member)
 		certMember, ok := tmpMember.(*certificateMember)
@@ -910,6 +1090,7 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 			return nil
 		}
 
+		// new member of pwk mode
 	} else if acs.authType == protocol.PermissionedWithKey {
 		tmpMember, err = acs.pwkNewMember(member)
 	}
@@ -934,6 +1115,15 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 	return tmpMember
 }
 
+// verifyPrincipalPolicy
+//  @Description: verify principal, not checking signature here
+//  @receiver acs
+//  @param principal
+//  @param refinedPrincipal
+//  @param p
+//  @return bool
+//  @return error
+//
 func (acs *accessControlService) verifyPrincipalPolicy(principal, refinedPrincipal protocol.Principal, p *policy) (
 	bool, error) {
 	endorsements := refinedPrincipal.GetEndorsement()
@@ -955,6 +1145,14 @@ func (acs *accessControlService) verifyPrincipalPolicy(principal, refinedPrincip
 	}
 }
 
+// verifyPrincipalPolicyRuleMajorityCase
+//  @Description: verify  MajorityCase
+//  @receiver acs
+//  @param p
+//  @param endorsements
+//  @return bool
+//  @return error
+//
 func (acs *accessControlService) verifyPrincipalPolicyRuleMajorityCase(p *policy,
 	endorsements []*common.EndorsementEntry) (bool, error) {
 	// notice: accept admin role only, and require majority of all the organizations on the chain
@@ -977,6 +1175,14 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleMajorityCase(p *policy
 		notEnoughParticipantsSupportError, int(float64(acs.orgNum)/2.0+1), numOfValid)
 }
 
+// verifyPrincipalPolicyRuleSelfCase
+//  @Description: verify SelfCase
+//  @receiver acs
+//  @param targetOrg
+//  @param endorsements
+//  @return bool
+//  @return error
+//
 func (acs *accessControlService) verifyPrincipalPolicyRuleSelfCase(targetOrg string,
 	endorsements []*common.EndorsementEntry) (bool, error) {
 	role := protocol.RoleAdmin
@@ -1003,6 +1209,15 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleSelfCase(targetOrg str
 	return false, fmt.Errorf("authentication fail: target [%s] does not belong to the signer", targetOrg)
 }
 
+// verifyPrincipalPolicyRuleAnyCase
+//  @Description: verify anycase
+//  @receiver acs
+//  @param p
+//  @param endorsements
+//  @param resourceName
+//  @return bool
+//  @return error
+//
 func (acs *accessControlService) verifyPrincipalPolicyRuleAnyCase(p *policy, endorsements []*common.EndorsementEntry,
 	resourceName string) (bool, error) {
 	orgList, roleList := buildOrgListRoleListOfPolicyForVerifyPrincipal(p)
@@ -1038,6 +1253,14 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleAnyCase(p *policy, end
 		resourceName)
 }
 
+// verifyPrincipalPolicyRuleAllCase
+//  @Description: verify allCase
+//  @receiver acs
+//  @param p
+//  @param endorsements
+//  @return bool
+//  @return error
+//
 func (acs *accessControlService) verifyPrincipalPolicyRuleAllCase(p *policy, endorsements []*common.EndorsementEntry) (
 	bool, error) {
 	orgList, roleList := buildOrgListRoleListOfPolicyForVerifyPrincipal(p)
@@ -1051,6 +1274,14 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleAllCase(p *policy, end
 	return false, fmt.Errorf("authentication fail: not all of the listed organtizations consend to this action")
 }
 
+// verifyPrincipalPolicyRuleDefaultCase
+//  @Description: verify default case
+//  @receiver acs
+//  @param p
+//  @param endorsements
+//  @return bool
+//  @return error
+//
 func (acs *accessControlService) verifyPrincipalPolicyRuleDefaultCase(p *policy,
 	endorsements []*common.EndorsementEntry) (bool, error) {
 	rule := p.GetRule()
@@ -1102,12 +1333,28 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleDefaultCase(p *policy,
 	}
 }
 
+// countValidEndorsements
+//  @Description: count valid endorsement or signature. omit invalid ones
+//  @receiver acs
+//  @param orgList
+//  @param roleList
+//  @param endorsements
+//  @return int
+//
 func (acs *accessControlService) countValidEndorsements(orgList map[string]bool, roleList map[protocol.Role]bool,
 	endorsements []*common.EndorsementEntry) int {
 	refinedEndorsements := acs.getValidEndorsements(orgList, roleList, endorsements)
 	return countOrgsFromEndorsements(refinedEndorsements)
 }
 
+// getValidEndorsements
+//  @Description: get valid endorsers
+//  @receiver acs
+//  @param orgList
+//  @param roleList
+//  @param endorsements
+//  @return []*common.EndorsementEntry
+//
 func (acs *accessControlService) getValidEndorsements(orgList map[string]bool, roleList map[protocol.Role]bool,
 	endorsements []*common.EndorsementEntry) []*common.EndorsementEntry {
 	var refinedEndorsements []*common.EndorsementEntry
@@ -1146,6 +1393,14 @@ func (acs *accessControlService) getValidEndorsements(orgList map[string]bool, r
 	return refinedEndorsements
 }
 
+// isRoleMatching
+//  @Description: check if signer role is valid
+//  @param signerRole
+//  @param roleList
+//  @param refinedEndorsements
+//  @param endorsement
+//  @return bool
+//
 func isRoleMatching(signerRole protocol.Role, roleList map[protocol.Role]bool,
 	refinedEndorsements *[]*common.EndorsementEntry, endorsement *common.EndorsementEntry) bool {
 	isRoleMatching := false
@@ -1178,6 +1433,13 @@ func buildOrgListRoleListOfPolicyForVerifyPrincipal(p *policy) (map[string]bool,
 	return orgList, roleList
 }
 
+// lookUpPolicy
+//  @Description: looup latest policy from policy map
+//  @receiver acs
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//
 func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
@@ -1194,6 +1456,13 @@ func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy
 	return nil, fmt.Errorf("policy not found for resource %s", resourceName)
 }
 
+// lookUpExceptionalPolicy
+//  @Description: lookup policy from exceptional policy map
+//  @receiver acs
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//
 func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 

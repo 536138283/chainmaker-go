@@ -20,12 +20,20 @@ type policy struct {
 	roleList []protocol.Role
 }
 
-//GetRule returns rule
+// GetRule
+//  @Description: return policy rule
+//  @receiver p
+//  @return protocol.Rule
+//
 func (p *policy) GetRule() protocol.Rule {
 	return p.rule
 }
 
-// GetPbPolicy return policy
+// GetPbPolicy return protocol policy
+//  @Description:
+//  @receiver p
+//  @return *pbac.Policy
+//
 func (p *policy) GetPbPolicy() *pbac.Policy {
 	var pbRoleList []string
 	for _, role := range p.roleList {
@@ -39,16 +47,31 @@ func (p *policy) GetPbPolicy() *pbac.Policy {
 	}
 }
 
-//GetOrgList return org list
+// GetOrgList return org list
+//  @Description:
+//  @receiver p
+//  @return []string
+//
 func (p *policy) GetOrgList() []string {
 	return p.orgList
 }
 
-//GetRoleList return role list
+// GetRoleList return role list
+//  @Description:
+//  @receiver p
+//  @return []protocol.Role
+//
 func (p *policy) GetRoleList() []protocol.Role {
 	return p.roleList
 }
 
+// newPolicy
+//  @Description: returns a policy
+//  @param rule
+//  @param orgList
+//  @param roleList
+//  @return *policy
+//
 func newPolicy(rule protocol.Rule, orgList []string, roleList []protocol.Role) *policy {
 	return &policy{
 		rule:     rule,
@@ -57,6 +80,11 @@ func newPolicy(rule protocol.Rule, orgList []string, roleList []protocol.Role) *
 	}
 }
 
+// newPolicyFromPb
+//  @Description: convert to ac policy from pb policy
+//  @param input
+//  @return *policy
+//
 func newPolicyFromPb(input *pbac.Policy) *policy {
 
 	p := &policy{
@@ -73,6 +101,11 @@ func newPolicyFromPb(input *pbac.Policy) *policy {
 	return p
 }
 
+// newPbPolicyFromPolicy
+//  @Description: convert ac policy to pb policy
+//  @param input
+//  @return *pbac.Policy
+//
 func newPbPolicyFromPolicy(input *policy) *pbac.Policy {
 	p := &pbac.Policy{
 		Rule:     string(input.rule),

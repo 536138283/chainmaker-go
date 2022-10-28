@@ -79,6 +79,9 @@ var (
 	)
 )
 
+//  pkACProvider
+//  @Description:  represents a pk provider implementation
+//
 type pkACProvider struct {
 
 	//chainconfig authType
@@ -109,11 +112,25 @@ type pkACProvider struct {
 	consensusType consensus.ConsensusType
 }
 
+//  publicAdminMemberModel
+//  @Description: member model
+//
 type publicAdminMemberModel struct {
 	publicKey crypto.PublicKey
 	pkBytes   []byte
 }
 
+// NewACProvider
+//  @Description: init a ac provider of pk mode by chain config
+//  @receiver p
+//  @param chainConf
+//  @param localOrgId
+//  @param store
+//  @param log
+//  @param msgBus
+//  @return protocol.AccessControlProvider
+//  @return error
+//
 func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
 	protocol.AccessControlProvider, error) {
@@ -128,6 +145,14 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	return pkAcProvider, nil
 }
 
+// newPkACProvider
+//  @Description: init a pk mode provider
+//  @param chainConfig
+//  @param store
+//  @param log
+//  @return *pkACProvider
+//  @return error
+//
 func newPkACProvider(chainConfig *config.ChainConfig,
 	store protocol.BlockchainStore, log protocol.Logger) (*pkACProvider, error) {
 	pkAcProvider := &pkACProvider{
@@ -178,6 +203,12 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 	return pkAcProvider, nil
 }
 
+// initAdminMembers
+//  @Description: init admin members of pk mode from trust root list
+//  @receiver p
+//  @param trustRootList
+//  @return error
+//
 func (p *pkACProvider) initAdminMembers(trustRootList []*config.TrustRootConfig) error {
 	var (
 		tempSyncMap sync.Map
@@ -216,6 +247,12 @@ func (p *pkACProvider) initAdminMembers(trustRootList []*config.TrustRootConfig)
 	return nil
 }
 
+// initConsensusMember
+//  @Description: init consensus member by chainconfig's consensus list
+//  @receiver p
+//  @param chainConfig
+//  @return error
+//
 func (p *pkACProvider) initConsensusMember(chainConfig *config.ChainConfig) error {
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
 		return p.initDPoSMember(chainConfig.Consensus.Nodes)
@@ -225,6 +262,12 @@ func (p *pkACProvider) initConsensusMember(chainConfig *config.ChainConfig) erro
 	return fmt.Errorf("public chain mode does not support other consensus")
 }
 
+// initDPoSMember
+//  @Description: init dpos members from chainconfig's consensus nodes
+//  @receiver p
+//  @param consensusConf
+//  @return error
+//
 func (p *pkACProvider) initDPoSMember(consensusConf []*config.OrgConfig) error {
 	if len(consensusConf) == 0 {
 		return fmt.Errorf("update dpos consensus member failed: DPoS config can't be empty in chain config")
@@ -242,6 +285,12 @@ func (p *pkACProvider) initDPoSMember(consensusConf []*config.OrgConfig) error {
 	return nil
 }
 
+// initPermissionMember
+//  @Description: init permission member from chainconfig consensus nodes
+//  @receiver p
+//  @param consensusConf
+//  @return error
+//
 func (p *pkACProvider) initPermissionMember(consensusConf []*config.OrgConfig) error {
 	if len(consensusConf) == 0 {
 		return fmt.Errorf("update permission consensus member failed: consensus node config can't be empty in chain config")
@@ -259,6 +308,13 @@ func (p *pkACProvider) initPermissionMember(consensusConf []*config.OrgConfig) e
 	return nil
 }
 
+// lookUpMemberInCache
+//  @Description: lookup up member cache of pk mode
+//  @receiver p
+//  @param memberInfo
+//  @return *memberCached
+//  @return bool
+//
 func (p *pkACProvider) lookUpMemberInCache(memberInfo string) (*memberCached, bool) {
 	ret, ok := p.memberCache.Get(memberInfo)
 	if ok {
@@ -267,6 +323,12 @@ func (p *pkACProvider) lookUpMemberInCache(memberInfo string) (*memberCached, bo
 	return nil, false
 }
 
+// getMemberFromCache
+//  @Description: get member from cache, if not found, new one
+//  @receiver p
+//  @param member
+//  @return protocol.Member
+//
 func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 	cached, ok := p.lookUpMemberInCache(string(member.MemberInfo))
 	if ok {
@@ -311,6 +373,12 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 //}
 
 // NewMember creates a member from pb Member
+//  @Description:
+//  @receiver p
+//  @param pbMember
+//  @return protocol.Member
+//  @return error
+//
 func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error) {
 	cache := p.getMemberFromCache(pbMember)
 	if cache != nil {
@@ -327,7 +395,13 @@ func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error)
 	return member, nil
 }
 
-// NewMember creates a member from pb Member
+// NewMemberFromAcs creates a member from pb Member
+//  @Description:
+//  @receiver p
+//  @param pbMember
+//  @return protocol.Member
+//  @return error
+//
 func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member, error) {
 	member, err := publicNewPkMemberFromAcs(pbMember, p.adminMember, p.consensusMember, p.hashType)
 	if err != nil {
@@ -336,6 +410,10 @@ func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member,
 	return member, nil
 }
 
+// createDefaultResourcePolicy
+//  @Description: int default resource policies of pk mode, except dpos consensus!!
+//  @receiver p
+//
 func (p *pkACProvider) createDefaultResourcePolicy() {
 	p.resourceNamePolicyMap.Store(protocol.ResourceNameReadData, policyRead)
 	p.resourceNamePolicyMap.Store(protocol.ResourceNameWriteData, policyWrite)
@@ -649,6 +727,15 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.DPoSSlashingFunction_SET_SLASHING_PER_BLOCK.String(), pubPolicyManage)
 }
 
+// verifyPrincipalPolicy
+//  @Description: verify policy principal
+//  @receiver p
+//  @param principal
+//  @param refinedPrincipal
+//  @param pol
+//  @return bool
+//  @return error
+//
 func (p *pkACProvider) verifyPrincipalPolicy(principal,
 	refinedPrincipal protocol.Principal, pol *policy) (bool, error) {
 	endorsements := refinedPrincipal.GetEndorsement()
@@ -666,6 +753,14 @@ func (p *pkACProvider) verifyPrincipalPolicy(principal,
 	}
 }
 
+// verifyRuleAnyCase
+//  @Description: verify policy rule of 'any' case
+//  @receiver p
+//  @param pol
+//  @param endorsements
+//  @return bool
+//  @return error
+//
 func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
 	roleList := p.buildRoleListForVerifyPrincipal(pol)
 	for _, endorsement := range endorsements {
@@ -691,6 +786,14 @@ func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.End
 	return false, err
 }
 
+// verifyRuleMajorityCase
+//  @Description:  verify policy rule of 'majority' case
+//  @receiver p
+//  @param pol
+//  @param endorsements
+//  @return bool
+//  @return error
+//
 func (p *pkACProvider) verifyRuleMajorityCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
 	role := protocol.RoleAdmin
 	refinedEndorsements := p.getValidEndorsements(map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
@@ -712,6 +815,13 @@ func (p *pkACProvider) buildRoleListForVerifyPrincipal(pol *policy) map[protocol
 	return roleList
 }
 
+// lookUpPolicyByResourceName
+//  @Description: lookup policy by resource name
+//  @receiver p
+//  @param resourceName
+//  @return *policy
+//  @return error
+//
 func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
@@ -729,7 +839,13 @@ func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy,
 	return pol.(*policy), nil
 }
 
-// all-in-one validation for signing members: signature, policies
+// refinePrincipal
+//  @Description: all-in-one validation for signing members: signature, policies
+//  @receiver p
+//  @param principal
+//  @return protocol.Principal
+//  @return error
+//
 func (p *pkACProvider) refinePrincipal(principal protocol.Principal) (protocol.Principal, error) {
 	endorsements := principal.GetEndorsement()
 	msg := principal.GetMessage()
@@ -746,6 +862,13 @@ func (p *pkACProvider) refinePrincipal(principal protocol.Principal) (protocol.P
 	return refinedPrincipal, nil
 }
 
+// refineEndorsements
+//  @Description: verify endorser's signature, omit invalid endorsements
+//  @receiver p
+//  @param endorsements
+//  @param msg
+//  @return []*common.EndorsementEntry
+//
 func (p *pkACProvider) refineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
@@ -783,6 +906,14 @@ func (p *pkACProvider) refineEndorsements(endorsements []*common.EndorsementEntr
 	return refinedEndorsement
 }
 
+// getValidEndorsements
+//  @Description: get valid endorsements
+//  @receiver p
+//  @param orgList
+//  @param roleList
+//  @param endorsements
+//  @return []*common.EndorsementEntry
+//
 func (p *pkACProvider) getValidEndorsements(orgList map[string]bool, roleList map[protocol.Role]bool,
 	endorsements []*common.EndorsementEntry) []*common.EndorsementEntry {
 	var refinedEndorsements []*common.EndorsementEntry
@@ -814,16 +945,31 @@ func (p *pkACProvider) getValidEndorsements(orgList map[string]bool, roleList ma
 }
 
 // GetHashAlg return hash algorithm the access control provider uses
+//  @Description:
+//  @receiver p
+//  @return string
+//
 func (p *pkACProvider) GetHashAlg() string {
 	return p.hashType
 }
 
 // ValidateResourcePolicy checks whether the given resource principal is valid
+//  @Description:
+//  @receiver p
+//  @param resourcePolicy
+//  @return bool
+//
 func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePolicy) bool {
 	return true
 }
 
 // LookUpPolicy returns corresponding policy configured for the given resource name
+//  @Description:
+//  @receiver p
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//
 func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
@@ -840,6 +986,12 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 }
 
 // LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
+//  @Description:
+//  @receiver p
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//
 func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
@@ -856,6 +1008,14 @@ func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Polic
 }
 
 // CreatePrincipal creates a principal for one time authentication
+//  @Description:
+//  @receiver p
+//  @param resourceName
+//  @param endorsements
+//  @param message
+//  @return protocol.Principal
+//  @return error
+//
 func (p *pkACProvider) CreatePrincipal(resourceName string, endorsements []*common.EndorsementEntry,
 	message []byte) (protocol.Principal, error) {
 
@@ -875,7 +1035,16 @@ func (p *pkACProvider) CreatePrincipal(resourceName string, endorsements []*comm
 }
 
 // CreatePrincipalForTargetOrg creates a principal for "SELF" type policy,
-// which needs to convert SELF to a sepecific organization id in one authentication
+// which needs to convert SELF to a sepecific organization id in one authentication//
+//  @Description:
+//  @receiver p
+//  @param resourceName
+//  @param endorsements
+//  @param message
+//  @param targetOrgId
+//  @return protocol.Principal
+//  @return error
+//
 func (p *pkACProvider) CreatePrincipalForTargetOrg(resourceName string,
 	endorsements []*common.EndorsementEntry, message []byte, targetOrgId string) (protocol.Principal, error) {
 
@@ -883,6 +1052,12 @@ func (p *pkACProvider) CreatePrincipalForTargetOrg(resourceName string,
 }
 
 // VerifyPrincipal verifies if the principal for the resource is met
+//  @Description:
+//  @receiver p
+//  @param principal
+//  @return bool
+//  @return error
+//
 func (p *pkACProvider) VerifyPrincipal(principal protocol.Principal) (bool, error) {
 
 	refinedPrincipal, err := p.refinePrincipal(principal)
@@ -902,17 +1077,36 @@ func (p *pkACProvider) VerifyPrincipal(principal protocol.Principal) (bool, erro
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-//GetMemberStatus get the status information of the member
+// GetMemberStatus get the status information of the member
+//  @Description:
+//  @receiver p
+//  @param member
+//  @return pbac.MemberStatus
+//  @return error
+//
 func (p *pkACProvider) GetMemberStatus(member *pbac.Member) (pbac.MemberStatus, error) {
 	return pbac.MemberStatus_NORMAL, nil
 }
 
-//VerifyRelatedMaterial verify the member's relevant identity material
+// VerifyRelatedMaterial verify the member's relevant identity material
+//  @Description:
+//  @receiver p
+//  @param verifyType
+//  @param data
+//  @return bool
+//  @return error
+//
 func (p *pkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 	return true, nil
 }
 
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
+// GetValidEndorsements filters all endorsement entries and returns all valid ones
+//  @Description:
+//  @receiver p
+//  @param principal
+//  @return []*common.EndorsementEntry
+//  @return error
+//
 func (p *pkACProvider) GetValidEndorsements(principal protocol.Principal) ([]*common.EndorsementEntry, error) {
 	refinedPolicy, err := p.refinePrincipal(principal)
 	if err != nil {
@@ -933,7 +1127,12 @@ func (p *pkACProvider) GetValidEndorsements(principal protocol.Principal) ([]*co
 	return p.getValidEndorsements(orgList, roleList, endorsements), nil
 }
 
-//GetAllPolicy returns all default policies
+// GetAllPolicy returns all default policies
+//  @Description:
+//  @receiver p
+//  @return map[string]*pbac.Policy
+//  @return error
+//
 func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.resourceNamePolicyMap.Range(func(key, value interface{}) bool {
