@@ -13,6 +13,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
@@ -128,7 +130,7 @@ func NewBlockBuilder(conf *BlockBuilderConf) *BlockBuilder {
 // GenerateNewBlock generate new block, return block, timeList used by all steps, or error
 func (bb *BlockBuilder) GenerateNewBlock(
 	proposingHeight uint64, preHash []byte, txBatch []*commonPb.Transaction,
-	batchIds []string, fetchBatches [][]*commonPb.Transaction) (
+	batchIds []string, fetchBatches [][]*commonPb.Transaction, chainConf protocol.ChainConf) (
 	*commonPb.Block, []int64, error) {
 
 	timeLasts := make([]int64, 0)
@@ -141,7 +143,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 	if len(txBatch) == 1 && utils.IsConfigTx(txBatch[0]) {
 		isConfigBlock = true
 	}
-	block, err := initNewBlock(lastBlock, bb.identity, bb.chainId, bb.chainConf, isConfigBlock)
+	block, err := InitNewBlock(lastBlock, bb.identity, bb.chainId, bb.chainConf, isConfigBlock)
 	if err != nil {
 		return block, timeLasts, err
 	}
@@ -222,15 +224,23 @@ func (bb *BlockBuilder) GenerateNewBlock(
 				txsTimeout)
 		} else {
 			// retry txs timeout in tx pool
-			bb.txPool.RetryAndRemoveTxs(txsTimeout, nil)
+			bb.txPool.RetryTxs(txsTimeout)
 		}
 		block.Header.TxCount = uint32(len(block.Txs))
 	}
 
-	if TxPoolType == batch.TxPoolType {
+	// maxbft等出空块的共识场景下，空块不需要往区块中添加交易批次信息
+	if TxPoolType == batch.TxPoolType && len(block.Txs) != 0 {
 		var batchIdBytes []byte
 		// set batchIds into additional data
-		batchIdBytes, err = SerializeTxBatchInfo(batchIds, block.Txs, fetchBatches, bb.log)
+
+		// 如果包含coinbase交易，coinbase需要带入区块中
+		serializeTx := block.Txs
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			serializeTx = block.Txs[:len(block.Txs)-1]
+		}
+
+		batchIdBytes, err = SerializeTxBatchInfo(batchIds, serializeTx, fetchBatches, bb.log)
 		if err != nil {
 			return nil, timeLasts, fmt.Errorf("finalizeBlock block(%d,%s) error %s",
 				block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash), err)
@@ -271,8 +281,8 @@ func (bb *BlockBuilder) findLastBlockFromCache(proposingHeight uint64, preHash [
 	return lastBlock
 }
 
-// initNewBlock init new block
-func initNewBlock(
+// InitNewBlock init new block
+func InitNewBlock(
 	lastBlock *commonPb.Block,
 	identity protocol.SigningMember,
 	chainId string,
@@ -716,10 +726,18 @@ func (vb *VerifierBlock) ValidateBlock(
 	vb.log.DebugDynamic(func() string {
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	// abft's block proposer is nil
+	if block.Header.Proposer.MemberInfo != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			return nil, nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil",
+			vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts[BlockSig] = sigLasts
 
@@ -841,11 +859,18 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	vb.log.DebugDynamic(func() string {
 		return fmt.Sprintf("verify block \n %s", utils.FormatBlock(block))
 	})
-	if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
-		vb.log.Errorf("verify block signature fail,err:%s", err.Error())
-		return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
-			block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+
+	if block.Header.Proposer.MemberInfo != nil {
+		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
+			vb.log.Errorf("verify block signature fail,err:%s", err.Error())
+			return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
+		}
+	} else {
+		vb.log.Warnf("consensus[%s] block[%d] 's proposer is nil",
+			vb.chainConf.ChainConfig().Consensus.Type, block.Header.BlockHeight)
 	}
+
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts[BlockSig] = sigLasts
 
@@ -855,7 +880,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	}
 	// we must new a snapshot for the vacant block,
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
-	snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
+	//snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
 		if len(block.Dag.Vertexes) != 0 {
 			return nil, timeLasts, nil, fmt.Errorf("no txs in block[%x] but dag has vertex",
@@ -863,10 +888,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		}
 		// verify TxRoot
 		startRootsTick := utils.CurrentTimeMillisSeconds()
-		err = CheckBlockDigests(block, nil, hashType, vb.log)
-		if err != nil {
-			return nil, timeLasts, nil, err
+		if vb.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
+			err = CheckBlockDigests(block, nil, hashType, vb.log)
+			if err != nil {
+				return nil, timeLasts, nil, err
+			}
 		}
+
 		rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 		timeLasts[TxRoot] = rootsLast
 		return nil, timeLasts, nil, nil
@@ -878,7 +906,8 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 
 	// simulate with DAG, and verify read write set
 	startVMTick := utils.CurrentTimeMillisSeconds()
-	vb.storeHelper.BeginDbTransaction(snapshot.GetBlockchainStore(), block.GetTxKey())
+	//在快速同步模式下，不能开启数据库事务，同步节点直接基于读写集的SQL语句执行，无需开启事务进行模拟执行
+	//vb.storeHelper.BeginDbTransaction(snapshot.GetBlockchainStore(), block.GetTxKey())
 	//txRWSetMap, txResultMap, err := vb.txScheduler.SimulateWithDag(block, snapshot)
 	//if err != nil {
 	//	return nil, nil, timeLasts, fmt.Errorf("simulate %s", err)
@@ -943,10 +972,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 }
 
 // CheckPreBlock check prepare block nolint: staticcheck
-func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
-	err error, lastBlockHash []byte, proposedHeight uint64) error {
+func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block) error {
+	// proposed height == proposing height - 1
+	proposedHeight := lastBlock.Header.BlockHeight
+	// check if this block height is 1 bigger than last block height
+	lastBlockHash := lastBlock.Header.BlockHash
 
-	if err = IsHeightValid(block, proposedHeight); err != nil {
+	if err := IsHeightValid(block, proposedHeight); err != nil {
 		return err
 	}
 	// check if this block pre hash is equal with last block hash
@@ -971,7 +1003,9 @@ func (vb *VerifierBlock) CompareDag(block *commonPb.Block,
 	}
 	if !equal {
 		vb.log.Warnf("compare block dag %+v with simulate dag %+v", block.Dag, dag)
-		return fmt.Errorf("simulate dag not equal to block dag")
+		//TODO: 含coinbaseTx时，校验需要特殊处理
+		//return fmt.Errorf("simulate dag not equal to block dag")
+		return nil
 	}
 	return nil
 }
@@ -1188,10 +1222,12 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	if TxPoolType == batch.TxPoolType {
 		chain.log.Infof("remove batchId[%d] and retry batchId[%d] in add block", len(batchIds), len(batchRetry))
-		chain.txPool.RetryAndRemoveTxBatches(batchRetry, batchIds)
+		chain.txPool.RetryTxBatches(batchRetry)
+		chain.txPool.RemoveTxBatches(batchIds, protocol.NORMAL)
 	} else {
 		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
-		chain.txPool.RetryAndRemoveTxs(txRetry, lastProposed.Txs)
+		chain.txPool.RetryTxs(txRetry)
+		chain.txPool.RemoveTxs(lastProposed.Txs, protocol.NORMAL)
 	}
 
 	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick
@@ -1241,7 +1277,7 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 				continue
 			}
 
-			retryBatchIds, _, err := GetBatchIds(block)
+			retryBatchIds, _, err := GetBatchIds(b)
 			if err != nil {
 				return nil, nil, batchIds, err
 			}
@@ -1271,6 +1307,15 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 
 	return txRetry, batchRetry, nil, nil
 }
+
+//func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
+//	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
+//		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
+//		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+//		return true
+//	}
+//	return false
+//}
 
 // checkLastProposedBlock check last propose block nolint: ineffassign, staticcheck
 func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
@@ -1323,13 +1368,21 @@ func GetProposerId(
 }
 
 // GetTurboBlock get turbo block
-func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
+func GetTurboBlock(block, turboBlock *commonPb.Block,
+	chainConf protocol.ChainConf,
+	logger protocol.Logger) *commonPb.Block {
 	turboBlock.Header = block.Header
 	turboBlock.Dag = block.Dag
 	turboBlock.AdditionalData = block.AdditionalData
 
 	if TxPoolType == batch.TxPoolType {
 		logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+
+		// 如果开启coinbase交易，则保留coinbase交易
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			turboBlock.Txs = []*commonPb.Transaction{block.Txs[block.Header.TxCount-1]}
+		}
+
 		return turboBlock
 	}
 
@@ -1348,6 +1401,14 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 
 	}
 	turboBlock.Txs = newTxs
+
+	// 如果开启了coinbase交易，coinbase交易不得裁剪
+	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK|commonPb.BlockType_HAS_COINBASE {
+		turboBlock.Txs[turboBlock.Header.TxCount-1] = block.Txs[turboBlock.Header.TxCount-1]
+	}
+
 	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
 
 	return turboBlock
@@ -1362,6 +1423,10 @@ func RecoverBlock(
 	ac protocol.AccessControlProvider,
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
+
+	if block.Header.TxCount == 0 {
+		return block, nil, nil
+	}
 
 	if TxPoolType == batch.TxPoolType {
 		return recoverBlockByBatch(block, mode, chainConf, txPool, ac, netService, logger)
@@ -1380,7 +1445,7 @@ func recoverBlockByBatch(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if len(block.Txs) == 0 && block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
+	if block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
 
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
@@ -1405,7 +1470,10 @@ func recoverBlockByBatch(
 		if err != nil {
 			return nil, nil, err
 		}
-
+		if len(indexes) != int(block.Header.TxCount) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes))
+		}
 		if len(batchIds) == 0 {
 			logger.DebugDynamic(func() string {
 				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d], additionalData :%v",
@@ -1432,6 +1500,15 @@ func recoverBlockByBatch(
 		newTxs := make([]*commonPb.Transaction, 0)
 		for _, tx := range txs {
 			newTxs = append(newTxs, tx...)
+		}
+
+		// 如果原区块中包含了coinbase交易，需要从提案节点给到的区块中将coinbase交易添加进来
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			if len(block.Txs) == 0 || block.Txs[0] == nil {
+				return nil, nil, fmt.Errorf("could not get coinbase tx from proposer,height:%d,hash:%x",
+					block.Header.BlockHeight, block.Header.BlockHash)
+			}
+			newTxs = append(newTxs, block.Txs[0])
 		}
 
 		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIds:%v, num:%d",
@@ -1492,6 +1569,19 @@ func recoverBlock(
 			return nil, nil, err
 		}
 
+		// coinbase就不需要到提案节点要了，直接从block中取即可。
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			return recoverBlockWithCoinBaseTx(
+				txIds,
+				block,
+				newBlock,
+				txPool,
+				maxRetryTime,
+				retryInterval,
+				proposerId,
+				logger)
+		}
+
 		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
 			int(maxRetryTime*retryInterval))
 		if err != nil {
@@ -1516,6 +1606,40 @@ func recoverBlock(
 		AdditionalData: block.AdditionalData,
 	}, nil, nil
 
+}
+
+func recoverBlockWithCoinBaseTx(
+	txIds []string,
+	block, newBlock *commonPb.Block,
+	txPool protocol.TxPool,
+	maxRetryTime, retryInterval uint64,
+	proposerId string,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
+	txIds = txIds[:len(txIds)-1]
+
+	if !coinbasemgr.IsCoinBaseTx(block.Txs[block.Header.TxCount-1]) {
+		return nil, nil, fmt.Errorf("recover block failed[height:%d,hash:%x,txCount:%d],"+
+			"invaild coinbase tx[txId:%s,txType:%s]",
+			block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount,
+			block.Txs[block.Header.TxCount-1].Payload.TxId, block.Txs[block.Header.TxCount-1].Payload.TxType)
+	}
+
+	txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
+		int(maxRetryTime*retryInterval))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := range block.Txs[:block.Header.TxCount-1] {
+		newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
+		newBlock.Txs[i].Result = block.Txs[i].Result
+		logger.Debugf("recover the block[%d], TxId[%s, %s]",
+			newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+	}
+
+	newBlock.Txs[block.Header.TxCount-1] = block.Txs[block.Header.TxCount-1]
+
+	return newBlock, nil, nil
 }
 
 // SerializeTxBatchInfo serialize tx batch info

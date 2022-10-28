@@ -774,7 +774,7 @@ func getAllCandidates(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, e
 }
 
 func getValidatorByAddress(cc *sdk.ChainClient, address string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"address": address,
 	}
 	resp, err := cc.QuerySystemContract(
@@ -792,7 +792,7 @@ func getValidatorByAddress(cc *sdk.ChainClient, address string, timeout int64) (
 
 func delegate(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"to":     address,
 		"amount": amount,
 	}
@@ -815,7 +815,7 @@ func delegate(cc *sdk.ChainClient, address, amount string, txId string, timeout 
 }
 
 func getDelegationsByAddress(cc *sdk.ChainClient, address string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"address": address,
 	}
 	resp, err := cc.QuerySystemContract(
@@ -833,7 +833,7 @@ func getDelegationsByAddress(cc *sdk.ChainClient, address string, timeout int64)
 
 func getUserDelegationByValidator(cc *sdk.ChainClient, delegatorAddress, validatorAddress string,
 	timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"delegator_address": delegatorAddress,
 		"validator_address": validatorAddress,
 	}
@@ -852,7 +852,7 @@ func getUserDelegationByValidator(cc *sdk.ChainClient, delegatorAddress, validat
 
 func unDelegate(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"from":   address,
 		"amount": amount,
 	}
@@ -875,7 +875,7 @@ func unDelegate(cc *sdk.ChainClient, address, amount string, txId string, timeou
 }
 
 func readEpochByID(cc *sdk.ChainClient, epochID string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"epoch_id": epochID,
 	}
 	resp, err := cc.QuerySystemContract(
@@ -906,7 +906,7 @@ func readLatestEpoch(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, er
 }
 
 func setNodeID(cc *sdk.ChainClient, nodeID string, timeout int64, withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"node_id": nodeID,
 	}
 	if txId == "" {
@@ -928,7 +928,7 @@ func setNodeID(cc *sdk.ChainClient, nodeID string, timeout int64, withSyncResult
 }
 
 func getNodeID(cc *sdk.ChainClient, address string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
+	params := map[string]interface{}{
 		"address": address,
 	}
 	resp, err := cc.QuerySystemContract(

@@ -53,6 +53,19 @@ type ApiService struct {
 	ctx                         context.Context
 }
 
+// GetTxStatus - get status of tx
+func (s *ApiService) GetTxStatus(ctx context.Context,
+	request *txpoolPb.GetTxStatusRequest) (*txpoolPb.GetTxStatusResponse, error) {
+	txStatus, err := s.chainMakerServer.GetTxStatus(request.ChainId, request.TxId)
+	if err != nil {
+		return nil, err
+	}
+	return &txpoolPb.GetTxStatusResponse{
+		TxStatus: txStatus,
+		TxId:     request.TxId,
+	}, nil
+}
+
 // NewApiService - new ApiService object
 func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerServer) *ApiService {
 	log := logger.GetLogger(logger.MODULE_RPC)
@@ -237,7 +250,13 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		return resp
 	}
 
-	ctx := vm.NewTxSimContext(vmMgr, snap, tx, protocol.DefaultBlockVersion, log)
+	blockVersion := protocol.DefaultBlockVersion
+
+	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
+		blockVersion = cc.ChainConfig().GetBlockVersion()
+	}
+
+	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
 
 	contract, err := store.GetContractByName(tx.Payload.ContractName)
 	if err != nil {
@@ -340,8 +359,12 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 		resp.TxId = tx.Payload.TxId
 		return resp
 	}
+	blockVersion := protocol.DefaultBlockVersion
 
-	ctx := vm.NewTxSimContext(vmMgr, snap, tx, protocol.DefaultBlockVersion, log)
+	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
+		blockVersion = cc.ChainConfig().GetBlockVersion()
+	}
+	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
 
 	defaultGas := uint64(0)
 	chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)

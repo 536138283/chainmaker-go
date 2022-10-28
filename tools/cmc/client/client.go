@@ -99,6 +99,14 @@ var (
 
 	consensusFrom string
 	consensusTo   string
+
+	minSelfDelegation    int
+	epochValidatorNumber int
+	epochBlockNumber     int
+	distributionPerBlock int
+	slashingPerBlock     int
+	//distributionFromSlashing int // nolint: unused
+	gasExchangeRate int
 )
 
 const (
@@ -162,7 +170,14 @@ const (
 	flagConsensusFrom                    = "src-consensus"
 	flagConsensusTo                      = "dst-consensus"
 	flagRespResultToString               = "result-to-string"
-	flagOutFilePath                      = "out-file-path"
+	flagMinSelfDelegation                = "min-self-delegation"
+	flagEpochValidatorNumber             = "epoch-validator-number"
+	flagEpochBlockNumber                 = "epoch-block-number"
+	flagDistributionPerBlock             = "distribution-per-block"
+	flagSlashingPerBlock                 = "slashing-per-block"
+	//flagDistributionFromSlashing         = "distribution-from-slashing" // nolint: unused
+	flagGasExchangeRate = "gas-exchange-rate"
+	flagOutFilePath     = "out-file-path"
 
 	flagDbHost = "db-host"
 	flagDbUser = "db-user"
@@ -182,6 +197,7 @@ func ClientCMD() *cobra.Command {
 
 	clientCmd.AddCommand(contractCMD())
 	clientCmd.AddCommand(chainConfigCMD())
+	clientCmd.AddCommand(dposConfigCMD())
 	clientCmd.AddCommand(getChainMakerServerVersionCMD())
 	clientCmd.AddCommand(certManageCMD())
 	clientCmd.AddCommand(blockChainsCMD())
@@ -295,6 +311,16 @@ func init() {
 	flags.StringVar(&consensusTo, flagConsensusTo, "", "specify destination consensus")
 	flags.BoolVar(&respResultToString, flagRespResultToString, false,
 		"enable convert TxResponse.ContractResult.Result to string for readable output")
+
+	flags.IntVar(&minSelfDelegation, flagMinSelfDelegation, 250000,
+		"the validator minimum staking amount (default 250000)")
+	flags.IntVar(&epochBlockNumber, flagEpochBlockNumber, 32, "the number of blocks contained in a epoch (default 32)")
+	flags.IntVar(&epochValidatorNumber, flagEpochValidatorNumber, 4,
+		"the number of validators in a epoch (default 4)")
+	flags.IntVar(&distributionPerBlock, flagDistributionPerBlock, 100, "amount of reward per block (default 100)")
+	flags.IntVar(&slashingPerBlock, flagSlashingPerBlock, 100, "penalty amount for each less proposed block (default 100)")
+	flags.IntVar(&gasExchangeRate, flagGasExchangeRate, 1, "gas exchange rate")
+
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {

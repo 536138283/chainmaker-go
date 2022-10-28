@@ -13,11 +13,13 @@ import (
 	"reflect"
 	"strconv"
 	"sync"
+
+	"chainmaker.org/chainmaker/logger/v2"
+
 	"sync/atomic"
 	"testing"
 	"time"
 
-	"chainmaker.org/chainmaker/logger/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
@@ -42,9 +44,12 @@ func (s *MockSimContextImpl) GetBlockFingerprint() string {
 	//TODO implement me
 	panic("implement me")
 }
-
 func (s *MockSimContextImpl) GetKeys(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	//TODO implement me
+	panic("implement me")
+}
+
+func (s *MockSimContextImpl) GetSnapshot() protocol.Snapshot {
 	panic("implement me")
 }
 
@@ -216,7 +221,6 @@ func (s *MockSimContextImpl) GetConsensusStateWrapper() protocol.ConsensusStateW
 func (s *MockSimContextImpl) GetStrAddrFromPbMember(pbMember *acPb.Member) (string, error) {
 	panic("impl me")
 }
-
 func TestKey(t *testing.T) {
 	s0 := "你好"
 	b0 := []byte(s0)

@@ -58,7 +58,7 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 					delBlock.Header.BlockHeight, delBlock.Header.BlockHash, err)
 				continue
 			}
-			hp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
+			hp.txPool.RetryTxBatches(batchIds)
 		}
 		return
 	}
@@ -68,5 +68,5 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 		txs = append(txs, blk.Txs...)
 	}
 
-	hp.txPool.RetryAndRemoveTxs(txs, nil)
+	hp.txPool.RetryTxs(txs)
 }

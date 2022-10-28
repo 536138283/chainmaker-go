@@ -39,10 +39,10 @@ if [ -n "$1" ] ;then
   echo "check UT cover: $1."
   ut_cover "$1" 40 10
 else
-   ut_cover "module/accesscontrol" 49 3
+   ut_cover "module/accesscontrol" 48.8 3
    ut_cover "module/blockchain" 43 15
   ut_cover "module/consensus" 41 15
-  ut_cover "module/core" 38 14
+  ut_cover "module/core" 32 13
   ut_cover "module/net" 35 12
   ut_cover "module/rpcserver" 0 2.8
   ut_cover "module/snapshot" 50 15

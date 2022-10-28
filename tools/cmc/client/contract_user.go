@@ -80,7 +80,7 @@ func createUserContractCMD() *cobra.Command {
 		Short: "create user contract command",
 		Long:  "create user contract command",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return createUserContract()
+			return createUpgradeUserContract(createContractOp)
 		},
 	}
 
@@ -234,7 +234,7 @@ func upgradeUserContractCMD() *cobra.Command {
 		Short: "upgrade user contract command",
 		Long:  "upgrade user contract command",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return upgradeUserContract()
+			return createUpgradeUserContract(upgradeContractOp)
 		},
 	}
 
@@ -242,7 +242,7 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash, flagContractAddress,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit, flagAbiFilePath,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -325,7 +325,15 @@ func revokeUserContractCMD() *cobra.Command {
 	return cmd
 }
 
-func createUserContract() error {
+type createUpgradeContractOp int
+
+const (
+	createContractOp createUpgradeContractOp = iota + 1
+	upgradeContractOp
+)
+
+// nolint
+func createUpgradeUserContract(op createUpgradeContractOp) error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
@@ -347,7 +355,7 @@ func createUserContract() error {
 
 	if runtimeType != "EVM" {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
@@ -390,15 +398,28 @@ func createUserContract() error {
 		byteCodePath = string(byteCode)
 	}
 
-	payload, err := client.CreateContractCreatePayload(
-		contractName,
-		version,
-		byteCodePath,
-		common.RuntimeType(rt),
-		kvs,
-	)
-	if err != nil {
-		return err
+	var payload *common.Payload
+	switch op {
+	case createContractOp:
+		payload, err = client.CreateContractCreatePayload(contractName, version,
+			byteCodePath, common.RuntimeType(rt), kvs)
+		if err != nil {
+			return err
+		}
+	case upgradeContractOp:
+		if contractAddress != "" {
+			contractName = contractAddress
+		}
+		if contractName == "" {
+			return errors.New("either contract-name or contract-address must be set")
+		}
+		payload, err = client.CreateContractUpgradePayload(contractName, version,
+			byteCodePath, common.RuntimeType(rt), kvs)
+		if err != nil {
+			return err
+		}
+	default:
+		return errors.New("unknown operation")
 	}
 
 	if gasLimit > 0 {
@@ -495,7 +516,7 @@ func invokeUserContract() error {
 		}
 	} else {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
@@ -569,7 +590,7 @@ func invokeContractTimes() error {
 		}
 	} else {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
@@ -631,7 +652,7 @@ func getUserContract() error {
 		}
 	} else {
 		if params != "" {
-			kvsMap := make(map[string]string)
+			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
 			if err != nil {
 				return err
@@ -673,67 +694,6 @@ func getUserContract() error {
 	}
 	util.PrintPrettyJson(output)
 	return nil
-}
-
-func upgradeUserContract() error {
-	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
-	if err != nil {
-		return err
-	}
-	defer client.Stop()
-
-	if contractAddress != "" {
-		contractName = contractAddress
-	}
-	if contractName == "" {
-		return errors.New("either contract-name or contract-address must be set")
-	}
-
-	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
-	if err != nil {
-		return err
-	}
-
-	rt, ok := common.RuntimeType_value[runtimeType]
-	if !ok {
-		return fmt.Errorf("unknown runtime type [%s]", runtimeType)
-	}
-
-	pairs := make(map[string]string)
-	if params != "" {
-		err := json.Unmarshal([]byte(params), &pairs)
-		if err != nil {
-			return err
-		}
-	}
-	pairsKv := util.ConvertParameters(pairs)
-	payload, err := client.CreateContractUpgradePayload(contractName, version, byteCodePath, common.RuntimeType(rt),
-		pairsKv)
-	if err != nil {
-		return err
-	}
-
-	if gasLimit > 0 {
-		var limit = &common.Limit{GasLimit: gasLimit}
-		payload = client.AttachGasLimit(payload, limit)
-	}
-
-	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
-	if err != nil {
-		return err
-	}
-	// 发送更新合约请求
-	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
-	if err != nil {
-		return fmt.Errorf(SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT, err.Error())
-	}
-
-	err = util.CheckProposalRequestResp(resp, false)
-	if err != nil {
-		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
-	}
-	return createUpgradeUserContractOutput(resp)
 }
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {

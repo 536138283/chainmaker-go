@@ -7,6 +7,7 @@ package util
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
@@ -24,12 +25,23 @@ func MaxInt(i, j int) int {
 }
 
 // ConvertParameters convert params map to []*common.KeyValuePair
-func ConvertParameters(pars map[string]string) []*common.KeyValuePair {
+func ConvertParameters(pars map[string]interface{}) []*common.KeyValuePair {
 	var kvp []*common.KeyValuePair
 	for k, v := range pars {
+		var value string
+		switch v := v.(type) {
+		case string:
+			value = v
+		default:
+			bz, err := json.Marshal(v)
+			if err != nil {
+				return nil
+			}
+			value = string(bz)
+		}
 		kvp = append(kvp, &common.KeyValuePair{
 			Key:   k,
-			Value: []byte(v),
+			Value: []byte(value),
 		})
 	}
 	return kvp
@@ -52,6 +64,28 @@ func RespResultToString(resp *common.TxResponse) interface{} {
 		ContractResult: &types.ContractResult{
 			ContractResult: resp.ContractResult,
 			Result:         string(resp.ContractResult.Result),
+		},
+	}
+}
+
+// TxResultToString convert result from bytes to string
+// @param tx
+// @return interface{}
+func TxResultToString(tx *common.Transaction) interface{} {
+	if tx == nil || tx.Result == nil || tx.Result.ContractResult == nil {
+		return tx
+	}
+	return types.Transaction{
+		Transaction: tx,
+		Result: &struct {
+			*common.Result
+			ContractResult *types.ContractResult `json:"contract_result"`
+		}{
+			Result: tx.Result,
+			ContractResult: &types.ContractResult{
+				ContractResult: tx.Result.ContractResult,
+				Result:         string(tx.Result.ContractResult.Result),
+			},
 		},
 	}
 }

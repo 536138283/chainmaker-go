@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -239,7 +241,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
 			return nil, err
 		}
@@ -425,7 +427,7 @@ func (v *BlockVerifierImpl) validateBlock(block,
 	timeLasts := make(map[string]int64)
 	var err error
 	var txCapacity uint32
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
@@ -468,11 +470,7 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 		return nil, timeLasts, nil, err
 	}
 
-	// proposed height == proposing height - 1
-	proposedHeight := lastBlock.Header.BlockHeight
-	// check if this block height is 1 bigger than last block height
-	lastBlockHash := lastBlock.Header.BlockHash
-	err = common.CheckPreBlock(block, lastBlock, err, lastBlockHash, proposedHeight)
+	err = common.CheckPreBlock(block, lastBlock)
 	if err != nil {
 		return nil, timeLasts, nil, err
 	}
@@ -569,7 +567,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 	// if cut txs not nil, retry txs to tx pool
 	if len(cutTxs) > 0 {
-		v.txPool.RetryAndRemoveTxs(cutTxs, nil)
+		v.txPool.RetryTxs(cutTxs)
 	}
 }
 
@@ -607,7 +605,7 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 	}
 
 	if len(finalCutBatchIds) > 0 {
-		v.txPool.RetryAndRemoveTxBatches(finalCutBatchIds, nil)
+		v.txPool.RetryTxBatches(finalCutBatchIds)
 	}
 
 	return nil

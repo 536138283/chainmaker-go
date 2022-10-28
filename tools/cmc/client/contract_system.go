@@ -35,6 +35,7 @@ func systemContractCMD() *cobra.Command {
 
 	// DPoS-erc20 contract
 	systemContractCmd.AddCommand(erc20Mint())
+	systemContractCmd.AddCommand(erc20TransferOwnership())
 	systemContractCmd.AddCommand(erc20Transfer())
 	systemContractCmd.AddCommand(erc20BalanceOf())
 	systemContractCmd.AddCommand(erc20Owner())
@@ -57,6 +58,9 @@ func systemContractCMD() *cobra.Command {
 	systemContractCmd.AddCommand(stakeReadEpochBlockNumber())
 	systemContractCmd.AddCommand(stakeReadSystemContractAddr())
 	systemContractCmd.AddCommand(stakeReadCompleteUnBoundingEpochNumber())
+
+	//DPoS.Distribution
+	systemContractCmd.AddCommand(distributionGetDetail())
 
 	// system contract manage
 	systemContractCmd.AddCommand(systemContractManageCMD())

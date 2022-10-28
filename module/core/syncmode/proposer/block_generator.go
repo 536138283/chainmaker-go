@@ -21,5 +21,6 @@ func (bp *BlockProposerImpl) generateNewBlock(proposingHeight uint64, preHash []
 		preHash,
 		txBatch,
 		batchIds,
-		fetchBatches)
+		fetchBatches,
+		bp.chainConf)
 }

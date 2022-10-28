@@ -8,14 +8,16 @@
 
 # check mac gun-getopt
 function checkEnv() {
-  getopt --test
-  if [ "$?" != "4" ];then
-    brew -v > /dev/null
-    if [ "$?" != "0" ];then
-      echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
+  if [ "$(uname)" == "Darwin" ];then
+    getopt --test
+    if [ "$?" != "4" ];then
+      brew -v > /dev/null
+      if [ "$?" != "0" ];then
+        echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
+      fi
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt'
+      exit
     fi
-    echo 'Please install gnu-getopt for Mac: brew install gnu-getopt'
-    exit
   fi
 }
 checkEnv
@@ -67,7 +69,8 @@ if ( [ $# -eq 1 ] && [ "$1" ==  "-h" ] ) ; then
     exit 1
 fi
 
-if [ $# -eq 1 ]; then    echo "invalid params"
+if [ $# -eq 1 ]; then
+    echo "invalid params"
     show_help
     exit 1
 fi
@@ -397,6 +400,7 @@ function generate_config() {
                TOTAL=$(($NODE_CNT*2500000))
                xsed "s%{erc20_total}%$TOTAL%g" node$i/chainconfig/bc$j.yml
                xsed "s%{epochValidatorNum}%$NODE_CNT%g" node$i/chainconfig/bc$j.yml
+               xsed "s%{epochBlockNum}%$(($NODE_CNT*3))%g" node$i/chainconfig/bc$j.yml
             fi
 
             c=0

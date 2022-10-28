@@ -28,31 +28,7 @@ func erc20Mint() *cobra.Command {
 		Use:   "mint",
 		Short: "mint feature of the erc20",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			var (
-				err error
-			)
-			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
-			if err != nil {
-				return err
-			}
-			defer client.Stop()
-			pairs := make(map[string]string)
-			if params != "" {
-				err := json.Unmarshal([]byte(params), &pairs)
-				if err != nil {
-					return err
-				}
-			}
-			txId = sdkutils.GetTimestampTxId()
-			resp, err := mint(client, address, amount, txId, DEFAULT_TIMEOUT, syncResult)
-			if err != nil {
-				return fmt.Errorf("mint failed, %s", err.Error())
-			}
-
-			fmt.Printf("resp: %+v\n", resp)
-
-			return nil
+			return mint()
 		},
 	}
 
@@ -62,7 +38,33 @@ func erc20Mint() *cobra.Command {
 		flagOrgId, flagChainId,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
-		flagSyncResult,
+		flagSyncResult, flagAdminKeyFilePaths, flagAdminOrgIds,
+	})
+
+	cmd.MarkFlagRequired(flagAddress)
+	cmd.MarkFlagRequired(flagAmount)
+
+	return cmd
+}
+
+// erc20TransferOwnership DPos ERC20合约中的转移owner权限
+// @return *cobra.Command
+func erc20TransferOwnership() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "transfer-owner-ship",
+		Short: "transfer owner ship of the erc20",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return transferOwnership()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagAddress, flagAmount,
+		flagSdkConfPath,
+		flagOrgId, flagChainId,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
+		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
+		flagSyncResult, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
 
 	cmd.MarkFlagRequired(flagAddress)
@@ -303,35 +305,88 @@ func erc20Total() *cobra.Command {
 	return cmd
 }
 
-func mint(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
-	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
-		"to":    address,
-		"value": amount,
-	}
-	if txId == "" {
-		txId = sdkutils.GetTimestampTxId()
-	}
-	resp, err := cc.InvokeSystemContract(
-		syscontract.SystemContract_DPOS_ERC20.String(),
-		syscontract.DPoSERC20Function_MINT.String(),
-		txId,
-		util.ConvertParameters(params),
-		timeout,
-		withSyncResult,
-	)
+func mint() error {
+
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("%s failed, %s", common.TxType_INVOKE_CONTRACT.String(), err.Error())
+		return err
+	}
+	defer client.Stop()
+
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
 	}
 
-	return resp, nil
+	payload, err := client.Mint(address, amount)
+	if err != nil {
+		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
+	}
+
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	if err != nil {
+		return fmt.Errorf("send chain config update request failed, %s", err.Error())
+	}
+	err = util.CheckProposalRequestResp(resp, false)
+	if err != nil {
+		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
+	}
+	fmt.Printf("response %+v\n", resp)
+	return nil
 }
 
+func transferOwnership() error {
+
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return err
+	}
+	defer client.Stop()
+
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
+	}
+
+	payload, err := client.TransferOwnership(address)
+	if err != nil {
+		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
+	}
+
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	if err != nil {
+		return fmt.Errorf("send chain config update request failed, %s", err.Error())
+	}
+	err = util.CheckProposalRequestResp(resp, false)
+	if err != nil {
+		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
+	}
+	fmt.Printf("response %+v\n", resp)
+	return nil
+}
+
+// transfer ERC20的transfer操作
 func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout int64,
 	withSyncResult bool) (*common.TxResponse, error) {
-	params := map[string]string{
-		"to":    address,
-		"value": amount,
+	pairs := []*common.KeyValuePair{
+		{
+			Key:   "to",
+			Value: []byte(address),
+		},
+		{
+			Key:   "value",
+			Value: []byte(amount),
+		},
 	}
 	if txId == "" {
 		txId = sdkutils.GetTimestampTxId()
@@ -340,7 +395,7 @@ func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout 
 		syscontract.SystemContract_DPOS_ERC20.String(),
 		syscontract.DPoSERC20Function_TRANSFER.String(),
 		txId,
-		util.ConvertParameters(params),
+		pairs,
 		timeout,
 		withSyncResult,
 	)
@@ -351,14 +406,18 @@ func transfer(cc *sdk.ChainClient, address, amount string, txId string, timeout 
 	return resp, nil
 }
 
+// balanceOf query balance-of feature of the DPoS erc20
 func balanceOf(cc *sdk.ChainClient, address string, timeout int64) (*common.TxResponse, error) {
-	params := map[string]string{
-		"owner": address,
+	pairs := []*common.KeyValuePair{
+		{
+			Key:   "owner",
+			Value: []byte(address),
+		},
 	}
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
 		syscontract.DPoSERC20Function_GET_BALANCEOF.String(),
-		util.ConvertParameters(params),
+		pairs,
 		timeout,
 	)
 	if err != nil {
@@ -368,6 +427,7 @@ func balanceOf(cc *sdk.ChainClient, address string, timeout int64) (*common.TxRe
 	return resp, nil
 }
 
+// owner query DPoS erc20 owner(admin)
 func owner(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
@@ -382,6 +442,7 @@ func owner(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	return resp, nil
 }
 
+// decimals query DPoS erc20 decimal
 func decimals(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
@@ -396,6 +457,7 @@ func decimals(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	return resp, nil
 }
 
+// total query total amount of DPoS erc20 token
 func total(cc *sdk.ChainClient, timeout int64) (*common.TxResponse, error) {
 	resp, err := cc.QuerySystemContract(
 		syscontract.SystemContract_DPOS_ERC20.String(),
