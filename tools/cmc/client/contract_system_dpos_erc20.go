@@ -59,7 +59,7 @@ func erc20TransferOwnership() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagAddress, flagAmount,
+		flagAddress,
 		flagSdkConfPath,
 		flagOrgId, flagChainId,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
@@ -68,7 +68,6 @@ func erc20TransferOwnership() *cobra.Command {
 	})
 
 	cmd.MarkFlagRequired(flagAddress)
-	cmd.MarkFlagRequired(flagAmount)
 
 	return cmd
 }

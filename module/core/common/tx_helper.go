@@ -381,7 +381,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 				//		block.Header.BlockHeight, rwSetVerifyFailTxIds, err1)
 				//}
 				//return
-				vt.log.Warn(err.Error())
+				vt.log.Warn(err1.Error())
 			}
 			resultMu.Lock()
 			defer resultMu.Unlock()
