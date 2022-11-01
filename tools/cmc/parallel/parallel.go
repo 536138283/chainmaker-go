@@ -24,6 +24,8 @@ import (
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/crypto/engine"
+	"chainmaker.org/chainmaker/common/v2/opencrypto"
 	"chainmaker.org/chainmaker/logger/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
@@ -162,6 +164,7 @@ func ParallelCMD() *cobra.Command {
 		Short: "Parallel",
 		Long:  "Parallel",
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
+			engine.InitCryptoEngine(string(opencrypto.GmSSL), false)
 			authType = sdk.AuthType(authTypeUint32)
 			caPaths = strings.Split(caPathsString, ",")
 			hosts = strings.Split(hostsString, ",")
