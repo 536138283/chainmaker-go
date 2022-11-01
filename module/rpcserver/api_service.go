@@ -176,7 +176,7 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		resp    = &commonPb.TxResponse{}
 	)
 
-	if tx.Payload.ChainId != SYSTEM_CHAIN {
+	if tx.Payload.ChainId != SYSTEM_CHAIN && tx.Payload.TxType != commonPb.TxType_QUERY_CONTRACT {
 		errCode, errMsg = s.validate(tx)
 		if errCode != commonErr.ERR_CODE_OK {
 			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
