@@ -7,6 +7,7 @@ RUN cd /chainmaker-go && go mod tidy && make
 # the second stage
 FROM ubuntu:20.04
 RUN rm /bin/sh && ln -s /bin/bash /bin/sh
+RUN sed -i 's/ports.ubuntu.com/mirrors.tencent.com/g' /etc/apt/sources.list
 RUN apt-get update && apt-get install -y vim net-tools tree gcc g++ p7zip-full
 ENV TZ "Asia/Shanghai"
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata && \
