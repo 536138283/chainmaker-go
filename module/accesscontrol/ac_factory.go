@@ -13,25 +13,43 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/protocol/v2"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
 )
 
-// AcFactory 构造AC模块的工厂
+// AcFactory 构造AC模块的工厂//
+//  AcFactory
+//  @Description: ac factory, used to instantiate ac providers
+//
 type AcFactory struct {
 }
 
 var once sync.Once
+
+//  acInstance ac factory singleton
 var acInstance *AcFactory
 
 // ACFactory is a singleton to init ac instance
+//  @Description:
+//  @return *AcFactory ac factory singleton
+//
 func ACFactory() *AcFactory {
 	once.Do(func() { acInstance = new(AcFactory) })
 	return acInstance
 }
 
 // NewACProvider return a AccessControlProvider accord to specific AuthType and ConsensusType
+//  @Description: init ac provider by chain config
+//  @receiver af
+//  @param chainConf
+//  @param localOrgId
+//  @param store
+//  @param log
+//  @param msgBus
+//  @return protocol.AccessControlProvider
+//  @return error
+//
 func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
 	protocol.AccessControlProvider, error) {

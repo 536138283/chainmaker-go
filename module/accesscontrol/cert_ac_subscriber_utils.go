@@ -22,6 +22,13 @@ import (
 // CONSENSUS "consensus"
 const CONSENSUS = "consensus"
 
+//
+// messageChainConfig
+//  @Description: handle chainconfig message, if consensus is maxbft delay it.
+//  @receiver cp
+//  @param chainConfig
+//  @param fromMaxBFT
+//
 func (cp *certACProvider) messageChainConfig(chainConfig *config.ChainConfig, fromMaxBFT bool) {
 	cp.acService.hashType = chainConfig.GetCrypto().GetHash()
 	cp.acService.initResourcePolicy(chainConfig.ResourcePolicies, cp.localOrg.id)
@@ -77,6 +84,11 @@ func (cp *certACProvider) isConsensusAKI(aki string) {
 	//nodeList := cp.chainConfig.Consensus.Nodes
 }
 
+// isConsensusCert
+//  @Description: check if certificate's role is consensus
+//  @param raw
+//  @return bool
+//
 func isConsensusCert(raw interface{}) bool {
 	switch certInfo := raw.(type) {
 	case *bcx509.Certificate:
@@ -98,6 +110,11 @@ func isConsensusCert(raw interface{}) bool {
 }
 
 //loadChainConfigFromGovernance used to load config from system contract, only for maxbft
+//  @Description:
+//  @param store
+//  @return *maxbft.GovernanceContract
+//  @return error
+//
 func loadChainConfigFromGovernance(store protocol.BlockchainStore) (*maxbft.GovernanceContract, error) {
 	contractName := syscontract.SystemContract_GOVERNANCE.String()
 	bz, err := store.ReadObject(contractName, []byte(contractName))
@@ -137,6 +154,12 @@ func (cp *certACProvider) onMessageMaxbftChainconfigInEpoch(msg *msgbus.Message)
 	}
 }
 
+// updateFrozenAndCRL
+//  @Description: update frozen and crl to db
+//  @receiver cp
+//  @param epochConfig
+//  @return error
+//
 func (cp *certACProvider) updateFrozenAndCRL(epochConfig *maxbft.GovernanceContract) error {
 	//update frozenList
 	if len(epochConfig.CertFrozenList) != 0 {

@@ -21,6 +21,10 @@ import (
 var _ msgbus.Subscriber = (*permissionedPkACProvider)(nil)
 
 // OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
+//  @Description:
+//  @receiver pp
+//  @param msg
+//
 func (pp *permissionedPkACProvider) OnMessage(msg *msgbus.Message) {
 	pp.acService.log.Infof("[AC_PWK] receive msg, topic: %s", msg.Topic.String())
 	switch msg.Topic {
@@ -35,10 +39,18 @@ func (pp *permissionedPkACProvider) OnMessage(msg *msgbus.Message) {
 }
 
 // OnQuit when the message bus is shutting down
+//  @Description:
+//  @receiver pp
+//
 func (pp *permissionedPkACProvider) OnQuit() {
 
 }
 
+// onMessageChainConfig
+//  @Description: handle chain config update from msgbus
+//  @receiver pp
+//  @param msg
+//
 func (pp *permissionedPkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	dataStr, _ := msg.Payload.([]string)
 	dataBytes, err := hex.DecodeString(dataStr[0])
@@ -53,6 +65,10 @@ func (pp *permissionedPkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 }
 
 // onMessagePublishKeyManageDelete delete pk from memberCache immediately.
+//  @Description:
+//  @receiver pp
+//  @param msg
+//
 // TODO: MaxBFT node pk must be delayed
 func (pp *permissionedPkACProvider) onMessagePublishKeyManageDelete(msg *msgbus.Message) {
 	data, _ := msg.Payload.([]string)

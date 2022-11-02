@@ -34,6 +34,9 @@ var _ protocol.AccessControlProvider = (*permissionedPkACProvider)(nil)
 
 var nilPermissionedPkACProvider ACProvider = (*permissionedPkACProvider)(nil)
 
+//  permissionedPkACProvider
+//  @Description: ac provider for pwk mode
+//
 type permissionedPkACProvider struct {
 	acService *accessControlService
 
@@ -61,6 +64,18 @@ type consensusMemberModel struct {
 	orgId  string
 }
 
+//
+// NewACProvider
+//  @Description: instantiate pwk provider
+//  @receiver pp
+//  @param chainConf
+//  @param localOrgId
+//  @param store
+//  @param log
+//  @param msgBus
+//  @return protocol.AccessControlProvider
+//  @return error
+//
 func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (
 	protocol.AccessControlProvider, error) {
@@ -122,11 +137,19 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 	return ppacProvider, nil
 }
 
+// initAdminMembers
+//  @Description: init admin members of pwk mode
+//  @receiver pp
+//  @param trustRootList
+//  @return error
+//
 func (pp *permissionedPkACProvider) initAdminMembers(trustRootList []*config.TrustRootConfig) error {
 	var (
 		tempSyncMap, orgList sync.Map
 		orgNum               int32
 	)
+
+	// admin members in trustRoot, different from cert mode which is root certificate
 	for _, trustRoot := range trustRootList {
 		for _, root := range trustRoot.Root {
 			pk, err := asym.PublicKeyFromPEM([]byte(root))
@@ -160,6 +183,12 @@ func (pp *permissionedPkACProvider) initAdminMembers(trustRootList []*config.Tru
 	return nil
 }
 
+// initConsensusMember
+//  @Description: init consensus member of pwk mode
+//  @receiver pp
+//  @param consensusConf
+//  @return error
+//
 func (pp *permissionedPkACProvider) initConsensusMember(consensusConf []*config.OrgConfig) error {
 	var tempSyncMap sync.Map
 	for _, conf := range consensusConf {
@@ -176,7 +205,13 @@ func (pp *permissionedPkACProvider) initConsensusMember(consensusConf []*config.
 	return nil
 }
 
-// all-in-one validation for signing members: certificate chain/whitelist, signature, policies
+//
+// refinePrincipal
+//  @Description: // all-in-one validation for signing members: certificate chain/whitelist, signature, policies
+//  @receiver pp
+//  @param principal
+//  @return protocol.Principal
+//  @return error
 func (pp *permissionedPkACProvider) refinePrincipal(principal protocol.Principal) (protocol.Principal, error) {
 	endorsements := principal.GetEndorsement()
 	msg := principal.GetMessage()
@@ -193,6 +228,13 @@ func (pp *permissionedPkACProvider) refinePrincipal(principal protocol.Principal
 	return refinedPrincipal, nil
 }
 
+// refineEndorsements
+//  @Description: verify endorser's signatures
+//  @receiver pp
+//  @param endorsements
+//  @param msg
+//  @return []*common.EndorsementEntry
+//
 func (pp *permissionedPkACProvider) refineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
@@ -233,11 +275,23 @@ func (pp *permissionedPkACProvider) refineEndorsements(endorsements []*common.En
 }
 
 // NewMember creates a member from pb Member
+//  @Description:
+//  @receiver pp
+//  @param member
+//  @return protocol.Member
+//  @return error
+//
 func (pp *permissionedPkACProvider) NewMember(member *pbac.Member) (protocol.Member, error) {
 	return pp.acService.newPkMember(member, pp.adminMember, pp.consensusMember)
 }
 
 // NewMemberFromAcs creates a member from pb Member
+//  @Description:
+//  @receiver pp
+//  @param member
+//  @return protocol.Member
+//  @return error
+//
 func (pp *permissionedPkACProvider) NewMemberFromAcs(member *pbac.Member) (protocol.Member, error) {
 	pkMember, err := newPkMemberFromAcs(member, pp.adminMember, pp.consensusMember, pp.acService)
 	if err != nil {
@@ -250,11 +304,20 @@ func (pp *permissionedPkACProvider) NewMemberFromAcs(member *pbac.Member) (proto
 }
 
 // GetHashAlg return hash algorithm the access control provider uses
+//  @Description:
+//  @receiver pp
+//  @return string
+//
 func (pp *permissionedPkACProvider) GetHashAlg() string {
 	return pp.acService.hashType
 }
 
 // ValidateResourcePolicy checks whether the given resource principal is valid
+//  @Description:
+//  @receiver pp
+//  @param resourcePolicy
+//  @return bool
+//
 func (pp *permissionedPkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePolicy) bool {
 	return pp.acService.validateResourcePolicy(resourcePolicy)
 }
@@ -268,6 +331,14 @@ func (pp *permissionedPkACProvider) CreatePrincipalForTargetOrg(resourceName str
 }
 
 // CreatePrincipal creates a principal for one time authentication
+//  @Description:
+//  @receiver pp
+//  @param resourceName
+//  @param endorsements
+//  @param message
+//  @return protocol.Principal
+//  @return error
+//
 func (pp *permissionedPkACProvider) CreatePrincipal(resourceName string, endorsements []*common.EndorsementEntry,
 	message []byte) (
 	protocol.Principal, error) {
@@ -275,16 +346,34 @@ func (pp *permissionedPkACProvider) CreatePrincipal(resourceName string, endorse
 }
 
 // LookUpPolicy returns corresponding policy configured for the given resource name
+//  @Description:
+//  @receiver pp
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//
 func (pp *permissionedPkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	return pp.acService.lookUpPolicy(resourceName)
 }
 
 // LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
+//  @Description:
+//  @receiver pp
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//
 func (pp *permissionedPkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
 	return pp.acService.lookUpExceptionalPolicy(resourceName)
 }
 
-//GetMemberStatus get the status information of the member
+// GetMemberStatus get the status information of the member
+//  @Description:
+//  @receiver pp
+//  @param member
+//  @return pbac.MemberStatus
+//  @return error
+//
 func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.MemberStatus, error) {
 	if _, err := pp.newNodeMember(member); err != nil {
 		pp.acService.log.Infof("get member status: %s", err.Error())
@@ -293,12 +382,25 @@ func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.M
 	return pbac.MemberStatus_NORMAL, nil
 }
 
-//VerifyRelatedMaterial verify the member's relevant identity material
+// VerifyRelatedMaterial verify the member's relevant identity material
+//  @Description:
+//  @receiver pp
+//  @param verifyType
+//  @param data
+//  @return bool
+//  @return error
+//
 func (pp *permissionedPkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 	return true, nil
 }
 
 // VerifyPrincipal verifies if the principal for the resource is met
+//  @Description:
+//  @receiver pp
+//  @param principal
+//  @return bool
+//  @return error
+//
 func (pp *permissionedPkACProvider) VerifyPrincipal(principal protocol.Principal) (bool, error) {
 
 	if atomic.LoadInt32(&pp.acService.orgNum) <= 0 {
@@ -322,7 +424,13 @@ func (pp *permissionedPkACProvider) VerifyPrincipal(principal protocol.Principal
 	return pp.acService.verifyPrincipalPolicy(principal, refinedPrincipal, p)
 }
 
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
+// GetValidEndorsements filters all endorsement entries and returns all valid ones
+//  @Description:
+//  @receiver pp
+//  @param principal
+//  @return []*common.EndorsementEntry
+//  @return error
+//
 func (pp *permissionedPkACProvider) GetValidEndorsements(principal protocol.Principal) (
 	[]*common.EndorsementEntry, error) {
 	if atomic.LoadInt32(&pp.acService.orgNum) <= 0 {
@@ -351,11 +459,23 @@ func (pp *permissionedPkACProvider) GetValidEndorsements(principal protocol.Prin
 	return pp.acService.getValidEndorsements(orgList, roleList, endorsements), nil
 }
 
+// newNodeMember
+//  @Description: init node member of pwk mode
+//  @receiver pp
+//  @param member
+//  @return protocol.Member
+//  @return error
+//
 func (pp *permissionedPkACProvider) newNodeMember(member *pbac.Member) (protocol.Member, error) {
 	return pp.acService.newNodePkMember(member, pp.consensusMember)
 }
 
-//GetAllPolicy returns all default policies
+// GetAllPolicy returns all default policies
+//  @Description:
+//  @receiver p
+//  @return map[string]*pbac.Policy
+//  @return error
+//
 func (p *permissionedPkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.acService.resourceNamePolicyMap.Range(func(key, value interface{}) bool {

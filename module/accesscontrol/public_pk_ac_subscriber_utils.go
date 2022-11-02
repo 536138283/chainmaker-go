@@ -17,9 +17,16 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 )
 
+// messageChainConfig
+//  @Description: handle chainconfig update message
+//  @receiver p
+//  @param chainConfig
+//  @param fromMaxBFT
+//
 func (p *pkACProvider) messageChainConfig(chainConfig *config.ChainConfig, fromMaxBFT bool) {
 	p.hashType = chainConfig.GetCrypto().GetHash()
 
+	// inner func for update trust root and member
 	updateTrustRootAndMemberFunc := func() {
 		err := p.initAdminMembers(chainConfig.TrustRoots)
 		if err != nil {
@@ -52,6 +59,6 @@ func (p *pkACProvider) onMessageMaxbftChainconfigInEpoch(msg *msgbus.Message) {
 		return
 	}
 
-	//update chainconfig
+	//update chainconfig, delay it
 	p.messageChainConfig(epochConfig.ChainConfig, true)
 }

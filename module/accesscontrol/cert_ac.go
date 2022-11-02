@@ -18,7 +18,9 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	"chainmaker.org/chainmaker/protocol/v2"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
@@ -27,14 +29,15 @@ import (
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/common/v2/json"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
 )
 
+//  certACProvider
+//  @Description: ac provider implementation for certificate mode
+//
 type certACProvider struct {
 	acService *accessControlService
 
@@ -59,6 +62,9 @@ type certACProvider struct {
 	consensusType consensus.ConsensusType
 }
 
+//  trustMemberCached
+//  @Description: trust member cache
+//
 type trustMemberCached struct {
 	trustMember *config.TrustMemberConfig
 	cert        *bcx509.Certificate
@@ -99,6 +105,15 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	return certACProvider, nil
 }
 
+// newCertACProvider
+//  @Description: new a ac provider of certificate mode
+//  @param chainConfig
+//  @param localOrgId
+//  @param store
+//  @param log
+//  @return *certACProvider
+//  @return error
+//
 func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger) (*certACProvider, error) {
 	certACProvider := &certACProvider{
@@ -114,6 +129,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 		store:        store,
 	}
 
+	// load chainconfig from GovernanceContract if consensus is maxbft
 	var maxbftCfg *maxbft.GovernanceContract
 	var err error
 	certACProvider.consensusType = chainConfig.Consensus.Type
@@ -145,12 +161,14 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 		return nil, err
 	}
 
+	// init resource policy, compatible to 220 version
 	certACProvider.acService.initResourcePolicy(chainConfig.ResourcePolicies, localOrgId)
 	certACProvider.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, localOrgId)
 
 	certACProvider.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	certACProvider.opts.KeyUsages[0] = x509.ExtKeyUsageAny
 
+	// update frozen and crl list from maxbftCft if consensus is maxbft
 	if certACProvider.consensusType == consensus.ConsensusType_MAXBFT && maxbftCfg != nil {
 		err = certACProvider.updateFrozenAndCRL(maxbftCfg)
 		if err != nil {
@@ -171,6 +189,13 @@ func (cp *certACProvider) getVerifyOptions() *bcx509.VerifyOptions {
 	return &cp.opts
 }
 
+// initTrustRoots
+//  @Description: instantiate trust roots
+//  @receiver cp
+//  @param roots
+//  @param localOrgId
+//  @return error
+//
 func (cp *certACProvider) initTrustRoots(roots []*config.TrustRootConfig, localOrgId string) error {
 
 	for _, orgRoot := range roots {
@@ -228,6 +253,15 @@ func (cp *certACProvider) initTrustRoots(roots []*config.TrustRootConfig, localO
 	return nil
 }
 
+// buildCertificateChain
+//  @Description: create cert chain from org's root certificate list
+//  @receiver cp
+//  @param root
+//  @param orgId
+//  @param org
+//  @return []*bcx509.Certificate
+//  @return error
+//
 func (cp *certACProvider) buildCertificateChain(root, orgId string, org *organization) ([]*bcx509.Certificate, error) {
 
 	var certificates, certificateChain []*bcx509.Certificate
@@ -247,6 +281,12 @@ func (cp *certACProvider) buildCertificateChain(root, orgId string, org *organiz
 	return certificateChain, nil
 }
 
+// initTrustMembers
+//  @Description: instantiate trust members
+//  @receiver cp
+//  @param trustMembers
+//  @return error
+//
 func (cp *certACProvider) initTrustMembers(trustMembers []*config.TrustMemberConfig) error {
 	var syncMap sync.Map
 	for _, member := range trustMembers {
@@ -271,6 +311,13 @@ func (cp *certACProvider) initTrustMembers(trustMembers []*config.TrustMemberCon
 	return nil
 }
 
+// loadTrustMembers
+//  @Description: get trust members from cache
+//  @receiver cp
+//  @param memberInfo
+//  @return *trustMemberCached
+//  @return bool
+//
 func (cp *certACProvider) loadTrustMembers(memberInfo string) (*trustMemberCached, bool) {
 	cached, ok := cp.trustMembers.Load(string(memberInfo))
 	if ok {
@@ -279,6 +326,11 @@ func (cp *certACProvider) loadTrustMembers(memberInfo string) (*trustMemberCache
 	return nil, ok
 }
 
+// loadCRL
+//  @Description: load crl from db
+//  @receiver cp
+//  @return error
+//
 func (cp *certACProvider) loadCRL() error {
 	if cp.acService.dataStore == nil {
 		return nil
@@ -304,6 +356,12 @@ func (cp *certACProvider) loadCRL() error {
 	return err
 }
 
+// storeCrls
+//  @Description: store crl to db
+//  @receiver cp
+//  @param crlAKIs
+//  @return error
+//
 func (cp *certACProvider) storeCrls(crlAKIs []string) error {
 	for _, crlAKI := range crlAKIs {
 		crlbytes, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(crlAKI))
@@ -367,6 +425,13 @@ func (cp *certACProvider) ValidateCRL(crlBytes []byte) ([]*pkix.CertificateList,
 	return crls, nil
 }
 
+// validateCrlVersion
+//  @Description: check if crl valid
+//  @receiver cp
+//  @param crlPemBytes
+//  @param crl
+//  @return error
+//
 func (cp *certACProvider) validateCrlVersion(crlPemBytes []byte, crl *pkix.CertificateList) error {
 	if cp.acService.dataStore != nil {
 		aki, isASN1Encoded, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
@@ -392,7 +457,14 @@ func (cp *certACProvider) validateCrlVersion(crlPemBytes []byte, crl *pkix.Certi
 	return nil
 }
 
-//check CRL against trusted certs
+//checkCRLAgainstTrustedCerts
+//  @Description:  check CRL against trusted certs
+//  @receiver cp
+//  @param crl
+//  @param orgList
+//  @param isIntermediate
+//  @return error
+//
 func (cp *certACProvider) checkCRLAgainstTrustedCerts(crl *pkix.CertificateList,
 	orgList []*organization, isIntermediate bool) error {
 	aki, isASN1Encoded, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
@@ -419,6 +491,12 @@ func (cp *certACProvider) checkCRLAgainstTrustedCerts(crl *pkix.CertificateList,
 	return fmt.Errorf("CRL [AKI: %s] is not signed by ac trusted CA", hex.EncodeToString(aki))
 }
 
+// checkCRL
+//  @Description: check if crl valid
+//  @receiver cp
+//  @param certChain
+//  @return error
+//
 func (cp *certACProvider) checkCRL(certChain []*bcx509.Certificate) error {
 	if len(certChain) < 1 {
 		return fmt.Errorf("given certificate chain is empty")
@@ -441,6 +519,11 @@ func (cp *certACProvider) checkCRL(certChain []*bcx509.Certificate) error {
 	return nil
 }
 
+// loadCertFrozenList
+//  @Description: load certificate frozen list from db
+//  @receiver cp
+//  @return error
+//
 func (cp *certACProvider) loadCertFrozenList() error {
 	if cp.acService.dataStore == nil {
 		return nil
@@ -478,6 +561,12 @@ func (cp *certACProvider) loadCertFrozenList() error {
 	return nil
 }
 
+// checkCertFrozenList
+//  @Description: check if certificate frozen list is valid
+//  @receiver cp
+//  @param certChain
+//  @return error
+//
 func (cp *certACProvider) checkCertFrozenList(certChain []*bcx509.Certificate) error {
 	if len(certChain) < 1 {
 		return fmt.Errorf("given certificate chain is empty")
@@ -545,6 +634,14 @@ func (cp *certACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, err
 	return memberCache.member, nil
 }
 
+// newNoCacheMember
+//  @Description: returns a new member by protocol member
+//  @receiver cp
+//  @param pbMember
+//  @return member
+//  @return isTrustMember
+//  @return err
+//
 func (cp *certACProvider) newNoCacheMember(pbMember *pbac.Member) (member protocol.Member,
 	isTrustMember bool, err error) {
 	cached, ok := cp.loadTrustMembers(string(pbMember.MemberInfo))
@@ -571,12 +668,25 @@ func (cp *certACProvider) newNoCacheMember(pbMember *pbac.Member) (member protoc
 }
 
 // ValidateResourcePolicy checks whether the given resource principal is valid
+//  @Description:
+//  @receiver cp
+//  @param resourcePolicy
+//  @return bool
+//d
 func (cp *certACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePolicy) bool {
 	return cp.acService.validateResourcePolicy(resourcePolicy)
 }
 
 // CreatePrincipalForTargetOrg creates a principal for "SELF" type principal,
-// which needs to convert SELF to a specific organization id in one authentication
+//  @Description:
+//  @receiver cp
+//  @param resourceName
+//  @param endorsements
+//  @param message
+//  @param targetOrgId
+//  @return protocol.Principal
+//  @return error
+//n
 func (cp *certACProvider) CreatePrincipalForTargetOrg(resourceName string,
 	endorsements []*common.EndorsementEntry, message []byte,
 	targetOrgId string) (protocol.Principal, error) {
@@ -584,6 +694,14 @@ func (cp *certACProvider) CreatePrincipalForTargetOrg(resourceName string,
 }
 
 // CreatePrincipal creates a principal for one time authentication
+//  @Description:
+//  @receiver cp
+//  @param resourceName
+//  @param endorsements
+//  @param message
+//  @return protocol.Principal
+//  @return error
+//n
 func (cp *certACProvider) CreatePrincipal(resourceName string, endorsements []*common.EndorsementEntry,
 	message []byte) (
 	protocol.Principal, error) {
@@ -591,16 +709,34 @@ func (cp *certACProvider) CreatePrincipal(resourceName string, endorsements []*c
 }
 
 // LookUpPolicy returns corresponding policy configured for the given resource name
+//  @Description:
+//  @receiver cp
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//e
 func (cp *certACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	return cp.acService.lookUpPolicy(resourceName)
 }
 
 // LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
+//  @Description:
+//  @receiver cp
+//  @param resourceName
+//  @return *pbac.Policy
+//  @return error
+//e
 func (cp *certACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
 	return cp.acService.lookUpExceptionalPolicy(resourceName)
 }
 
 // GetMemberStatus get the status information of the member
+//  @Description:
+//  @receiver cp
+//  @param pbMember
+//  @return pbac.MemberStatus
+//  @return error
+//
 func (cp *certACProvider) GetMemberStatus(pbMember *pbac.Member) (pbac.MemberStatus, error) {
 
 	member, err := cp.NewMember(pbMember)
@@ -624,7 +760,14 @@ func (cp *certACProvider) GetMemberStatus(pbMember *pbac.Member) (pbac.MemberSta
 	return pbac.MemberStatus_NORMAL, nil
 }
 
-//VerifyRelatedMaterial verify the member's relevant identity material
+//VerifyRelatedMaterial verify the member's relevant identity materia
+//  @Description:
+//  @receiver cp
+//  @param verifyType
+//  @param data
+//  @return bool
+//  @return error
+//l
 func (cp *certACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 
 	if verifyType != pbac.VerifyType_CRL {
@@ -670,6 +813,12 @@ func (cp *certACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data
 }
 
 // VerifyPrincipal verifies if the principal for the resource is met
+//  @Description:
+//  @receiver cp
+//  @param principal
+//  @return bool
+//  @return error
+//
 func (cp *certACProvider) VerifyPrincipal(principal protocol.Principal) (bool, error) {
 
 	if atomic.LoadInt32(&cp.acService.orgNum) <= 0 {
@@ -693,7 +842,13 @@ func (cp *certACProvider) VerifyPrincipal(principal protocol.Principal) (bool, e
 	return cp.acService.verifyPrincipalPolicy(principal, refinedPrincipal, p)
 }
 
-// all-in-one validation for signing members: certificate chain/whitelist, signature, policies
+// refinePrincipal
+//  @Description: all-in-one validation for signing members: certificate chain/whitelist, signature, policies
+//  @receiver cp
+//  @param principal
+//  @return protocol.Principal
+//  @return error
+//
 func (cp *certACProvider) refinePrincipal(principal protocol.Principal) (protocol.Principal, error) {
 	endorsements := principal.GetEndorsement()
 	msg := principal.GetMessage()
@@ -710,6 +865,13 @@ func (cp *certACProvider) refinePrincipal(principal protocol.Principal) (protoco
 	return refinedPrincipal, nil
 }
 
+// refineEndorsements
+//  @Description: remove invalid endorsement, and returns all valid ones
+//  @receiver cp
+//  @param endorsements
+//  @param msg
+//  @return []*common.EndorsementEntry
+//
 func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
@@ -776,6 +938,12 @@ func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementE
 }
 
 // lookUpCertCache Cache for compressed certificate
+//  @Description:
+//  @receiver cp
+//  @param certId
+//  @return []byte
+//  @return bool
+//ressed certificate
 func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 	ret, ok := cp.certCache.Get(string(certId))
 	if !ok {
@@ -807,10 +975,27 @@ func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 	}
 }
 
+// addCertCache
+//  @Description: add certificate to cert cache
+//  @receiver cp
+//  @param certId
+//  @param cert
+//
 func (cp *certACProvider) addCertCache(certId string, cert []byte) {
 	cp.certCache.Add(certId, cert)
 }
 
+// verifyPrincipalSignerNotInCache
+//  @Description: check if msg signature is valid using tmp member
+//  @receiver cp
+//  @param endorsement
+//  @param msg
+//  @param memInfo
+//  @return remoteMember
+//  @return certChain
+//  @return ok
+//  @return err
+//
 func (cp *certACProvider) verifyPrincipalSignerNotInCache(endorsement *common.EndorsementEntry, msg []byte,
 	memInfo string) (remoteMember protocol.Member, certChain []*bcx509.Certificate, ok bool, err error) {
 	var isTrustMember bool
@@ -841,6 +1026,16 @@ func (cp *certACProvider) verifyPrincipalSignerNotInCache(endorsement *common.En
 	return
 }
 
+// verifyPrincipalSignerInCache
+//  @Description: check if  msg signature is valid using cache member
+//  @receiver cp
+//  @param signerInfo
+//  @param endorsement
+//  @param msg
+//  @param memInfo
+//  @return bool
+//  @return error
+//
 func (cp *certACProvider) verifyPrincipalSignerInCache(signerInfo *memberCached, endorsement *common.EndorsementEntry,
 	msg []byte, memInfo string) (bool, error) {
 	// check CRL and certificate frozen list
@@ -873,7 +1068,13 @@ func (cp *certACProvider) verifyPrincipalSignerInCache(signerInfo *memberCached,
 	return true, nil
 }
 
-// Check whether the provided member is a valid member of this group
+// verifyMember
+//  @Description: Check whether the provided member is a valid member of this group
+//  @receiver cp
+//  @param mem
+//  @return []*bcx509.Certificate
+//  @return error
+//
 func (cp *certACProvider) verifyMember(mem protocol.Member) ([]*bcx509.Certificate, error) {
 	if mem == nil {
 		return nil, fmt.Errorf("invalid member: member should not be nil")
@@ -955,6 +1156,13 @@ func (cp *certACProvider) findCertChain(org *organization, certChains [][]*bcx50
 	return nil
 }
 
+// initTrustRootsForUpdatingChainConfig
+//  @Description: instanticate trust roots when handling chainconfig update msg from msgbus
+//  @receiver cp
+//  @param chainConfig
+//  @param localOrgId
+//  @return error
+////
 func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *config.ChainConfig,
 	localOrgId string) error {
 
@@ -1013,6 +1221,12 @@ func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *conf
 }
 
 // GetValidEndorsements filters all endorsement entries and returns all valid ones
+//  @Description:
+//  @receiver cp
+//  @param principal
+//  @return []*common.EndorsementEntry
+//  @return error
+//rs all endorsement entries and returns all valid ones
 func (cp *certACProvider) GetValidEndorsements(principal protocol.Principal) ([]*common.EndorsementEntry, error) {
 	if atomic.LoadInt32(&cp.acService.orgNum) <= 0 {
 		return nil, fmt.Errorf("authentication fail: empty organization list or trusted node list on this chain")
@@ -1041,6 +1255,11 @@ func (cp *certACProvider) GetValidEndorsements(principal protocol.Principal) ([]
 }
 
 // GetAllPolicy returns all default policies
+//  @Description:
+//  @receiver p
+//  @return map[string]*pbac.Policy
+//  @return error
+//
 func (p *certACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.acService.resourceNamePolicyMap.Range(func(key, value interface{}) bool {

@@ -24,7 +24,7 @@ import (
 
 var _ protocol.Member = (*pkMember)(nil)
 
-// an instance whose member type is a certificate
+// pkMember an instance whose member type is a certificate
 type pkMember struct {
 
 	// pem public key
@@ -46,31 +46,59 @@ type pkMember struct {
 	hashType string
 }
 
+// GetPk
+//  @Description: returns pk member publickey
+//  @receiver pm
+//  @return bccrypto.PublicKey
+//
 func (pm *pkMember) GetPk() bccrypto.PublicKey {
 	return pm.pk
 }
 
 // GetMemberId returns the identity of this member (non-uniqueness)
+//  @Description:
+//  @receiver pm
+//  @return string
+//
 func (pm *pkMember) GetMemberId() string {
 	return pm.id
 }
 
 // GetOrgId returns the organization id which this member belongs to
+//  @Description:
+//  @receiver pm
+//  @return string
+//
 func (pm *pkMember) GetOrgId() string {
 	return pm.orgId
 }
 
 // GetRole returns roles of this member
+//  @Description:
+//  @receiver pm
+//  @return protocol.Role
+//
 func (pm *pkMember) GetRole() protocol.Role {
 	return pm.role
 }
 
 // GetUid returns the identity of this member (unique)
+//  @Description:
+//  @receiver pm
+//  @return string
+//
 func (pm *pkMember) GetUid() string {
 	return pm.uid
 }
 
 // Verify verifies a signature over some message using this member
+//  @Description:
+//  @receiver pm
+//  @param hashType
+//  @param msg
+//  @param sig
+//  @return error
+//
 func (pm *pkMember) Verify(hashType string, msg []byte, sig []byte) error {
 
 	hash, ok := bccrypto.HashAlgoMap[hashType]
@@ -90,7 +118,12 @@ func (pm *pkMember) Verify(hashType string, msg []byte, sig []byte) error {
 	return nil
 }
 
-// GetMember returns Member
+// GetMember returns Member of pk mode
+//  @Description:
+//  @receiver pm
+//  @return *pbac.Member
+//  @return error
+//
 func (pm *pkMember) GetMember() (*pbac.Member, error) {
 	memberInfo, err := pm.pk.String()
 	if err != nil {
@@ -103,6 +136,9 @@ func (pm *pkMember) GetMember() (*pbac.Member, error) {
 	}, nil
 }
 
+//  signingPKMember
+//  @Description: represents signing subject of pk mode
+//
 type signingPKMember struct {
 	// Extends Identity
 	pkMember
@@ -111,8 +147,15 @@ type signingPKMember struct {
 	sk bccrypto.PrivateKey
 }
 
-//Sign When using public key instead of certificate,
-//hashType is used to specify the hash algorithm while the signature algorithm is decided by the public key itself.
+// Sign
+//  @Description: When using public key instead of certificate,
+////hashType is used to specify the hash algorithm while the signature algorithm is decided by the public key itself.//
+//  @receiver spm
+//  @param hashType
+//  @param msg
+//  @return []byte
+//  @return error
+//
 func (spm *signingPKMember) Sign(hashType string, msg []byte) ([]byte, error) {
 	hash, ok := bccrypto.HashAlgoMap[hashType]
 	if !ok {
@@ -124,6 +167,15 @@ func (spm *signingPKMember) Sign(hashType string, msg []byte) ([]byte, error) {
 	})
 }
 
+// newPkMemberFromAcs
+//  @Description: returns a member of pk mode
+//  @param member
+//  @param adminList
+//  @param consensusList
+//  @param acs
+//  @return *pkMember
+//  @return error
+//
 func newPkMemberFromAcs(member *pbac.Member, adminList, consensusList *sync.Map,
 	acs *accessControlService) (*pkMember, error) {
 
@@ -139,12 +191,14 @@ func newPkMemberFromAcs(member *pbac.Member, adminList, consensusList *sync.Map,
 		return nil, fmt.Errorf("new public key member failed: %s", err.Error())
 	}
 
+	// check and return if it's admin
 	adminMember, ok := adminList.Load(hex.EncodeToString(pkBytes))
 	if ok {
 		admin, _ := adminMember.(*adminMemberModel)
 		return newPkMemberFromParam(admin.orgId, admin.pkBytes, protocol.RoleAdmin, acs.hashType)
 	}
 
+	// check and return if it's consensus node
 	var nodeId string
 	nodeId, err = helper.CreateLibp2pPeerIdWithPublicKey(pk)
 	if err != nil {
@@ -158,6 +212,7 @@ func newPkMemberFromAcs(member *pbac.Member, adminList, consensusList *sync.Map,
 			protocol.RoleConsensusNode, acs.hashType)
 	}
 
+	// check if it's on chain
 	publicKeyIdex := pubkeyHash(pkBytes)
 	publicKeyInfoBytes, err := acs.dataStore.ReadObject(syscontract.SystemContract_PUBKEY_MANAGE.String(),
 		[]byte(publicKeyIdex))
@@ -175,10 +230,19 @@ func newPkMemberFromAcs(member *pbac.Member, adminList, consensusList *sync.Map,
 		return nil, fmt.Errorf("new public key member failed: %s", err.Error())
 	}
 
+	// return an client member
 	return newPkMemberFromParam(publickInfo.OrgId, pkBytes,
 		protocol.Role(publickInfo.Role), acs.hashType)
 }
 
+// newPkNodeMemberFromAcs
+//  @Description: check and return an node member of pk mode
+//  @param member
+//  @param consensusList
+//  @param acs
+//  @return *pkMember
+//  @return error
+//
 func newPkNodeMemberFromAcs(member *pbac.Member, consensusList *sync.Map,
 	acs *accessControlService) (*pkMember, error) {
 

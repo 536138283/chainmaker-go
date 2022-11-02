@@ -26,7 +26,9 @@ import (
 
 var _ protocol.Member = (*certificateMember)(nil)
 
-// an instance whose member type is a public key
+//  certificateMember
+//  @Description: an instance whose member type is a public key
+//
 type certificateMember struct {
 
 	// the CommonName field of the certificate
@@ -49,31 +51,58 @@ type certificateMember struct {
 }
 
 // GetPk returns the public key
+//  @Description:
+//  @receiver cm
+//  @return bccrypto.PublicKey
+//y
 func (cm *certificateMember) GetPk() bccrypto.PublicKey {
 	return cm.cert.PublicKey
 }
 
 // GetMemberId returns the identity of this member (non-uniqueness)
+//  @Description:
+//  @receiver cm
+//  @return string
+//
 func (cm *certificateMember) GetMemberId() string {
 	return cm.id
 }
 
 // GetOrgId returns the organization id which this member belongs to
+//  @Description:
+//  @receiver cm
+//  @return string
+//
 func (cm *certificateMember) GetOrgId() string {
 	return cm.orgId
 }
 
 // GetRole returns roles of this member
+//  @Description:
+//  @receiver cm
+//  @return protocol.Role
+//
 func (cm *certificateMember) GetRole() protocol.Role {
 	return cm.role
 }
 
 // GetUid returns the identity of this member (unique)
+//  @Description:
+//  @receiver cm
+//  @return string
+//
 func (cm *certificateMember) GetUid() string {
 	return hex.EncodeToString(cm.cert.SubjectKeyId)
 }
 
 // Verify verifies a signature over some message using this member
+//  @Description:
+//  @receiver cm
+//  @param hashType
+//  @param msg
+//  @param sig
+//  @return error
+//
 func (cm *certificateMember) Verify(hashType string, msg []byte, sig []byte) error {
 	hashAlgo, err := bcx509.GetHashFromSignatureAlgorithm(cm.cert.SignatureAlgorithm)
 	if err != nil {
@@ -93,6 +122,11 @@ func (cm *certificateMember) Verify(hashType string, msg []byte, sig []byte) err
 }
 
 // GetMember returns Member
+//  @Description:
+//  @receiver cm
+//  @return *pbac.Member
+//  @return error
+//
 func (cm *certificateMember) GetMember() (*pbac.Member, error) {
 	if cm.isCompressed {
 		id, err := utils.GetCertificateIdFromDER(cm.cert.Raw, cm.hashType)
@@ -114,6 +148,17 @@ func (cm *certificateMember) GetMember() (*pbac.Member, error) {
 	}, nil
 }
 
+//
+// newCertMemberFromParam
+//  @Description: new member for certificate mode by cert pem
+//  @param orgId
+//  @param role
+//  @param hashType
+//  @param isCompressed
+//  @param certPEM
+//  @return *certificateMember
+//  @return error
+//
 func newCertMemberFromParam(orgId, role, hashType string, isCompressed bool,
 	certPEM []byte) (*certificateMember, error) {
 	var (
@@ -211,16 +256,27 @@ func newMemberFromCertPem(orgId, hashType string, certPEM []byte, isCompressed b
 	return &member, nil
 }
 
+//
+// newCertMemberFromPb
+//  @Description: new member of certificate mode from protocol member
+//  @param member
+//  @param acs
+//  @return *certificateMember
+//  @return error
+//
 func newCertMemberFromPb(member *pbac.Member, acs *accessControlService) (*certificateMember, error) {
 
+	// new member from cert type
 	if member.MemberType == pbac.MemberType_CERT {
 		return newMemberFromCertPem(member.OrgId, acs.hashType, member.MemberInfo, false)
 	}
 
+	// new member from cert hash type
 	if member.MemberType == pbac.MemberType_CERT_HASH {
 		return newMemberFromCertPem(member.OrgId, acs.hashType, member.MemberInfo, true)
 	}
 
+	// new member from alias type
 	if member.MemberType == pbac.MemberType_ALIAS {
 		return newMemberFromCertPem(member.OrgId, acs.hashType, member.MemberInfo, false)
 	}
@@ -228,6 +284,9 @@ func newCertMemberFromPb(member *pbac.Member, acs *accessControlService) (*certi
 	return nil, fmt.Errorf("setup member failed, unsupport cert member type")
 }
 
+//  signingCertMember
+//  @Description: cert signing member used to sign message or data
+//
 type signingCertMember struct {
 	// Extends Identity
 	certificateMember
@@ -238,6 +297,13 @@ type signingCertMember struct {
 
 // Sign When using certificate, the signature-hash algorithm suite is from the certificate
 // and the input hashType is ignored.
+//  @Description:
+//  @receiver scm
+//  @param hashType
+//  @param msg
+//  @return []byte
+//  @return error
+//
 func (scm *signingCertMember) Sign(hashType string, msg []byte) ([]byte, error) {
 	hashAlgo, err := bcx509.GetHashFromSignatureAlgorithm(scm.cert.SignatureAlgorithm)
 	if err != nil {

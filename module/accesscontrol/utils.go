@@ -30,20 +30,31 @@ import (
 	"github.com/mr-tron/base58"
 )
 
+// getHSMHandleId
+//  @Description: get hsm handle, only effect when pkcs11 enabled
+//  @return string
+//
 func getHSMHandleId() string {
 	p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
 	return p11Config.Library + p11Config.Label
 }
 
+// getHSMHandle
+//  @Description: get hsm handle, support pkcs11 and sdf
+//  @return interface{}
+//  @return error
+//
 func getHSMHandle() (interface{}, error) {
 	var err error
 	cfg := localconf.ChainMakerConfig.NodeConfig.P11Config
 	hsmKey := getHSMHandleId()
 	handle, ok := hsmHandleMap[hsmKey]
 	if !ok {
+		// if type is pkcs11, init a pkcs11 handle
 		if strings.EqualFold(cfg.Type, "pkcs11") {
 			handle, err = pkcs11.New(cfg.Library, cfg.Label, cfg.Password, cfg.SessionCacheSize,
 				cfg.Hash)
+			// if type is sdf, init a sdf handle
 		} else if strings.EqualFold(cfg.Type, "sdf") {
 			handle, err = sdf.New(cfg.Library, cfg.SessionCacheSize)
 		} else {
@@ -57,6 +68,10 @@ func getHSMHandle() (interface{}, error) {
 	return handle, nil
 }
 
+// initKMS
+//  @Description: init kms context, only effect when kms enabled
+//  @return error
+//
 func initKMS() error {
 	config := localconf.ChainMakerConfig.NodeConfig.KMSConfig
 	if !config.Enabled {
@@ -90,6 +105,11 @@ func initKMS() error {
 	return nil
 }
 
+// pubkeyHash
+//  @Description: calculate publickey hash
+//  @param pubkey
+//  @return string
+//
 func pubkeyHash(pubkey []byte) string {
 	pkHash := sha256.Sum256(pubkey)
 	strPkHash := base58.Encode(pkHash[:])
@@ -116,6 +136,7 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 			return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
 		}
 
+		// check if  localCertFile is in trust members
 		isTrustMember := false
 		for _, v := range chainConfig.TrustMembers {
 			certBlock, _ := pem.Decode([]byte(v.MemberInfo))
@@ -133,6 +154,7 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 			}
 		}
 
+		// new cert member from certPem
 		if !isTrustMember {
 			certMember, err = newMemberFromCertPem(localOrgId, chainConfig.Crypto.Hash, certPEM, false)
 			if err != nil {
@@ -140,6 +162,7 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 			}
 		}
 
+		// load signing private key
 		skPEM, err := ioutil.ReadFile(localPrivKeyFile)
 		if err != nil {
 			return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
@@ -147,6 +170,7 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 
 		var sk bccrypto.PrivateKey
 		cfg := localconf.ChainMakerConfig.NodeConfig
+		// parse skPem as pkcs11 or sdf private key
 		if cfg.P11Config.Enabled {
 			var handle interface{}
 			handle, err = getHSMHandle()
@@ -157,6 +181,7 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
 			}
+			// parse skPem as kms private key
 		} else if cfg.KMSConfig.Enabled {
 			if err = initKMS(); err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
@@ -166,6 +191,7 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
 
+			// parse skPem as ordinary private key (soft implementation)
 		} else {
 			sk, err = asym.PrivateKeyFromPEM(skPEM, []byte(localPrivKeyPwd))
 			if err != nil {
@@ -242,7 +268,12 @@ func InitPKSigningMember(hashType,
 	return nil, nil
 }
 
-//cryptoEngineOption parse public key by CryptoEngine
+// cryptoEngineOption parse public key by CryptoEngine
+//  @Description: parse public key of cert to another public key by crypto engine
+//  this used to improve the performance of GM-SM2 signature verifying
+//  @param cert
+//  @return error
+//
 func cryptoEngineOption(cert *bcx509.Certificate) error {
 	pkPem, err := cert.PublicKey.String()
 	if err != nil {
@@ -256,6 +287,11 @@ func cryptoEngineOption(cert *bcx509.Certificate) error {
 }
 
 // getBlockVersionAndResourceName return blockVersion and resourceName
+//  @Description:
+//  @param resourceNameWithPrefix
+//  @return blockVersion
+//  @return resourceName
+//
 func getBlockVersionAndResourceName(resourceNameWithPrefix string) (blockVersion uint32, resourceName string) {
 	blockVersionAndResourceName := strings.Split(resourceNameWithPrefix, ":")
 	if len(blockVersionAndResourceName) == 2 {
