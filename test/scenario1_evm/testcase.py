@@ -33,6 +33,14 @@ class Test(unittest.TestCase):
             cmd = Command(sync_result=True)
             cmd.recharge_gas(user_a_address)
             cmd.recharge_gas(user_b_address)
+        contractNull = ContractDeal("ERC20", sync_result=True)
+
+        result= contractNull.invoke("transfer", "{{\"k\": \"{}\",\"v\": \"{}\"}}".format("toAddr","100"),
+                                 sdk_config="sdk_config.yml")
+        msg=json.loads(result).get("contract_result").get("message")
+        print("在安装ERC20合约之前调用了合约方法，返回错误消息：",msg)
+        self.assertEqual("contractName not found", msg, "success")
+
         print("ERC20合约安装".center(50, "="))
         cd_erc = ContractDeal("ERC20", sync_result=True)
         result_erc = cd_erc.create("EVM", "erc20.bin",abi="erc20.abi", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
