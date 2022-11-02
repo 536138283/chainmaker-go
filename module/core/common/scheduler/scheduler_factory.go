@@ -46,6 +46,7 @@ func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
 		chainConf:       chainConf,
 		StoreHelper:     storeHelper,
 		ledgerCache:     cache,
+		contractCache:   &sync.Map{},
 	}
 	var err error
 	txScheduler.keyReg, err = regexp.Compile(protocol.DefaultStateRegex)
@@ -114,6 +115,7 @@ func newTxSchedulerEvidence(vmMgr protocol.VmManager, chainConf protocol.ChainCo
 			chainConf:       chainConf,
 			StoreHelper:     storeHelper,
 			ledgerCache:     cache,
+			contractCache:   &sync.Map{},
 		},
 	}
 	var err error

@@ -12,15 +12,16 @@ import (
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"go.uber.org/atomic"
 
 	"chainmaker.org/chainmaker/common/v2/bitmap"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"go.uber.org/atomic"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
 // The record value is written by the SEQ corresponding to TX
@@ -46,6 +47,7 @@ type SnapshotImpl struct {
 	preSnapshot protocol.Snapshot
 
 	blockFingerprint string
+	lastChainConfig  *config.ChainConfig
 
 	// applied data, please lock it before using
 	txRWSetTable   []*commonPb.TxRWSet
@@ -67,6 +69,10 @@ func NewQuerySnapshot(store protocol.BlockchainStore, log protocol.Logger) (*Sna
 	if err != nil {
 		return nil, err
 	}
+	lastChainConfig, err := store.GetLastChainConfig()
+	if err != nil || lastChainConfig == nil {
+		return nil, fmt.Errorf("failed to get last chain config, %v", err)
+	}
 
 	querySnapshot := &SnapshotImpl{
 		blockchainStore: store,
@@ -74,12 +80,13 @@ func NewQuerySnapshot(store protocol.BlockchainStore, log protocol.Logger) (*Sna
 		log:             log,
 		txResultMap:     make(map[string]*commonPb.Result, txCount),
 
-		chainId:        lastBlock.Header.ChainId,
-		blockHeight:    lastBlock.Header.BlockHeight,
-		blockVersion:   lastBlock.Header.BlockVersion,
-		blockTimestamp: lastBlock.Header.BlockTimestamp,
-		blockProposer:  lastBlock.Header.Proposer,
-		preBlockHash:   lastBlock.Header.PreBlockHash,
+		chainId:         lastBlock.Header.ChainId,
+		blockHeight:     lastBlock.Header.BlockHeight,
+		blockVersion:    lastBlock.Header.BlockVersion,
+		blockTimestamp:  lastBlock.Header.BlockTimestamp,
+		blockProposer:   lastBlock.Header.Proposer,
+		preBlockHash:    lastBlock.Header.PreBlockHash,
+		lastChainConfig: lastChainConfig,
 
 		txTable: nil,
 
@@ -107,6 +114,11 @@ func (s *SnapshotImpl) SetPreSnapshot(snapshot protocol.Snapshot) {
 // GetBlockchainStore return the blockchainStore of the snapshot
 func (s *SnapshotImpl) GetBlockchainStore() protocol.BlockchainStore {
 	return s.blockchainStore
+}
+
+// GetLastChainConfig return the last chain config
+func (s *SnapshotImpl) GetLastChainConfig() *config.ChainConfig {
+	return s.lastChainConfig
 }
 
 // GetSnapshotSize return the len of the txTable
@@ -183,7 +195,6 @@ func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([
 	if sv, ok := s.writeTable[finalKey]; ok {
 		return sv.value, nil
 	}
-
 	if sv, ok := s.readTable[finalKey]; ok {
 		return sv.value, nil
 	}
@@ -242,6 +253,7 @@ func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.Ba
 	return append(objects, append(value, append(readSetValues, writeSetValues...)...)...), nil
 }
 
+// getObjects returns objects on given keys
 func (s *SnapshotImpl) getObjects(keys []*vmPb.BatchKey) ([]*vmPb.BatchKey, error) {
 	var contractName string
 	if len(keys) > 0 {
@@ -316,8 +328,11 @@ func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.Batch
 func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, applySpecialTx bool) (bool, int) {
 	tx := txSimContext.GetTx()
-	s.log.Debugf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
-		specialTxType, runVmSuccess, applySpecialTx)
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
+			specialTxType, runVmSuccess, applySpecialTx)
+	})
+
 	if !applySpecialTx && s.IsSealed() {
 		return false, s.GetSnapshotSize()
 	}
@@ -362,6 +377,7 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	return true, len(s.txTable)
 }
 
+// ApplyBlock apply tx rwset map to block
 func (s *SnapshotImpl) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*commonPb.TxRWSet) {
 	if len(block.Txs) != len(txRWSetMap) {
 		s.log.Warnf("txs num is: %d, but rwSet num is: %d", len(block.Txs), len(txRWSetMap))
@@ -399,9 +415,15 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 
 	// Append to read-write-set table
 	s.txRWSetTable = append(s.txRWSetTable, txRWSet)
-	//s.log.Debugf("apply tx: %s, rwset.TxReads", tx.Payload.TxId, txRWSet.TxReads)
-	//s.log.Debugf("apply tx: %s, rwset.TxWrites", tx.Payload.TxId, txRWSet.TxWrites)
-	s.log.Debugf("apply tx: %s, rwset table size %d", tx.Payload.TxId, len(s.txRWSetTable))
+	//s.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("apply tx: %s, rwset.TxReads: %v", tx.Payload.TxId, txRWSet.TxReads)
+	//})
+	//s.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("apply tx: %s, rwset.TxWrites: %v", tx.Payload.TxId, txRWSet.TxWrites)
+	//})
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("apply tx: %s, rwset table size %d", tx.Payload.TxId, len(s.txRWSetTable))
+	})
 
 	// Add to tx result map
 	s.txResultMap[tx.Payload.TxId] = txResult
@@ -483,6 +505,7 @@ func (s *SnapshotImpl) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet) *c
 	return dag
 }
 
+// buildDictAndPos build read/write key dict and read/write key pos
 func (s *SnapshotImpl) buildDictAndPos(txRWSetTable []*commonPb.TxRWSet) (map[string][]uint32, map[string][]uint32,
 	map[uint32]map[string]uint32, map[uint32]map[string]uint32) {
 	readKeyDict := make(map[string][]uint32, 1024)
@@ -566,6 +589,7 @@ func (s *SnapshotImpl) buildReachMap(i uint32, txRWSet *commonPb.TxRWSet, readKe
 	return directReachForI
 }
 
+// constructKey construct keys: contractName#key
 func constructKey(contractName string, key []byte) string {
 	var builder strings.Builder
 	builder.WriteString(contractName)

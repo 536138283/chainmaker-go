@@ -11,12 +11,15 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	"chainmaker.org/chainmaker/utils/v2"
+
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/require"
 )
 
 func TestChainedSnapshot(t *testing.T) {
@@ -27,6 +30,10 @@ func TestChainedSnapshot(t *testing.T) {
 		},
 		log: &test.GoLogger{},
 	}
+
+	blockchainStore := mock.NewMockBlockchainStore(gomock.NewController(t))
+	blockchainStore.EXPECT().GetLastChainConfig().Return(&configPb.ChainConfig{}, nil).AnyTimes()
+	snapshotMgr.delegate.blockchainStore = blockchainStore
 
 	genesis := createNewBlock(0, 0)
 

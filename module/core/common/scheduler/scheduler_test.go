@@ -14,6 +14,7 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"sync"
 	"testing"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
@@ -241,10 +242,10 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
-	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
@@ -325,13 +326,13 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	// simulate calling GetContractByName(...) 3 times
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(contractId.Name)).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(sysContractId.Name)).Return(sysContractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
-	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
@@ -412,13 +413,13 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	// simulate calling GetContractByName(...) 3 times
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(contractId.Name)).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(sysContractId.Name)).Return(sysContractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
-	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
@@ -1300,6 +1301,7 @@ func TestTxScheduler_parseParameter(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			got, err := ts.parseParameter2220(tt.args.parameterPairs, false)
 			if (err != nil) != tt.wantErr {
@@ -1406,6 +1408,7 @@ func TestTxScheduler_dumpDAG(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			ts.dumpDAG(tt.args.dag, tt.args.txs)
 		})
@@ -1617,6 +1620,7 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			gotRe, err := ts.chargeGasLimit(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result)
 			if (err != nil) != tt.wantErr {
@@ -1820,6 +1824,7 @@ func TestTxScheduler_refundGas(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			gotRe, err := ts.refundGas(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result, tt.args.contractResultPayload)
 			if (err != nil) != tt.wantErr {
@@ -2007,6 +2012,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			gotAccountMangerContract, gotPk, err := ts.getAccountMgrContractAndPk(tt.args.txSimContext, tt.args.tx, tt.args.contractName, tt.args.method)
 			if (err != nil) != tt.wantErr {
@@ -2088,6 +2094,7 @@ func TestTxScheduler_checkGasEnable(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			if got := ts.checkGasEnable(); got != tt.want {
 				t.Errorf("checkGasEnable() = %v, want %v", got, tt.want)
@@ -2145,6 +2152,7 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			if got := ts.checkNativeFilter(tt.args.contractName, tt.args.method); got != tt.want {
 				t.Errorf("checkNativeFilter() = %v, want %v", got, tt.want)
@@ -2353,6 +2361,7 @@ func TestTxScheduler_getSenderPk(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			got, err := ts.getSenderPk(tt.args.txSimContext)
 			if (err != nil) != tt.wantErr {
