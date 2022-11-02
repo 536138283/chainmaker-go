@@ -9,26 +9,26 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20221024073246-1ad73c6ce18c
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1-0.20221014103022-470aa01a6916
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.1-0.20220922081441-580676b65f8a
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20221022011821-093b93b9eecd
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20221027085131-68df9a194ae4
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.2-0.20221022011224-4139a935ab8e
 	chainmaker.org/chainmaker/localconf/v2 v2.3.1-0.20220930132913-96e38fc556a3
 	chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20220906085151-3fe59a8a3fe5
 	chainmaker.org/chainmaker/net-common v1.2.0
 	chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20220906155423-3c724ff823aa
 	chainmaker.org/chainmaker/net-liquid v1.1.1-0.20220906155617-b0a95c2cd5c0
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221026084626-88a2a6524402
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221101053229-7c19a3b50555
 	chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221021075557-d411feaae9c2
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221027062602-6ae6ab425052
 	chainmaker.org/chainmaker/store/v2 v2.3.3-0.20221021083013-adcd42809c60
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.1-0.20221014100836-f444f35f5b52
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.1-0.20221014100813-9c8c829060a1
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.1-0.20221014100745-f95b35faf06f
-	chainmaker.org/chainmaker/utils/v2 v2.3.2-0.20221027144601-cdd97064358f
+	chainmaker.org/chainmaker/utils/v2 v2.3.2-0.20221028093224-6525688df68c
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.0
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.2-0.20221021085319-5bcf2a5c8d81
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1-0.20220906161626-e1ccd9b65594
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221028095852-1b9c40ae5163
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221102084919-723e4c0605f4
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220906162226-ae9199a14411
 	chainmaker.org/chainmaker/vm/v2 v2.3.2-0.20221021083400-f78ae3a37a92
@@ -76,8 +76,6 @@ require (
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
-	github.com/rogpeppe/go-internal v1.8.0 // indirect
-	go.uber.org/zap v1.23.0 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/protobuf v1.28.0
 )
