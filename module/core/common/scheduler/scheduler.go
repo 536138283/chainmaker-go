@@ -1089,19 +1089,19 @@ func (ts *TxScheduler) appendCoinbaseTx(
 	block *commonPb.Block,
 	snapshot protocol.Snapshot,
 	senderCollection *SenderCollection) {
-	ts.log.Debug("TxScheduler => appendChargeGasTx() => creaCoinbaseTx() begin ")
+	ts.log.Debug("TxScheduler => appendCoinbaseTx() => createCoinbaseTx() begin ")
 	//创建coinbase交易
 	tx, err := ts.createCoinbaseTx(senderCollection)
 	if err != nil {
 		return
 	}
 
-	ts.log.Debug("TxScheduler => appendChargeGasTx() => executeCoinbaseTx() begin ")
+	ts.log.Debug("TxScheduler => appendCoinbaseTx() => executeCoinbaseTx() begin ")
 	//执行coinbase交易
 	txSimContext := ts.executeCoinbaseTx(tx, block, snapshot)
 	tx.Result = txSimContext.GetTxResult()
 
-	ts.log.Debug("TxScheduler => appendChargeGasTx() => appendCCoinbaseToDAG() begin ")
+	ts.log.Debug("TxScheduler => appendCoinbaseTx() => appendCoinbaseToDAG() begin ")
 	//coinbase交易添加到dag中
 	ts.appendCoinbaseToDAG(block.Dag, snapshot)
 }
@@ -1315,7 +1315,7 @@ func (ts *TxScheduler) executeCoinbaseTx(
 	snapshot protocol.Snapshot) protocol.TxSimContext {
 
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
-	ts.log.Debugf("new tx for charging gas, id = %s", tx.Payload.GetTxId())
+	ts.log.Debugf("new tx for coinbase, id = %s", tx.Payload.GetTxId())
 
 	result := &commonPb.Result{
 		Code: commonPb.TxStatusCode_SUCCESS,
@@ -1350,7 +1350,7 @@ func (ts *TxScheduler) executeCoinbaseTx(
 		params, txSimContext, 0, commonPb.TxType_INVOKE_CONTRACT)
 	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
 		ts.log.Errorf("txStatusCode = %d", txStatusCode)
-		panic("running the tx of charging gas will never failed.")
+		panic("running the tx of coinbase will never failed.")
 	}
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
