@@ -189,7 +189,7 @@ func multiSignReq() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("multi sign req resp: %s\n", string(output))
+	fmt.Println(string(output))
 	return nil
 }
 
@@ -284,7 +284,7 @@ func multiSignVote() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("multi sign vote resp: %s\n", string(output))
+	fmt.Println(string(output))
 
 	return nil
 }
@@ -327,7 +327,7 @@ func multiSignQuery() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("multi sign query resp: %s\n", string(output))
+	fmt.Println(string(output))
 	return nil
 }
 
