@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -17,20 +16,17 @@ import (
 	"strconv"
 	"testing"
 
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-
-	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
-
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
+	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/localconf/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/utils/v2"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/prometheus/client_golang/prometheus"
