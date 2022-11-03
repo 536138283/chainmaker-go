@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -51,8 +52,8 @@ const (
 	// blockVersion2300 block version 2.3.0
 	blockVersion2300 = uint32(2300)
 
-	// blockVersion2400 block version 2.4.0
-	blockVersion2400 = uint32(2400)
+	// blockVersion2040000 block version 2.4.0
+	blockVersion2040000 = uint32(2040000)
 )
 
 const (
@@ -212,7 +213,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	// 软分叉处理，240版本后gas交易变更为coinbase交易
 	blockVersion := block.GetHeader().BlockVersion
-	if blockVersion >= blockVersion2400 {
+	if blockVersion >= blockVersion2040000 {
 		//dpos或开启gas时，启用coinbase
 		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
 			ts.log.DebugDynamic(func() string {
@@ -1594,7 +1595,7 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 	// 检查gas或coinbase交易个数
 	// 240后 gas交易变更为coinbase交易,且gas交易数应为0
 	blockVersion := block.GetHeader().BlockVersion
-	if blockVersion >= blockVersion2400 {
+	if blockVersion >= blockVersion2040000 {
 		if (coinbasemgr.CheckCoinbaseEnable(ts.chainConf)) && txExecOrderCoinBaseCount != 1 ||
 			(!coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && txExecOrderCoinBaseCount != 0) ||
 			txExecOrderChargeGasCount != 0 {
@@ -1638,7 +1639,7 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 func (ts *TxScheduler) getTypeShouldBeByBlockVersion(blockVersion uint32, i int,
 	block *commonPb.Block, typeShouldBe protocol.ExecOrderTxType) protocol.ExecOrderTxType {
 	// 240 以后，gas交易变更为coinbase交易
-	if blockVersion >= blockVersion2400 {
+	if blockVersion >= blockVersion2040000 {
 		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
 			typeShouldBe = protocol.ExecOrderTxTypeCoinbase
 		}
@@ -1682,7 +1683,7 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 
 	// 软分叉处理，v240之后使用coinbase实现，不再有GasTx
 	blockVersion := block.GetHeader().BlockVersion
-	if blockVersion >= blockVersion2400 {
+	if blockVersion >= blockVersion2040000 {
 		// coinbase Tx
 		if coinbasemgr.CheckCoinbaseEnable(ts.chainConf) {
 			ts.appendCoinbaseToDAG(dag, snapshot)

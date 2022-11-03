@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -3016,7 +3017,7 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 
 			block := &commonPb.Block{
 				Header: &commonPb.BlockHeader{
-					BlockVersion: blockVersion2400,
+					BlockVersion: blockVersion2040000,
 				},
 			}
 			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}

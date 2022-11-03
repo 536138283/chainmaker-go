@@ -24,7 +24,7 @@ checkEnv
 
 set -e
 
-VERSION=2400
+VERSION=2040000
 
 NODE_CNT=$1
 CHAIN_CNT=$2
