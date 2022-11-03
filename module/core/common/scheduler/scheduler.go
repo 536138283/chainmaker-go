@@ -83,6 +83,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 
+	defer ts.releaseContractCache()
+
 	var err error
 	lastCommittedHeight, err := ts.ledgerCache.CurrentHeight()
 	if err != nil {
@@ -374,6 +376,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	map[string]*commonPb.TxRWSet, map[string]*commonPb.Result, error) {
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
+
+	defer ts.releaseContractCache()
 
 	var (
 		startTime  = time.Now()
@@ -1466,6 +1470,13 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	timeUsed := time.Since(startTime)
 	ts.log.Infof("compare dag finished, time used %v", timeUsed)
 	return nil
+}
+
+func (ts *TxScheduler) releaseContractCache() {
+	ts.contractCache.Range(func(key interface{}, value interface{}) bool {
+		ts.contractCache.Delete(key)
+		return true
+	})
 }
 
 // appendSpecialTxsToDag similar to ts.simulateSpecialTxs except do not execute tx, only handle dag
