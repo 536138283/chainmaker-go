@@ -27,6 +27,9 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+  native:
+    multisign:
+      enable_manual_run: true
 
 # 交易、区块相关配置
 block:

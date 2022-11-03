@@ -47,6 +47,9 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+  native:
+      multisign:
+        enable_manual_run: true
 
 # Block proposing related settings
 block:
