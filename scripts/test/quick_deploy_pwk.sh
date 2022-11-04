@@ -98,14 +98,16 @@ function cmc_test() {
     --method=save \
     --sdk-conf-path=./testdata/sdk_config_pwk.yml \
     --params="{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" \
-    --sync-result=true
+    --sync-result=true \
+    --result-to-string=true
 
   ## query tx
   ./cmc client contract user get \
     --contract-name=fact \
     --method=find_by_file_hash \
     --sdk-conf-path=./testdata/sdk_config_pwk.yml \
-    --params="{\"file_hash\":\"ab3456df5799b87c77e7f88\"}"
+    --params="{\"file_hash\":\"ab3456df5799b87c77e7f88\"}" \
+    --result-to-string=true
 }
 
 function cat_log() {
