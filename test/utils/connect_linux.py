@@ -13,7 +13,7 @@ class TheServerHelper():
         self.remote = remote
         self.local_dir = local_dir
 
-    # SSH连接服务器，用于命令执行
+    # SSH连接服务器,用于命令执行
     def ssh_connectionServer(self, inputs=[]):
         try:
             # 创建SSH对象

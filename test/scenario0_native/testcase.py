@@ -19,7 +19,7 @@ import config.public_import as gl
 
 class Test(unittest.TestCase):
     def test_invoke_native_contract(self):
-        print("update ChainConfig，block interval is 20".center(50, "="))
+        print("update ChainConfig,block interval is 20".center(50, "="))
         cmd = Command(sync_result=True)
         cmd.update_chain_config(subcmd="block updateblockinterval", params="--block-interval 20",
                                 public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',

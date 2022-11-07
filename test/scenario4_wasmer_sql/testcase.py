@@ -95,7 +95,7 @@ class Test(unittest.TestCase):
         cd_asset.invoke("sql_delete",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
 
 
-        print("8.query id age=11 once more，should not found".center(50, "="))
+        print("8.query id age=11 once more,should not found".center(50, "="))
         query_id_result=cd_asset.get("sql_query_by_id",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\"}}".format(str(1)))
         query_id=str(base64.b64decode(json.loads(query_id_result).get("contract_result").get("result")),encoding='utf-8')
         print("query id age=11 once more,the result is: ",query_id,"\n")
@@ -167,7 +167,7 @@ class Test(unittest.TestCase):
 
 
         print("14.abnormal function test".center(50, "="))
-        print("14.1 create table、index、view and so on DDL sentence can only use in init_contract and upgrade contract".center(50, "="))
+        print("14.1 create table,index,view and so on DDL sentence can only use in init_contract and upgrade contract".center(50, "="))
         ddl_result=cd_asset.invoke("sql_execute_ddl",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"chainmaker"))
         ddl_message=json.loads(ddl_result).get("contract_result").get("message");
         b="match expection" in ddl_message
@@ -175,7 +175,7 @@ class Test(unittest.TestCase):
             print("result contains match expectio pass!!!\n")
 
 
-        print("14.2 in SQL中，forbid cross database operate，without assign database name。such as select * from db.table is forbidden； use db; is forbidden。".center(50, "="))
+        print("14.2 in SQL, forbid cross database operate,without assign database name.such as select * from db.table is forbidden； use db; is forbidden.".center(50, "="))
         forbidden_result=cd_asset.invoke("sql_dbname_table_name",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"chainmaker"))
         forbidden_message=json.loads(forbidden_result).get("contract_result").get("message");
         b="match expection" in forbidden_message
@@ -183,7 +183,7 @@ class Test(unittest.TestCase):
             print("result contains match expection pass!!!\n")
 
 
-        print("14.3 in SQL，forbid using transaction operation sentence，such as commit 、rollback，transaction is controlled by ChainMaker framework。".center(50, "="))
+        print("14.3 in SQL,forbid using transaction operation sentence,such as commit ,rollback,transaction is controlled by ChainMaker framework.".center(50, "="))
         tx_result=cd_asset.invoke("sql_execute_commit",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"chainmaker"))
         tx_message=json.loads(tx_result).get("contract_result").get("message");
         b="match expection" in tx_message
@@ -191,7 +191,7 @@ class Test(unittest.TestCase):
             print("result contains match expectio pass!!!\n")
 
 
-        print("14.4 in SQL，forbid using random number、getting system time and so on uncertain function，these function result is different from different node result can not consensus。".center(50, "="))
+        print("14.4 in SQL,forbid using random number,getting system time and so on uncertain function,these function result is different from different node result can not consensus.".center(50, "="))
         random_key_result=cd_asset.invoke("sql_random_key",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"chainmaker"))
         random_key=json.loads(random_key_result).get("contract_result").get("message");
         b="forbidden sql keyword" in random_key
@@ -208,7 +208,7 @@ class Test(unittest.TestCase):
         self.assertEqual(random_query_str,"ok","success")
         print("result:",random_query_str, "pass !!!\n")
 
-        print("14.5 in SQL，forbid multi SQL combination one SQL string to input ".center(50, "="))
+        print("14.5 in SQL,forbid multi SQL combination one SQL string to input ".center(50, "="))
         multi_sql_result=cd_asset.invoke("sql_multi_sql",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"chainmaker"))
         multi_sql=json.loads(multi_sql_result).get("contract_result").get("message");
         b="match expection" in multi_sql
@@ -216,7 +216,7 @@ class Test(unittest.TestCase):
             print("result contains match expection pass!!!\n")
 
 
-        print("14.6 forbid create、fix、delete the table named state_infos”，this is system provided kv data table，using to store PutState function data。".center(50, "="))
+        print("14.6 forbid create,fix,delete the table named state_infos”,this is system provided kv data table,using to store PutState function data.".center(50, "="))
         update_state_info_result=cd_asset.invoke("sql_update_state_info",sdk_config="sdk_config.yml",params="{{\"id\":\"{}\",\"name\":\"{}\"}}".format(str(501),"chainmaker"))
         update_state_info=json.loads(update_state_info_result).get("contract_result").get("message");
         b="you can't change table state_infos" in update_state_info

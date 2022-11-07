@@ -58,7 +58,7 @@ class Test(unittest.TestCase):
         print("A transfer to withdraw contract".center(50, "="))
         erc20.transfer(withdraw_address,200)
 
-        print("B invoke withdraw contract，withdraw 10".center(50, "="))
+        print("B invoke withdraw contract,withdraw 10".center(50, "="))
         cd_withdraw.invoke("withdraw", params="{{\"address\":\"{}\",\"amount\":\"{}\"}}".format(erc_address,10),
                         sdk_config="sdk_config.yml",signkey=gl.USER_B_KEY,
                            signcrt="wx-org2.chainmaker.org/certs/user/admin1/admin1.sign.crt",
@@ -101,7 +101,7 @@ class Test(unittest.TestCase):
         # erc20.transfer(withdraw_address,200)
         #
         #
-        # print("B调用withdraw合约，提款10".center(50, "="))
+        # print("B调用withdraw合约,提款10".center(50, "="))
         # cd_withdraw.invoke("withdraw", r'[{"address": "%s"},{"uint256": "10"}]' % erc_address,
         #                    sdk_config="sdk_config.yml",
         #                    abi="withdraw.abi", signkey=gl.USER_B_KEY,

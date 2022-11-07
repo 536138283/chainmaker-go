@@ -113,24 +113,24 @@ class Test(unittest.TestCase):
                                                     sdk_config="sdk_config.yml")
 
         balance_b_allowance_a = base64.b64decode(json.loads(balance_b_allowance_a_result).get("contract_result").get("result"))
-        print("query result：balance of B allowance A:",balance_b_allowance_a,"\n")
+        print("query result:balance of B allowance A:",balance_b_allowance_a,"\n")
 
-        print("query A account balance，should be 90".center(50, "="))
+        print("query A account balance,should be 90".center(50, "="))
         balance_a_result = cd_asset.get("balance_of",
                                         "{{\"owner\":\"{}\"}}".format(user_a_address),
                                         sdk_config="sdk_config.yml", signkey="", signcrt="", org="")
         balance_user_a = base64.b64decode(json.loads(balance_a_result).get("contract_result").get("result"))
-        print("query result：balance of A:",balance_user_a,"\n")
+        print("query result:balance of A:",balance_user_a,"\n")
 
 
-        print("query B account balance，should be 100".center(50, "="))
+        print("query B account balance,should be 100".center(50, "="))
         balance_b_result = cd_asset.get("balance_of","{{\"owner\":\"{}\"}}".format(user_b_address2),
                                         sdk_config="sdk_config2.yml")
 
 
 
         balance_user_b = base64.b64decode(json.loads(balance_b_result).get("contract_result").get("result"))
-        print("query result：balance of B",balance_user_b,"\n")
+        print("query result:balance of B",balance_user_b,"\n")
 
 
 

@@ -38,7 +38,7 @@ class Test(unittest.TestCase):
         result= contractNull.invoke("transfer", "{{\"k\": \"{}\",\"v\": \"{}\"}}".format("toAddr","100"),
                                  sdk_config="sdk_config.yml")
         msg=json.loads(result).get("contract_result").get("message")
-        print("if invoke contract method before install ERC20 contract, response error message：",msg)
+        print("if invoke contract method before install ERC20 contract, response error message:",msg)
         self.assertEqual("contractName not found", msg, "success")
 
         print("ERC20 contract install".center(50, "="))
@@ -61,7 +61,7 @@ class Test(unittest.TestCase):
         erc20.transfer(withdraw_address,200)
 
 
-        print("B invoke withdraw contract，withdraw 10".center(50, "="))
+        print("B invoke withdraw contract,withdraw 10".center(50, "="))
         cd_withdraw.invoke("withdraw", r'[{"address": "%s"},{"uint256": "10"}]' % erc_address,
                            sdk_config="sdk_config.yml",
                            abi="withdraw.abi", signkey=gl.USER_B_KEY,
