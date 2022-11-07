@@ -319,7 +319,7 @@ func multiSignQuery() error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("multi sign query resp: %s\n", string(output))
+		fmt.Println(string(output))
 		return nil
 	}
 
