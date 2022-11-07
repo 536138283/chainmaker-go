@@ -19,14 +19,14 @@ import config.public_import as gl
 
 class Test(unittest.TestCase):
     def test_invoke_native_contract(self):
-        print("更新ChainConfig，产块间隔为20".center(50, "="))
+        print("update ChainConfig，block interval is 20".center(50, "="))
         cmd = Command(sync_result=True)
         cmd.update_chain_config(subcmd="block updateblockinterval", params="--block-interval 20",
                                 public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',
                                 endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}', endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',
                                 endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
 
-        print("调用T合约存证数据".center(50, "="))
+        print("invoke T contract store data".center(50, "="))
         contractT = ContractDeal("T", sync_result=True)
         key = r'key%d' % time.time()
         value = r"value%d" % time.time()
@@ -35,15 +35,15 @@ class Test(unittest.TestCase):
         txId=json.loads(result).get("tx_id")
         block_height=json.loads(result).get("tx_block_height")
         # time.sleep(1)
-        print("UserB 查询:".center(50, "="))
+        print("UserB query:".center(50, "="))
         result= contractT.get("G","{{\"k\":\"{}\"}}".format(key),sdk_config="sdk_config2.yml" ,stringResult=True)
         queryValue = json.loads(result).get("contract_result").get("result")
         self.assertEqual(value, queryValue, "success")
 
-        print("UserC 查询:Tx".center(50, "="))
+        print("UserC query:Tx".center(50, "="))
         queryCmd3 = ContractQuery(sdk_config="sdk_config3.yml")
         queryCmd3.query_by_tx(txId)
-        print("UserD 查询:Block".center(50, "="))
+        print("UserD query:Block".center(50, "="))
         queryCmd4 = ContractQuery(sdk_config="sdk_config4.yml")
         queryCmd4.query_block_height(block_height)
 

@@ -26,7 +26,7 @@ class TheServerHelper():
             return False
 
         # 关闭连接
-        print("______执行结果_________")
+        print("______invoke result_________")
         linux_result = result.decode()
         return linux_result
 

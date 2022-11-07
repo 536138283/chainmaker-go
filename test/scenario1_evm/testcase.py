@@ -33,27 +33,35 @@ class Test(unittest.TestCase):
             cmd = Command(sync_result=True)
             cmd.recharge_gas(user_a_address)
             cmd.recharge_gas(user_b_address)
-        print("ERC20合约安装".center(50, "="))
+        contractNull = ContractDeal("ERC20", sync_result=True)
+
+        result= contractNull.invoke("transfer", "{{\"k\": \"{}\",\"v\": \"{}\"}}".format("toAddr","100"),
+                                 sdk_config="sdk_config.yml")
+        msg=json.loads(result).get("contract_result").get("message")
+        print("if invoke contract method before install ERC20 contract, response error message：",msg)
+        self.assertEqual("contractName not found", msg, "success")
+
+        print("ERC20 contract install".center(50, "="))
         cd_erc = ContractDeal("ERC20", sync_result=True)
         result_erc = cd_erc.create("EVM", "erc20.bin",abi="erc20.abi", public_identity=f'{gl.ACCOUNT_TYPE}', sdk_config='sdk_config.yml',endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         erc_address = json.loads(result_erc).get("contract_result").get("result").get("address")
         print("ERC20 contract address: ", erc_address)
         erc20 = Erc20(erc_address,"erc20.abi",True,sdk_config="sdk_config.yml")
-        print("withdraw合约安装".center(50, "="))
+        print("withdraw contract install".center(50, "="))
         cd_withdraw = ContractDeal("withdraw", sync_result=True)
         result_withdraw = cd_withdraw.create("EVM", "withdraw.bin", public_identity=f'{gl.ACCOUNT_TYPE}',abi="withdraw.abi",
                                              endorserKeys=f'{gl.ADMIN_KEY_FILE_PATHS}',endorserCerts=f'{gl.ADMIN_CRT_FILE_PATHS}',endorserOrgs=f'{gl.ADMIN_ORG_IDS}')
         withdraw_address = json.loads(result_withdraw).get("contract_result").get("result").get("address")
         print("withdraw contract address: ", withdraw_address)
 
-        print("A转账给B".center(50, "="))
+        print("A transfer to B".center(50, "="))
         erc20.transfer(user_b_address,100)
 
-        print("A转账给withdraw合约".center(50, "="))
+        print("A transfer to withdraw contract".center(50, "="))
         erc20.transfer(withdraw_address,200)
 
 
-        print("B调用withdraw合约，提款10".center(50, "="))
+        print("B invoke withdraw contract，withdraw 10".center(50, "="))
         cd_withdraw.invoke("withdraw", r'[{"address": "%s"},{"uint256": "10"}]' % erc_address,
                            sdk_config="sdk_config.yml",
                            abi="withdraw.abi", signkey=gl.USER_B_KEY,
