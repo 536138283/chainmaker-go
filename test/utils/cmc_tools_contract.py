@@ -15,7 +15,7 @@ class ContractDeal(object):
     def __init__(self, contract_name, sync_result=True):
         """
         :param contract_name: 合约名称
-        :param sync_result: 同步参数，默认true，传入false就异步
+        :param sync_result: 同步参数,默认true,传入false就异步
         """
         self.contract_name = contract_name
         self.sync_result = sync_result
@@ -26,8 +26,8 @@ class ContractDeal(object):
         :param runtime: GASM,WASMER,DOCKER_GO,EVM
         :param wasm: 使用的是哪个wasm文件
         :param params: 创建合约的时候的参数
-        :param public_identity: 是否选择公钥方式，共有三种模式，pk，pwk，cert模式
-        :param sdk_config: 默认是节点1，传入的这个sdk的配置文件表示在哪个节点上跑
+        :param public_identity: 是否选择公钥方式,共有三种模式,pk,pwk,cert模式
+        :param sdk_config: 默认是节点1,传入的这个sdk的配置文件表示在哪个节点上跑
         :return:
         """
         wasm_path = gl.WASM_APTH + wasm
@@ -128,8 +128,8 @@ class ContractDeal(object):
         :param runtime: GASM,WASMER,DOCKER_GO,EVM
         :param wasm: 使用的是哪个wasm文件
         :param params: 升级合约的时候的参数
-        :param public_identity: 是否选择公钥方式，共有三种模式，pk，pwk，cert模式
-        :param sdk_config: 默认是节点1，传入的这个sdk的配置文件表示在哪个节点上跑
+        :param public_identity: 是否选择公钥方式,共有三种模式,pk,pwk,cert模式
+        :param sdk_config: 默认是节点1,传入的这个sdk的配置文件表示在哪个节点上跑
         :return:
         """
         wasm_path = gl.WASM_APTH + wasm
