@@ -33,13 +33,13 @@ class Command(object):
         sdk_config_path = f'{gl.SDK_PATH}{new_sdk_config}'
         cmd = f'cd {gl.CMC_TOOL_PATH} && {self.BASE_CMD} client chainconfig {subcmd} {params} --sdk-conf-path={sdk_config_path}'
         if public_identity == "pwk":
-            print("合约创建-pwk模式".center(50, "="))
+            print("contract create-pwk mode".center(50, "="))
             cmd = cmd + f' --admin-org-ids={endorserOrgs} --admin-key-file-paths={endorserKeys}'
         elif public_identity == "pk":
-            print("合约创建-pk模式".center(50, "="))
+            print("contract create-pk mode".center(50, "="))
             cmd = cmd + f' --admin-key-file-paths={endorserKeys}'
         else:
-            print("合约创建-cert模式".center(50, "="))
+            print("contract create-cert mode".center(50, "="))
             cmd = cmd + f' --admin-key-file-paths={endorserKeys} --admin-crt-file-paths={endorserCerts}'
 
         print(cmd)
