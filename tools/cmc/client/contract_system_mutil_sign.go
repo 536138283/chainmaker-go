@@ -372,7 +372,7 @@ func multiSignTrig() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(output)
+	fmt.Printf("%0x", output)
 
 	return nil
 }
