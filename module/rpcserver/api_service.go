@@ -15,6 +15,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker-go/module/snapshot"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
+	"chainmaker.org/chainmaker/common/v2/ethbase"
 	"chainmaker.org/chainmaker/common/v2/json"
 	"chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -108,9 +109,32 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 
 	return &apiService
 }
+func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*commonPb.TxResponse, error) {
+	req := &commonPb.Transaction{}
+	err := req.UnmarshalEthRlpBytes(raw)
+	if err != nil {
+		return nil, err
+	}
+	resp := s.invoke(req, protocol.RPC)
+
+	from := ethbase.BytesToAddress(req.Sender.Signer.MemberInfo)
+	valueBytes := req.Payload.GetParameter(commonPb.EthTxParameterKey_VALUE.String())
+	value, _ := ethbase.NewSafeUint256(valueBytes)
+	// audit log format: ip:port|TxType|TxHash|From|To|ChainId|Nonce|Value|respCode|respMsg
+	s.logBrief.Infof("|%s|%s|%s|%s|%s|%s|%d|%s|%s|%s", GetClientAddr(ctx), req.Payload.TxType,
+		req.Payload.TxId, from.String(), req.Payload.ContractName,
+		req.Payload.ChainId, req.Payload.Sequence,
+		value.ToString(), resp.Code, resp.Message)
+
+	return resp, nil
+}
 
 // SendRequest - deal received TxRequest
 func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
+	if req.Payload.TxType == commonPb.TxType_ETH_TX {
+		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("data"))
+	}
+
 	s.log.DebugDynamic(func() string {
 		return fmt.Sprintf("SendRequest[%s],payload:%#v,\n----signer:%v\n----endorsers:%+v",
 			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
