@@ -181,7 +181,16 @@ func multiSignReq() error {
 	}
 	payload = client.CreateMultiSignReqPayload(pairs)
 
-	resp, err = client.MultiSignContractReq(payload)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
+	}
+	endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
+
+	resp, err = client.MultiSignContractReq(payload, endorsers)
 	if err != nil {
 		return fmt.Errorf("multi sign req failed, %s", err.Error())
 	}
