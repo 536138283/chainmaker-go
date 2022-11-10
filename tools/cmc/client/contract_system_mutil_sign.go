@@ -216,7 +216,6 @@ func multiSignVote() error {
 		endorser  *common.EndorsementEntry
 		client    *sdk.ChainClient
 		resp      *common.TxResponse
-		tx        *common.TransactionInfo
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,

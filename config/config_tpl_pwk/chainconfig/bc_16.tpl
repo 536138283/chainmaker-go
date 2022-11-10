@@ -247,6 +247,12 @@ resource_policies:
       org_list:
       role_list:
         - admin
+  - resource_name: CHAIN_CONFIG-MULTI_SIGN_ENABLE_MANUAL_RUN
+      policy:
+        rule: MAJORITY
+        org_list:
+        role_list:
+          - admin
   - resource_name: CONTRACT_MANAGE-INIT_CONTRACT
     policy:
       rule: ANY
