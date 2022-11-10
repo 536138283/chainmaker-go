@@ -186,7 +186,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
 			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds,
-				txsTimeout)
+				block.Txs)
 		} else {
 			RetryAndRemoveTxs(bb.txPool, txsTimeout, nil, bb.log)
 		}
