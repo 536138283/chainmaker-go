@@ -334,7 +334,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		if common.TxPoolType != batch.TxPoolType {
 			common.RetryAndRemoveTxs(bp.txPool, txRetry, nil, bp.log)
 		} else {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, txRetry)
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
 			fetchBatch = getFetchBatch(fetchBatches)
 		}
 
