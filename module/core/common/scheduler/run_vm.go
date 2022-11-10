@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"golang.org/x/sync/singleflight"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -154,8 +155,9 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		RwSetHash: nil,
 	}
 	payload := tx.Payload
+	//不是查询，也不是上链的交易，则不需要VM运行
 	if payload.TxType != commonPb.TxType_QUERY_CONTRACT &&
-		payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
+		!payload.TxType.IsBlockTx() {
 		return errResult(result, fmt.Errorf("no such tx type: %s", tx.Payload.TxType))
 	}
 
@@ -171,7 +173,11 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 			err.Error()),
 		)
 	}
-
+	//Ethereum tx, use syscontract to process
+	if tx.Payload.TxType.IsEthTxType() {
+		contractName = syscontract.SystemContract_ETHEREUM.String()
+		method = syscontract.EthereumFunction_Unpack.String()
+	}
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
 	ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
 		return txSimContext.GetContractByName(contractName)

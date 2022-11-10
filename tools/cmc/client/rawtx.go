@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io/ioutil"
 
@@ -43,11 +44,12 @@ func sendRawTransaction(rawTxHex string) error {
 	if err != nil {
 		return err
 	}
-	req := &commonPb.TxRequest{Payload: &commonPb.Payload{TxType: commonPb.TxType_ETH_TX}}
+	req := &commonPb.TxRequest{Payload: &commonPb.Payload{TxType: commonPb.TxType_ETH_TX_LegacyTxType}}
 	req.Payload.Parameters = []*commonPb.KeyValuePair{&commonPb.KeyValuePair{
-		Key:   "data",
+		Key:   "rawtx",
 		Value: rawTx,
 	}}
+	req.Payload.TxId = hex.EncodeToString(ethbase.Keccak256(rawTx))
 	resp, err := client.SendTxRequest(req, timeout, syncResult)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())

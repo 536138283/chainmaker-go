@@ -131,8 +131,8 @@ func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*co
 
 // SendRequest - deal received TxRequest
 func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
-	if req.Payload.TxType == commonPb.TxType_ETH_TX {
-		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("data"))
+	if req.Payload.TxType == commonPb.TxType_ETH_TX_LegacyTxType {
+		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("rawtx"))
 	}
 
 	s.log.DebugDynamic(func() string {
@@ -209,15 +209,16 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 			return resp
 		}
 	}
-
+	if tx.Payload.TxType.IsBlockTx() {
+		return s.dealTransact(tx, source)
+	}
 	switch tx.Payload.TxType {
 	case commonPb.TxType_QUERY_CONTRACT:
 		return s.dealQuery(tx, source)
-	case commonPb.TxType_INVOKE_CONTRACT:
-		return s.dealTransact(tx, source)
 	case commonPb.TxType_ARCHIVE:
 		return s.doArchive(tx)
 	default:
+		s.log.Warnf("unsupported tx_type tx[%s]", tx.Payload.TxId)
 		return &commonPb.TxResponse{
 			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,
 			Message: commonErr.ERR_CODE_TXTYPE.String(),
