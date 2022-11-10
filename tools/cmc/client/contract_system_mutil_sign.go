@@ -260,11 +260,13 @@ func multiSignVote() error {
 		adminKey = adminKeys[0]
 	}
 
-	tx, err = client.GetTxByTxId(txId)
+	resp, err = client.MultiSignContractQuery(txId)
 	if err != nil {
 		return fmt.Errorf("get tx by txid failed, %s", err.Error())
 	}
-	payload = tx.Transaction.Payload
+	multiSignInfo := &syscontract.MultiSignInfo{}
+	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
+	payload = multiSignInfo.Payload
 	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
 		endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
 		if err != nil {
