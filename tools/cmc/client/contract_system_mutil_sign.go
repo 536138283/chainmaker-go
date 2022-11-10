@@ -54,7 +54,7 @@ func multiSignReqCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagAdminKeyFilePaths, flagAdminCrtFilePaths,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash,
 	})
@@ -181,7 +181,16 @@ func multiSignReq() error {
 	}
 	payload = client.CreateMultiSignReqPayload(pairs)
 
-	resp, err = client.MultiSignContractReq(payload)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
+	}
+	endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
+
+	resp, err = client.MultiSignContractReq(payload, endorsers)
 	if err != nil {
 		return fmt.Errorf("multi sign req failed, %s", err.Error())
 	}
@@ -207,7 +216,6 @@ func multiSignVote() error {
 		endorser  *common.EndorsementEntry
 		client    *sdk.ChainClient
 		resp      *common.TxResponse
-		tx        *common.TransactionInfo
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -251,11 +259,13 @@ func multiSignVote() error {
 		adminKey = adminKeys[0]
 	}
 
-	tx, err = client.GetTxByTxId(txId)
+	resp, err = client.MultiSignContractQuery(txId)
 	if err != nil {
 		return fmt.Errorf("get tx by txid failed, %s", err.Error())
 	}
-	payload = tx.Transaction.Payload
+	multiSignInfo := &syscontract.MultiSignInfo{}
+	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
+	payload = multiSignInfo.Payload
 	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
 		endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
 		if err != nil {
@@ -363,7 +373,7 @@ func multiSignTrig() error {
 	if err != nil {
 		return err
 	}
-	fmt.Println(output)
+	fmt.Println(string(output))
 
 	return nil
 }
