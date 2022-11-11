@@ -56,7 +56,7 @@ func multiSignReqCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagAdminKeyFilePaths, flagAdminCrtFilePaths,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash,
+		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagSyncResult,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -129,7 +129,7 @@ func multiSignTrigCMD() *cobra.Command {
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
+		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId, flagSyncResult,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -190,7 +190,7 @@ func multiSignReq() error {
 		return err
 	}
 
-	resp, err = client.MultiSignContractReq(payload, endorsers)
+	resp, err = client.MultiSignContractReq(payload, endorsers, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign req failed, %s", err.Error())
 	}
@@ -286,7 +286,7 @@ func multiSignVote() error {
 
 	}
 
-	resp, err = client.MultiSignContractVote(payload, endorser, isAgree)
+	resp, err = client.MultiSignContractVote(payload, endorser, isAgree, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}
@@ -365,7 +365,7 @@ func multiSignTrig() error {
 		return fmt.Errorf("get tx by txid failed, %s", err.Error())
 	}
 	payload = tx.Transaction.Payload
-	resp, err = client.MultiSignContractTrig(payload)
+	resp, err = client.MultiSignContractTrig(payload, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}
