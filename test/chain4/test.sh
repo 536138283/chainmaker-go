@@ -9,3 +9,25 @@ echo "查询余额"
 ./cmc client contract user get --contract-name=0x6f259637dcd74c767781e37bc6133cd6a68aa161 --method=balanceOf --sdk-conf-path=../config/sdk_config.yml --abi-file-path=../../testdata/erc20.abi --params='[{"address":"0xcba472d0fe169e5632f217b3c00e9225165dea6e"}]'
 
 ./cmc client contract user get --contract-name=0x6f259637dcd74c767781e37bc6133cd6a68aa161 --method=balanceOf --sdk-conf-path=../config/sdk_config.yml --abi-file-path=../../testdata/erc20.abi --params='[{"address":"0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10"}]'
+
+
+echo "Mint ETHToken 10亿"
+./cmc client contract user invoke --contract-name=ETHEREUM --method=Mint --sdk-conf-path=../config/sdk_config.yml --params='{"account": "0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10","amount": "1000000000000000000000000000"}' --sync-result=true
+echo "查询ETHToken余额"
+./cmc client contract user get --contract-name=ETHEREUM --method=BalanceOf --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{"account":"0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10"}'
+./cmc client contract user get --contract-name=ETHEREUM --method=BalanceOf --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{"account":"0x291471887e746158c3b020e3020f9104f9fedef9"}'
+
+echo "0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10 转450 ETHToken To 0x291471887e746158c3b020e3020f9104f9fedef9" #TxHash: 775a5a8798f8df9bbd7fa1aa41aceb176805585010b7c4a5efaf16a99fe95aa7
+./cmc client sendrawtransaction 0xf86d4d85028fa6ae0082520894291471887e746158c3b020e3020f9104f9fedef989022b1c8c1227a000008026a0ee0fd756864d5bdd14c2f3a7f978010cbc2f22fe3d3a42704e6d906a07e98a6da02ae7ab7c534086725c85d48d0f9cc952b8ac9fb381d224fdd965d5cce0d4b6fb --sdk-conf-path=../config/sdk_config.yml  --sync-result=true
+echo "查询ETHToken余额"
+./cmc client contract user get --contract-name=ETHEREUM --method=BalanceOf --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{"account":"0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10"}'
+./cmc client contract user get --contract-name=ETHEREUM --method=BalanceOf --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{"account":"0x291471887e746158c3b020e3020f9104f9fedef9"}'
+
+echo "查询Nonce =1"
+./cmc client contract user get --contract-name=ETHEREUM --method=Nonce --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{"account":"0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10"}'
+
+./cmc client sendrawtransaction 0xf86c4e8502540be400825208944fdf7d2b73ba8522e6bf358165bac12503f3f9d1888b67024780cc80008025a08676409e3d848eeff949bb1ab69bda98aa08ed53331bf7a50c76f329953c51e1a055605f9b761badc48cace9d278257e34d9f35ca95b841d35bc90968f9e74aed8 --sdk-conf-path=../config/sdk_config.yml  --sync-result=true
+echo "查询Nonce =2"
+
+./cmc client contract user get --contract-name=ETHEREUM --method=Nonce --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{"account":"0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10"}'
+
