@@ -259,13 +259,11 @@ func multiSignVote() error {
 		adminKey = adminKeys[0]
 	}
 
-	resp, err = client.MultiSignContractQuery(txId)
+	payload, err = getMultiSignReqInfo(client, txId)
 	if err != nil {
-		return fmt.Errorf("get tx by txid failed, %s", err.Error())
+		return err
 	}
-	multiSignInfo := &syscontract.MultiSignInfo{}
-	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
-	payload = multiSignInfo.Payload
+
 	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
 		endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
 		if err != nil {
@@ -318,6 +316,9 @@ func multiSignQuery() error {
 	if err != nil {
 		return fmt.Errorf("multi sign query failed, %s", err.Error())
 	}
+	if resp.ContractResult.Result == nil {
+		return fmt.Errorf("multi sign req does not exist, req id = %v", txId)
+	}
 
 	if resp.Code == 0 && resp.ContractResult.Code == 0 {
 		multiSignInfo := &syscontract.MultiSignInfo{}
@@ -358,16 +359,14 @@ func multiSignTrig() error {
 	}
 	defer client.Stop()
 
-	resp, err = client.MultiSignContractQuery(txId)
+	payload, err = getMultiSignReqInfo(client, txId)
 	if err != nil {
-		return fmt.Errorf("multi sign query failed, %s", err.Error())
+		return err
 	}
-	multiSignInfo := &syscontract.MultiSignInfo{}
-	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
-	payload = multiSignInfo.Payload
+
 	resp, err = client.MultiSignContractTrig(payload, timeout, syncResult)
 	if err != nil {
-		return fmt.Errorf("multi sign vote failed, %s", err.Error())
+		return fmt.Errorf("multi sign trig failed, %s", err.Error())
 	}
 	output, err = prettyjson.Marshal(resp)
 	if err != nil {
@@ -376,4 +375,23 @@ func multiSignTrig() error {
 	fmt.Println(string(output))
 
 	return nil
+}
+
+func getMultiSignReqInfo(client *sdk.ChainClient, txId string) (
+	*common.Payload, error) {
+	resp, err := client.MultiSignContractQuery(txId)
+	if err != nil {
+		return nil, fmt.Errorf("get tx by txid failed, %s", err.Error())
+	}
+	if resp.ContractResult.Result == nil {
+		return nil, fmt.Errorf("multi sign req does not exist, req id = %v", txId)
+	}
+	multiSignInfo := &syscontract.MultiSignInfo{}
+	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
+	payload := multiSignInfo.Payload
+	if payload == nil {
+		return nil, fmt.Errorf("multi sign req info has not 'payload' field, req id = %v", txId)
+	}
+
+	return payload, nil
 }
