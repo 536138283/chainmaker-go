@@ -368,7 +368,7 @@ func multiSignTrig() error {
 
 	resp, err = client.MultiSignContractTrig(payload)
 	if err != nil {
-		return fmt.Errorf("multi sign vote failed, %s", err.Error())
+		return fmt.Errorf("multi sign trig failed, %s", err.Error())
 	}
 	output, err = prettyjson.Marshal(resp)
 	if err != nil {
