@@ -349,8 +349,6 @@ func multiSignTrig() error {
 		output []byte
 
 		payload *common.Payload
-		tx      *common.TransactionInfo
-		//endorser *common.EndorsementEntry
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -360,11 +358,13 @@ func multiSignTrig() error {
 	}
 	defer client.Stop()
 
-	tx, err = client.GetTxByTxId(txId)
+	resp, err = client.MultiSignContractQuery(txId)
 	if err != nil {
-		return fmt.Errorf("get tx by txid failed, %s", err.Error())
+		return fmt.Errorf("multi sign query failed, %s", err.Error())
 	}
-	payload = tx.Transaction.Payload
+	multiSignInfo := &syscontract.MultiSignInfo{}
+	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
+	payload = multiSignInfo.Payload
 	resp, err = client.MultiSignContractTrig(payload, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
