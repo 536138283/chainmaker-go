@@ -263,6 +263,9 @@ func multiSignVote() error {
 	if err != nil {
 		return fmt.Errorf("get tx by txid failed, %s", err.Error())
 	}
+	if resp.ContractResult.Result == nil {
+		return fmt.Errorf("multi sign req does not exist, req id = %v", txId)
+	}
 	multiSignInfo := &syscontract.MultiSignInfo{}
 	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
 	payload = multiSignInfo.Payload
@@ -318,6 +321,9 @@ func multiSignQuery() error {
 	if err != nil {
 		return fmt.Errorf("multi sign query failed, %s", err.Error())
 	}
+	if resp.ContractResult.Result == nil {
+		return fmt.Errorf("multi sign req does not exist, req id = %v", txId)
+	}
 
 	if resp.Code == 0 && resp.ContractResult.Code == 0 {
 		multiSignInfo := &syscontract.MultiSignInfo{}
@@ -361,6 +367,9 @@ func multiSignTrig() error {
 	resp, err = client.MultiSignContractQuery(txId)
 	if err != nil {
 		return fmt.Errorf("multi sign query failed, %s", err.Error())
+	}
+	if resp.ContractResult.Result == nil {
+		return fmt.Errorf("multi sign req does not exist, req id = %v", txId)
 	}
 	multiSignInfo := &syscontract.MultiSignInfo{}
 	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
