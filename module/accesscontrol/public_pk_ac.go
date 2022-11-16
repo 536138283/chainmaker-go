@@ -458,6 +458,10 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// move set admin method to chain config module
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
+
+	// for multi-sign enable_manual_run
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), pubPolicyMajorityAdmin)
 }
 
 // need to consistent with 2.1.0 for dpos
@@ -546,6 +550,9 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyForbidden)
 
+	// multisign enable_manual_run
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), pubPolicyForbidden)
 	// disable multisign for public mode
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_MULTI_SIGN.String()+"-"+
 		syscontract.MultiSignFunction_REQ.String(), pubPolicyForbidden)
