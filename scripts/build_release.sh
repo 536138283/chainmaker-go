@@ -74,6 +74,7 @@ function package() {
         cp $CURRENT_PATH/bin/start.sh     $chainmaker_file/bin
         cp $CURRENT_PATH/bin/stop.sh      $chainmaker_file/bin
         cp $CURRENT_PATH/bin/restart.sh   $chainmaker_file/bin
+        cp $CURRENT_PATH/bin/version.sh   $chainmaker_file/bin
         cp $CURRENT_PATH/bin/docker-vm-standalone-start.sh   $chainmaker_file/bin
         cp $CURRENT_PATH/bin/docker-vm-standalone-stop.sh   $chainmaker_file/bin
         cp $CURRENT_PATH/service/*        $chainmaker_file/bin
