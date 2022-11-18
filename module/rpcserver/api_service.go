@@ -110,8 +110,7 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 	return &apiService
 }
 func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*commonPb.TxResponse, error) {
-	req := &commonPb.Transaction{}
-	err := req.UnmarshalEthRlpBytes(raw)
+	req, err := utils.UnmarshalEthRlpBytes(raw)
 	if err != nil {
 		return nil, err
 	}
