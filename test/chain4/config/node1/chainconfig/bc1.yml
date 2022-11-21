@@ -9,7 +9,7 @@
 # The content should be consistent across all nodes in this chain.
 
 # chain id
-chain_id: "123"
+chain_id: "12301"
 
 # chain maker version
 version: "2040000"

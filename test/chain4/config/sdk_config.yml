@@ -1,6 +1,6 @@
 chain_client:
   # 链ID
-  chain_id: "123"
+  chain_id: "12301"
 
   # 客户端用户交易签名私钥路径
   user_sign_key_file_path: "../config/node1/admin/admin1/admin1.key"

@@ -26,7 +26,7 @@ crypto_engine: tjfoc #support gmssl, tencentsm and tjfoc
 # Chains the node currently joined in
 blockchain:
   # chain id and its genesis block file path.
-  - chainId: "123"
+  - chainId: "12301"
     genesis: ../config/node3/chainconfig/bc1.yml
 #  - chainId: chain2
 #    genesis: ../config/{org_path2}/chainconfig/bc2.yml

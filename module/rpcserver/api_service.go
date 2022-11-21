@@ -119,11 +119,11 @@ func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*co
 	from := ethbase.BytesToAddress(req.Sender.Signer.MemberInfo)
 	valueBytes := req.Payload.GetParameter(commonPb.EthTxParameterKey_VALUE.String())
 	value, _ := ethbase.NewSafeUint256(valueBytes)
-	// audit log format: ip:port|TxType|TxHash|From|To|ChainId|Nonce|Value|respCode|respMsg
-	s.logBrief.Infof("|%s|%s|%s|%s|%s|%s|%d|%s|%s|%s", GetClientAddr(ctx), req.Payload.TxType,
+	// audit log format: ip:port|TxType|TxHash|From|To|ChainId|Nonce|Value|RawTx|respCode|respMsg
+	s.logBrief.Infof("|%s|%s|%s|%s|%s|%s|%d|%s|%x|%s|%s", GetClientAddr(ctx), req.Payload.TxType,
 		req.Payload.TxId, from.String(), req.Payload.ContractName,
 		req.Payload.ChainId, req.Payload.Sequence,
-		value.ToString(), resp.Code, resp.Message)
+		value.ToString(), raw, resp.Code, resp.Message)
 
 	return resp, nil
 }
