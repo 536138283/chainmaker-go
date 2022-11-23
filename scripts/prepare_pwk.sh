@@ -15,7 +15,7 @@ function checkEnv() {
       if [ "$?" != "0" ];then
         echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
       fi
-      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt'
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH'
       exit
     fi
   fi
@@ -351,8 +351,8 @@ function generate_config() {
                 xsed "/  seeds:/a\    - \"/ip4/127.0.0.1/tcp/$(($P2P_PORT+$k-1))/p2p/{org${k}_peerid}\"" node$i/chainmaker.yml
             done
         else
-            ver=$(sw_vers | grep ProductVersion | cut -d':' -f2 | tr -d ' ')
-            version=${ver:1:2}
+            ver=$(sw_vers | grep ProductVersion | cut -d':' -f2 | sed 's/\t//g')
+            version=${ver:0:2}
             if [ $version -ge 11 ]; then
                 for ((k = $NODE_CNT; k > 0; k = k - 1)); do
                 xsed  "/  seeds:/a\\
