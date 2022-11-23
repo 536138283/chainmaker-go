@@ -44,7 +44,7 @@ func sendRawTransaction(rawTxHex string) error {
 	if err != nil {
 		return err
 	}
-	req := &commonPb.TxRequest{Payload: &commonPb.Payload{TxType: commonPb.TxType_ETH_TX_LegacyTxType}}
+	req := &commonPb.TxRequest{Payload: &commonPb.Payload{TxType: commonPb.TxType_ETH_TX}}
 	req.Payload.Parameters = []*commonPb.KeyValuePair{{
 		Key:   "rawtx",
 		Value: rawTx,

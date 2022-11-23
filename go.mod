@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20221025141844-0cbbbbd64fbc
-	chainmaker.org/chainmaker/common/v2 v2.3.1-0.20221118140231-661eea022d81
+	chainmaker.org/chainmaker/common/v2 v2.3.1-0.20221121145126-3b58dae910ca
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.1-0.20220928123352-fe127bc35022
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1-0.20221028094100-12c7a4fa94e5
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1-0.20221028095831-299dc01b844a
@@ -16,19 +16,19 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.0
 	chainmaker.org/chainmaker/net-libp2p v1.2.1-0.20220906155423-3c724ff823aa
 	chainmaker.org/chainmaker/net-liquid v1.1.1-0.20220906155617-b0a95c2cd5c0
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221118140723-697c8a4db0bb
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221123025233-f84553a7182c
 	chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221103064903-7fc1f5d49fa9
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221103031513-d9ece13edb89
 	chainmaker.org/chainmaker/store/v2 v2.3.3-0.20221021083013-adcd42809c60
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.1-0.20221031065915-2de0e657eb8f
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.1-0.20221031070007-51f8cf6815d3
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.1-0.20221031070033-fd2849851f4e
-	chainmaker.org/chainmaker/utils/v2 v2.3.2-0.20221118143722-db47d3aba698
+	chainmaker.org/chainmaker/utils/v2 v2.3.2-0.20221123025500-b9f6f9418902
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2-0.20221021084115-67dc956c89ca
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.2-0.20221021085319-5bcf2a5c8d81
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2-0.20221103061104-db6fda28da96
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1-0.20220906161626-e1ccd9b65594
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221117161908-7e12986e8258
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221123025739-9cfb111c68d6
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1-0.20220906162226-ae9199a14411
 	chainmaker.org/chainmaker/vm/v2 v2.3.2-0.20221110093614-89822be34a3c
