@@ -7,6 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/logger/v2"
 	"crypto/sha256"
 	"errors"
 	"fmt"
@@ -2124,8 +2125,10 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "test0",
-			fields: fields{},
+			name: "test0",
+			fields: fields{
+				log: logger.GetLogger("unit-test"),
+			},
 			args: args{
 				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
 				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
@@ -2133,8 +2136,10 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "test1",
-			fields: fields{},
+			name: "test1",
+			fields: fields{
+				log: logger.GetLogger("unit-test"),
+			},
 			args: args{
 				contractName: syscontract.SystemContract_CHAIN_QUERY.String(),
 				method:       syscontract.ChainQueryFunction_GET_BLOCK_BY_HASH.String(),
