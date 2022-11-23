@@ -888,6 +888,7 @@ func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
 		method == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
 		return true
 	}
+	// add by Cai.Zhihong for 3 phrase multi-sign
 	if method == syscontract.MultiSignFunction_TRIG.String() {
 		return true
 	}
