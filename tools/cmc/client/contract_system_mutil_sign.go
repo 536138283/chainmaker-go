@@ -130,6 +130,7 @@ func multiSignTrigCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId, flagSyncResult,
+		flagGasLimit,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -350,6 +351,7 @@ func multiSignTrig() error {
 		output []byte
 
 		payload *common.Payload
+		limit   *common.Limit
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -364,7 +366,13 @@ func multiSignTrig() error {
 		return err
 	}
 
-	resp, err = client.MultiSignContractTrig(payload, timeout, syncResult)
+	if gasLimit > 0 {
+		limit = &common.Limit{
+			GasLimit: gasLimit,
+		}
+	}
+
+	resp, err = client.MultiSignContractTrig(payload, timeout, limit, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign trig failed, %s", err.Error())
 	}
