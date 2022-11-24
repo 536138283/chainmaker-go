@@ -17,6 +17,9 @@ var (
 	enableCertHash bool
 	withRWSet      bool
 	truncateValue  bool
+	format         string
+	pageSize       int
+	pageIndex      int
 )
 
 const (
@@ -25,6 +28,9 @@ const (
 	flagEnableCertHash = "enable-cert-hash"
 	flagWithRWSet      = "with-rw-set"
 	flagTruncateValue  = "truncate-value"
+	flagFormat         = "format"
+	flagPageSize       = "page-size"
+	flagPageIndex      = "page-index"
 )
 
 // NewQueryOnChainCMD new query on-chain blockchain data command
@@ -41,6 +47,8 @@ func NewQueryOnChainCMD() *cobra.Command {
 	cmd.AddCommand(newQueryBlockByTxIdOnChainCMD())
 	cmd.AddCommand(newQueryArchivedHeightOnChainCMD())
 	cmd.AddCommand(newQueryContractOnChainCMD())
+	cmd.AddCommand(newQueryStateByKeyOnChainCMD())
+	cmd.AddCommand(newQueryStateByPrefixOnChainCMD())
 
 	return cmd
 }
@@ -52,7 +60,10 @@ func init() {
 
 	flags.StringVar(&chainId, flagChainId, "", "Chain ID")
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")
+	flags.StringVar(&format, flagFormat, "", "specify result format:string/hex/json/raw/hex0x/pb")
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet")
 	flags.BoolVar(&truncateValue, flagTruncateValue, true, "enable truncate value, default true")
+	flags.IntVar(&pageIndex, flagPageIndex, 0, "page index")
+	flags.IntVar(&pageSize, flagPageSize, 0, "page size")
 }

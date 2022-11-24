@@ -12,6 +12,7 @@ SPDX-License-Identifier: Apache-2.0
 package query
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
@@ -30,6 +31,7 @@ func newQueryContractOnChainCMD() *cobra.Command {
 	}
 
 	cmd.AddCommand(newQueryContractByNameOnChainCMD())
+	cmd.AddCommand(newQueryContractByteCodeCMD())
 	cmd.AddCommand(newQueryContractListOnChainCMD())
 	cmd.AddCommand(newQueryDisableNativeContractListOnChainCMD())
 
@@ -67,6 +69,44 @@ func newQueryContractByNameOnChainCMD() *cobra.Command {
 				return err
 			}
 			fmt.Println(string(output))
+			return nil
+		},
+	}
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
+	util.AttachFlags(cmd, flags, []string{
+		flagEnableCertHash,
+	})
+	return cmd
+}
+
+func newQueryContractByteCodeCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "code [contract name]",
+		Short: "query on-chain contract code by contract name",
+		Long:  "query on-chain contract code by contract name",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			// 1.Chain Client
+			cc, err := sdk.NewChainClient(
+				sdk.WithConfPath(sdkConfPath),
+			)
+			if err != nil {
+				return err
+			}
+			defer cc.Stop()
+			if err := util.DealChainClientCertHash(cc, enableCertHash); err != nil {
+				return err
+			}
+
+			// 2.Query contract bytecode on-chain
+			code, err := cc.GetContractByteCode(args[0])
+			if err != nil {
+				return err
+			}
+
+			fmt.Println(hex.EncodeToString(code))
 			return nil
 		},
 	}
