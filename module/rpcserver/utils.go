@@ -11,9 +11,10 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-
 	cmx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
+	"chainmaker.org/chainmaker/localconf/v2"
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -142,4 +143,14 @@ func checkMemberStatusIsRevoked(accessControls []protocol.AccessControlProvider,
 	}
 
 	return false, nil
+}
+
+func shouldValidateTx(tx *commonPb.Transaction) bool {
+	if localconf.ChainMakerConfig.RpcConfig.DisableVerifyQuerySignature {
+		// validate none-TxType_QUERY_CONTRACT & none-SYSTEM_CHAIN tx
+		return tx.Payload.ChainId != SYSTEM_CHAIN && tx.Payload.TxType != commonPb.TxType_QUERY_CONTRACT
+	} else {
+		// validate none-SYSTEM_CHAIN tx
+		return tx.Payload.ChainId != SYSTEM_CHAIN
+	}
 }

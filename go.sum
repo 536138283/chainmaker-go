@@ -44,8 +44,9 @@ chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220601092821-2162b2905ed5/go.m
 chainmaker.org/chainmaker/localconf/v2 v2.2.2-0.20220607115425-03689a750027/go.mod h1:wiflrrd8MwwM2UzIKi+xVr30YgwJP0Ddp6A+zH49AzU=
 chainmaker.org/chainmaker/localconf/v2 v2.3.0/go.mod h1:FsrIi0ts5Ba9MmRhg+j+dLAB9oGyVTQsPgjSA39Ql+k=
 chainmaker.org/chainmaker/localconf/v2 v2.3.1-0.20220906151025-5b25ff1f9cd9/go.mod h1:fE2/pD7JOLLZQ2yuq0m7KqjDEz7+ccjR26BwLEbdAlI=
-chainmaker.org/chainmaker/localconf/v2 v2.3.1-0.20220930132913-96e38fc556a3 h1:HSx/YDrYR/zGuQdYdETzLZ6FBtG9ABnMYoz9y0zNcc4=
 chainmaker.org/chainmaker/localconf/v2 v2.3.1-0.20220930132913-96e38fc556a3/go.mod h1:fE2/pD7JOLLZQ2yuq0m7KqjDEz7+ccjR26BwLEbdAlI=
+chainmaker.org/chainmaker/localconf/v2 v2.3.1-0.20221124125624-c8d3758642c7 h1:byeJC/mwE0mAk1qBb1qLZOyXDl7BJh/1wKYdx+PonIk=
+chainmaker.org/chainmaker/localconf/v2 v2.3.1-0.20221124125624-c8d3758642c7/go.mod h1:fE2/pD7JOLLZQ2yuq0m7KqjDEz7+ccjR26BwLEbdAlI=
 chainmaker.org/chainmaker/logger/v2 v2.2.1/go.mod h1:S3pJIY3aOVTyNC2//EIgT+nGF9mfB71R2E1b5NYp+VQ=
 chainmaker.org/chainmaker/logger/v2 v2.2.2-0.20220601091955-6c66ad476f3a/go.mod h1:NKHb0tOqmUBzXgBMhi0+bL+1l4jToLtdhABWlbnjq/U=
 chainmaker.org/chainmaker/logger/v2 v2.3.0/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=

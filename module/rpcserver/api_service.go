@@ -199,7 +199,7 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		resp    = &commonPb.TxResponse{}
 	)
 
-	if tx.Payload.ChainId != SYSTEM_CHAIN {
+	if shouldValidateTx(tx) {
 		errCode, errMsg = s.validate(tx)
 		if errCode != commonErr.ERR_CODE_OK {
 			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -208,10 +208,10 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 			return resp
 		}
 	}
-	if tx.Payload.TxType.IsBlockTx() {
-		return s.dealTransact(tx, source)
-	}
+
 	switch tx.Payload.TxType {
+	case commonPb.TxType_INVOKE_CONTRACT, commonPb.TxType_ETH_TX:
+		return s.dealTransact(tx, source)
 	case commonPb.TxType_QUERY_CONTRACT:
 		return s.dealQuery(tx, source)
 	case commonPb.TxType_ARCHIVE:
