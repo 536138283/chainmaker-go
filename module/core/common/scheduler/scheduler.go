@@ -753,6 +753,8 @@ func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, 
 			result.ContractResult = runChargeGasContract
 			return result, errors.New(runChargeGasContract.Message)
 		}
+	} else {
+		ts.log.Debugf("%s:%s no need to charge gas.", contractName, method)
 	}
 	return result, nil
 }
@@ -878,11 +880,16 @@ func (ts *TxScheduler) checkGasEnable() bool {
 }
 
 func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
+	ts.log.Debugf("checkNativeFilter => contractName = %s, method = %s", contractName, method)
 	if !utils.IsNativeContract(contractName) {
 		return true
 	}
 	if method == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
 		method == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
+		return true
+	}
+	// add by Cai.Zhihong for 3 phrase multi-sign
+	if method == syscontract.MultiSignFunction_TRIG.String() {
 		return true
 	}
 	return false
