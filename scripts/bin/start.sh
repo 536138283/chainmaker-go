@@ -99,6 +99,7 @@ function start_vm_go() {
 
   protocol=$chainmaker_vm_go_protocol
   vm_go_log_level=$chainmaker_vm_go_log_level
+  runtime_server_host=$chainmaker_vm_go_runtime_server_host
   runtime_server_port=$chainmaker_vm_go_runtime_server_port
   contract_engine_port=$chainmaker_vm_go_contract_engine_port
   rpc_timeout=$chainmaker_vm_go_dial_timeout
@@ -140,6 +141,7 @@ function start_vm_go() {
       -v "$mount_path":/mount \
       -v "$log_path":/log \
       -e CHAIN_RPC_PROTOCOL="1" \
+      -e CHAIN_HOST="$runtime_server_host" \
       -e CHAIN_RPC_PORT="$contract_engine_port" \
       -e SANDBOX_RPC_PORT="$runtime_server_port" \
       -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
