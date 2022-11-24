@@ -2160,7 +2160,7 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
 			}
-			if got := ts.checkNativeFilter(tt.args.contractName, tt.args.method); got != tt.want {
+			if got := ts.checkNativeFilter(tt.args.contractName, tt.args.method, nil, nil); got != tt.want {
 				t.Errorf("checkNativeFilter() = %v, want %v", got, tt.want)
 			}
 		})
