@@ -109,21 +109,6 @@ func TestBlockchain_startConsensus(t *testing.T) {
 				chainId: "chain1",
 				consensus: func() protocol.ConsensusEngine {
 					consensus := newMockConsensusEngine(t)
-					consensus.EXPECT().Start().Return(errors.New("test error")).AnyTimes()
-					return consensus
-				}(),
-				initModules:  nil,
-				startModules: nil,
-			},
-			wantErr: true,
-		},
-		{
-			name: "test2",
-			fields: fields{
-				log:     log,
-				chainId: "chain1",
-				consensus: func() protocol.ConsensusEngine {
-					consensus := newMockConsensusEngine(t)
 					consensus.EXPECT().Start().AnyTimes()
 					return consensus
 				}(),

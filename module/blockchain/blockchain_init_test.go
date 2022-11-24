@@ -18,9 +18,11 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 )
 
@@ -1016,7 +1018,6 @@ func TestBlockchain_initChainConf(t *testing.T) {
 		log             *logger.CMLogger
 		genesis         string
 		chainId         string
-		msgBus          msgbus.MessageBus
 		net             protocol.Net
 		netService      protocol.NetService
 		store           protocol.BlockchainStore
@@ -1040,8 +1041,8 @@ func TestBlockchain_initChainConf(t *testing.T) {
 	}
 
 	var (
-		ctrl      = gomock.NewController(t)
-		chainConf = mock.NewMockChainConf(ctrl)
+		ctrl = gomock.NewController(t)
+		//chainConf = mock.NewMockChainConf(ctrl)
 		//log = mock.NewMockLogger(ctrl)
 		//ac        = mock.NewMockAccessControlProvider(ctrl)
 		//syncService = mock.NewMockSyncService(ctrl)
@@ -1058,6 +1059,31 @@ func TestBlockchain_initChainConf(t *testing.T) {
 		//msgBus          = msgbusMock.NewMockMessageBus(ctrl)
 	)
 
+	chainConfigMock := &configpb.ChainConfig{
+		Block: &configpb.BlockConfig{
+			TxParameterSize: 1000,
+		},
+		ChainId: "chain1",
+		Consensus: &configpb.ConsensusConfig{
+			Type: consensus.ConsensusType_DPOS,
+		},
+		Core: &configpb.CoreConfig{
+			ConsensusTurboConfig: &configpb.ConsensusTurboConfig{
+				ConsensusMessageTurbo: false,
+			},
+		},
+		AuthType: protocol.Identity,
+		Contract: nil,
+	}
+
+	chainConfigCase1 := func() protocol.ChainConf {
+		ctrl = gomock.NewController(t)
+		chainConf := mock.NewMockChainConf(ctrl)
+		chainConfig = chainConfigMock
+		chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+		return chainConf
+	}()
+
 	tests := []struct {
 		name    string
 		fields  fields
@@ -1073,44 +1099,18 @@ func TestBlockchain_initChainConf(t *testing.T) {
 					block := createNewBlock(uint64(1), int64(1), "chain1")
 					blockChainStore.EXPECT().GetDbTransaction(gomock.Any()).AnyTimes().Return(nil, errors.New("blockChainStore GetDbTransaction test err msg"))
 					blockChainStore.EXPECT().GetLastBlock().AnyTimes().Return(block, errors.New("blockChainStore err test"))
-					blockChainStore.EXPECT().ReadObject(gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
+					chainConfigRes := chainConfigMock
+					chainConfigBytes, _ := proto.Marshal(chainConfigRes)
+					blockChainStore.EXPECT().ReadObject(syscontract.SystemContract_CHAIN_CONFIG.String(), []byte(syscontract.SystemContract_CHAIN_CONFIG.String())).AnyTimes().Return(chainConfigBytes, nil)
+					blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfigRes, nil).AnyTimes()
 					return blockChainStore
 				}(),
-				chainConf: chainConf,
+				chainConf: chainConfigCase1,
+				initModules: map[string]struct{}{
+					moduleNameChainConf: {},
+				},
 			},
-			wantErr: true,
-		},
-		{
-			name: "test1",
-			fields: fields{
-				log:        log,
-				genesis:    "",
-				chainId:    "chain1",
-				msgBus:     newMockMessageBus(t),
-				net:        nil,
-				netService: nil,
-				store: func() protocol.BlockchainStore {
-					blockChainStore := mock.NewMockBlockchainStore(ctrl)
-					block := createNewBlock(uint64(1), int64(1), "chain1")
-					blockChainStore.EXPECT().GetDbTransaction(gomock.Any()).AnyTimes().Return(nil, errors.New("blockChainStore GetDbTransaction test err msg"))
-					blockChainStore.EXPECT().GetLastBlock().AnyTimes().Return(block, errors.New("blockChainStore err test"))
-					blockChainStore.EXPECT().ReadObject(gomock.Any(), gomock.Any()).AnyTimes().Return(nil, nil)
-					return blockChainStore
-				}(),
-				chainConf: func() protocol.ChainConf {
-					ctrl := gomock.NewController(t)
-					chainConf := mock.NewMockChainConf(ctrl)
-					chainConfig = &configpb.ChainConfig{
-						AuthType: protocol.Identity,
-						Consensus: &configpb.ConsensusConfig{
-							Type: consensus.ConsensusType_DPOS,
-						},
-					}
-					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
-					return chainConf
-				}(),
-			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 
@@ -1120,7 +1120,6 @@ func TestBlockchain_initChainConf(t *testing.T) {
 				log:             tt.fields.log,
 				genesis:         tt.fields.genesis,
 				chainId:         tt.fields.chainId,
-				msgBus:          tt.fields.msgBus,
 				net:             tt.fields.net,
 				netService:      tt.fields.netService,
 				store:           tt.fields.store,
