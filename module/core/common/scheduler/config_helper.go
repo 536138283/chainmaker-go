@@ -1,9 +1,10 @@
 package scheduler
 
 import (
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"fmt"
 	"strconv"
+
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
