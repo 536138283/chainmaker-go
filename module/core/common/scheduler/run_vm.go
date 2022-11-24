@@ -33,7 +33,11 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
-	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
+	txNeedChargeGas := ts.checkNativeFilter(
+		tx.Payload.ContractName,
+		tx.Payload.Method,
+		tx,
+		txSimContext.GetBlockchainStore())
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
@@ -195,7 +199,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method) {
+		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetBlockchainStore()) {
 			return result, specialTxType, err
 		}
 
@@ -301,7 +305,7 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method) {
+		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetBlockchainStore()) {
 			return result, specialTxType, err
 		}
 

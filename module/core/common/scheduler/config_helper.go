@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"fmt"
 	"strconv"
 
@@ -84,4 +85,16 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	}
 
 	return nil
+}
+
+func getMultiSignEnableManualRun(chainConfig *configPb.ChainConfig) bool {
+	if chainConfig.Vm == nil {
+		return false
+	} else if chainConfig.Vm.Native == nil {
+		return false
+	} else if chainConfig.Vm.Native.Multisign == nil {
+		return false
+	}
+
+	return chainConfig.Vm.Native.Multisign.EnableManualRun
 }
