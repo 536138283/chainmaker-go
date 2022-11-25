@@ -86,8 +86,6 @@ func getChainInfoCMD() *cobra.Command {
 		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-
 	return cmd
 }
 
@@ -109,7 +107,6 @@ func getBlockByHeightCMD() *cobra.Command {
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagBlockHeight)
 	cmd.MarkFlagRequired(flagWithRWSet)
 
@@ -134,7 +131,6 @@ func getTxByTxIdCMD() *cobra.Command {
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTxId)
 
 	return cmd

@@ -59,7 +59,6 @@ func addTrustRootCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTrustRootOrgId)
 	cmd.MarkFlagRequired(flagTrustRootCrtPath)
 
@@ -84,7 +83,6 @@ func removeTrustRootCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTrustRootOrgId)
 
 	return cmd
@@ -108,7 +106,6 @@ func updateTrustRootCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTrustRootOrgId)
 	cmd.MarkFlagRequired(flagTrustRootCrtPath)
 

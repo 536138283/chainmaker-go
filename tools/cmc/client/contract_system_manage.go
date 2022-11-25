@@ -47,7 +47,6 @@ func contractAccessGrantCMD() *cobra.Command {
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagGrantContractList, flagAdminOrgIds,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagGrantContractList)
 
 	return cmd
@@ -72,7 +71,6 @@ func contractAccessRevokeCMD() *cobra.Command {
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagRevokeContractList, flagAdminOrgIds,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagRevokeContractList)
 
 	return cmd
@@ -95,8 +93,6 @@ func contractAccessQueryCMD() *cobra.Command {
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
 
 	return cmd
 }

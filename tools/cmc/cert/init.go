@@ -10,6 +10,7 @@ package cert
 import (
 	"fmt"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -74,6 +75,10 @@ func init() {
 	flags.StringVar(&nodePkPath, flagNodePkPath, "", "specify node cert path")
 	flags.StringVar(&pubkeyOrCertPath, flagCertOrPubkeyPath, "", "specify user pubkey path or cert path")
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk_conf path")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {

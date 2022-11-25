@@ -271,6 +271,10 @@ func init() {
 		flagMultiSignEnableManualRun,
 		false,
 		"enable or disable manual run feature of multi-sign")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {
@@ -301,8 +305,6 @@ func getChainMakerServerVersionCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
 
 	return cmd
 }

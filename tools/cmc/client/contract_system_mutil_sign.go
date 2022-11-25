@@ -59,7 +59,6 @@ func multiSignReqCMD() *cobra.Command {
 		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagSyncResult,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagParams)
 
 	return cmd
@@ -84,7 +83,6 @@ func multiSignVoteCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult, flagAdminOrgIds,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTxId)
 
 	return cmd
@@ -108,7 +106,6 @@ func multiSignQueryCMD() *cobra.Command {
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTxId)
 
 	return cmd
@@ -133,7 +130,6 @@ func multiSignTrigCMD() *cobra.Command {
 		flagGasLimit,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTxId)
 
 	return cmd

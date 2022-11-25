@@ -45,7 +45,6 @@ func updateBlockIntervalCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagBlockInterval,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagBlockInterval)
 
 	return cmd
@@ -114,7 +113,6 @@ func updateTxParameterSizeCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagTxParameterSize,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTxParameterSize)
 
 	return cmd

@@ -53,8 +53,6 @@ func queryChainConfigCMD() *cobra.Command {
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-
 	return cmd
 }
 

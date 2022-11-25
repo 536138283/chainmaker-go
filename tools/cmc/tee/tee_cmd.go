@@ -14,6 +14,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
@@ -66,6 +67,10 @@ func NewTeeCMD() *cobra.Command {
 
 	teeCmd.AddCommand(uploadCaCertCmd())
 	teeCmd.AddCommand(uploadReportCmd())
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 
 	return teeCmd
 }
