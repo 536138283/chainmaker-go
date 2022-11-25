@@ -75,11 +75,8 @@ func newQueryBlockByHeightOnChainCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
-	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagSdkConfPath, flagEnableCertHash, flagChainId,
 	})
 	return cmd
 }
@@ -135,11 +132,8 @@ func newQueryBlockByHashOnChainCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
-	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagSdkConfPath, flagEnableCertHash, flagChainId,
 	})
 	return cmd
 }
@@ -195,11 +189,8 @@ func newQueryBlockByTxIdOnChainCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
-	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagSdkConfPath, flagEnableCertHash, flagChainId,
 	})
 	return cmd
 }

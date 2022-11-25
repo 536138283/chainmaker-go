@@ -120,11 +120,7 @@ func updateCertByAliasCMD() *cobra.Command {
 	util.AttachFlags(cmd, flags, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagOrgId, flagChainId, flagSyncResult,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
-		flagEnableCertHash,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagEnableCertHash, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -200,11 +196,7 @@ func deleteCertAliasCMD() *cobra.Command {
 	util.AttachFlags(cmd, flags, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagOrgId, flagChainId, flagSyncResult,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
-		flagEnableCertHash,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagEnableCertHash, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -245,7 +237,7 @@ func queryCertAliasCMD() *cobra.Command {
 	pFlags := cmd.PersistentFlags()
 	pFlags.StringVar(&certAlias, flagCertAlias, "", "cert alias")
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
+	util.AttachFlags(cmd, flags, []string{
 		flagSdkConfPath,
 	})
 	return cmd

@@ -80,7 +80,6 @@ func createUserContractCMD() *cobra.Command {
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
@@ -106,7 +105,6 @@ func invokeUserContractCMD() *cobra.Command {
 		flagGasLimit, flagTxId,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagMethod)
 
@@ -128,7 +126,6 @@ func invokeContractTimesCMD() *cobra.Command {
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagMethod)
 
@@ -151,7 +148,6 @@ func getUserContractCMD() *cobra.Command {
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagMethod)
 
@@ -175,7 +171,6 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
@@ -200,7 +195,6 @@ func freezeUserContractCMD() *cobra.Command {
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
@@ -222,7 +216,6 @@ func unfreezeUserContractCMD() *cobra.Command {
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
@@ -244,7 +237,6 @@ func revokeUserContractCMD() *cobra.Command {
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd

@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package tee
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"fmt"
 	"strings"
 
@@ -64,6 +65,10 @@ func NewTeeCMD() *cobra.Command {
 
 	teeCmd.AddCommand(uploadCaCertCmd())
 	teeCmd.AddCommand(uploadReportCmd())
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 
 	return teeCmd
 }

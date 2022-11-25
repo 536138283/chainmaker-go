@@ -40,8 +40,6 @@ func checkNewBlockchainsCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId, flagChainId, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-
 	return cmd
 }
 

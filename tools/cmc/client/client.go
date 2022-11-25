@@ -50,6 +50,7 @@ var (
 	userSignKeyFilePath string
 	userSignCrtFilePath string
 
+	txTimeout       uint32
 	blockInterval   uint32
 	txParameterSize uint32
 	nodeOrgId       string
@@ -83,6 +84,8 @@ var (
 	permissionResourcePolicyRule     string
 	permissionResourcePolicyOrgList  []string
 	permissionResourcePolicyRoleList []string
+
+	multiSignEnableManualRun bool
 )
 
 const (
@@ -113,6 +116,7 @@ const (
 	flagUserSignKeyFilePath              = "user-signkey-file-path"
 	flagUserSignCrtFilePath              = "user-signcrt-file-path"
 	flagTimeout                          = "timeout"
+	flagTxTimeout                        = "tx-timeout"
 	flagBlockInterval                    = "block-interval"
 	flagTxParameterSize                  = "tx-parameter-size"
 	flagNodeOrgId                        = "node-org-id"
@@ -141,6 +145,7 @@ const (
 	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
+	flagMultiSignEnableManualRun         = "multi-sign-enable-manual-run"
 )
 
 func ClientCMD() *cobra.Command {
@@ -210,6 +215,7 @@ func init() {
 	flags.StringVar(&userSignCrtFilePath, flagUserSignCrtFilePath, "", "specify user sign cert file path to sign tx")
 
 	// 链配置
+	flags.Uint32Var(&txTimeout, flagTxTimeout, 600, "transaction timeout in second, default 600s")
 	flags.Uint32Var(&blockInterval, flagBlockInterval, 2000, "block interval timeout in milliseconds, default 2000ms")
 	flags.Uint32Var(&txParameterSize, flagTxParameterSize, 10, "tx parameter size, default 10MB")
 	flags.StringVar(&nodeOrgId, flagNodeOrgId, "", "specify node org id")
@@ -250,6 +256,16 @@ func init() {
 		"chain config permission resource policy org list")
 	flags.StringSliceVar(&permissionResourcePolicyRoleList, flagPermissionResourcePolicyRoleList, []string{},
 		"chain config permission resource policy role list")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
+
+	// multi-sign enable manual_run
+	flags.BoolVar(&multiSignEnableManualRun,
+		flagMultiSignEnableManualRun,
+		false,
+		"enable or disable manual run feature of multi-sign")
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {
@@ -278,8 +294,6 @@ func getChainMakerServerVersionCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
 
 	return cmd
 }

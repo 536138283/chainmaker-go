@@ -98,11 +98,7 @@ func newSetGasAdminCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAdminKeyFilePaths, flagSyncResult,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAdminKeyFilePaths, flagSyncResult, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -140,7 +136,7 @@ func newGetGasAdminCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
+	util.AttachFlags(cmd, flags, []string{
 		flagSdkConfPath,
 	})
 	return cmd
@@ -190,11 +186,10 @@ func newRechargeGasCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSdkConfPath, flagSyncResult,
 	})
-
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress, flagAmount,
+		flagAddress, flagAmount,
 	})
 	return cmd
 }
@@ -244,11 +239,7 @@ func newGetGasBalanceCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAddress,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagSdkConfPath, flagAddress,
 	})
 	return cmd
 }
@@ -291,11 +282,10 @@ func newRefundGasCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSdkConfPath, flagSyncResult,
 	})
-
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress, flagAmount,
+		flagAddress, flagAmount,
 	})
 	return cmd
 }
@@ -338,11 +328,10 @@ func newFrozenGasAccountCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSdkConfPath, flagSyncResult,
 	})
-
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress,
+		flagAddress,
 	})
 	return cmd
 }
@@ -385,11 +374,10 @@ func newUnfrozenGasAccountCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSdkConfPath, flagSyncResult,
 	})
-
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress,
+		flagAddress,
 	})
 	return cmd
 }
@@ -439,11 +427,7 @@ func newGetGasAccountStatusCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAddress,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagSdkConfPath, flagAddress,
 	})
 	return cmd
 }

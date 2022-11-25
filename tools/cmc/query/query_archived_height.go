@@ -25,11 +25,8 @@ func newQueryArchivedHeightOnChainCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId,
-	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagSdkConfPath, flagEnableCertHash, flagChainId,
 	})
 	return cmd
 }

@@ -5,6 +5,7 @@
 package gas
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -57,4 +58,8 @@ func init() {
 	flags.StringVar(&adminKeyFilePaths, flagAdminKeyFilePaths, "", "specify admin key file paths, use ',' to separate")
 	flags.StringVar(&address, flagAddress, "", "address of account")
 	flags.Int64Var(&amount, flagAmount, 0, "amount of gas")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }

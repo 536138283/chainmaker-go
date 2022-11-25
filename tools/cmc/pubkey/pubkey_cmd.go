@@ -71,12 +71,16 @@ func NewPubkeyCMD() *cobra.Command {
 	pkCmd.PersistentFlags().StringVar(&adminOrgIds, flagAdminOrgIds, "",
 		"specify admin org-ids, use ',' to separate")
 
-	pkCmd.MarkPersistentFlagRequired(flagSdkConfPath)
-	pkCmd.MarkPersistentFlagRequired(flagChainId)
+	//pkCmd.MarkPersistentFlagRequired(flagSdkConfPath)
+	//pkCmd.MarkPersistentFlagRequired(flagChainId)
 
 	pkCmd.AddCommand(AddPKCmd())
 	pkCmd.AddCommand(DelPKCmd())
 	pkCmd.AddCommand(QueryPKCmd())
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 
 	return pkCmd
 }

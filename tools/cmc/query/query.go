@@ -6,6 +6,7 @@
 package query
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -49,4 +50,8 @@ func init() {
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }

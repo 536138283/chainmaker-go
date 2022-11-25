@@ -103,8 +103,11 @@ func enableOrDisableGasCMD() *cobra.Command {
 		flagAdminKeyFilePaths, flagSyncResult,
 	})
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagGasEnable,
+		flagGasEnable,
 	})
 	return cmd
 }

@@ -26,10 +26,132 @@ func updateBlockConfigCMD() *cobra.Command {
 		Short: "update block command",
 		Long:  "update block command",
 	}
+	cmd.AddCommand(updateTxTimeoutCMD())
 	cmd.AddCommand(updateBlockIntervalCMD())
 	cmd.AddCommand(updateTxParameterSizeCMD())
 
 	return cmd
+}
+
+func updateTxTimeoutCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "updatetxtimeout",
+		Short: "update tx timeout",
+		Long:  "update tx timeout",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return updateTxTimeout()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagChainId,
+		flagSdkConfPath, flagOrgId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagTxTimeout,
+	})
+
+	cmd.MarkFlagRequired(flagTxTimeout)
+
+	return cmd
+}
+
+func updateTxTimeout() error {
+	var adminKeys []string
+	var adminCrts []string
+	var adminOrgs []string
+
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return err
+	}
+	defer client.Stop()
+
+	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminCrtFilePaths != "" {
+			adminCrts = strings.Split(adminCrtFilePaths, ",")
+		}
+		if len(adminKeys) != len(adminCrts) {
+			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
+		}
+	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminOrgIds != "" {
+			adminOrgs = strings.Split(adminOrgIds, ",")
+		}
+		if len(adminKeys) != len(adminOrgs) {
+			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+		}
+	} else {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+	}
+	chainConfig, err := client.GetChainConfig()
+	if err != nil {
+		return fmt.Errorf("get chain config failed, %s", err.Error())
+	}
+	txTimestampVerify := chainConfig.Block.TxTimestampVerify
+	blockTxCap := chainConfig.Block.BlockTxCapacity
+	blockSize := chainConfig.Block.BlockSize
+	blockInterval = chainConfig.Block.BlockInterval
+	txParameterSize = chainConfig.Block.TxParameterSize
+
+	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, txTimeout, blockTxCap,
+		blockSize, blockInterval, txParameterSize)
+	if err != nil {
+		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
+	}
+
+	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
+	for i := range adminKeys {
+		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+			if err != nil {
+				return err
+			}
+
+			endorsementEntrys[i] = e
+		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+			e, err := sdkutils.MakePkEndorserWithPath(
+				adminKeys[i],
+				crypto.HashAlgoMap[client.GetHashType()],
+				adminOrgs[i],
+				payload,
+			)
+			if err != nil {
+				return err
+			}
+
+			endorsementEntrys[i] = e
+		} else {
+			e, err := sdkutils.MakePkEndorserWithPath(
+				adminKeys[i],
+				crypto.HashAlgoMap[client.GetHashType()],
+				"",
+				payload,
+			)
+			if err != nil {
+				return err
+			}
+
+			endorsementEntrys[i] = e
+		}
+	}
+
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	if err != nil {
+		return fmt.Errorf("send chain config update request failed, %s", err.Error())
+	}
+	err = util.CheckProposalRequestResp(resp, false)
+	if err != nil {
+		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
+	}
+	fmt.Printf("response %+v\n", resp)
+	return nil
 }
 
 func updateBlockIntervalCMD() *cobra.Command {
@@ -47,7 +169,6 @@ func updateBlockIntervalCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagBlockInterval,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagBlockInterval)
 
 	return cmd
@@ -169,7 +290,6 @@ func updateTxParameterSizeCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagTxParameterSize,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTxParameterSize)
 
 	return cmd
