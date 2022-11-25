@@ -148,7 +148,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				enableSenderGroup,
 				senderGroup,
 				enableConflictsBitWindow,
-				conflictsBitWindow)
+				conflictsBitWindow,
+				snapshot.GetBlockchainStore())
 		}
 		ts.log.Infof("end Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
 	}()
@@ -728,7 +729,7 @@ func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
 	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
 	result *commonPb.Result) (re *commonPb.Result, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
+	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method, tx, txSimContext.GetBlockchainStore()) &&
 		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		var code commonPb.TxStatusCode
 		var runChargeGasContract *commonPb.ContractResult
@@ -805,7 +806,7 @@ func (ts *TxScheduler) checkRefundGas(accountMangerContract *commonPb.Contract, 
 func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
 	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
 	result *commonPb.Result, contractResultPayload *commonPb.ContractResult) (re *commonPb.Result, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
+	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method, tx, txSimContext.GetBlockchainStore()) &&
 		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		var code commonPb.TxStatusCode
 		var refundGasContract *commonPb.ContractResult
@@ -851,7 +852,7 @@ func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *c
 
 func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction,
 	contractName, method string) (accountMangerContract *commonPb.Contract, pk []byte, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
+	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method, tx, txSimContext.GetBlockchainStore()) &&
 		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		ts.log.Debugf("getAccountMgrContractAndPk => txSimContext.GetContractByName(`%s`)",
 			syscontract.SystemContract_ACCOUNT_MANAGER.String())
@@ -879,7 +880,8 @@ func (ts *TxScheduler) checkGasEnable() bool {
 	return false
 }
 
-func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
+func (ts *TxScheduler) checkNativeFilter(contractName, method string,
+	tx *commonPb.Transaction, blockchainStore protocol.BlockchainStore) bool {
 	ts.log.Debugf("checkNativeFilter => contractName = %s, method = %s", contractName, method)
 	if !utils.IsNativeContract(contractName) {
 		return true
@@ -889,9 +891,49 @@ func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
 		return true
 	}
 	// add by Cai.Zhihong for 3 phrase multi-sign
-	if method == syscontract.MultiSignFunction_TRIG.String() {
-		return true
+	if contractName == syscontract.SystemContract_MULTI_SIGN.String() &&
+		method == syscontract.MultiSignFunction_TRIG.String() {
+		if getMultiSignEnableManualRun(ts.chainConf.ChainConfig()) {
+
+			var multiSignReqId []byte
+			for _, kvpair := range tx.Payload.Parameters {
+				if kvpair.Key == syscontract.MultiVote_TX_ID.String() {
+					multiSignReqId = kvpair.Value
+				}
+			}
+			multiSignInfoBytes, err := blockchainStore.ReadObject(contractName, multiSignReqId)
+			if err != nil {
+				ts.log.Errorf("read multi-sign failed, multiSignReqId = %v, err = %v", multiSignReqId, err)
+				return true
+			}
+
+			multiSignInfo := &syscontract.MultiSignInfo{}
+			err = proto.Unmarshal(multiSignInfoBytes, multiSignInfo)
+			if err != nil {
+				ts.log.Errorf("unmarshal MultiSignInfo failed, multiSignReqId = %v, err = %v", multiSignReqId, err)
+				return true
+			}
+
+			var calleeContractName string
+			var calleeMethod string
+			for _, kvpair := range multiSignInfo.Payload.Parameters {
+				if kvpair.Key == syscontract.MultiReq_SYS_CONTRACT_NAME.String() {
+					calleeContractName = string(kvpair.Value)
+				}
+				if kvpair.Key == syscontract.MultiReq_SYS_METHOD.String() {
+					calleeMethod = string(kvpair.Value)
+				}
+			}
+			if calleeContractName == syscontract.SystemContract_CONTRACT_MANAGE.String() {
+				if calleeMethod == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
+					calleeMethod == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
+					ts.log.Debugf("need charging gas, multiSignReqId = %v", multiSignReqId)
+					return true
+				}
+			}
+		}
 	}
+	ts.log.Debugf("need not charging gas")
 	return false
 }
 
@@ -951,10 +993,11 @@ func (ts *TxScheduler) dispatchTxs(
 	enableSenderGroup bool,
 	senderGroup *SenderGroup,
 	enableConflictsBitWindow bool,
-	conflictsBitWindow *ConflictsBitWindow) {
+	conflictsBitWindow *ConflictsBitWindow,
+	blockchainStore protocol.BlockchainStore) {
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before `SenderCollection` dispatch => ")
-		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC)
+		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC, blockchainStore)
 		ts.log.Debugf("end `SenderCollection` dispatch => ")
 
 	} else if enableSenderGroup {
@@ -978,7 +1021,9 @@ func (ts *TxScheduler) dispatchTxs(
 // dispatchTxsInSenderCollection dispatch txs from senderCollection to runningTxC chan
 // if the balance less than gas limit, set the result of tx and dispatch this tx.
 func (ts *TxScheduler) dispatchTxsInSenderCollection(
-	senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
+	senderCollection *SenderCollection,
+	runningTxC chan *commonPb.Transaction,
+	blockchainStore protocol.BlockchainStore) {
 	ts.log.Debugf("begin dispatchTxsInSenderCollection(...)")
 	for addr, txCollection := range senderCollection.txsMap {
 		ts.log.Debugf("%v => {balance: %v, tx size: %v}",
@@ -991,7 +1036,10 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			ts.log.Debugf("dispatch sender collection tx => %s", tx.Payload)
 			var gasLimit int64
 			limit := tx.Payload.Limit
-			txNeedChargeGas := ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method)
+			txNeedChargeGas := ts.checkNativeFilter(
+				tx.GetPayload().ContractName,
+				tx.GetPayload().Method,
+				tx, blockchainStore)
 			ts.log.Debugf("tx need charge gas => %v", txNeedChargeGas)
 			if limit == nil && txNeedChargeGas {
 				// tx需要扣费，但是limit没有设置
