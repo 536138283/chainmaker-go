@@ -100,7 +100,6 @@ func createUserContractCMD() *cobra.Command {
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
@@ -133,10 +132,7 @@ func invokeUserContractCMD() *cobra.Command {
 		flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagGasLimit, flagTxId, flagContractAddress, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
-	})
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -159,10 +155,7 @@ func invokeContractTimesCMD() *cobra.Command {
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagContractAddress, flagGasLimit, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
-	})
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -186,7 +179,6 @@ func getUserContractCMD() *cobra.Command {
 		flagRespResultToString,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagMethod)
 
 	return cmd
@@ -223,7 +215,6 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit, flagAbiFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
 	cmd.MarkFlagRequired(flagRuntimeType)
@@ -258,8 +249,6 @@ func freezeUserContractCMD() *cobra.Command {
 		flagContractAddress,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-
 	return cmd
 }
 
@@ -290,8 +279,6 @@ func unfreezeUserContractCMD() *cobra.Command {
 		flagContractAddress,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-
 	return cmd
 }
 
@@ -321,8 +308,6 @@ func revokeUserContractCMD() *cobra.Command {
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 		flagContractAddress,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
 
 	return cmd
 }

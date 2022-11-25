@@ -75,11 +75,7 @@ func newSetGasAdminCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -114,7 +110,7 @@ func newGetGasAdminCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
+	util.AttachFlags(cmd, flags, []string{
 		flagSdkConfPath,
 	})
 	return cmd
@@ -161,11 +157,11 @@ func newRechargeGasCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSyncResult, flagSdkConfPath,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress, flagAmount,
+		flagAddress, flagAmount,
 	})
 	return cmd
 }
@@ -208,11 +204,7 @@ func newGetGasBalanceCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAddress,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAddress, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -252,11 +244,11 @@ func newRefundGasCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSyncResult, flagSdkConfPath,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress, flagAmount,
+		flagAddress, flagAmount,
 	})
 	return cmd
 }
@@ -296,11 +288,11 @@ func newFrozenGasAccountCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSyncResult, flagSdkConfPath,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress,
+		flagAddress,
 	})
 	return cmd
 }
@@ -340,11 +332,11 @@ func newUnfrozenGasAccountCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagSyncResult,
+		flagSyncResult, flagSdkConfPath,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddress,
+		flagAddress,
 	})
 	return cmd
 }
@@ -387,11 +379,7 @@ func newGetGasAccountStatusCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAddress,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAddress, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -468,11 +456,11 @@ func newSetInvokeBaseGasCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult, flagSdkConfPath,
 	})
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAmount,
+		flagAmount,
 	})
 	return cmd
 }

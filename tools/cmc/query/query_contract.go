@@ -70,11 +70,8 @@ func newQueryContractByNameOnChainCMD() *cobra.Command {
 			return nil
 		},
 	}
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
-	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagEnableCertHash, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -112,11 +109,8 @@ func newQueryContractListOnChainCMD() *cobra.Command {
 			return nil
 		},
 	}
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
-	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagEnableCertHash, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -156,11 +150,8 @@ func newQueryDisableNativeContractListOnChainCMD() *cobra.Command {
 			return nil
 		},
 	}
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
-	})
 	util.AttachFlags(cmd, flags, []string{
-		flagEnableCertHash,
+		flagEnableCertHash, flagSdkConfPath,
 	})
 	return cmd
 }
