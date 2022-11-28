@@ -219,8 +219,8 @@ rpc:
   max_recv_msg_size: 100
 
   # RPC server disable verify query signature.
-  # set true, the rpcserver will not verify the signature of the query tx.
-  # default is false, the rpcserver will do verify the signature of the query tx.
+  # set true, the rpcserver will not verify the signature of the TxType_QUERY_CONTRACT tx.
+  # default is false, the rpcserver will do verify the signature of the TxType_QUERY_CONTRACT tx.
   disable_verify_query_signature: false
 
 tx_filter:
