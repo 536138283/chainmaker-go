@@ -14,7 +14,14 @@ import (
 	"regexp"
 	"runtime"
 	"strconv"
+	"sync"
 	"testing"
+
+	"chainmaker.org/chainmaker/logger/v2"
+
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+
+	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
 
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
@@ -238,10 +245,10 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	blockChainStore.EXPECT().GetContractByName(contractId.Name).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
-	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
@@ -328,6 +335,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	// simulate calling GetContractByName(...) 3 times
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(contractId.Name)).Return(contractId, nil).AnyTimes()
@@ -416,13 +424,13 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	// simulate calling GetContractByName(...) 3 times
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(contractId.Name)).Return(contractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(sysContractId.Name)).Return(sysContractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
-	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
@@ -1305,6 +1313,7 @@ func TestTxScheduler_parseParameter(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			got, err := ts.parseParameter2220(tt.args.parameterPairs, false)
 			if (err != nil) != tt.wantErr {
@@ -1411,6 +1420,7 @@ func TestTxScheduler_dumpDAG(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			ts.dumpDAG(tt.args.dag, tt.args.txs)
 		})
@@ -1493,6 +1503,7 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					return txSimContext
 				}(),
 				result: &commonPb.Result{
@@ -1536,6 +1547,7 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					return txSimContext
 				}(),
 				result: &commonPb.Result{
@@ -1594,6 +1606,7 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					return txSimContext
 				}(),
 				result: &commonPb.Result{
@@ -1622,6 +1635,7 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			gotRe, err := ts.chargeGasLimit(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result)
 			if (err != nil) != tt.wantErr {
@@ -1703,6 +1717,7 @@ func TestTxScheduler_refundGas(t *testing.T) {
 				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					return txSimContext
 				}(),
 				result: &commonPb.Result{
@@ -1750,6 +1765,7 @@ func TestTxScheduler_refundGas(t *testing.T) {
 				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					return txSimContext
 				}(),
 				result: &commonPb.Result{
@@ -1798,6 +1814,7 @@ func TestTxScheduler_refundGas(t *testing.T) {
 				pk: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					return txSimContext
 				}(),
 				result: &commonPb.Result{
@@ -1825,6 +1842,7 @@ func TestTxScheduler_refundGas(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			gotRe, err := ts.refundGas(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result, tt.args.contractResultPayload)
 			if (err != nil) != tt.wantErr {
@@ -1895,7 +1913,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				},
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
 						OrgId:      "org1",
 						MemberType: acPb.MemberType_CERT,
@@ -1951,6 +1969,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				},
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).Return(nil, errors.New("txSimContext GetContractByName data is nil"))
 					return txSimContext
 				}(),
@@ -1988,6 +2007,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				},
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
 					txSimContext.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
 					txSimContext.EXPECT().GetSender().AnyTimes()
 					return txSimContext
@@ -2012,6 +2032,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			gotAccountMangerContract, gotPk, err := ts.getAccountMgrContractAndPk(tt.args.txSimContext, tt.args.tx, tt.args.contractName, tt.args.method)
 			if (err != nil) != tt.wantErr {
@@ -2093,6 +2114,7 @@ func TestTxScheduler_checkGasEnable(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			if got := ts.checkGasEnable(); got != tt.want {
 				t.Errorf("checkGasEnable() = %v, want %v", got, tt.want)
@@ -2122,8 +2144,10 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 		want   bool
 	}{
 		{
-			name:   "test0",
-			fields: fields{},
+			name: "test0",
+			fields: fields{
+				log: logger.GetLogger("unit-test"),
+			},
 			args: args{
 				contractName: syscontract.InitContract_CONTRACT_NAME.String(),
 				method:       syscontract.InitContract_CONTRACT_VERSION.String(),
@@ -2131,8 +2155,10 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 			want: true,
 		},
 		{
-			name:   "test1",
-			fields: fields{},
+			name: "test1",
+			fields: fields{
+				log: logger.GetLogger("unit-test"),
+			},
 			args: args{
 				contractName: syscontract.SystemContract_CHAIN_QUERY.String(),
 				method:       syscontract.ChainQueryFunction_GET_BLOCK_BY_HASH.String(),
@@ -2150,8 +2176,9 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
-			if got := ts.checkNativeFilter(tt.args.contractName, tt.args.method); got != tt.want {
+			if got := ts.checkNativeFilter(tt.args.contractName, tt.args.method, nil, nil); got != tt.want {
 				t.Errorf("checkNativeFilter() = %v, want %v", got, tt.want)
 			}
 		})
@@ -2358,6 +2385,7 @@ func TestTxScheduler_getSenderPk(t *testing.T) {
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
+				contractCache:   &sync.Map{},
 			}
 			got, err := ts.getSenderPk(tt.args.txSimContext)
 			if (err != nil) != tt.wantErr {

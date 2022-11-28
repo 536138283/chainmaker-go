@@ -15,7 +15,7 @@ function checkEnv() {
       if [ "$?" != "0" ];then
         echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
       fi
-      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt'
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH'
       exit
     fi
   fi
@@ -44,7 +44,6 @@ CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/crypto_config_template.yml
 CRYPTOGEN_TOOL_TEST_KEYS=${CRYPTOGEN_TOOL_PATH}/config/test_keys.yml
 
-
 BC_YML_TRUST_ROOT_LINE=$(awk '/trust roots list start/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
 BC_YML_TRUST_ROOT_LINE_END=$(awk '/trust roots list end/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
 
@@ -53,7 +52,7 @@ function show_help() {
     echo "    prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4)"
     echo "               p2p_port(default:11301) rpc_port(default:12301)"
     echo "               vm_go_runtime_port(default:32351) vm_go_engine_port(default:22351)"
-    echo "               -c consense-type: 0-SOLO,1-TBFT,3-MAXBFT,4-RAFT "
+    echo "               -c consense-type: 1-TBFT,3-MAXBFT,4-RAFT "
     echo "               -l log-level: DEBUG,INFO,WARN,ERROR"
     echo "               -v docker-vm-enable: true,false"
     echo "                  --vtp  vm go transport protocol: tcp,uds"
@@ -331,8 +330,8 @@ function generate_config() {
                 xsed "/  seeds:/a\    - \"/ip4/127.0.0.1/tcp/$(($P2P_PORT+$k-1))/p2p/{org${k}_peerid}\"" node$i/chainmaker.yml
             done
         else
-            ver=$(sw_vers | grep ProductVersion | cut -d':' -f2 | tr -d ' ')
-            version=${ver:1:2}
+            ver=$(sw_vers | grep ProductVersion | cut -d':' -f2 | sed 's/\t//g')
+            version=${ver:0:2}
             if [ $version -ge 11 ]; then
                 for ((k = $NODE_CNT; k > 0; k = k - 1)); do
                 xsed  "/  seeds:/a\\

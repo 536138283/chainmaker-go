@@ -7,6 +7,7 @@
 package query
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -55,4 +56,8 @@ func init() {
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet")
 	flags.BoolVar(&truncateValue, flagTruncateValue, true, "enable truncate value, default true")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }

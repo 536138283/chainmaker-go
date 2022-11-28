@@ -425,6 +425,9 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
+	// add majority permission for multi sign enable/disable enable_manual_run mode
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
@@ -604,6 +607,9 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), policyConfig)
+	// add majority permission for multi sign enable/disable enable_manual_run mode
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 

@@ -221,7 +221,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
 			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds,
-				txsTimeout)
+				block.Txs)
 		} else {
 			// retry txs timeout in tx pool
 			bb.txPool.RetryTxs(txsTimeout)
@@ -696,7 +696,7 @@ func (vb *VerifierBlock) SetTxScheduler(txScheduler protocol.TxScheduler) {
 func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block, error) { //nolint: staticcheck
 	currentHeight, _ := vb.ledgerCache.CurrentHeight()
 	if currentHeight >= block.Header.BlockHeight {
-		return nil, commonErrors.ErrBlockHadBeenCommited
+		return nil, commonErrors.ErrBlockHadBeenCommitted
 	}
 
 	var lastBlock *commonPb.Block
@@ -1133,7 +1133,7 @@ func (chain *BlockCommitterImpl) isBlockLegal(blk *commonPb.Block) error {
 	}
 
 	if lastBlock.Header.BlockHeight >= blk.Header.BlockHeight {
-		return commonErrors.ErrBlockHadBeenCommited
+		return commonErrors.ErrBlockHadBeenCommitted
 	}
 	// block height verify
 	if blk.Header.BlockHeight != lastBlock.Header.BlockHeight+1 {
@@ -1166,7 +1166,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 			panic(fmt.Sprintf("cache add block fail, panic: %v", panicError))
 		}
 		if err != nil {
-			if err == commonErrors.ErrBlockHadBeenCommited {
+			if err == commonErrors.ErrBlockHadBeenCommitted {
 				chain.log.Warnf("cache add block fail, err: %v", err)
 				return
 			}
@@ -1185,7 +1185,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	height := block.Header.BlockHeight
 	if err = chain.isBlockLegal(block); err != nil {
-		if err == commonErrors.ErrBlockHadBeenCommited {
+		if err == commonErrors.ErrBlockHadBeenCommitted {
 			chain.log.Warnf("block illegal [%d](hash:%x), %s", height, block.Header.BlockHash, err)
 			return err
 		}

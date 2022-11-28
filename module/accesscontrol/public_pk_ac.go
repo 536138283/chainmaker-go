@@ -556,6 +556,10 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
 
+	// for multi-sign enable_manual_run
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), pubPolicyMajorityAdmin)
+
 	// for coinbase in optimize mode or tbft
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_COINBASE.String()+"-"+
 		syscontract.CoinbaseFunction_RUN_COINBASE.String(), policyConsensus)
@@ -651,6 +655,9 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyForbidden)
 
+	// multisign enable_manual_run
+	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), pubPolicyForbidden)
 	// disable multisign for public mode
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_MULTI_SIGN.String()+"-"+
 		syscontract.MultiSignFunction_REQ.String(), pubPolicyForbidden)

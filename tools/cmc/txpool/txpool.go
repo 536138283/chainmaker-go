@@ -53,6 +53,10 @@ func init() {
 	flags.Int32Var(&txStage, flagStage, 3, "tx stage, in queue stage:1, in pending stage:2, all stage:3")
 	flags.StringSliceVar(&txIds, flagTxIds, []string{}, "tx id list. --tx-ids=\"abc,xyz\"")
 	flags.StringVar(&txId, flagTxId, "", "tx id")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }
 
 // newGetPoolStatusCMD get tx pool status
@@ -79,7 +83,7 @@ func newGetPoolStatusCMD() *cobra.Command {
 		},
 	}
 
-	util.AttachAndRequiredFlags(cmd, flags, []string{
+	util.AttachFlags(cmd, flags, []string{
 		flagSdkConfPath,
 	})
 	return cmd
@@ -110,11 +114,7 @@ func newGetTxIdsByTypeAndStageCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagType, flagStage,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagType, flagStage, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -150,11 +150,7 @@ func newGetTxsInPoolByTxIdsCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagTxIds,
-	})
-
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagTxIds, flagSdkConfPath,
 	})
 	return cmd
 }

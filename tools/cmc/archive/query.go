@@ -114,8 +114,11 @@ func newQueryTxOffChainCMD() *cobra.Command {
 		},
 	}
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId, flagDbType, flagDbDest,
+		flagChainId, flagDbType, flagDbDest,
 	})
 	return cmd
 }
@@ -169,8 +172,11 @@ func newQueryBlockByHeightOffChainCMD() *cobra.Command {
 		},
 	}
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId, flagDbType, flagDbDest,
+		flagChainId, flagDbType, flagDbDest,
 	})
 	return cmd
 }
@@ -232,8 +238,11 @@ func newQueryBlockByHashOffChainCMD() *cobra.Command {
 		},
 	}
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId, flagDbType, flagDbDest,
+		flagChainId, flagDbType, flagDbDest,
 	})
 	return cmd
 }
@@ -295,8 +304,11 @@ func newQueryBlockByTxIdOffChainCMD() *cobra.Command {
 		},
 	}
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId, flagDbType, flagDbDest,
+		flagChainId, flagDbType, flagDbDest,
 	})
 	return cmd
 }
@@ -331,8 +343,11 @@ func newQueryArchivedHeightOffChainCMD() *cobra.Command {
 		},
 	}
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId, flagDbType, flagDbDest,
+		flagChainId, flagDbType, flagDbDest,
 	})
 	return cmd
 }

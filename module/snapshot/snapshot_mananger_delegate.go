@@ -58,6 +58,11 @@ func (m *ManagerDelegate) calcSnapshotFingerPrintWithoutTx(snapshot *SnapshotImp
 func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block) *SnapshotImpl {
 	// If the corresponding Snapshot does not exist, create one
 	txCount := len(block.Txs) // as map init size
+	lastChainConfig, err := m.blockchainStore.GetLastChainConfig()
+	if err != nil || lastChainConfig == nil {
+		m.log.Errorf("failed to get last chain config, %v", err)
+		return nil
+	}
 	snapshotImpl := &SnapshotImpl{
 		blockchainStore: m.blockchainStore,
 		sealed:          atomic.NewBool(false),
@@ -65,12 +70,13 @@ func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block) *SnapshotImpl 
 		log:             m.log,
 		txResultMap:     make(map[string]*commonPb.Result, txCount),
 
-		chainId:        block.Header.ChainId,
-		blockHeight:    block.Header.BlockHeight,
-		blockVersion:   block.Header.BlockVersion,
-		blockTimestamp: block.Header.BlockTimestamp,
-		blockProposer:  block.Header.Proposer,
-		preBlockHash:   block.Header.PreBlockHash,
+		chainId:         block.Header.ChainId,
+		blockHeight:     block.Header.BlockHeight,
+		blockVersion:    block.Header.BlockVersion,
+		blockTimestamp:  block.Header.BlockTimestamp,
+		blockProposer:   block.Header.Proposer,
+		preBlockHash:    block.Header.PreBlockHash,
+		lastChainConfig: lastChainConfig,
 
 		txTable:    nil,
 		readTable:  make(map[string]*sv, txCount),

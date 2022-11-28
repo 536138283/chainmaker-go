@@ -33,8 +33,11 @@ func alterAddrTypeCMD() *cobra.Command {
 		flagChainId, flagTimeout, flagSyncResult, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagAddressType,
+		flagAddressType,
 	})
 
 	return cmd

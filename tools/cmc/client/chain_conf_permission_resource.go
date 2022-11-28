@@ -57,8 +57,11 @@ func addPermissionResourceCMD() *cobra.Command {
 		flagPermissionResourcePolicyRule, flagPermissionResourcePolicyOrgList, flagPermissionResourcePolicyRoleList,
 	})
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagPermissionResourceName,
+		flagPermissionResourceName,
 	})
 
 	return cmd
@@ -82,8 +85,11 @@ func updatePermissionResourceCMD() *cobra.Command {
 		flagPermissionResourcePolicyRule, flagPermissionResourcePolicyOrgList, flagPermissionResourcePolicyRoleList,
 	})
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagPermissionResourceName,
+		flagPermissionResourceName,
 	})
 
 	return cmd
@@ -106,8 +112,11 @@ func deletePermissionResourceCMD() *cobra.Command {
 		flagChainId, flagTimeout, flagSyncResult, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 	})
 
+	util.AttachFlags(cmd, flags, []string{
+		flagSdkConfPath,
+	})
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagPermissionResourceName,
+		flagPermissionResourceName,
 	})
 
 	return cmd

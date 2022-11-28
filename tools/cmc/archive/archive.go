@@ -90,6 +90,10 @@ func init() {
 	flags.Uint64Var(&blocks, flagBlocks, 1000, "Number of blocks to be archived this time")
 	flags.StringVar(&secretKey, flagSecretKey, "", "Secret Key for calc Hmac")
 	flags.Uint64Var(&restoreStartBlockHeight, flagStartBlockHeight, 0, "Restore starting block height")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }
 
 // initDb Connecting database, migrate tables.

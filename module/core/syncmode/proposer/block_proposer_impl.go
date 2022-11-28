@@ -311,8 +311,6 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	startTick := utils.CurrentTimeMillisSeconds()
 	defer bp.yieldProposing()
 
-	bp.log.Debugf("syncmode::BlockProposerImpl::proposing() => tx_pool status = %#v, height:%d", bp.txPool, height)
-
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 	if selfProposedBlock != nil {
 		if needPropose := bp.dealProposalRequestWithProposalCache(height, selfProposedBlock, preHash); !needPropose {
@@ -380,7 +378,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		if common.TxPoolType != batch.TxPoolType {
 			bp.txPool.RetryTxs(txRetry)
 		} else {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, txRetry)
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
 			fetchBatch = getFetchBatch(fetchBatches)
 		}
 

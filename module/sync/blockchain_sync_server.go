@@ -493,7 +493,7 @@ func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) 
 	startTick := utils.CurrentTimeMillisSeconds()
 	sync.log.Debugf("VerifyBlock start, height is: %d ....", block.Header.BlockHeight)
 	if err := sync.blockVerifier.VerifyBlock(block, protocol.SYNC_VERIFY); err != nil {
-		if err == commonErrors.ErrBlockHadBeenCommited {
+		if err == commonErrors.ErrBlockHadBeenCommitted {
 			sync.log.Warnf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			return hasProcessed
 		}
@@ -503,7 +503,7 @@ func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) 
 	lastTime := utils.CurrentTimeMillisSeconds() - startTick
 	sync.log.Infof("block [%d] VerifyBlock spend %d", block.Header.BlockHeight, lastTime)
 	if err := sync.blockCommitter.AddBlock(block); err != nil {
-		if err == commonErrors.ErrBlockHadBeenCommited {
+		if err == commonErrors.ErrBlockHadBeenCommitted {
 			sync.log.Warnf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			return hasProcessed
 		}
@@ -528,7 +528,7 @@ func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *common
 	}
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err := sync.blockVerifier.VerifyBlockWithRwSets(block, rwsets, protocol.SYNC_VERIFY); err != nil {
-		if err == commonErrors.ErrBlockHadBeenCommited {
+		if err == commonErrors.ErrBlockHadBeenCommitted {
 			sync.log.Warnf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			return hasProcessed
 		}
@@ -541,7 +541,7 @@ func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *common
 	sync.log.Debugf("VerifyBlock end, height is: %d ....", block.Header.BlockHeight)
 	sync.log.Debugf("AddBlock start, height is: %d ....", block.Header.BlockHeight)
 	if err := sync.blockCommitter.AddBlock(block); err != nil {
-		if err == commonErrors.ErrBlockHadBeenCommited {
+		if err == commonErrors.ErrBlockHadBeenCommitted {
 			sync.log.Warnf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			return hasProcessed
 		}

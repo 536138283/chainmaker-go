@@ -47,6 +47,9 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+  native:
+      multisign:
+        enable_manual_run: true
 
 # Block proposing related settings
 block:
@@ -64,7 +67,8 @@ block:
   # Max block size, in MB
   block_size: 10
 
-  # The interval of block proposing attempts, in millisecond
+  # The interval of block proposing attempts, in millisecond.
+  # should be within the range of [10,10000]
   block_interval: 10
 
 # Core settings

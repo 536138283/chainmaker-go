@@ -58,7 +58,6 @@ func freezeCertCMD() *cobra.Command {
 		flagCertFilePaths, flagEnableCertHash,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 	cmd.MarkFlagRequired(flagCertFilePaths)
@@ -85,7 +84,6 @@ func unfreezeCertCMD() *cobra.Command {
 		flagCertFilePaths, flagEnableCertHash,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 	cmd.MarkFlagRequired(flagCertFilePaths)
@@ -112,7 +110,6 @@ func revokeCertCMD() *cobra.Command {
 		flagCertCrlPath, flagEnableCertHash,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 	cmd.MarkFlagRequired(flagCertCrlPath)

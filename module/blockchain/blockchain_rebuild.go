@@ -70,7 +70,7 @@ func (bc *Blockchain) RebuildDbs(needVerify bool) {
 		}
 
 		if err3 != nil {
-			if err3 == commonErrors.ErrBlockHadBeenCommited {
+			if err3 == commonErrors.ErrBlockHadBeenCommitted {
 				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			} else {
 				fmt.Printf("block[%d] verify success.", block.Header.BlockHeight)
@@ -83,7 +83,7 @@ func (bc *Blockchain) RebuildDbs(needVerify bool) {
 
 		//time.Sleep(500*time.Millisecond)
 		if err4 := bc.coreEngine.GetBlockCommitter().AddBlock(block); err4 != nil {
-			if err4 == commonErrors.ErrBlockHadBeenCommited {
+			if err4 == commonErrors.ErrBlockHadBeenCommitted {
 				bc.log.Errorf("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 			} else {
 				fmt.Printf("block[%d] rebuild success.", block.Header.BlockHeight)

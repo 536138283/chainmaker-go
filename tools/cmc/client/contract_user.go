@@ -74,6 +74,17 @@ func userContractCMD() *cobra.Command {
 
 // createUserContractCMD create user contract command
 // @return *cobra.Command
+// use as:
+//./cmc client contract user create \
+//--contract-name=fact \
+//--runtime-type=WASMER \
+//--byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
+//--version=1.0 \
+//--sdk-conf-path=./testdata/sdk_config.yml \
+//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+//--sync-result=true \
+//--params="{}"
 func createUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -91,7 +102,6 @@ func createUserContractCMD() *cobra.Command {
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagContractName)
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
@@ -102,6 +112,13 @@ func createUserContractCMD() *cobra.Command {
 
 // invokeUserContractCMD invoke user contract command
 // @return *cobra.Command
+// use as:
+// ./cmc client contract user invoke \
+// --contract-name=fact \
+// --method=save \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --params="{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" \
+// --sync-result=true
 func invokeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "invoke",
@@ -117,10 +134,7 @@ func invokeUserContractCMD() *cobra.Command {
 		flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagGasLimit, flagTxId, flagContractAddress, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
-	})
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -168,10 +182,7 @@ func invokeContractTimesCMD() *cobra.Command {
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagContractAddress, flagGasLimit, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
-	})
-	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
 	})
 	return cmd
 }
@@ -195,7 +206,6 @@ func getUserContractCMD() *cobra.Command {
 		flagRespResultToString,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagMethod)
 
 	return cmd
@@ -228,6 +238,18 @@ func getOutUserContractCMD() *cobra.Command {
 
 // upgradeUserContractCMD upgrade user contract command
 // @return *cobra.Command
+// use as:
+// ./cmc client contract user upgrade \
+//--contract-name=fact \
+//--runtime-type=WASMER \
+//--byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
+//--version=2.0 \
+//--sdk-conf-path=./testdata/sdk_config.yml \
+//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+//--org-id=wx-org1.chainmaker.org \
+//--sync-result=true \
+//--params="{}"
 func upgradeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade",
@@ -245,7 +267,6 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit, flagAbiFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagVersion)
 	cmd.MarkFlagRequired(flagByteCodePath)
 	cmd.MarkFlagRequired(flagRuntimeType)
@@ -255,6 +276,14 @@ func upgradeUserContractCMD() *cobra.Command {
 
 // freezeUserContractCMD freeze user contract command
 // @return *cobra.Command
+// use as:
+// ./cmc client contract user freeze \
+//--contract-name=fact \
+//--sdk-conf-path=./testdata/sdk_config.yml \
+//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+//--org-id=wx-org1.chainmaker.org \
+//--sync-result=true
 func freezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "freeze",
@@ -272,13 +301,19 @@ func freezeUserContractCMD() *cobra.Command {
 		flagContractAddress,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-
 	return cmd
 }
 
 // unfreezeUserContractCMD unfreeze user contract command
 // @return *cobra.Command
+// use as：
+//./cmc client contract user unfreeze \
+//--contract-name=fact \
+//--sdk-conf-path=./testdata/sdk_config.yml \
+//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+//--org-id=wx-org1.chainmaker.org \
+//--sync-result=true
 func unfreezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unfreeze",
@@ -296,13 +331,19 @@ func unfreezeUserContractCMD() *cobra.Command {
 		flagContractAddress,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
-
 	return cmd
 }
 
 // revokeUserContractCMD revoke user contract command
 // @return *cobra.Command
+// use as:
+// ./cmc client contract user revoke \
+//--contract-name=fact \
+//--sdk-conf-path=./testdata/sdk_config.yml \
+//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+//--org-id=wx-org1.chainmaker.org \
+//--sync-result=true
 func revokeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "revoke",
@@ -319,8 +360,6 @@ func revokeUserContractCMD() *cobra.Command {
 		flagSyncResult, flagEnableCertHash, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
 		flagContractAddress,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
 
 	return cmd
 }

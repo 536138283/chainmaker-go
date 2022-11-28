@@ -34,7 +34,11 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
-	txNeedChargeGas := ts.checkNativeFilter(tx.Payload.ContractName, tx.Payload.Method)
+	txNeedChargeGas := ts.checkNativeFilter(
+		tx.Payload.ContractName,
+		tx.Payload.Method,
+		tx,
+		txSimContext.GetBlockchainStore())
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
@@ -82,6 +86,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 				if !ok {
 					ts.log.Errorf("failed to transfer chainConfig from interface to struct")
 				}
+				//chainCfg := txSimContext.GetLastChainConfig()
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
@@ -141,6 +146,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		accountMangerContract *commonPb.Contract
 		contractResultPayload *commonPb.ContractResult
 		txStatusCode          commonPb.TxStatusCode
+		contract              *commonPb.Contract
 	)
 
 	ts.log.Debugf("runVM =>  for tx `%v`", tx.GetPayload().TxId)
@@ -173,6 +179,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	}
 
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
+
+	//if contract, err = ts.getContractFromCache(txSimContext, contractName); err != nil {
 	ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
 		return txSimContext.GetContractByName(contractName)
 	})
@@ -187,20 +195,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		return errResult(result, err)
 	}
 
-	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
-		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
-		contract.RuntimeType != commonPb.RuntimeType_GO {
-		byteCode, err = txSimContext.GetContractBytecode(contract.Name)
-		if err != nil {
-			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
-			return errResult(result, err)
-		}
-	} else {
-		ts.log.DebugDynamic(func() string {
-			contractData, _ := json.Marshal(contract)
-			return fmt.Sprintf("contract[%s] is a native contract, definition:%s",
-				contractName, string(contractData))
-		})
+	if byteCode, err = ts.getContractBytecode(txSimContext, contract); err != nil {
+		return errResult(result, err)
 	}
 
 	if ts.checkGasEnable() && !enableOptimizeChargeGas {
@@ -229,7 +225,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method) {
+		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetBlockchainStore()) {
 			return result, specialTxType, err
 		}
 
@@ -335,7 +331,7 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method) {
+		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetBlockchainStore()) {
 			return result, specialTxType, err
 		}
 
@@ -544,4 +540,62 @@ func (ts *TxScheduler) parseParameter2210(parameterPairs []*commonPb.KeyValuePai
 		parameters[key] = value
 	}
 	return parameters, nil
+}
+
+func (ts *TxScheduler) getContractFromCache(txSimContext protocol.TxSimContext,
+	contractName string) (*commonPb.Contract, error) {
+	var contract *commonPb.Contract
+	var err error
+	// if contract exists in cache, assign to contract
+	if ct, ok := ts.contractCache.Load(contractName); ok {
+		if contract, ok = ct.(*commonPb.Contract); !ok {
+			err = errors.New("failed to transfer contract from interface to struct")
+			ts.log.Error(err)
+			return nil, err
+		}
+	} else {
+		// contract not exists in cache, use single flight to get contract
+		ct, err, _ = sf.Do(contractName, func() (interface{}, error) {
+			var ctTmp *commonPb.Contract
+			ctTmp, err = txSimContext.GetContractByName(contractName)
+			if err != nil {
+				ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
+				return nil, err
+			}
+			// store to contract cache after get contract
+			ts.contractCache.Store(contractName, ctTmp)
+			return ctTmp, nil
+		})
+
+		if err != nil {
+			return nil, err
+		}
+
+		if contract, ok = ct.(*commonPb.Contract); !ok {
+			err = errors.New("failed to transfer contract from interface to struct")
+			ts.log.Error(err)
+			return nil, err
+		}
+	}
+	return contract, nil
+}
+
+func (ts *TxScheduler) getContractBytecode(txSimContext protocol.TxSimContext,
+	contract *commonPb.Contract) ([]byte, error) {
+	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
+		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
+		contract.RuntimeType != commonPb.RuntimeType_GO {
+		byteCode, err := txSimContext.GetContractBytecode(contract.Name)
+		if err != nil {
+			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
+			return nil, err
+		}
+		return byteCode, nil
+	}
+	ts.log.DebugDynamic(func() string {
+		contractData, _ := json.Marshal(contract)
+		return fmt.Sprintf("contract[%s] is a native contract, definition:%s",
+			contract.Name, string(contractData))
+	})
+	return nil, nil
 }

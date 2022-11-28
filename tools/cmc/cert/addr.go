@@ -72,7 +72,7 @@ func certToUserAddrInStake() *cobra.Command {
 		flagSdkConfPath,
 		flagCertOrPubkeyPath,
 	})
-	cmd.MarkFlagRequired(flagSdkConfPath)
+
 	cmd.MarkFlagRequired(flagCertOrPubkeyPath)
 	return cmd
 }
