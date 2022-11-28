@@ -180,20 +180,20 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 
 	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
 
-	//if contract, err = ts.getContractFromCache(txSimContext, contractName); err != nil {
-	ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
-		return txSimContext.GetContractByName(contractName)
-	})
-	if err != nil {
+	if contract, err = ts.getContractFromCache(txSimContext, contractName); err != nil {
+		//ct, err, _ := sf.Do(contractName, func() (interface{}, error) {
+		//	return txSimContext.GetContractByName(contractName)
+		//})
+		//if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 		return errResult(result, err)
 	}
-	contract, ok := ct.(*commonPb.Contract)
-	if !ok {
-		err = errors.New("failed to transfer contract from interface to struct")
-		ts.log.Error(err)
-		return errResult(result, err)
-	}
+	//contract, ok := ct.(*commonPb.Contract)
+	//if !ok {
+	//	err = errors.New("failed to transfer contract from interface to struct")
+	//	ts.log.Error(err)
+	//	return errResult(result, err)
+	//}
 
 	if byteCode, err = ts.getContractBytecode(txSimContext, contract); err != nil {
 		return errResult(result, err)

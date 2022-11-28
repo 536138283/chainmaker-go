@@ -7,6 +7,7 @@ const (
 )
 
 var (
+	//EnvSdkConfPath 环境变量中的配置文件路径
 	EnvSdkConfPath string
 )
 

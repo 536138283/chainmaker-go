@@ -17,15 +17,10 @@ import (
 	"sync"
 	"testing"
 
-	"chainmaker.org/chainmaker/logger/v2"
-
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-
-	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
-
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
