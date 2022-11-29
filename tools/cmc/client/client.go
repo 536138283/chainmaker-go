@@ -107,6 +107,8 @@ var (
 	slashingPerBlock     int
 	//distributionFromSlashing int // nolint: unused
 	gasExchangeRate int
+
+	multiSignEnableManualRun bool
 )
 
 const (
@@ -179,12 +181,13 @@ const (
 	flagGasExchangeRate = "gas-exchange-rate"
 	flagOutFilePath     = "out-file-path"
 
-	flagDbHost = "db-host"
-	flagDbUser = "db-user"
-	flagDbPass = "db-pass"
-	flagDbPort = "db-port"
-	flagDbName = "db-name"
-	flagSm4Key = "sm4_key"
+	flagDbHost                   = "db-host"
+	flagDbUser                   = "db-user"
+	flagDbPass                   = "db-pass"
+	flagDbPort                   = "db-port"
+	flagDbName                   = "db-name"
+	flagSm4Key                   = "sm4_key"
+	flagMultiSignEnableManualRun = "multi-sign-enable-manual-run"
 )
 
 // ClientCMD new client series command
@@ -322,6 +325,15 @@ func init() {
 	flags.IntVar(&slashingPerBlock, flagSlashingPerBlock, 100, "penalty amount for each less proposed block (default 100)")
 	flags.IntVar(&gasExchangeRate, flagGasExchangeRate, 1, "gas exchange rate")
 
+	// multi-sign enable manual_run
+	flags.BoolVar(&multiSignEnableManualRun,
+		flagMultiSignEnableManualRun,
+		false,
+		"enable or disable manual run feature of multi-sign")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {
@@ -352,8 +364,6 @@ func getChainMakerServerVersionCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
 
 	return cmd
 }

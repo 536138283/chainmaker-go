@@ -32,7 +32,7 @@ var snapshotEvidence = &SnapshotEvidence{
 func TestSetPreSnapshot(t *testing.T) {
 	t.Log("TestSetPreSnapshot")
 
-	snapshotList, _ := createNewBlockGroup()
+	snapshotList, _ := createNewBlockGroup(t)
 
 	for _, snapshot := range snapshotList {
 		snapshotEvidence.SetPreSnapshot(snapshot)
@@ -44,7 +44,7 @@ func TestGetPreSnapshot(t *testing.T) {
 	t.Log("TestGetPreSnapshot")
 	t.Logf("snapshotEvidence.GetPreSnapshot with no set %v", snapshotEvidence.GetPreSnapshot())
 
-	snapshotList, _ := createNewBlockGroup()
+	snapshotList, _ := createNewBlockGroup(t)
 
 	for _, snapshot := range snapshotList {
 		snapshotEvidence.SetPreSnapshot(snapshot)

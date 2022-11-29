@@ -54,7 +54,6 @@ func addTrustMemberCMD() *cobra.Command {
 		flagTrustMemberRole, flagTrustMemberNodeId, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 	cmd.MarkFlagRequired(flagTrustMemberOrgId)
@@ -81,7 +80,6 @@ func removeTrustMemberCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
 	cmd.MarkFlagRequired(flagAdminKeyFilePaths)
 	cmd.MarkFlagRequired(flagTrustMemberCrtPath)

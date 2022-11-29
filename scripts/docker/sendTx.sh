@@ -26,7 +26,8 @@ echo -e "\nsend transaction invoke contract..."
 --method=save \
 --sdk-conf-path=./testdata/sdk_config.yml \
 --params="{\"file_name\":\"name007\",\"file_hash\":\"ab3456df5799b87c77e7f88\",\"time\":\"6543234\"}" \
---sync-result=true
+--sync-result=true \
+--result-to-string=true
 
 
 echo -e "\nsend transaction query contract..."
@@ -34,4 +35,5 @@ echo -e "\nsend transaction query contract..."
 --contract-name=$contract_name \
 --method=find_by_file_hash \
 --sdk-conf-path=./testdata/sdk_config.yml \
---params="{\"file_hash\":\"ab3456df5799b87c77e7f88\"}"
+--params="{\"file_hash\":\"ab3456df5799b87c77e7f88\"}" \
+--result-to-string=true

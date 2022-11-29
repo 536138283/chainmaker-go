@@ -7,6 +7,7 @@
 package query
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -66,4 +67,8 @@ func init() {
 	flags.BoolVar(&truncateValue, flagTruncateValue, true, "enable truncate value, default true")
 	flags.IntVar(&pageIndex, flagPageIndex, 0, "page index")
 	flags.IntVar(&pageSize, flagPageSize, 0, "page size")
+
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }

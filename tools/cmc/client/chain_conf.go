@@ -32,7 +32,7 @@ func chainConfigCMD() *cobra.Command {
 	chainConfigCmd.AddCommand(alterAddrTypeCMD())
 	chainConfigCmd.AddCommand(permissionResourceCMD())
 	chainConfigCmd.AddCommand(configSwitchConsensusCMD())
-
+	chainConfigCmd.AddCommand(enableMultiSignManualRunCMD())
 	return chainConfigCmd
 }
 
@@ -53,8 +53,6 @@ func queryChainConfigCMD() *cobra.Command {
 		flagSdkConfPath, flagOrgId, flagEnableCertHash,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
-
-	cmd.MarkFlagRequired(flagSdkConfPath)
 
 	return cmd
 }

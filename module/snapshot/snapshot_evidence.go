@@ -11,12 +11,12 @@ import (
 	"errors"
 	"math"
 
-	"chainmaker.org/chainmaker/utils/v2"
-
 	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
 // SnapshotEvidence snapshot evidence
@@ -70,7 +70,15 @@ func (s *SnapshotEvidence) GetBlockchainStore() protocol.BlockchainStore {
 	return s.delegate.GetBlockchainStore()
 }
 
-// GetSnapshotSize get snapshot size
+// GetLastChainConfig returns last block chain config
+func (s *SnapshotEvidence) GetLastChainConfig() *config.ChainConfig {
+	if s.delegate == nil {
+		return nil
+	}
+	return s.delegate.GetLastChainConfig()
+}
+
+// GetSnapshotSize returns snapshot size
 func (s *SnapshotEvidence) GetSnapshotSize() int {
 	if s.delegate == nil {
 		return -1
@@ -78,7 +86,7 @@ func (s *SnapshotEvidence) GetSnapshotSize() int {
 	return s.delegate.GetSnapshotSize()
 }
 
-// GetTxTable get tx table
+// GetTxTable returns tx table
 func (s *SnapshotEvidence) GetTxTable() []*commonPb.Transaction {
 	if s.delegate == nil {
 		return nil

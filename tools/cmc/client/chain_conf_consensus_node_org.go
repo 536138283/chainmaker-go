@@ -57,7 +57,6 @@ func addConsensusNodeOrgCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagNodeOrgId)
 	cmd.MarkFlagRequired(flagNodeIds)
 
@@ -82,7 +81,6 @@ func removeConsensusNodeOrgCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagNodeOrgId)
 
 	return cmd
@@ -106,7 +104,6 @@ func updateConsensusNodeOrgCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagNodeOrgId)
 	cmd.MarkFlagRequired(flagNodeIds)
 

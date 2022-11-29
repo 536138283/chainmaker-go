@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package payload
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -60,6 +61,9 @@ func init() {
 	flags.StringVar(&sdkConfPath, "sdk-conf-path", "", "specify sdk config path")
 	flags.StringVar(&sdkConfPath, "out-file-path", "", "out file path")
 
+	if sdkConfPath == "" {
+		sdkConfPath = util.EnvSdkConfPath
+	}
 }
 
 func attachFlags(cmd *cobra.Command, names []string) {

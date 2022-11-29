@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"strconv"
 
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -75,4 +77,16 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	}
 
 	return nil
+}
+
+func getMultiSignEnableManualRun(chainConfig *configPb.ChainConfig) bool {
+	if chainConfig.Vm == nil {
+		return false
+	} else if chainConfig.Vm.Native == nil {
+		return false
+	} else if chainConfig.Vm.Native.Multisign == nil {
+		return false
+	}
+
+	return chainConfig.Vm.Native.Multisign.EnableManualRun
 }

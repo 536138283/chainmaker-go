@@ -37,6 +37,7 @@ func systemContractMultiSignCMD() *cobra.Command {
 	systemContractMultiSignCmd.AddCommand(multiSignReqCMD())
 	systemContractMultiSignCmd.AddCommand(multiSignVoteCMD())
 	systemContractMultiSignCmd.AddCommand(multiSignQueryCMD())
+	systemContractMultiSignCmd.AddCommand(multiSignTrigCMD())
 
 	return systemContractMultiSignCmd
 }
@@ -54,12 +55,11 @@ func multiSignReqCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagAdminKeyFilePaths, flagAdminCrtFilePaths,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
-		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash,
+		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagSyncResult,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagParams)
 
 	return cmd
@@ -84,7 +84,6 @@ func multiSignVoteCMD() *cobra.Command {
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult, flagAdminOrgIds,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
 	cmd.MarkFlagRequired(flagTxId)
 
 	return cmd
@@ -108,7 +107,30 @@ func multiSignQueryCMD() *cobra.Command {
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
 	})
 
-	cmd.MarkFlagRequired(flagSdkConfPath)
+	cmd.MarkFlagRequired(flagTxId)
+
+	return cmd
+}
+
+// multiSignTrigCMD multi sign trig
+// @return *cobra.Command
+func multiSignTrigCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "trig",
+		Short: "multi sign trig",
+		Long:  "multi sign trig",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return multiSignTrig()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
+		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId, flagSyncResult,
+		flagGasLimit,
+	})
+
 	cmd.MarkFlagRequired(flagTxId)
 
 	return cmd
@@ -157,7 +179,16 @@ func multiSignReq() error {
 	}
 	payload = client.CreateMultiSignReqPayload(pairs)
 
-	resp, err = client.MultiSignContractReq(payload)
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
+	}
+	endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
+
+	resp, err = client.MultiSignContractReq(payload, endorsers, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign req failed, %s", err.Error())
 	}
@@ -165,7 +196,7 @@ func multiSignReq() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("multi sign req resp: %s\n", string(output))
+	fmt.Println(string(output))
 	return nil
 }
 
@@ -183,7 +214,6 @@ func multiSignVote() error {
 		endorser  *common.EndorsementEntry
 		client    *sdk.ChainClient
 		resp      *common.TxResponse
-		tx        *common.TransactionInfo
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -227,11 +257,11 @@ func multiSignVote() error {
 		adminKey = adminKeys[0]
 	}
 
-	tx, err = client.GetTxByTxId(txId)
+	payload, err = getMultiSignReqInfo(client, txId)
 	if err != nil {
-		return fmt.Errorf("get tx by txid failed, %s", err.Error())
+		return err
 	}
-	payload = tx.Transaction.Payload
+
 	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
 		endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
 		if err != nil {
@@ -252,7 +282,7 @@ func multiSignVote() error {
 
 	}
 
-	resp, err = client.MultiSignContractVote(payload, endorser, isAgree)
+	resp, err = client.MultiSignContractVote(payload, endorser, isAgree, timeout, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}
@@ -260,7 +290,7 @@ func multiSignVote() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("multi sign vote resp: %s\n", string(output))
+	fmt.Println(string(output))
 
 	return nil
 }
@@ -284,6 +314,9 @@ func multiSignQuery() error {
 	if err != nil {
 		return fmt.Errorf("multi sign query failed, %s", err.Error())
 	}
+	if resp.ContractResult.Result == nil {
+		return fmt.Errorf("multi sign req does not exist, req id = %v", txId)
+	}
 
 	if resp.Code == 0 && resp.ContractResult.Code == 0 {
 		multiSignInfo := &syscontract.MultiSignInfo{}
@@ -295,7 +328,7 @@ func multiSignQuery() error {
 		if err != nil {
 			return err
 		}
-		fmt.Printf("multi sign query resp: %s\n", string(output))
+		fmt.Println(string(output))
 		return nil
 	}
 
@@ -303,6 +336,67 @@ func multiSignQuery() error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("multi sign query resp: %s\n", string(output))
+	fmt.Println(string(output))
 	return nil
+}
+
+func multiSignTrig() error {
+	var (
+		err    error
+		resp   *common.TxResponse
+		client *sdk.ChainClient
+		output []byte
+
+		payload *common.Payload
+		limit   *common.Limit
+	)
+
+	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return err
+	}
+	defer client.Stop()
+
+	payload, err = getMultiSignReqInfo(client, txId)
+	if err != nil {
+		return err
+	}
+
+	if gasLimit > 0 {
+		limit = &common.Limit{
+			GasLimit: gasLimit,
+		}
+	}
+
+	resp, err = client.MultiSignContractTrig(payload, timeout, limit, syncResult)
+	if err != nil {
+		return fmt.Errorf("multi sign trig failed, %s", err.Error())
+	}
+	output, err = prettyjson.Marshal(resp)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(output))
+
+	return nil
+}
+
+func getMultiSignReqInfo(client *sdk.ChainClient, txId string) (
+	*common.Payload, error) {
+	resp, err := client.MultiSignContractQuery(txId)
+	if err != nil {
+		return nil, fmt.Errorf("get tx by txid failed, %s", err.Error())
+	}
+	if resp.ContractResult.Result == nil {
+		return nil, fmt.Errorf("multi sign req does not exist, req id = %v", txId)
+	}
+	multiSignInfo := &syscontract.MultiSignInfo{}
+	proto.Unmarshal(resp.ContractResult.Result, multiSignInfo)
+	payload := multiSignInfo.Payload
+	if payload == nil {
+		return nil, fmt.Errorf("multi sign req info has not 'payload' field, req id = %v", txId)
+	}
+
+	return payload, nil
 }

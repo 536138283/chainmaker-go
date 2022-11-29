@@ -73,8 +73,9 @@ type TxScheduler struct {
 	// regexp
 	keyReg *regexp.Regexp
 	// signing member
-	signer      protocol.SigningMember
-	ledgerCache protocol.LedgerCache
+	signer        protocol.SigningMember
+	ledgerCache   protocol.LedgerCache
+	contractCache *sync.Map
 }
 
 // Transaction dependency in adjacency table representation
@@ -93,6 +94,9 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
+
+	defer ts.releaseContractCache()
+
 	var err error
 
 	if err = ts.checkTBFTLastBLock(block); err != nil {
@@ -100,7 +104,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	txBatchSize := len(txBatch)
-	ts.log.Infof("schedule tx batch start, block_number = %v, size = %d", block.Header.BlockHeight, txBatchSize)
+	ts.log.Infof("schedule tx batch start, block %d, size = %d", block.Header.BlockHeight, txBatchSize)
 
 	var goRoutinePool *ants.Pool
 	poolCapacity := ts.StoreHelper.GetPoolCapacity()
@@ -150,7 +154,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				enableSenderGroup,
 				senderGroup,
 				enableConflictsBitWindow,
-				conflictsBitWindow)
+				conflictsBitWindow,
+				snapshot.GetBlockchainStore())
 		}
 		ts.log.Infof("end Schedule(...) dispatch txs of block(%v)", block.Header.BlockHeight)
 	}()
@@ -227,8 +232,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	timeCostB := time.Since(startTime)
-	ts.log.Infof("schedule tx batch finished, success %d, txs execution cost %v, "+
-		"dag building cost %v, total used %v, tps %v", len(block.Dag.Vertexes), timeCostA,
+	ts.log.Infof("schedule tx batch finished, block %d, success %d, txs execution cost %v, "+
+		"dag building cost %v, total used %v, tps %v", block.Header.BlockHeight, len(block.Dag.Vertexes), timeCostA,
 		timeCostB-timeCostA, timeCostB, float64(len(block.Dag.Vertexes))/(float64(timeCostB)/1e9))
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
@@ -262,7 +267,9 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 
 	// If snapshot is sealed, no more transaction will be added into snapshot
 	if snapshot.IsSealed() {
-		ts.log.Debugf("handleTx(`%v`) snapshot has already sealed.", tx.GetPayload().TxId)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("handleTx(`%v`) snapshot has already sealed.", tx.GetPayload().TxId)
+		})
 		return
 	}
 	var start time.Time
@@ -275,13 +282,17 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	// 2) the result that telling if the invoke success.
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
 	tx.Result = txSimContext.GetTxResult()
-	ts.log.Debugf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
+	})
 
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
 		runVmSuccess, false)
-	ts.log.Debugf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
-		tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("handleTx(`%v`) => ApplyTxSimContext(...) => snapshot.txTable = %v, applySize = %v",
+			tx.GetPayload().TxId, len(snapshot.GetTxTable()), applySize)
+	})
 
 	// reduce the conflictsBitWindow size to eliminate the read/write set conflict
 	if !applyResult {
@@ -291,15 +302,19 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 
 		runningTxC <- tx
 
-		ts.log.Debugf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
-			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("apply to snapshot failed, tx id:%s, result:%+v, apply count:%d",
+				tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		})
 
 	} else {
 		ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
 			conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
 
-		ts.log.Debugf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
-			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
+				tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize)
+		})
 	}
 	// If all transactions have been successfully added to dag
 	if applySize >= txBatchSize {
@@ -371,9 +386,9 @@ func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSe
 
 // getTxRWSetTable get tx rw set table, return tx rw set map
 func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *commonPb.Block) map[string]*commonPb.TxRWSet {
-	txRWSetMap := make(map[string]*commonPb.TxRWSet)
 	block.Txs = snapshot.GetTxTable()
 	txRWSetTable := snapshot.GetTxRWSetTable()
+	txRWSetMap := make(map[string]*commonPb.TxRWSet, len(txRWSetTable))
 	for _, txRWSet := range txRWSetTable {
 		if txRWSet != nil {
 			txRWSetMap[txRWSet.TxId] = txRWSet
@@ -403,9 +418,11 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
 
+	defer ts.releaseContractCache()
+
 	var (
 		startTime  = time.Now()
-		txRWSetMap = make(map[string]*commonPb.TxRWSet)
+		txRWSetMap = make(map[string]*commonPb.TxRWSet, len(block.Txs))
 	)
 	if block.Header.BlockVersion >= blockVersion2300 && len(block.Txs) != len(block.Dag.Vertexes) {
 		ts.log.Warnf("found dag size mismatch txs length in "+
@@ -414,7 +431,9 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			"block[%x] dag:%d, txs:%d", block.Header.BlockHash, len(block.Dag.Vertexes), len(block.Txs))
 	}
 	if len(block.Txs) == 0 {
-		ts.log.Debugf("no txs in block[%x] when simulate", block.Header.BlockHash)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("no txs in block[%x] when simulate", block.Header.BlockHash)
+		})
 		return txRWSetMap, snapshot.GetTxResultMap(), nil
 	}
 	ts.log.Infof("simulate with dag start, size %d", len(block.Txs))
@@ -446,8 +465,10 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	}
 	defer goRoutinePool.Release()
 
-	ts.log.Debugf("block [%d] simulate with dag first batch size:%d, total batch size:%d",
-		block.Header.BlockHeight, len(txIndexBatch), txBatchSize)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("block [%d] simulate with dag first batch size:%d, total batch size:%d",
+			block.Header.BlockHeight, len(txIndexBatch), txBatchSize)
+	})
 
 	blockFingerPrint := string(utils.CalcBlockFingerPrintWithoutTx(block))
 	ts.VmManager.BeforeSchedule(blockFingerPrint, block.Header.BlockHeight)
@@ -493,8 +514,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	<-ts.scheduleFinishC
 	snapshot.Seal()
 	timeUsed := time.Since(startTime)
-	ts.log.Infof("simulate with dag finished, size %d, time used %v, tps %v", len(block.Txs),
-		timeUsed, float64(len(block.Txs))/(float64(timeUsed)/1e9))
+	ts.log.Infof("simulate with dag finished, block %d, size %d, time used %v, tps %v", block.Header.BlockHeight,
+		len(block.Txs), timeUsed, float64(len(block.Txs))/(float64(timeUsed)/1e9))
 
 	// Return the read and write set after the scheduled execution
 	for _, txRWSet := range snapshot.GetTxRWSetTable() {
@@ -502,7 +523,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			txRWSetMap[txRWSet.TxId] = txRWSet
 		}
 	}
-	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType)
+	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType, len(block.Txs))
 	// we only receive fixed number of elements from this channel since we process unreceived things
 	// and return error in later parts
 	length := len(txExecOrderTypeC)
@@ -570,17 +591,23 @@ func handleTxInSimulateWithDag(
 	// if apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
 	if !applyResult {
-		ts.log.Debugf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
+		})
 		// apply fails in verification, make it done rather than retry it
 		doneTxC <- txIndex
 	} else {
-		ts.log.Debugf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
-			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
+				tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
+		})
 		doneTxC <- txIndex
 	}
 	// If all transactions in current batch have been successfully added to dag
 	if applySize >= txBatchSize {
-		ts.log.Debugf("finished 1 batch, apply size:%d, tx batch size:%d", applySize, txBatchSize)
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("finished 1 batch, apply size:%d, tx batch size:%d", applySize, txBatchSize)
+		})
 		finishC <- true
 	}
 }
@@ -599,8 +626,12 @@ func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
-	ts.log.Debugf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
-	ts.log.Debugf("tx.Result = %v", tx.Result)
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
+	})
+	//ts.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("tx.Result = %v", tx.Result)
+	//})
 
 	enableGas := ts.checkGasEnable()
 	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
@@ -727,7 +758,7 @@ func (ts *TxScheduler) Halt() {
 	ts.scheduleFinishC <- true
 }
 
-//nolint: unused
+// nolint: unused
 func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 	dagString := "digraph DAG {\n"
 	for i, ns := range dag.Vertexes {
@@ -746,7 +777,7 @@ func (ts *TxScheduler) dumpDAG(dag *commonPb.DAG, txs []*commonPb.Transaction) {
 func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
 	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
 	result *commonPb.Result) (re *commonPb.Result, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
+	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method, tx, txSimContext.GetBlockchainStore()) &&
 		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		var code commonPb.TxStatusCode
 		var runChargeGasContract *commonPb.ContractResult
@@ -771,6 +802,8 @@ func (ts *TxScheduler) chargeGasLimit(accountMangerContract *commonPb.Contract, 
 			result.ContractResult = runChargeGasContract
 			return result, errors.New(runChargeGasContract.Message)
 		}
+	} else {
+		ts.log.Debugf("%s:%s no need to charge gas.", contractName, method)
 	}
 	return result, nil
 }
@@ -821,7 +854,7 @@ func (ts *TxScheduler) checkRefundGas(accountMangerContract *commonPb.Contract, 
 func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *commonPb.Transaction,
 	txSimContext protocol.TxSimContext, contractName, method string, pk []byte,
 	result *commonPb.Result, contractResultPayload *commonPb.ContractResult) (re *commonPb.Result, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
+	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method, tx, txSimContext.GetBlockchainStore()) &&
 		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		var code commonPb.TxStatusCode
 		var refundGasContract *commonPb.ContractResult
@@ -867,7 +900,7 @@ func (ts *TxScheduler) refundGas(accountMangerContract *commonPb.Contract, tx *c
 
 func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction,
 	contractName, method string) (accountMangerContract *commonPb.Contract, pk []byte, err error) {
-	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method) &&
+	if ts.checkGasEnable() && ts.checkNativeFilter(contractName, method, tx, txSimContext.GetBlockchainStore()) &&
 		tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
 		ts.log.Debugf("getAccountMgrContractAndPk => txSimContext.GetContractByName(`%s`)",
 			syscontract.SystemContract_ACCOUNT_MANAGER.String())
@@ -895,7 +928,9 @@ func (ts *TxScheduler) checkGasEnable() bool {
 	return false
 }
 
-func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
+func (ts *TxScheduler) checkNativeFilter(contractName, method string,
+	tx *commonPb.Transaction, blockchainStore protocol.BlockchainStore) bool {
+	ts.log.Debugf("checkNativeFilter => contractName = %s, method = %s", contractName, method)
 	if !utils.IsNativeContract(contractName) {
 		return true
 	}
@@ -903,6 +938,50 @@ func (ts *TxScheduler) checkNativeFilter(contractName, method string) bool {
 		method == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
 		return true
 	}
+	// add by Cai.Zhihong for 3 phrase multi-sign
+	if contractName == syscontract.SystemContract_MULTI_SIGN.String() &&
+		method == syscontract.MultiSignFunction_TRIG.String() {
+		if getMultiSignEnableManualRun(ts.chainConf.ChainConfig()) {
+
+			var multiSignReqId []byte
+			for _, kvpair := range tx.Payload.Parameters {
+				if kvpair.Key == syscontract.MultiVote_TX_ID.String() {
+					multiSignReqId = kvpair.Value
+				}
+			}
+			multiSignInfoBytes, err := blockchainStore.ReadObject(contractName, multiSignReqId)
+			if err != nil {
+				ts.log.Errorf("read multi-sign failed, multiSignReqId = %v, err = %v", multiSignReqId, err)
+				return true
+			}
+
+			multiSignInfo := &syscontract.MultiSignInfo{}
+			err = proto.Unmarshal(multiSignInfoBytes, multiSignInfo)
+			if err != nil {
+				ts.log.Errorf("unmarshal MultiSignInfo failed, multiSignReqId = %v, err = %v", multiSignReqId, err)
+				return true
+			}
+
+			var calleeContractName string
+			var calleeMethod string
+			for _, kvpair := range multiSignInfo.Payload.Parameters {
+				if kvpair.Key == syscontract.MultiReq_SYS_CONTRACT_NAME.String() {
+					calleeContractName = string(kvpair.Value)
+				}
+				if kvpair.Key == syscontract.MultiReq_SYS_METHOD.String() {
+					calleeMethod = string(kvpair.Value)
+				}
+			}
+			if calleeContractName == syscontract.SystemContract_CONTRACT_MANAGE.String() {
+				if calleeMethod == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
+					calleeMethod == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
+					ts.log.Debugf("need charging gas, multiSignReqId = %v", multiSignReqId)
+					return true
+				}
+			}
+		}
+	}
+	ts.log.Debugf("need not charging gas")
 	return false
 }
 
@@ -949,10 +1028,10 @@ func (ts *TxScheduler) getSenderPk(txSimContext protocol.TxSimContext) ([]byte, 
 }
 
 // dispatchTxs dispatch txs from:
-// 	1) senderCollection when flag `enableOptimizeChargeGas` was set
-// 	2) senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
-// 	3) txBatch directly where no flags was set
-// to runningTxC
+//  1. senderCollection when flag `enableOptimizeChargeGas` was set
+//  2. senderGroup when flag `enableOptimizeChargeGas` was not set, and flag `enableSenderGroup` was set
+//  3. txBatch directly where no flags was set
+//     to runningTxC
 func (ts *TxScheduler) dispatchTxs(
 	txBatch []*commonPb.Transaction,
 	runningTxC chan *commonPb.Transaction,
@@ -962,10 +1041,11 @@ func (ts *TxScheduler) dispatchTxs(
 	enableSenderGroup bool,
 	senderGroup *SenderGroup,
 	enableConflictsBitWindow bool,
-	conflictsBitWindow *ConflictsBitWindow) {
+	conflictsBitWindow *ConflictsBitWindow,
+	blockchainStore protocol.BlockchainStore) {
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before `SenderCollection` dispatch => ")
-		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC)
+		ts.dispatchTxsInSenderCollection(senderCollection, runningTxC, blockchainStore)
 		ts.log.Debugf("end `SenderCollection` dispatch => ")
 
 	} else if enableSenderGroup {
@@ -989,7 +1069,9 @@ func (ts *TxScheduler) dispatchTxs(
 // dispatchTxsInSenderCollection dispatch txs from senderCollection to runningTxC chan
 // if the balance less than gas limit, set the result of tx and dispatch this tx.
 func (ts *TxScheduler) dispatchTxsInSenderCollection(
-	senderCollection *SenderCollection, runningTxC chan *commonPb.Transaction) {
+	senderCollection *SenderCollection,
+	runningTxC chan *commonPb.Transaction,
+	blockchainStore protocol.BlockchainStore) {
 	ts.log.Debugf("begin dispatchTxsInSenderCollection(...)")
 	for addr, txCollection := range senderCollection.txsMap {
 		ts.log.Debugf("%v => {balance: %v, tx size: %v}",
@@ -1002,7 +1084,10 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			ts.log.Debugf("dispatch sender collection tx => %s", tx.Payload)
 			var gasLimit int64
 			limit := tx.Payload.Limit
-			txNeedChargeGas := ts.checkNativeFilter(tx.GetPayload().ContractName, tx.GetPayload().Method)
+			txNeedChargeGas := ts.checkNativeFilter(
+				tx.GetPayload().ContractName,
+				tx.GetPayload().Method,
+				tx, blockchainStore)
 			ts.log.Debugf("tx need charge gas => %v", txNeedChargeGas)
 			if limit == nil && txNeedChargeGas {
 				// tx需要扣费，但是limit没有设置
@@ -1699,6 +1784,13 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	timeUsed := time.Since(startTime)
 	ts.log.Infof("compare dag finished, time used %v", timeUsed)
 	return nil
+}
+
+func (ts *TxScheduler) releaseContractCache() {
+	ts.contractCache.Range(func(key interface{}, value interface{}) bool {
+		ts.contractCache.Delete(key)
+		return true
+	})
 }
 
 // appendSpecialTxsToDag similar to ts.simulateSpecialTxs except do not execute tx, only handle dag
