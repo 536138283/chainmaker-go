@@ -10,6 +10,8 @@ package blockchain
 import (
 	"encoding/hex"
 
+	"chainmaker.org/chainmaker/pb-go/v2/config"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"github.com/gogo/protobuf/proto"
 )
@@ -39,7 +41,7 @@ func (bc *Blockchain) OnQuit() {
 }
 
 func (bc *Blockchain) updateChainConfig(msg *msgbus.Message) {
-	cfg := bc.chainConf.ChainConfig()
+	cfg := &config.ChainConfig{}
 	dataStr, ok := msg.Payload.([]string)
 	if !ok {
 		return
@@ -54,4 +56,5 @@ func (bc *Blockchain) updateChainConfig(msg *msgbus.Message) {
 		bc.log.Error(err)
 		panic(err)
 	}
+	bc.chainConf.SetChainConfig(cfg)
 }
