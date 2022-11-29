@@ -1,8 +1,8 @@
 chainmaker.org/chainmaker/chainconf/v2 v2.3.0/go.mod h1:JXISUHzKPGMcRh59OupxMNj2pB9Xih/wao8GkxLntPw=
 chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20221020020859-b943be72733f/go.mod h1:MPPCo5NnrL8KSgKNnxBMRNmLT19lBRB0Ynxs9B09/pA=
 chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20221025033805-ffd0aa194a91/go.mod h1:e/UHrO/8wxIpAos1erfhp/23hYyVMAOvCN6RYFSVRhk=
-chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20221109030152-29b09937bc1f h1:a+OuMvxFm2q346ULySYIlY9/ttsp1cADvU8JaSWBucU=
-chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20221109030152-29b09937bc1f/go.mod h1:e/UHrO/8wxIpAos1erfhp/23hYyVMAOvCN6RYFSVRhk=
+chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20221129075111-5274d6c108a2 h1:qh7byeIHe97IyeKonMz26ItPFGC61f1T2PAeMO69/cU=
+chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20221129075111-5274d6c108a2/go.mod h1:gWBs0XjZdeWCNEp6NdsenZhYvKwCCfmYj00DRjLi+yI=
 chainmaker.org/chainmaker/common/v2 v2.3.0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/common/v2 v2.3.1-0.20221103080328-39ebe8c6722f h1:LohWle/o+uGAT/3hOhpEWduTdfUzzrVDKauxUFv34M8=
 chainmaker.org/chainmaker/common/v2 v2.3.1-0.20221103080328-39ebe8c6722f/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
@@ -48,8 +48,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.3.0/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4Y
 chainmaker.org/chainmaker/protocol/v2 v2.3.1/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
 chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221024093623-fc7569579a3f/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
 chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221101031048-3a0474008ce9/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
-chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221101070008-37c2e5712b67 h1:RINY+TjdZPRT08WsoKefDZr7RkeIVGyVJsyiH52cF1o=
-chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221101070008-37c2e5712b67/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
+chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221129070207-7b73ec9f5f5c h1:/y5GqG6ACTeBafGFVcYMzb6Jb6C67zMICFF4c+KZVHU=
+chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20221129070207-7b73ec9f5f5c/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0 h1:8TNEw1XtWBZkjqoNgcc9qoD/0xFkSb0SDXyzM2rQxjo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20221123100145-18e877261b23 h1:+mGlaIRTokw9oDYI4yQl1q7RsaZzEmBQow3XJ6sFyz8=
@@ -1588,6 +1588,7 @@ github.com/tendermint/tendermint v0.34.3 h1:9yEsf3WO5VAwPVwrmM+RffDMiijmNfWaBwNt
 github.com/tendermint/tendermint v0.34.3/go.mod h1:h57vnXeOlrdvvNFCqPBSaOrpOivl+2swWEtlUAqStYE=
 github.com/tendermint/tm-db v0.6.2/go.mod h1:GYtQ67SUvATOcoY8/+x6ylk8Qo02BQyLrAs+yAcLvGI=
 github.com/tendermint/tm-db v0.6.3/go.mod h1:lfA1dL9/Y/Y8wwyPp2NMLyn5P5Ptr/gvDFNWtrCWSf8=
+github.com/test-go/testify v1.1.4 h1:Tf9lntrKUMHiXQ07qBScBTSA0dhYQlu83hswqelv1iE=
 github.com/test-go/testify v1.1.4/go.mod h1:rH7cfJo/47vWGdi4GPj16x3/t1xGOj2YxzmNQzk2ghU=
 github.com/thoas/go-funk v0.7.0/go.mod h1:+IWnUfUmFO1+WVYQWQtIJHeRRdaIyyYglZN7xzUPe4Q=
 github.com/thoas/go-funk v0.9.1 h1:O549iLZqPpTUQ10ykd26sZhzD+rmR5pWhuElrhbC20M=
