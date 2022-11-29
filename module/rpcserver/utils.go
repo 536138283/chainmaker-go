@@ -149,8 +149,7 @@ func shouldValidateTx(tx *commonPb.Transaction) bool {
 	if localconf.ChainMakerConfig.RpcConfig.DisableVerifyQuerySignature {
 		// validate none-TxType_QUERY_CONTRACT & none-SYSTEM_CHAIN tx
 		return tx.Payload.ChainId != SYSTEM_CHAIN && tx.Payload.TxType != commonPb.TxType_QUERY_CONTRACT
-	} else {
-		// validate none-SYSTEM_CHAIN tx
-		return tx.Payload.ChainId != SYSTEM_CHAIN
 	}
+	// validate none-SYSTEM_CHAIN tx
+	return tx.Payload.ChainId != SYSTEM_CHAIN
 }
