@@ -83,7 +83,7 @@ require (
 replace (
 	//chainmaker.org/chainmaker/common/v2 => ../chainmaker/common
 	//chainmaker.org/chainmaker/pb-go/v2 => ../chainmaker/pb-go
-	//chainmaker.org/chainmaker/vm-native/v2 => ../chainmaker/vm-native
+	chainmaker.org/chainmaker/vm-native/v2 => ../chainmaker/vm-native
 	//chainmaker.org/chainmaker/vm/v2 => ../chainmaker/vm
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0

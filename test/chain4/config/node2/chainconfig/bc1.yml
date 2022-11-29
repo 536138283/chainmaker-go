@@ -186,3 +186,8 @@ trust_roots:
       - "../config/node2/admin/admin3/admin3.pem"
       - "../config/node2/admin/admin4/admin4.pem"
 
+eth_config:
+  enable: true
+  admin_address: "0x54244e76fcf5c91ef149c5e6bfd0ebcc257cca10"
+  enable_gas: true
+  enable_register: false
