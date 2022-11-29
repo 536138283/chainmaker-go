@@ -59,9 +59,11 @@ func (s *ApiService) Subscribe(req *commonPb.TxRequest, server apiPb.RpcNode_Sub
 		Endorsers: req.Endorsers,
 		Result:    nil}
 
-	errCode, errMsg = s.validate(tx)
-	if errCode != commonErr.ERR_CODE_OK {
-		return status.Error(codes.Unauthenticated, errMsg)
+	if shouldValidateTx(tx) {
+		errCode, errMsg = s.validate(tx)
+		if errCode != commonErr.ERR_CODE_OK {
+			return status.Error(codes.Unauthenticated, errMsg)
+		}
 	}
 
 	switch req.Payload.Method {

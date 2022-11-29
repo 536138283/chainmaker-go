@@ -146,10 +146,15 @@ func checkMemberStatusIsRevoked(accessControls []protocol.AccessControlProvider,
 }
 
 func shouldValidateTx(tx *commonPb.Transaction) bool {
-	if localconf.ChainMakerConfig.RpcConfig.DisableVerifyQuerySignature {
-		// validate none-TxType_QUERY_CONTRACT & none-SYSTEM_CHAIN tx
-		return tx.Payload.ChainId != SYSTEM_CHAIN && tx.Payload.TxType != commonPb.TxType_QUERY_CONTRACT
+	if tx.Payload.ChainId == SYSTEM_CHAIN {
+		return false
 	}
-	// validate none-SYSTEM_CHAIN tx
-	return tx.Payload.ChainId != SYSTEM_CHAIN
+
+	if localconf.ChainMakerConfig.RpcConfig.DisableVerifyQuerySignature {
+		// TxType_QUERY_CONTRACT, TxType_SUBSCRIBE no need validate
+		if tx.Payload.TxType == commonPb.TxType_QUERY_CONTRACT || tx.Payload.TxType == commonPb.TxType_SUBSCRIBE {
+			return false
+		}
+	}
+	return true
 }
