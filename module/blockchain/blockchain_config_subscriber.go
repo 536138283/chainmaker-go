@@ -56,5 +56,5 @@ func (bc *Blockchain) updateChainConfig(msg *msgbus.Message) {
 		bc.log.Error(err)
 		panic(err)
 	}
-	bc.chainConf.SetChainConfig(cfg)
+	_ = bc.chainConf.SetChainConfig(cfg)
 }
