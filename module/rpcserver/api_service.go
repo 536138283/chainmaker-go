@@ -24,6 +24,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2/archive"
@@ -224,6 +225,20 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		}
 	}
 }
+func isEstimateGasEthTx(tx *commonPb.Transaction) bool {
+	if tx.Payload.TxType.IsEthTxType() {
+		return true
+	}
+	_, err := ethbase.ParseAddress(tx.Payload.ContractName)
+	if err != nil {
+		return false
+	}
+	value := tx.Payload.GetParameter(commonPb.EthTxParameterKey_FROM.String())
+	if value != nil {
+		return true
+	}
+	return false
+}
 
 // dealQuery - deal query tx
 func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
@@ -281,8 +296,15 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	}
 
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
-
-	contract, err := store.GetContractByName(tx.Payload.ContractName)
+	contractName := tx.Payload.ContractName
+	method := tx.Payload.Method
+	//以太坊预估Gas
+	if isEstimateGasEthTx(tx) {
+		contractName = syscontract.SystemContract_ETHEREUM.String()
+		method = syscontract.EthereumFunction_Unpack.String()
+		tx.Payload.TxType = commonPb.TxType_ETH_TX
+	}
+	contract, err := store.GetContractByName(contractName)
 	if err != nil {
 		s.log.Error(err)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -304,15 +326,19 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 			return resp
 		}
 	}
-	txResult, _, txStatusCode := vmMgr.RunContract(contract, tx.Payload.Method,
+	txResult, _, txStatusCode := vmMgr.RunContract(contract, method,
 		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
 	s.log.DebugDynamic(func() string {
 		contractJson, _ := json.Marshal(contract)
 		return fmt.Sprintf("vmMgr.RunContract: txStatusCode:%d, resultCode:%d, contractName[%s](%s), "+
-			"method[%s], txType[%s], message[%s],result len: %d",
+			"method[%s], txType[%s], message[%s],result len: %d, gasUsed:%d",
 			txStatusCode, txResult.Code, tx.Payload.ContractName, string(contractJson), tx.Payload.Method,
-			tx.Payload.TxType, txResult.Message, len(txResult.Result))
+			tx.Payload.TxType, txResult.Message, len(txResult.Result), txResult.GasUsed)
 	})
+	if isEstimateGasEthTx(tx) && txResult.GasUsed < 21000 {
+		txResult.GasUsed = 21000
+		s.log.Infof("Tx[%s] EstimateGas result:%d, update to 21000", tx.Payload.TxId, txResult.GasUsed)
+	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
