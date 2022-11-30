@@ -372,11 +372,11 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(), pubPolicyForbidden)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), policyConfig)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
@@ -520,11 +520,11 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(), pubPolicyForbidden)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), policyConfig)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
