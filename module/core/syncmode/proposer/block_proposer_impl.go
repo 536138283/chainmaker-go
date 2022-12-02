@@ -661,18 +661,18 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 		}
 
 		blockFinger := utils.CalcBlockFingerPrint(selfProposedBlock)
-		timeNow, err := bp.getLastProposeTimeByBlockFinger(string(blockFinger))
+		lastProposeTime, err := bp.getLastProposeTimeByBlockFinger(string(blockFinger))
 
 		if err != nil {
 			bp.log.Errorf("proposer fail, get last propose time by hash err %s", err.Error())
 			return false
 		}
 
-		if timeNow == 0 {
+		if lastProposeTime == 0 {
 			return false
 		}
 
-		if utils.CurrentTimeMillisSeconds()-timeNow >= 1000 {
+		if utils.CurrentTimeMillisSeconds()-lastProposeTime >= 1000 {
 			// Repeat propose block if node has proposed before at the same height
 			bp.proposalCache.SetProposedAt(height)
 			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
