@@ -575,7 +575,6 @@ func (bp *BlockProposerImpl) getLastProposeTimeByBlockFinger(blockFinger string)
 
 	switch timeNow := timeValue.(type) {
 	case int64:
-		common.ProposeRepeatTimerMap.Store(blockFinger, utils.CurrentTimeMillisSeconds())
 		return timeNow, nil
 	default:
 		timeNow = utils.CurrentTimeMillisSeconds()
@@ -677,6 +676,7 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 			// Repeat propose block if node has proposed before at the same height
 			bp.proposalCache.SetProposedAt(height)
 			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
+			common.ProposeRepeatTimerMap.Store(blockFinger, utils.CurrentTimeMillisSeconds())
 
 			cutBlock := new(commonpb.Block)
 			if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
