@@ -1,7 +1,10 @@
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/vm-native/v2/accountmgr"
 	"fmt"
+	"strconv"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -108,4 +111,83 @@ func (s SenderCollection) Clear() {
 	for addr := range s.txsMap {
 		delete(s.txsMap, addr)
 	}
+}
+
+func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (int64, error) {
+	chainConfig := snapshot.GetLastChainConfig()
+	blockVersion := chainConfig.GetBlockVersion()
+	if blockVersion < blockVersion2310 {
+		return getAccountBalanceFromSnapshot2300(address, snapshot)
+	} else {
+		return getAccountBalanceFromSnapshot2310(address, snapshot)
+	}
+}
+
+func getAccountBalanceFromSnapshot2300(address string, snapshot protocol.Snapshot) (int64, error) {
+	var err error
+	var balance int64
+	balanceData, err := snapshot.GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		[]byte(accountmgr.AccountPrefix+address))
+	if err != nil {
+		return -1, err
+	}
+
+	if len(balanceData) == 0 {
+		balance = int64(0)
+	} else {
+		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	return balance, nil
+}
+
+func getAccountBalanceFromSnapshot2310(address string, snapshot protocol.Snapshot) (int64, error) {
+	var err error
+	var balance int64
+	var freezen bool
+
+	// 查询账户的余额
+	balanceData, err := snapshot.GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		[]byte(accountmgr.AccountPrefix+address))
+	if err != nil {
+		return -1, err
+	}
+
+	if len(balanceData) == 0 {
+		balance = int64(0)
+	} else {
+		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
+		if err != nil {
+			return 0, err
+		}
+	}
+
+	// 查询账户的状态
+	freezenData, err := snapshot.GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		[]byte(accountmgr.FrozenPrefix+address))
+	if err != nil {
+		return -1, err
+	}
+
+	if len(freezenData) == 0 {
+		freezen = false
+	} else {
+		if string(freezenData) == "0" {
+			freezen = false
+		} else if string(freezenData) == "0" {
+			freezen = true
+		}
+	}
+
+	if freezen {
+		return 0, fmt.Errorf("account `%s` has been locked", address)
+	}
+
+	return balance, nil
 }
