@@ -133,7 +133,7 @@ net:
 # Other txpool settings can be found in tx_Pool_config.go
 txpool:
   # tx_pool type, can be single, normal, batch.
-  # By default the tx_pool type is single.
+  # By default the tx_pool type is normal.
   # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
   pool_type: "normal"
 
