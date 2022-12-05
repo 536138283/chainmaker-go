@@ -55,7 +55,7 @@ func NewBlockSyncServerConf() *BlockSyncServerConf {
 		reqTimeThreshold:     1 * time.Second,
 		blockRequestTime:     5 * time.Second,
 		minLagThreshold:      5,
-		minLagThresholdTime:  2 * time.Second,
+		minLagThresholdTime:  3 * time.Second,
 	}
 }
 

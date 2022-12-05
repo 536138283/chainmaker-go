@@ -389,7 +389,7 @@ func (sync *BlockChainSyncServer) loop() {
 		doNodeStatusTk.Stop()
 		doDataDetect.Stop()
 	}()
-
+	_ = sync.broadcastMsg(syncPb.SyncMsg_NODE_STATUS_REQ, nil)
 	for {
 		select {
 		//service close
