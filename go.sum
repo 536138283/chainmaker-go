@@ -34,8 +34,8 @@ chainmaker.org/chainmaker/net-libp2p v1.2.1/go.mod h1:Uf5WLR3PpRFYdb5vNIGQ012KDk
 chainmaker.org/chainmaker/net-liquid v1.1.0 h1:WElaY7ZAcIXcIYnkBy2Zi6tTrkZ/uVBo2h3kOi5VlAk=
 chainmaker.org/chainmaker/net-liquid v1.1.0/go.mod h1:A1fjmgLv7ejD1eFh320+ZxGB4OWKYi1wgh56TJZ8b/A=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.0/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
-chainmaker.org/chainmaker/pb-go/v2 v2.3.1 h1:hb+visoJKhBpTVrjEWGaQgfOCKpeXOBBmqbeaP2wokI=
-chainmaker.org/chainmaker/pb-go/v2 v2.3.1/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221205024552-ef56e6d2b275 h1:OOfxArtrUtByO0jrvq2PgF9h2bK8MGX0bI8GxjFBTzc=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221205024552-ef56e6d2b275/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/protocol/v2 v2.3.0/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
 chainmaker.org/chainmaker/protocol/v2 v2.3.1 h1:XNYSW5fANmy37yNCqTd3JpmGX1HYZXtsK80Zk6yFPZk=
 chainmaker.org/chainmaker/protocol/v2 v2.3.1/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
