@@ -136,7 +136,7 @@ func configConsensusExtra(op int) error {
 	case addExtraConfig:
 		payload, err = client.CreateChainConfigConsensusExtAddPayload(kvs)
 	case deleteExtraConfig:
-		keys := []string{extraConfigValue}
+		keys := []string{extraConfigKey}
 		payload, err = client.CreateChainConfigConsensusExtDeletePayload(keys)
 	case updateExtraConfig:
 		payload, err = client.CreateChainConfigConsensusExtUpdatePayload(kvs)
