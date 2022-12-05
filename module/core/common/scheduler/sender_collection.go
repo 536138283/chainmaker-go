@@ -84,7 +84,7 @@ func getSenderTxCollection(
 
 	for senderAddress, txCollection := range txCollectionMap {
 		// get the account balance from snapshot
-		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot)
+		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot, log)
 		if err != nil {
 			errMsg := fmt.Sprintf("get account balance failed: err = %v", err)
 			log.Error(errMsg)
@@ -113,17 +113,21 @@ func (s SenderCollection) Clear() {
 	}
 }
 
-func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (int64, error) {
+func getAccountBalanceFromSnapshot(
+	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	chainConfig := snapshot.GetLastChainConfig()
 	blockVersion := chainConfig.GetBlockVersion()
+	log.Debugf("address = %v, blockVersion = %v", address, blockVersion)
 	if blockVersion < blockVersion2310 {
-		return getAccountBalanceFromSnapshot2300(address, snapshot)
+		return getAccountBalanceFromSnapshot2300(address, snapshot, log)
 	} else {
-		return getAccountBalanceFromSnapshot2310(address, snapshot)
+		return getAccountBalanceFromSnapshot2310(address, snapshot, log)
 	}
 }
 
-func getAccountBalanceFromSnapshot2300(address string, snapshot protocol.Snapshot) (int64, error) {
+func getAccountBalanceFromSnapshot2300(
+	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
+
 	var err error
 	var balance int64
 	balanceData, err := snapshot.GetKey(-1,
@@ -145,7 +149,8 @@ func getAccountBalanceFromSnapshot2300(address string, snapshot protocol.Snapsho
 	return balance, nil
 }
 
-func getAccountBalanceFromSnapshot2310(address string, snapshot protocol.Snapshot) (int64, error) {
+func getAccountBalanceFromSnapshot2310(
+	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	var err error
 	var balance int64
 	var freezen bool
@@ -180,10 +185,11 @@ func getAccountBalanceFromSnapshot2310(address string, snapshot protocol.Snapsho
 	} else {
 		if string(freezenData) == "0" {
 			freezen = false
-		} else if string(freezenData) == "0" {
+		} else if string(freezenData) == "1" {
 			freezen = true
 		}
 	}
+	log.Debugf("balance = %v, freeze = %v", balance, freezen)
 
 	if freezen {
 		return 0, fmt.Errorf("account `%s` has been locked", address)
