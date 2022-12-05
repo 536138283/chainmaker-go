@@ -118,11 +118,12 @@ func getAccountBalanceFromSnapshot(
 	chainConfig := snapshot.GetLastChainConfig()
 	blockVersion := chainConfig.GetBlockVersion()
 	log.Debugf("address = %v, blockVersion = %v", address, blockVersion)
+
 	if blockVersion < blockVersion2310 {
 		return getAccountBalanceFromSnapshot2300(address, snapshot, log)
-	} else {
-		return getAccountBalanceFromSnapshot2310(address, snapshot, log)
 	}
+
+	return getAccountBalanceFromSnapshot2310(address, snapshot, log)
 }
 
 func getAccountBalanceFromSnapshot2300(
