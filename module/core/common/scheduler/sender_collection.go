@@ -155,7 +155,7 @@ func getAccountBalanceFromSnapshot2310(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	var err error
 	var balance int64
-	var freezen bool
+	var frozen bool
 
 	// 查询账户的余额
 	balanceData, err := snapshot.GetKey(-1,
@@ -175,25 +175,25 @@ func getAccountBalanceFromSnapshot2310(
 	}
 
 	// 查询账户的状态
-	freezenData, err := snapshot.GetKey(-1,
+	frozenData, err := snapshot.GetKey(-1,
 		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 		[]byte(accountmgr.FrozenPrefix+address))
 	if err != nil {
 		return -1, err
 	}
 
-	if len(freezenData) == 0 {
-		freezen = false
+	if len(frozenData) == 0 {
+		frozen = false
 	} else {
-		if string(freezenData) == "0" {
-			freezen = false
-		} else if string(freezenData) == "1" {
-			freezen = true
+		if string(frozenData) == "0" {
+			frozen = false
+		} else if string(frozenData) == "1" {
+			frozen = true
 		}
 	}
-	log.Debugf("balance = %v, freeze = %v", balance, freezen)
+	log.Debugf("balance = %v, freeze = %v", balance, frozen)
 
-	if freezen {
+	if frozen {
 		return 0, fmt.Errorf("account `%s` has been locked", address)
 	}
 
