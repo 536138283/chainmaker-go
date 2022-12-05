@@ -429,8 +429,10 @@ storage:
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0 common write，1 quick write
-
+  # record DB slow log (INFO level) when query spend time more than this value (millisecond), 0 means no record
+  slow_log: 0
   # state db cache
+  disable_state_cache: false # default enable state cache
   state_cache_config:
     # key/value ttl time, ns
     life_window: 3000000000000
@@ -491,6 +493,7 @@ storage:
       store_path: ../data/{org_id}/state
 
   # History db config
+  disable_historydb: false  # default enable history db
   historydb_config:
     provider: leveldb
     disable_key_history: false
@@ -500,6 +503,7 @@ storage:
       store_path: ../data/{org_id}/history
 
   # Result db config
+  disable_resultdb: false # default enable result db
   resultdb_config:
     provider: leveldb
     leveldb_config:
