@@ -405,7 +405,7 @@ storage:
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
-  # Disable block file db, default: false
+  # Disable block file db, default: true
   disable_block_file_db: false
 
   # async write block in file block db to disk, default: false, so default is sync write disk
