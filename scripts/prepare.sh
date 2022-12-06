@@ -202,18 +202,18 @@ function generate_config() {
     # set CONSENSUS_TYPE
     if [ $CONSENSUS_TYPE == 0 ] ;then
       if  [ $NODE_CNT -gt 1 ] && [ "$CONSENSUS_TYPE" == "0" ] ;then
-        read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+        read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT,5-DPOS,6-ABFT): " tmp
         if  [ ! -z "$tmp" ] ;then
-          if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+          if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] || [ $tmp -eq 5 ] || [ $tmp -eq 6 ] ;then
             CONSENSUS_TYPE=$tmp
           else
             echo "invalid consensus type [" $tmp "], so use default"
           fi
         fi
       else
-        read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+        read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT,5-DPOS,6-ABFT): " tmp
         if  [ ! -z "$tmp" ] ;then
-          if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+          if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] || [ $tmp -eq 5 ] || [ $tmp -eq 6 ] ;then
             CONSENSUS_TYPE=$tmp
           else
             echo "unknown consensus type [" $tmp "], so use default"
