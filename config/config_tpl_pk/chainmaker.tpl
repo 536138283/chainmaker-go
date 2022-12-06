@@ -376,10 +376,12 @@ storage:
   # Disable block file db, default: true
   disable_block_file_db: false
 
-  # async write block in file block db to disk, default: false, so default is sync write disk
+  # async write block in file block db to disk (by blockfiledb or wal), default: false, so default is sync write disk
   logdb_segment_async: false
 
-  # file size of .fdb, MB, default: 20
+  # file size of stored block file
+  # if disable_block_file_db: false, we use block filedb, this means .fdb file size(MB), default: 64
+  # if disable_block_file_db: true, we use wal, this means .wal file size(MB), default: 20
   logdb_segment_size: 128
 
   # bigfilter config
