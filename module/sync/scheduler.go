@@ -286,7 +286,7 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 		sch.pendingTime[i] = sch.lastRequest
 		sch.pendingBlocks[i] = peer
 	}
-	sch.log.Debugf("request block[height: %d] from node [%s], BatchesSizeInReq: %d", pendingHeight, peer,
+	sch.log.Infof("request block[height: %d] from node [%s], BatchesSizeInReq: %d", pendingHeight, peer,
 		sch.BatchesizeInEachReq)
 	if err := sch.sender.sendMsg(syncPb.SyncMsg_BLOCK_SYNC_REQ, bz, peer); err != nil {
 		sch.log.Warnf("send sync block request for height[%d], fail: %s", pendingHeight, err.Error())
