@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2"
+	"chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	"chainmaker.org/chainmaker/vm/v2"
 
@@ -752,6 +753,18 @@ func (bc *Blockchain) initConsensus() (err error) {
 			}
 		}
 	}
+
+	// abft consensus can not use batch pool
+	if bc.chainConf.ChainConfig().Consensus.Type == consensusPb.ConsensusType_ABFT {
+		if value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]; ok {
+			if strings.ToUpper(value.(string)) == batch.TxPoolType {
+				errMsg := fmt.Sprintf("ABFT consensus no support Batch Pool")
+				bc.log.Errorf(errMsg)
+				return fmt.Errorf(errMsg)
+			}
+		}
+	}
+
 	//epoch1 [1,100]
 	//node7 ;
 	if !isConsensusNode &&
