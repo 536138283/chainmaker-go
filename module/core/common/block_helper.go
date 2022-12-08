@@ -250,7 +250,10 @@ func initNewBlock(
 	if utils.IsConfBlock(lastBlock) {
 		preConfHeight = lastBlock.Header.BlockHeight
 	}
-
+	blockVersion := chainConf.ChainConfig().GetBlockVersion()
+	if blockVersion == 0 {
+		blockVersion = protocol.DefaultBlockVersion
+	}
 	block := &commonPb.Block{
 		Header: &commonPb.BlockHeader{
 			ChainId:        chainId,
@@ -258,7 +261,7 @@ func initNewBlock(
 			PreBlockHash:   lastBlock.Header.BlockHash,
 			BlockHash:      nil,
 			PreConfHeight:  preConfHeight,
-			BlockVersion:   protocol.DefaultBlockVersion,
+			BlockVersion:   blockVersion,
 			DagHash:        nil,
 			RwSetRoot:      nil,
 			TxRoot:         nil,
