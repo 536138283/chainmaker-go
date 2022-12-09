@@ -12,6 +12,7 @@ import (
 
 	"chainmaker.org/chainmaker-go/tools/cmc/address"
 	"chainmaker.org/chainmaker-go/tools/cmc/archive"
+	"chainmaker.org/chainmaker-go/tools/cmc/archivecenter"
 	"chainmaker.org/chainmaker-go/tools/cmc/bulletproofs"
 	"chainmaker.org/chainmaker-go/tools/cmc/cert"
 	"chainmaker.org/chainmaker-go/tools/cmc/client"
@@ -56,6 +57,7 @@ For detailed logs, please see ./sdk.log
 	// 后续改成go-sdk
 	//mainCmd.AddCommand(payload.PayloadCMD())
 	//mainCmd.AddCommand(log.LogCMD())
-
+	// 增加归档中心命令行
+	mainCmd.AddCommand(archivecenter.NewArchiveCenterCMD())
 	mainCmd.Execute()
 }
