@@ -2,7 +2,7 @@ module chainmaker.org/chainmaker-go
 
 go 1.16
 
-replace chainmaker.org/chainmaker/pb-go/v2 v2.3.1 => chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221206104802-c7946d62842c
+replace chainmaker.org/chainmaker/pb-go/v2 v2.3.1 => chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20221212031024-fc4ec021d4ca
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.0

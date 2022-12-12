@@ -3,6 +3,7 @@ package archivecenter
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
@@ -42,7 +43,7 @@ func newDumpCMD() *cobra.Command {
 	util.AttachAndRequiredFlags(cmd, flags,
 		[]string{
 			flagSdkConfPath, flagArchiveConfPath, flagChainId,
-			flagArchiveBeginHeight, flagArchiveEndHeight,
+			flagArchiveBeginHeight, flagArchiveEndHeight, flagArchiveMode,
 		})
 	return cmd
 }
@@ -66,11 +67,7 @@ func runDumpCMD(beginHeight, endHeight uint64) error {
 	if registerErr != nil {
 		return registerErr
 	}
-	clientStream, clientStreamErr := archiveClient.client.ArchiveBlocks(context.Background(),
-		archiveClient.GrpcCallOption()...)
-	if clientStreamErr != nil {
-		return clientStreamErr
-	}
+
 	barCount := archiveEndHeight - archiveBeginHeight + 1
 	progress := uiprogress.New()
 	bar := progress.AddBar(int(barCount)).AppendCompleted().PrependElapsed()
@@ -79,14 +76,47 @@ func runDumpCMD(beginHeight, endHeight uint64) error {
 	})
 	progress.Start()
 	defer progress.Stop()
+	isQuickMode := strings.TrimSpace(archiveMode) == archiveModeQuick
+	var singleClientStream archivecenter.ArchiveCenterServer_SingleArchiveBlocksClient
+	var clientStream archivecenter.ArchiveCenterServer_ArchiveBlocksClient
+	var streamErr error
+	if isQuickMode {
+		singleClientStream, streamErr =
+			archiveClient.client.SingleArchiveBlocks(context.Background(),
+				archiveClient.GrpcCallOption()...)
+		if streamErr != nil {
+			return streamErr
+		}
+	} else {
+		clientStream, streamErr = archiveClient.client.ArchiveBlocks(context.Background(),
+			archiveClient.GrpcCallOption()...)
+		if streamErr != nil {
+			return streamErr
+		}
+	}
 	var archiveError error
 	for tempHeight := archiveBeginHeight; tempHeight <= archiveEndHeight; tempHeight++ {
 		archiveError = archiveBlockByHeight(genesisHash, tempHeight,
-			cc, clientStream)
+			cc, clientStream, singleClientStream, isQuickMode)
 		if archiveError != nil {
 			break
 		}
 		bar.Incr()
+	}
+	if isQuickMode {
+		archiveResp, archiveRespErr := singleClientStream.CloseAndRecv()
+		if archiveRespErr != nil {
+			return fmt.Errorf("stream close recv error %s", archiveRespErr.Error())
+		}
+		if archiveResp != nil {
+			fmt.Printf("archive resp code %d ,message %s , begin %d , end %d ",
+				archiveResp.Code, archiveResp.Message,
+				archiveResp.ArchivedBeginHeight, archiveResp.ArchivedEndHeight)
+		}
+		if archiveError != nil {
+			return archiveError
+		}
+		return nil
 	}
 	archiveRespErr := clientStream.CloseSend()
 	if archiveRespErr != nil {
@@ -129,12 +159,26 @@ func registerChainToArchiveCenter(chainClient *chainmaker_sdk_go.ChainClient,
 
 func archiveBlockByHeight(chainGenesis string, height uint64,
 	chainClient *chainmaker_sdk_go.ChainClient,
-	archiveClient archivecenter.ArchiveCenterServer_ArchiveBlocksClient) error {
+	archiveClient archivecenter.ArchiveCenterServer_ArchiveBlocksClient,
+	singleClientStream archivecenter.ArchiveCenterServer_SingleArchiveBlocksClient,
+	isQuickMode bool) error {
 	block, blockError := chainClient.GetFullBlockByHeight(height)
 	if blockError != nil {
 		return fmt.Errorf("query block height %d got error %s",
 			height, blockError.Error())
 
+	}
+	if isQuickMode {
+		singleSendErr := singleClientStream.Send(&archivecenter.ArchiveBlockRequest{
+			ChainUnique: chainGenesis,
+			Block:       block,
+		})
+		if singleSendErr != nil {
+			return fmt.Errorf("send height %d got error %s",
+				height, singleSendErr.Error())
+		} else {
+			return nil
+		}
 	}
 	sendErr := archiveClient.Send(&archivecenter.ArchiveBlockRequest{
 		ChainUnique: chainGenesis,

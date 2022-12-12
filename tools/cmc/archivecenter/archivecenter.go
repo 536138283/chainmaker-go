@@ -11,6 +11,7 @@ var (
 	chainId               string // chainid
 	archiveBeginHeight    uint64 // 开始归档区块
 	archiveEndHeight      uint64 // 结束归档区块
+	archiveMode           string // 是否使用快速归档(是的话为quick默认为否)
 	flags                 *pflag.FlagSet
 )
 
@@ -20,6 +21,9 @@ const (
 	flagArchiveBeginHeight = "archive-begin-height"
 	flagArchiveEndHeight   = "archive-end-height"
 	flagChainId            = "chain-id"
+	flagArchiveMode        = "mode"
+	archiveModeQuick       = "quick"
+	archivedModeNormal     = "normal"
 )
 
 func NewArchiveCenterCMD() *cobra.Command {
@@ -44,4 +48,5 @@ func init() {
 		0, "specify archive end block height")
 	flags.Uint64Var(&archiveBeginHeight, flagArchiveBeginHeight,
 		0, "specify archive begin block height")
+	flags.StringVar(&archiveMode, flagArchiveMode, "", "specify archive mode ,can be quick or normal ")
 }

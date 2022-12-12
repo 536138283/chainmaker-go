@@ -2,7 +2,7 @@
 
 ## cmc归档数据命令
 ```powershell
-./cmc archivecenter dump --sdk-conf-path ./testdata/sdk_config.yml --chain-id chain1 --archive-conf-path ./archivecenter/config.yml --archive-begin-height 1 --archive-end-height 610
+./cmc archivecenter dump --sdk-conf-path ./testdata/sdk_config.yml --chain-id chain1 --archive-conf-path ./archivecenter/config.yml --archive-begin-height 1 --archive-end-height 610 --mode quick
 
 ```
 ## cmc查询归档中心当前已归档数据状态命令
