@@ -265,7 +265,10 @@ func (bp *BlockProposerImpl) proposeBlock() {
 // proposing, propose a block in new height
 func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.Block {
 	startTick := utils.CurrentTimeMillisSeconds()
-	defer bp.yieldProposing()
+	//defer bp.yieldProposing()
+	defer func() {
+		bp.finishProposeC <- true
+	}()
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
 	if selfProposedBlock != nil {
