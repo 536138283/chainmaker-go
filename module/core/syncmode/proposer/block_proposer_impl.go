@@ -267,7 +267,13 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	startTick := utils.CurrentTimeMillisSeconds()
 	//defer bp.yieldProposing()
 	defer func() {
-		bp.finishProposeC <- true
+		if !bp.yieldProposing() {
+			select {
+			case bp.finishProposeC <- true:
+				bp.log.Info("proposing f end")
+			default:
+			}
+		}
 	}()
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
