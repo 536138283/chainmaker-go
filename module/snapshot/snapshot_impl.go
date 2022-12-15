@@ -14,14 +14,14 @@ import (
 
 	"go.uber.org/atomic"
 
-	"chainmaker.org/chainmaker/common/v2/bitmap"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/common/v3/bitmap"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	vmPb "chainmaker.org/chainmaker/pb-go/v3/vm"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 // The record value is written by the SEQ corresponding to TX

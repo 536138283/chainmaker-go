@@ -11,11 +11,11 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v3/json"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"

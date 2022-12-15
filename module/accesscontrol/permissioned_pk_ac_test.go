@@ -11,16 +11,16 @@ import (
 	"fmt"
 	"testing"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 	"github.com/golang/mock/gomock"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/helper"
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/helper"
+	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 	"github.com/stretchr/testify/require"
 )
 

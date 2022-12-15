@@ -12,25 +12,25 @@ import (
 
 	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v3"
 
 	"github.com/gogo/protobuf/proto"
 
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
-	"chainmaker.org/chainmaker/common/v2/monitor"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	chainConfConfig "chainmaker.org/chainmaker/pb-go/v2/config"
-	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/utils/v2"
+	commonErrors "chainmaker.org/chainmaker/common/v3/errors"
+	"chainmaker.org/chainmaker/common/v3/monitor"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/localconf/v3"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	chainConfConfig "chainmaker.org/chainmaker/pb-go/v3/config"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/utils/v3"
 	"github.com/prometheus/client_golang/prometheus"
 )
 

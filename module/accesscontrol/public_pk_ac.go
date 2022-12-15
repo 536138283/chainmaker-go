@@ -14,21 +14,21 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/maxbft"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/localconf/v2"
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/common/v3/concurrentlru"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/localconf/v3"
+	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 var _ protocol.AccessControlProvider = (*pkACProvider)(nil)
@@ -140,7 +140,7 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	}
 	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
 	msgBus.Register(msgbus.MaxbftEpochConf, pkAcProvider)
-	//v220_compat Deprecated
+	//v320_compat Deprecated
 	chainConf.AddWatch(pkAcProvider) //nolint: staticcheck
 	return pkAcProvider, nil
 }

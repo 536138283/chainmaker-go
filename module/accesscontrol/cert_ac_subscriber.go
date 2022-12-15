@@ -13,13 +13,13 @@ import (
 	"fmt"
 	"strings"
 
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
 
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"github.com/gogo/protobuf/proto"
 )
 

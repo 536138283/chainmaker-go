@@ -12,16 +12,16 @@ import (
 	"sort"
 	"sync"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/utils/v3"
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/abft"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // BlockCommitter block committer

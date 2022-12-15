@@ -1,6 +1,6 @@
 package consensus
 
-import "chainmaker.org/chainmaker/protocol/v2"
+import "chainmaker.org/chainmaker/protocol/v3"
 
 //ConsensusStateBundle a bundle with consensus state instance
 type ConsensusStateBundle struct {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )

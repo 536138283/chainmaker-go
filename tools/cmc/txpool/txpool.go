@@ -6,8 +6,8 @@ package txpool
 
 import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/txpool"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

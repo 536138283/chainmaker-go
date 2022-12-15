@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
-	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
-	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
-	"chainmaker.org/chainmaker/protocol/v2"
+	bn "chainmaker.org/chainmaker/common/v3/birdsnest"
+	sbn "chainmaker.org/chainmaker/common/v3/shardingbirdsnest"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/txfilter"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 const (

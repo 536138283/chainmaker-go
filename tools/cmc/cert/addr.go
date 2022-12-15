@@ -13,13 +13,13 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	pbconfig "chainmaker.org/chainmaker/pb-go/v2/config"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	pbconfig "chainmaker.org/chainmaker/pb-go/v3/config"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 	"github.com/spf13/cobra"
 )
 

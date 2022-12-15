@@ -8,7 +8,7 @@ package util
 import (
 	"errors"
 
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

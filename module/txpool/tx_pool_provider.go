@@ -10,10 +10,10 @@ package txpool
 import (
 	"strings"
 
-	normal "chainmaker.org/chainmaker/txpool-normal/v2"
+	normal "chainmaker.org/chainmaker/txpool-normal/v3"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 const (

@@ -12,11 +12,11 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v3/json"
 
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/hibe"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/hibe"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/spf13/cobra"
 )
 

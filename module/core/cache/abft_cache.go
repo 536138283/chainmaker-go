@@ -11,8 +11,8 @@ import (
 	"errors"
 	"sync"
 
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/utils/v2"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 // VerifiedTxBatchCache Abft tx batch structure

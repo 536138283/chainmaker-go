@@ -9,8 +9,8 @@ package subscriber
 
 import (
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 // EventSubscriber - new EventSubscriber struct

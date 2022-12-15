@@ -14,18 +14,18 @@ import (
 	"strconv"
 	"sync"
 
-	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/logger/v3"
 
 	"sync/atomic"
 	"testing"
 	"time"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	vmPb "chainmaker.org/chainmaker/pb-go/v2/vm"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	vmPb "chainmaker.org/chainmaker/pb-go/v3/vm"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 	uatomic "go.uber.org/atomic"
 	uberAtomic "go.uber.org/atomic"
 )

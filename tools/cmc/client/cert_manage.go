@@ -14,8 +14,8 @@ import (
 	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v3/utils"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )

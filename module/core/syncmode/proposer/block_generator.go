@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package proposer
 
 import (
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 // GenerateNewBlock generate new block, return block, timeList used by all steps, or error

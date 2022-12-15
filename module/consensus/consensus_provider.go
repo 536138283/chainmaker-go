@@ -8,9 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 package consensus
 
 import (
-	utils "chainmaker.org/chainmaker/consensus-utils/v2"
-	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	utils "chainmaker.org/chainmaker/consensus-utils/v3"
+	consensusPb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // Provider ConsensusEngine provider

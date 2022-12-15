@@ -1,10 +1,10 @@
 package coinbasemgr
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // CheckCoinbaseEnable Check if coinbase is enabled

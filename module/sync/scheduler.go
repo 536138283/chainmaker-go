@@ -13,13 +13,13 @@ import (
 	"sort"
 	"time"
 
-	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/localconf/v3"
+	syncPb "chainmaker.org/chainmaker/pb-go/v3/sync"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/Workiva/go-datastructures/queue"
 	"github.com/gogo/protobuf/proto"
 )

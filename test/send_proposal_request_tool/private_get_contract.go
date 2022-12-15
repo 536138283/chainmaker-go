@@ -11,8 +11,8 @@ import (
 	"crypto/sha256"
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
 	"github.com/spf13/cobra"
 )

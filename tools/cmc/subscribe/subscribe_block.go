@@ -9,7 +9,7 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/spf13/cobra"
 )
 

@@ -10,8 +10,8 @@ package vm
 import (
 	"strings"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 type Provider func(chainId string, config map[string]interface{}) (protocol.VmInstancesManager, error)

@@ -13,10 +13,10 @@ import (
 	"io/ioutil"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v3/utils"
 	"github.com/spf13/cobra"
 )
 

@@ -10,10 +10,10 @@ package sync
 import (
 	"testing"
 
-	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
+	syncPb "chainmaker.org/chainmaker/pb-go/v3/sync"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

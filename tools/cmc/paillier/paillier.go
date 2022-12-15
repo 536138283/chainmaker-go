@@ -13,7 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/paillier"
+	"chainmaker.org/chainmaker/common/v3/crypto/paillier"
 	"github.com/spf13/cobra"
 )
 

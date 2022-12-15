@@ -12,10 +12,10 @@ import (
 	"fmt"
 	"time"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
 	"github.com/Rican7/retry"
 	"github.com/Rican7/retry/backoff"

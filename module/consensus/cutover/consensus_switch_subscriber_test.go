@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"testing"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/logger/v2"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/logger/v3"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/gogo/protobuf/proto"
 )
 

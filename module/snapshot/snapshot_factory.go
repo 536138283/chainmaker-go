@@ -8,8 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 //var log = logger.GetLogger(logger.MODULE_SNAPSHOT)

@@ -5,12 +5,12 @@ import (
 	"sync"
 	"testing"
 
-	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/logger/v3"
 
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	configpb "chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

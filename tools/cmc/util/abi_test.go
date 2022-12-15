@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	ethabi "chainmaker.org/chainmaker/common/v2/evmutils/abi"
+	ethabi "chainmaker.org/chainmaker/common/v3/evmutils/abi"
 	"github.com/stretchr/testify/require"
 )
 

@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
-	"chainmaker.org/chainmaker/protocol/v2"
+	commonErrors "chainmaker.org/chainmaker/common/v3/errors"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/Workiva/go-datastructures/queue"
 )
 

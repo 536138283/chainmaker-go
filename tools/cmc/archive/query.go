@@ -12,8 +12,8 @@ import (
 
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/store"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/store"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 	"gorm.io/gorm"

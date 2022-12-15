@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"testing"
 
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 func TestAbft(t *testing.T) {

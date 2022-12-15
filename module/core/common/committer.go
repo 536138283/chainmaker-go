@@ -11,12 +11,12 @@ import (
 	"strconv"
 
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/localconf/v3"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 const (

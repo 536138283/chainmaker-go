@@ -14,16 +14,16 @@ import (
 
 	"github.com/hokaccha/go-prettyjson"
 
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/stretchr/testify/require"
 
 	native "chainmaker.org/chainmaker-go/test/chainconfig_test"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

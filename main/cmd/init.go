@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"os"
 
-	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/localconf/v3"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )

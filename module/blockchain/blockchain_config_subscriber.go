@@ -10,7 +10,7 @@ package blockchain
 import (
 	"encoding/hex"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
 	"github.com/gogo/protobuf/proto"
 )
 

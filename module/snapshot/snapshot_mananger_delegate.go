@@ -12,9 +12,9 @@ import (
 
 	"go.uber.org/atomic"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 // ManagerDelegate manager delegate struct

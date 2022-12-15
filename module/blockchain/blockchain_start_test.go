@@ -10,8 +10,8 @@ import (
 	"errors"
 	"testing"
 
-	"chainmaker.org/chainmaker/logger/v2"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/logger/v3"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 func TestBlockchain_startNetService(t *testing.T) {

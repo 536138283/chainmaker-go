@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // VerifyOptimizeChargeGasTx verify gas tx

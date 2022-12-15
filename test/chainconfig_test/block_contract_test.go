@@ -15,11 +15,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
 	native "chainmaker.org/chainmaker-go/test/chainconfig_test"
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

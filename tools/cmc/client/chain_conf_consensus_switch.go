@@ -12,9 +12,9 @@ import (
 	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 	"github.com/spf13/cobra"
 )
 

@@ -12,10 +12,10 @@ import (
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/protocol/v3"
 
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
 )
 
 // AcFactory 构造AC模块的工厂//

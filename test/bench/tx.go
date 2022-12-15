@@ -14,13 +14,13 @@ import (
 	"os"
 	"time"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 	"github.com/gogo/protobuf/proto"
 )
 

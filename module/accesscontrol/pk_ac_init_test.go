@@ -14,12 +14,12 @@ import (
 	"path/filepath"
 	"testing"
 
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/helper"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/helper"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
 	"github.com/stretchr/testify/require"
 )
 

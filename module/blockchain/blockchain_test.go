@@ -12,14 +12,14 @@ import (
 	"testing"
 
 	"chainmaker.org/chainmaker-go/module/subscriber"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	msgbusMock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
-	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	msgbusMock "chainmaker.org/chainmaker/common/v3/msgbus/mock"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	configpb "chainmaker.org/chainmaker/pb-go/v3/config"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
 
 	"github.com/golang/mock/gomock"
 )

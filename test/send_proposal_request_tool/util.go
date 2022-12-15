@@ -14,18 +14,18 @@ import (
 	"strings"
 	"time"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 
-	"chainmaker.org/chainmaker/common/v2/ca"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/ca"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
 
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc"
 )

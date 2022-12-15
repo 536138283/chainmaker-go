@@ -12,7 +12,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 type coreEngineFactory struct {

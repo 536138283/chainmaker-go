@@ -11,15 +11,15 @@ import (
 	"encoding/json"
 	"fmt"
 
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v3/utils"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 )
 
 // stakeGetAllCandidates all-candidates feature of the DPoS stake

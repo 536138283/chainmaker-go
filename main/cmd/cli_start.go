@@ -22,8 +22,8 @@ import (
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker-go/module/monitor"
 	"chainmaker.org/chainmaker-go/module/rpcserver"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/logger/v3"
 	"code.cloudfoundry.org/bytefmt"
 	"github.com/spf13/cobra"
 )

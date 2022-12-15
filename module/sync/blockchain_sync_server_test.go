@@ -11,15 +11,15 @@ import (
 	"testing"
 	"time"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
-	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	"chainmaker.org/chainmaker/localconf/v3"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	netPb "chainmaker.org/chainmaker/pb-go/v3/net"
+	syncPb "chainmaker.org/chainmaker/pb-go/v3/sync"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )

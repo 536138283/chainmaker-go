@@ -16,12 +16,12 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/core/syncmode/proposer"
 	"chainmaker.org/chainmaker-go/module/core/syncmode/verifier"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	msgbusMock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	msgbusMock "chainmaker.org/chainmaker/common/v3/msgbus/mock"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	configpb "chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
 
 	"github.com/golang/mock/gomock"
 )

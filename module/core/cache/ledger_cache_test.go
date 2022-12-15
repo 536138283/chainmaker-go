@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/stretchr/testify/require"
 )
 

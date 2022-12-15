@@ -11,10 +11,10 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 
-	cmx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/protocol/v2"
+	cmx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 func createVerifyPeerCertificateFunc(

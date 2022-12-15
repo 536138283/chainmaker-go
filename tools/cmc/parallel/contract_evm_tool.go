@@ -16,9 +16,9 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
-	"chainmaker.org/chainmaker/common/v2/json"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/common/v3/evmutils/abi"
+	"chainmaker.org/chainmaker/common/v3/json"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 var contractAbi *abi.ABI

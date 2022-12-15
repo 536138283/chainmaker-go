@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // TxSchedulerEvidence TxScheduler evidence transaction scheduler structure

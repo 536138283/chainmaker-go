@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/spf13/cobra"
 )
 

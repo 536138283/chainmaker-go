@@ -13,10 +13,10 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/abft"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // CoreEngine struct

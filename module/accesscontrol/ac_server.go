@@ -14,14 +14,14 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/localconf/v2"
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/concurrentlru"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	"chainmaker.org/chainmaker/localconf/v3"
+	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // Special characters allowed to define customized access rules

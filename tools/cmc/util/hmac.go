@@ -8,8 +8,8 @@ package util
 import (
 	"encoding/hex"
 
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/hash"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/hash"
 )
 
 // SM3 sum of data in SM3, returns sum hex

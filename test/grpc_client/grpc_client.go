@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"log"
 
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
 
-	"chainmaker.org/chainmaker/common/v2/ca"
+	"chainmaker.org/chainmaker/common/v3/ca"
 	"google.golang.org/grpc"
 )
 

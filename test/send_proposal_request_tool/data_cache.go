@@ -12,7 +12,7 @@ import (
 	"io/ioutil"
 	"sync"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 //FileCacheReader read file data and cache to memory,when invoke read method, if file has read,get from memory cache

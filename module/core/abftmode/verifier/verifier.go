@@ -12,21 +12,21 @@ import (
 	"sync"
 	"time"
 
-	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
+	commonErrors "chainmaker.org/chainmaker/common/v3/errors"
+	batch "chainmaker.org/chainmaker/txpool-batch/v3"
 
-	"chainmaker.org/chainmaker/common/v2/monitor"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/common/v3/monitor"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/panjf2000/ants/v2"
 	"github.com/prometheus/client_golang/prometheus"
 )

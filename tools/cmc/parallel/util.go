@@ -15,11 +15,11 @@ import (
 	"sync/atomic"
 	"time"
 
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	utils "chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v3/utils"
+	utils "chainmaker.org/chainmaker/utils/v3"
 )
 
 const GRPCMaxCallRecvMsgSize = 16 * 1024 * 1024

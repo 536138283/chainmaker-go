@@ -9,10 +9,10 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	configpb "chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )

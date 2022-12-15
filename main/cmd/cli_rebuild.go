@@ -17,10 +17,10 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker-go/module/blockchain"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/helper"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/store/v2/conf"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/helper"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/store/v3/conf"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/cobra"
 )

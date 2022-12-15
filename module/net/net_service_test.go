@@ -15,10 +15,10 @@ import (
 	"testing"
 	"time"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
 
-	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
-	"chainmaker.org/chainmaker/protocol/v2"
+	netPb "chainmaker.org/chainmaker/pb-go/v3/net"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/stretchr/testify/require"
 )
 

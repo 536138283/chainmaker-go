@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
 	"github.com/spf13/cobra"
 )
 

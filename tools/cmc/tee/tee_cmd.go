@@ -15,7 +15,7 @@ import (
 	"github.com/spf13/pflag"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 )
 
 var (

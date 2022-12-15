@@ -7,9 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package net
 
 import (
-	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/logger/v3"
 	liquid "chainmaker.org/chainmaker/net-liquid/liquidnet"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // GlobalNetLogger logger

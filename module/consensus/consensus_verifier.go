@@ -10,14 +10,14 @@ package consensus
 import (
 	"fmt"
 
-	maxbft "chainmaker.org/chainmaker/consensus-maxbft/v2"
+	maxbft "chainmaker.org/chainmaker/consensus-maxbft/v3"
 
-	dpos "chainmaker.org/chainmaker/consensus-dpos/v2"
-	raft "chainmaker.org/chainmaker/consensus-raft/v2"
-	tbft "chainmaker.org/chainmaker/consensus-tbft/v2"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	dpos "chainmaker.org/chainmaker/consensus-dpos/v3"
+	raft "chainmaker.org/chainmaker/consensus-raft/v3"
+	tbft "chainmaker.org/chainmaker/consensus-tbft/v3"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // VerifyBlockSignatures verifies whether the signatures in block

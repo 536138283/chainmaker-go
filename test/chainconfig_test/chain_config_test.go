@@ -11,20 +11,20 @@ import (
 	"fmt"
 	"testing"
 
-	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v3/json"
 
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
 
 	"github.com/stretchr/testify/require"
 
 	native "chainmaker.org/chainmaker-go/test/chainconfig_test"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"

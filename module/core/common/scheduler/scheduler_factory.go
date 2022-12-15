@@ -12,13 +12,13 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
 
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	"chainmaker.org/chainmaker/common/v2/monitor"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/logger/v2"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/monitor"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/logger/v3"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // TxSchedulerFactory tx scheduler factory

@@ -19,14 +19,14 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 
-	"chainmaker.org/chainmaker/common/v2/ca"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	apipb "chainmaker.org/chainmaker/pb-go/v2/api"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/sdk-go/v2/utils"
+	"chainmaker.org/chainmaker/common/v3/ca"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	apipb "chainmaker.org/chainmaker/pb-go/v3/api"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/sdk-go/v3/utils"
 )
 
 var (

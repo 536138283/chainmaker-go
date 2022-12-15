@@ -11,7 +11,7 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/module/blockchain"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/common-nighthawk/go-figure"
 	"github.com/spf13/cobra"
 )

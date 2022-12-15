@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
 
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc/codes"

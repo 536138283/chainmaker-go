@@ -20,10 +20,10 @@ import (
 	"strings"
 	"time"
 
-	"chainmaker.org/chainmaker/common/v2/cert"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/crypto/x509"
+	"chainmaker.org/chainmaker/common/v3/cert"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/crypto/x509"
 	"github.com/spf13/cobra"
 )
 

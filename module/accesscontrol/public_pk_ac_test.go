@@ -10,10 +10,10 @@ package accesscontrol
 import (
 	"testing"
 
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
+	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/stretchr/testify/require"
 )
 

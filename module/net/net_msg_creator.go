@@ -7,7 +7,7 @@ SPDX-License-Identifier: Apache-2.0
 package net
 
 import (
-	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
+	netPb "chainmaker.org/chainmaker/pb-go/v3/net"
 )
 
 // NewNetMsg create a new netPb.NetMsg .

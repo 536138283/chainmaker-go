@@ -3,9 +3,9 @@ package scheduler
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // SenderCollection contains:

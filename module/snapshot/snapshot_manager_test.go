@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"testing"
 
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
-	"chainmaker.org/chainmaker/protocol/v2/test"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
+	"chainmaker.org/chainmaker/protocol/v3/test"
+	"chainmaker.org/chainmaker/utils/v3"
 
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"

@@ -4,10 +4,11 @@
 package tx_duplicate_performance
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 	"testing"
+
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 func TestQueryBlockSendTx(t *testing.T) {

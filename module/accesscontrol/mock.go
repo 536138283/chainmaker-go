@@ -10,13 +10,13 @@ package accesscontrol
 import (
 	"sync"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/concurrentlru"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 var mockAcLogger = &test.GoLogger{}

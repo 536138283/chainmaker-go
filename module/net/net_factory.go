@@ -12,7 +12,7 @@ import (
 
 	libp2p "chainmaker.org/chainmaker/net-libp2p/libp2pnet"
 	liquid "chainmaker.org/chainmaker/net-liquid/liquidnet"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // ErrorNetType error net type

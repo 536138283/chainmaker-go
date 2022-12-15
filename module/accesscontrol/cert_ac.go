@@ -18,21 +18,21 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/maxbft"
+	"chainmaker.org/chainmaker/protocol/v3"
 
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/common/v2/json"
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/common/v3/concurrentlru"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	"chainmaker.org/chainmaker/common/v3/json"
+	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 )
 
 //  certACProvider
@@ -99,7 +99,7 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
 	msgBus.Register(msgbus.MaxbftEpochConf, certACProvider)
 
-	//v220_compat Deprecated
+	//v320_compat Deprecated
 	chainConf.AddWatch(certACProvider)   //nolint: staticcheck
 	chainConf.AddVmWatch(certACProvider) //nolint: staticcheck
 	return certACProvider, nil

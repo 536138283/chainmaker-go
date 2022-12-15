@@ -10,13 +10,13 @@ package committer
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/consensus-maxbft/v2/epoch"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
-	systemPb "chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/consensus-maxbft/v3/epoch"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/maxbft"
+	systemPb "chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/gogo/protobuf/proto"
 )
 

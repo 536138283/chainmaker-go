@@ -16,17 +16,17 @@ import (
 	"strconv"
 	"strings"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/kms"
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
+	"chainmaker.org/chainmaker/common/v3/crypto/kms"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
 
-	"chainmaker.org/chainmaker/common/v2/cert"
-	bccrypto "chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/crypto/pkcs11"
-	"chainmaker.org/chainmaker/common/v2/crypto/sdf"
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/cert"
+	bccrypto "chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/crypto/pkcs11"
+	"chainmaker.org/chainmaker/common/v3/crypto/sdf"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/mr-tron/base58"
 )
 

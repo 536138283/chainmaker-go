@@ -15,14 +15,14 @@ import (
 	"fmt"
 	"strings"
 
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/gogo/protobuf/proto"
 )
 

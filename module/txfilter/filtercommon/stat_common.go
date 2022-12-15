@@ -10,7 +10,7 @@ package filtercommon
 import (
 	"time"
 
-	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
+	"chainmaker.org/chainmaker/pb-go/v3/txfilter"
 )
 
 // NewStat txfilter stat

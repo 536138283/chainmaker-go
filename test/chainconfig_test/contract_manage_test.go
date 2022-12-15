@@ -5,17 +5,17 @@ import (
 	"strings"
 	"testing"
 
-	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v3/json"
 
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	native "chainmaker.org/chainmaker-go/test/chainconfig_test"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 var chainConfig *configPb.ChainConfig

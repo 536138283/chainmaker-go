@@ -12,7 +12,7 @@ import (
 	"sync"
 	"testing"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 func TestInit(t *testing.T) {

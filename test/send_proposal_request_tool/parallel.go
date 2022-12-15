@@ -17,20 +17,20 @@ import (
 	"sync/atomic"
 	"time"
 
-	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v3/json"
 
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 
-	"chainmaker.org/chainmaker/common/v2/ca"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/common/v3/ca"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/logger/v3"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

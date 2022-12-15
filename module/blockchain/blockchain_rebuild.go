@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"os"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
 
-	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
+	commonErrors "chainmaker.org/chainmaker/common/v3/errors"
 )
 
 // RebuildDbs Start all the modules.

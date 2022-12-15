@@ -11,9 +11,9 @@ import (
 	"runtime"
 	"testing"
 
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
 
 	"github.com/golang/mock/gomock"
 )

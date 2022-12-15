@@ -5,18 +5,18 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 
-	"chainmaker.org/chainmaker/common/v2/json"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
+	"chainmaker.org/chainmaker/common/v3/json"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
 
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/maxbft"
 	"github.com/gogo/protobuf/proto"
 
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 )
 
 // CONSENSUS "consensus"

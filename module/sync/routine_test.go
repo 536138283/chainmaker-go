@@ -11,11 +11,11 @@ import (
 	"fmt"
 	"testing"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 
-	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
+	syncPb "chainmaker.org/chainmaker/pb-go/v3/sync"
 
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 	"github.com/Workiva/go-datastructures/queue"
 	"github.com/stretchr/testify/require"
 )

@@ -11,10 +11,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
 	"github.com/gogo/protobuf/proto"
 )
 

@@ -10,11 +10,11 @@ package accesscontrol
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/maxbft"
 
-	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus"
 )
 
 // messageChainConfig

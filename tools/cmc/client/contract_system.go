@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 

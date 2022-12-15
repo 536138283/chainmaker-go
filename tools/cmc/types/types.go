@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package types
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 // CreateUpgradeContractTxResponse extends of *common.TxResponse when upgrade contract

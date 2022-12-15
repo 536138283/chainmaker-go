@@ -10,8 +10,8 @@ package mapimpl
 import (
 	"sync"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/txfilter"
 )
 
 // TxFilter sync.Map transaction filter

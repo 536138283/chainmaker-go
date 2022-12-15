@@ -8,8 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 var _ protocol.Principal = (*principal)(nil)

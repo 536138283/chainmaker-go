@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"sync/atomic"
 
-	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
+	syncPb "chainmaker.org/chainmaker/pb-go/v3/sync"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/Workiva/go-datastructures/queue"
 )
 

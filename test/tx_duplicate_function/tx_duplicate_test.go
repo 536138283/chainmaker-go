@@ -4,12 +4,13 @@
 package tx_duplicate_function
 
 import (
-	"chainmaker.org/chainmaker/common/v2/random/uuid"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"log"
 	"strconv"
 	"testing"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v3/random/uuid"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v3/utils"
 )
 
 var (

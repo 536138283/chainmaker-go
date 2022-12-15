@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/utils/v3"
 	"github.com/mr-tron/base58/base58"
 )
 

@@ -17,12 +17,12 @@ import (
 	"chainmaker.org/chainmaker-go/module/txfilter/filterdefault"
 	mapimpl "chainmaker.org/chainmaker-go/module/txfilter/map"
 	"chainmaker.org/chainmaker-go/module/txfilter/shardingbirdsnest"
-	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
-	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
+	bn "chainmaker.org/chainmaker/common/v3/birdsnest"
+	sbn "chainmaker.org/chainmaker/common/v3/shardingbirdsnest"
+	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
 	"github.com/golang/mock/gomock"
 )
 

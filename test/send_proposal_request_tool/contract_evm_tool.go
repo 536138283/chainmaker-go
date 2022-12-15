@@ -17,12 +17,12 @@ import (
 	"strconv"
 	"strings"
 
-	"chainmaker.org/chainmaker/common/v2/json"
+	"chainmaker.org/chainmaker/common/v3/json"
 
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	evm "chainmaker.org/chainmaker/common/v2/evmutils"
-	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	bcx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
+	evm "chainmaker.org/chainmaker/common/v3/evmutils"
+	"chainmaker.org/chainmaker/common/v3/evmutils/abi"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 //func getByteCode(bytecode []byte, runtime commonPb.RuntimeType) ([]*commonPb.KeyValuePair, error) {

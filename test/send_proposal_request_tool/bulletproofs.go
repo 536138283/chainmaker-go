@@ -11,7 +11,7 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/crypto/bulletproofs"
+	"chainmaker.org/chainmaker/common/v3/crypto/bulletproofs"
 	"github.com/spf13/cobra"
 )
 

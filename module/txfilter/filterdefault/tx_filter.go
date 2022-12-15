@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/txfilter"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/txfilter"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // TxFilter protocol.BlockchainStore transaction filter

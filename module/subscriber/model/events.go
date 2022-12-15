@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package model
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 // NewBlockEvent - define new block event object

@@ -9,8 +9,8 @@ This file is for version compatibility
 package verifier
 
 import (
-	chainConfConfig "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
+	chainConfConfig "chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 var _ protocol.Watcher = (*BlockVerifierImpl)(nil)

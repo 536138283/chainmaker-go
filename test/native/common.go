@@ -7,14 +7,14 @@ import (
 	"strconv"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
-	"chainmaker.org/chainmaker/common/v2/ca"
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/common/v2/helper"
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/ca"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/helper"
+	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"google.golang.org/grpc"
 )
 

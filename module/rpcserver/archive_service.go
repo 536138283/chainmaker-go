@@ -11,12 +11,12 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/bytehelper"
-	commonErr "chainmaker.org/chainmaker/common/v2/errors"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/common/v3/bytehelper"
+	commonErr "chainmaker.org/chainmaker/common/v3/errors"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	protocol "chainmaker.org/chainmaker/protocol/v3"
 )
 
 func (s *ApiService) doArchive(tx *commonPb.Transaction) *commonPb.TxResponse {

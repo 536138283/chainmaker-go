@@ -9,9 +9,9 @@ package conf
 import (
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/subscriber"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // CoreEngineConfig core engine config struct

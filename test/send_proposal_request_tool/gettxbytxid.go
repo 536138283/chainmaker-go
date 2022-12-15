@@ -10,8 +10,8 @@ package main
 import (
 	"fmt"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
 	"github.com/gogo/protobuf/proto"
 	"github.com/spf13/cobra"

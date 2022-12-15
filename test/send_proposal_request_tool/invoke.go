@@ -11,8 +11,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/utils/v2"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/utils/v3"
 
 	"github.com/spf13/cobra"
 )

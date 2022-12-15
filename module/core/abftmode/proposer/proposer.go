@@ -12,18 +12,18 @@ import (
 	"sync"
 	"time"
 
-	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
-	txpoolpb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+	consensuspb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/maxbft"
+	txpoolpb "chainmaker.org/chainmaker/pb-go/v3/txpool"
 
 	"chainmaker.org/chainmaker-go/module/core/cache"
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/consensus/abft"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/consensus/abft"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 )
 
 // DEFAULT_WAIT_TXS_TIMEOUT default wait txs timeout

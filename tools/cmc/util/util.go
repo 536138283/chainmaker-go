@@ -11,8 +11,8 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
-	"chainmaker.org/chainmaker/common/v2/evmutils"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/common/v3/evmutils"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/hokaccha/go-prettyjson"
 )
 

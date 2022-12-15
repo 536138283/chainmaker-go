@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/stretchr/testify/require"
 )
 

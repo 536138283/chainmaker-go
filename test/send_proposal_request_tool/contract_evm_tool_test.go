@@ -8,10 +8,10 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 //import (
-//	evm "chainmaker.org/chainmaker/common/v2/evmutils"
-//	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+//	evm "chainmaker.org/chainmaker/common/v3/evmutils"
+//	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 //	"encoding/hex"
-//	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
+//	"chainmaker.org/chainmaker/common/v3/evmutils/abi"
 //	"github.com/stretchr/testify/require"
 //	"math/big"
 //	"strings"

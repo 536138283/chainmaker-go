@@ -14,7 +14,7 @@ import (
 	"strconv"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )

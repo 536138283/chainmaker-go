@@ -12,7 +12,7 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/evmutils"
+	"chainmaker.org/chainmaker/common/v3/evmutils"
 	"github.com/spf13/cobra"
 )
 

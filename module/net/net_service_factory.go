@@ -7,8 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package net
 
 import (
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // NetServiceFactory is a net service instance factory.

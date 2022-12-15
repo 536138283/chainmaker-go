@@ -17,9 +17,9 @@ import (
 
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"chainmaker.org/chainmaker/common/v3/evmutils/abi"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 	"github.com/spf13/cobra"
 )
 

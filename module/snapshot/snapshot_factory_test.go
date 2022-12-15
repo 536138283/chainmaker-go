@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"testing"
 
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	"chainmaker.org/chainmaker/protocol/v3/test"
 	"github.com/golang/mock/gomock"
 
-	"chainmaker.org/chainmaker/protocol/v2/mock"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
 )
 
 func TestNewSnapshotManager(t *testing.T) {

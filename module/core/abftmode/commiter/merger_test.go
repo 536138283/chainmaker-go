@@ -7,13 +7,13 @@ package commiter
 
 //
 //import (
-//	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+//	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 //	"fmt"
 //	//"github.com/gogo/protobuf/proto"
 //	"testing"
 //
 //	"chainmaker.org/chainmaker-go/core/cache"
-//	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+//	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
 //)
 //
 //var (

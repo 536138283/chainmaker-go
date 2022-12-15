@@ -10,15 +10,15 @@ package sync
 import (
 	"fmt"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	mbusmock "chainmaker.org/chainmaker/common/v2/msgbus/mock"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
-	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
-	"chainmaker.org/chainmaker/protocol/v2/mock"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	mbusmock "chainmaker.org/chainmaker/common/v3/msgbus/mock"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	netPb "chainmaker.org/chainmaker/pb-go/v3/net"
+	syncPb "chainmaker.org/chainmaker/pb-go/v3/sync"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
 	"github.com/golang/mock/gomock"
 
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 var errStr = "implement me"

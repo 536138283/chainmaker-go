@@ -19,8 +19,8 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/db/mysql"
 	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 )
 
 const (

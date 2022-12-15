@@ -9,8 +9,8 @@ This file is for version compatibility
 package blockchain
 
 import (
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 var _ protocol.Watcher = (*Blockchain)(nil)

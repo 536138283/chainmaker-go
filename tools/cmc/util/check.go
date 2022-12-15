@@ -9,7 +9,7 @@ import (
 	"errors"
 	"fmt"
 
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 )
 
 // CheckProposalRequestResp check *common.TxResponse is success

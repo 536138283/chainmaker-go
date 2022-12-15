@@ -12,12 +12,12 @@ import (
 	"strings"
 	"sync"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-	rootLog "chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
+	rootLog "chainmaker.org/chainmaker/logger/v3"
 	"chainmaker.org/chainmaker/net-common/common/priorityblocker"
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
-	"chainmaker.org/chainmaker/protocol/v2"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
+	netPb "chainmaker.org/chainmaker/pb-go/v3/net"
+	"chainmaker.org/chainmaker/protocol/v3"
 	"github.com/gogo/protobuf/proto"
 )
 

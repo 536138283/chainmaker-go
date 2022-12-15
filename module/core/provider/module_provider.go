@@ -8,7 +8,7 @@ package provider
 
 import (
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // CoreProvider core provider interface

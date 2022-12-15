@@ -11,9 +11,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"chainmaker.org/chainmaker/common/v2/birdsnest"
+	"chainmaker.org/chainmaker/common/v3/birdsnest"
 
-	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/localconf/v3"
 	"github.com/linvon/cuckoo-filter"
 )
 

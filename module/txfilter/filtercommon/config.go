@@ -8,8 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package filtercommon
 
 import (
-	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
-	sbn "chainmaker.org/chainmaker/common/v2/shardingbirdsnest"
+	bn "chainmaker.org/chainmaker/common/v3/birdsnest"
+	sbn "chainmaker.org/chainmaker/common/v3/shardingbirdsnest"
 )
 
 // TxFilterType Transaction filter type

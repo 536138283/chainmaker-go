@@ -8,10 +8,10 @@ package helper
 
 import (
 	"chainmaker.org/chainmaker-go/module/core/common"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
-	"chainmaker.org/chainmaker/protocol/v2"
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
+	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
+	consensusPb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/protocol/v3"
+	batch "chainmaker.org/chainmaker/txpool-batch/v3"
 )
 
 // maxBftHelper max bft heleper

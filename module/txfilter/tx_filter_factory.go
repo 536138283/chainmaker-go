@@ -17,7 +17,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/txfilter/birdnest"
 	"chainmaker.org/chainmaker-go/module/txfilter/filterdefault"
 	"chainmaker.org/chainmaker-go/module/txfilter/shardingbirdsnest"
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 // txFilterFactory Transaction filter factory

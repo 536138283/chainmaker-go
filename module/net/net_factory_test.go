@@ -3,7 +3,7 @@ package net
 import (
 	"testing"
 
-	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v3"
 )
 
 func TestLiquidConfig(t *testing.T) {

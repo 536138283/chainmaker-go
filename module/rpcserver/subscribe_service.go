@@ -13,12 +13,12 @@ import (
 
 	"github.com/gogo/protobuf/proto"
 
-	commonErr "chainmaker.org/chainmaker/common/v2/errors"
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
+	commonErr "chainmaker.org/chainmaker/common/v3/errors"
+	apiPb "chainmaker.org/chainmaker/pb-go/v3/api"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
