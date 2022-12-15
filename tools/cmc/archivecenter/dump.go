@@ -130,6 +130,18 @@ func runDumpCMD(beginHeight, endHeight uint64) error {
 
 func registerChainToArchiveCenter(chainClient *chainmaker_sdk_go.ChainClient,
 	archiveClient *ArchiveCenterClient) (string, error) {
+	statusCtx, statusCancel := context.WithTimeout(context.Background(),
+		time.Duration(grpcTimeoutSeconds)*time.Second)
+	defer statusCancel()
+	archivedStatus, archiveStatusErr := archiveClient.client.GetArchivedStatus(
+		statusCtx, &archivecenter.ArchiveStatusRequest{
+			ChainUnique: archiveCenterCFG.ChainGenesisHash,
+		})
+	if archiveStatusErr == nil && archivedStatus != nil && archivedStatus.Code == 0 {
+		fmt.Printf("chain %s archivestatus %+v \n",
+			archiveCenterCFG.ChainGenesisHash, *archivedStatus)
+		return archiveCenterCFG.ChainGenesisHash, nil
+	}
 	genesisBlock, genesisErr := chainClient.GetFullBlockByHeight(genesisBlockHeight)
 	if genesisErr != nil {
 		return "", fmt.Errorf("query genesis block error %s", genesisErr.Error())
