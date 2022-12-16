@@ -56,6 +56,9 @@ type Blockchain struct {
 	// oldStore
 	oldStore protocol.BlockchainStore
 
+	// import snapshot
+	//importLedgerSnapshot protocol.ImportLedgerSnapshot
+
 	// consensus
 	consensus protocol.ConsensusEngine
 

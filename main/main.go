@@ -20,6 +20,7 @@ func main() {
 	mainCmd.AddCommand(cmd.VersionCMD())
 	mainCmd.AddCommand(cmd.ConfigCMD())
 	mainCmd.AddCommand(cmd.RebuildDbsCMD())
+	//mainCmd.AddCommand(cmd.ImportLedgerSnapshotCMD())
 
 	err := mainCmd.Execute()
 	if err != nil {

@@ -87,6 +87,24 @@ func (server *ChainMakerServer) InitForRebuildDbs(chainId string) error {
 	log.Info("init chain maker server success!")
 	return nil
 }
+
+// InitForImportSnapshot init import snapshot for store.
+//  @Description: if we have a snapshot of chainmaker, we need to create a store and import snapshot data
+//  into store,so InitForImportSnapshot is used to create a store  for importing snapshot data
+//  @receiver ChainMakerServer
+//  @param chainId
+//  @return error
+func (server *ChainMakerServer) InitForImportSnapshot(chainId string) error {
+	log.Debug("begin init chain maker import snapshot server...")
+	server.readyC = make(chan struct{})
+
+	blockchain := NewBlockchain("", chainId, msgbus.NewMessageBus(), server.net)
+	server.blockchains.Store(chainId, blockchain)
+	log.Infof("init blockchain[%s] success!", chainId)
+	return nil
+
+}
+
 func (server *ChainMakerServer) initNet() error {
 	var netType protocol.NetType
 	var err error

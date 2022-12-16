@@ -8,6 +8,7 @@ package blockchain
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	"chainmaker.org/chainmaker-go/module/subscriber"
@@ -285,7 +286,7 @@ func TestBlockchain_InitForRebuildDbs(t *testing.T) {
 	}
 	localconf.ChainMakerConfig = &localconf.CMConfig{
 		StorageConfig: map[string]interface{}{
-			"store_path": "./mypath1",
+			"store_path": "./mypath1_rebuild",
 			"blockdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
@@ -295,32 +296,32 @@ func TestBlockchain_InitForRebuildDbs(t *testing.T) {
 			"statedb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_rebuild",
 				},
 			},
 			"historydb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_rebuild",
 				},
 			},
 			"resultdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_rebuild",
 				},
 			},
 			"txexistdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_rebuild",
 				},
 			},
 			"disable_contract_eventdb": true,
 			"contract_eventdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_rebuild",
 				},
 			},
 		},
@@ -638,42 +639,42 @@ func TestBlockchain_Init(t *testing.T) {
 
 	localconf.ChainMakerConfig = &localconf.CMConfig{
 		StorageConfig: map[string]interface{}{
-			"store_path": "./mypath1",
+			"store_path": "./mypath1_init",
 			"blockdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_init",
 				},
 			},
 			"statedb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_init",
 				},
 			},
 			"historydb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_init",
 				},
 			},
 			"resultdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_init",
 				},
 			},
 			"txexistdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_init",
 				},
 			},
 			"disable_contract_eventdb": true,
 			"contract_eventdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_init",
 				},
 			},
 		},
@@ -876,50 +877,48 @@ func TestBlockchain_initStore(t *testing.T) {
 		initModules     map[string]struct{}
 		startModules    map[string]struct{}
 	}
-
 	localconf.ChainMakerConfig = &localconf.CMConfig{
 		StorageConfig: map[string]interface{}{
-			"store_path": "./mypath1",
+			"store_path": "./mypath1_store_init",
 			"blockdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_store_init",
 				},
 			},
 			"statedb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_store_init",
 				},
 			},
 			"historydb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_store_init",
 				},
 			},
 			"resultdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_store_init",
 				},
 			},
 			"txexistdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_store_init",
 				},
 			},
 			"disable_contract_eventdb": true,
 			"contract_eventdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./mypath1",
+					"store_path": "./mypath1_store_init",
 				},
 			},
 		},
 	}
-
 	tests := []struct {
 		name    string
 		fields  fields
@@ -1006,6 +1005,354 @@ func TestBlockchain_initStore(t *testing.T) {
 				initModules:     tt.fields.initModules,
 				startModules:    tt.fields.startModules,
 			}
+			if err := bc.initStore(); (err != nil) != tt.wantErr {
+				t.Errorf("initStore() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestBlockchain_initStore1(t *testing.T) {
+	type fields struct {
+		log             *logger.CMLogger
+		genesis         string
+		chainId         string
+		msgBus          msgbus.MessageBus
+		net             protocol.Net
+		netService      protocol.NetService
+		store           protocol.BlockchainStore
+		oldStore        protocol.BlockchainStore
+		consensus       protocol.ConsensusEngine
+		txPool          protocol.TxPool
+		coreEngine      protocol.CoreEngine
+		vmMgr           protocol.VmManager
+		identity        protocol.SigningMember
+		ac              protocol.AccessControlProvider
+		syncServer      protocol.SyncService
+		ledgerCache     protocol.LedgerCache
+		proposalCache   protocol.ProposalCache
+		snapshotManager protocol.SnapshotManager
+		lastBlock       *commonPb.Block
+		chainConf       protocol.ChainConf
+		chainNodeList   []string
+		eventSubscriber *subscriber.EventSubscriber
+		initModules     map[string]struct{}
+		startModules    map[string]struct{}
+	}
+	//localconf.ChainMakerConfig = &localconf.CMConfig{}
+	localconf.ChainMakerConfig = &localconf.CMConfig{
+		StorageConfig: map[string]interface{}{
+			"store_path":      "./mypath2",
+			"engine_provider": "store-huge",
+			"block_file_config": map[string]interface{}{
+				"online_file_system":  "./mypath2/metadb_tmp/online1",
+				"archive_file_system": "./mypath2/metadb_tmp/archive1",
+			},
+			"storage_config_version": map[string]interface{}{
+				"major_version": 1,
+				"minor_version": 2,
+			},
+			"blockdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath2",
+				},
+			},
+			"statedb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath2",
+				},
+			},
+			"historydb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath2",
+				},
+			},
+			"resultdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath2",
+				},
+			},
+			"txexistdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath2",
+				},
+			},
+			"disable_contract_eventdb": true,
+			"contract_eventdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath2",
+				},
+			},
+		},
+	}
+	storeEngine, ok := localconf.ChainMakerConfig.StorageConfig["engine_provider"].(string)
+	// store engine is not store-huge, config "engine-provider" is nil
+	if !ok {
+		fmt.Println("---------------------------------------not ok")
+	} else {
+		fmt.Println("------------------------------------------storeEngine=", storeEngine)
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				log:     log,
+				genesis: "",
+				chainId: "chain1",
+				store: func() protocol.BlockchainStore {
+					store := newMockBlockchainStore(t)
+					store.EXPECT().GetDBHandle(gomock.Any()).AnyTimes()
+					store.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
+					return store
+				}(),
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				initModules: map[string]struct{}{
+					moduleNameStore: {},
+				},
+				startModules: nil,
+			},
+			wantErr: false,
+		},
+		//{
+		//	name: "test1",
+		//	fields: fields{
+		//		log:     log,
+		//		genesis: "",
+		//		chainId: "chain1",
+		//		store: func() protocol.BlockchainStore {
+		//			store := newMockBlockchainStore(t)
+		//			return store
+		//		}(),
+		//		oldStore: func() protocol.BlockchainStore {
+		//			store := newMockBlockchainStore(t)
+		//			store.EXPECT().GetDBHandle(gomock.Any()).AnyTimes()
+		//			store.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
+		//			return store
+		//		}(),
+		//		chainConf: func() protocol.ChainConf {
+		//			chainConf := newMockChainConf(t)
+		//			chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+		//			return chainConf
+		//		}(),
+		//		initModules: map[string]struct{}{
+		//			moduleNameStore: {},
+		//		},
+		//		startModules: nil,
+		//	},
+		//	wantErr: false,
+		//},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bc := &Blockchain{
+				log:             tt.fields.log,
+				genesis:         tt.fields.genesis,
+				chainId:         tt.fields.chainId,
+				msgBus:          tt.fields.msgBus,
+				net:             tt.fields.net,
+				netService:      tt.fields.netService,
+				store:           tt.fields.store,
+				oldStore:        tt.fields.oldStore,
+				consensus:       tt.fields.consensus,
+				txPool:          tt.fields.txPool,
+				coreEngine:      tt.fields.coreEngine,
+				vmMgr:           tt.fields.vmMgr,
+				identity:        tt.fields.identity,
+				ac:              tt.fields.ac,
+				syncServer:      tt.fields.syncServer,
+				ledgerCache:     tt.fields.ledgerCache,
+				proposalCache:   tt.fields.proposalCache,
+				snapshotManager: tt.fields.snapshotManager,
+				lastBlock:       tt.fields.lastBlock,
+				chainConf:       tt.fields.chainConf,
+				chainNodeList:   tt.fields.chainNodeList,
+				eventSubscriber: tt.fields.eventSubscriber,
+				initModules:     tt.fields.initModules,
+				startModules:    tt.fields.startModules,
+			}
+			delete(bc.initModules, moduleNameStore)
+			if err := bc.initStore(); (err != nil) != tt.wantErr {
+				t.Errorf("initStore() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestBlockchain_initStore2(t *testing.T) {
+	type fields struct {
+		log             *logger.CMLogger
+		genesis         string
+		chainId         string
+		msgBus          msgbus.MessageBus
+		net             protocol.Net
+		netService      protocol.NetService
+		store           protocol.BlockchainStore
+		oldStore        protocol.BlockchainStore
+		consensus       protocol.ConsensusEngine
+		txPool          protocol.TxPool
+		coreEngine      protocol.CoreEngine
+		vmMgr           protocol.VmManager
+		identity        protocol.SigningMember
+		ac              protocol.AccessControlProvider
+		syncServer      protocol.SyncService
+		ledgerCache     protocol.LedgerCache
+		proposalCache   protocol.ProposalCache
+		snapshotManager protocol.SnapshotManager
+		lastBlock       *commonPb.Block
+		chainConf       protocol.ChainConf
+		chainNodeList   []string
+		eventSubscriber *subscriber.EventSubscriber
+		initModules     map[string]struct{}
+		startModules    map[string]struct{}
+	}
+	//localconf.ChainMakerConfig = &localconf.CMConfig{}
+
+	localconf.ChainMakerConfig = &localconf.CMConfig{
+		StorageConfig: map[string]interface{}{
+			"store_path":      "./mypath3",
+			"engine_provider": "store-2.3.1",
+			"blockdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath3",
+				},
+			},
+			"statedb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath3",
+				},
+			},
+			"historydb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath3",
+				},
+			},
+			"resultdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath3",
+				},
+			},
+			"txexistdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath3",
+				},
+			},
+			"disable_contract_eventdb": true,
+			"contract_eventdb_config": map[string]interface{}{
+				"provider": "leveldb",
+				"leveldb_config": map[string]interface{}{
+					"store_path": "./mypath3",
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name    string
+		fields  fields
+		wantErr bool
+	}{
+		{
+			name: "test0",
+			fields: fields{
+				log:     log,
+				genesis: "",
+				chainId: "chain1",
+				store: func() protocol.BlockchainStore {
+					store := newMockBlockchainStore(t)
+					store.EXPECT().GetDBHandle(gomock.Any()).AnyTimes()
+					store.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
+					return store
+				}(),
+				chainConf: func() protocol.ChainConf {
+					chainConf := newMockChainConf(t)
+					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+					return chainConf
+				}(),
+				initModules: map[string]struct{}{
+					moduleNameStore: {},
+				},
+				startModules: nil,
+			},
+			wantErr: false,
+		},
+		//{
+		//	name: "test1",
+		//	fields: fields{
+		//		log:     log,
+		//		genesis: "",
+		//		chainId: "chain1",
+		//		store: func() protocol.BlockchainStore {
+		//			store := newMockBlockchainStore(t)
+		//			return store
+		//		}(),
+		//		oldStore: func() protocol.BlockchainStore {
+		//			store := newMockBlockchainStore(t)
+		//			store.EXPECT().GetDBHandle(gomock.Any()).AnyTimes()
+		//			store.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
+		//			return store
+		//		}(),
+		//		chainConf: func() protocol.ChainConf {
+		//			chainConf := newMockChainConf(t)
+		//			chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
+		//			return chainConf
+		//		}(),
+		//		initModules: map[string]struct{}{
+		//			moduleNameStore: {},
+		//		},
+		//		startModules: nil,
+		//	},
+		//	wantErr: false,
+		//},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			bc := &Blockchain{
+				log:             tt.fields.log,
+				genesis:         tt.fields.genesis,
+				chainId:         tt.fields.chainId,
+				msgBus:          tt.fields.msgBus,
+				net:             tt.fields.net,
+				netService:      tt.fields.netService,
+				store:           tt.fields.store,
+				oldStore:        tt.fields.oldStore,
+				consensus:       tt.fields.consensus,
+				txPool:          tt.fields.txPool,
+				coreEngine:      tt.fields.coreEngine,
+				vmMgr:           tt.fields.vmMgr,
+				identity:        tt.fields.identity,
+				ac:              tt.fields.ac,
+				syncServer:      tt.fields.syncServer,
+				ledgerCache:     tt.fields.ledgerCache,
+				proposalCache:   tt.fields.proposalCache,
+				snapshotManager: tt.fields.snapshotManager,
+				lastBlock:       tt.fields.lastBlock,
+				chainConf:       tt.fields.chainConf,
+				chainNodeList:   tt.fields.chainNodeList,
+				eventSubscriber: tt.fields.eventSubscriber,
+				initModules:     tt.fields.initModules,
+				startModules:    tt.fields.startModules,
+			}
+			delete(bc.initModules, moduleNameStore)
 			if err := bc.initStore(); (err != nil) != tt.wantErr {
 				t.Errorf("initStore() error = %v, wantErr %v", err, tt.wantErr)
 			}

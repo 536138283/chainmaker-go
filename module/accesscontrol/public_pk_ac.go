@@ -427,6 +427,8 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
+	p.resourceNamePolicyMap.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), pubPolicyManage)
+	p.resourceNamePolicyMap.Store(common.TxType_SNAPSHOT.String(), pubPolicyManage)
 
 	// exceptional resourceName
 	p.exceptionalPolicyMap.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)
@@ -583,6 +585,8 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
+	p.resourceNamePolicyMap.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), pubPolicyManage)
+	p.resourceNamePolicyMap.Store(common.TxType_SNAPSHOT.String(), pubPolicyManage)
 
 	// exceptional resourceName
 	p.exceptionalPolicyMap.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)

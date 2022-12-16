@@ -10,6 +10,9 @@ package main
 import (
 	"strings"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/hot_cold_data_separate"
+	"chainmaker.org/chainmaker-go/tools/cmc/snapshot"
+
 	"chainmaker.org/chainmaker-go/tools/cmc/address"
 	"chainmaker.org/chainmaker-go/tools/cmc/archive"
 	"chainmaker.org/chainmaker-go/tools/cmc/bulletproofs"
@@ -60,6 +63,10 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(version.VersionCMD())
 	mainCmd.AddCommand(consensus.NewConsensusCMD())
 	mainCmd.AddCommand(subscribe.NewSubscribeCMD())
+	mainCmd.AddCommand(snapshot.NewSnapshotCMD())
+	mainCmd.AddCommand(snapshot.NewGetSnapshotStatusCMD())
+	mainCmd.AddCommand(hot_cold_data_separate.NewHotColdDataSeparateCMD())
+	mainCmd.AddCommand(hot_cold_data_separate.NewGetHotColdDataSeparateJobCMD())
 
 	mainCmd.Execute()
 }
