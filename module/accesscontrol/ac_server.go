@@ -58,10 +58,12 @@ var restrainedResourceList = map[string]bool{
 	protocol.ResourceNameP2p:           true,
 	protocol.ResourceNameConsensusNode: true,
 
-	common.TxType_QUERY_CONTRACT.String():  true,
-	common.TxType_INVOKE_CONTRACT.String(): true,
-	common.TxType_SUBSCRIBE.String():       true,
-	common.TxType_ARCHIVE.String():         true,
+	common.TxType_QUERY_CONTRACT.String():           true,
+	common.TxType_INVOKE_CONTRACT.String():          true,
+	common.TxType_SUBSCRIBE.String():                true,
+	common.TxType_ARCHIVE.String():                  true,
+	common.TxType_HOT_COLD_DATA_SEPARATION.String(): true,
+	common.TxType_SNAPSHOT.String():                 true,
 }
 
 // predifined policies
@@ -143,6 +145,22 @@ var (
 	)
 
 	policyArchive = newPolicy(
+		protocol.RuleAny,
+		nil,
+		[]protocol.Role{
+			protocol.RoleAdmin,
+		},
+	)
+
+	policyHotColdDataSeparate = newPolicy(
+		protocol.RuleAny,
+		nil,
+		[]protocol.Role{
+			protocol.RoleAdmin,
+		},
+	)
+
+	policySnapshot = newPolicy(
 		protocol.RuleAny,
 		nil,
 		[]protocol.Role{
@@ -312,6 +330,8 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	acs.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
 	acs.resourceNamePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 	acs.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
+	acs.resourceNamePolicyMap.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), policyHotColdDataSeparate)
+	acs.resourceNamePolicyMap.Store(common.TxType_SNAPSHOT.String(), policySnapshot)
 
 	// exceptional resourceName opened for light user
 	acs.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_QUERY.String()+"-"+
@@ -484,6 +504,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	acs.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
 	acs.resourceNamePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 	acs.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
+	acs.resourceNamePolicyMap.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), policyHotColdDataSeparate)
+	acs.resourceNamePolicyMap.Store(common.TxType_SNAPSHOT.String(), policySnapshot)
 
 	// exceptional resourceName opened for light user
 	acs.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_QUERY.String()+"-"+

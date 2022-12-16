@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 
+	batch "chainmaker.org/chainmaker/txpool-batch/v3"
+
 	"chainmaker.org/chainmaker-go/module/consensus/cutover"
 	"chainmaker.org/chainmaker-go/module/txfilter"
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
@@ -20,8 +22,8 @@ import (
 	"chainmaker.org/chainmaker/localconf/v3"
 	"chainmaker.org/chainmaker/logger/v3"
 	"chainmaker.org/chainmaker/protocol/v3"
-	"chainmaker.org/chainmaker/store/v3"
-	batch "chainmaker.org/chainmaker/txpool-batch/v3"
+	storeHuge "chainmaker.org/chainmaker/store-huge/v3"
+	store "chainmaker.org/chainmaker/store/v3"
 	"chainmaker.org/chainmaker/utils/v3"
 	"chainmaker.org/chainmaker/vm/v3"
 
@@ -43,13 +45,15 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v3/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v3/consensus"
 	storePb "chainmaker.org/chainmaker/pb-go/v3/store"
-	"chainmaker.org/chainmaker/store/v3/conf"
-	"github.com/mitchellh/mapstructure"
+	storeHugeConf "chainmaker.org/chainmaker/store-huge/v3/conf"
+	storeConf "chainmaker.org/chainmaker/store/v3/conf"
 )
 
 const (
 	//PREFIX_dpos_stake_nodeId the nodeId prefix in the dpos config in the chainconf
 	PREFIX_dpos_stake_nodeId string = "stake.nodeID"
+	//STORE_HUGE the store engine's name
+	STORE_HUGE string = "store-huge"
 )
 
 // Init all the modules.
@@ -170,6 +174,24 @@ func (bc *Blockchain) InitForRebuildDbs() (err error) {
 	bc.log.Debug("start to init blockchain ...")
 	return bc.initExtModules(extModules)
 }
+
+// InitForImportSnapshot Init import snapshot.
+//func (bc *Blockchain) InitForImportSnapshot() (err error) {
+//	baseModules := []map[string]func() error{
+//		// init import store module
+//		{moduleNameStore: bc.initImportSnapshotStore},
+//		// init chain config , must latter than store module
+//		{moduleNameChainConf: bc.initChainConf},
+//	}
+//	if err := bc.initBaseModules(baseModules); err != nil {
+//		return err
+//	}
+//	//var extModules []map[string]func() error
+//	bc.log.Debug("start to init blockchain ...")
+//	return nil
+//	//return bc.initExtModules(extModules)
+//}
+
 func (bc *Blockchain) initBaseModules(baseModules []map[string]func() error) (err error) {
 	moduleNum := len(baseModules)
 	for idx, baseModule := range baseModules {
@@ -218,15 +240,93 @@ func (bc *Blockchain) initStore() (err error) {
 	_, ok := bc.initModules[moduleNameStore]
 	if ok {
 		bc.log.Infof("store module existed, ignore.")
-		return
+		return nil
 	}
-	var storeFactory store.Factory // nolint: typecheck
+	// get store configuration ,check "engine-provider"
+	storeEngine, ok := localconf.ChainMakerConfig.StorageConfig["engine_provider"].(string)
+	// store engine is not store-huge, config "engine-provider" is nil
+	if !ok {
+		storeFactory := store.NewFactory()
+		//var storeFactory store.Factory // nolint: typecheck
+		storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+		err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("store"))
+		if err != nil {
+			return err
+		}
+		var config *storeConf.StorageConfig
+		config, err = storeConf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+		//err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
+		if err != nil {
+			return err
+		}
+
+		//p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
+		err = container.Register(localconf.ChainMakerConfig.GetP11Handle)
+		if err != nil {
+			return err
+		}
+
+		err = container.Register(storeFactory.NewStore,
+			container.Parameters(map[int]interface{}{0: bc.chainId, 1: config}),
+			container.DependsOn(map[int]string{2: "store"}),
+			container.Name(bc.chainId))
+		if err != nil {
+			return err
+		}
+		err = container.Resolve(&bc.store, container.ResolveName(bc.chainId))
+		if err != nil {
+			bc.log.Errorf("new store failed, %s", err.Error())
+			return err
+		}
+		bc.initModules[moduleNameStore] = struct{}{}
+		return nil
+	}
+	// store engine is not store-huge
+	if storeEngine != STORE_HUGE {
+		storeFactory := store.NewFactory()
+		//var storeFactory store.Factory // nolint: typecheck
+		storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+		err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("store"))
+		if err != nil {
+			return err
+		}
+		var config *storeConf.StorageConfig
+		config, err = storeConf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+		//err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
+		if err != nil {
+			return err
+		}
+
+		//p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
+		err = container.Register(localconf.ChainMakerConfig.GetP11Handle)
+		if err != nil {
+			return err
+		}
+
+		err = container.Register(storeFactory.NewStore,
+			container.Parameters(map[int]interface{}{0: bc.chainId, 1: config}),
+			container.DependsOn(map[int]string{2: "store"}),
+			container.Name(bc.chainId))
+		if err != nil {
+			return err
+		}
+		err = container.Resolve(&bc.store, container.ResolveName(bc.chainId))
+		if err != nil {
+			bc.log.Errorf("new store failed, %s", err.Error())
+			return err
+		}
+		bc.initModules[moduleNameStore] = struct{}{}
+		return nil
+	}
+	// store engine is store-huge
+	storeFactory := storeHuge.NewFactory()
 	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
-	err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("store"))
+	err = container.Register(func() protocol.Logger { return storeLogger },
+		container.Name("oldStore"))
 	if err != nil {
 		return err
 	}
-	config, err := conf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+	config, err := storeHugeConf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
 	//err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
 	if err != nil {
 		return err
@@ -251,8 +351,55 @@ func (bc *Blockchain) initStore() (err error) {
 		return err
 	}
 	bc.initModules[moduleNameStore] = struct{}{}
-	return
+	return nil
+
 }
+
+// initImportSnapshotStore  create a  import storage ,then import snapshot data into storage
+//func (bc *Blockchain) initImportSnapshotStore() (err error) {
+//	_, ok := bc.initModules[moduleNameStore]
+//	if ok {
+//		bc.log.Infof("store module existed, ignore.")
+//		return nil
+//	}
+//	//var storeFactory store.Factory // nolint: typecheck
+//	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+//
+//	//get storage config
+//	config, err := storeHugeConf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+//	if err != nil {
+//		return err
+//	}
+//
+//	//get p11Handle from local conf
+//	p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
+//	if err != nil {
+//		return err
+//	}
+//
+//	//create import storage
+//	factoryStore := storeHuge.NewFactory()
+//	snapshotHeight, ok := localconf.ChainMakerConfig.StorageConfig["snapshot_height"].(uint64)
+//	if !ok { // config "snapshot_height" is nil, we don't need to init import snapshot store
+//		return nil
+//	}
+//	importStore, err := factoryStore.NewImportStore(bc.chainId, config, storeLogger, p11Handle, snapshotHeight)
+//
+//	//import snapshot data into storage
+//	if err = importStore.ImportSnapshot(bc.chainId, config.StorePath, snapshotHeight); err != nil {
+//		return err
+//	}
+//
+//	//bc.initModules[moduleNameStore] = struct{}{}
+//	return nil
+//}
+
+//func (bc *Blockchain) Import() error {
+//	chainID := bc.chainId
+//	snapshotPath := localconf.ChainMakerConfig.GetStorePath()
+//	snapshotHeight := localconf.ChainMakerConfig.StorageConfig["height"].(uint64)
+//	return bc.importLedgerSnapshot.ImportSnapshot(chainID,snapshotPath,snapshotHeight)
+//}
 
 func (bc *Blockchain) initOldStore() (err error) {
 	_, ok := bc.initModules[moduleNameOldStore]
@@ -260,51 +407,11 @@ func (bc *Blockchain) initOldStore() (err error) {
 		bc.log.Infof("store module existed, ignore.")
 		return
 	}
-	var storeFactory store.Factory // nolint: typecheck
-	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
-	err = container.Register(func() protocol.Logger { return storeLogger },
-		container.Name("oldStore"))
-	if err != nil {
-		return err
-	}
-	config := &conf.StorageConfig{}
-	err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
-	timeS, _ := localconf.ChainMakerConfig.StorageConfig["back_path"].(string)
-	config.StorePath = config.StorePath + "-" + timeS
-	config.BlockDbConfig.LevelDbConfig["store_path"] =
-		config.BlockDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	config.StateDbConfig.LevelDbConfig["store_path"] =
-		config.StateDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	config.ResultDbConfig.LevelDbConfig["store_path"] =
-		config.ResultDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	config.HistoryDbConfig.LevelDbConfig["store_path"] =
-		config.HistoryDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	if config.TxExistDbConfig != nil {
-		config.TxExistDbConfig.LevelDbConfig["store_path"] =
-			config.TxExistDbConfig.LevelDbConfig["store_path"].(string) + "-" + timeS
-	}
-	if err != nil {
-		return err
-	}
-	//p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
-	err = container.Register(localconf.ChainMakerConfig.GetP11Handle)
-	if err != nil {
-		return err
-	}
-	err = container.Register(storeFactory.NewStore,
-		container.Parameters(map[int]interface{}{0: bc.chainId, 1: config}),
-		container.DependsOn(map[int]string{2: "oldStore"}),
-		container.Name(bc.chainId))
-	if err != nil {
-		return err
-	}
-	err = container.Resolve(&bc.oldStore, container.ResolveName(bc.chainId))
-	if err != nil {
-		bc.log.Errorf("new store failed, %s", err.Error())
-		return err
-	}
-	bc.initModules[moduleNameOldStore] = struct{}{}
-	return
+
+	// get store configuration ,check "engine-provider"
+	storeEngine, ok := localconf.ChainMakerConfig.StorageConfig["engine-provider"].(string)
+	return bc.createOldStore(ok, storeEngine)
+
 }
 func (bc *Blockchain) initChainConf() (err error) {
 	_, ok := bc.initModules[moduleNameChainConf]
@@ -758,7 +865,7 @@ func (bc *Blockchain) initConsensus() (err error) {
 	if bc.chainConf.ChainConfig().Consensus.Type == consensusPb.ConsensusType_ABFT {
 		if value, ok := localconf.ChainMakerConfig.TxPoolConfig["pool_type"]; ok {
 			if strings.ToUpper(value.(string)) == batch.TxPoolType {
-				errMsg := fmt.Sprintf("ABFT consensus no support Batch Pool")
+				errMsg := "ABFT consensus no support Batch Pool"
 				bc.log.Errorf(errMsg)
 				return fmt.Errorf(errMsg)
 			}

@@ -10,6 +10,14 @@ import (
 	"fmt"
 	"os"
 
+	"chainmaker.org/chainmaker/common/v3/container"
+	"chainmaker.org/chainmaker/logger/v3"
+	"chainmaker.org/chainmaker/protocol/v3"
+	storeHuge "chainmaker.org/chainmaker/store-huge/v3"
+	storeHugeConf "chainmaker.org/chainmaker/store-huge/v3/conf"
+	"chainmaker.org/chainmaker/store/v3"
+	storeConf "chainmaker.org/chainmaker/store/v3/conf"
+
 	"chainmaker.org/chainmaker/localconf/v3"
 	"chainmaker.org/chainmaker/pb-go/v3/config"
 
@@ -122,5 +130,118 @@ func (bc *Blockchain) SwitchConsensus(consensusConfig *config.ConsensusConfig) e
 		bc.log.Errorf("blockchain start failed when witching consensus, %s", err)
 		return err
 	}
+	return nil
+}
+
+// createOldStore create a old store for rebuild
+func (bc *Blockchain) createOldStore(ok bool, storeEngine string) error {
+	var err error
+
+	// store engine is not store-huge,provider-engine is nil
+	if !ok {
+		storeFactory := store.NewFactory()
+		//var storeFactory store.Factory // nolint: typecheck
+		storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+		err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("store"))
+		if err != nil {
+			return err
+		}
+		var config *storeConf.StorageConfig
+		config, err = storeConf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+		//err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
+		if err != nil {
+			return err
+		}
+
+		//p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
+		err = container.Register(localconf.ChainMakerConfig.GetP11Handle)
+		if err != nil {
+			return err
+		}
+
+		err = container.Register(storeFactory.NewStore,
+			container.Parameters(map[int]interface{}{0: bc.chainId, 1: config}),
+			container.DependsOn(map[int]string{2: "store"}),
+			container.Name(bc.chainId))
+		if err != nil {
+			return err
+		}
+		err = container.Resolve(&bc.store, container.ResolveName(bc.chainId))
+		if err != nil {
+			bc.log.Errorf("new store failed, %s", err.Error())
+			return err
+		}
+		bc.initModules[moduleNameStore] = struct{}{}
+		return nil
+	}
+	// store engine is not store-huge
+	if storeEngine != STORE_HUGE {
+		storeFactory := store.NewFactory()
+		//var storeFactory store.Factory // nolint: typecheck
+		storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+		err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("store"))
+		if err != nil {
+			return err
+		}
+		var config *storeConf.StorageConfig
+		config, err = storeConf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+		//err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
+		if err != nil {
+			return err
+		}
+
+		//p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
+		err = container.Register(localconf.ChainMakerConfig.GetP11Handle)
+		if err != nil {
+			return err
+		}
+
+		err = container.Register(storeFactory.NewStore,
+			container.Parameters(map[int]interface{}{0: bc.chainId, 1: config}),
+			container.DependsOn(map[int]string{2: "store"}),
+			container.Name(bc.chainId))
+		if err != nil {
+			return err
+		}
+		err = container.Resolve(&bc.store, container.ResolveName(bc.chainId))
+		if err != nil {
+			bc.log.Errorf("new store failed, %s", err.Error())
+			return err
+		}
+		bc.initModules[moduleNameStore] = struct{}{}
+		return nil
+	}
+	// store engine is store-huge
+	storeFactory := storeHuge.NewFactory()
+	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
+	err = container.Register(func() protocol.Logger { return storeLogger }, container.Name("store"))
+	if err != nil {
+		return err
+	}
+	config, err := storeHugeConf.NewStorageConfig(localconf.ChainMakerConfig.StorageConfig)
+	//err = mapstructure.Decode(localconf.ChainMakerConfig.StorageConfig, config)
+	if err != nil {
+		return err
+	}
+
+	//p11Handle, err := localconf.ChainMakerConfig.GetP11Handle()
+	err = container.Register(localconf.ChainMakerConfig.GetP11Handle)
+	if err != nil {
+		return err
+	}
+
+	err = container.Register(storeFactory.NewStore,
+		container.Parameters(map[int]interface{}{0: bc.chainId, 1: config}),
+		container.DependsOn(map[int]string{2: "store"}),
+		container.Name(bc.chainId))
+	if err != nil {
+		return err
+	}
+	err = container.Resolve(&bc.store, container.ResolveName(bc.chainId))
+	if err != nil {
+		bc.log.Errorf("new store failed, %s", err.Error())
+		return err
+	}
+	bc.initModules[moduleNameStore] = struct{}{}
 	return nil
 }
