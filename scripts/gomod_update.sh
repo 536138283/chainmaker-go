@@ -31,6 +31,7 @@ go get chainmaker.org/chainmaker/pb-go/v3@${BRANCH}
 go get chainmaker.org/chainmaker/protocol/v3@${BRANCH}
 go get chainmaker.org/chainmaker/sdk-go/v3@${BRANCH}
 go get chainmaker.org/chainmaker/store/v3@${BRANCH}
+go get chainmaker.org/chainmaker/store-huge/v3@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-batch/v3@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-normal/v3@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-single/v3@${BRANCH}

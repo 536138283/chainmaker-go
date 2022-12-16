@@ -212,6 +212,11 @@ rpc:
   max_send_msg_size: 100
   max_recv_msg_size: 100
 
+  # RPC server disable verify query signature.
+  # set true, the rpcserver will not verify the signature of the TxType_QUERY_CONTRACT tx.
+  # default is false, the rpcserver will do verify the signature of the TxType_QUERY_CONTRACT tx.
+  disable_verify_query_signature: false
+
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
   # 3 is recommended.

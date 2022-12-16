@@ -15,6 +15,8 @@ import (
 	commonCert "chainmaker.org/chainmaker/common/v3/cert"
 	bccrypto "chainmaker.org/chainmaker/common/v3/crypto"
 	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	becdsa "chainmaker.org/chainmaker/common/v3/crypto/asym/ecdsa"
+	"chainmaker.org/chainmaker/common/v3/ethbase"
 	"chainmaker.org/chainmaker/common/v3/helper"
 	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
@@ -330,6 +332,22 @@ func publicNewPkMemberFromAcs(member *pbac.Member, adminList,
 			protocol.RoleConsensusNode, hashType)
 	}
 	return newPkMemberFromParam("", pkBytes, protocol.Role(""), hashType)
+}
+
+func publicNewEthPkMember(member *pbac.Member) (*pkMember, error) {
+	if member.MemberType != pbac.MemberType_PUBLIC_KEY {
+		return nil, fmt.Errorf("new public key member failed: memberType and authType do not match")
+	}
+	pk := ethbase.UnmarshalPublicKey(member.MemberInfo)
+	var pkMem pkMember
+	pkMem.orgId = ""
+	pkMem.hashType = "Keccak256"
+	pkMem.pk = &becdsa.PublicKey{K: pk}
+	pkMem.role = ""
+	addr := ethbase.PubKeyToAddress(pk)
+	pkMem.uid = addr.StringSimple()
+	pkMem.id = addr.StringSimple()
+	return &pkMem, nil
 }
 
 func newPkMemberFromParam(orgId string, pkBytes []byte, role protocol.Role,

@@ -348,6 +348,7 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 		p.log.Debugf("member found in local cache")
 		return cached.member
 	}
+
 	// handle false positive when member cache is cleared
 	if p.authType == protocol.Public {
 		tmpMember, err := p.NewMemberFromAcs(member)
@@ -416,6 +417,14 @@ func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error)
 //  @return error
 //
 func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member, error) {
+	if len(pbMember.MemberInfo) < 66 {
+		member, err := publicNewEthPkMember(pbMember)
+		if err != nil {
+			return nil, fmt.Errorf("new member failed: %s", err.Error())
+		}
+		p.log.Debugf("new eth member by pk:%x", pbMember.MemberInfo)
+		return member, nil
+	}
 	member, err := publicNewPkMemberFromAcs(pbMember, p.adminMember, p.consensusMember, p.hashType)
 	if err != nil {
 		return nil, fmt.Errorf("new member failed: %s", err.Error())

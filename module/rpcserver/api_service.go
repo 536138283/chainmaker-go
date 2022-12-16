@@ -15,6 +15,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker-go/module/snapshot"
 	commonErr "chainmaker.org/chainmaker/common/v3/errors"
+	"chainmaker.org/chainmaker/common/v3/ethbase"
 	"chainmaker.org/chainmaker/common/v3/json"
 	"chainmaker.org/chainmaker/common/v3/monitor"
 	"chainmaker.org/chainmaker/localconf/v3"
@@ -23,6 +24,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
 	"chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v3/txpool"
 	"chainmaker.org/chainmaker/protocol/v3"
 	"chainmaker.org/chainmaker/store/v3/archive"
@@ -108,9 +110,31 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 
 	return &apiService
 }
+func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*commonPb.TxResponse, error) {
+	req, err := utils.UnmarshalEthRlpBytes(raw)
+	if err != nil {
+		return nil, err
+	}
+	resp := s.invoke(req, protocol.RPC)
+
+	from := ethbase.BytesToAddress(req.Sender.Signer.MemberInfo)
+	valueBytes := req.Payload.GetParameter(commonPb.EthTxParameterKey_VALUE.String())
+	value, _ := ethbase.NewSafeUint256(valueBytes)
+	// audit log format: ip:port|TxType|TxHash|From|To|ChainId|Nonce|Value|RawTx|respCode|respMsg
+	s.logBrief.Infof("|%s|%s|%s|%s|%s|%s|%d|%s|%x|%s|%s", GetClientAddr(ctx), req.Payload.TxType,
+		req.Payload.TxId, from.String(), req.Payload.ContractName,
+		req.Payload.ChainId, req.Payload.Sequence,
+		value.ToString(), raw, resp.Code, resp.Message)
+
+	return resp, nil
+}
 
 // SendRequest - deal received TxRequest
 func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
+	if req.Payload.TxType == commonPb.TxType_ETH_TX {
+		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("rawtx"))
+	}
+
 	s.log.DebugDynamic(func() string {
 		return fmt.Sprintf("SendRequest[%s],payload:%#v,\n----signer:%v\n----endorsers:%+v",
 			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
@@ -176,7 +200,7 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		resp    = &commonPb.TxResponse{}
 	)
 
-	if tx.Payload.ChainId != SYSTEM_CHAIN {
+	if shouldValidateTx(tx) {
 		errCode, errMsg = s.validate(tx)
 		if errCode != commonErr.ERR_CODE_OK {
 			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -187,10 +211,10 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 	}
 
 	switch tx.Payload.TxType {
+	case commonPb.TxType_INVOKE_CONTRACT, commonPb.TxType_ETH_TX:
+		return s.dealTransact(tx, source)
 	case commonPb.TxType_QUERY_CONTRACT:
 		return s.dealQuery(tx, source)
-	case commonPb.TxType_INVOKE_CONTRACT:
-		return s.dealTransact(tx, source)
 	case commonPb.TxType_ARCHIVE:
 		return s.doArchive(tx)
 	case commonPb.TxType_SNAPSHOT:
@@ -198,11 +222,26 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 	case commonPb.TxType_HOT_COLD_DATA_SEPARATION:
 		return s.dealHotColdDataSeparate(tx)
 	default:
+		s.log.Warnf("unsupported tx_type tx[%s]", tx.Payload.TxId)
 		return &commonPb.TxResponse{
 			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,
 			Message: commonErr.ERR_CODE_TXTYPE.String(),
 		}
 	}
+}
+func isEstimateGasEthTx(tx *commonPb.Transaction) bool {
+	if tx.Payload.TxType.IsEthTxType() {
+		return true
+	}
+	_, err := ethbase.ParseAddress(tx.Payload.ContractName)
+	if err != nil {
+		return false
+	}
+	value := tx.Payload.GetParameter(commonPb.EthTxParameterKey_FROM.String())
+	if value != nil {
+		return true
+	}
+	return false
 }
 
 // dealQuery - deal query tx
@@ -263,8 +302,15 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		blockVersion = protocol.DefaultBlockVersion
 	}
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
-
-	contract, err := store.GetContractByName(tx.Payload.ContractName)
+	contractName := tx.Payload.ContractName
+	method := tx.Payload.Method
+	//以太坊预估Gas
+	if isEstimateGasEthTx(tx) {
+		contractName = syscontract.SystemContract_ETHEREUM.String()
+		method = syscontract.EthereumFunction_Unpack.String()
+		tx.Payload.TxType = commonPb.TxType_ETH_TX
+	}
+	contract, err := store.GetContractByName(contractName)
 	if err != nil {
 		s.log.Error(err)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -286,15 +332,19 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 			return resp
 		}
 	}
-	txResult, _, txStatusCode := vmMgr.RunContract(contract, tx.Payload.Method,
+	txResult, _, txStatusCode := vmMgr.RunContract(contract, method,
 		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
 	s.log.DebugDynamic(func() string {
 		contractJson, _ := json.Marshal(contract)
 		return fmt.Sprintf("vmMgr.RunContract: txStatusCode:%d, resultCode:%d, contractName[%s](%s), "+
-			"method[%s], txType[%s], message[%s],result len: %d",
+			"method[%s], txType[%s], message[%s],result len: %d, gasUsed:%d",
 			txStatusCode, txResult.Code, tx.Payload.ContractName, string(contractJson), tx.Payload.Method,
-			tx.Payload.TxType, txResult.Message, len(txResult.Result))
+			tx.Payload.TxType, txResult.Message, len(txResult.Result), txResult.GasUsed)
 	})
+	if isEstimateGasEthTx(tx) && txResult.GasUsed < 21000 {
+		txResult.GasUsed = 21000
+		s.log.Infof("Tx[%s] EstimateGas result:%d, update to 21000", tx.Payload.TxId, txResult.GasUsed)
+	}
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
