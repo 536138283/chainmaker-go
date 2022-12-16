@@ -259,7 +259,9 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
 		blockVersion = cc.ChainConfig().GetBlockVersion()
 	}
-
+	if blockVersion == 0 {
+		blockVersion = protocol.DefaultBlockVersion
+	}
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
 
 	contract, err := store.GetContractByName(tx.Payload.ContractName)
@@ -369,6 +371,9 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 
 	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
 		blockVersion = cc.ChainConfig().GetBlockVersion()
+	}
+	if blockVersion == 0 {
+		blockVersion = protocol.DefaultBlockVersion
 	}
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
 

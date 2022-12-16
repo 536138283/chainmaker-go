@@ -49,13 +49,13 @@ func NewBlockSyncServerConf() *BlockSyncServerConf {
 		batchSizeFromOneNode: 1,
 		processBlockTick:     20 * time.Millisecond,
 		livenessTick:         1 * time.Second,
-		nodeStatusTick:       5 * time.Second,
+		nodeStatusTick:       2 * time.Second,
 		schedulerTick:        20 * time.Millisecond,
 		dataDetectionTick:    time.Minute,
-		reqTimeThreshold:     5 * time.Second,
+		reqTimeThreshold:     1 * time.Second,
 		blockRequestTime:     5 * time.Second,
 		minLagThreshold:      5,
-		minLagThresholdTime:  30 * time.Second,
+		minLagThresholdTime:  3 * time.Second,
 	}
 }
 

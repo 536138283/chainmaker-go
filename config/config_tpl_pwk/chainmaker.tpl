@@ -133,7 +133,7 @@ net:
 # Other txpool settings can be found in tx_Pool_config.go
 txpool:
   # tx_pool type, can be single, normal, batch.
-  # By default the tx_pool type is single.
+  # By default the tx_pool type is normal.
   # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
   pool_type: "normal"
 
@@ -379,13 +379,15 @@ storage:
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
-  # Disable block file db, default: false
+  # Disable block file db, default: true
   disable_block_file_db: false
 
-  # async write block in file block db to disk, default: false, so default is sync write disk
+  # async write block in file block db to disk (by blockfiledb or wal), default: false, so default is sync write disk
   logdb_segment_async: false
 
-  # file size of .fdb, MB, default: 20
+  # file size of stored block file
+  # if disable_block_file_db: false, we use block filedb, this means .fdb file size(MB), default: 64
+  # if disable_block_file_db: true, we use wal, this means .wal file size(MB), default: 20
   logdb_segment_size: 128
 
   # bigfilter config
@@ -403,7 +405,10 @@ storage:
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
   write_block_type: 0  # 0普通写模式，1快速写模式
+  # record DB slow log (INFO level) when query spend time more than this value (millisecond), 0 means no record
+  slow_log: 0
   # state db cache
+  disable_state_cache: false # default enable state cache
   state_cache_config:
     # key/value ttl time, ns
     life_window: 3000000000000
@@ -465,12 +470,14 @@ storage:
       store_path: ../data/{org_id}/state
 
   # History db config
+  disable_historydb: false  # default enable history db
   historydb_config:
     provider: leveldb
     leveldb_config:
       store_path: ../data/{org_id}/history
 
   # Result db config
+  disable_resultdb: false # default enable result db
   resultdb_config:
     provider: leveldb
     leveldb_config:
@@ -523,6 +530,8 @@ vm:
 
     #  Configs of docker runtime server (handle messages with contract sandbox)
     runtime_server:
+      # runtime server host, default 127.0.0.1
+      # host: 127.0.0.1
       # Runtime server port, default 32351
       port: {vm_go_runtime_port}
 

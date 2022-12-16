@@ -47,6 +47,7 @@ const (
 
 	// blockVersion2040000 block version 2.4.0
 	blockVersion2040000 = uint32(2040000)
+	blockVersion2310    = uint32(2030100)
 )
 
 const (
@@ -1522,29 +1523,6 @@ func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
 		return [32]byte{}, err
 	}
 	return sha256.Sum256(keyBytes), nil
-}
-
-func getAccountBalanceFromSnapshot(address string, snapshot protocol.Snapshot) (int64, error) {
-
-	var err error
-	var balance int64
-	balanceData, err := snapshot.GetKey(-1,
-		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-		[]byte(accountmgr.AccountPrefix+address))
-	if err != nil {
-		return -1, err
-	}
-
-	if len(balanceData) == 0 {
-		balance = int64(0)
-	} else {
-		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
-		if err != nil {
-			return 0, err
-		}
-	}
-
-	return balance, nil
 }
 
 // publicKeyToAddress: generate address from public key, according to chainconfig parameter

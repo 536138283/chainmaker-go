@@ -62,16 +62,18 @@ var (
 	userSignKeyFilePath string
 	userSignCrtFilePath string
 
-	blockInterval   uint32
-	txParameterSize uint32
-	nodeOrgId       string
-	nodeIdOld       string
-	nodeId          string
-	nodeIds         string
-	trustRootOrgId  string
-	trustRootPaths  []string
-	certFilePaths   string
-	certCrlPath     string
+	blockInterval    uint32
+	extraConfigKey   string
+	extraConfigValue string
+	txParameterSize  uint32
+	nodeOrgId        string
+	nodeIdOld        string
+	nodeId           string
+	nodeIds          string
+	trustRootOrgId   string
+	trustRootPaths   []string
+	certFilePaths    string
+	certCrlPath      string
 
 	address   string
 	amount    string
@@ -142,6 +144,8 @@ const (
 	flagUserSignCrtFilePath              = "user-signcrt-file-path"
 	flagTimeout                          = "timeout"
 	flagBlockInterval                    = "block-interval"
+	flagExtraConfigKey                   = "extra-config-key"
+	flagExtraConfigValue                 = "extra-config-value"
 	flagTxParameterSize                  = "tx-parameter-size"
 	flagNodeOrgId                        = "node-org-id"
 	flagNodeIdOld                        = "node-id-old"
@@ -283,6 +287,10 @@ func init() {
 	flags.StringVar(&trustMemberInfoPath, flagTrustMemberCrtPath, "", "specify the ca file path")
 	flags.StringVar(&trustMemberRole, flagTrustMemberRole, "", "specify trust member role")
 	flags.StringVar(&trustMemberNodeId, flagTrustMemberNodeId, "", "specify trust member node id")
+
+	// consensus extra config
+	flags.StringVar(&extraConfigKey, flagExtraConfigKey, "", "extra config key")
+	flags.StringVar(&extraConfigValue, flagExtraConfigValue, "", "extra config value")
 
 	// 证书管理
 	flags.StringVar(&certFilePaths, flagCertFilePaths, "", "specify cert file paths, use ',' to separate")

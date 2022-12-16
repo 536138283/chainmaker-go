@@ -296,6 +296,9 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 		sch.pendingTime[i] = sch.lastRequest
 		sch.pendingBlocks[i] = peer
 	}
+	sch.log.Infof("request block[height: %d] from node [%s], BatchesSizeInReq: %d", pendingHeight, peer,
+		sch.BatchesizeInEachReq)
+
 	if err := sch.sendSyncBlockRequest(peer, pendingHeight, sch.BatchesizeInEachReq,
 		localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable); err != nil {
 		return nil, err

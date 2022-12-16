@@ -576,7 +576,11 @@ func (bp *BlockProposerImpl) getChainVersion() uint32 {
 		bp.log.Warnf("No chain config found, use default block version:%d", protocol.DefaultBlockVersion)
 		return protocol.DefaultBlockVersion
 	}
-	return bp.chainConf.ChainConfig().GetBlockVersion()
+	blockVersion := bp.chainConf.ChainConfig().GetBlockVersion()
+	if blockVersion == 0 {
+		blockVersion = protocol.DefaultBlockVersion
+	}
+	return blockVersion
 }
 
 // setNotIdle, set not idle status

@@ -110,6 +110,8 @@ type pkACProvider struct {
 
 	//consensus type
 	consensusType consensus.ConsensusType
+
+	lastestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
 }
 
 //  publicAdminMemberModel
@@ -168,6 +170,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 		exceptionalPolicyMap:     &sync.Map{},
 		resourceNamePolicyMap220: &sync.Map{},
 		exceptionalPolicyMap220:  &sync.Map{},
+		lastestPolicyMap:         &sync.Map{},
 	}
 
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
@@ -191,6 +194,16 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 			chainConfig = maxbftCfg.ChainConfig
 		}
 	}
+
+	err = pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
+	lastestPolicyMap := &sync.Map{}
+	for _, resourcePolicy := range chainConfig.ResourcePolicies {
+		if pkAcProvider.ValidateResourcePolicy(resourcePolicy) {
+			policy := newPolicyFromPb(resourcePolicy.Policy)
+			lastestPolicyMap.Store(resourcePolicy.ResourceName, policy)
+		}
+	}
+	pkAcProvider.lastestPolicyMap = lastestPolicyMap
 
 	err = pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {
@@ -459,11 +472,11 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(), pubPolicyForbidden)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), policyConfig)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
@@ -617,11 +630,11 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(), pubPolicyForbidden)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), policyConfig)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
@@ -840,6 +853,9 @@ func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy,
 		return p.lookUpPolicyByResourceName220(policyResourceName)
 	}
 
+	if p, ok := p.lastestPolicyMap.Load(resourceName); ok {
+		return p.(*policy), nil
+	}
 	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
 		if pol, ok = p.exceptionalPolicyMap.Load(resourceName); !ok {
@@ -988,6 +1004,10 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 		return p.lookUpPolicy220(policyResourceName)
 	}
 
+	if p, ok := p.lastestPolicyMap.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
+	}
+
 	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
 	if !ok {
 		return nil, fmt.Errorf("policy not found for resource %s", resourceName)
@@ -1008,6 +1028,10 @@ func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Polic
 
 	if blockVersion > 0 && blockVersion <= 220 {
 		return p.lookUpExceptionalPolicy220(policyResourceName)
+	}
+
+	if p, ok := p.lastestPolicyMap.Load(resourceName); ok {
+		return p.(*policy).GetPbPolicy(), nil
 	}
 
 	pol, ok := p.exceptionalPolicyMap.Load(resourceName)
