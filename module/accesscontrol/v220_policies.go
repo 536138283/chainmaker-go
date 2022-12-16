@@ -29,6 +29,8 @@ func (acs *accessControlService) createDefaultResourcePolicy_220(localOrgId stri
 	acs.resourceNamePolicyMap220.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
 	acs.resourceNamePolicyMap220.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 	acs.resourceNamePolicyMap220.Store(common.TxType_ARCHIVE.String(), policyArchive)
+	acs.resourceNamePolicyMap220.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), policyHotColdDataSeparate)
+	acs.resourceNamePolicyMap220.Store(common.TxType_SNAPSHOT.String(), policySnapshot)
 
 	// exceptional resourceName opened for light user
 	acs.exceptionalPolicyMap220.Store(syscontract.SystemContract_CHAIN_QUERY.String()+"-"+
@@ -187,6 +189,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK_220(localOrgId
 	acs.resourceNamePolicyMap220.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
 	acs.resourceNamePolicyMap220.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 	acs.resourceNamePolicyMap220.Store(common.TxType_ARCHIVE.String(), policyArchive)
+	acs.resourceNamePolicyMap220.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), policyHotColdDataSeparate)
+	acs.resourceNamePolicyMap220.Store(common.TxType_SNAPSHOT.String(), policySnapshot)
 
 	// exceptional resourceName opened for light user
 	acs.exceptionalPolicyMap220.Store(syscontract.SystemContract_CHAIN_QUERY.String()+"-"+
@@ -330,6 +334,8 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS_220() {
 	p.resourceNamePolicyMap220.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap220.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap220.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
+	p.resourceNamePolicyMap220.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), pubPolicyManage)
+	p.resourceNamePolicyMap220.Store(common.TxType_SNAPSHOT.String(), pubPolicyManage)
 
 	// exceptional resourceName
 	p.exceptionalPolicyMap220.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)
@@ -458,6 +464,8 @@ func (p *pkACProvider) createDefaultResourcePolicy_220() {
 	p.resourceNamePolicyMap220.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap220.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
 	p.resourceNamePolicyMap220.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
+	p.resourceNamePolicyMap220.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), pubPolicyManage)
+	p.resourceNamePolicyMap220.Store(common.TxType_SNAPSHOT.String(), pubPolicyManage)
 
 	// exceptional resourceName
 	p.exceptionalPolicyMap220.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)

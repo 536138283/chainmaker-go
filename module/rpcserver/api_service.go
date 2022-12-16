@@ -193,6 +193,10 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		return s.dealTransact(tx, source)
 	case commonPb.TxType_ARCHIVE:
 		return s.doArchive(tx)
+	case commonPb.TxType_SNAPSHOT:
+		return s.dealSnapshot(tx)
+	case commonPb.TxType_HOT_COLD_DATA_SEPARATION:
+		return s.dealHotColdDataSeparate(tx)
 	default:
 		return &commonPb.TxResponse{
 			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,

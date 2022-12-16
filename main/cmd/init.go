@@ -19,12 +19,14 @@ const (
 	flagNameOfConfigFilepath          = "conf-file"
 	flagNameShortHandOFConfigFilepath = "c"
 	flagNameOfChainId                 = "chain-id"
+	flagNameSnapshotHeight            = "snapshot-height"
 	flagNameOfNeedVerify              = "need-verify"
 )
 
 var (
 	rebuildChainId string
 	needVerify     bool
+	snapshotHeight uint64
 )
 
 func initLocalConfig(cmd *cobra.Command) {
@@ -42,6 +44,8 @@ func initFlagSet() *pflag.FlagSet {
 		"chain1", "specify chain-id, this flag only used by rebuild-dbs module")
 	flags.BoolVarP(&needVerify, flagNameOfNeedVerify, "v",
 		true, "specify need-verify, verify rebuild block whether or not, this flag only used by rebuild-dbs module")
+	flags.Uint64VarP(&snapshotHeight, flagNameSnapshotHeight, "", 0,
+		"snapshot height ")
 	return flags
 }
 

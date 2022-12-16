@@ -87,6 +87,19 @@ func (server *ChainMakerServer) InitForRebuildDbs(chainId string) error {
 	log.Info("init chain maker server success!")
 	return nil
 }
+
+// InitForImportSnapshot import snapshot .
+func (server *ChainMakerServer) InitForImportSnapshot(chainId string) error {
+	log.Debug("begin init chain maker rebuild dbs server...")
+	server.readyC = make(chan struct{})
+
+	blockchain := NewBlockchain("", chainId, msgbus.NewMessageBus(), server.net)
+	server.blockchains.Store(chainId, blockchain)
+	log.Infof("init blockchain[%s] success!", chainId)
+	return nil
+
+}
+
 func (server *ChainMakerServer) initNet() error {
 	var netType protocol.NetType
 	var err error
