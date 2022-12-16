@@ -3036,7 +3036,7 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 
 			block := &commonPb.Block{
 				Header: &commonPb.BlockHeader{
-					BlockVersion: blockVersion2040000,
+					BlockVersion: blockVersion3000000,
 				},
 			}
 			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
