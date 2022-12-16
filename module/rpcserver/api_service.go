@@ -29,7 +29,6 @@ import (
 	"chainmaker.org/chainmaker/protocol/v3"
 	"chainmaker.org/chainmaker/store/v3/archive"
 	"chainmaker.org/chainmaker/utils/v3"
-	native "chainmaker.org/chainmaker/vm-native/v3"
 	"chainmaker.org/chainmaker/vm/v3"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/time/rate"
@@ -238,10 +237,40 @@ func isEstimateGasEthTx(tx *commonPb.Transaction) bool {
 		return false
 	}
 	value := tx.Payload.GetParameter(commonPb.EthTxParameterKey_FROM.String())
-	if value != nil {
-		return true
+	return value != nil
+}
+func (s *ApiService) makeQueryContext(tx *commonPb.Transaction, chainId string,
+	store protocol.BlockchainStore, blockVersion uint32, vmMgr protocol.VmManager) (protocol.TxSimContext, error) {
+	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
+	snap, err := snapshot.NewQuerySnapshot(store, log)
+	if err != nil {
+		return nil, err
 	}
-	return false
+	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
+	return ctx, nil
+}
+func (s *ApiService) getBlockVersion(chainId string) uint32 {
+	blockVersion := protocol.DefaultBlockVersion
+
+	if cc, err1 := s.chainMakerServer.GetChainConf(chainId); err1 == nil {
+		blockVersion = cc.ChainConfig().GetBlockVersion()
+	}
+	if blockVersion == 0 {
+		blockVersion = protocol.DefaultBlockVersion
+	}
+	return blockVersion
+}
+
+// ErrorResponse generate an error response
+// @param txId
+// @param code
+// @param msg
+// @return *commonPb.TxResponse
+func ErrorResponse(txId string, code commonPb.TxStatusCode, msg string) *commonPb.TxResponse {
+	resp := &commonPb.TxResponse{TxId: txId}
+	resp.Code = code
+	resp.Message = msg
+	return resp
 }
 
 // dealQuery - deal query tx
@@ -252,7 +281,6 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		errCode commonErr.ErrCode
 		store   protocol.BlockchainStore
 		vmMgr   protocol.VmManager
-		resp    = &commonPb.TxResponse{TxId: tx.Payload.TxId}
 	)
 
 	chainId := tx.Payload.ChainId
@@ -261,47 +289,26 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		errCode = commonErr.ERR_CODE_GET_STORE
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = errMsg
-		resp.TxId = tx.Payload.TxId
-		return resp
+		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, errMsg)
 	}
 
 	if vmMgr, err = s.chainMakerServer.GetVmManager(chainId); err != nil {
 		errCode = commonErr.ERR_CODE_GET_VM_MGR
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = errMsg
-		resp.TxId = tx.Payload.TxId
-		return resp
+		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, errMsg)
 	}
 
-	if chainId == SYSTEM_CHAIN {
-		return s.dealSystemChainQuery(tx, vmMgr)
-	}
+	//if chainId == SYSTEM_CHAIN {
+	//	return s.dealSystemChainQuery(tx, vmMgr)
+	//}
 
-	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
-
-	var snap protocol.Snapshot
-	snap, err = snapshot.NewQuerySnapshot(store, log)
 	if err != nil {
 		s.log.Error(err)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = err.Error()
-		resp.TxId = tx.Payload.TxId
-		return resp
+		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
 
-	blockVersion := protocol.DefaultBlockVersion
-
-	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
-		blockVersion = cc.ChainConfig().GetBlockVersion()
-	}
-	if blockVersion == 0 {
-		blockVersion = protocol.DefaultBlockVersion
-	}
-	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
+	blockVersion := s.getBlockVersion(chainId)
 	contractName := tx.Payload.ContractName
 	method := tx.Payload.Method
 	//以太坊预估Gas
@@ -313,10 +320,7 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	contract, err := store.GetContractByName(contractName)
 	if err != nil {
 		s.log.Error(err)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = err.Error()
-		resp.TxId = tx.Payload.TxId
-		return resp
+		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
 
 	var bytecode []byte
@@ -326,11 +330,12 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		bytecode, err = store.GetContractBytecode(contract.Name)
 		if err != nil {
 			s.log.Error(err)
-			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-			resp.Message = err.Error()
-			resp.TxId = tx.Payload.TxId
-			return resp
+			return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 		}
+	}
+	ctx, err := s.makeQueryContext(tx, chainId, store, blockVersion, vmMgr)
+	if err != nil {
+		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
 	txResult, _, txStatusCode := vmMgr.RunContract(contract, method,
 		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
@@ -357,26 +362,25 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 			txStatusCode, txResult.Code, tx.Payload.ContractName, tx.Payload.Method, tx.Payload.TxType, txResult.Message)
 		s.log.Warn(errMsg)
 
-		resp.Code = txStatusCode
+		respCode := txStatusCode
 		if txResult.Message == archive.ErrArchivedBlock.Error() {
-			resp.Code = commonPb.TxStatusCode_ARCHIVED_BLOCK
+			respCode = commonPb.TxStatusCode_ARCHIVED_BLOCK
 		} else if txResult.Message == archive.ErrArchivedTx.Error() {
-			resp.Code = commonPb.TxStatusCode_ARCHIVED_TX
+			respCode = commonPb.TxStatusCode_ARCHIVED_TX
 		}
-
-		resp.Message = errMsg
+		resp := ErrorResponse(tx.Payload.TxId, respCode, errMsg)
 		resp.ContractResult = txResult
-		resp.TxId = tx.Payload.TxId
+
 		return resp
 	}
 
 	if txResult.Code == 1 {
-		resp.Code = commonPb.TxStatusCode_CONTRACT_FAIL
-		resp.Message = commonPb.TxStatusCode_CONTRACT_FAIL.String()
+		resp := ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_CONTRACT_FAIL,
+			commonPb.TxStatusCode_CONTRACT_FAIL.String())
 		resp.ContractResult = txResult
-		resp.TxId = tx.Payload.TxId
 		return resp
 	}
+	resp := &commonPb.TxResponse{}
 	resp.Code = commonPb.TxStatusCode_SUCCESS
 	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
 	resp.ContractResult = txResult
@@ -385,86 +389,86 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 }
 
 // dealSystemChainQuery - deal system chain query
-func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protocol.VmManager) *commonPb.TxResponse {
-	var (
-		resp    = &commonPb.TxResponse{}
-		store   protocol.BlockchainStore
-		err     error
-		errCode commonErr.ErrCode
-		errMsg  string
-	)
-
-	chainId := tx.Payload.ChainId
-
-	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
-		errCode = commonErr.ERR_CODE_GET_STORE
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = errMsg
-		resp.TxId = tx.Payload.TxId
-		return resp
-	}
-
-	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
-
-	var snap protocol.Snapshot
-	snap, err = snapshot.NewQuerySnapshot(store, log)
-	if err != nil {
-		s.log.Error(err)
-		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
-		resp.Message = err.Error()
-		resp.TxId = tx.Payload.TxId
-		return resp
-	}
-	blockVersion := protocol.DefaultBlockVersion
-
-	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
-		blockVersion = cc.ChainConfig().GetBlockVersion()
-	}
-	if blockVersion == 0 {
-		blockVersion = protocol.DefaultBlockVersion
-	}
-	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
-
-	defaultGas := uint64(0)
-	chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)
-	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
-		defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
-	}
-
-	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas, s.log)
-	txResult := runtimeInstance.Invoke(&commonPb.Contract{
-		Name: tx.Payload.ContractName,
-	},
-		tx.Payload.Method,
-		nil,
-		s.kvPair2Map(tx.Payload.Parameters),
-		ctx,
-	)
-
-	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		if txResult.Code != 1 {
-			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
-		} else {
-			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
-		}
-	}
-
-	if txResult.Code == 1 {
-		resp.Code = commonPb.TxStatusCode_CONTRACT_FAIL
-		resp.Message = commonPb.TxStatusCode_CONTRACT_FAIL.String()
-		resp.ContractResult = txResult
-		resp.TxId = tx.Payload.TxId
-		return resp
-	}
-
-	resp.Code = commonPb.TxStatusCode_SUCCESS
-	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
-	resp.ContractResult = txResult
-	resp.TxId = tx.Payload.TxId
-	return resp
-}
+//func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protocol.VmManager) *commonPb.TxResponse {
+//	var (
+//		resp    = &commonPb.TxResponse{}
+//		store   protocol.BlockchainStore
+//		err     error
+//		errCode commonErr.ErrCode
+//		errMsg  string
+//	)
+//
+//	chainId := tx.Payload.ChainId
+//
+//	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
+//		errCode = commonErr.ERR_CODE_GET_STORE
+//		errMsg = s.getErrMsg(errCode, err)
+//		s.log.Error(errMsg)
+//		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+//		resp.Message = errMsg
+//		resp.TxId = tx.Payload.TxId
+//		return resp
+//	}
+//
+//	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
+//
+//	var snap protocol.Snapshot
+//	snap, err = snapshot.NewQuerySnapshot(store, log)
+//	if err != nil {
+//		s.log.Error(err)
+//		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+//		resp.Message = err.Error()
+//		resp.TxId = tx.Payload.TxId
+//		return resp
+//	}
+//	blockVersion := protocol.DefaultBlockVersion
+//
+//	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
+//		blockVersion = cc.ChainConfig().GetBlockVersion()
+//	}
+//	if blockVersion == 0 {
+//		blockVersion = protocol.DefaultBlockVersion
+//	}
+//	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
+//
+//	defaultGas := uint64(0)
+//	chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)
+//	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
+//		defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
+//	}
+//
+//	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas, s.log)
+//	txResult := runtimeInstance.Invoke(&commonPb.Contract{
+//		Name: tx.Payload.ContractName,
+//	},
+//		tx.Payload.Method,
+//		nil,
+//		s.kvPair2Map(tx.Payload.Parameters),
+//		ctx,
+//	)
+//
+//	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+//		if txResult.Code != 1 {
+//			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
+//		} else {
+//			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
+//		}
+//	}
+//
+//	if txResult.Code == 1 {
+//		resp.Code = commonPb.TxStatusCode_CONTRACT_FAIL
+//		resp.Message = commonPb.TxStatusCode_CONTRACT_FAIL.String()
+//		resp.ContractResult = txResult
+//		resp.TxId = tx.Payload.TxId
+//		return resp
+//	}
+//
+//	resp.Code = commonPb.TxStatusCode_SUCCESS
+//	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
+//	resp.ContractResult = txResult
+//	resp.TxId = tx.Payload.TxId
+//	return resp
+//}
 
 // kvPair2Map - change []*commonPb.KeyValuePair to map[string]string
 func (s *ApiService) kvPair2Map(kvPair []*commonPb.KeyValuePair) map[string][]byte {
