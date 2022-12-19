@@ -43,7 +43,7 @@ require (
 
 require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.0-20221216071835-0e68877c2cf6
-	chainmaker.org/chainmaker/common/v3 v3.0.0-20221216095258-0c834b040e27
+	chainmaker.org/chainmaker/common/v3 v3.0.0-20221219095751-8403621d5d51
 	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.0-20221215170435-69b73b81a806
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0-20221215165135-ef9b875e02ee
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0-20221215164818-7d218f843768
