@@ -10,6 +10,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 
@@ -993,7 +994,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
 			}
 
-			panic(fmt.Sprintf("cache add block fail, panic: %v", panicError))
+			panic(fmt.Sprintf("cache add block fail, panic: %v %s", panicError, debug.Stack()))
 		}
 		if err != nil {
 			if err == commonErrors.ErrBlockHadBeenCommited {
@@ -1002,7 +1003,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 			}
 			if sqlErr := chain.storeHelper.RollBack(block, chain.blockchainStore); sqlErr != nil {
 				chain.log.Errorf("block [%d] rollback sql failed: %s", block.Header.BlockHeight, sqlErr)
-				panic("add block err: " + err.Error())
+				panic("add block err: " + err.Error() + string(debug.Stack()))
 			}
 		}
 	}()
