@@ -29,7 +29,7 @@ require (
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2-0.20221101040731-6542fc4bae7f
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2-0.20221028065828-e6a027d54d7c
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20221220021535-f02a1b84717b
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2-0.20221220040654-2674cb3f29d0
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2-0.20221220085836-040383ff2772
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2-0.20221027124616-c0fb426ec231
 	chainmaker.org/chainmaker/vm/v2 v2.3.2-0.20221104065611-5108c6b52afe
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
