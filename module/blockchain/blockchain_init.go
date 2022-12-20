@@ -322,7 +322,7 @@ func (bc *Blockchain) initStore() (err error) {
 	storeFactory := storeHuge.NewFactory()
 	storeLogger := logger.GetLoggerByChain(logger.MODULE_STORAGE, bc.chainId)
 	err = container.Register(func() protocol.Logger { return storeLogger },
-		container.Name("oldStore"))
+		container.Name("store"))
 	if err != nil {
 		return err
 	}
