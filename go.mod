@@ -53,7 +53,6 @@ require (
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.0-20221215163218-859d20eb13ba
 	chainmaker.org/chainmaker/localconf/v3 v3.0.0-20221216145445-586baf4ff3c7
 	chainmaker.org/chainmaker/logger/v3 v3.0.0-20221215144630-dc51ec90e4d2
-	chainmaker.org/chainmaker/lws v1.1.1-0.20220713075428-5bed3f300ef9 // indirect
 	chainmaker.org/chainmaker/pb-go/v3 v3.0.0-20221221064008-f515d53ac20d
 	chainmaker.org/chainmaker/protocol/v3 v3.0.0-20221216071513-a00aa38168f2
 	chainmaker.org/chainmaker/sdk-go/v3 v3.0.0-20221220072953-6589f4a83fd8

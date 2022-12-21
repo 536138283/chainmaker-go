@@ -30,9 +30,8 @@ chainmaker.org/chainmaker/logger/v3 v3.0.0-20221215144630-dc51ec90e4d2 h1:7s7HSw
 chainmaker.org/chainmaker/logger/v3 v3.0.0-20221215144630-dc51ec90e4d2/go.mod h1:ZvNcsZHPaNtKBDHTw9tDHC7NprKpIkk4MXaVkLwNXUw=
 chainmaker.org/chainmaker/lws v1.0.2-0.20220601075926-5112dcb6c15f/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
 chainmaker.org/chainmaker/lws v1.0.2-0.20220713075428-5bed3f300ef9/go.mod h1:DZTkZzjiHVT32GGFGPC/8gDJmV8aqAzwyV2Vpx8QKWY=
+chainmaker.org/chainmaker/lws v1.1.0 h1:i8J4KTlDAOtZjBtzwS0MpFXCQdGyHdyOJVsXqjxY1bQ=
 chainmaker.org/chainmaker/lws v1.1.0/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
-chainmaker.org/chainmaker/lws v1.1.1-0.20220713075428-5bed3f300ef9 h1:f1a1+HiZd9OldkihD4yb6rQJy31OKeTfLcx2NyMSUzc=
-chainmaker.org/chainmaker/lws v1.1.1-0.20220713075428-5bed3f300ef9/go.mod h1:DZTkZzjiHVT32GGFGPC/8gDJmV8aqAzwyV2Vpx8QKWY=
 chainmaker.org/chainmaker/net-common v1.2.2-0.20221215160619-96074a3a1951 h1:h4cuo4brYs0z8e5MkpolRjE971riIaMa6TaDmpA3RN8=
 chainmaker.org/chainmaker/net-common v1.2.2-0.20221215160619-96074a3a1951/go.mod h1:jIJ9xNakPOG9HZX+8tDh5n5QUhGtQ2jLbeh5wBwNwhY=
 chainmaker.org/chainmaker/net-libp2p v1.2.2-0.20221215163047-b6984c944e7c h1:DQMl1e47m/NXKiC9GLl3F1G78i8Ptv3y4f5iu/IHR5g=
