@@ -12,7 +12,7 @@
 chain_id: "12301"
 
 # chain maker version
-version: "2040000"
+version: "3000000"
 
 # chain config sequence
 sequence: 0
