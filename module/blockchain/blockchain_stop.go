@@ -26,6 +26,9 @@ func (bc *Blockchain) Stop() {
 	if bc.isModuleStartUp(moduleNameConsensus) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameConsensus: bc.stopConsensus})
 	}
+	if bc.isModuleStartUp(moduleNameVM) {
+		stopModules = append(stopModules, map[string]func() error{moduleNameVM: bc.stopVM})
+	}
 	if bc.isModuleStartUp(moduleNameCore) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameCore: bc.stopCoreEngine})
 	}
@@ -34,9 +37,6 @@ func (bc *Blockchain) Stop() {
 	}
 	if bc.isModuleStartUp(moduleNameTxPool) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameTxPool: bc.stopTxPool})
-	}
-	if bc.isModuleStartUp(moduleNameVM) {
-		stopModules = append(stopModules, map[string]func() error{moduleNameVM: bc.stopVM})
 	}
 
 	total := len(stopModules)
