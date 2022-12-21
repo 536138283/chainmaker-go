@@ -45,7 +45,7 @@ func distributionGetDetail() *cobra.Command {
 
 			resp, err := getDistributionDetail(client, epochID, DEFAULT_TIMEOUT)
 			if err != nil {
-				return fmt.Errorf("get-node-id failed, %s", err.Error())
+				return fmt.Errorf("get-distribution-detail failed, %s", err.Error())
 			}
 
 			fmt.Printf("resp: %+v\n", resp)

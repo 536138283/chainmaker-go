@@ -39,7 +39,7 @@ func slashingGetDetail() *cobra.Command {
 
 			resp, err := getSlashingDetail(client, epochID, DEFAULT_TIMEOUT)
 			if err != nil {
-				return fmt.Errorf("get-node-id failed, %s", err.Error())
+				return fmt.Errorf("get-slashing-detail failed, %s", err.Error())
 			}
 
 			fmt.Printf("resp: %+v\n", resp)
