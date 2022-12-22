@@ -15,6 +15,7 @@ cd ..
 
 go get chainmaker.org/chainmaker/chainconf/v3@${BRANCH}
 go get chainmaker.org/chainmaker/common/v3@${BRANCH}
+go get chainmaker.org/chainmaker/lws@v1.2.0_qc
 go get chainmaker.org/chainmaker/consensus-maxbft/v3@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-abft/v3@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-dpos/v3@${BRANCH}
