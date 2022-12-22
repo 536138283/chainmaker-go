@@ -44,13 +44,13 @@ require (
 require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.0-20221216071835-0e68877c2cf6
 	chainmaker.org/chainmaker/common/v3 v3.0.0-20221219095751-8403621d5d51
-	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.0-20221215170435-69b73b81a806
+	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.0-20221222070039-d73be9d06f5f
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0-20221215165135-ef9b875e02ee
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0-20221215164818-7d218f843768
 	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.0-20221221033359-b10228f150b9
 	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.0-20221215165852-2da7a814209b
-	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.0-20221221072010-adf289dad645
-	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.0-20221215163218-859d20eb13ba
+	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.0-20221222072540-0870eb341390
+	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.0-20221222042826-c44d4dd3de68
 	chainmaker.org/chainmaker/localconf/v3 v3.0.0-20221216145445-586baf4ff3c7
 	chainmaker.org/chainmaker/logger/v3 v3.0.0-20221215144630-dc51ec90e4d2
 	chainmaker.org/chainmaker/pb-go/v3 v3.0.0-20221221064008-f515d53ac20d
