@@ -43,4 +43,5 @@ test*.txt
 module/txfilter/shardingbirdsnest/data/
 module/txfilter/test0/
 module/blockchain/mypath*
+module/blockchain/createOldStore*
 __pycache__

@@ -8,7 +8,7 @@
 function lint_check() {
   cd ${cm}
   echo "cd ${cm}/$1"
-  golangci-lint run ./$1/...
+  golangci-lint run ./$1/... --allow-parallel-runners
 
   #计算注释覆盖率，需要安装gocloc： go install github.com/hhatto/gocloc/cmd/gocloc@latest
   comment_coverage=$(gocloc --include-lang=Go --output-type=json --not-match=".*_test\.go" ./$1 | jq '(.total.comment-.total.files*5)/(.total.code+.total.comment)*100')
@@ -28,12 +28,12 @@ if [ -n "$1" ] ;then
   echo "check lint and comment cover: $1."
   lint_check "$1" 15
 else
-   lint_check "module/accesscontrol" 5
+   lint_check "module/accesscontrol" 15
    lint_check "module/blockchain" 15
   lint_check "module/consensus" 15
   lint_check "module/core" 14
   lint_check "module/net" 12
-  lint_check "module/rpcserver" 3.8
+  lint_check "module/rpcserver" 6
   lint_check "module/snapshot" 15
   lint_check "module/subscriber" 15
   lint_check "module/sync" 15

@@ -43,7 +43,7 @@ require (
 
 require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.0-20221216071835-0e68877c2cf6
-	chainmaker.org/chainmaker/common/v3 v3.0.0-20221219095751-8403621d5d51
+	chainmaker.org/chainmaker/common/v3 v3.0.0-20221219115951-ecde175edfad
 	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.0-20221222085233-876e8328e6c4
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0-20221215165135-ef9b875e02ee
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0-20221222100221-30d1d1bd1c03
@@ -55,19 +55,19 @@ require (
 	chainmaker.org/chainmaker/logger/v3 v3.0.0-20221215144630-dc51ec90e4d2
 	chainmaker.org/chainmaker/pb-go/v3 v3.0.0-20221221064008-f515d53ac20d
 	chainmaker.org/chainmaker/protocol/v3 v3.0.0-20221216071513-a00aa38168f2
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.0-20221220072953-6589f4a83fd8
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.0-20221221072641-54cd6aa139ed
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.0-20221216090235-a261ffcc5ac7
 	chainmaker.org/chainmaker/store/v3 v3.0.0-20221216074351-8fd0ca065af9
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.0-20221222085351-60ada789ed63
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.0-20221222085326-adf868ff5913
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.0-20221222085301-a0578d8479a1
 	chainmaker.org/chainmaker/utils/v3 v3.0.0-20221216142307-223160f75f87
-	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.0-20221215155255-a82afbd98e70
-	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0-20221219025124-19d5268422c9
+	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.0-20221222063128-70c94d36e79f
+	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0-20221222064220-c4fe09f6e742
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.0-20221216070931-9f418041a3d2
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0-20221215154235-fc87247c7d80
 	chainmaker.org/chainmaker/vm-native/v3 v3.0.0-20221222101120-476dd297135e
-	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0-20221215154918-3b910a1efecb
+	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0-20221222034503-ed709dfb7f35
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0-20221215151317-d5335ed0efce
 	chainmaker.org/chainmaker/vm/v3 v3.0.0-20221216144325-84451089a89f
 	github.com/go-echarts/go-echarts/v2 v2.2.4
