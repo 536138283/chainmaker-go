@@ -237,9 +237,9 @@ func (bp *BlockProposerImpl) proposeBlock() {
 	}
 
 	proposingHeight := lastBlock.Header.BlockHeight + 1
-	//if !bp.shouldProposeByBFT(proposingHeight) {
-	//	return
-	//}
+	if !bp.shouldProposeByBFT(proposingHeight) {
+		return
+	}
 	if !bp.isIdle() {
 		// concurrent control, proposer is proposing now
 		bp.log.Debugf("proposer is busy, not propose [%d] ", proposingHeight)
@@ -267,13 +267,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 	startTick := utils.CurrentTimeMillisSeconds()
 	//defer bp.yieldProposing()
 	defer func() {
-		if !bp.yieldProposing() {
-			select {
-			case bp.finishProposeC <- true:
-				bp.log.Info("proposing f end")
-			default:
-			}
-		}
+		bp.yieldProposing()
 	}()
 
 	selfProposedBlock := bp.proposalCache.GetSelfProposedBlockAt(height)
@@ -413,7 +407,7 @@ func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 	bp.proposalCache.ResetProposedAt(height + 1) // proposer status changed, reset this round proposed status
 	bp.setIsSelfProposer(proposeStatus)
 	if !bp.isSelfProposer() {
-		bp.yieldProposing() // try to yield if proposer self is proposing right now.
+		//bp.yieldProposing() // try to yield if proposer self is proposing right now.
 		bp.log.Debug("current node is not proposer ")
 		return
 	}
@@ -491,7 +485,7 @@ func (bp *BlockProposerImpl) yieldProposing() bool {
 	defer bp.idleMu.Unlock()
 	if !bp.idle {
 		bp.finishProposeC <- true
-		bp.idle = true
+		//bp.idle = true
 		return true
 	}
 	return false
