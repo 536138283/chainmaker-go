@@ -56,7 +56,7 @@ require (
 	chainmaker.org/chainmaker/pb-go/v3 v3.0.0-20221221064008-f515d53ac20d
 	chainmaker.org/chainmaker/protocol/v3 v3.0.0-20221216071513-a00aa38168f2
 	chainmaker.org/chainmaker/sdk-go/v3 v3.0.0-20221221072641-54cd6aa139ed
-	chainmaker.org/chainmaker/store-huge/v3 v3.0.0-20221216090235-a261ffcc5ac7
+	chainmaker.org/chainmaker/store-huge/v3 v3.0.0-20221222132512-762c4753a329
 	chainmaker.org/chainmaker/store/v3 v3.0.0-20221216074351-8fd0ca065af9
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.0-20221222085351-60ada789ed63
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.0-20221222085326-adf868ff5913
