@@ -1090,7 +1090,8 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		height, lastProposed.Header.TxCount, lastProposed.Header.BlockHash,
 		checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, pubEvent, filterLasts, otherLasts, elapsed, interval)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		go chain.updateMetrics(blockInfo, elapsed, interval)
+		blockInfoTmp := *blockInfo
+		go chain.updateMetrics(&blockInfoTmp, elapsed, interval)
 	}
 	return nil
 }
@@ -1581,11 +1582,12 @@ func (chain *BlockCommitterImpl) initMetrics() {
 }
 
 func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, interval int64) {
-	raw, err := proto.Marshal(bi)
-	if err != nil {
-		chain.log.Errorw("marshal BlockInfo failed", "err", err)
-	}
-	chain.metricBlockSize.WithLabelValues(bi.Block.Header.ChainId).Observe(float64(len(raw)))
+	defer func() {
+		if panicError := recover(); panicError != nil {
+			chain.log.Error("updateMetrics failed ", panicError)
+		}
+	}()
+	chain.metricBlockSize.WithLabelValues(bi.Block.Header.ChainId).Observe(float64(bi.Size()))
 	chain.metricBlockHeight.WithLabelValues(bi.Block.Header.ChainId).Set(float64(bi.Block.Header.BlockHeight))
 	atomic.StoreUint64(&chain.mBlockHeight, bi.Block.Header.BlockHeight)
 	chain.metricTxCounter.WithLabelValues(bi.Block.Header.ChainId).Add(float64(bi.Block.Header.TxCount))
