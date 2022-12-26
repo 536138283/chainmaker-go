@@ -180,7 +180,6 @@ function start_vm_go() {
   sleep 3
 }
 
-
 # if enable Deprecated docker vm service and use unix domain socket, it will start a docker vm container
 function start_docker_vm_go() {
   container_name=DOCKERVM-{org_id}
