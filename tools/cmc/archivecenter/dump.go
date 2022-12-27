@@ -95,9 +95,13 @@ func runDumpCMD(beginHeight, endHeight uint64) error {
 		}
 	}
 	var archiveError error
+	var queryBlockFailed bool
 	for tempHeight := archiveBeginHeight; tempHeight <= archiveEndHeight; tempHeight++ {
-		archiveError = archiveBlockByHeight(genesisHash, tempHeight,
+		queryBlockFailed, archiveError = archiveBlockByHeight(genesisHash, tempHeight,
 			cc, clientStream, singleClientStream, isQuickMode)
+		if queryBlockFailed { // 如果查询区块失败,直接返回
+			break
+		}
 		if archiveError != nil {
 			break
 		}
@@ -113,7 +117,7 @@ func runDumpCMD(beginHeight, endHeight uint64) error {
 				archiveResp.Code, archiveResp.Message,
 				archiveResp.ArchivedBeginHeight, archiveResp.ArchivedEndHeight)
 		}
-		if archiveError != nil {
+		if archiveError != nil && !queryBlockFailed {
 			return archiveError
 		}
 		return nil
@@ -122,7 +126,7 @@ func runDumpCMD(beginHeight, endHeight uint64) error {
 	if archiveRespErr != nil {
 		return fmt.Errorf("stream close recv error %s", archiveRespErr.Error())
 	}
-	if archiveError != nil {
+	if archiveError != nil && !queryBlockFailed {
 		return archiveError
 	}
 	return nil
@@ -173,10 +177,12 @@ func archiveBlockByHeight(chainGenesis string, height uint64,
 	chainClient *chainmaker_sdk_go.ChainClient,
 	archiveClient archivecenter.ArchiveCenterServer_ArchiveBlocksClient,
 	singleClientStream archivecenter.ArchiveCenterServer_SingleArchiveBlocksClient,
-	isQuickMode bool) error {
+	isQuickMode bool) (bool, error) {
+	queryBlockFailed := false
 	block, blockError := chainClient.GetFullBlockByHeight(height)
 	if blockError != nil {
-		return fmt.Errorf("query block height %d got error %s",
+		queryBlockFailed = true
+		return queryBlockFailed, fmt.Errorf("query block height %d got error %s",
 			height, blockError.Error())
 
 	}
@@ -186,10 +192,10 @@ func archiveBlockByHeight(chainGenesis string, height uint64,
 			Block:       block,
 		})
 		if singleSendErr != nil {
-			return fmt.Errorf("send height %d got error %s",
+			return queryBlockFailed, fmt.Errorf("send height %d got error %s",
 				height, singleSendErr.Error())
 		} else {
-			return nil
+			return queryBlockFailed, nil
 		}
 	}
 	sendErr := archiveClient.Send(&archivecenter.ArchiveBlockRequest{
@@ -197,15 +203,15 @@ func archiveBlockByHeight(chainGenesis string, height uint64,
 		Block:       block,
 	})
 	if sendErr != nil {
-		return fmt.Errorf("send height %d got error %s",
+		return queryBlockFailed, fmt.Errorf("send height %d got error %s",
 			height, sendErr.Error())
 	}
 	archiveResp, archiveRespErr := archiveClient.Recv()
 	if archiveRespErr != nil {
-		return fmt.Errorf("send height %d got error %s", height, archiveRespErr.Error())
+		return queryBlockFailed, fmt.Errorf("send height %d got error %s", height, archiveRespErr.Error())
 	}
 	if archiveResp.ArchiveStatus == archivecenter.ArchiveStatus_ArchiveStatusFailed {
-		return fmt.Errorf("send height %d failed %s ", height, archiveResp.Message)
+		return queryBlockFailed, fmt.Errorf("send height %d failed %s ", height, archiveResp.Message)
 	}
-	return nil
+	return queryBlockFailed, nil
 }
