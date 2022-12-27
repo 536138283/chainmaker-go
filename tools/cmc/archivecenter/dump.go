@@ -113,7 +113,7 @@ func runDumpCMD(beginHeight, endHeight uint64) error {
 			return fmt.Errorf("stream close recv error %s", archiveRespErr.Error())
 		}
 		if archiveResp != nil {
-			fmt.Printf("archive resp code %d ,message %s , begin %d , end %d ",
+			fmt.Printf("archive resp code %d ,message %s , begin %d , end %d \n",
 				archiveResp.Code, archiveResp.Message,
 				archiveResp.ArchivedBeginHeight, archiveResp.ArchivedEndHeight)
 		}
