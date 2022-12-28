@@ -62,7 +62,7 @@ require (
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.0
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.0
 	chainmaker.org/chainmaker/utils/v3 v3.0.0
-	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20221226151504-43b57bab1a4a
+	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20221228075214-c3f41fb03ef2
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0

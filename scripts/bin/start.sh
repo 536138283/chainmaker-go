@@ -176,7 +176,6 @@ function start_vm_go() {
 
   echo "start docker vm service container succeed: $container_name"
 
-
   sleep 3
 }
 
