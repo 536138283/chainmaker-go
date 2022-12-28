@@ -52,8 +52,11 @@ core:
 
 # gas account config
 account_config:
+  # the flag to control if subtracting gas from transaction's origin account when sending tx.
   enable_gas: false
+  # Deprecated，the default gas count set for admin account.
   gas_count: 0
+  # the minimum gas count to be subtracted from transaction's origin account.
   default_gas: 0
 
 #共识配置
