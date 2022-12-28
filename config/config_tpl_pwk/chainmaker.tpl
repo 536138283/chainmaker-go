@@ -302,17 +302,17 @@ tx_filter:
       # 1 serialization by time interval
       type: 0
 
-      # effective when type is 0
+      # effective when type is 1
       timed:
         # Time interval in seconds
         interval: 10
 
-      # effective when type is 1
+      # effective when type is 0
       block_height:
         # Block height interval
         interval: 10
 
-      # effective when type is 0, serialization interval in seconds, compatible with version 221
+      # effective when type is 1, serialization interval in seconds, compatible with version 221
       serialize_interval: 10
 
       # storage to disk file path
