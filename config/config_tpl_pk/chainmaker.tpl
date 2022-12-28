@@ -416,7 +416,7 @@ storage:
   # bigfilter config, default false
   enable_bigfilter: false
 
-  # if enable_bigfilter is true, then bigfilter_config take effect
+  # effective when enable_bigfilter is true
   bigfilter_config:
     # redis host:port
     redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"
