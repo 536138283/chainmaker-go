@@ -217,6 +217,7 @@ func (server *ChainMakerServer) initBlockchains() error {
 		return fmt.Errorf("init all blockchains fail")
 	}
 	go server.newBlockchainTaskListener()
+	go server.deleteBlockchainTaskListener()
 	return nil
 }
 
@@ -239,6 +240,7 @@ func (server *ChainMakerServer) initBlockchainsForRebuildDbs(chainId string) err
 		return fmt.Errorf("init %s blockchains fail for not exists", chainId)
 	}
 	go server.newBlockchainTaskListener()
+	go server.deleteBlockchainTaskListener()
 	return nil
 }
 
@@ -260,6 +262,20 @@ func (server *ChainMakerServer) newBlockchainTaskListener() {
 				go startBlockchain(newBlockchain.(*Blockchain))
 			}
 		}
+	}
+}
+
+func (server *ChainMakerServer) deleteBlockchainTaskListener() {
+	for deleteChainId := range localconf.FindDeleteBlockChainNotifyC {
+		oldBlockChain, ok := server.blockchains.Load(deleteChainId)
+		if !ok {
+			log.Errorf("old block chain not found (chain-id: %s)", deleteChainId)
+			continue
+		}
+		log.Infof("old block chain found(chain-id: %s), start to delete block chain.", deleteChainId)
+		oldBlockChainS, _ := oldBlockChain.(*Blockchain)
+		oldBlockChainS.Stop()
+		server.blockchains.Delete(deleteChainId)
 	}
 }
 
