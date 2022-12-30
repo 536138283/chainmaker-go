@@ -298,8 +298,6 @@ func (ns *NetService) Stop() error {
 		return ErrorNetNotRunning
 	}
 
-	ns.localNet.StopPubSub(ns.chainId)
-	ns.logger.Info("[NetService] the net pubSub service has been stopped.")
 	// add access control
 	ns.localNet.DeleteAC(ns.chainId)
 	ns.localNet.ReVerifyPeers(ns.chainId)
@@ -308,6 +306,7 @@ func (ns *NetService) Stop() error {
 		ns.logger.Errorf("[NetService] clean the msg handler failed, err[%s], chainId[%s]", err.Error(), ns.chainId)
 		return err
 	}
+	ns.localNet.StopPubSub(ns.chainId)
 	ns.logger.Info("[NetService] the net service service has been stopped.")
 	return nil
 }
@@ -745,10 +744,6 @@ func (ns *NetService) initBindMsgBus() error {
 			netPb.NetMsg_TX,
 		),
 	); err != nil {
-		ns.logger.Errorf("topic: [%s]", CreateFlagWithPrefixAndMsgType(
-			topicNamePrefix,
-			netPb.NetMsg_TX,
-		))
 		return err
 	}
 
@@ -784,10 +779,6 @@ func (ns *NetService) initBindMsgBus() error {
 			netPb.NetMsg_SYNC_BLOCK_MSG,
 		),
 	); err != nil {
-		ns.logger.Errorf("topic: [%s]", CreateFlagWithPrefixAndMsgType(
-			msgBusTopicPrefix,
-			netPb.NetMsg_SYNC_BLOCK_MSG,
-		))
 		return err
 	}
 	// subscribe a sync block msg subscriber for receiving
@@ -855,11 +846,6 @@ func (ns *NetService) cleanAllMsgHandler() error {
 		return err
 	}
 
-	ns.logger.Errorf("cancelSubscribeTopicForMsgBus: [%s]", CreateFlagWithPrefixAndMsgType(
-		topicNamePrefix,
-		netPb.NetMsg_TX,
-	))
-
 	if err := ns.cancelSubscribeTopicForMsgBus(CreateFlagWithPrefixAndMsgType(
 		msgBusTopicPrefix,
 		netPb.NetMsg_SYNC_BLOCK_MSG,
@@ -867,10 +853,6 @@ func (ns *NetService) cleanAllMsgHandler() error {
 		return err
 	}
 
-	ns.logger.Errorf("cancelSubscribeTopicForMsgBus: [%s]", CreateFlagWithPrefixAndMsgType(
-		msgBusTopicPrefix,
-		netPb.NetMsg_SYNC_BLOCK_MSG,
-	))
 	return nil
 }
 
