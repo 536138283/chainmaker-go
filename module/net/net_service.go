@@ -213,7 +213,6 @@ func (ns *NetService) receiveMsg(handler protocol.MsgHandler, flag string, msgTy
 }
 
 func (ns *NetService) cancelReceiveMsg(flag string) error {
-
 	return ns.localNet.CancelDirectMsgHandle(ns.chainId, flag)
 }
 
@@ -746,6 +745,10 @@ func (ns *NetService) initBindMsgBus() error {
 			netPb.NetMsg_TX,
 		),
 	); err != nil {
+		ns.logger.Errorf("topic: [%s]", CreateFlagWithPrefixAndMsgType(
+			topicNamePrefix,
+			netPb.NetMsg_TX,
+		))
 		return err
 	}
 
@@ -781,6 +784,10 @@ func (ns *NetService) initBindMsgBus() error {
 			netPb.NetMsg_SYNC_BLOCK_MSG,
 		),
 	); err != nil {
+		ns.logger.Errorf("topic: [%s]", CreateFlagWithPrefixAndMsgType(
+			msgBusTopicPrefix,
+			netPb.NetMsg_SYNC_BLOCK_MSG,
+		))
 		return err
 	}
 	// subscribe a sync block msg subscriber for receiving
@@ -848,12 +855,22 @@ func (ns *NetService) cleanAllMsgHandler() error {
 		return err
 	}
 
+	ns.logger.Errorf("cancelSubscribeTopicForMsgBus: [%s]", CreateFlagWithPrefixAndMsgType(
+		topicNamePrefix,
+		netPb.NetMsg_TX,
+	))
+
 	if err := ns.cancelSubscribeTopicForMsgBus(CreateFlagWithPrefixAndMsgType(
 		msgBusTopicPrefix,
 		netPb.NetMsg_SYNC_BLOCK_MSG,
 	)); err != nil {
 		return err
 	}
+
+	ns.logger.Errorf("cancelSubscribeTopicForMsgBus: [%s]", CreateFlagWithPrefixAndMsgType(
+		msgBusTopicPrefix,
+		netPb.NetMsg_SYNC_BLOCK_MSG,
+	))
 	return nil
 }
 
