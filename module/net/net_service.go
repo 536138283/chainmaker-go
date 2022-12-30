@@ -290,6 +290,17 @@ func (ns *NetService) Start() error {
 
 // Stop the net-service.
 func (ns *NetService) Stop() error {
+	if !ns.localNet.IsRunning() {
+		ns.logger.Errorf("[NetService] the whole net has been stopped.")
+		return ErrorNetNotRunning
+	}
+
+	ns.localNet.StopPubSub(ns.chainId)
+	ns.logger.Info("[NetService] the net pubSub service has been stopped.")
+	// add access control
+	ns.localNet.DeleteAC(ns.chainId)
+	ns.localNet.ReVerifyPeers(ns.chainId)
+	ns.logger.Info("[NetService] the net service service has been stopped.")
 	return nil
 }
 
