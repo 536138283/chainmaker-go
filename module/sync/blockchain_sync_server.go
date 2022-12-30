@@ -552,6 +552,8 @@ func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *common
 func (sync *BlockChainSyncServer) StopBlockSync() {
 	_ = sync.scheduler.addTask(&StopSyncMsg{})
 	_ = sync.processor.addTask(&StopSyncMsg{})
+	sync.net.CancelSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG)
+	sync.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
 }
 
 //StartBlockSync make sync service resume sending sync block requests to other peer nodes

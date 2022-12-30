@@ -216,6 +216,11 @@ func (ns *NetService) cancelReceiveMsg(flag string) error {
 	return ns.localNet.CancelDirectMsgHandle(ns.chainId, flag)
 }
 
+func (ns *NetService) CancelReceiveMsg(msgType netPb.NetMsg_MsgType) error {
+	msgFlag := msgType.String()
+	return ns.cancelReceiveMsg(msgFlag)
+}
+
 // MsgForMsgBusHandler is a handler function that receive the msg from net than publish to msg-bus.
 type MsgForMsgBusHandler func(chainId string, from string, msg []byte) error
 
