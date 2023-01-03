@@ -9,6 +9,7 @@ package proposer
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"sync"
 	"time"
 
@@ -242,7 +243,9 @@ func (bp *BlockProposerImpl) proposeBlock() {
 	}
 	if !bp.isIdle() {
 		// concurrent control, proposer is proposing now
-		bp.log.Debugf("proposer is busy, not propose [%d] ", proposingHeight)
+		bp.log.DebugDynamic(func() string {
+			return fmt.Sprintf("proposer is busy, not propose [%d] ", proposingHeight)
+		})
 		return
 	}
 	if !bp.setNotIdle() {
@@ -676,7 +679,7 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 			// Repeat propose block if node has proposed before at the same height
 			bp.proposalCache.SetProposedAt(height)
 			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
-			common.ProposeRepeatTimerMap.Store(blockFinger, utils.CurrentTimeMillisSeconds())
+			common.ProposeRepeatTimerMap.Store(string(blockFinger), utils.CurrentTimeMillisSeconds())
 
 			cutBlock := new(commonpb.Block)
 			if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
