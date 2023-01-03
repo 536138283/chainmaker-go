@@ -378,7 +378,7 @@ func createNewTestBlock(height uint64) *commonpb.Block {
 			TxRoot:         hash,
 			DagHash:        hash,
 			RwSetRoot:      hash,
-			BlockTimestamp: 0,
+			BlockTimestamp: utils.CurrentTimeMillisSeconds(),
 			ConsensusArgs:  hash,
 			Proposer: &accesscontrol.Member{
 				OrgId:      "org1",
@@ -1132,4 +1132,76 @@ func TestBlockProposerImpl_getLastProposeTimeByBlockFinger_raceCondition(t *test
 		wg.Done()
 	}()
 	wg.Wait()
+}
+
+func TestProposeBlock(t *testing.T) {
+
+	log := logger.GetLoggerByChain("[Core_UT]", "chain1")
+	ctl := gomock.NewController(t)
+	txPool := mock.NewMockTxPool(ctl)
+	snapshotManager := mock.NewMockSnapshotManager(ctl)
+	msgBus := mbusmock.NewMockMessageBus(ctl)
+	identity := mock.NewMockSigningMember(ctl)
+	ledgerCache := mock.NewMockLedgerCache(ctl)
+	//consensus := mock.NewMockConsensusEngine(ctl)
+	proposedCache := mock.NewMockProposalCache(ctl)
+	txScheduler := mock.NewMockTxScheduler(ctl)
+	blockChainStore := mock.NewMockBlockchainStore(ctl)
+	chainConf := mock.NewMockChainConf(ctl)
+	storeHelper := mock.NewMockStoreHelper(ctl)
+	ac := mock.NewMockAccessControlProvider(ctl)
+	txFilter := mock.NewMockTxFilter(ctl)
+
+	b1 := createNewTestBlock(2)
+	ledgerCache.EXPECT().GetLastCommittedBlock().Return(b1).AnyTimes()
+
+	b2 := createNewTestBlock(3)
+	proposedCache.EXPECT().GetSelfProposedBlockAt(b2.Header.BlockHeight).Return(b2).AnyTimes()
+	proposedCache.EXPECT().SetProposedAt(gomock.Any()).AnyTimes()
+	proposedCache.EXPECT().GetProposedBlock(b2).AnyTimes()
+
+	c1 := &configpb.ChainConfig{
+		Block: &configpb.BlockConfig{
+			TxTimeout: 600,
+		},
+		Core: &configpb.CoreConfig{
+			ConsensusTurboConfig: nil,
+		},
+	}
+	chainConf.EXPECT().ChainConfig().Return(c1).AnyTimes()
+
+	msgBus.EXPECT().Publish(gomock.Any(), gomock.Any()).AnyTimes()
+
+	blockProposerImpl := &BlockProposerImpl{
+		chainId:         "chain1",
+		isProposer:      false, // not proposer when initialized
+		idle:            true,
+		msgBus:          msgBus,
+		blockchainStore: blockChainStore,
+		canProposeC:     make(chan bool),
+		txPoolSignalC:   make(chan *txpoolpb.TxPoolSignal),
+		exitC:           make(chan bool),
+		txPool:          txPool,
+		snapshotManager: snapshotManager,
+		txScheduler:     txScheduler,
+		identity:        identity,
+		ledgerCache:     ledgerCache,
+		proposalCache:   proposedCache,
+		chainConf:       chainConf,
+		ac:              ac,
+		log:             log,
+		finishProposeC:  make(chan bool),
+		storeHelper:     storeHelper,
+		txFilter:        txFilter,
+	}
+
+	blockProposerImpl.proposeBlock()
+
+	for i := 0; i < 50; i++ {
+		blockProposerImpl.proposeBlock()
+
+		// 模拟重复提案
+		time.Sleep(time.Millisecond * 200)
+	}
+
 }
