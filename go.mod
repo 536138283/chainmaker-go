@@ -49,7 +49,7 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0
 	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.0
 	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.0
-	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.0
+	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230105031605-69944db00178
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.0
 	chainmaker.org/chainmaker/localconf/v3 v3.0.0
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
