@@ -719,14 +719,14 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	// disable gas related native contract
 	//p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 	//	syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyForbidden)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyMajorityAdmin)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyMajorityAdmin)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyMajorityAdmin)
 	// for charge gas in optimize mode
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
@@ -741,23 +741,23 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 
 	// for erc20 contract
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_ERC20.String()+"-"+
-		syscontract.DPoSERC20Function_MINT.String(), pubPolicyManage)
+		syscontract.DPoSERC20Function_MINT.String(), pubPolicyMajorityAdmin)
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_ERC20.String()+"-"+
-		syscontract.DPoSERC20Function_TRANSFER_OWNERSHIP.String(), pubPolicyManage)
+		syscontract.DPoSERC20Function_TRANSFER_OWNERSHIP.String(), pubPolicyMajorityAdmin)
 
 	// for stake contract
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_STAKE.String()+"-"+
-		syscontract.DPoSStakeFunction_UPDATE_EPOCH_VALIDATOR_NUMBER_AND_EPOCH_BLOCK_NUMBER.String(), pubPolicyManage)
+		syscontract.DPoSStakeFunction_UPDATE_EPOCH_VALIDATOR_NUMBER_AND_EPOCH_BLOCK_NUMBER.String(), pubPolicyMajorityAdmin)
 
 	// for distribution contract
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_DISTRIBUTION.String()+"-"+
-		syscontract.DPoSDistributionFunction_SET_DISTRIBUTION_PER_BLOCK.String(), pubPolicyManage)
+		syscontract.DPoSDistributionFunction_SET_DISTRIBUTION_PER_BLOCK.String(), pubPolicyMajorityAdmin)
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_DISTRIBUTION.String()+"-"+
-		syscontract.DPoSDistributionFunction_SET_GAS_EXCHANGE_RATE.String(), pubPolicyManage)
+		syscontract.DPoSDistributionFunction_SET_GAS_EXCHANGE_RATE.String(), pubPolicyMajorityAdmin)
 
 	// for slashing contract
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_SLASHING.String()+"-"+
-		syscontract.DPoSSlashingFunction_SET_SLASHING_PER_BLOCK.String(), pubPolicyManage)
+		syscontract.DPoSSlashingFunction_SET_SLASHING_PER_BLOCK.String(), pubPolicyMajorityAdmin)
 }
 
 // verifyPrincipalPolicy
