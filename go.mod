@@ -54,7 +54,7 @@ require (
 	chainmaker.org/chainmaker/localconf/v3 v3.0.0
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
 	chainmaker.org/chainmaker/pb-go/v3 v3.0.0
-	chainmaker.org/chainmaker/protocol/v3 v3.0.0
+	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230104111024-4b6a6f2320e4
 	chainmaker.org/chainmaker/sdk-go/v3 v3.0.0
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.0
 	chainmaker.org/chainmaker/store/v3 v3.0.0
@@ -66,7 +66,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20221226085036-dc7957162178
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230104111344-9493862af47c
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0
 	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20221226152344-d03f23e4d940
