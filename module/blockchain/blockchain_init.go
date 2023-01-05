@@ -497,6 +497,13 @@ func (bc *Blockchain) initAC() (err error) {
 			bc.log.Errorf("initialize identity failed, %s", err.Error())
 			return
 		}
+	case protocol.PermissionedWithIBC:
+		bc.identity, err = accesscontrol.InitIBCSigningMember(bc.chainConf.ChainConfig(), nodeConfig.OrgId,
+			nodeConfig.PrivKeyFile, nodeConfig.CertFile)
+		if err != nil {
+			bc.log.Errorf("initialize identity failed, %s", err.Error())
+			return
+		}
 	default:
 		err = fmt.Errorf("auth type doesn't exist")
 		bc.log.Errorf("initialize identity failed, %s", err.Error())

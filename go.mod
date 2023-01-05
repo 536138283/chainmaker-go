@@ -3,8 +3,8 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.3.0
-	chainmaker.org/chainmaker/common/v2 v2.3.0
+	chainmaker.org/chainmaker/chainconf/v2 v2.3.1-0.20230105074858-60477b35fa67
+	chainmaker.org/chainmaker/common/v2 v2.3.1-0.20230105071251-ec7374344cef
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.0
@@ -16,9 +16,9 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.1
 	chainmaker.org/chainmaker/net-libp2p v1.2.1
 	chainmaker.org/chainmaker/net-liquid v1.1.0
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.1
-	chainmaker.org/chainmaker/protocol/v2 v2.3.1
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.1
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.2-0.20230105064828-6c82495a6a5e
+	chainmaker.org/chainmaker/protocol/v2 v2.3.2-0.20230105072246-0590ca20f44e
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.2-0.20230105075536-dc76b3a13a36
 	chainmaker.org/chainmaker/store/v2 v2.3.2
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.0
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.0
@@ -28,7 +28,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.1
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.1
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.2-0.20230105075130-a91f43b99675
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.1
 	chainmaker.org/chainmaker/vm/v2 v2.3.1
@@ -68,11 +68,10 @@ require (
 )
 
 require (
+	github.com/emmansun/gmsm v0.14.1
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
-	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
-	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect

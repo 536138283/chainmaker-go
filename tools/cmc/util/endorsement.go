@@ -41,6 +41,12 @@ func MakeEndorsement(adminKeys, adminCrts, adminOrgs []string, client *sdk.Chain
 				return nil, err
 			}
 			endorsementEntrys[i] = e
+		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithIBC {
+			e, err := sdkutils.MakeIBCEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+			if err != nil {
+				return nil, err
+			}
+			endorsementEntrys[i] = e
 		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
 			e, err := sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],
@@ -81,7 +87,8 @@ func MakeEndorsement(adminKeys, adminCrts, adminOrgs []string, client *sdk.Chain
 // @return err
 func MakeAdminInfo(client *sdk.ChainClient, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds string) (
 	adminKeys, adminCrts, adminOrgs []string, err error) {
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert ||
+		sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithIBC {
 		if adminKeyFilePaths != "" {
 			adminKeys = strings.Split(adminKeyFilePaths, ",")
 		}

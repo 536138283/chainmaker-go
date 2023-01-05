@@ -20,6 +20,7 @@ import (
 	"chainmaker.org/chainmaker/common/v2/cert"
 	bccrypto "chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym/sm9"
 	"chainmaker.org/chainmaker/common/v2/crypto/pkcs11"
 	"chainmaker.org/chainmaker/common/v2/crypto/sdf"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -131,6 +132,50 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 
 		return &signingCertMember{
 			*certMember,
+			sk,
+		}, nil
+	}
+	return nil, nil
+}
+
+// InitIBCSigningMember 初始化一个IBC签名的用户
+// @param chainConfig
+// @param localOrgId
+// @param localPrivKeyFile
+// @param localPrivKeyPwd
+// @param localCertFile
+// @return protocol.SigningMember
+// @return error
+func InitIBCSigningMember(chainConfig *config.ChainConfig, localOrgId,
+	localPrivKeyFile, localCertFile string) (
+	protocol.SigningMember, error) {
+	if localPrivKeyFile != "" && localCertFile != "" {
+		cert, err := ioutil.ReadFile(localCertFile)
+		if err != nil {
+			return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
+		}
+
+		var ibcMember *ibcMember
+
+		ibcMember, err = newMemberFromIBCInfo(localOrgId, chainConfig.Crypto.Hash, cert, false)
+		if err != nil {
+			return nil, fmt.Errorf("init signing ibcMember failed: [%s]", err.Error())
+		}
+
+		skPEM, err := ioutil.ReadFile(localPrivKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("fail to initialize identity management service: [%s]", err.Error())
+		}
+		block, _ := pem.Decode(skPEM)
+
+		var sk bccrypto.PrivateKey
+		sk, err = sm9.PrivateKeyFromDER(block.Bytes)
+		if err != nil {
+			return nil, err
+		}
+
+		return &signingIBCMember{
+			*ibcMember,
 			sk,
 		}, nil
 	}

@@ -93,6 +93,15 @@ func initSigner(
 		if err != nil {
 			return nil, fmt.Errorf("InitPKSigningMember failed: err = %v", err)
 		}
+	case protocol.PermissionedWithIBC:
+		signingMember, err = accesscontrol.InitIBCSigningMember(
+			chainConfig,
+			nodeConfig.OrgId,
+			nodeConfig.PrivKeyFile,
+			nodeConfig.CertFile)
+		if err != nil {
+			return nil, fmt.Errorf("InitibcSigningMember failed: err = %v", err)
+		}
 	default:
 		return nil, fmt.Errorf("unknown auth type: %v", chainConfig.AuthType)
 	}

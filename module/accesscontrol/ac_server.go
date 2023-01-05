@@ -585,6 +585,16 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 }
 
+func (acs *accessControlService) createDefaultResourcePolicyForIBC(localOrgId string) {
+	acs.createDefaultResourcePolicy(localOrgId)
+	// Master key management for IBC mode
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_IBC_MASTER_KEY_ADD.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_IBC_MASTER_KEY_DELETE.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_IBC_MASTER_KEY_UPDATE.String(), policySelfConfig)
+}
 func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.ResourcePolicy,
 	localOrgId string) {
 	authType := strings.ToLower(acs.authType)
@@ -593,6 +603,8 @@ func (acs *accessControlService) initResourcePolicy(resourcePolicies []*config.R
 		acs.createDefaultResourcePolicy(localOrgId)
 	case protocol.PermissionedWithKey:
 		acs.createDefaultResourcePolicyForPK(localOrgId)
+	case protocol.PermissionedWithIBC:
+		acs.createDefaultResourcePolicyForIBC(localOrgId)
 	}
 	lastestPolicyMap := &sync.Map{}
 	for _, resourcePolicy := range resourcePolicies {
@@ -815,6 +827,10 @@ func (acs *accessControlService) newCertMember(pbMember *pbac.Member) (protocol.
 	return newCertMemberFromPb(pbMember, acs)
 }
 
+func (acs *accessControlService) newIBCMember(pbMember *pbac.Member) (protocol.Member, error) {
+	return newIBCMemberFromPb(pbMember, acs)
+}
+
 func (acs *accessControlService) newPkMember(member *pbac.Member, adminList,
 	consensusList *sync.Map) (protocol.Member, error) {
 
@@ -896,6 +912,8 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 
 	} else if acs.authType == protocol.PermissionedWithKey {
 		tmpMember, err = acs.pwkNewMember(member)
+	} else if acs.authType == protocol.PermissionedWithIBC {
+		tmpMember, err = acs.newIBCMember(member)
 	}
 	if err != nil {
 		acs.log.Debugf("new member failed, authType = %s, err = %s", acs.authType, err.Error())

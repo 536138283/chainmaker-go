@@ -192,7 +192,8 @@ func multiSignVote() error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert ||
+		sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithIBC {
 		if adminKeyFilePaths != "" {
 			adminKeys = strings.Split(adminKeyFilePaths, ",")
 		}
@@ -233,22 +234,17 @@ func multiSignVote() error {
 	payload = tx.Transaction.Payload
 	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
 		endorser, err = sdkutils.MakeEndorserWithPath(adminKey, adminCrt, payload)
-		if err != nil {
-			return fmt.Errorf("multi sign vote failed, %s", err.Error())
-		}
 	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
 		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
 			adminOrg, payload)
-		if err != nil {
-			return fmt.Errorf("multi sign vote failed, %s", err.Error())
-		}
+	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithIBC {
+		endorser, err = sdkutils.MakeIBCEndorserWithPath(adminKey, adminCrt, payload)
 	} else {
 		endorser, err = sdkutils.MakePkEndorserWithPath(adminKey, client.GetHashType(),
 			"", payload)
-		if err != nil {
-			return fmt.Errorf("multi sign vote failed, %s", err.Error())
-		}
-
+	}
+	if err != nil {
+		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}
 
 	resp, err = client.MultiSignContractVote(payload, endorser, isAgree)

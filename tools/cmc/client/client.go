@@ -63,6 +63,8 @@ var (
 	trustRootPaths  []string
 	certFilePaths   string
 	certCrlPath     string
+	masterKeyOrgId  string
+	masterKeyPaths  []string
 
 	address   string
 	amount    string
@@ -148,6 +150,8 @@ const (
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
 	flagRespResultToString               = "result-to-string"
+	flagMasterKeyOrgId                   = "master-key-org-id"
+	flagMasterKeyPath                    = "master-key-path"
 )
 
 // ClientCMD new client series command
@@ -234,6 +238,9 @@ func init() {
 	flags.StringVar(&trustMemberInfoPath, flagTrustMemberCrtPath, "", "specify the ca file path")
 	flags.StringVar(&trustMemberRole, flagTrustMemberRole, "", "specify trust member role")
 	flags.StringVar(&trustMemberNodeId, flagTrustMemberNodeId, "", "specify trust member node id")
+
+	flags.StringVar(&masterKeyOrgId, flagMasterKeyOrgId, "", "specify the master key org id")
+	flags.StringSliceVar(&masterKeyPaths, flagMasterKeyPath, nil, "specify the master key file path")
 
 	// 证书管理
 	flags.StringVar(&certFilePaths, flagCertFilePaths, "", "specify cert file paths, use ',' to separate")

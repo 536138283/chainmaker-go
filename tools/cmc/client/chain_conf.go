@@ -31,6 +31,7 @@ func chainConfigCMD() *cobra.Command {
 	chainConfigCmd.AddCommand(configTrustMemberCMD())
 	chainConfigCmd.AddCommand(alterAddrTypeCMD())
 	chainConfigCmd.AddCommand(permissionResourceCMD())
+	chainConfigCmd.AddCommand(configMasterKeyCMD())
 	return chainConfigCmd
 }
 

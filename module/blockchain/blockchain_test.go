@@ -216,6 +216,7 @@ func createBlockChain(t *testing.T) []*Blockchain {
 			singMemer.EXPECT().GetMember().AnyTimes().Return(nil, nil)
 			txpool.EXPECT().Start().AnyTimes().Return(errors.New("txpool start test err msg"))
 			blockChainStore.EXPECT().GetDbTransaction(gomock.Any()).AnyTimes().Return(nil, errors.New("blockChainStore GetDbTransaction test err msg"))
+			blockchain.initModules[moduleNameSync] = struct{}{}
 
 		}
 

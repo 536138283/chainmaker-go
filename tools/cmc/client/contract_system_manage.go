@@ -153,6 +153,13 @@ func grantOrRevokeContractAccess(which int) error {
 			}
 
 			endorsementEntrys[i] = e
+		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithIBC {
+			e, err := sdkutils.MakeIBCEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+			if err != nil {
+				return err
+			}
+
+			endorsementEntrys[i] = e
 		}
 	}
 

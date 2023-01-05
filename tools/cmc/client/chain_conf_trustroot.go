@@ -158,40 +158,9 @@ func configTrustRoot(op int) error {
 		return err
 	}
 
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				client.GetHashType(),
-				adminOrgs[i],
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				client.GetHashType(),
-				"",
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		}
+	endorsementEntrys, err := getEndorsementEntrys(client, payload, adminKeys, adminCrts, adminOrgs)
+	if err != nil {
+		return err
 	}
 
 	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, syncResult)
@@ -204,4 +173,51 @@ func configTrustRoot(op int) error {
 	}
 	fmt.Printf("trustroot response %+v\n", resp)
 	return nil
+}
+
+func getEndorsementEntrys(client *sdk.ChainClient, payload *common.Payload,
+	adminKeys, adminCrts, adminOrgs []string) ([]*common.EndorsementEntry, error) {
+	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
+	for i := range adminKeys {
+		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+			if err != nil {
+				return nil, err
+			}
+
+			endorsementEntrys[i] = e
+		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+			e, err := sdkutils.MakePkEndorserWithPath(
+				adminKeys[i],
+				client.GetHashType(),
+				adminOrgs[i],
+				payload,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			endorsementEntrys[i] = e
+		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithIBC {
+			e, err := sdkutils.MakeIBCEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+			if err != nil {
+				return nil, err
+			}
+
+			endorsementEntrys[i] = e
+		} else {
+			e, err := sdkutils.MakePkEndorserWithPath(
+				adminKeys[i],
+				client.GetHashType(),
+				"",
+				payload,
+			)
+			if err != nil {
+				return nil, err
+			}
+
+			endorsementEntrys[i] = e
+		}
+	}
+	return endorsementEntrys, nil
 }

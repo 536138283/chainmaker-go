@@ -134,6 +134,8 @@ func acSign(msg *commonPb.Payload) ([]*commonPb.EndorsementEntry, error) {
 				adminOrgs[i],
 				msg,
 			)
+		} else if authType == sdk.PermissionedWithIBC {
+			e, err = sdkutils.MakeIBCEndorserWithPath(adminKeys[i], adminCrts[i], msg)
 		} else {
 			e, err = sdkutils.MakePkEndorserWithPath(
 				adminKeys[i],

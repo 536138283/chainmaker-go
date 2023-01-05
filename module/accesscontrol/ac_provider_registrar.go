@@ -20,6 +20,7 @@ func init() {
 	RegisterACProvider(protocol.Identity, nilCertACProvider)
 	RegisterACProvider(protocol.PermissionedWithKey, nilPermissionedPkACProvider)
 	RegisterACProvider(protocol.Public, nilPkACProvider)
+	RegisterACProvider(protocol.PermissionedWithIBC, nilIBCACProvider)
 }
 
 var acProviderRegistry = map[string]reflect.Type{}

@@ -1315,7 +1315,7 @@ func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.P
 			return nil, err
 		}
 
-	case accesscontrol.MemberType_PUBLIC_KEY:
+	case accesscontrol.MemberType_PUBLIC_KEY, accesscontrol.MemberType_IBC:
 		pk = signingMember.MemberInfo
 		publicKey, err = asym.PublicKeyFromPEM(pk)
 		if err != nil {
