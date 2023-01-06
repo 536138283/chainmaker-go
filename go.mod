@@ -55,7 +55,7 @@ require (
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
 	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230105082508-751af508a01c
 	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230104111024-4b6a6f2320e4
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.0
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230106090737-51bf786e74cb
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.0
 	chainmaker.org/chainmaker/store/v3 v3.0.0
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.0
