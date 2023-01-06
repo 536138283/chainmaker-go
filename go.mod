@@ -66,7 +66,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230105090310-f8fdf6f82865
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230106092936-8249baa7a8dd
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0
 	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20221226152344-d03f23e4d940
