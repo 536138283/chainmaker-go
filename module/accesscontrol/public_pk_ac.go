@@ -449,6 +449,9 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	p.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
 	p.resourceNamePolicyMap.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), pubPolicyManage)
 	p.resourceNamePolicyMap.Store(common.TxType_SNAPSHOT.String(), pubPolicyManage)
+	// for consensus switch
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	// exceptional resourceName
 	p.exceptionalPolicyMap.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)
@@ -484,8 +487,6 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), policyConfig)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
@@ -609,6 +610,9 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	p.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
 	p.resourceNamePolicyMap.Store(common.TxType_HOT_COLD_DATA_SEPARATION.String(), pubPolicyManage)
 	p.resourceNamePolicyMap.Store(common.TxType_SNAPSHOT.String(), pubPolicyManage)
+	// for consensus switch
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	// exceptional resourceName
 	p.exceptionalPolicyMap.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)
@@ -644,8 +648,6 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), policyConfig)
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), policyConfig)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
 
 	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
