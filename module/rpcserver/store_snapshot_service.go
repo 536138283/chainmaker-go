@@ -1,3 +1,10 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpcserver
 
 import (
@@ -12,6 +19,8 @@ import (
 )
 
 // dealSnapshot , deal snapshot
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) dealSnapshot(tx *commonPb.Transaction) *commonPb.TxResponse {
 	if tx.Payload.TxType != commonPb.TxType_SNAPSHOT {
 		return &commonPb.TxResponse{
@@ -38,6 +47,8 @@ func (s *ApiService) dealSnapshot(tx *commonPb.Transaction) *commonPb.TxResponse
 }
 
 // makeSnapshot , make a snapshot of store
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) makeSnapshot(tx *commonPb.Transaction) *commonPb.TxResponse {
 	var (
 		err         error
@@ -82,6 +93,9 @@ func (s *ApiService) makeSnapshot(tx *commonPb.Transaction) *commonPb.TxResponse
 }
 
 // getSnapshotHeight , get snapshot height from store
+// @param []*commonPb.KeyValuePair
+// @return uint64
+// @return error
 func (s *ApiService) getSnapshotHeight(params []*commonPb.KeyValuePair) (uint64, error) {
 	if len(params) != 1 {
 		return 0, errors.New("params count != 1")
@@ -101,6 +115,8 @@ func (s *ApiService) getSnapshotHeight(params []*commonPb.KeyValuePair) (uint64,
 }
 
 // getSnapshotStatus , get snapshot status by tx
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) getSnapshotStatus(tx *commonPb.Transaction) *commonPb.TxResponse {
 	var (
 		err    error

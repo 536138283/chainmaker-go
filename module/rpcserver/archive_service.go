@@ -1,9 +1,9 @@
 /*
- * Copyright (C) BABEC. All rights reserved.
- * Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
- *
- * SPDX-License-Identifier: Apache-2.0
- */
+Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
 
 package rpcserver
 
@@ -14,11 +14,13 @@ import (
 	"chainmaker.org/chainmaker/common/v3/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v3/errors"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
-
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	protocol "chainmaker.org/chainmaker/protocol/v3"
 )
 
+// doArchive process all kind of archive request
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) doArchive(tx *commonPb.Transaction) *commonPb.TxResponse {
 	if tx.Payload.TxType != commonPb.TxType_ARCHIVE {
 		return &commonPb.TxResponse{
@@ -42,6 +44,10 @@ func (s *ApiService) doArchive(tx *commonPb.Transaction) *commonPb.TxResponse {
 	}
 }
 
+// getArchiveBlockHeight get archive block height from kv pairs
+// @param []*commonPb.KeyValuePair
+// @return uint64
+// @return error
 func (s *ApiService) getArchiveBlockHeight(params []*commonPb.KeyValuePair) (uint64, error) {
 	if len(params) != 1 {
 		return 0, errors.New("params count != 1")
@@ -60,6 +66,9 @@ func (s *ApiService) getArchiveBlockHeight(params []*commonPb.KeyValuePair) (uin
 	return blockHeight, nil
 }
 
+// doArchiveBlock process archive block request
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) doArchiveBlock(tx *commonPb.Transaction) *commonPb.TxResponse {
 	var (
 		err         error
@@ -103,6 +112,10 @@ func (s *ApiService) doArchiveBlock(tx *commonPb.Transaction) *commonPb.TxRespon
 	return resp
 }
 
+// getRestoreBlock get restore block object from kv pairs
+// @param []*commonPb.KeyValuePair
+// @return []byte
+// @return error
 func (s *ApiService) getRestoreBlock(params []*commonPb.KeyValuePair) ([]byte, error) {
 	if len(params) != 1 {
 		return nil, errors.New("params count != 1")
@@ -121,6 +134,9 @@ func (s *ApiService) getRestoreBlock(params []*commonPb.KeyValuePair) ([]byte, e
 	return fullBlock, nil
 }
 
+// doRestoreBlock process restore block tx request
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) doRestoreBlock(tx *commonPb.Transaction) *commonPb.TxResponse {
 
 	var (
