@@ -110,9 +110,13 @@ func TestVerifyOptimizeChargeGasTx_OK(t *testing.T) {
 	}
 	txs = append(txs, tx)
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data
