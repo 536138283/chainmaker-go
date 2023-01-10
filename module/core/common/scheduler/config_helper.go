@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+
 	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
-	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"chainmaker.org/chainmaker/protocol/v3"
 )
 
@@ -25,8 +26,17 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 		return fmt.Errorf("GetLastChainConfig error: %v", err)
 	}
 
-	contractName := syscontract.SystemContract_ACCOUNT_MANAGER.String()
-	methodName := syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
+	// 软分叉处理，v240之后使用coinbase实现，不再有GasTx
+	var contractName, methodName string
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion3000000 {
+		contractName = syscontract.SystemContract_COINBASE.String()
+		methodName = syscontract.CoinbaseFunction_RUN_COINBASE.String()
+	} else {
+		contractName = syscontract.SystemContract_ACCOUNT_MANAGER.String()
+		methodName = syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
+	}
+
 	found := false
 	for _, tx := range block.Txs {
 		if tx.Payload.ContractName == contractName && tx.Payload.Method == methodName {
