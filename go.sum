@@ -8,8 +8,8 @@ chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0 h1:Itw5n4o3udPMnO++oi8hjV9zEw
 chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0/go.mod h1:MIDKRQacPxbBeBXS8w/l5GYU6vM/gU5kRqNpXsEayqM=
 chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0 h1:gfpoXKiXkfroB82jGppwlOIn06O4Ng0A196xuMvTZLI=
 chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0/go.mod h1:dr1lkmUAPY2hdGDuyGMY8nCtCKEYebAA6lnTVi3iUyM=
-chainmaker.org/chainmaker/consensus-raft/v3 v3.0.0 h1:Uww9wj76cJeaDTrWSz8WcfIG4rJVTsN6eaNDRSh9eKw=
-chainmaker.org/chainmaker/consensus-raft/v3 v3.0.0/go.mod h1:gQklozYlgP38GYF8OIndNRk/fOMZZ3wAPgIf1TVeM30=
+chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230106064937-2551daaa19d2 h1:DlQw1QJczS/V+zGjMKWKdieTnuTmWqZuhazp/unE1Do=
+chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230106064937-2551daaa19d2/go.mod h1:gQklozYlgP38GYF8OIndNRk/fOMZZ3wAPgIf1TVeM30=
 chainmaker.org/chainmaker/consensus-solo/v3 v3.0.0 h1:qJQUgonAIY+eZednt0PS6krJTfMt26C9nIPYVe+MQ1A=
 chainmaker.org/chainmaker/consensus-solo/v3 v3.0.0/go.mod h1:Y2p20klLPCI3w5lFywgvFMN5nt6eMROwmdhAILGZqoU=
 chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230105031605-69944db00178 h1:tl/XgvJFpgPCRG36NQOCGuSeJXtIZiXrpdc5geeOHjo=
@@ -41,8 +41,8 @@ chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230104111024-4b6a6f2320e4 h1:ki
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230104111024-4b6a6f2320e4/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/raftwal/v3 v3.0.0 h1:BXrGLmyF0iqrWS55ae+FukxIJDgNcby2CFj18PpoZ20=
 chainmaker.org/chainmaker/raftwal/v3 v3.0.0/go.mod h1:YCbtQtz6PY2QpLNSH0JrdjtTmRj5v4Y38FQ8pVrL/Ys=
-chainmaker.org/chainmaker/sdk-go/v3 v3.0.0 h1:Kx/LcHZ7iO77f4eXdK9Iuc0WNGXe0CANBH+ty9CVayA=
-chainmaker.org/chainmaker/sdk-go/v3 v3.0.0/go.mod h1:237CSDAIYo+8+LD3kGFxq5ybZcTeL4cWP9Htgr9JScA=
+chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230106090737-51bf786e74cb h1:IKfdOuO9qlz8icvzHGJSzdm+uRdFFl7CNjG+spOB9ec=
+chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230106090737-51bf786e74cb/go.mod h1:237CSDAIYo+8+LD3kGFxq5ybZcTeL4cWP9Htgr9JScA=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.0 h1:Mx5KhJaCj0vxeCq1TX9cijGlzUSSw5DovJQOfqLxx7I=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.0/go.mod h1:o8WRrGnldefpMcw1H73l8zsyJVcj0+zXi03a80YWwSw=
 chainmaker.org/chainmaker/store-huge/v3 v3.0.0 h1:KVd12SPB/PJVoWWliqRsl7x9Z5cZ77M5DZycf83zknM=

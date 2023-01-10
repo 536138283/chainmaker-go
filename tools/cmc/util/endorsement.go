@@ -36,9 +36,19 @@ func MakeEndorsement(adminKeys, adminCrts, adminOrgs []string, client *sdk.Chain
 	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
 	for i := range adminKeys {
 		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return nil, err
+			var e *common.EndorsementEntry
+			var err error
+			if sdk.GetP11Handle() != nil || sdk.KMSEnabled() {
+				e, err = sdkutils.MakeEndorserWithPathAndCSP(adminKeys[i], adminCrts[i], sdk.GetP11Handle(),
+					sdk.KMSEnabled(), payload)
+				if err != nil {
+					return nil, err
+				}
+			} else {
+				e, err = sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+				if err != nil {
+					return nil, err
+				}
 			}
 			endorsementEntrys[i] = e
 		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {

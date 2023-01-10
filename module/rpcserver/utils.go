@@ -11,11 +11,10 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	cmx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
 	"chainmaker.org/chainmaker/localconf/v3"
 	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
-
-	cmx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
 	"chainmaker.org/chainmaker/protocol/v3"
 )
 
