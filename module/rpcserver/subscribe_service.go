@@ -45,6 +45,9 @@ func (s *ApiService) SubscribeWS(rawTxReq *commonPb.RawTxRequest, server apiPb.R
 }
 
 // Subscribe - deal block/tx/contracEvent subscribe request
+// @param *commonPb.TxRequest
+// @param apiPb.RpcNode_SubscribeServer
+// @return error
 func (s *ApiService) Subscribe(req *commonPb.TxRequest, server apiPb.RpcNode_SubscribeServer) error {
 
 	var (
@@ -77,6 +80,13 @@ func (s *ApiService) Subscribe(req *commonPb.TxRequest, server apiPb.RpcNode_Sub
 	return nil
 }
 
+// checkAndGetLastBlockHeight get latest block height from stroe.
+// return -1 if payloadStartBlockHeight greater than latest block height,
+// else return latest block height.
+// @param protocol.BlockchainStore
+// @param int64
+// @return int64
+// @return error
 func (s *ApiService) checkAndGetLastBlockHeight(store protocol.BlockchainStore,
 	payloadStartBlockHeight int64) (int64, error) {
 
@@ -108,6 +118,9 @@ func (s *ApiService) checkAndGetLastBlockHeight(store protocol.BlockchainStore,
 	return int64(lastBlock.Header.BlockHeight), nil
 }
 
+// getRateLimitToken get rate limit token from ApiService instance.
+// throw error when get token failed.
+// @return error
 func (s *ApiService) getRateLimitToken() error {
 	if s.subscriberRateLimiter != nil {
 		if err := s.subscriberRateLimiter.Wait(s.ctx); err != nil {
@@ -120,7 +133,14 @@ func (s *ApiService) getRateLimitToken() error {
 	return nil
 }
 
-// checkSubscribeBlockHeight - check subscriber payload info
+// checkSubscribeBlockHeight - check subscribe block height.
+// verify startBlockHeight & endBlockHeight
+// require startBlockHeight >= -1
+// require endBlockHeight >= -1
+// if endBlockHeight > -1 require startBlockHeight < endBlockHeight
+// @param int64
+// @param int64
+// @return error
 func (s *ApiService) checkSubscribeBlockHeight(startBlockHeight, endBlockHeight int64) error {
 	if startBlockHeight < -1 || endBlockHeight < -1 ||
 		(endBlockHeight != -1 && startBlockHeight > endBlockHeight) {
@@ -131,6 +151,10 @@ func (s *ApiService) checkSubscribeBlockHeight(startBlockHeight, endBlockHeight 
 	return nil
 }
 
+// getRoleFromTx get protocol.Role from *commonPb.Transaction
+// @param *commonPb.Transaction
+// @return protocol.Role
+// @return error
 func (s *ApiService) getRoleFromTx(tx *commonPb.Transaction) (protocol.Role, error) {
 	bc, err := s.chainMakerServer.GetBlockchain(tx.Payload.ChainId)
 	if err != nil {
