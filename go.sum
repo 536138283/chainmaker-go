@@ -75,8 +75,6 @@ chainmaker.org/chainmaker/vm-evm/v3 v3.0.0/go.mod h1:mNcNfe1JFvXQxU8s5TdDkcxOz/E
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0 h1:acYIaPrr7F29RW33WIML+mowTyiqyqS7Rp3kRmRcUfw=
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0/go.mod h1:0EcvWXdRQRG7s+mQdbMLCV2GXcQc9dN8lpYHZAGKPxA=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.0/go.mod h1:ZiG6aLOy/kuOWihp9BJurvSpCZ2fZ3qwdatiqy+qSQA=
-chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230109062503-32ff5394a7d0 h1:ASefmuLb57zI8TxmeinSqGC6K2vcluUg+ZzVI6zkGQ0=
-chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230109062503-32ff5394a7d0/go.mod h1:CxHIrHik2EkOCOqo6GO99cY1WusXJ5ywy61J+j0gJ3M=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230110062522-4ce0cdd9d93f h1:LKYrYwVU/mRh1UI0OJ1XkaBU84/iQTZaCNKvi09wE8U=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230110062522-4ce0cdd9d93f/go.mod h1:CxHIrHik2EkOCOqo6GO99cY1WusXJ5ywy61J+j0gJ3M=
 chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0 h1:lxjU6uOQGVo5ttUdw5lhkcFLcRVDShi2PmMhT7Ny4fM=
@@ -84,8 +82,8 @@ chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0/go.mod h1:3rqNTN/PxcMeeVv5aryBrnpW
 chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0 h1:czwzqLcT83iTASMN27yNxx9N4NSubuMQcBjryETrTzY=
 chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0/go.mod h1:rJ+pDDOhiw3uoJdeeBr+0ZV/SRh9wv/AHGSBjI0S+Dk=
 chainmaker.org/chainmaker/vm/v3 v3.0.0/go.mod h1:EDqt1BUU8TFkEtVG/XzTBN1vEEZAoV5ya/RK8mJ35IU=
-chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20221226152344-d03f23e4d940 h1:IEkgkH6gjB2nwB+UjJNtKIRNUnIIHzHzMbhXosmc1jI=
-chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20221226152344-d03f23e4d940/go.mod h1:EDqt1BUU8TFkEtVG/XzTBN1vEEZAoV5ya/RK8mJ35IU=
+chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230111060751-8c2f25dfde30 h1:Rm9PuJwAjTY0i73jMv9r4hbXDuksuG5sqwRLBr5eXhg=
+chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230111060751-8c2f25dfde30/go.mod h1:EDqt1BUU8TFkEtVG/XzTBN1vEEZAoV5ya/RK8mJ35IU=
 chainmaker.org/third_party/badger/v3 v3.0.0 h1:8fPIUB8dyCCPu2QbQbp6r4QcixYVK7KOdfSEUeMZPVc=
 chainmaker.org/third_party/badger/v3 v3.0.0/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 chainmaker.org/third_party/cuckoo-filter v1.0.1 h1:rMRTRnui5zjbDN+t1q5HxXYiISf0PJuMMfhanMHzGCU=
