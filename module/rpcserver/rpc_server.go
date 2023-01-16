@@ -158,7 +158,8 @@ func (s *RPCServer) Start() error {
 		}
 	}
 
-	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
+	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
+		localconf.ChainMakerConfig.RpcConfig.Port)
 	conn, err := net.Listen("tcp", endPoint)
 	if err != nil {
 		return fmt.Errorf("TCP listen failed, %s", err.Error())
@@ -491,7 +492,8 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 		dopts = append(dopts, grpc.WithInsecure())
 	}
 
-	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
+	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
+		localconf.ChainMakerConfig.RpcConfig.Port)
 
 	gwmux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard,
