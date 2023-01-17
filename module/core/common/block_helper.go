@@ -868,10 +868,9 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 }
 
 //nolint: staticcheck
-func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block,
-	err error, lastBlockHash []byte, proposedHeight uint64) error {
+func CheckPreBlock(block *commonPb.Block, lastBlockHash []byte, proposedHeight uint64) error {
 
-	if err = IsHeightValid(block, proposedHeight); err != nil {
+	if err := IsHeightValid(block, proposedHeight); err != nil {
 		return err
 	}
 	// check if this block pre hash is equal with last block hash
