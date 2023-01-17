@@ -447,8 +447,8 @@ storage:
   # if disable_block_file_db: true, we use wal, this means .wal file size(MB), default: 20
   logdb_segment_size: 128
 
-   # read bfdb block file time out(ms), default: 1000
-   read_bfdb_timeout: 1000
+  # read bfdb block file time out(ms), default: 1000
+  read_bfdb_timeout: 1000
 
   # bigfilter config, default false
   enable_bigfilter: false
