@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/net-common v1.3.0
-	chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230106102354-2b0eae6d3693
+	chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230118071112-decc3e8e8953
 	chainmaker.org/chainmaker/net-liquid v1.3.0
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
