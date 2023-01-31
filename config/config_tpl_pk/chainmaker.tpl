@@ -46,32 +46,8 @@ node:
 
   # fast sync settings
   fast_sync:
-    # Enable it or not
+    # Enable it or not, true means do not execute smart contract
     enabled: true  # [*]
-
-  # PKCS#11 crypto settings
-  pkcs11:
-    # Enable it or not
-    enabled: false  # [*]
-
-    # Type only support pkcs11 and sdf
-    type: pkcs11
-
-    # Path for the pkcs11 interface file(.so)
-    library: /usr/local/lib64/pkcs11/libupkcs11.so
-
-    # Label for the slot to be used
-    label: HSM
-
-    # HSM Password
-    password: 11111111
-
-    # Size for HSM session cache, default value is 10.
-    session_cache_size: 10
-
-    # Hash algorithm is used to calculate SKI.
-    # It can be SHA256 or SM3.
-    hash: "SHA256"  # [*]
 
 # Network Settings
 net:

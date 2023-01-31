@@ -56,7 +56,7 @@ node:
 
   # fast sync settings
   fast_sync:
-    # Enable it or not
+    # Enable it or not, true means do not execute smart contract
     enabled: true
 
   # PKCS#11 crypto settings
