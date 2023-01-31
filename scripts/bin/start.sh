@@ -100,8 +100,8 @@ function start_vm_go() {
   protocol=$chainmaker_vm_go_protocol
   vm_go_log_level=$chainmaker_vm_go_log_level
   dockervm_config_path=$chainmaker_vm_go_dockervm_config_path
-  runtime_server_host=$chainmaker_vm_go_runtime_server_host
-  runtime_server_port=$chainmaker_vm_go_runtime_server_port
+  runtime_server_host=$chainmaker_vm_common_runtime_server_host
+  runtime_server_port=$chainmaker_vm_common_runtime_server_port
   contract_engine_port=$chainmaker_vm_go_contract_engine_port
   rpc_timeout=$chainmaker_vm_go_dial_timeout
   rpc_max_send_size=$chainmaker_vm_go_max_send_msg_size
