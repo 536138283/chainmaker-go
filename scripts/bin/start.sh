@@ -183,6 +183,129 @@ function start_vm_go() {
   sleep 3
 }
 
+# if enable docker vm service and use unix domain socket, run a vm docker container
+function start_vm_java() {
+  container_name=VM-JAVA-{org_id}
+  #check container exists
+  exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
+  if [ "$exist" ]; then
+    echo "$container_name already RUNNING, please stop it first."
+    exit 1
+  fi
+
+  exist=$(docker ps -a -f name="$container_name" --format '{{.Names}}')
+  if [ "$exist" ]; then
+    echo "$container_name already exists(STOPPED)"
+    if [ "$FORCE_CLEAN" == "true" ]; then
+      docker rm $container_name > /dev/null
+    else
+      need_rm="yes"
+      read -r -p "remove it and start a new container, default: yes (y|n): " need_rm
+      if [ "$need_rm" == "no" ] || [ "$need_rm" == "n" ]; then
+        exit 0
+      else
+        docker rm $container_name > /dev/null
+      fi
+    fi
+  fi
+
+  # concat mount_path and log_path for container to mount
+  mount_path=$chainmaker_vm_java_data_mount_path
+  log_path=$chainmaker_vm_java_log_mount_path
+  if [[ "${mount_path:0:1}" != "/" ]];then
+    mount_path=$(pwd)/$mount_path
+  fi
+  if [[ "${log_path:0:1}" != "/" ]];then
+    log_path=$(pwd)/$log_path
+  fi
+
+  mkdir -p "$mount_path"
+  mkdir -p "$log_path"
+
+  protocol=$chainmaker_vm_java_protocol
+  vm_go_log_level=$chainmaker_vm_java_log_level
+  dockervm_config_path=$chainmaker_vm_java_dockervm_config_path
+  runtime_server_host=$chainmaker_vm_common_runtime_server_host
+  runtime_server_port=$chainmaker_vm_common_runtime_server_port
+  contract_engine_port=$chainmaker_vm_java_contract_engine_port
+  rpc_timeout=$chainmaker_vm_java_dial_timeout
+  rpc_max_send_size=$chainmaker_vm_java_max_send_msg_size
+  rpc_max_recv_size=$chainmaker_vm_java_max_recv_msg_size
+  log_in_console=$chainmaker_vm_java_log_in_console
+  max_concurrency=$chainmaker_vm_java_max_concurrency
+  slow_tx_step_time=$chainmaker_vm_slow_tx_log_step_base_time
+  slow_tx_time=$chainmaker_vm_slow_tx_log_tx_base_time
+  process_timeout=$chainmaker_vm_process_timeout
+
+  if [[ $dockervm_config_path != "" ]];then
+    if [[ "${dockervm_config_path:0:1}" != "/" ]];then
+        dockervm_config_path=$(pwd)/$dockervm_config_path
+    fi
+    if [ ! -d $mount_path/config  ];then
+        mkdir $mount_path/config
+    fi
+    cp $dockervm_config_path $mount_path/config/vm.yml
+  fi
+
+  if [[ $protocol = "uds" ]]
+  then
+
+    docker run -itd \
+    -v "$mount_path":/mount \
+    -v "$log_path":/log \
+    -e CHAIN_RPC_PROTOCOL="0" \
+    -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
+    -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
+    -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+    -e MAX_ORIGINAL_PROCESS_NUM="$max_concurrency" \
+    -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+    -e SLOW_TX_STEP_TIME="$slow_tx_step_time" \
+    -e SLOW_TX_TIME="$slow_tx_time" \
+    -e PROCESS_TIMEOUT="$process_timeout" \
+    --name VM-JAVA-{org_id} \
+    --privileged $VM_GO_IMAGE_NAME \
+    > /dev/null
+
+  else
+      EXPOSE_PORT=$contract_engine_port
+      docker run -itd \
+      --net=host \
+      -v "$mount_path":/mount \
+      -v "$log_path":/log \
+      -e CHAIN_RPC_PROTOCOL="1" \
+      -e CHAIN_HOST="$runtime_server_host" \
+      -e CHAIN_RPC_PORT="$contract_engine_port" \
+      -e SANDBOX_RPC_PORT="$runtime_server_port" \
+      -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
+      -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
+      -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+      -e MAX_ORIGINAL_PROCESS_NUM="$max_concurrency" \
+      -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
+      -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
+      -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+      -e SLOW_TX_STEP_TIME="$slow_tx_step_time" \
+      -e SLOW_TX_TIME="$slow_tx_time" \
+      -e PROCESS_TIMEOUT="$process_timeout" \
+      --name VM-JAVA-{org_id} \
+      --privileged $VM_GO_IMAGE_NAME \
+       > /dev/null
+  fi
+
+  retval="$?"
+  if [ $retval -ne 0 ]; then
+    echo "failed to run docker vm."
+    exit 1
+  fi
+
+  echo "start docker vm service container succeed: $container_name"
+
+  sleep 3
+}
+
+
+
 # if enable Deprecated docker vm service and use unix domain socket, it will start a docker vm container
 function start_docker_vm_go() {
   container_name=DOCKERVM-{org_id}
@@ -278,6 +401,13 @@ function start_vm_containers() {
       then
         start_docker_vm_go
       fi
+
+      # check if need to start java vm service.
+      if [[ "$enable_java_vm_container" == "true" ]]
+      then
+        start_vm_java
+      fi
+
     fi
 }
 
@@ -291,8 +421,13 @@ if [ -z "${pid}" ];then
     if [[ $chainmaker_vm_docker_go_enable_dockervm == "true" && $chainmaker_vm_docker_go_uds_open == "true" ]]; then
       enable_docker_vm_container=true
     fi
+    # check if enable go vm
+    if [[ $chainmaker_vm_java_enable == "true" ]]; then
+     enable_java_vm_container=true
+    fi
+
     # if enable one, start vm containers
-    if [[ $enable_docker_vm_container == "true" || $enable_go_vm_container == "true" ]]
+    if [[ $enable_docker_vm_container == "true" || $enable_go_vm_container == "true" || $enable_java_vm_container == "true" ]]
     then
       start_vm_containers
     fi
