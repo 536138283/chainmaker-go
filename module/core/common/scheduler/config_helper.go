@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -41,12 +42,26 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	for _, tx := range block.Txs {
 		if tx.Payload.ContractName == contractName && tx.Payload.Method == methodName {
 			found = true
-			for _, kv := range tx.Payload.Parameters {
-				total, err2 := strconv.ParseUint(string(kv.Value), 10, 64)
-				if err2 != nil {
-					return fmt.Errorf("ParseUint error: %v", err2)
+			if blockVersion >= blockVersion3000000 {
+				senders, err1 := getSenders(tx.Payload.Parameters)
+				if err1 != nil {
+					return err1
 				}
-				gasNeedToCharge[kv.Key] = total
+				for k, v := range senders {
+					total, err2 := strconv.ParseUint(string(v), 10, 64)
+					if err2 != nil {
+						return fmt.Errorf("ParseUint error: %v", err2)
+					}
+					gasNeedToCharge[k] = total
+				}
+			} else {
+				for _, kv := range tx.Payload.Parameters {
+					total, err2 := strconv.ParseUint(string(kv.Value), 10, 64)
+					if err2 != nil {
+						return fmt.Errorf("ParseUint error: %v", err2)
+					}
+					gasNeedToCharge[kv.Key] = total
+				}
 			}
 		} else {
 			gasUsed := tx.Result.ContractResult.GasUsed
@@ -87,6 +102,20 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	}
 
 	return nil
+}
+
+func getSenders(parameters []*commonPb.KeyValuePair) (map[string][]byte, error) {
+	for _, kv := range parameters {
+		if kv.Key == chargeGasVmForMultiAccountParameterKey {
+			senders := make(map[string][]byte)
+			err := json.Unmarshal(kv.Value, &senders)
+			if err != nil {
+				return nil, fmt.Errorf("senders unmarshal error")
+			}
+			return senders, nil
+		}
+	}
+	return nil, fmt.Errorf("%s not found", chargeGasVmForMultiAccountParameterKey)
 }
 
 func getMultiSignEnableManualRun(chainConfig *configPb.ChainConfig) bool {

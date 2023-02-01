@@ -31,8 +31,6 @@ chainmaker.org/chainmaker/lws v1.2.0/go.mod h1:DZTkZzjiHVT32GGFGPC/8gDJmV8aqAzwy
 chainmaker.org/chainmaker/net-common v1.3.0 h1:W1mRwFpIFQn9yhY5jbBHnYorSuy2GbHop7mDW18QHyY=
 chainmaker.org/chainmaker/net-common v1.3.0/go.mod h1:og/xE1/N2vN+i4jvSLEp08iKa6vEK9rwU09ziLABkaQ=
 chainmaker.org/chainmaker/net-libp2p v1.3.0/go.mod h1:ghr047fYkskn6AzZDJCk4QDqQo3MOzzuIGDMIqrCPIQ=
-chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230106102354-2b0eae6d3693 h1:t18vVzHigfWoBgC+f5RhTbiRIkOfk1D/JOhZ/ciGSLo=
-chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230106102354-2b0eae6d3693/go.mod h1:ghr047fYkskn6AzZDJCk4QDqQo3MOzzuIGDMIqrCPIQ=
 chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230118071112-decc3e8e8953 h1:6pOGEZWG+JnvQgoWEy58B+uyqtoPNqnAsk8T/rhENbM=
 chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230118071112-decc3e8e8953/go.mod h1:ghr047fYkskn6AzZDJCk4QDqQo3MOzzuIGDMIqrCPIQ=
 chainmaker.org/chainmaker/net-liquid v1.3.0 h1:Z5HwKUy60eYKxblfA/0lXCNaBrhuuVyfncoBvcaHglM=
@@ -80,8 +78,8 @@ chainmaker.org/chainmaker/vm-evm/v3 v3.0.0/go.mod h1:mNcNfe1JFvXQxU8s5TdDkcxOz/E
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0 h1:acYIaPrr7F29RW33WIML+mowTyiqyqS7Rp3kRmRcUfw=
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0/go.mod h1:0EcvWXdRQRG7s+mQdbMLCV2GXcQc9dN8lpYHZAGKPxA=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.0/go.mod h1:ZiG6aLOy/kuOWihp9BJurvSpCZ2fZ3qwdatiqy+qSQA=
-chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230110062522-4ce0cdd9d93f h1:LKYrYwVU/mRh1UI0OJ1XkaBU84/iQTZaCNKvi09wE8U=
-chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230110062522-4ce0cdd9d93f/go.mod h1:CxHIrHik2EkOCOqo6GO99cY1WusXJ5ywy61J+j0gJ3M=
+chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230201030142-9045238d1ef0 h1:Dftyuc82ZLy+0Xx8IhC27Y95nJPKL2T1vLRQFC/x1D4=
+chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230201030142-9045238d1ef0/go.mod h1:CxHIrHik2EkOCOqo6GO99cY1WusXJ5ywy61J+j0gJ3M=
 chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0 h1:lxjU6uOQGVo5ttUdw5lhkcFLcRVDShi2PmMhT7Ny4fM=
 chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0/go.mod h1:3rqNTN/PxcMeeVv5aryBrnpWDY/JVWVXfyMPx5zoVPk=
 chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0 h1:czwzqLcT83iTASMN27yNxx9N4NSubuMQcBjryETrTzY=
