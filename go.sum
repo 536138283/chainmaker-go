@@ -15,8 +15,8 @@ chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1-0.20230118064759-e8c3c1f74457
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1-0.20230118064759-e8c3c1f74457/go.mod h1:1mGogAc+/xIISWCb2WpPlra0ZsZD94vJNSI+1n3eo8c=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0 h1:mkqVcc4qknBDq3VZY/KSzo0leh6br2vjdTPxyc1nUEs=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0/go.mod h1:OXtOwnLA27c3FP2KnCfb+HHlZGph3vXBgtXhBGQpSKA=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20221230064214-90f1ef222287 h1:c59nyQnCRTMPNQNTwc0huVF3cqPPv2xRShrNLZJklio=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20221230064214-90f1ef222287/go.mod h1:m8o9/OyVybLfHW8sTsV0rVGhIrhr1VsL5+tEDSe8tEA=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20230202033327-87682d44da07 h1:v7zQPT/fB3gVa1/rbI8565XImuR4r/xtkdvWp7bDJoA=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2-0.20230202033327-87682d44da07/go.mod h1:m8o9/OyVybLfHW8sTsV0rVGhIrhr1VsL5+tEDSe8tEA=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.0/go.mod h1:9KowPGC3NRiswF0xzvpktKP4s6v/4MI52JCCUiimduM=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.2-0.20221229082157-d83b0346184b h1:Y/LNTM0H9eI9YhksYo907ydilcimBH7szWmTvR+SeOg=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.2-0.20221229082157-d83b0346184b/go.mod h1:9KowPGC3NRiswF0xzvpktKP4s6v/4MI52JCCUiimduM=
