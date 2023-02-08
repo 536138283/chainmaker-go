@@ -97,7 +97,7 @@ func erc20Transfer() *cobra.Command {
 				}
 			}
 			txId = sdkutils.GetTimestampTxId()
-			resp, err := transfer(client, address, amount, txId, DEFAULT_TIMEOUT, false)
+			resp, err := transfer(client, address, amount, txId, DEFAULT_TIMEOUT, syncResult)
 			if err != nil {
 				return fmt.Errorf("transfer failed, %s", err.Error())
 			}
@@ -110,7 +110,7 @@ func erc20Transfer() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagAddress, flagAmount,
-		flagSdkConfPath,
+		flagSdkConfPath, flagSyncResult,
 		flagOrgId, flagChainId,
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagUserSignCrtFilePath, flagUserSignKeyFilePath,
 	})
@@ -327,7 +327,7 @@ func mint() error {
 	if err != nil {
 		return err
 	}
-	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, syncResult)
 	if err != nil {
 		return fmt.Errorf("send chain config update request failed, %s", err.Error())
 	}
@@ -362,7 +362,7 @@ func transferOwnership() error {
 	if err != nil {
 		return err
 	}
-	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, syncResult)
 	if err != nil {
 		return fmt.Errorf("send chain config update request failed, %s", err.Error())
 	}

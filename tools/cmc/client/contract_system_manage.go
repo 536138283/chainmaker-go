@@ -8,7 +8,6 @@ import (
 	"chainmaker.org/chainmaker/protocol/v3"
 	sdk "chainmaker.org/chainmaker/sdk-go/v3"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v3/utils"
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
@@ -41,7 +40,7 @@ func contractAccessGrantCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagSyncResult,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash,
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagGrantContractList, flagAdminOrgIds,
@@ -65,7 +64,7 @@ func contractAccessRevokeCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagSyncResult,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash,
 		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagRevokeContractList, flagAdminOrgIds,
@@ -155,16 +154,15 @@ func grantOrRevokeContractAccess(which int) error {
 	// 发送创建合约请求
 	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
 	if err != nil {
-		return fmt.Errorf(SEND_CONTRACT_MANAGE_REQUEST_FAILED_FORMAT, err.Error())
+		return err
 	}
 
 	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
-		return fmt.Errorf(CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT, err.Error())
+		return err
 	}
 
-	fmt.Printf("%s contract resp: %+v\n", whichOperation, resp)
-
+	util.PrintPrettyJson(resp)
 	return nil
 }
 
@@ -181,11 +179,6 @@ func queryContractAccess() error {
 		return fmt.Errorf("get disabled native contract list failed, %s", err)
 	}
 
-	output, err := prettyjson.Marshal(disabledNativeContractList)
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(string(output))
+	util.PrintPrettyJson(disabledNativeContractList)
 	return nil
 }
