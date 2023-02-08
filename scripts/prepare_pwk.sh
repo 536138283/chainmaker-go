@@ -173,7 +173,7 @@ function generate_keys() {
 
 function generate_config() {
     LOG_LEVEL="" # default INFO
-    CONSENSUS_TYPE=0 # default  1
+    CONSENSUS_TYPE=-1 # default  1
     HASH_TYPE="" # SHA256
     MONITOR_PORT=14321
     PPROF_PORT=24321
@@ -206,7 +206,7 @@ function generate_config() {
     done
 
     # set CONSENSUS_TYPE
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
       if  [ $NODE_CNT -gt 1 ] ;then
         read -p "input consensus type (1-TBFT(default),4-RAFT): " tmp
         if  [ ! -z "$tmp" ] ;then
@@ -227,7 +227,7 @@ function generate_config() {
         fi
       fi
     fi
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
           CONSENSUS_TYPE=1
     fi
     echo "param CONSENSUS_TYPE $CONSENSUS_TYPE"
