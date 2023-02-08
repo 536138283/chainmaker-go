@@ -55,7 +55,7 @@ func addTrustRootCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
-		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootCrtPath, flagTrustRootOrgId,
+		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootCrtPath, flagTrustRootOrgId, flagSyncResult,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
@@ -79,7 +79,7 @@ func removeTrustRootCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
-		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootOrgId,
+		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootOrgId, flagSyncResult,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
@@ -102,7 +102,7 @@ func updateTrustRootCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
-		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootCrtPath, flagTrustRootOrgId,
+		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustRootCrtPath, flagTrustRootOrgId, flagSyncResult,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
 
@@ -199,6 +199,6 @@ func configTrustRoot(op int) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("trustroot response %+v\n", resp)
+	util.PrintPrettyJson(resp)
 	return nil
 }
