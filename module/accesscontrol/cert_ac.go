@@ -880,6 +880,9 @@ func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementE
 	var memInfo string
 
 	for _, endorsementEntry := range endorsements {
+		if endorsementEntry == nil || endorsementEntry.Signer == nil {
+			continue
+		}
 		endorsement := &common.EndorsementEntry{
 			Signer: &pbac.Member{
 				OrgId:      endorsementEntry.Signer.OrgId,
