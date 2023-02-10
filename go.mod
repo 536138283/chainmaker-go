@@ -43,7 +43,7 @@ require (
 
 require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.0
-	chainmaker.org/chainmaker/common/v3 v3.0.0
+	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230210033754-8929c216525b
 	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.0
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0
@@ -53,9 +53,9 @@ require (
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.0
 	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230116051044-25072f585984
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
-	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230105082508-751af508a01c
+	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230208070942-eb8a80858d3d
 	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230104111024-4b6a6f2320e4
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230112090745-1601dcda4003
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230210071627-5c7bf50450be
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230209065014-572f1d083283
 	chainmaker.org/chainmaker/store/v3 v3.0.0
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.0
@@ -63,13 +63,13 @@ require (
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.0
 	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230112025723-92669b41065d
 	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20221228075214-c3f41fb03ef2
-	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230208095428-469d63e0313a
-	chainmaker.org/chainmaker/vm-evm/v3 v3.0.0
+	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0
+	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230210034611-9606e1d56e7c
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230201030142-9045238d1ef0
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230210092917-404db2fa0282
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0
-	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230111060751-8c2f25dfde30
+	chainmaker.org/chainmaker/vm/v3 v3.0.0
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
@@ -93,5 +93,4 @@ replace (
 	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.0.0
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.1.0
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v1.0.0
-// google.golang.org/grpc => google.golang.org/grpc v1.26.0
 )

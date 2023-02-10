@@ -111,6 +111,13 @@ var (
 	gasExchangeRate int
 
 	multiSignEnableManualRun bool
+
+	ethFrom     string
+	ethTo       string
+	ethGas      uint64
+	ethGasPrice uint64
+	ethValue    uint64
+	ethData     string
 )
 
 const (
@@ -192,6 +199,14 @@ const (
 	flagDbName                   = "db-name"
 	flagSm4Key                   = "sm4_key"
 	flagMultiSignEnableManualRun = "multi-sign-enable-manual-run"
+
+	//eth
+	flagEthFrom     = "from"
+	flagEthTo       = "to"
+	flagEthGas      = "gas"
+	flagEthGasPrice = "gas-price"
+	flagEthValue    = "value"
+	flagEthData     = "data"
 )
 
 // ClientCMD new client series command
@@ -211,6 +226,8 @@ func ClientCMD() *cobra.Command {
 	clientCmd.AddCommand(enableOrDisableGasCMD())
 	clientCmd.AddCommand(certAliasCMD())
 	clientCmd.AddCommand(sendRawTransactionCMD())
+	clientCmd.AddCommand(estimateGasCMD())
+	clientCmd.AddCommand(callCMD())
 
 	return clientCmd
 }
@@ -332,6 +349,13 @@ func init() {
 	flags.IntVar(&distributionPerBlock, flagDistributionPerBlock, 100, "amount of reward per block (default 100)")
 	flags.IntVar(&slashingPerBlock, flagSlashingPerBlock, 100, "penalty amount for each less proposed block (default 100)")
 	flags.IntVar(&gasExchangeRate, flagGasExchangeRate, 1, "gas exchange rate")
+	//eth
+	flags.Uint64Var(&ethGas, flagEthGas, 0, "gas")
+	flags.Uint64Var(&ethGasPrice, flagEthGasPrice, 0, "gas price")
+	flags.Uint64Var(&ethValue, flagEthValue, 0, "value")
+	flags.StringVar(&ethFrom, flagEthFrom, "", "from address")
+	flags.StringVar(&ethTo, flagEthTo, "", "to address")
+	flags.StringVar(&ethData, flagEthData, "", "input data hex")
 
 	// multi-sign enable manual_run
 	flags.BoolVar(&multiSignEnableManualRun,
