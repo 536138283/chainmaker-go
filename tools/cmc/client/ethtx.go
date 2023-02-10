@@ -184,6 +184,9 @@ func call(from string, to string, gas uint64, price uint64, value uint64, data [
 	defer client.Stop()
 
 	fromAddr, err := ethbase.ParseAddress(from)
+	if err != nil {
+		return fmt.Errorf("invalid address [from:%s]", from)
+	}
 	toAddr, err := ethbase.ParseAddress(to)
 	if err != nil {
 		return fmt.Errorf("invalid address [to:%s]", to)

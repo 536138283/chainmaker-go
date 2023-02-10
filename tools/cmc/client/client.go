@@ -234,6 +234,7 @@ func ClientCMD() *cobra.Command {
 
 var flags *pflag.FlagSet
 
+//nolint: revive
 func init() {
 	flags = &pflag.FlagSet{}
 
