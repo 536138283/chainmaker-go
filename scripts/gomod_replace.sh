@@ -18,7 +18,7 @@ go mod edit -replace 	github.com/linvon/cuckoo-filter=chainmaker.org/third_party
 go mod tidy
 go mod edit -replace 	github.com/lucas-clemente/quic-go=chainmaker.org/third_party/quic-go@master
 go mod tidy
-go mod edit -replace 	github.com/marten-seemann/qtls-go1-15=chainmaker.org/third_party/qtls-go1-15@chainmaker
+go mod edit -replace 	github.com/marten-seemann/qtls-go1-19=chainmaker.org/third_party/qtls-go1-19@chainmaker
 go mod tidy
 go mod edit -replace 	github.com/marten-seemann/qtls-go1-16=chainmaker.org/third_party/qtls-go1-16@chainmaker
 go mod tidy
