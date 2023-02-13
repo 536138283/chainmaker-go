@@ -224,6 +224,10 @@ function generate_config() {
     if [ $CONSENSUS_TYPE == -1 ] ;then
           CONSENSUS_TYPE=1
     fi
+    if [ $CONSENSUS_TYPE == 3 ] && [ $NODE_CNT -lt 4 ] ;then
+      echo  "the current version of maxbft does not support the deployment of less than four nodes"
+      exit
+    fi
     echo "param CONSENSUS_TYPE $CONSENSUS_TYPE"
 
     # set LOG_LEVEL
