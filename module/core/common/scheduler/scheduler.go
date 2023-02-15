@@ -881,6 +881,7 @@ func (ts *TxScheduler) checkGasEnable() bool {
 	return false
 }
 
+// checkNativeFilter use snapshot instead of blockchainStore
 func (ts *TxScheduler) checkNativeFilter(contractName, method string,
 	tx *commonPb.Transaction, snapshot protocol.Snapshot) bool {
 	ts.log.Debugf("checkNativeFilter => contractName = %s, method = %s", contractName, method)
