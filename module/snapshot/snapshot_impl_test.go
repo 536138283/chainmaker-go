@@ -218,6 +218,11 @@ func (s *MockSimContextImpl) GetStrAddrFromPbMember(pbMember *acPb.Member) (stri
 	panic("impl me")
 }
 
+// GetSnapshot
+func (s *MockSimContextImpl) GetSnapshot() protocol.Snapshot {
+	panic("impl me")
+}
+
 func TestKey(t *testing.T) {
 	s0 := "你好"
 	b0 := []byte(s0)
