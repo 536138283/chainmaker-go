@@ -402,7 +402,7 @@ function generate_config() {
             if [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
               xsed "${BC_YML_TRUST_ROOT_LINE},${BC_YML_TRUST_ROOT_LINE_END}d" node$i/chainconfig/bc$j.yml
             fi
-            echo "begin node$i chain$CHAIN_CNT cert config..."
+            echo "begin node$i chain$j cert config..."
 
             c=0
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
