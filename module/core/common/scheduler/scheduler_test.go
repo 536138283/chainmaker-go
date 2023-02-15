@@ -1909,7 +1909,8 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				},
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
+					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
+					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
 					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
 						OrgId:      "org1",
 						MemberType: acPb.MemberType_CERT,
@@ -1965,7 +1966,8 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				},
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
+					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
+					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
 					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).Return(nil, errors.New("txSimContext GetContractByName data is nil"))
 					return txSimContext
 				}(),
@@ -2003,7 +2005,8 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				},
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-					txSimContext.EXPECT().GetBlockchainStore().Return(nil).AnyTimes()
+					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
+					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
 					txSimContext.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
 					txSimContext.EXPECT().GetSender().AnyTimes()
 					return txSimContext
