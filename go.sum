@@ -54,6 +54,8 @@ chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.0 h1:Mx5KhJaCj0vxeCq1TX9cijGlzU
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.0/go.mod h1:o8WRrGnldefpMcw1H73l8zsyJVcj0+zXi03a80YWwSw=
 chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230214065154-6d4f65df6063 h1:VESqwDUFAQcTQuwjJxjdUo8TkbbqbkfBY99fz2oL6M4=
 chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230214065154-6d4f65df6063/go.mod h1:/nvSCB5nusULuKFfpjrHRwg7tDCDsq/gR5d3pZyCTvY=
+chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230216074710-38886687b6f3 h1:jJg76B3yTbT12J4sdeEJ6yuW6w1Hc6ZFRWP4ejzIeJs=
+chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230216074710-38886687b6f3/go.mod h1:AcdpLWkJWwyXWmjBBnFa4xx2LNcpf9bBaN8G4r2gE7Q=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.0 h1:jxlARb+e64fxWEtyOI77zuS9V5/1mVfNV9ghlzPubVE=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.0/go.mod h1:2OW5KbW3XXdbva9WgwifgE0flRi86DeI+sKcW/k4fF4=
 chainmaker.org/chainmaker/store-sqldb/v3 v3.0.0 h1:+sEDGtJ9qEVgF0Yb2BgnpARFj2h0Uk57GIjQQ1L0BDg=
@@ -1386,6 +1388,7 @@ github.com/pingcap/kvproto v0.0.0-20200518112156-d4aeb467de29/go.mod h1:IOdRDPLy
 github.com/pingcap/kvproto v0.0.0-20210112051026-540f4cb76c1c/go.mod h1:IOdRDPLyda8GX2hE/jO7gqaCV/PNFh8BZQCQZXfIOqI=
 github.com/pingcap/kvproto v0.0.0-20210219095907-b2375dcc80ad h1:NtvR4/wXW5ztC534O1BjHYXx4foS8+3IRYcJmKsBgfo=
 github.com/pingcap/kvproto v0.0.0-20210219095907-b2375dcc80ad/go.mod h1:IOdRDPLyda8GX2hE/jO7gqaCV/PNFh8BZQCQZXfIOqI=
+github.com/pingcap/kvproto v0.0.0-20230216063518-fe71e5de4643/go.mod h1:+on3Lfk/fb1lXkud3XvskJumhSIEEgN2TTbMObUlrxE=
 github.com/pingcap/log v0.0.0-20191012051959-b742a5d432e9/go.mod h1:4rbK1p9ILyIfb6hU7OG2CiWSqMXnp3JMbiaVJ6mvoY8=
 github.com/pingcap/log v0.0.0-20200117041106-d28c14d3b1cd/go.mod h1:4rbK1p9ILyIfb6hU7OG2CiWSqMXnp3JMbiaVJ6mvoY8=
 github.com/pingcap/log v0.0.0-20200511115504-543df19646ad/go.mod h1:4rbK1p9ILyIfb6hU7OG2CiWSqMXnp3JMbiaVJ6mvoY8=
@@ -1626,8 +1629,10 @@ github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFC
 github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c/go.mod h1:ahpPrc7HpcfEWDQRZEmnXMzHY03mLDYMCxeDzy46i+8=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.415 h1:og/7VpgTs+gduTxzXlU0i4yP8Il+ATnEsF/74NL6xyE=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.415/go.mod h1:7sCQWVkxcsR38nffDW057DRGk8mUjK1Ing/EFOK8s8Y=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.596/go.mod h1:7sCQWVkxcsR38nffDW057DRGk8mUjK1Ing/EFOK8s8Y=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms v1.0.415 h1:4TLva0WVB3Z0Ky+SxHtT2Ea+xQlAQCWFLCm0GrS5P/I=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms v1.0.415/go.mod h1:aE9m72+Jcn80D0f/lQxcb8CaYaTHVlPxV6IyfRK19JE=
+github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms v1.0.596/go.mod h1:fByn79H4Tjd29tUsiT4mND8AhgvVlFqolCOLYXTgxIA=
 github.com/tendermint/tendermint v0.34.0-rc4/go.mod h1:yotsojf2C1QBOw4dZrTcxbyxmPUrT4hNuOQWX9XUwB4=
 github.com/tendermint/tendermint v0.34.0-rc6/go.mod h1:ugzyZO5foutZImv0Iyx/gOFCX6mjJTgbLHTwi17VDVg=
 github.com/tendermint/tendermint v0.34.0/go.mod h1:Aj3PIipBFSNO21r+Lq3TtzQ+uKESxkbA3yo/INM4QwQ=
