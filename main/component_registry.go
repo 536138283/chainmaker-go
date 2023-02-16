@@ -19,6 +19,7 @@ import (
 	utils "chainmaker.org/chainmaker/consensus-utils/v3"
 	"chainmaker.org/chainmaker/localconf/v3"
 	"chainmaker.org/chainmaker/logger/v3"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v3/consensus"
 	"chainmaker.org/chainmaker/protocol/v3"
 	batch "chainmaker.org/chainmaker/txpool-batch/v3"
@@ -79,6 +80,7 @@ func init() {
 				logger.GetLoggerByChain(logger.MODULE_VM, chainId),
 				localconf.ChainMakerConfig.VMConfig.Common,
 				localconf.ChainMakerConfig.VMConfig.Go,
+				commonPb.RuntimeType_GO,
 			), nil
 		})
 
@@ -91,6 +93,7 @@ func init() {
 				logger.GetLoggerByChain(logger.MODULE_VM, chainId),
 				localconf.ChainMakerConfig.VMConfig.Common,
 				localconf.ChainMakerConfig.VMConfig.Java,
+				commonPb.RuntimeType_DOCKER_JAVA,
 			), nil
 		})
 
