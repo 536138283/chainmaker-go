@@ -1171,14 +1171,22 @@ func buildOrgListRoleListOfPolicyForVerifyPrincipal(p *policy) (map[string]bool,
 func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
+	acs.log.Infof("resourceName: %s, blockVersion: %d, policyResourceName: %s", resourceName, blockVersion, policyResourceName)
 	if blockVersion > 0 && blockVersion <= 220 {
-		return acs.lookUpPolicy220(policyResourceName)
+		policy, err := acs.lookUpPolicy220(policyResourceName)
+		if err != nil {
+			return nil, err
+		}
+		acs.log.Infof("load from resourceNamePolicyMap220, resourceName = %s", resourceName)
+		return policy, nil
 	}
 
 	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
+		acs.log.Infof("load from lastestPolicyMap, resourceName = %s", resourceName)
 		return p.(*policy).GetPbPolicy(), nil
 	}
 	if p, ok := acs.resourceNamePolicyMap.Load(resourceName); ok {
+		acs.log.Infof("load from resourceNamePolicyMap, resourceName = %s", resourceName)
 		return p.(*policy).GetPbPolicy(), nil
 	}
 	return nil, fmt.Errorf("policy not found for resource %s", resourceName)
