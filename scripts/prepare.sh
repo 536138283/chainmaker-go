@@ -156,10 +156,10 @@ function check_params() {
 
     if [ "$DOCKER_JAVA_ENGINE_PORT" -gt 0 ] 2>/dev/null ;then
       if  [ ${DOCKER_JAVA_ENGINE_PORT} -ge 60000 ] || [ ${DOCKER_JAVA_ENGINE_PORT} -le 10000 ];then
-        DOCKER_JAVA_ENGINE_PORT=22351
+        DOCKER_JAVA_ENGINE_PORT=23351
       fi
     else
-        DOCKER_JAVA_ENGINE_PORT=22351
+        DOCKER_JAVA_ENGINE_PORT=23351
     fi
     echo "param DOCKER_JAVA_ENGINE_PORT $DOCKER_JAVA_ENGINE_PORT"
 }
