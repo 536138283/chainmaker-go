@@ -1172,16 +1172,20 @@ func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
 	if blockVersion > 0 && blockVersion <= 220 {
-		return acs.lookUpPolicy220(policyResourceName)
+		policy, err := acs.lookUpPolicy220(policyResourceName)
+		if err != nil {
+			return nil, err
+		}
+		return policy, nil
 	}
 
-	if p, ok := acs.lastestPolicyMap.Load(resourceName); ok {
+	if p, ok := acs.lastestPolicyMap.Load(policyResourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
-	if p, ok := acs.resourceNamePolicyMap.Load(resourceName); ok {
+	if p, ok := acs.resourceNamePolicyMap.Load(policyResourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
-	return nil, fmt.Errorf("policy not found for resource %s", resourceName)
+	return nil, fmt.Errorf("policy not found for resource %s", policyResourceName)
 }
 
 func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
@@ -1191,7 +1195,7 @@ func (acs *accessControlService) lookUpExceptionalPolicy(resourceName string) (*
 		return acs.lookUpExceptionalPolicy220(policyResourceName)
 	}
 
-	if p, ok := acs.exceptionalPolicyMap.Load(resourceName); ok {
+	if p, ok := acs.exceptionalPolicyMap.Load(policyResourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 
 	}

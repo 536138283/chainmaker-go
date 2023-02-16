@@ -687,14 +687,14 @@ func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy,
 		return p.lookUpPolicyByResourceName220(policyResourceName)
 	}
 
-	if p, ok := p.lastestPolicyMap.Load(resourceName); ok {
+	if p, ok := p.lastestPolicyMap.Load(policyResourceName); ok {
 		return p.(*policy), nil
 	}
-	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
+	pol, ok := p.resourceNamePolicyMap.Load(policyResourceName)
 	if !ok {
-		if pol, ok = p.exceptionalPolicyMap.Load(resourceName); !ok {
+		if pol, ok = p.exceptionalPolicyMap.Load(policyResourceName); !ok {
 			return nil, fmt.Errorf("look up access policy failed, did not configure access policy "+
-				"for resource %s", resourceName)
+				"for resource %s", policyResourceName)
 		}
 	}
 	return pol.(*policy), nil
@@ -802,11 +802,11 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 		return p.lookUpPolicy220(policyResourceName)
 	}
 
-	if p, ok := p.lastestPolicyMap.Load(resourceName); ok {
+	if p, ok := p.lastestPolicyMap.Load(policyResourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
 
-	pol, ok := p.resourceNamePolicyMap.Load(resourceName)
+	pol, ok := p.resourceNamePolicyMap.Load(policyResourceName)
 	if !ok {
 		return nil, fmt.Errorf("policy not found for resource %s", resourceName)
 	}
@@ -822,13 +822,13 @@ func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Polic
 		return p.lookUpExceptionalPolicy220(policyResourceName)
 	}
 
-	if p, ok := p.lastestPolicyMap.Load(resourceName); ok {
+	if p, ok := p.lastestPolicyMap.Load(policyResourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
 
-	pol, ok := p.exceptionalPolicyMap.Load(resourceName)
+	pol, ok := p.exceptionalPolicyMap.Load(policyResourceName)
 	if !ok {
-		return nil, fmt.Errorf("exceptional policy not found for resource %s", resourceName)
+		return nil, fmt.Errorf("exceptional policy not found for resource %s", policyResourceName)
 	}
 	pbPolicy := pol.(*policy).GetPbPolicy()
 	return pbPolicy, nil
