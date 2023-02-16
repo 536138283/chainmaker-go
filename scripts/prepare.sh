@@ -30,8 +30,9 @@ NODE_CNT=$1
 CHAIN_CNT=$2
 P2P_PORT=$3
 RPC_PORT=$4
-VM_GO_RUNTIME_PORT=$5
-VM_GO_ENGINE_PORT=$6
+DOCKER_VM_RUNTIME_PORT=$5
+DOCKER_GO_ENGINE_PORT=$6
+DOCKER_JAVA_ENGINE_PORT=$7
 
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
@@ -51,18 +52,20 @@ function show_help() {
     echo "Usage:  "
     echo "    prepare.sh node_cnt(1/4/7/10/13/16) chain_cnt(1-4)"
     echo "               p2p_port(default:11301) rpc_port(default:12301)"
-    echo "               vm_go_runtime_port(default:32351) vm_go_engine_port(default:22351)"
+    echo "               docker_vm_runtime_port(default:32351) docker_go_engine_port(default:22351)"
+    echo "               docker_java_engine_port(default:23351)"
     echo "               -c consense-type: 1-TBFT,3-MAXBFT,4-RAFT "
     echo "               -l log-level: DEBUG,INFO,WARN,ERROR"
     echo "               -v docker-vm-enable: true,false"
-    echo "                  --vtp  vm go transport protocol: tcp,uds"
+    echo "               -j docker-java-enable: true,false"
     echo "                  --vlog vm go log level: DEBUG,INFO,WARN,ERROR"
+    echo "                  --jlog vm go log level: DEBUG,INFO,WARN,ERROR"
     echo "               -h show help"
     echo "    eg1: prepare.sh 4 1"
     echo "    eg2: prepare.sh 4 1 11301 12301"
-    echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351"
-    echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351 -c 1 -l INFO -v true  --vtp=tcp --vlog=INFO"
-    echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351 -c 1 -l INFO -v false --vtp=tcp --vlog=INFO"
+    echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351 23351"
+    echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351 23351 -c 1 -l INFO -v true   -j true  --vlog=INFO --jlog=INFO"
+    echo "    eg2: prepare.sh 4 1 11301 12301 32351 22351 23351 -c 1 -l INFO -v false  -j false --vlog=INFO --jlog=INFO"
 }
 
 if ( [ $# -eq 1 ] && [ "$1" ==  "-h" ] ) ; then
@@ -133,23 +136,32 @@ function check_params() {
     fi
     echo "param RPC_PORT $RPC_PORT"
 
-    if [ "$VM_GO_RUNTIME_PORT" -gt 0 ] 2>/dev/null ;then
-      if  [ ${VM_GO_RUNTIME_PORT} -ge 60000 ] || [ ${VM_GO_RUNTIME_PORT} -le 10000 ];then
-        VM_GO_RUNTIME_PORT=32351
+    if [ "$DOCKER_VM_RUNTIME_PORT" -gt 0 ] 2>/dev/null ;then
+      if  [ ${DOCKER_VM_RUNTIME_PORT} -ge 60000 ] || [ ${DOCKER_VM_RUNTIME_PORT} -le 10000 ];then
+        DOCKER_VM_RUNTIME_PORT=32351
       fi
     else
-        VM_GO_RUNTIME_PORT=32351
+        DOCKER_VM_RUNTIME_PORT=32351
     fi
-    echo "param VM_GO_RUNTIME_PORT $VM_GO_RUNTIME_PORT"
+    echo "param DOCKER_VM_RUNTIME_PORT $DOCKER_VM_RUNTIME_PORT"
 
-    if [ "$VM_GO_ENGINE_PORT" -gt 0 ] 2>/dev/null ;then
-      if  [ ${VM_GO_ENGINE_PORT} -ge 60000 ] || [ ${VM_GO_ENGINE_PORT} -le 10000 ];then
-        VM_GO_ENGINE_PORT=22351
+    if [ "$DOCKER_GO_ENGINE_PORT" -gt 0 ] 2>/dev/null ;then
+      if  [ ${DOCKER_GO_ENGINE_PORT} -ge 60000 ] || [ ${DOCKER_GO_ENGINE_PORT} -le 10000 ];then
+        DOCKER_GO_ENGINE_PORT=22351
       fi
     else
-        VM_GO_ENGINE_PORT=22351
+        DOCKER_GO_ENGINE_PORT=22351
     fi
-    echo "param VM_GO_ENGINE_PORT $VM_GO_ENGINE_PORT"
+    echo "param DOCKER_GO_ENGINE_PORT $DOCKER_GO_ENGINE_PORT"
+
+    if [ "$DOCKER_JAVA_ENGINE_PORT" -gt 0 ] 2>/dev/null ;then
+      if  [ ${DOCKER_JAVA_ENGINE_PORT} -ge 60000 ] || [ ${DOCKER_JAVA_ENGINE_PORT} -le 10000 ];then
+        DOCKER_JAVA_ENGINE_PORT=22351
+      fi
+    else
+        DOCKER_JAVA_ENGINE_PORT=22351
+    fi
+    echo "param DOCKER_JAVA_ENGINE_PORT $DOCKER_JAVA_ENGINE_PORT"
 }
 
 function generate_certs() {
@@ -177,10 +189,12 @@ function generate_config() {
     TRUSTED_PORT=13301
     VM_GO_CONTAINER_NAME_PREFIX="chainmaker-vm-go-container"
     ENABLE_VM_GO="" # default false
-    VM_GO_LOG_LEVEL="" # default INFO
-    VM_GO_TRANSPORT_PROTOCOL="" # default tcp, uds
+    DOCKER_GO_LOG_LEVEL="" # default INFO
 
-    set -- $(getopt -u -o c:l:v: -l vtp:,vlog: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
+    ENABLE_VM_JAVA="" # default false
+    DOCKER_JAVA_LOG_LEVEL="" # default INFO
+
+    set -- $(getopt -u -o c:l:v:j: -l vlog:,jlog: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
     while [ -n "$1" ]; do
         case "$1" in
             -c) CONSENSUS_TYPE=$2
@@ -189,11 +203,13 @@ function generate_config() {
                 shift ;;
             -v) ENABLE_VM_GO=$2
                 shift ;;
-            --vtp)
-                VM_GO_TRANSPORT_PROTOCOL=$2
+            -j) ENABLE_VM_JAVA=$2
                 shift ;;
             --vlog)
-                VM_GO_LOG_LEVEL=$2
+                DOCKER_GO_LOG_LEVEL=$2
+                shift ;;
+            --jlog)
+                DOCKER_JAVA_LOG_LEVEL=$2
                 shift
         esac
         shift
@@ -249,34 +265,18 @@ function generate_config() {
         if  [ $enable_vm_go == "yes" ] || [ $enable_vm_go == "YES" ]; then
             ENABLE_VM_GO="true"
 
-            if [ "$VM_GO_TRANSPORT_PROTOCOL" == "" ] ;then
-              read -p "vm go transport protocol (uds|tcp(default))" transport_protocol
-              if [ ! -z "$transport_protocol" ]; then
-                  if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
-                      VM_GO_TRANSPORT_PROTOCOL="tcp"
-                  elif [ $transport_protocol == "uds" ] || [ $transport_protocol == "UDS" ]; then
-                      VM_GO_TRANSPORT_PROTOCOL="uds"
-                  else
-                      echo "unknown input [" $transport_protocol "], so use default"
-                  fi
-              fi
-            fi
-            if [ "$VM_GO_TRANSPORT_PROTOCOL" == "" ] ;then
-              VM_GO_TRANSPORT_PROTOCOL="tcp"
-            fi
-
-            if [ "$VM_GO_LOG_LEVEL" == "" ] ;then
-                read -p "input vm go log level (DEBUG|INFO(default)|WARN|ERROR): " vm_go_log_level
-                if  [ ! -z "$vm_go_log_level" ] ;then
-                if  [ $vm_go_log_level == "DEBUG" ] || [ $vm_go_log_level == "INFO" ] || [ $vm_go_log_level == "WARN" ] || [ $vm_go_log_level == "ERROR" ];then
-                    VM_GO_LOG_LEVEL=$vm_go_log_level
+            if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
+                read -p "input vm go log level (DEBUG|INFO(default)|WARN|ERROR): " docker_go_log_level
+                if  [ ! -z "$docker_go_log_level" ] ;then
+                if  [ $docker_go_log_level == "DEBUG" ] || [ $docker_go_log_level == "INFO" ] || [ $docker_go_log_level == "WARN" ] || [ $docker_go_log_level == "ERROR" ];then
+                    DOCKER_GO_LOG_LEVEL=$docker_go_log_level
                 else
-                    echo "unknown vm go log level [" $vm_go_log_level "], so use default"
+                    echo "unknown vm go log level [" $docker_go_log_level "], so use default"
                 fi
               fi
             fi
-            if [ "$VM_GO_LOG_LEVEL" == "" ] ;then
-              VM_GO_LOG_LEVEL="INFO"
+            if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
+              DOCKER_GO_LOG_LEVEL="INFO"
             fi
 
         fi
@@ -285,10 +285,43 @@ function generate_config() {
     if [ "$ENABLE_VM_GO" == "" ] ;then
       ENABLE_VM_GO="false"
     elif [ $ENABLE_VM_GO == "true" ] ;then
-      echo "param VM_GO_LOG_LEVEL $VM_GO_LOG_LEVEL"
+      echo "param DOCKER_GO_LOG_LEVEL $DOCKER_GO_LOG_LEVEL"
       echo "param VM_GO_TRANSPORT_PROTOCOL $VM_GO_TRANSPORT_PROTOCOL"
     fi
     echo "param ENABLE_VM_GO $ENABLE_VM_GO"
+    echo
+
+    # set ENABLE_VM_JAVA
+    if [ "$ENABLE_VM_JAVA" == "" ] ;then
+      read -p "enable vm java (YES|NO(default))" enable_vm_java
+      if  [ ! -z "$enable_vm_java" ]; then
+        if  [ $enable_vm_java == "yes" ] || [ $enable_vm_java == "YES" ]; then
+            ENABLE_VM_JAVA="true"
+
+            if [ "$DOCKER_JAVA_LOG_LEVEL" == "" ] ;then
+                read -p "input vm java log level (DEBUG|INFO(default)|WARN|ERROR): " docker_java_log_level
+                if  [ ! -z "$docker_java_log_level" ] ;then
+                if  [ $docker_java_log_level == "DEBUG" ] || [ $docker_java_log_level == "INFO" ] || [ $docker_java_log_level == "WARN" ] || [ $docker_java_log_level == "ERROR" ];then
+                    DOCKER_JAVA_LOG_LEVEL=$docker_java_log_level
+                else
+                    echo "unknown vm java log level [" $docker_java_log_level "], so use default"
+                fi
+              fi
+            fi
+            if [ "$DOCKER_JAVA_LOG_LEVEL" == "" ] ;then
+              DOCKER_JAVA_LOG_LEVEL="INFO"
+            fi
+
+        fi
+      fi
+    fi
+    if [ "$ENABLE_VM_JAVA" == "" ] ;then
+      ENABLE_VM_JAVA="false"
+    elif [ $ENABLE_VM_JAVA == "true" ] ;then
+      echo "param DOCKER_JAVA_LOG_LEVEL $DOCKER_JAVA_LOG_LEVEL"
+      echo "param VM_JAVA_TRANSPORT_PROTOCOL $VM_JAVA_TRANSPORT_PROTOCOL"
+    fi
+    echo "param ENABLE_VM_JAVA $ENABLE_VM_JAVA"
     echo
 
     cd "${BUILD_PATH}"
@@ -318,10 +351,11 @@ function generate_config() {
         xsed "s%{trusted_port}%$(($TRUSTED_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{enable_vm_go}%$ENABLE_VM_GO%g" node$i/chainmaker.yml
         xsed "s%{dockervm_container_name}%"${VM_GO_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
-        xsed "s%{vm_go_runtime_port}%$(($VM_GO_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
-        xsed "s%{vm_go_engine_port}%$(($VM_GO_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
-        xsed "s%{vm_go_log_level}%$VM_GO_LOG_LEVEL%g" node$i/chainmaker.yml
-        xsed "s%{vm_go_protocol}%$VM_GO_TRANSPORT_PROTOCOL%g" node$i/chainmaker.yml
+        xsed "s%{docker_vm_runtime_port}%$(($DOCKER_VM_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{docker_go_engine_port}%$(($DOCKER_GO_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{docker_go_log_level}%$DOCKER_GO_LOG_LEVEL%g" node$i/chainmaker.yml
+        xsed "s%{docker_java_engine_port}%$(($DOCKER_JAVA_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
+        xsed "s%{docker_java_log_level}%$DOCKER_JAVA_LOG_LEVEL%g" node$i/chainmaker.yml
 
         system=$(uname)
 
