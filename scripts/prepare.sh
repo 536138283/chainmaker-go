@@ -286,7 +286,6 @@ function generate_config() {
       ENABLE_VM_GO="false"
     elif [ $ENABLE_VM_GO == "true" ] ;then
       echo "param DOCKER_GO_LOG_LEVEL $DOCKER_GO_LOG_LEVEL"
-      echo "param VM_GO_TRANSPORT_PROTOCOL $VM_GO_TRANSPORT_PROTOCOL"
     fi
     echo "param ENABLE_VM_GO $ENABLE_VM_GO"
     echo
@@ -319,8 +318,7 @@ function generate_config() {
       ENABLE_VM_JAVA="false"
     elif [ $ENABLE_VM_JAVA == "true" ] ;then
       echo "param DOCKER_JAVA_LOG_LEVEL $DOCKER_JAVA_LOG_LEVEL"
-      echo "param VM_JAVA_TRANSPORT_PROTOCOL $VM_JAVA_TRANSPORT_PROTOCOL"
-    fi
+\    fi
     echo "param ENABLE_VM_JAVA $ENABLE_VM_JAVA"
     echo
 
@@ -349,11 +347,12 @@ function generate_config() {
         xsed "s%{monitor_port}%$(($MONITOR_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{pprof_port}%$(($PPROF_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{trusted_port}%$(($TRUSTED_PORT+$i-1))%g" node$i/chainmaker.yml
-        xsed "s%{enable_vm_go}%$ENABLE_VM_GO%g" node$i/chainmaker.yml
+        xsed "s%{enable_docker_go}%$ENABLE_VM_GO%g" node$i/chainmaker.yml
         xsed "s%{dockervm_container_name}%"${VM_GO_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
         xsed "s%{docker_vm_runtime_port}%$(($DOCKER_VM_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{docker_go_engine_port}%$(($DOCKER_GO_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{docker_go_log_level}%$DOCKER_GO_LOG_LEVEL%g" node$i/chainmaker.yml
+        xsed "s%{enable_docker_java}%$ENABLE_VM_JAVA%g" node$i/chainmaker.yml
         xsed "s%{docker_java_engine_port}%$(($DOCKER_JAVA_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{docker_java_log_level}%$DOCKER_JAVA_LOG_LEVEL%g" node$i/chainmaker.yml
 
