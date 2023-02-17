@@ -318,7 +318,7 @@ function generate_config() {
       ENABLE_VM_JAVA="false"
     elif [ $ENABLE_VM_JAVA == "true" ] ;then
       echo "param DOCKER_JAVA_LOG_LEVEL $DOCKER_JAVA_LOG_LEVEL"
-\    fi
+    fi
     echo "param ENABLE_VM_JAVA $ENABLE_VM_JAVA"
     echo
 
