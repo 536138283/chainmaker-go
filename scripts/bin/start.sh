@@ -33,6 +33,7 @@ config_file="../config/{org_id}/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
 VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v3.0.0"
+VM_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine-java:v3.0.0"
 DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v3.0.0"
 START_FULL_MODE=""
 
@@ -242,7 +243,7 @@ function start_vm_java() {
   -e SLOW_TX_TIME="$slow_tx_time" \
   -e PROCESS_TIMEOUT="$process_timeout" \
   --name VM-JAVA-{org_id} \
-  --privileged $VM_GO_IMAGE_NAME \
+  --privileged $VM_JAVA_IMAGE_NAME \
    > /dev/null
 
 
