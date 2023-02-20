@@ -1022,6 +1022,7 @@ func (ts *TxScheduler) dispatchTxs(
 
 // dispatchTxsInSenderCollection dispatch txs from senderCollection to runningTxC chan
 // if the balance less than gas limit, set the result of tx and dispatch this tx.
+// use snapshot for newest data
 func (ts *TxScheduler) dispatchTxsInSenderCollection(
 	senderCollection *SenderCollection,
 	runningTxC chan *commonPb.Transaction,
