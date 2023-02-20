@@ -522,7 +522,7 @@ vm:
     #  Configs of docker runtime server (handle messages with contract sandbox)
     runtime_server:
       # Runtime server port, default 32351
-      port: 32351
+      port: 32353
 
   # Golang runtime in docker container
   go:
