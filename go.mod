@@ -3,9 +3,9 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/net-common v1.3.0
-	chainmaker.org/chainmaker/net-libp2p v1.3.0
-	chainmaker.org/chainmaker/net-liquid v1.3.0
+	chainmaker.org/chainmaker/net-common v1.3.1-0.20230213072658-a11f3807819b
+	chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230213073422-e1044f50e304
+	chainmaker.org/chainmaker/net-liquid v1.3.1-0.20230213072923-6e2a04af7cd8
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -43,33 +43,33 @@ require (
 
 require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.0
-	chainmaker.org/chainmaker/common/v3 v3.0.0
-	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.0
+	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230210033754-8929c216525b
+	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20221226075348-48a089e5e847
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0
-	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230221064238-53bb63fe88de
-	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.0
+	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.0
+	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230106071642-01b938fb5bf7
 	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.0
-	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.0
+	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230203083430-35f5c277df40
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.0
-	chainmaker.org/chainmaker/localconf/v3 v3.0.0
+	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230116051044-25072f585984
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
-	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230213084455-1da02ca121ba
-	chainmaker.org/chainmaker/protocol/v3 v3.0.0
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.0
-	chainmaker.org/chainmaker/store-huge/v3 v3.0.0
-	chainmaker.org/chainmaker/store/v3 v3.0.0
-	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.0
-	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.0
-	chainmaker.org/chainmaker/txpool-single/v3 v3.0.0
+	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230208070942-eb8a80858d3d
+	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230105035346-c4a74d4ca5d2
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230210071627-5c7bf50450be
+	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230216074710-38886687b6f3
+	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20221230064609-80a286bca8ec
+	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20221228062544-96f734521184
+	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20221228062526-1ba30e4e3b07
+	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20221228062503-b30c4733473f
 	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230112025723-92669b41065d
-	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20221226151504-43b57bab1a4a
-	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0
-	chainmaker.org/chainmaker/vm-evm/v3 v3.0.0
+	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20221228093754-3896353ea52c
+	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230216022145-de510180326c
+	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230210034611-9606e1d56e7c
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.0
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20221226085036-dc7957162178
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230210092917-404db2fa0282
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.0
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.0
-	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20221226152344-d03f23e4d940
+	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230111060751-8c2f25dfde30
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
@@ -83,15 +83,16 @@ require (
 replace (
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0
+	github.com/gomodule/redigo => github.com/gomodule/redigo v1.8.2
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.0
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.0
 	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v1.0.1
-	github.com/lucas-clemente/quic-go => chainmaker.org/third_party/quic-go v1.0.0
-	github.com/marten-seemann/qtls-go1-15 => chainmaker.org/third_party/qtls-go1-15 v1.0.0
-	github.com/marten-seemann/qtls-go1-16 => chainmaker.org/third_party/qtls-go1-16 v1.0.0
-	github.com/marten-seemann/qtls-go1-17 => chainmaker.org/third_party/qtls-go1-17 v1.0.0
-	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.0.0
+	github.com/lucas-clemente/quic-go => chainmaker.org/third_party/quic-go v1.2.0
+	github.com/marten-seemann/qtls-go1-16 => chainmaker.org/third_party/qtls-go1-16 v1.2.0
+	github.com/marten-seemann/qtls-go1-17 => chainmaker.org/third_party/qtls-go1-17 v1.2.0
+	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.2.0
+	github.com/marten-seemann/qtls-go1-19 => chainmaker.org/third_party/qtls-go1-19 v1.1.0
+	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.8
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.1.0
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v1.0.0
-// google.golang.org/grpc => google.golang.org/grpc v1.26.0
 )

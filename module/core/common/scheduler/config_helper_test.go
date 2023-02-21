@@ -110,9 +110,13 @@ func TestVerifyOptimizeChargeGasTx_OK(t *testing.T) {
 	}
 	txs = append(txs, tx)
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data
@@ -163,9 +167,13 @@ func TestVerifyOptimizeChargeGasTx_NoChargeGasTx(t *testing.T) {
 		txs = append(txs, tx)
 	}
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data
@@ -251,9 +259,13 @@ func TestVerifyOptimizeChargeGasTx_WithWrongAccountAddress(t *testing.T) {
 	}
 	txs = append(txs, tx)
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data
@@ -335,9 +347,13 @@ func TestVerifyOptimizeChargeGasTx_WithLessAddress(t *testing.T) {
 	}
 	txs = append(txs, tx)
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data
@@ -427,9 +443,13 @@ func TestVerifyOptimizeChargeGasTx_WithMoreAddress(t *testing.T) {
 	}
 	txs = append(txs, tx)
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data
@@ -515,9 +535,13 @@ func TestVerifyOptimizeChargeGasTx_WithWrongGas(t *testing.T) {
 	}
 	txs = append(txs, tx)
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data
@@ -605,9 +629,13 @@ func TestVerifyOptimizeChargeGasTx_WithNotExistAddress(t *testing.T) {
 	}
 	txs = append(txs, tx)
 
+	blockHeader := &commonPb.BlockHeader{
+		BlockVersion: 2030100,
+	}
 	// construct block
 	block := &commonPb.Block{
-		Txs: txs,
+		Txs:    txs,
+		Header: blockHeader,
 	}
 
 	// init mock data

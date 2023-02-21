@@ -1,13 +1,15 @@
 package scheduler
 
 import (
+	"encoding/json"
 	"fmt"
 	"strconv"
+
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
 	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
-	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"chainmaker.org/chainmaker/protocol/v3"
 )
 
@@ -25,18 +27,41 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 		return fmt.Errorf("GetLastChainConfig error: %v", err)
 	}
 
-	contractName := syscontract.SystemContract_ACCOUNT_MANAGER.String()
-	methodName := syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
+	// 软分叉处理，v240之后使用coinbase实现，不再有GasTx
+	var contractName, methodName string
+	blockVersion := block.GetHeader().BlockVersion
+	if blockVersion >= blockVersion3000000 {
+		contractName = syscontract.SystemContract_COINBASE.String()
+		methodName = syscontract.CoinbaseFunction_RUN_COINBASE.String()
+	} else {
+		contractName = syscontract.SystemContract_ACCOUNT_MANAGER.String()
+		methodName = syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
+	}
+
 	found := false
 	for _, tx := range block.Txs {
 		if tx.Payload.ContractName == contractName && tx.Payload.Method == methodName {
 			found = true
-			for _, kv := range tx.Payload.Parameters {
-				total, err2 := strconv.ParseUint(string(kv.Value), 10, 64)
-				if err2 != nil {
-					return fmt.Errorf("ParseUint error: %v", err2)
+			if blockVersion >= blockVersion3000000 {
+				senders, err1 := getSenders(tx.Payload.Parameters)
+				if err1 != nil {
+					return err1
 				}
-				gasNeedToCharge[kv.Key] = total
+				for k, v := range senders {
+					total, err2 := strconv.ParseUint(string(v), 10, 64)
+					if err2 != nil {
+						return fmt.Errorf("ParseUint error: %v", err2)
+					}
+					gasNeedToCharge[k] = total
+				}
+			} else {
+				for _, kv := range tx.Payload.Parameters {
+					total, err2 := strconv.ParseUint(string(kv.Value), 10, 64)
+					if err2 != nil {
+						return fmt.Errorf("ParseUint error: %v", err2)
+					}
+					gasNeedToCharge[kv.Key] = total
+				}
 			}
 		} else {
 			gasUsed := tx.Result.ContractResult.GasUsed
@@ -77,6 +102,20 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	}
 
 	return nil
+}
+
+func getSenders(parameters []*commonPb.KeyValuePair) (map[string][]byte, error) {
+	for _, kv := range parameters {
+		if kv.Key == chargeGasVmForMultiAccountParameterKey {
+			senders := make(map[string][]byte)
+			err := json.Unmarshal(kv.Value, &senders)
+			if err != nil {
+				return nil, fmt.Errorf("senders unmarshal error")
+			}
+			return senders, nil
+		}
+	}
+	return nil, fmt.Errorf("%s not found", chargeGasVmForMultiAccountParameterKey)
 }
 
 func getMultiSignEnableManualRun(chainConfig *configPb.ChainConfig) bool {

@@ -51,7 +51,7 @@ func addTrustMemberCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustMemberCrtPath, flagTrustMemberOrgId,
-		flagTrustMemberRole, flagTrustMemberNodeId, flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagTrustMemberRole, flagTrustMemberNodeId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult,
 	})
 
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
@@ -77,7 +77,7 @@ func removeTrustMemberCMD() *cobra.Command {
 
 	attachFlags(cmd, []string{
 		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagTrustMemberCrtPath,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult,
 	})
 
 	cmd.MarkFlagRequired(flagAdminCrtFilePaths)
@@ -151,6 +151,6 @@ func configTrustMember(op int) error {
 		return err
 	}
 
-	fmt.Printf("add or remove request response %+v\n", resp)
+	util.PrintPrettyJson(resp)
 	return nil
 }

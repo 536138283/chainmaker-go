@@ -66,12 +66,18 @@ const (
 
 // TLS Mode
 const (
+	// TLS_MODE_DISABLE disable tls
 	TLS_MODE_DISABLE = "disable"
-	TLS_MODE_ONEWAY  = "oneway"
-	TLS_MODE_TWOWAY  = "twoway"
+	// TLS_MODE_ONEWAY use oneway mode tls
+	TLS_MODE_ONEWAY = "oneway"
+	// TLS_MODE_TWOWAY use twoway mode tls
+	TLS_MODE_TWOWAY = "twoway"
 )
 
 // NewRPCServer - new RPCServer object
+// @param *blockchain.ChainMakerServer
+// @return *RPCServer
+// @return error
 func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, error) {
 
 	grpcServer, err := newGrpc(chainMakerServer)
@@ -103,6 +109,7 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 }
 
 // Start - start RPCServer
+// @return error
 func (s *RPCServer) Start() error {
 	var (
 		err       error
@@ -151,7 +158,8 @@ func (s *RPCServer) Start() error {
 		}
 	}
 
-	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
+	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
+		localconf.ChainMakerConfig.RpcConfig.Port)
 	conn, err := net.Listen("tcp", endPoint)
 	if err != nil {
 		return fmt.Errorf("TCP listen failed, %s", err.Error())
@@ -176,6 +184,7 @@ func (s *RPCServer) Start() error {
 }
 
 // RegisterHandler - register apiservice handler to rpcserver
+// @return error
 func (s *RPCServer) RegisterHandler() error {
 	apiService := NewApiService(s.ctx, s.chainMakerServer)
 	apiPb.RegisterRpcNodeServer(s.grpcServer, apiService)
@@ -191,6 +200,8 @@ func (s *RPCServer) Stop() {
 }
 
 // Restart - Restart RPCServer
+// @param string
+// @return error
 func (s *RPCServer) Restart(reason string) error {
 	var (
 		err error
@@ -226,6 +237,9 @@ func (s *RPCServer) Restart(reason string) error {
 	return nil
 }
 
+// getCurChainConfTrustRootsHash get the newest chain config trust roots hash
+// @return string
+// @return error
 func (s *RPCServer) getCurChainConfTrustRootsHash() (string, error) {
 	chainConfs, err := s.chainMakerServer.GetAllChainConf()
 	if err != nil {
@@ -251,6 +265,7 @@ func (s *RPCServer) getCurChainConfTrustRootsHash() (string, error) {
 	return hex.EncodeToString(certsHash), nil
 }
 
+// tryReloadChainConfTrustRootsChange try to reload chainconfig trust roots changes
 func (s *RPCServer) tryReloadChainConfTrustRootsChange() {
 	go func() {
 		s.log.Debugf("check chainconf trust roots change goroutine start...")
@@ -270,6 +285,7 @@ func (s *RPCServer) tryReloadChainConfTrustRootsChange() {
 	}()
 }
 
+// sleep a while
 func (s *RPCServer) sleep() {
 	checkChainConfTrustRootsChangeInterval :=
 		localconf.ChainMakerConfig.RpcConfig.CheckChainConfTrustRootsChangeInterval
@@ -279,6 +295,9 @@ func (s *RPCServer) sleep() {
 	time.Sleep(time.Duration(checkChainConfTrustRootsChangeInterval) * time.Second)
 }
 
+// checkAndRestart check the newest chainconfig trust root, if it is changes,
+// then restart rpc server with the newest trust roots, else do nothing
+// @return error
 func (s *RPCServer) checkAndRestart() error {
 
 	rootsHash, err := s.getCurChainConfTrustRootsHash()
@@ -303,6 +322,9 @@ func (s *RPCServer) checkAndRestart() error {
 }
 
 // newGrpc - new GRPC object
+// @param *blockchain.ChainMakerServer
+// @return *grpc.Server
+// @return error
 func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error) {
 	var opts []grpc.ServerOption
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
@@ -402,6 +424,11 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 	return server, nil
 }
 
+// newMixServer new http mix server
+// @param *grpc.Server
+// @param *blockchain.ChainMakerServer
+// @return *http.Server
+// @return error
 func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMakerServer) (*http.Server, error) {
 
 	var (
@@ -433,6 +460,10 @@ func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMak
 	return httpServer, nil
 }
 
+// newGateway new http gateway handler
+// @param *blockchain.ChainMakerServer
+// @return http.Handler
+// @return error
 func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, error) {
 	ctx := context.Background()
 
@@ -461,7 +492,8 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 		dopts = append(dopts, grpc.WithInsecure())
 	}
 
-	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
+	// NOTE: the mix http server certificate is valid for 127.0.0.1, so we must use 127.0.0.1
+	endPoint := fmt.Sprintf("%s:%d", "127.0.0.1", localconf.ChainMakerConfig.RpcConfig.Port)
 
 	gwmux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard,
@@ -469,7 +501,7 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 		),
 	)
 
-	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, "localhost"+endPoint, dopts); err != nil {
+	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, endPoint, dopts); err != nil {
 		log.Errorf("new gateway failed, RegisterRpcNodeHandlerFromEndpoint err: %v", err)
 		return nil, err
 	}
@@ -477,6 +509,10 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 	return gwmux, nil
 }
 
+// getCACerts get CA certs from chainmaker server instance
+// @param *blockchain.ChainMakerServer
+// @return []string
+// @return error
 func getCACerts(chainMakerServer *blockchain.ChainMakerServer) ([]string, error) {
 	chainConfs, err := chainMakerServer.GetAllChainConf()
 	if err != nil {

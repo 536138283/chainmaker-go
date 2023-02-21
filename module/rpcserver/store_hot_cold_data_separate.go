@@ -1,3 +1,10 @@
+/*
+Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package rpcserver
 
 import (
@@ -14,6 +21,8 @@ import (
 )
 
 // dealHotColdDataSeparate , deal hot-cold-data-separate
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) dealHotColdDataSeparate(tx *commonPb.Transaction) *commonPb.TxResponse {
 	if tx.Payload.TxType != commonPb.TxType_HOT_COLD_DATA_SEPARATION {
 		return &commonPb.TxResponse{
@@ -40,6 +49,8 @@ func (s *ApiService) dealHotColdDataSeparate(tx *commonPb.Transaction) *commonPb
 }
 
 // doHotColdDataSeparation , do a hot cold separate job, then return jobID in tx.message
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) doHotColdDataSeparation(tx *commonPb.Transaction) *commonPb.TxResponse {
 	var (
 		err                    error
@@ -83,7 +94,11 @@ func (s *ApiService) doHotColdDataSeparation(tx *commonPb.Transaction) *commonPb
 	return resp
 }
 
-//getStartEndHeight , get start height, end height from params
+// getStartEndHeight , get start height, end height from params
+// @param []*commonPb.KeyValuePair
+// @return uint64
+// @return uint64
+// @return error
 func (s *ApiService) getStartEndHeight(params []*commonPb.KeyValuePair) (uint64, uint64, error) {
 	if len(params) != 2 {
 		return 0, 0, errors.New("params count != 2")
@@ -113,6 +128,8 @@ func (s *ApiService) getStartEndHeight(params []*commonPb.KeyValuePair) (uint64,
 }
 
 // getHotColdDataSeparationJobByID, get hot cold separate job by jobID, return jobInfo json in resp message
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
 func (s *ApiService) getHotColdDataSeparationJobByID(tx *commonPb.Transaction) *commonPb.TxResponse {
 	var (
 		err           error
@@ -169,7 +186,10 @@ func (s *ApiService) getHotColdDataSeparationJobByID(tx *commonPb.Transaction) *
 
 }
 
-//getStartEndHeight , get start height, end height from params
+// getStartEndHeight , get start height, end height from params
+// @param []*commonPb.KeyValuePair
+// @return string
+// @return error
 func (s *ApiService) getJobID(params []*commonPb.KeyValuePair) (string, error) {
 	if len(params) != 1 {
 		return "", errors.New("params count != 1")

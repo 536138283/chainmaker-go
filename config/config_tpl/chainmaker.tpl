@@ -201,6 +201,8 @@ rpc:
   # RPC type, can only be grpc now
   provider: grpc  # [*]
 
+  # RPC host eg. 127.0.0.1,0.0.0.0,localhost
+  host: 0.0.0.0
   # RPC port
   port: {rpc_port}
 

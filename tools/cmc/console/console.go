@@ -56,9 +56,10 @@ func NewConsoleCMD(rootCmd *cobra.Command) *cobra.Command {
 	return cmd
 }
 
-func handleDynamicSuggestions(annotation string, _ *prompt.Document) []prompt.Suggest {
-	switch annotation {
-	default:
-		return []prompt.Suggest{}
-	}
+func handleDynamicSuggestions(_ string, _ *prompt.Document) []prompt.Suggest {
+	//switch annotation {
+	//default:
+	//	return []prompt.Suggest{}
+	//}
+	return []prompt.Suggest{}
 }

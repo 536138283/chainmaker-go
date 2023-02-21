@@ -55,6 +55,10 @@ type ApiService struct {
 }
 
 // GetTxStatus - get status of tx
+// @param context.Context
+// @param *txpoolPb.GetTxStatusRequest
+// @return *txpoolPb.GetTxStatusResponse
+// @return error
 func (s *ApiService) GetTxStatus(ctx context.Context,
 	request *txpoolPb.GetTxStatusRequest) (*txpoolPb.GetTxStatusResponse, error) {
 	txStatus, err := s.chainMakerServer.GetTxStatus(request.ChainId, request.TxId)
@@ -68,6 +72,9 @@ func (s *ApiService) GetTxStatus(ctx context.Context,
 }
 
 // NewApiService - new ApiService object
+// @param context.Context
+// @param *blockchain.ChainMakerServer
+// @return *ApiService
 func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerServer) *ApiService {
 	log := logger.GetLogger(logger.MODULE_RPC)
 	logBrief := logger.GetLogger(logger.MODULE_BRIEF)
@@ -109,6 +116,12 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 
 	return &apiService
 }
+
+// sendRawEthTransaction impl raw Ethereum tx handler
+// @param context.Context
+// @param []byte
+// @return *commonPb.TxResponse
+// @return error
 func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*commonPb.TxResponse, error) {
 	req, err := utils.UnmarshalEthRlpBytes(raw)
 	if err != nil {
@@ -129,6 +142,10 @@ func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*co
 }
 
 // SendRequest - deal received TxRequest
+// @param context.Context
+// @param *commonPb.TxRequest
+// @return *commonPb.TxResponse
+// @return error
 func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
 	if req.Payload.TxType == commonPb.TxType_ETH_TX {
 		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("rawtx"))
@@ -154,6 +171,9 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 }
 
 // validate tx
+// @param *commonPb.Transaction
+// @return commonErr.ErrCode
+// @return string
 func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCode, errMsg string) {
 	var (
 		err error
@@ -187,11 +207,18 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 	return commonErr.ERR_CODE_OK, ""
 }
 
+// getErrMsg format error from errcode
+// @param commonErr.ErrCode
+// @param error
+// @return string
 func (s *ApiService) getErrMsg(errCode commonErr.ErrCode, err error) string {
 	return fmt.Sprintf("%s, %s", errCode.String(), err.Error())
 }
 
 // invoke contract according to TxType
+// @param *commonPb.Transaction
+// @param protocol.TxSource
+// @return *commonPb.TxResponse
 func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
 	var (
 		errCode commonErr.ErrCode
@@ -228,6 +255,10 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		}
 	}
 }
+
+// isEstimateGasEthTx if tx is a estimate gas Ethereum tx then return true, else return false
+// @param *commonPb.Transaction
+// @return bool
 func isEstimateGasEthTx(tx *commonPb.Transaction) bool {
 	if tx.Payload.TxType.IsEthTxType() {
 		return true
@@ -239,6 +270,15 @@ func isEstimateGasEthTx(tx *commonPb.Transaction) bool {
 	value := tx.Payload.GetParameter(commonPb.EthTxParameterKey_FROM.String())
 	return value != nil
 }
+
+// makeQueryContext make query contract tx simulation context
+// @param *commonPb.Transaction
+// @param string
+// @param protocol.BlockchainStore
+// @param uint32
+// @param protocol.VmManager
+// @return protocol.TxSimContext
+// @return error
 func (s *ApiService) makeQueryContext(tx *commonPb.Transaction, chainId string,
 	store protocol.BlockchainStore, blockVersion uint32, vmMgr protocol.VmManager) (protocol.TxSimContext, error) {
 	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
@@ -249,6 +289,10 @@ func (s *ApiService) makeQueryContext(tx *commonPb.Transaction, chainId string,
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
 	return ctx, nil
 }
+
+// getBlockVersion get block version by chain id
+// @param string
+// @return uint32
 func (s *ApiService) getBlockVersion(chainId string) uint32 {
 	blockVersion := protocol.DefaultBlockVersion
 
@@ -274,6 +318,9 @@ func ErrorResponse(txId string, code commonPb.TxStatusCode, msg string) *commonP
 }
 
 // dealQuery - deal query tx
+// @param *commonPb.Transaction
+// @param protocol.TxSource
+// @return *commonPb.TxResponse
 func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
 	var (
 		err     error
@@ -471,6 +518,8 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 //}
 
 // kvPair2Map - change []*commonPb.KeyValuePair to map[string]string
+// @param []*commonPb.KeyValuePair
+// @return map[string][]byte
 func (s *ApiService) kvPair2Map(kvPair []*commonPb.KeyValuePair) map[string][]byte {
 	kvMap := make(map[string][]byte)
 
@@ -482,6 +531,9 @@ func (s *ApiService) kvPair2Map(kvPair []*commonPb.KeyValuePair) map[string][]by
 }
 
 // dealTransact - deal transact tx
+// @param *commonPb.Transaction
+// @param protocol.TxSource
+// @return *commonPb.TxResponse
 func (s *ApiService) dealTransact(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
 	var (
 		err     error
@@ -515,6 +567,9 @@ func (s *ApiService) dealTransact(tx *commonPb.Transaction, source protocol.TxSo
 	return resp
 }
 
+// incInvokeCounter increase invoke metric counters
+// @param string
+// @param error
 func (s *ApiService) incInvokeCounter(chainId string, err error) {
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if err == nil {
@@ -525,6 +580,9 @@ func (s *ApiService) incInvokeCounter(chainId string, err error) {
 	}
 }
 
+// updateTxSizeHistogram update tx size metric histogram
+// @param *commonPb.Transaction
+// @param error
 func (s *ApiService) updateTxSizeHistogram(tx *commonPb.Transaction, err error) {
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if err == nil {
@@ -536,6 +594,8 @@ func (s *ApiService) updateTxSizeHistogram(tx *commonPb.Transaction, err error) 
 }
 
 // RefreshLogLevelsConfig - refresh log level
+// @param context.Context
+// @param *configPb.LogLevelsRequest
 func (s *ApiService) RefreshLogLevelsConfig(ctx context.Context, req *configPb.LogLevelsRequest) (
 	*configPb.LogLevelsResponse, error) {
 
@@ -551,6 +611,8 @@ func (s *ApiService) RefreshLogLevelsConfig(ctx context.Context, req *configPb.L
 }
 
 // UpdateDebugConfig - update debug config for test
+// @param context.Context
+// @param *configPb.DebugConfigRequest
 func (s *ApiService) UpdateDebugConfig(ctx context.Context, req *configPb.DebugConfigRequest) (
 	*configPb.DebugConfigResponse, error) {
 
@@ -566,6 +628,8 @@ func (s *ApiService) UpdateDebugConfig(ctx context.Context, req *configPb.DebugC
 }
 
 // CheckNewBlockChainConfig check new block chain config.
+// @param context.Context
+// @param *configPb.CheckNewBlockChainConfigRequest
 func (s *ApiService) CheckNewBlockChainConfig(context.Context, *configPb.CheckNewBlockChainConfigRequest) (
 	*configPb.CheckNewBlockChainConfigResponse, error) {
 
@@ -581,6 +645,8 @@ func (s *ApiService) CheckNewBlockChainConfig(context.Context, *configPb.CheckNe
 }
 
 // GetChainMakerVersion get chainmaker version by rpc request
+// @param context.Context
+// @param *configPb.ChainMakerVersionRequest
 func (s *ApiService) GetChainMakerVersion(ctx context.Context, req *configPb.ChainMakerVersionRequest) (
 	*configPb.ChainMakerVersionResponse, error) {
 
@@ -593,6 +659,10 @@ func (s *ApiService) GetChainMakerVersion(ctx context.Context, req *configPb.Cha
 // GetPoolStatus Returns the max size of config transaction pool and common transaction pool,
 // the num of config transaction in queue and pendingCache,
 // and the the num of common transaction in queue and pendingCache.
+// @param context.Context
+// @param *txpoolPb.GetPoolStatusRequest
+// @return *txpoolPb.TxPoolStatus
+// @return error
 func (s *ApiService) GetPoolStatus(ctx context.Context,
 	request *txpoolPb.GetPoolStatusRequest) (*txpoolPb.TxPoolStatus, error) {
 	return s.chainMakerServer.GetPoolStatus(request.ChainId)
@@ -601,6 +671,10 @@ func (s *ApiService) GetPoolStatus(ctx context.Context,
 // GetTxIdsByTypeAndStage Returns config or common txIds in different stage.
 // TxType may be TxType_CONFIG_TX, TxType_COMMON_TX, (TxType_CONFIG_TX|TxType_COMMON_TX)
 // TxStage may be TxStage_IN_QUEUE, TxStage_IN_PENDING, (TxStage_IN_QUEUE|TxStage_IN_PENDING)
+// @param context.Context
+// @param *txpoolPb.GetTxIdsByTypeAndStageRequest
+// @return *txpoolPb.GetTxIdsByTypeAndStageResponse
+// @return error
 func (s *ApiService) GetTxIdsByTypeAndStage(ctx context.Context,
 	request *txpoolPb.GetTxIdsByTypeAndStageRequest) (*txpoolPb.GetTxIdsByTypeAndStageResponse, error) {
 	txIds, err := s.chainMakerServer.GetTxIdsByTypeAndStage(request.ChainId,
@@ -614,6 +688,10 @@ func (s *ApiService) GetTxIdsByTypeAndStage(ctx context.Context,
 // GetTxsInPoolByTxIds Retrieve the transactions by the txIds from the txPool,
 // return transactions in the txPool and txIds not in txPool.
 // default query upper limit is 1w transaction, and error is returned if the limit is exceeded.
+// @param context.Context
+// @param *txpoolPb.GetTxsInPoolByTxIdsRequest
+// @return *txpoolPb.GetTxsInPoolByTxIdsResponse
+// @return error
 func (s *ApiService) GetTxsInPoolByTxIds(ctx context.Context,
 	request *txpoolPb.GetTxsInPoolByTxIdsRequest) (*txpoolPb.GetTxsInPoolByTxIdsResponse, error) {
 	txs, txIds, err := s.chainMakerServer.GetTxsInPoolByTxIds(request.ChainId, request.TxIds)
@@ -628,6 +706,10 @@ func (s *ApiService) GetTxsInPoolByTxIds(ctx context.Context,
 
 // GetConsensusStateJSON Gets the status of the current consensus, including the height and view
 // of the block participating in the consensus, timeout, and identity of the consensus node
+// @param context.Context
+// @param *consensus.GetConsensusStatusRequest
+// @return *wrapperspb.BytesValue
+// @return error
 func (s *ApiService) GetConsensusStateJSON(ctx context.Context,
 	request *consensus.GetConsensusStatusRequest) (*wrapperspb.BytesValue, error) {
 	bz, err := s.chainMakerServer.GetConsensusStateJSON(request.ChainId)
@@ -638,6 +720,10 @@ func (s *ApiService) GetConsensusStateJSON(ctx context.Context,
 }
 
 // GetConsensusValidators Gets the identity of all consensus nodes
+// @param context.Context
+// @param *consensus.GetConsensusStatusRequest
+// @return *consensus.Validators
+// @return error
 func (s *ApiService) GetConsensusValidators(ctx context.Context,
 	request *consensus.GetConsensusStatusRequest) (*consensus.Validators, error) {
 	nodes, err := s.chainMakerServer.GetConsensusValidators(request.ChainId)
@@ -648,6 +734,10 @@ func (s *ApiService) GetConsensusValidators(ctx context.Context,
 }
 
 // GetConsensusHeight Gets the height of the block participating in the consensus
+// @param context.Context
+// @param *consensus.GetConsensusStatusRequest
+// @return *wrapperspb.UInt64Value
+// @return error
 func (s *ApiService) GetConsensusHeight(ctx context.Context,
 	request *consensus.GetConsensusStatusRequest) (*wrapperspb.UInt64Value, error) {
 	height, err := s.chainMakerServer.GetConsensusHeight(request.ChainId)

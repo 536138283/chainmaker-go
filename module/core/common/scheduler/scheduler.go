@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/common/v3/crypto"
 	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/common/v3/json"
 	"chainmaker.org/chainmaker/localconf/v3"
 	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
@@ -48,6 +49,8 @@ const (
 	// blockVersion3000000 block version v3.0.0_alpha
 	blockVersion3000000 = uint32(3000000)
 	blockVersion2310    = uint32(2030100)
+
+	chargeGasVmForMultiAccountParameterKey = "charge_gas_vm_for_multi_account_senders"
 )
 
 const (
@@ -1276,6 +1279,7 @@ func (ts *TxScheduler) createChargeGasTx(
 func (ts *TxScheduler) createCoinbaseTx(
 	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
 
+	senders := make(map[string][]byte)
 	parameters := make([]*commonPb.KeyValuePair, 0)
 	if senderCollection != nil {
 		// 构造gas参数
@@ -1286,13 +1290,23 @@ func (ts *TxScheduler) createCoinbaseTx(
 					totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
 				}
 			}
-			keyValuePair := commonPb.KeyValuePair{
-				Key:   address,
-				Value: []byte(fmt.Sprintf("%d", totalGasUsed)),
-			}
-			parameters = append(parameters, &keyValuePair)
+			//keyValuePair := commonPb.KeyValuePair{
+			//	Key:   address,
+			//	Value: []byte(fmt.Sprintf("%d", totalGasUsed)),
+			//}
+			senders[address] = []byte(fmt.Sprintf("%d", totalGasUsed))
 		}
 	}
+	senderBytes, err := json.Marshal(senders)
+	if err != nil {
+		ts.log.Errorf(" Marshal senders error: %v", err.Error())
+		return nil, err
+	}
+	kvPair := commonPb.KeyValuePair{
+		Key:   chargeGasVmForMultiAccountParameterKey,
+		Value: senderBytes,
+	}
+	parameters = append(parameters, &kvPair)
 
 	// 构造 Payload
 	payload := &commonPb.Payload{

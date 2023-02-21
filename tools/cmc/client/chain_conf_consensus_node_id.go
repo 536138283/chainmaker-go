@@ -51,7 +51,7 @@ func addConsensusNodeIdCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagSyncResult,
 		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagNodeOrgId, flagNodeId,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
@@ -75,7 +75,7 @@ func removeConsensusNodeIdCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagSyncResult,
 		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagNodeOrgId, flagNodeId,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})
@@ -99,7 +99,7 @@ func updateConsensusNodeIdCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagSyncResult,
 		flagSdkConfPath, flagOrgId, flagEnableCertHash, flagNodeOrgId, flagNodeIdOld, flagNodeId,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 	})

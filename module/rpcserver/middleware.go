@@ -17,11 +17,10 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	"chainmaker.org/chainmaker/localconf/v3"
 	"chainmaker.org/chainmaker/logger/v3"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -29,19 +28,21 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+// new rpc logger
 var log = logger.GetLogger(logger.MODULE_RPC)
 
 const (
-	//UNKNOWN unknown string
+	// UNKNOWN unknown string
 	UNKNOWN = "unknown"
 )
 
 const (
+	// default rate limit type
 	rateLimitTypeGlobal = 0
 )
 
 // GetClientAddr get client address
-// @param ctx
+// @param context.Context
 // @return string
 func GetClientAddr(ctx context.Context) string {
 	pr, ok := peer.FromContext(ctx)
@@ -58,12 +59,21 @@ func GetClientAddr(ctx context.Context) string {
 	return pr.Addr.String()
 }
 
+// getClientIp get client IP
+// @param context.Context
+// @return string
 func getClientIp(ctx context.Context) string {
 	addr := GetClientAddr(ctx)
 	return strings.Split(addr, ":")[0]
 }
 
 // LoggingInterceptor - set logging interceptor
+// @param context.Context
+// @param interface{}
+// @param *grpc.UnaryServerInfo
+// @param grpc.UnaryHandler
+// @return interface{}
+// @return error
 func LoggingInterceptor(ctx context.Context, req interface{},
 	info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 
@@ -83,6 +93,12 @@ func LoggingInterceptor(ctx context.Context, req interface{},
 }
 
 // RecoveryInterceptor - set recovery interceptor
+// @param context.Context
+// @param interface{}
+// @param *grpc.UnaryServerInfo
+// @param grpc.UnaryHandler
+// @return interface{}
+// @return error
 func RecoveryInterceptor(ctx context.Context, req interface{},
 	_ *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 
@@ -99,6 +115,12 @@ func RecoveryInterceptor(ctx context.Context, req interface{},
 }
 
 // MonitorInterceptor - set monitor interceptor
+// @param context.Context
+// @param interface{}
+// @param *grpc.UnaryServerInfo
+// @param grpc.UnaryHandler
+// @return interface{}
+// @return error
 func MonitorInterceptor(ctx context.Context, req interface{},
 	info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
 
@@ -114,6 +136,12 @@ func MonitorInterceptor(ctx context.Context, req interface{},
 	return resp, err
 }
 
+// getRateLimitBucket get rate limit bucket from bucket map
+// @param *sync.Map
+// @param int
+// @param int
+// @param string
+// @return *rate.Limiter
 func getRateLimitBucket(bucketMap *sync.Map, tokenBucketSize, tokenPerSecond int, peerIpAddr string) *rate.Limiter {
 	rateLimitType := localconf.ChainMakerConfig.RpcConfig.RateLimitConfig.Type
 	var (
@@ -161,6 +189,7 @@ func getRateLimitBucket(bucketMap *sync.Map, tokenBucketSize, tokenPerSecond int
 }
 
 // RateLimitInterceptor - set ratelimit interceptor
+// @return grpc.UnaryServerInterceptor
 func RateLimitInterceptor() grpc.UnaryServerInterceptor {
 
 	tokenBucketSize := localconf.ChainMakerConfig.RpcConfig.RateLimitConfig.TokenBucketSize
@@ -187,6 +216,7 @@ func RateLimitInterceptor() grpc.UnaryServerInterceptor {
 }
 
 // BlackListInterceptor - set ip blacklist interceptor
+// @return grpc.UnaryServerInterceptor
 func BlackListInterceptor() grpc.UnaryServerInterceptor {
 
 	blackIps := localconf.ChainMakerConfig.RpcConfig.BlackList.Addresses
@@ -208,6 +238,7 @@ func BlackListInterceptor() grpc.UnaryServerInterceptor {
 }
 
 // BlackListStreamInterceptor - set ip blacklist interceptor
+// @return grpc.StreamServerInterceptor
 func BlackListStreamInterceptor() grpc.StreamServerInterceptor {
 
 	blackIps := localconf.ChainMakerConfig.RpcConfig.BlackList.Addresses
@@ -227,6 +258,10 @@ func BlackListStreamInterceptor() grpc.StreamServerInterceptor {
 	}
 }
 
+// splitMethodName split method name
+// @param string
+// @return string
+// @return string
 func splitMethodName(fullMethodName string) (string, string) {
 	fullMethodName = strings.TrimPrefix(fullMethodName, "/") // remove leading slash
 	if i := strings.Index(fullMethodName, "/"); i >= 0 {
@@ -256,6 +291,7 @@ func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 }
 
 // StreamRecoveryInterceptor - set stream recovery interceptor
+// @return grpc.StreamServerInterceptor
 func StreamRecoveryInterceptor() grpc.StreamServerInterceptor {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo,
 		handler grpc.StreamHandler) (err error) {
