@@ -1,9 +1,6 @@
 chainmaker.org/chainmaker/chainconf/v3 v3.0.0/go.mod h1:zkxSPOSYkSeAfzJunf768bNVd8zAk66ww+vOzY50qvg=
 chainmaker.org/chainmaker/chainconf/v3 v3.0.1-0.20230222031539-5d0c4e710360 h1:zvnv9N9bhpLIyqxVcCYgFW3HMZ88MLyIBO6ft8wlqBY=
 chainmaker.org/chainmaker/chainconf/v3 v3.0.1-0.20230222031539-5d0c4e710360/go.mod h1:zkxSPOSYkSeAfzJunf768bNVd8zAk66ww+vOzY50qvg=
-chainmaker.org/chainmaker/common/v2 v2.3.0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
-chainmaker.org/chainmaker/common/v2 v2.3.1 h1:0CVVamBNHrp0mOOOXJraIfQTquosfwV+yhMRo1kf6HA=
-chainmaker.org/chainmaker/common/v2 v2.3.1/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/common/v3 v3.0.0/go.mod h1:ILO7yNANpE6LEQoyPR/Px2MRnHxBf32vKwKwxfOMREo=
 chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230210033754-8929c216525b h1:HdUvup6A96pmHI297NXRrklyLstrM2HNAROvzoBOt9o=
 chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230210033754-8929c216525b/go.mod h1:ILO7yNANpE6LEQoyPR/Px2MRnHxBf32vKwKwxfOMREo=
@@ -26,13 +23,9 @@ chainmaker.org/chainmaker/libp2p-core v1.0.0 h1:0wUc81wt6VwbmhcEswcwZ96f6NWo6Dtb
 chainmaker.org/chainmaker/libp2p-core v1.0.0/go.mod h1:o5hZnNkN7gMbfe34vRKlgAtndDw2OtLUAS9+bUSz4SU=
 chainmaker.org/chainmaker/libp2p-pubsub v1.3.0 h1:ZJtsCxCsYk+VrYjbWZpnOMz2aGBK316z4CEd2FcLS2U=
 chainmaker.org/chainmaker/libp2p-pubsub v1.3.0/go.mod h1:tapj0SEC7O2wUXw/P0V2LXT+Ktl6ESYhgYDmdbwXGU4=
-chainmaker.org/chainmaker/localconf/v2 v2.3.1 h1:hTRr1YNirJ+uWciIWn03ABpF91pJpffN8QNd8+3gS+s=
-chainmaker.org/chainmaker/localconf/v2 v2.3.1/go.mod h1:j9FLoNFgeunr3VGmi/F7H1IJ7A0GH0R8Ao45fCPGyw0=
 chainmaker.org/chainmaker/localconf/v3 v3.0.0/go.mod h1:8ErKX7zQA407XKkRtCNkFCRGg6A15Gxba2r05hmVUmU=
 chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230222032633-416066e4d7e1 h1:KZ+yDKmxfKeahFb0Ruvn2UiwueBEu6cb+Ld9yS689rk=
 chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230222032633-416066e4d7e1/go.mod h1:8ErKX7zQA407XKkRtCNkFCRGg6A15Gxba2r05hmVUmU=
-chainmaker.org/chainmaker/logger/v2 v2.3.0 h1:SuBA48m+OQ5HChX34j6eXk4o0uhXHi8Jfkrjf90U7rQ=
-chainmaker.org/chainmaker/logger/v2 v2.3.0/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
 chainmaker.org/chainmaker/logger/v3 v3.0.0 h1:tkJwMWc11hwPQXZICFPf47YWYNAlsZcBdv+kJ0JJOM0=
 chainmaker.org/chainmaker/logger/v3 v3.0.0/go.mod h1:dFQvIIpNcaTl+K37sbzHZv/pCOtnHEW+BakbnxqnHaA=
 chainmaker.org/chainmaker/lws v1.1.0/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
@@ -47,8 +40,6 @@ chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230213073422-e1044f50e304/go.mod
 chainmaker.org/chainmaker/net-liquid v1.3.0/go.mod h1:UxmWusKI1YD9LLeBTvJioXNfcA7QRN8uJfh2K3CNx2g=
 chainmaker.org/chainmaker/net-liquid v1.3.1-0.20230213072923-6e2a04af7cd8 h1:OETcSuql7WQLEOt401CSMxbUAdpx6CZ+OoJMboSwgD0=
 chainmaker.org/chainmaker/net-liquid v1.3.1-0.20230213072923-6e2a04af7cd8/go.mod h1:gZudRHScPb9EJDkITD8tUktNnPdA6gNSScvS9DZT4DA=
-chainmaker.org/chainmaker/pb-go/v2 v2.3.2 h1:EmGbMEJGSnP+ASqBkbSsPosRgl8tC3xF4De9UszIoE8=
-chainmaker.org/chainmaker/pb-go/v2 v2.3.2/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.0/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230105082508-751af508a01c/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230208070942-eb8a80858d3d/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
@@ -1639,10 +1630,8 @@ github.com/tarm/serial v0.0.0-20180830185346-98f6abe2eb07/go.mod h1:kDXzergiv9cb
 github.com/tebeka/strftime v0.1.5 h1:1NQKN1NiQgkqd/2moD6ySP/5CoZQsKa1d3ZhJ44Jpmg=
 github.com/tebeka/strftime v0.1.5/go.mod h1:29/OidkoWHdEKZqzyDLUyC+LmgDgdHo4WAFCDT7D/Ig=
 github.com/tecbot/gorocksdb v0.0.0-20191217155057-f0fad39f321c/go.mod h1:ahpPrc7HpcfEWDQRZEmnXMzHY03mLDYMCxeDzy46i+8=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.238/go.mod h1:7sCQWVkxcsR38nffDW057DRGk8mUjK1Ing/EFOK8s8Y=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.415 h1:og/7VpgTs+gduTxzXlU0i4yP8Il+ATnEsF/74NL6xyE=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common v1.0.415/go.mod h1:7sCQWVkxcsR38nffDW057DRGk8mUjK1Ing/EFOK8s8Y=
-github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms v1.0.238/go.mod h1:yrBKWhChnDqNz1xuXdSbWXG56XawEq0G5j1lg4VwBD4=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms v1.0.415 h1:4TLva0WVB3Z0Ky+SxHtT2Ea+xQlAQCWFLCm0GrS5P/I=
 github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/kms v1.0.415/go.mod h1:aE9m72+Jcn80D0f/lQxcb8CaYaTHVlPxV6IyfRK19JE=
 github.com/tendermint/tendermint v0.34.0-rc4/go.mod h1:yotsojf2C1QBOw4dZrTcxbyxmPUrT4hNuOQWX9XUwB4=
