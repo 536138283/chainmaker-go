@@ -267,7 +267,8 @@ func (p *pkACProvider) initAdminMembers(trustRootList []*config.TrustRootConfig)
 func (p *pkACProvider) initConsensusMember(chainConfig *config.ChainConfig) error {
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
 		return p.initDPoSMember(chainConfig.Consensus.Nodes)
-	} else if chainConfig.Consensus.Type == consensus.ConsensusType_TBFT {
+	} else if chainConfig.Consensus.Type == consensus.ConsensusType_TBFT ||
+		chainConfig.Consensus.Type == consensus.ConsensusType_MAXBFT {
 		return p.initPermissionMember(chainConfig.Consensus.Nodes)
 	}
 	return fmt.Errorf("public chain mode does not support other consensus")
