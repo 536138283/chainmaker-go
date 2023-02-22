@@ -33,7 +33,7 @@ config_file="../config/{org_id}/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
 VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.1"
-DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.0.1"
+DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.1"
 START_FULL_MODE=""
 
 # read params
