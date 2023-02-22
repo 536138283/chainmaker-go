@@ -125,7 +125,6 @@ function start_vm_go() {
 
   if [[ $protocol = "uds" ]]
   then
-
     docker run -itd \
     -v "$mount_path":/mount \
     -v "$log_path":/log \

@@ -12,6 +12,10 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
+
+	"chainmaker.org/chainmaker/localconf/v2"
+	"github.com/stretchr/testify/assert"
 
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
@@ -47,6 +51,45 @@ func TestInitBlockchains(t *testing.T) {
 			t.Log(err)
 		}
 	}
+}
+
+func TestDeleteBlockchainTaskListener(t *testing.T) {
+	t.Log("TestDeleteBlockchainTaskListener")
+
+	defer func() {
+		err := recover()
+		assert.Nil(t, err)
+	}()
+
+	chainmakerServerList := makeChainServer(t)
+	chainmakerServerList[0].blockchains.Store("chain1", &Blockchain{
+		chainId: "chain1",
+	})
+	chainmakerServerList[0].blockchains.Store("chain1", &Blockchain{
+		chainId: "chain2",
+	})
+	go chainmakerServerList[0].deleteBlockchainTaskListener()
+
+	localconf.FindDeleteBlockChainNotifyC <- "chain1"
+	time.Sleep(time.Second)
+}
+
+func TestNewBlockchainTaskListener(t *testing.T) {
+	t.Log("TestDeleteBlockchainTaskListener")
+
+	defer func() {
+		err := recover()
+		assert.Nil(t, err)
+	}()
+
+	chainmakerServerList := makeChainServer(t)
+	chainmakerServerList[0].blockchains.Store("chain1", &Blockchain{
+		chainId: "chain1",
+	})
+	go chainmakerServerList[0].newBlockchainTaskListener()
+
+	localconf.FindNewBlockChainNotifyC <- "chain2"
+	time.Sleep(time.Second)
 }
 
 //func TestStart(t *testing.T) {

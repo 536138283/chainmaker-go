@@ -15,7 +15,7 @@ function checkEnv() {
       if [ "$?" != "0" ];then
         echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
       fi
-      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH'
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH (brew link --force gnu-getopt)'
       exit
     fi
   fi
@@ -170,7 +170,7 @@ function generate_keys() {
 
 function generate_config() {
     LOG_LEVEL="" # default INFO
-    CONSENSUS_TYPE=0 # default  1
+    CONSENSUS_TYPE=-1 # default  1
     CONSENSUS_ORGID="public"
     HASH_TYPE="" # SHA256
     MONITOR_PORT=14321
@@ -204,7 +204,7 @@ function generate_config() {
     done
 
     # set CONSENSUS_TYPE
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
       read -p "input consensus type (1-TBFT(default),5-DPOS): " tmp
       if  [ ! -z "$tmp" ] ;then
         if  [ $tmp -eq 1 ] || [ $tmp -eq 5 ] ;then
@@ -214,7 +214,7 @@ function generate_config() {
         fi
       fi
     fi
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
           CONSENSUS_TYPE=1
     fi
     echo "param CONSENSUS_TYPE $CONSENSUS_TYPE"
