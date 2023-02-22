@@ -43,16 +43,16 @@ var VmTypeToRunTimeType = map[string]common.RuntimeType{
 	"WXVM":     common.RuntimeType_WXVM,
 	"EVM":      common.RuntimeType_EVM,
 	"DOCKERGO": common.RuntimeType_DOCKER_GO,
-	"JAVA":     common.RuntimeType_JAVA,
+	"JAVA":     common.RuntimeType_DOCKER_JAVA,
 	"GO":       common.RuntimeType_GO,
 }
 
 var RunTimeTypeToVmType = map[common.RuntimeType]string{
-	common.RuntimeType_GASM:      "GASM",
-	common.RuntimeType_WASMER:    "WASMER",
-	common.RuntimeType_WXVM:      "WXVM",
-	common.RuntimeType_EVM:       "EVM",
-	common.RuntimeType_DOCKER_GO: "DOCKERGO",
-	common.RuntimeType_JAVA:      "JAVA",
-	common.RuntimeType_GO:        "GO",
+	common.RuntimeType_GASM:        "GASM",
+	common.RuntimeType_WASMER:      "WASMER",
+	common.RuntimeType_WXVM:        "WXVM",
+	common.RuntimeType_EVM:         "EVM",
+	common.RuntimeType_DOCKER_GO:   "DOCKERGO",
+	common.RuntimeType_DOCKER_JAVA: "JAVA",
+	common.RuntimeType_GO:          "GO",
 }
