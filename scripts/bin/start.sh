@@ -128,7 +128,6 @@ function start_vm_go() {
   --net=host \
   -v "$mount_path":/mount \
   -v "$log_path":/log \
-  -e CHAIN_RPC_PROTOCOL="1" \
   -e CHAIN_HOST="$runtime_server_host" \
   -e CHAIN_RPC_PORT="$contract_engine_port" \
   -e SANDBOX_RPC_PORT="$runtime_server_port" \
