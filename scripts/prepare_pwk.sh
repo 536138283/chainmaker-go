@@ -15,7 +15,7 @@ function checkEnv() {
       if [ "$?" != "0" ];then
         echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
       fi
-      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH'
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH (brew link --force gnu-getopt)'
       exit
     fi
   fi
@@ -185,7 +185,7 @@ function generate_keys() {
 
 function generate_config() {
     LOG_LEVEL="" # default INFO
-    CONSENSUS_TYPE=0 # default  1
+    CONSENSUS_TYPE=-1 # default  1
     HASH_TYPE="" # SHA256
     MONITOR_PORT=14321
     PPROF_PORT=24321
@@ -223,7 +223,7 @@ function generate_config() {
     done
 
     # set CONSENSUS_TYPE
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
       if  [ $NODE_CNT -gt 1 ] ;then
         read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
         if  [ ! -z "$tmp" ] ;then
@@ -244,7 +244,7 @@ function generate_config() {
         fi
       fi
     fi
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
           CONSENSUS_TYPE=1
     fi
     echo "param CONSENSUS_TYPE $CONSENSUS_TYPE"
@@ -440,7 +440,7 @@ if [ "$ENABLE_VM_GO" == "" ] ;then
             if [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
               xsed "${BC_YML_TRUST_ROOT_LINE},${BC_YML_TRUST_ROOT_LINE_END}d" node$i/chainconfig/bc$j.yml
             fi
-            echo "begin node$i chain$CHAIN_CNT key config..."
+            echo "begin node$i chain$j key config..."
 
             c=0
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`

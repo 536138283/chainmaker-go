@@ -414,7 +414,9 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 	runVmSuccess bool) {
 	// Append to read table
 	applySeq := len(s.txTable)
-	// compatible with version lower than 2201
+	// compatible with version lower than 2201, failed transaction should not apply read set to snapshot
+	// that may cause next transaction read out an error value. Failed transaction can produce invalid read set
+	// by read, write and then read again the same value.
 	if s.blockVersion < 2201 || runVmSuccess {
 		for _, txRead := range txRWSet.TxReads {
 			finalKey := constructKey(txRead.ContractName, txRead.Key)

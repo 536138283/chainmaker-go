@@ -15,7 +15,7 @@ function checkEnv() {
       if [ "$?" != "0" ];then
         echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
       fi
-      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH'
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH (brew link --force gnu-getopt)'
       exit
     fi
   fi
@@ -183,7 +183,7 @@ function generate_certs() {
 
 function generate_config() {
     LOG_LEVEL="" # default INFO
-    CONSENSUS_TYPE=0 # default  1
+    CONSENSUS_TYPE=-1 # default  1
     MONITOR_PORT=14321
     PPROF_PORT=24321
     TRUSTED_PORT=13301
@@ -216,8 +216,8 @@ function generate_config() {
     done
 
     # set CONSENSUS_TYPE
-    if [ $CONSENSUS_TYPE == 0 ] ;then
-      if  [ $NODE_CNT -gt 1 ] && [ "$CONSENSUS_TYPE" == "0" ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
+      if  [ $NODE_CNT -gt 1 ] ;then
         read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT,5-DPOS,6-ABFT): " tmp
         if  [ ! -z "$tmp" ] ;then
           if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] || [ $tmp -eq 5 ] || [ $tmp -eq 6 ] ;then
@@ -237,8 +237,12 @@ function generate_config() {
         fi
       fi
     fi
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
           CONSENSUS_TYPE=1
+    fi
+    if [ $CONSENSUS_TYPE == 3 ] && [ $NODE_CNT -lt 4 ] ;then
+      echo  "the current version of maxbft does not support the deployment of less than four nodes"
+      exit
     fi
     echo "param CONSENSUS_TYPE $CONSENSUS_TYPE"
 
@@ -431,7 +435,7 @@ function generate_config() {
             if [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
               xsed "${BC_YML_TRUST_ROOT_LINE},${BC_YML_TRUST_ROOT_LINE_END}d" node$i/chainconfig/bc$j.yml
             fi
-            echo "begin node$i chain$CHAIN_CNT cert config..."
+            echo "begin node$i chain$j cert config..."
 
             c=0
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`

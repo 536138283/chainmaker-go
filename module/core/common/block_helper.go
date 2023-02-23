@@ -15,7 +15,6 @@ import (
 	"sync/atomic"
 
 	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
-
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
@@ -977,11 +976,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 }
 
 // CheckPreBlock check prepare block nolint: staticcheck
-func CheckPreBlock(block *commonPb.Block, lastBlock *commonPb.Block) error {
-	// proposed height == proposing height - 1
-	proposedHeight := lastBlock.Header.BlockHeight
-	// check if this block height is 1 bigger than last block height
-	lastBlockHash := lastBlock.Header.BlockHash
+func CheckPreBlock(block *commonPb.Block, lastBlockHash []byte, proposedHeight uint64) error {
 
 	if err := IsHeightValid(block, proposedHeight); err != nil {
 		return err

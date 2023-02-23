@@ -122,7 +122,11 @@ func (bv *BlockVerifier) verifyBlock(block *commonPb.Block,
 	}
 
 	lastBlock := bv.ledgerCache.GetLastCommittedBlock()
-	err = common.CheckPreBlock(block, lastBlock)
+	// proposed height == proposing height - 1
+	proposedHeight := lastBlock.Header.BlockHeight
+	// check if this block height is 1 bigger than last block height
+	lastBlockHash := lastBlock.Header.BlockHash
+	err = common.CheckPreBlock(block, lastBlockHash, proposedHeight)
 	if err != nil {
 		return false, emptyTxRwSetMap, err
 	}
@@ -302,7 +306,11 @@ func (bv *BlockVerifier) validateBlockWithRWSets(block, lastBlock *commonPb.Bloc
 		return nil, timeLasts, nil, err
 	}
 
-	err = common.CheckPreBlock(block, lastBlock)
+	// proposed height == proposing height - 1
+	proposedHeight := lastBlock.Header.BlockHeight
+	// check if this block height is 1 bigger than last block height
+	lastBlockHash := lastBlock.Header.BlockHash
+	err = common.CheckPreBlock(block, lastBlockHash, proposedHeight)
 	if err != nil {
 		return nil, timeLasts, nil, err
 	}
