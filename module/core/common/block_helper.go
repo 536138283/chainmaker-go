@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	systemPb "chainmaker.org/chainmaker/pb-go/v3/syscontract"
+
 	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -1301,6 +1303,15 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 		}
 		for _, tx := range b.Txs {
 			if _, ok := keepTxs[tx.Payload.TxId]; !ok {
+				//filter coinbase/gas transactions
+				if isOptimizedChargingGasTx(tx) || isCoinbaseTx(tx) {
+					chain.log.Debugf("filter tx, id %d, contract name %s, method %s, tx type %s",
+						tx.Payload.TxId,
+						tx.Payload.ContractName,
+						tx.Payload.Method,
+						tx.Payload.TxType)
+					continue
+				}
 				txRetry = append(txRetry, tx)
 			}
 		}
@@ -1309,14 +1320,23 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	return txRetry, batchRetry, nil, nil
 }
 
-//func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
-//	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
-//		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
-//		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
-//		return true
-//	}
-//	return false
-//}
+func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
+	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
+		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
+		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+		return true
+	}
+	return false
+}
+
+func isCoinbaseTx(t *commonPb.Transaction) bool {
+	if t.Payload.ContractName == systemPb.SystemContract_COINBASE.String() &&
+		t.Payload.Method == systemPb.CoinbaseFunction_RUN_COINBASE.String() &&
+		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
+		return true
+	}
+	return false
+}
 
 // checkLastProposedBlock check last propose block nolint: ineffassign, staticcheck
 func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
