@@ -65,11 +65,15 @@ config_file="../config/{org_id}/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
 go_vm_container_name=VM-GO-{org_id}
+java_vm_container_name=VM-JAVA-{org_id}
 # Deprecated docker vm container
 docker_vm_container_name=DOCKERVM-{org_id}
 
 if [[ $chainmaker_vm_go_enable == "true" ]]; then
  enable_go_vm_container=true
+fi
+if [[ $chainmaker_vm_java_enable == "true" ]]; then
+ enable_java_vm_container=true
 fi
 # check if enable Deprecated docker vm
 if [[ $chainmaker_vm_docker_go_enable_dockervm == "true" && $chainmaker_vm_docker_go_uds_open == "true" ]]; then
@@ -77,7 +81,7 @@ if [[ $chainmaker_vm_docker_go_enable_dockervm == "true" && $chainmaker_vm_docke
 fi
 
 # if enable one, stop vm containers
-if [[ $enable_docker_vm_container == "true" || $enable_go_vm_container == "true" ]]
+if [[ $enable_docker_vm_container == "true" || $enable_go_vm_container == "true" || $enable_java_vm_container == "true" ]]
 then
   if [ "$STOP_FULL_MODE" == "" ]
   then
@@ -95,6 +99,12 @@ then
     if [[ $enable_go_vm_container == "true" ]]
     then
       stop_container $go_vm_container_name
+    fi
+
+    # if enable go vm service, stop the running container
+    if [[ $enable_java_vm_container == "true" ]]
+    then
+      stop_container $java_vm_container_name
     fi
 
     # if enable Deprecated docker vm service and use unix domain socket, stop the running container
