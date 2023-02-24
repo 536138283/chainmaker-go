@@ -710,5 +710,5 @@ vm:
       # Docker vm contract engine server port, default 22351
       port: {docker_java_engine_port}
 
-      # Max number of connection created to connect docker vm service
+      # Max number of connection created to connect docker vm engine service
       max_connection: 5
