@@ -27,6 +27,7 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+    - "dockerjava"
   native:
     multisign:
       enable_manual_run: true
@@ -36,8 +37,10 @@ block:
   tx_timestamp_verify: true # 是否需要开启交易时间戳校验
   tx_timeout: 600  # 交易时间戳的过期时间(秒)
   block_tx_capacity: 100  # 区块中最大交易数
-  block_size: 10  # 区块最大限制，单位MB
+  block_size: 40  # 区块最大限制，单位MB
   block_interval: 10 # 出块间隔，单位:ms
+  tx_parameter_size: 30
+
 
 # core模块
 core:

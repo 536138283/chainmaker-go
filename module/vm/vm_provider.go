@@ -30,21 +30,14 @@ func GetVmProvider(t string) Provider {
 	return provider
 }
 
-const (
-	VmTypeGasm   = "GASM"
-	VmTypeWasmer = "WASMER"
-	VmTypeEvm    = "EVM"
-	VmTypeWxvm   = "WXVM"
-)
-
 var VmTypeToRunTimeType = map[string]common.RuntimeType{
-	"GASM":     common.RuntimeType_GASM,
-	"WASMER":   common.RuntimeType_WASMER,
-	"WXVM":     common.RuntimeType_WXVM,
-	"EVM":      common.RuntimeType_EVM,
-	"DOCKERGO": common.RuntimeType_DOCKER_GO,
-	"JAVA":     common.RuntimeType_DOCKER_JAVA,
-	"GO":       common.RuntimeType_GO,
+	"GASM":       common.RuntimeType_GASM,
+	"WASMER":     common.RuntimeType_WASMER,
+	"WXVM":       common.RuntimeType_WXVM,
+	"EVM":        common.RuntimeType_EVM,
+	"DOCKERGO":   common.RuntimeType_DOCKER_GO,
+	"DOCKERJAVA": common.RuntimeType_DOCKER_JAVA,
+	"GO":         common.RuntimeType_GO,
 }
 
 var RunTimeTypeToVmType = map[common.RuntimeType]string{
@@ -53,6 +46,6 @@ var RunTimeTypeToVmType = map[common.RuntimeType]string{
 	common.RuntimeType_WXVM:        "WXVM",
 	common.RuntimeType_EVM:         "EVM",
 	common.RuntimeType_DOCKER_GO:   "DOCKERGO",
-	common.RuntimeType_DOCKER_JAVA: "JAVA",
+	common.RuntimeType_DOCKER_JAVA: "DOCKERJAVA",
 	common.RuntimeType_GO:          "GO",
 }
