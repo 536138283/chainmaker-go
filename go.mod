@@ -46,7 +46,7 @@ require (
 	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230210033754-8929c216525b
 	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20221226075348-48a089e5e847
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.0
-	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230222080429-1a54f9ae5d0f
+	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230224111451-d54ac0980dc3
 	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230222081901-cd5b8b604611
 	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.0
 	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230222022155-73d4cb87f83e
