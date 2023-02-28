@@ -55,7 +55,7 @@ function show_help() {
     echo "               p2p_port(default:11301) rpc_port(default:12301)"
     echo "               docker_vm_runtime_port(default:32351) docker_go_engine_port(default:22351)"
     echo "               docker_java_engine_port(default:23351)"
-    echo "               -c consense-type: 1-TBFT,4-RAFT "
+    echo "               -c consense-type: 1-TBFT,3-MAXBFT,4-RAFT "
     echo "               -l log-level: DEBUG,INFO,WARN,ERROR"
     echo "               -v docker-vm-enable: true,false"
     echo "               -j docker-java-enable: true,false"
