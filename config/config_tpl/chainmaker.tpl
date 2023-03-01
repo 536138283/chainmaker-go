@@ -633,11 +633,6 @@ vm:
     # Mount log path in chainmaker
     log_mount_path: ../log/{org_id}/go
 
-    # Communication protocol, used for chainmaker and docker manager communication
-    # 1. tcp: docker vm uses TCP to communicate with chain
-    # 2. uds: docker vm uses unix domain socket to communicate with chain
-    protocol: {vm_go_protocol}
-
     # If use a customized VM configuration file, supplement it; else, do not configure
     # Priority: chainmaker.yml > vm.yml > default settings
     # dockervm_config_path: /config_path/vm.yml
