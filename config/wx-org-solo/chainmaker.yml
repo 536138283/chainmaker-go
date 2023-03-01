@@ -281,7 +281,7 @@ vm:
     contract_engine:
       # Docker vm contract engine server host, default 127.0.0.1
       host: 127.0.0.1
-      # Docker vm contract engine server port, default 22351
-      port: 22351
+      # Docker vm contract engine server port, default 23351
+      port: 23351
       # Max number of connection created to connect docker vm service
       max_connection: 5
