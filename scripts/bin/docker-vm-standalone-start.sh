@@ -9,7 +9,7 @@ LOG_PATH=$(pwd)/log
 LOG_LEVEL=INFO
 RUNTIME_PORT=32351
 DOCKER_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v3.0.0"
-DOCKER_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v3.0.0"
+DOCKER_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine-java:v3.0.0"
 
 if [ "$1" = "" ]; then
   vm_type="go"
