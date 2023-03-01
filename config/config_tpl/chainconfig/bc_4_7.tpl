@@ -68,13 +68,13 @@ block:
   block_tx_capacity: 100
 
   # Max block size, in MB
-  block_size: 40
+  block_size: 50
 
   # The interval of block proposing attempts, in millisecond.
   # should be within the range of [10,10000]
   block_interval: 10
 
-  tx_parameter_size: 30
+  tx_parameter_size: 40
 
 # Core settings
 core:
