@@ -40,6 +40,9 @@ func (s *ApiService) dealHotColdDataSeparate(tx *commonPb.Transaction) *commonPb
 	//get job status
 	case syscontract.HotColdDataSeparateFunction_GetHotColdDataSeparationJobByID.String():
 		return s.getHotColdDataSeparationJobByID(tx)
+	//get hot cold separate max height
+	case syscontract.HotColdDataSeparateFunction_GetHotColdDataSeparationMaxHeight.String():
+		return s.getHotColdDataSeparationMaxHeight(tx)
 	default:
 		return &commonPb.TxResponse{
 			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,
@@ -186,7 +189,7 @@ func (s *ApiService) getHotColdDataSeparationJobByID(tx *commonPb.Transaction) *
 
 }
 
-// getStartEndHeight , get start height, end height from params
+// getJobID , get job id from params
 // @param []*commonPb.KeyValuePair
 // @return string
 // @return error
@@ -203,4 +206,55 @@ func (s *ApiService) getJobID(params []*commonPb.KeyValuePair) (string, error) {
 	jobID := string(params[0].Value)
 
 	return jobID, nil
+}
+
+// getHotColdDataSeparationMaxHeight, get hot cold separate max height, return  json in resp message
+// @param *commonPb.Transaction
+// @return *commonPb.TxResponse
+func (s *ApiService) getHotColdDataSeparationMaxHeight(tx *commonPb.Transaction) *commonPb.TxResponse {
+	var (
+		err                      error
+		errMsg                   string
+		maxHeight                uint64
+		errCode                  commonErr.ErrCode
+		store                    protocol.BlockchainStore
+		resp                     = &commonPb.TxResponse{TxId: tx.Payload.TxId}
+		hotColdSeparateMaxHeight storePb.HotColdSeparateMaxHeight
+		respMessage              []byte
+	)
+
+	chainId := tx.Payload.ChainId
+
+	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
+		errCode = commonErr.ERR_CODE_GET_STORE
+		errMsg = s.getErrMsg(errCode, err)
+		s.log.Error(errMsg)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = errMsg
+		return resp
+	}
+
+	if maxHeight, err = store.GetHotColdDataSeparationMaxHeight(); err != nil {
+		errCode = commonErr.ERR_CODE_GET_STORE
+		errMsg = s.getErrMsg(errCode, err)
+		s.log.Error(errMsg)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = errMsg
+		return resp
+	}
+
+	//maxHeight to json
+	hotColdSeparateMaxHeight.MaxHeight = maxHeight
+	if respMessage, err = json.Marshal(hotColdSeparateMaxHeight); err != nil {
+		errCode = commonErr.ERR_CODE_GET_STORE
+		errMsg = s.getErrMsg(errCode, err)
+		s.log.Error(errMsg)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = errMsg
+		return resp
+	}
+	resp.Code = commonPb.TxStatusCode_SUCCESS
+	resp.Message = string(respMessage)
+	return resp
+
 }

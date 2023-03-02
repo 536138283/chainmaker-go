@@ -67,6 +67,7 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(snapshot.NewGetSnapshotStatusCMD())
 	mainCmd.AddCommand(hot_cold_data_separate.NewHotColdDataSeparateCMD())
 	mainCmd.AddCommand(hot_cold_data_separate.NewGetHotColdDataSeparateJobCMD())
+	mainCmd.AddCommand(hot_cold_data_separate.NewGetHotColdDataSeparationMaxHeightCMD())
 
 	mainCmd.Execute()
 }
