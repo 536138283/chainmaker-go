@@ -404,7 +404,7 @@ if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
             NODES_LINE_START=$(awk '/Consensus node list start/{print NR}' node$i/chainconfig/bc$j.yml)
             NODES_LINE_END=$(awk '/Consensus node list end/{print NR}' node$i/chainconfig/bc$j.yml)
             xsed "s%{consensus_type}%$CONSENSUS_TYPE%g" node$i/chainconfig/bc$j.yml
-            if  [ $CONSENSUS_TYPE -eq 1 ]; then
+            if  [ $CONSENSUS_TYPE -eq 1 ] || [ $CONSENSUS_TYPE -eq 3 ]; then
                 xsed "${DPOS_LINE_START},${DPOS_LINE_END}d" node$i/chainconfig/bc$j.yml
                 xsed "s%{public_org_id}%$CONSENSUS_ORGID%g" node$i/chainconfig/bc$j.yml
             elif  [ $CONSENSUS_TYPE -eq 5 ]; then
