@@ -74,6 +74,8 @@ chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230221091710-dc76d380efe3 h1:g7N87
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230221091710-dc76d380efe3/go.mod h1:/CtbtCNyYPbql3b9zMpqA149bN+sfzTUZFzolf/FbpQ=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230302034351-3b75823bcf9f h1:DBLIjwYSon3yhMw8KchWIv04fRTRHAv10ZTaRMtTI5k=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230302034351-3b75823bcf9f/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
+chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230302034608-432da703795d h1:yy4jccmdc3FqrqstcNaYWoEopSNJA5lwpABqS1DBQjs=
+chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230302034608-432da703795d/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
 chainmaker.org/chainmaker/tbft-engine v1.0.2-0.20230203081556-5a5061fd415d h1:FF+st+Mid0GX3rbQpi4kS6uSPgAX1fRPKEyilD8jaGc=
 chainmaker.org/chainmaker/tbft-engine v1.0.2-0.20230203081556-5a5061fd415d/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=
 chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230221092047-dd9fc48a15a0 h1:vHGblg/ZFneSyM1KtexvGcQDBy9zxs+JIZfETbsMp2M=
