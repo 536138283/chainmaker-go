@@ -31,6 +31,7 @@ func (s *ApiService) dealHotColdDataSeparate(tx *commonPb.Transaction) *commonPb
 			TxId:    tx.Payload.TxId,
 		}
 	}
+	s.log.Debugf("dealHotColdDataSeparate,tx.Payload.Method:[%v]", tx.Payload.Method)
 
 	switch tx.Payload.Method {
 
@@ -254,7 +255,12 @@ func (s *ApiService) getHotColdDataSeparationMaxHeight(tx *commonPb.Transaction)
 		return resp
 	}
 	resp.Code = commonPb.TxStatusCode_SUCCESS
-	resp.Message = string(respMessage)
+
+	if hotColdSeparateMaxHeight.MaxHeight == 0 {
+		resp.Message = "{\"max_height\":0}"
+	} else {
+		resp.Message = string(respMessage)
+	}
 	return resp
 
 }

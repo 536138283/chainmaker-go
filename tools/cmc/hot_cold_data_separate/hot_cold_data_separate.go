@@ -191,7 +191,7 @@ func NewGetHotColdDataSeparationMaxHeightCMD() *cobra.Command {
 	}
 
 	util.AttachAndRequiredFlags(cmd, flags, []string{
-		flagSdkConfPath, flagChainId, flagSecretKey, flagJobID,
+		flagSdkConfPath, flagChainId, flagSecretKey,
 	})
 
 	return cmd
@@ -235,7 +235,7 @@ func getHotColdSeparateMaxHeight(cc *sdk.ChainClient) error {
 	}
 
 	if resp.Code == common.TxStatusCode_SUCCESS {
-		fmt.Printf("get jobInfo:[%s] \n", resp.Message)
+		fmt.Printf("get getHotColdSeparateMaxHeight:[%s] \n", resp.Message)
 		return nil
 	}
 
