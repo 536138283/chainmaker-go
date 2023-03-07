@@ -53,11 +53,11 @@ require (
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.1-0.20230221100751-02e92d01a8d6
 	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230222032633-416066e4d7e1
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
-	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230302032047-68d4233f1d57
-	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230228074744-8dbdcfac9f82
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230302025522-3823114c76db
-	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230301064020-34cc692e1903
-	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230302035153-07fe42ff126c
+	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230307032214-b2c839d1cca6
+	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230307062106-e182ecb004bd
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230307071315-4e0b22717c63
+	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230307062058-2c869901a138
+	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230306095249-51f985632cb7
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230221092047-dd9fc48a15a0
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230221092257-712fb7449cf3
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230221091958-2e9fa4d45ff0
