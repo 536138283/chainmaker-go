@@ -53,11 +53,11 @@ require (
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.1-0.20230221100751-02e92d01a8d6
 	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230222032633-416066e4d7e1
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
-	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230221090242-ab67a9877333
-	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230222032756-e5c7c7928339
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230222033147-c215f22a246b
-	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230214065154-6d4f65df6063
-	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230221091710-dc76d380efe3
+	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230307032214-b2c839d1cca6
+	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230307062106-e182ecb004bd
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230307071315-4e0b22717c63
+	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230307062058-2c869901a138
+	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230306095249-51f985632cb7
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230221092047-dd9fc48a15a0
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230221092257-712fb7449cf3
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230221091958-2e9fa4d45ff0
@@ -93,6 +93,7 @@ replace (
 	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.2.0
 	github.com/marten-seemann/qtls-go1-19 => chainmaker.org/third_party/qtls-go1-19 v1.1.0
 	github.com/mattn/go-sqlite3 => github.com/mattn/go-sqlite3 v1.14.8
+	github.com/oleiade/reflections => github.com/oleiade/reflections v1.0.1
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.1.0
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v1.0.0
 )

@@ -178,3 +178,67 @@ func getJobInfo(cc *sdk.ChainClient) error {
 	fmt.Printf("error, resp code :[%d],resp message :[%s]  \n", resp.Code, resp.Message)
 	return errors.New(resp.Message)
 }
+
+// NewGetHotColdDataSeparationMaxHeightCMD , new command for getting hot-cold-data-separate max height
+func NewGetHotColdDataSeparationMaxHeightCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "get_hot_cold_separate_max_height",
+		Short: "get hot cold separate max height ",
+		Long:  "get detail information about hot cold data separate's max height ",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return runGetHotColdDataSeparationMaxHeightCMD()
+		},
+	}
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath, flagChainId, flagSecretKey,
+	})
+
+	return cmd
+}
+
+// runGetHotColdDataSeparationMaxHeightCMD `get_hot_cold_separate_max_height` command implementation
+func runGetHotColdDataSeparationMaxHeightCMD() error {
+	//// 1.Chain Client
+	cc, err := util.CreateChainClient(sdkConfPath, chainId, "", "", "", "", "")
+	if err != nil {
+		return err
+	}
+	defer cc.Stop()
+
+	return getHotColdSeparateMaxHeight(cc)
+
+}
+
+// getHotColdSeparateMaxHeight Build & Sign & Send a get max height of hot-cold-separate   Request
+func getHotColdSeparateMaxHeight(cc *sdk.ChainClient) error {
+	var (
+		err                error
+		payload            *common.Payload
+		signedPayloadBytes *common.Payload
+		resp               *common.TxResponse
+	)
+
+	payload, err = cc.CreateGetHotColdDataSeparateMaxHeightPayload()
+	if err != nil {
+		return err
+	}
+
+	signedPayloadBytes, err = cc.SignHotColdDataSeparatePayload(payload)
+	if err != nil {
+		return err
+	}
+
+	resp, err = cc.SendHotColdDataSeparateRequest(signedPayloadBytes, requestTimeout)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code == common.TxStatusCode_SUCCESS {
+		fmt.Printf("get getHotColdSeparateMaxHeight:[%s] \n", resp.Message)
+		return nil
+	}
+
+	fmt.Printf("error, resp code :[%d],resp message :[%s]  \n", resp.Code, resp.Message)
+	return errors.New(resp.Message)
+}
