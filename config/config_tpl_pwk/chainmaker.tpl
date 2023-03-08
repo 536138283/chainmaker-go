@@ -551,9 +551,8 @@ vm:
   # Golang runtime in docker container
   go:
     # Enable docker go virtual machine, default: false
-    enable: {enable_vm_go}
-
     enable: {enable_docker_go}
+
     # Mount data path in chainmaker, include contracts, uds socks
     data_mount_path: ../data/{org_id}/go
 
