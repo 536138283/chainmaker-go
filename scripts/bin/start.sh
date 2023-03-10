@@ -207,9 +207,10 @@ function start_vm_java() {
   rpc_max_recv_size=$chainmaker_vm_java_max_recv_msg_size
   log_in_console=$chainmaker_vm_java_log_in_console
   max_concurrency=$chainmaker_vm_java_max_concurrency
-  slow_tx_step_time=$chainmaker_vm_slow_tx_log_step_base_time
-  slow_tx_time=$chainmaker_vm_slow_tx_log_tx_base_time
-  process_timeout=$chainmaker_vm_process_timeout
+  slow_disable=$chainmaker_vm_java_slow_disable
+  slow_step_time=$chainmaker_vm_java_slow_step_time
+  slow_tx_time=$chainmaker_vm_java_slow_tx_time
+  process_timeout=$chainmaker_vm_java_process_timeout
 
   if [[ $dockervm_config_path != "" ]];then
     if [[ "${dockervm_config_path:0:1}" != "/" ]];then
