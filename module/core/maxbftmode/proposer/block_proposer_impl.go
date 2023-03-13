@@ -349,8 +349,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	}
 	fetchTotalLasts = utils.CurrentTimeMillisSeconds() - fetchTotalFirst
 
+	// 剔除同分支重复交易的时间
+	rejectTxsInSameBranch := utils.CurrentTimeMillisSeconds()
 	batchIds, fetchBatch, fetchBatches = bp.fetchBatchWithoutDupTxInSameBranch(height, preHash, batchIds, fetchBatch,
 		fetchBatches)
+	rejectTxsInSameBranch = utils.CurrentTimeMillisSeconds() - rejectTxsInSameBranch
 
 	txCapacity := int(bp.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if len(fetchBatch) > txCapacity {
@@ -369,6 +372,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		bp.log.Warnf("txbatch oversize expect <= %d, got %d", txCapacity, len(fetchBatch))
 	}
 
+	generateTime := utils.CurrentTimeMillisSeconds()
 	block, timeLasts, err := bp.generateNewBlock(
 		height,
 		preHash,
@@ -391,6 +395,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 		return nil, err
 	}
+	generateTime = utils.CurrentTimeMillisSeconds() - generateTime
 	_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(block)
 
 	cutBlock := new(commonpb.Block)
@@ -408,9 +413,10 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	bp.log.Infof("proposer success [%d](txs:%d), fetch(times:%v,fetch:%v,filter:%v,fetch from other block:%v,total:%d) "+
 		"time used(begin DB transaction:%v, "+
-		"new snapshot:%v, vm:%v, finalize block:%v,total:%d)", block.Header.BlockHeight, block.Header.TxCount,
+		"new snapshot:%v, vm:%v, finalize block:%v,rejectTxsSameBranch: %dms, generate: %dms,total:%d)",
+		block.Header.BlockHeight, block.Header.TxCount,
 		totalTimes, fetchLasts, filterValidateLasts, fetchFromOtherBlockLasts, fetchTotalLasts,
-		timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], elapsed)
+		timeLasts[0], timeLasts[1], timeLasts[2], timeLasts[3], rejectTxsInSameBranch, generateTime, elapsed)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		bp.metricBlockPackageTime.WithLabelValues(bp.chainId).Observe(float64(elapsed) / 1000)
 	}
@@ -901,10 +907,12 @@ func (bp *BlockProposerImpl) removeAndRetryTx(
 func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, preHash []byte, batchIds []string,
 	fetchBatch []*commonpb.Transaction, fetchBatches [][]*commonpb.Transaction) ([]string, []*commonpb.Transaction,
 	[][]*commonpb.Transaction) {
+
+	txsMap := common.GetTxsMapFromSameBranch(height, bp.proposalCache, preHash)
 	if common.TxPoolType == batch.TxPoolType {
 		dupTxs := make([]*commonpb.Transaction, 0)
 		for _, tx := range fetchBatch {
-			if isExit, _ := common.IfExitInSameBranch(height, tx.Payload.TxId, bp.proposalCache, preHash); isExit {
+			if _, isExit := txsMap[tx.Payload.TxId]; isExit {
 				dupTxs = append(dupTxs, tx)
 			}
 		}
@@ -914,15 +922,16 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, p
 		}
 		return batchIds, fetchBatch, fetchBatches
 	}
-	finalBatch := make([]*commonpb.Transaction, 0)
+
+	finalBatch := make([]*commonpb.Transaction, 0, len(fetchBatch))
 	for _, tx := range fetchBatch {
-		if isExit, _ := common.IfExitInSameBranch(
-			height, tx.Payload.TxId, bp.proposalCache, preHash); !isExit {
-			finalBatch = append(finalBatch, tx)
+		if _, ok := txsMap[tx.Payload.TxId]; ok {
+			continue
 		}
+		finalBatch = append(finalBatch, tx)
 	}
-	fetchBatch = finalBatch
-	return batchIds, fetchBatch, fetchBatches
+
+	return batchIds, finalBatch, fetchBatches
 }
 
 //// isIdle, to check if proposer is idle

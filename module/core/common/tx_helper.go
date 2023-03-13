@@ -92,6 +92,26 @@ func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.Propo
 	return false, nil
 }
 
+// GetTxsMapFromSameBranch 将该分支下的所有交易的txId，放入map中
+func GetTxsMapFromSameBranch(
+	height uint64, proposalCache protocol.ProposalCache, preBlockHash []byte) map[string]struct{} {
+	hash := preBlockHash
+	txMap := make(map[string]struct{})
+	for i := uint64(1); i <= 3; i++ {
+		b, _ := proposalCache.GetProposedBlockByHashAndHeight(hash, height-i)
+		if b == nil || b.Header == nil {
+			return nil
+		}
+
+		for _, tx := range b.Txs {
+			txMap[tx.Payload.TxId] = struct{}{}
+		}
+		hash = b.Header.PreBlockHash
+	}
+
+	return txMap
+}
+
 // ValidateTx validate tx, return error
 func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transaction,
 	stat *VerifyStat, newAddTxs []*commonpb.Transaction, block *commonpb.Block,
@@ -100,33 +120,17 @@ func ValidateTx(txsRet map[string]*commonpb.Transaction, tx *commonpb.Transactio
 	mode protocol.VerifyMode, verifyMode uint8, options ...string) error {
 
 	if TxPoolType == batch.TxPoolType {
-		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
-		if consensuspb.ConsensusType_MAXBFT == consensusType && isExit {
-
-			err = fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d, exit:%s",
-				tx.Payload.TxId, block.Header.BlockHeight, err.Error())
-			return err
-		}
 
 		// tx pool batch not need to verify TxHash
 		return nil
 	}
 
 	txInPool, existTx := txsRet[tx.Payload.TxId]
-	if existTx {
-		isExit, err := IfExitInSameBranch(block.Header.BlockHeight, tx.Payload.TxId, proposalCache, block.Header.PreBlockHash)
-		if consensuspb.ConsensusType_MAXBFT == consensusType && isExit {
-
-			err = fmt.Errorf("tx duplicate in pending (tx:%s), txInBlockHeight:%d, exit:%s",
-				tx.Payload.TxId, block.Header.BlockHeight, err.Error())
-			return err
-		}
-
+	if existTx && mode == protocol.CONSENSUS_VERIFY {
 		// not necessary to verify tx hash when in SYNC_VERIFY
-		if mode == protocol.CONSENSUS_VERIFY {
-			return IsTxRequestValid(tx, txInPool)
-		}
+		return IsTxRequestValid(tx, txInPool)
 	}
+
 	startDBTicker := utils.CurrentTimeMillisSeconds()
 	var (
 		isExist    bool
@@ -349,6 +353,15 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	var err error
 	startTicker := utils.CurrentTimeMillisSeconds()
 
+	// maxbft 共识下，从同分支下的其他区块中获取txsMap，用以判断交易是否重复
+	txsMap := make(map[string]struct{})
+	if vt.chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_MAXBFT {
+		txsMap = GetTxsMapFromSameBranch(
+			block.Header.BlockHeight,
+			vt.proposalCache,
+			block.Header.PreBlockHash)
+	}
+
 	// collect rw set verify failed txs
 	//var failTxLock sync.Mutex
 	rwSetVerifyFailTxIds := make([]string, 0)
@@ -362,7 +375,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 			}
 			//txHashes1, newAddTxs, rwSetVerifyFailTxIdsIncr, err1 :=
 			//vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
-			txHashes1, newAddTxs, _, err1 := vt.verifyTx(txs, txsRet, stat, block, mode, verifyMode)
+			txHashes1, newAddTxs, _, err1 := vt.verifyTx(txs, txsRet, stat, block, txsMap, mode, verifyMode)
 			if err1 != nil {
 				//TODO：校验有问题，校验修改后开启
 				//2022-10-17 11:12:09.315 [ERROR] [Core] [35;1m@chain3[0m common/tx_helper.go:365
@@ -444,10 +457,22 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 
 // verifyTx verify tx, return tx hashs, tx list, rw set verify failed tx tds, error
 func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*commonpb.Transaction,
-	stat *VerifyStat, block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
+	stat *VerifyStat, block *commonpb.Block, txsMap map[string]struct{}, mode protocol.VerifyMode, verifyMode uint8) (
 	[][]byte, []*commonpb.Transaction, []string, error) {
 	txHashes := make([][]byte, 0)
 	newAddTxs := make([]*commonpb.Transaction, 0) // tx that verified and not in txpool, need to be added to txpool
+
+	// maxbft 共识下判断相同分支上是否存在交易重复（防止双花）
+	if vt.chainConf.ChainConfig().Consensus.Type == consensuspb.ConsensusType_MAXBFT {
+		if txsMap != nil {
+			for _, tx := range txs {
+				if _, exit := txsMap[tx.Payload.TxId]; exit {
+					return nil, nil, nil, fmt.Errorf("found the same tx[%s], height: %d",
+						tx.Payload.TxId, block.Header.BlockHeight)
+				}
+			}
+		}
+	}
 
 	rwSetVerifyFailTxIds := make([]string, 0)
 	for _, tx := range txs {
