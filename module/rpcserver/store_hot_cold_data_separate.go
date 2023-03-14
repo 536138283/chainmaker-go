@@ -176,7 +176,34 @@ func (s *ApiService) getHotColdDataSeparationJobByID(tx *commonPb.Transaction) *
 	}
 
 	//jobInfo to json
-	if respMessage, err = json.Marshal(job); err != nil {
+	// ArchiveJob include jobs for archiving blocks
+	// remove tag omitempty from pb-go
+	type ArchiveJob struct {
+		// job state time
+		StartTime int64 `protobuf:"varint,1,opt,name=start_time,json=startTime,proto3" json:"start_time"`
+		// job end time
+		EndTime int64 `protobuf:"varint,2,opt,name=end_time,json=endTime,proto3" json:"end_time"`
+		// job status
+		Status int32 `protobuf:"varint,3,opt,name=status,proto3" json:"status"`
+		// archive block's height that between start_height and end_height
+		StartHeight uint64 `protobuf:"varint,4,opt,name=start_height,json=startHeight,proto3" json:"start_height"`
+		EndHeight   uint64 `protobuf:"varint,5,opt,name=end_height,json=endHeight,proto3" json:"end_height"`
+		// archive scan file name
+		ScanFiles []string `protobuf:"bytes,6,rep,name=scan_files,json=scanFiles,proto3" json:"scan_files"`
+		// archive affect file name
+		AffectFiles []string `protobuf:"bytes,7,rep,name=affect_files,json=affectFiles,proto3" json:"affect_files"`
+	}
+	resultArchiveJob := ArchiveJob{
+		StartTime:   job.StartTime,
+		EndTime:     job.EndTime,
+		Status:      job.Status,
+		StartHeight: job.StartHeight,
+		EndHeight:   job.EndHeight,
+		ScanFiles:   job.ScanFiles,
+		AffectFiles: job.AffectFiles,
+	}
+
+	if respMessage, err = json.Marshal(resultArchiveJob); err != nil {
 		errCode = commonErr.ERR_CODE_GET_STORE
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
