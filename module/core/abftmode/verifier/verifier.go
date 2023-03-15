@@ -229,7 +229,7 @@ func (bv *BlockVerifier) VerifyBlockWithRwSets(block *commonPb.Block,
 	}
 
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
-	contractEventMap, timeLasts, _, err := bv.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
+	contractEventMap, timeLasts, err := bv.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
 	if err != nil {
 		bv.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
@@ -293,17 +293,17 @@ func (bv *BlockVerifier) VerifyBlockWithRwSets(block *commonPb.Block,
 
 func (bv *BlockVerifier) validateBlockWithRWSets(block, lastBlock *commonPb.Block, mode protocol.VerifyMode,
 	txRWSetMap map[string]*commonPb.TxRWSet) (
-	map[string][]*commonPb.ContractEvent, map[string]int64, *common.RwSetVerifyFailTx, error) {
+	map[string][]*commonPb.ContractEvent, map[string]int64, error) {
 	hashType := bv.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make(map[string]int64)
 	var err error
 	txCapacity := uint32(bv.chainConf.ChainConfig().Block.BlockTxCapacity)
 	if block.Header.TxCount > txCapacity {
-		return nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
+		return nil, timeLasts, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
 	}
 
 	if err = common.IsTxCountValid(block); err != nil {
-		return nil, timeLasts, nil, err
+		return nil, timeLasts, err
 	}
 
 	// proposed height == proposing height - 1
@@ -312,10 +312,10 @@ func (bv *BlockVerifier) validateBlockWithRWSets(block, lastBlock *commonPb.Bloc
 	lastBlockHash := lastBlock.Header.BlockHash
 	err = common.CheckPreBlock(block, lastBlockHash, proposedHeight)
 	if err != nil {
-		return nil, timeLasts, nil, err
+		return nil, timeLasts, err
 	}
 
-	return bv.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap, mode)
+	return bv.verifierBlock.ValidateBlockWithRWSets(block, hashType, timeLasts, txRWSetMap, mode)
 }
 
 // Verify params Block, VerifyMode, return error
