@@ -48,6 +48,10 @@ var (
 	adminCrtFilePaths string
 	adminOrgIds       string
 
+	payerKeyFilePath string
+	payerCrtFilePath string
+	payerOrgId       string
+
 	userTlsKeyFilePath  string
 	userTlsCrtFilePath  string
 	userSignKeyFilePath string
@@ -118,6 +122,9 @@ const (
 	flagAdminKeyFilePaths                = "admin-key-file-paths"
 	flagAdminCrtFilePaths                = "admin-crt-file-paths"
 	flagAdminOrgIds                      = "admin-org-ids"
+	flagPayerKeyFilePath                 = "payer-key-file-path"
+	flagPayerCrtFilePath                 = "payer-crt-file-path"
+	flagPayerOrgId                       = "payer-org-id"
 	flagUserTlsKeyFilePath               = "user-tlskey-file-path"
 	flagUserTlsCrtFilePath               = "user-tlscrt-file-path"
 	flagUserSignKeyFilePath              = "user-signkey-file-path"
@@ -218,6 +225,10 @@ func init() {
 	flags.StringVar(&adminKeyFilePaths, flagAdminKeyFilePaths, "", "specify admin key file paths, use ',' to separate")
 	flags.StringVar(&adminCrtFilePaths, flagAdminCrtFilePaths, "", "specify admin cert file paths, use ',' to separate")
 	flags.StringVar(&adminOrgIds, flagAdminOrgIds, "", "specify admin org-ids, use ',' to separate")
+
+	flags.StringVar(&payerKeyFilePath, flagPayerKeyFilePath, "", "specify payer key file path")
+	flags.StringVar(&payerCrtFilePath, flagPayerCrtFilePath, "", "specify payer cert file path")
+	flags.StringVar(&payerOrgId, flagPayerOrgId, "", "specify payer org-id")
 
 	flags.StringVar(&userTlsKeyFilePath, flagUserTlsKeyFilePath, "", "specify user tls key file path for "+
 		"chainclient tls connection")

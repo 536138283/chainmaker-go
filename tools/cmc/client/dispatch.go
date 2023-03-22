@@ -83,7 +83,23 @@ func invokeContract(client *sdk.ChainClient, contractName, methodName, txId stri
 		fmt.Printf("MakeEndorsement failed, %s", err)
 		return
 	}
-	req, err := client.GenerateTxRequest(payload, endorsers)
+
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 && len(payerOrgId) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return
+		}
+	}
+	var req *common.TxRequest
+	if len(payer) == 0 {
+		req, err = client.GenerateTxRequest(payload, endorsers)
+	} else {
+		req, err = client.GenerateTxRequestWithPayer(payload, endorsers, payer[0])
+	}
+
 	if err != nil {
 		fmt.Printf("GenerateTxRequest failed, %s", err)
 		return

@@ -57,9 +57,9 @@ func getSenderTxCollection(
 
 	for _, tx := range txBatch {
 		// get the public key from tx
-		pk, err2 := getPkFromTx(tx, snapshot)
+		pk, err2 := getPayerPkFromTx(tx, snapshot)
 		if err2 != nil {
-			log.Errorf("getPkFromTx failed: err = %v", err)
+			log.Errorf("getPayerPkFromTx failed: err = %v", err)
 			continue
 		}
 

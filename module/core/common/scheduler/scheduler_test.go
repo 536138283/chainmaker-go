@@ -2386,13 +2386,13 @@ func TestTxScheduler_getSenderPk(t *testing.T) {
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
 			}
-			got, err := ts.getSenderPk(tt.args.txSimContext)
+			got, err := ts.getPayerPk(tt.args.txSimContext)
 			if (err != nil) != tt.wantErr {
-				t.Errorf("getSenderPk() error = %v, wantErr %v", err, tt.wantErr)
+				t.Errorf("getPayerPk() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
 			if !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("getSenderPk() got = %v, want %v", got, tt.want)
+				t.Errorf("getPayerPk() got = %v, want %v", got, tt.want)
 			}
 		})
 	}

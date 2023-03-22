@@ -72,7 +72,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
 			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
-				pk, _ := getPkFromTx(tx, snapshot)
+				pk, _ := getPayerPkFromTx(tx, snapshot)
 				chainCfg := txSimContext.GetLastChainConfig()
 				addr, _ := publicKeyToAddress(pk, chainCfg)
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)

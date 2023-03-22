@@ -97,7 +97,8 @@ func createUserContractCMD() *cobra.Command {
 		flagUserTlsKeyFilePath, flagUserTlsCrtFilePath, flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash, flagAbiFilePath,
-		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit, flagPayerKeyFilePath,
+		flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagContractName)
@@ -132,7 +133,8 @@ func invokeUserContractCMD() *cobra.Command {
 		flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagGasLimit, flagTxId, flagContractAddress, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath, flagPayerKeyFilePath,
+		flagPayerCrtFilePath, flagPayerOrgId,
 	})
 	return cmd
 }
@@ -155,7 +157,8 @@ func invokeContractTimesCMD() *cobra.Command {
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagContractAddress, flagGasLimit, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath, flagPayerKeyFilePath,
+		flagPayerCrtFilePath, flagPayerOrgId,
 	})
 	return cmd
 }
@@ -213,6 +216,7 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash, flagContractAddress,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit, flagAbiFilePath,
+		flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagVersion)
@@ -418,7 +422,22 @@ func createUpgradeUserContract(op createUpgradeContractOp) error {
 	if err != nil {
 		return err
 	}
-	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
+
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 && len(payerOrgId) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	var resp *common.TxResponse
+	if len(payer) == 0 {
+		resp, err = client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
+	} else {
+		resp, err = client.SendContractManageRequestWithPayer(payload, endorsementEntrys, payer[0], timeout, syncResult)
+	}
 	if err != nil {
 		return err
 	}

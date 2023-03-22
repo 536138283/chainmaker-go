@@ -105,7 +105,9 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 		Payload:   req.Payload,
 		Sender:    req.Sender,
 		Endorsers: req.Endorsers,
-		Result:    nil}, protocol.RPC)
+		Result:    nil,
+		Payer:     req.Payer,
+	}, protocol.RPC)
 
 	// audit log format: ip:port|orgId|chainId|TxType|TxId|Timestamp|ContractName|Method|retCode|retCodeMsg|retMsg
 	s.logBrief.Infof("|%s|%s|%s|%s|%s|%d|%s|%s|%d|%s|%s", GetClientAddr(ctx), req.Sender.Signer.OrgId,
