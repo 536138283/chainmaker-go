@@ -1906,16 +1906,23 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 					Payload: &commonPb.Payload{
 						TxType: commonPb.TxType_INVOKE_CONTRACT,
 					},
+					Payer: &commonPb.EndorsementEntry{
+						Signer: &acPb.Member{
+							OrgId:      "org1",
+							MemberType: acPb.MemberType_CERT,
+							MemberInfo: []byte(cert),
+						},
+					},
 				},
 				txSimContext: func() protocol.TxSimContext {
 					txSimContext := mock.NewMockTxSimContext(ctrl)
 					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
 					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
-					txSimContext.EXPECT().GetSender().Return(&acPb.Member{
-						OrgId:      "org1",
-						MemberType: acPb.MemberType_CERT,
-						MemberInfo: []byte(cert),
-					})
+					//txSimContext.EXPECT().GetSender().Return(&acPb.Member{
+					//	OrgId:      "org1",
+					//	MemberType: acPb.MemberType_CERT,
+					//	MemberInfo: []byte(cert),
+					//})
 					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).Return(&commonPb.Contract{
 						Name: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 					}, nil)
@@ -2008,7 +2015,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
 					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
 					txSimContext.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
-					txSimContext.EXPECT().GetSender().AnyTimes()
+					//txSimContext.EXPECT().GetSender().AnyTimes()
 					return txSimContext
 				}(),
 			},
