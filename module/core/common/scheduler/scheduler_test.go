@@ -2065,7 +2065,6 @@ func TestTxScheduler_checkGasEnable(t *testing.T) {
 		StoreHelper     conf.StoreHelper
 		keyReg          *regexp.Regexp
 	}
-
 	ctrl := gomock.NewController(t)
 	logger := mock.NewMockLogger(ctrl)
 	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
