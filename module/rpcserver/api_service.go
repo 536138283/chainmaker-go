@@ -370,13 +370,14 @@ func (s *ApiService) dealSystemChainQuery(tx *commonPb.Transaction, vmMgr protoc
 	}
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
 
-	defaultGas := uint64(0)
-	chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)
-	if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
-		defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
-	}
+	//defaultGas := uint64(0)
+	//chainConfig, _ := s.chainMakerServer.GetChainConf(chainId)
+	//if chainConfig.ChainConfig().AccountConfig != nil && chainConfig.ChainConfig().AccountConfig.EnableGas {
+	//	defaultGas = chainConfig.ChainConfig().AccountConfig.DefaultGas
+	//}
+	//runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas, s.log)
+	runtimeInstance := native.GetRuntimeInstance(chainId)
 
-	runtimeInstance := native.GetRuntimeInstance(chainId, defaultGas, s.log)
 	txResult := runtimeInstance.Invoke(&commonPb.Contract{
 		Name: tx.Payload.ContractName,
 	},
