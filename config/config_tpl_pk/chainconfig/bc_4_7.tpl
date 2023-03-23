@@ -36,6 +36,9 @@ contract:
   # If it is true, storage.statedb_config.provider in chainmaker.yml should be sql.
   enable_sql_support: false
 
+  # If it is true, Only creators are allowed to upgrade contract.
+  only_creator_can_upgrade: false
+
 # Virtual machine related settings
 vm:
   #0:chainmaker, 1:zxl, 2:ethereum

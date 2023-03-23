@@ -419,6 +419,12 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	// for charge gas in optimize mode
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+
+	// transaction id blacklist manager
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_TRANSACTION_MANAGER.String()+"-"+
+		syscontract.TransactionManagerFunction_ADD_BLACKLIST_TX_IDS.String(), policyAdmin)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_TRANSACTION_MANAGER.String()+"-"+
+		syscontract.TransactionManagerFunction_DELETE_BLACKLIST_TX_IDS.String(), policyAdmin)
 }
 
 func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId string) {
