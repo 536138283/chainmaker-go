@@ -863,7 +863,7 @@ func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimCon
 			return nil, nil, err
 		}
 
-		pk, err = ts.getSenderPk(txSimContext)
+		pk, err = ts.getPayerPk(txSimContext, tx)
 		if err != nil {
 			ts.log.Error(err.Error())
 			return accountMangerContract, nil, err
@@ -939,11 +939,66 @@ func (ts *TxScheduler) checkNativeFilter(contractName, method string,
 	return false
 }
 
-func (ts *TxScheduler) getSenderPk(txSimContext protocol.TxSimContext) ([]byte, error) {
+// todo: merge with getPayerPk
+func getPayerPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
 
 	var err error
 	var pk []byte
-	sender := txSimContext.GetSender()
+	var publicKey crypto.PublicKey
+	signingMember := getTxPayerSigner(tx)
+	if signingMember == nil {
+		err = errors.New(" can not find sender from tx ")
+		return nil, err
+	}
+
+	switch signingMember.MemberType {
+	case accesscontrol.MemberType_CERT:
+		pk, err = publicKeyFromCert(signingMember.MemberInfo)
+		if err != nil {
+			return nil, err
+		}
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	case accesscontrol.MemberType_CERT_HASH:
+		var certInfo *commonPb.CertInfo
+		infoHex := hex.EncodeToString(signingMember.MemberInfo)
+		if certInfo, err = wholeCertInfoFromSnapshot(snapshot, infoHex); err != nil {
+			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
+		}
+
+		pk, err = publicKeyFromCert(certInfo.Cert)
+		if err != nil {
+			return nil, err
+		}
+
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	case accesscontrol.MemberType_PUBLIC_KEY:
+		pk = signingMember.MemberInfo
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return nil, err
+		}
+
+	default:
+		err = fmt.Errorf("invalid member type: %s", signingMember.MemberType)
+		return nil, err
+	}
+
+	return publicKey, nil
+}
+
+func (ts *TxScheduler) getPayerPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction) ([]byte, error) {
+
+	var err error
+	var pk []byte
+	sender := getTxPayerSigner(tx)
 	if sender == nil {
 		err = errors.New(" can not find sender from tx ")
 		ts.log.Error(err.Error())
@@ -1319,7 +1374,7 @@ func getSenderTxsMap(txBatch []*commonPb.Transaction) map[[32]byte][]*commonPb.T
 }
 
 func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
-	sender := tx.GetSender().GetSigner()
+	sender := getTxPayerSigner(tx)
 	keyBytes, err := sender.Marshal()
 	if err != nil {
 		return [32]byte{}, err
@@ -1341,58 +1396,13 @@ func publicKeyToAddress(pk crypto.PublicKey, chainCfg *configPb.ChainConfig) (st
 	return publicKeyString, nil
 }
 
-func getPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
-
-	var err error
-	var pk []byte
-	var publicKey crypto.PublicKey
-	signingMember := tx.GetSender().GetSigner()
-	if signingMember == nil {
-		err = errors.New(" can not find sender from tx ")
-		return nil, err
+func getTxPayerSigner(tx *commonPb.Transaction) *accesscontrol.Member {
+	payer := tx.GetPayer()
+	// don't need version compatibility
+	if payer == nil {
+		payer = tx.GetSender()
 	}
-
-	switch signingMember.MemberType {
-	case accesscontrol.MemberType_CERT:
-		pk, err = publicKeyFromCert(signingMember.MemberInfo)
-		if err != nil {
-			return nil, err
-		}
-		publicKey, err = asym.PublicKeyFromPEM(pk)
-		if err != nil {
-			return nil, err
-		}
-
-	case accesscontrol.MemberType_CERT_HASH:
-		var certInfo *commonPb.CertInfo
-		infoHex := hex.EncodeToString(signingMember.MemberInfo)
-		if certInfo, err = wholeCertInfoFromSnapshot(snapshot, infoHex); err != nil {
-			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
-		}
-
-		pk, err = publicKeyFromCert(certInfo.Cert)
-		if err != nil {
-			return nil, err
-		}
-
-		publicKey, err = asym.PublicKeyFromPEM(pk)
-		if err != nil {
-			return nil, err
-		}
-
-	case accesscontrol.MemberType_PUBLIC_KEY:
-		pk = signingMember.MemberInfo
-		publicKey, err = asym.PublicKeyFromPEM(pk)
-		if err != nil {
-			return nil, err
-		}
-
-	default:
-		err = fmt.Errorf("invalid member type: %s", signingMember.MemberType)
-		return nil, err
-	}
-
-	return publicKey, nil
+	return payer.GetSigner()
 }
 
 func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*commonPb.CertInfo, error) {
