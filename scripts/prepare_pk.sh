@@ -422,9 +422,7 @@ if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
                     xsed "s%#\(.*\)value:%\1value:%g" node$i/chainconfig/bc$j.yml
                 fi
                 # cancel node ids
-                if  [ $CONSENSUS_TYPE -eq 1 ]; then
-                    xsed "s%#\(.*\)- \"{org%\1- \"{org%g" node$i/chainconfig/bc$j.yml
-                fi
+                xsed "s%#\(.*\)- \"{org%\1- \"{org%g" node$i/chainconfig/bc$j.yml
             fi
 
             # dpos update erc20.total and epochValidatorNum
