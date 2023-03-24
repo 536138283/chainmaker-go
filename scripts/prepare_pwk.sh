@@ -197,7 +197,7 @@ function generate_config() {
     ENABLE_VM_JAVA="" # default false
     DOCKER_JAVA_LOG_LEVEL="" # default INFO
 
-    set -- $(getopt -u -o c:l:v:j: -l vlog:,jlog: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
+    set -- $(getopt -u -o c:l:v:j: -l hash:,vlog:,jlog: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
 
     while [ -n "$1" ]; do
         case "$1" in
