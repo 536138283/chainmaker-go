@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"testing"
 
+	"chainmaker.org/chainmaker-go/module/core/cache"
+	"github.com/stretchr/testify/require"
+
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker/logger/v3"
 	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
@@ -2270,4 +2273,178 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 			_ = chain.AddBlock(tt.args.block)
 		})
 	}
+}
+
+func createBlockWithHash(height uint64, hash, preHash []byte) *commonpb.Block {
+	var version = uint32(1)
+	var block = &commonpb.Block{
+		Header: &commonpb.BlockHeader{
+			ChainId:        "Chain1",
+			BlockHeight:    height,
+			PreBlockHash:   preHash,
+			BlockHash:      hash,
+			PreConfHeight:  0,
+			BlockVersion:   version,
+			DagHash:        hash,
+			RwSetRoot:      hash,
+			TxRoot:         hash,
+			BlockTimestamp: 0,
+			Proposer:       &accesscontrol.Member{MemberInfo: hash},
+			ConsensusArgs:  nil,
+			TxCount:        1,
+			Signature:      []byte(""),
+		},
+		Dag: &commonpb.DAG{
+			Vertexes: nil,
+		},
+		Txs: nil,
+	}
+
+	return block
+}
+
+func TestRemoveInvalidSonBlock(t *testing.T) {
+
+	// 构造测试区块
+	hash0 := []byte("0")
+	b0 := createBlockWithHash(0, hash0, nil)
+
+	// b1
+	hash1 := []byte("1")
+	b1 := createBlockWithHash(1, hash1, hash0)
+	b1c := createBlockWithHash(1, []byte("1c"), hash0)
+	b1d := createBlockWithHash(1, []byte("1d"), hash0)
+
+	// b2
+	hash2 := []byte("2")
+	b2 := createBlockWithHash(2, hash2, b1.Hash())
+	b2c := createBlockWithHash(2, []byte("2c"), b1c.Hash())
+	b2d := createBlockWithHash(2, []byte("2d"), b1d.Hash())
+
+	// b3
+	hash3 := []byte("3")
+	b3 := createBlockWithHash(3, hash3, b2.Hash())
+	b3a := createBlockWithHash(3, []byte("3a"), b2.Hash())
+	b3b := createBlockWithHash(3, []byte("3b"), b2.Hash())
+	b3c := createBlockWithHash(3, []byte("3c"), b2c.Hash())
+	b3d := createBlockWithHash(3, []byte("3d"), b2d.Hash())
+
+	// b4
+	hash4 := []byte("4")
+	b4 := createBlockWithHash(4, hash4, b3.Hash())
+	b4a := createBlockWithHash(4, []byte("4a"), b3a.Hash())
+	b4b := createBlockWithHash(4, []byte("4b"), b3b.Hash())
+	b4c := createBlockWithHash(4, []byte("4c"), b3c.Hash())
+	b4d := createBlockWithHash(4, []byte("4d"), b3d.Hash())
+	b4e := createBlockWithHash(4, []byte("4e"), b3a.Hash())
+
+	ctrl := gomock.NewController(t)
+
+	logger := mock2.NewMockLogger(ctrl)
+	logger.EXPECT().Debug().AnyTimes()
+	logger.EXPECT().Infof(gomock.Any()).AnyTimes()
+	logger.EXPECT().Info().AnyTimes()
+	logger.EXPECT().DebugDynamic(gomock.Any()).AnyTimes()
+
+	txpool := mock2.NewMockTxPool(ctrl)
+	txpool.EXPECT().RetryTxs(gomock.Any()).AnyTimes()
+
+	ledgerCache := cache.NewLedgerCache("chain1")
+	ledgerCache.SetLastCommittedBlock(b0)
+	proposalCache := cache.NewProposalCache(nil, ledgerCache, logger)
+
+	// 将测试区块存入proposalCache中，模拟maxbft的多分枝场景
+
+	// branch1
+	proposalCache.SetProposedBlock(b1, nil, nil, true)
+	proposalCache.SetProposedBlock(b2, nil, nil, true)
+	proposalCache.SetProposedBlock(b3, nil, nil, true)
+	proposalCache.SetProposedBlock(b4, nil, nil, true)
+
+	// branch2
+	proposalCache.SetProposedBlock(b3a, nil, nil, true)
+	proposalCache.SetProposedBlock(b4a, nil, nil, true)
+
+	// branch 3
+	proposalCache.SetProposedBlock(b3b, nil, nil, true)
+	proposalCache.SetProposedBlock(b4b, nil, nil, true)
+
+	// branch 4
+	proposalCache.SetProposedBlock(b1c, nil, nil, true)
+	proposalCache.SetProposedBlock(b2c, nil, nil, true)
+	proposalCache.SetProposedBlock(b3c, nil, nil, true)
+	proposalCache.SetProposedBlock(b4c, nil, nil, true)
+
+	// branch 5
+	proposalCache.SetProposedBlock(b1d, nil, nil, true)
+	proposalCache.SetProposedBlock(b2d, nil, nil, true)
+	proposalCache.SetProposedBlock(b3d, nil, nil, true)
+	proposalCache.SetProposedBlock(b4d, nil, nil, true)
+
+	// branch 6
+	proposalCache.SetProposedBlock(b4e, nil, nil, true)
+	/**
+
+		此时cache中的区块应该是这个情况：
+						- b4e
+			      - b3a - b4a
+				  - b3b - b4b
+		b1  - b2  - b3  - b4
+	    b1c - b2c - b3c - b4c
+		b1d - b2d - b3d - b4d
+
+	*/
+
+	committer := &BlockCommitterImpl{
+		txPool:        txpool,
+		proposalCache: proposalCache,
+		log:           nil,
+	}
+
+	hashMap := make(map[string]struct{})
+
+	// b1 为高度1落块的区块
+	hashMap[string(hash1)] = struct{}{}
+
+	// 删除其余分支的block
+	committer.removeInvalidSonBlock(2, hashMap)
+
+	// 高度2的区块，除b2外，全被删除
+	remainB2 := proposalCache.GetProposedBlocksAt(2)
+	// check count
+	require.Equal(t, 1, len(remainB2))
+	// check block's hash
+	require.Equal(t, b2.Hash(), remainB2[0].Hash())
+
+	// b3,b3a,b3b 保留；b3c,b3d删除
+	remainB3 := proposalCache.GetProposedBlocksAt(3)
+	// check count
+	require.Equal(t, 3, len(remainB3))
+	// check block's hash
+	rmB3Map := make(map[string]struct{})
+	rmB3Map[string(b3.Header.BlockHash)] = struct{}{}
+	rmB3Map[string(b3a.Header.BlockHash)] = struct{}{}
+	rmB3Map[string(b3b.Header.BlockHash)] = struct{}{}
+
+	for _, b := range remainB3 {
+		_, ok := rmB3Map[string(b.Hash())]
+		require.Equal(t, true, ok)
+	}
+
+	// b4,b4a,b4b,b4e 保留；b4c,b4d删除
+	remainB4 := proposalCache.GetProposedBlocksAt(4)
+	// check count
+	require.Equal(t, 4, len(remainB4))
+	// check block's hash
+	rmB4Map := make(map[string]struct{})
+	rmB4Map[string(b4.Header.BlockHash)] = struct{}{}
+	rmB4Map[string(b4a.Header.BlockHash)] = struct{}{}
+	rmB4Map[string(b4b.Header.BlockHash)] = struct{}{}
+	rmB4Map[string(b4e.Header.BlockHash)] = struct{}{}
+
+	for _, b := range remainB4 {
+		_, ok := rmB4Map[string(b.Hash())]
+		require.Equal(t, true, ok)
+	}
+
 }

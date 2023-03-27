@@ -1236,6 +1236,11 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	chain.proposalCache.ClearProposedBlockAt(height)
 
+	// maxbft 找到对应的后续区块，并删除
+	hMap := make(map[string]struct{})
+	hMap[string(block.Header.BlockHash)] = struct{}{}
+	chain.removeInvalidSonBlock(block.Header.BlockHeight+1, hMap)
+
 	// clear propose repeat map before send
 	ClearProposeRepeatTimerMap()
 
@@ -1840,4 +1845,30 @@ func ClearProposeRepeatTimerMap() {
 		ProposeRepeatTimerMap.Delete(key)
 		return true
 	})
+}
+
+func (chain *BlockCommitterImpl) removeInvalidSonBlock(height uint64, hashMap map[string]struct{}) {
+
+	childBlocks := chain.proposalCache.GetProposedBlocksAt(height)
+	// 不存在子区块，直接返回
+	if len(childBlocks) == 0 {
+		return
+	}
+
+	princeBlocks := make(map[string]struct{})
+	for _, childBlock := range childBlocks {
+		hashStr := string(childBlock.Header.PreBlockHash)
+		if _, ok := hashMap[hashStr]; ok {
+			princeBlocks[string(childBlock.Header.BlockHash)] = struct{}{}
+			continue
+		}
+
+		// 将交易放回交易池
+		chain.txPool.RetryTxs(childBlock.Txs)
+
+		// 删除cache
+		chain.proposalCache.ClearTheBlock(childBlock)
+	}
+
+	chain.removeInvalidSonBlock(height+1, princeBlocks)
 }
