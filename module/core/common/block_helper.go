@@ -847,12 +847,12 @@ func (vb *VerifierBlock) ValidateBlock(
 
 // ValidateBlockWithRWSets validate block and transactions
 func (vb *VerifierBlock) ValidateBlockWithRWSets(
-	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64,
+	block *commonPb.Block, hashType string, timeLasts map[string]int64,
 	txRWSetMap map[string]*commonPb.TxRWSet, mode protocol.VerifyMode) (
-	map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
+	map[string][]*commonPb.ContractEvent, map[string]int64, error) {
 	// 1.block verify
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
-		return nil, timeLasts, nil, err
+		return nil, timeLasts, err
 	}
 	txResultMap := make(map[string]*commonPb.Result)
 	for _, tx := range block.GetTxs() {
@@ -869,7 +869,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	if block.Header.Proposer.MemberInfo != nil {
 		if ok, err := utils.VerifyBlockSig(hashType, block, vb.ac); !ok || err != nil {
 			vb.log.Errorf("verify block signature fail,err:%s", err.Error())
-			return nil, timeLasts, nil, fmt.Errorf("(%d,%x - %x,%x) [signature]",
+			return nil, timeLasts, fmt.Errorf("(%d,%x - %x,%x) [signature]",
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.Proposer, block.Header.Signature)
 		}
 	} else {
@@ -880,34 +880,22 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	sigLasts := utils.CurrentTimeMillisSeconds() - startSigTick
 	timeLasts[BlockSig] = sigLasts
 
-	err := CheckVacuumBlock(block, vb.chainConf.ChainConfig().Consensus.Type)
-	if err != nil {
-		return nil, timeLasts, nil, err
-	}
 	// we must new a snapshot for the vacant block,
 	// otherwise the subsequent snapshot can not link to the previous snapshot.
 	//snapshot := vb.snapshotManager.NewSnapshot(lastBlock, block)
 	if len(block.Txs) == 0 {
-		if len(block.Dag.Vertexes) != 0 {
-			return nil, timeLasts, nil, fmt.Errorf("no txs in block[%x] but dag has vertex",
-				block.Header.BlockHash)
-		}
 		// verify TxRoot
 		startRootsTick := utils.CurrentTimeMillisSeconds()
 		if vb.chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_ABFT {
-			err = CheckBlockDigests(block, nil, hashType, vb.log)
+			err := CheckBlockDigests(block, nil, hashType, vb.log)
 			if err != nil {
-				return nil, timeLasts, nil, err
+				return nil, timeLasts, err
 			}
 		}
 
 		rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 		timeLasts[TxRoot] = rootsLast
-		return nil, timeLasts, nil, nil
-	}
-	// verify if txs are duplicate in this block
-	if duplicate, errors := IsTxDuplicate(block.Txs); duplicate {
-		return nil, timeLasts, nil, fmt.Errorf("tx duplicate, errors: %v", errors)
+		return nil, timeLasts, nil
 	}
 
 	// simulate with DAG, and verify read write set
@@ -923,11 +911,6 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts[VM] = vmLasts
 
-	if block.Header.TxCount != uint32(len(txRWSetMap)) {
-		return nil, timeLasts, nil, fmt.Errorf("simulate txcount expect %d, got %d",
-			block.Header.TxCount, len(txRWSetMap))
-	}
-
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
 	verifierTxConf := &VerifierTxConfig{
@@ -942,13 +925,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, _, rwSetVerifyFailTx, err := verifiertx.verifierTxs(block, mode, QuickSyncVerifyMode)
+	txHashes, err := verifiertx.verifierTxsWithRWSet(block, mode, QuickSyncVerifyMode)
 	vb.log.Infof("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs),
 		block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
 	timeLasts[TxVerify] = txLasts
 	if err != nil {
-		return nil, timeLasts, rwSetVerifyFailTx, fmt.Errorf("verify failed [%d](%x), %s ",
+		return nil, timeLasts, fmt.Errorf("verify failed [%d](%x), %s ",
 			block.Header.BlockHeight, block.Header.BlockHash, err)
 	}
 	//if protocol.CONSENSUS_VERIFY == mode && len(newAddTx) > 0 {
@@ -968,13 +951,13 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
 	if err != nil {
-		return contractEventMap, timeLasts, nil, err
+		return contractEventMap, nil, err
 	}
 	// calc root use time
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts[TxRoot] = rootsLast
 
-	return contractEventMap, timeLasts, nil, nil
+	return contractEventMap, nil, nil
 }
 
 // CheckPreBlock check prepare block nolint: staticcheck
@@ -1239,7 +1222,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	// maxbft 找到对应的后续区块，并删除
 	hMap := make(map[string]struct{})
 	hMap[string(block.Header.BlockHash)] = struct{}{}
-	chain.removeInvalidSonBlock(block.Header.BlockHeight+1, hMap)
+	chain.removeInvalidChildBlock(block.Header.BlockHeight+1, hMap)
 
 	// clear propose repeat map before send
 	ClearProposeRepeatTimerMap()
@@ -1847,7 +1830,7 @@ func ClearProposeRepeatTimerMap() {
 	})
 }
 
-func (chain *BlockCommitterImpl) removeInvalidSonBlock(height uint64, hashMap map[string]struct{}) {
+func (chain *BlockCommitterImpl) removeInvalidChildBlock(height uint64, hashMap map[string]struct{}) {
 
 	childBlocks := chain.proposalCache.GetProposedBlocksAt(height)
 	// 不存在子区块，直接返回
@@ -1870,5 +1853,5 @@ func (chain *BlockCommitterImpl) removeInvalidSonBlock(height uint64, hashMap ma
 		chain.proposalCache.ClearTheBlock(childBlock)
 	}
 
-	chain.removeInvalidSonBlock(height+1, princeBlocks)
+	chain.removeInvalidChildBlock(height+1, princeBlocks)
 }

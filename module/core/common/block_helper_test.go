@@ -2407,7 +2407,7 @@ func TestRemoveInvalidSonBlock(t *testing.T) {
 	hashMap[string(hash1)] = struct{}{}
 
 	// 删除其余分支的block
-	committer.removeInvalidSonBlock(2, hashMap)
+	committer.removeInvalidChildBlock(2, hashMap)
 
 	// 高度2的区块，除b2外，全被删除
 	remainB2 := proposalCache.GetProposedBlocksAt(2)

@@ -343,18 +343,10 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		return err
 	}
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
-	contractEventMap, timeLasts, rwSetVerifyFailTx, err := v.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
+	contractEventMap, timeLasts, err := v.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
-		// if mode equal consensus verify, publish to consensus verify result signal
-		if protocol.CONSENSUS_VERIFY == mode {
-			v.log.DebugDynamic(func() string {
-				return fmt.Sprintf("publish verfiy failed rw set txs, block height:%d, err: %s",
-					newBlock.Header.BlockHeight, err.Error())
-			})
-			v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, false, txRWSetMap, rwSetVerifyFailTx))
-		}
 
 		// rollback sql
 		if sqlErr := v.storeHelper.RollBack(newBlock, v.blockchainStore); sqlErr != nil {
@@ -365,7 +357,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 
 	// sync mode, need to verify consensus vote signature
 	beginConsensCheck := utils.CurrentTimeMillisSeconds()
-	if protocol.SYNC_VERIFY == mode {
+	if mode == protocol.SYNC_VERIFY {
 		if err = v.verifyVoteSig(newBlock); err != nil {
 			v.log.Warnf("verify failed [%d](%x), votesig %s",
 				newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
@@ -388,10 +380,9 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
 	}
 
-	// if mode equal consensus verify, publish to consensus verify result signal
-	if protocol.CONSENSUS_VERIFY == mode {
-		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, true, txRWSetMap, nil))
-	}
+	//if protocol.CONSENSUS_VERIFY == mode {
+	//	v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, true, txRWSetMap, nil))
+	//}
 	elapsed := utils.CurrentTimeMillisSeconds() - startTick
 	v.log.Infof("verify success [%d,%x]"+
 		"(blockSig:%d,vm:%d,txVerify:%d,txRoot:%d,pool:%d,consensusCheckUsed:%d,total:%d)",
@@ -482,35 +473,21 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 // validateBlockWithRWSets validate block with rw sets
 func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block, mode protocol.VerifyMode,
 	txRWSetMap map[string]*commonpb.TxRWSet) (
-	map[string][]*commonpb.ContractEvent, map[string]int64, *common.RwSetVerifyFailTx, error) {
+	map[string][]*commonpb.ContractEvent, map[string]int64, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make(map[string]int64)
-	var err error
-	//var txCapacity uint32
-	//if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
-	//	txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
-	//} else {
-	//	txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity
-	//}
-	//if block.Header.TxCount > txCapacity {
-	//	return nil, timeLasts, nil, fmt.Errorf("txcapacity expect <= %d, got %d)", txCapacity, block.Header.TxCount)
-	//}
-
-	if err = common.IsTxCountValid(block); err != nil {
-		return nil, timeLasts, nil, err
-	}
 
 	// proposed height == proposing height - 1
 	proposedHeight := lastBlock.Header.BlockHeight
 	// check if this block height is 1 bigger than last block height
 	lastBlockHash := lastBlock.Header.BlockHash
-	err = common.CheckPreBlock(block, lastBlockHash, proposedHeight)
+	err := common.CheckPreBlock(block, lastBlockHash, proposedHeight)
 	if err != nil {
-		return nil, timeLasts, nil, err
+		return nil, timeLasts, err
 	}
 
 	// ValidateBlockWithRWSets block by verifier
-	return v.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap, mode)
+	return v.verifierBlock.ValidateBlockWithRWSets(block, hashType, timeLasts, txRWSetMap, mode)
 }
 
 // verifyVoteSig verify vote signatures
