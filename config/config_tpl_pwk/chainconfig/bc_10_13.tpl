@@ -102,6 +102,21 @@ core:
     # Retry interval of fetching transaction in txpool by txid, in ms.
     # retry_interval: 20
 
+# gas account config
+account_config:
+  # the flag to control if subtracting gas from transaction's origin account when sending tx.
+  enable_gas: false
+  # Deprecated，the default gas count set for admin account.
+  gas_count: 0
+  # the minimum gas count to be subtracted from transaction's origin account for invoking tx.
+  default_gas: 100
+  # the gas price per byte for invoking tx, accurate to 6 digits after the decimal point.
+  default_gas_price: 0.01
+  # the minimum gas count to be subtracted from transaction's origin account for installing|upgrading tx.
+  install_base_gas: 10000
+  # the gas price per byte for installing tx, accurate to 6 digits after the decimal point.
+  install_gas_price: 0.001
+
 # snapshot settings
 # snapshot:
   # Enable the evidence snapshot or not.

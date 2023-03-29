@@ -51,8 +51,14 @@ account_config:
   enable_gas: false
   # Deprecated，the default gas count set for admin account.
   gas_count: 0
-  # the minimum gas count to be subtracted from transaction's origin account.
-  default_gas: 0
+  # the minimum gas count to be subtracted from transaction's origin account for invoking tx.
+  default_gas: 100
+  # the gas price per byte for invoking tx.
+  default_gas_price: 0.01
+  # the minimum gas count to be subtracted from transaction's origin account for installing|upgrading tx.
+  install_base_gas: 10000
+  # the gas price per byte for installing tx.
+  install_gas_price: 0.001
 
 #共识配置
 consensus:

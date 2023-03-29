@@ -57,6 +57,7 @@ func multiSignReqCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagAdminKeyFilePaths, flagAdminCrtFilePaths,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagSyncResult,
+		flagGasLimit,
 	})
 
 	cmd.MarkFlagRequired(flagParams)
@@ -80,7 +81,7 @@ func multiSignVoteCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagTxId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagIsAgree,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult, flagAdminOrgIds,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult, flagAdminOrgIds, flagGasLimit,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
@@ -176,7 +177,8 @@ func multiSignReq() error {
 		}
 
 	}
-	payload = client.CreateMultiSignReqPayload(pairs)
+
+	payload = client.CreateMultiSignReqPayloadWithGasLimit(pairs, gasLimit)
 
 	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
@@ -278,10 +280,9 @@ func multiSignVote() error {
 		if err != nil {
 			return fmt.Errorf("multi sign vote failed, %s", err.Error())
 		}
-
 	}
 
-	resp, err = client.MultiSignContractVote(payload, endorser, isAgree, timeout, syncResult)
+	resp, err = client.MultiSignContractVoteWithGasLimit(payload, endorser, isAgree, timeout, gasLimit, syncResult)
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}

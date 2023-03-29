@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"strings"
 
+	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
+
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core"
@@ -661,13 +663,10 @@ func (bc *Blockchain) initVM() (err error) {
 
 func (bc *Blockchain) initVMNative() {
 	chainConfig := bc.chainConf.ChainConfig()
-	defaultGas := uint64(0)
-	//check if enable gas
-	if chainConfig.AccountConfig != nil && chainConfig.AccountConfig.EnableGas {
-		defaultGas = chainConfig.AccountConfig.DefaultGas
-	}
 	vmlog := logger.GetLoggerByChain(logger.MODULE_VM, bc.chainId)
-	native.InitInstance(bc.chainId, defaultGas, vmlog, bc.msgBus, bc.store)
+
+	gasConfig := gasutils.NewGasConfig(chainConfig.AccountConfig)
+	native.InitInstance(bc.chainId, gasConfig, vmlog, bc.msgBus, bc.store)
 }
 
 func (bc *Blockchain) addVmManager(vmType string,

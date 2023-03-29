@@ -1,0 +1,109 @@
+package scheduler
+
+import (
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
+	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
+)
+
+// calcTxGasUsed for block version greater than 2030102
+func calcTxGasUsed(txSimContext protocol.TxSimContext, log protocol.Logger) (uint64, error) {
+
+	gasUsed := uint64(0)
+	blockVersion := txSimContext.GetBlockVersion()
+	if blockVersion < blockVersion2312 {
+		return gasUsed, nil
+	} // for block version < 2030102
+	gasConfig := gasutils.NewGasConfig(txSimContext.GetLastChainConfig().AccountConfig)
+	if gasConfig == nil {
+		return gasUsed, nil
+	} // for enable_gas == false
+
+	tx := txSimContext.GetTx()
+	contractName := tx.Payload.ContractName
+	method := tx.Payload.Method
+	parameters := tx.Payload.Parameters
+
+	// 用户合约，按 Invoke 扣费
+	if !utils.IsNativeContract(contractName) {
+		return calcInvokeTxGasUsed(parameters, gasConfig, log)
+	}
+
+	if contractName == syscontract.SystemContract_CONTRACT_MANAGE.String() {
+		if method == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
+			method == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
+			// Native 合约中的 install & upgrade, 按 Install 扣费
+			return calcInstallTxGasUsed(parameters, gasConfig, log)
+		}
+
+	} else if contractName == syscontract.SystemContract_MULTI_SIGN.String() {
+		if method == syscontract.MultiSignFunction_REQ.String() {
+			var sysContractName string
+			var sysMethod string
+			for _, kvPair := range parameters {
+				if kvPair.Key == syscontract.MultiReq_SYS_CONTRACT_NAME.String() {
+					sysContractName = string(kvPair.Value)
+				} else if kvPair.Key == syscontract.MultiReq_SYS_METHOD.String() {
+					sysMethod = string(kvPair.Value)
+				}
+			}
+
+			if sysContractName == syscontract.SystemContract_CONTRACT_MANAGE.String() {
+				if sysMethod == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
+					sysMethod == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
+					// 针对 install & upgrade 的 multi-sign req, 按 Install 扣费
+					return calcInstallTxGasUsed(parameters, gasConfig, log)
+				}
+			}
+		}
+		// 除了 install & upgrade 的 multi-sign, 按 Invoke 扣费
+		return calcInvokeTxGasUsed(parameters, gasConfig, log)
+	}
+
+	// 普通 Native 合约，除了 install & upgrade，都不扣费
+	return uint64(0), nil
+}
+
+func calcInstallTxGasUsed(parameters []*commonPb.KeyValuePair,
+	gasConfig *gasutils.GasConfig, log protocol.Logger) (uint64, error) {
+	if gasConfig == nil {
+		return 0, nil
+	}
+
+	installBaseGas := gasConfig.GetBaseGasForInstall()
+	dataSize := 0
+	for _, kvPair := range parameters {
+		log.Debugf("【gas calc】key = %v, value size = %v", kvPair.Key, len(kvPair.Value))
+		dataSize += len(kvPair.Key) + len(kvPair.Value)
+	}
+
+	dataGas, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInstall())
+	if err != nil {
+		return 0, err
+	}
+
+	return installBaseGas + dataGas, nil
+}
+
+func calcInvokeTxGasUsed(parameters []*commonPb.KeyValuePair,
+	gasConfig *gasutils.GasConfig, log protocol.Logger) (uint64, error) {
+	if gasConfig == nil {
+		return 0, nil
+	}
+
+	invokeBaseGas := gasConfig.GetBaseGasForInvoke()
+	dataSize := 0
+	for _, kvPair := range parameters {
+		log.Debugf("【gas calc】key = %v, value size = %v", kvPair.Key, len(kvPair.Value))
+		dataSize += len(kvPair.Key) + len(kvPair.Value)
+	}
+
+	dataGas, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
+	if err != nil {
+		return 0, err
+	}
+
+	return invokeBaseGas + dataGas, nil
+}

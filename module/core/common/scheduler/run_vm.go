@@ -34,6 +34,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
 	txNeedChargeGas := ts.checkNativeFilter(
+		txSimContext.GetBlockVersion(),
 		tx.Payload.ContractName,
 		tx.Payload.Method,
 		tx,
@@ -191,15 +192,28 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		}
 	}
 
+	var gasUsed = uint64(0)
+	blockVersion := txSimContext.GetBlockVersion()
+	if blockVersion2312 <= blockVersion {
+		gasUsed, err = calcTxGasUsed(txSimContext, ts.log)
+		if err != nil {
+			ts.log.Errorf("calculate tx gas failed, err = %v", err)
+			result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			result.Message = err.Error()
+			result.ContractResult.Code = uint32(1)
+			result.ContractResult.Message = err.Error()
+			return result, specialTxType, err
+		}
+	}
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
-		parameters, txSimContext, 0, tx.Payload.TxType)
+		parameters, txSimContext, gasUsed, tx.Payload.TxType)
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetSnapshot()) {
+		if !ts.checkNativeFilter(txSimContext.GetBlockVersion(), contract.Name, method, tx, txSimContext.GetSnapshot()) {
 			return result, specialTxType, err
 		}
 
@@ -305,7 +319,7 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetSnapshot()) {
+		if !ts.checkNativeFilter(txSimContext.GetBlockVersion(), contract.Name, method, tx, txSimContext.GetSnapshot()) {
 			return result, specialTxType, err
 		}
 
