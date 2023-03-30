@@ -60,7 +60,7 @@ account_config:
   # the minimum gas count to be subtracted from transaction's origin account for invoking tx.
   default_gas: 100
   # the gas price per byte for invoking tx.
-  default_gas_price: 0.01
+  default_gas_price: 0.1
   # the minimum gas count to be subtracted from transaction's origin account for installing|upgrading tx.
   install_base_gas: 10000
   # the gas price per byte for installing tx.
