@@ -9,8 +9,11 @@ package net
 import (
 	"encoding/hex"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
+
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 
 	"chainmaker.org/chainmaker/common/v3/msgbus"
 	rootLog "chainmaker.org/chainmaker/logger/v3"
@@ -321,6 +324,8 @@ func (n *NetContractEventSubscribe) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
 		n.onMessageChainConfig(msg)
+	case msgbus.ContractEventInfo:
+		n.onMessageEpochCreate(msg)
 	case msgbus.CertManageCertsRevoke,
 		msgbus.CertManageCertsFreeze,
 		msgbus.CertManageCertsUnfreeze,
@@ -370,6 +375,35 @@ func (n *NetContractEventSubscribe) onMessageChainConfig(msg *msgbus.Message) {
 	n.ns.localNet.ReVerifyPeers(n.ns.chainId)
 	n.ns.logger.Infof("[NetService] re-verify peers ok")
 	n.ns.logger.Infof("[NetService] refresh chain config ok")
+}
+
+func (n *NetContractEventSubscribe) onMessageEpochCreate(msg *msgbus.Message) {
+	if msg.Topic != msgbus.ContractEventInfo {
+		n.ns.logger.Errorf("receive the message from the topic as %d, but not msgbus.ContractEventInfo ", msg.Topic)
+		return
+	}
+	if conEventInfoList, ok := msg.Payload.(*common.ContractEventInfoList); ok {
+		for _, eventInfo := range conEventInfoList.ContractEvents {
+			if eventInfo.Topic == strconv.Itoa(int(msgbus.DPoSManageEpochCreate)) {
+				proposersStr := eventInfo.EventData[1]
+				newConsensusNodeIds := make(map[string]struct{})
+				nodeIds := strings.Split(proposersStr, ",")
+				for _, nodeId := range nodeIds {
+					newConsensusNodeIds[nodeId] = struct{}{}
+				}
+				// refresh dpos consensus nodeIds
+				n.ns.consensusNodeIdsLock.Lock()
+				n.ns.consensusNodeIds = newConsensusNodeIds
+				n.ns.consensusNodeIdsLock.Unlock()
+				n.ns.logger.Infof("[NetService] refresh ids of dpos consensus nodes ok ")
+				// 2.re-verify peers
+				n.ns.localNet.ReVerifyPeers(n.ns.chainId)
+				n.ns.logger.Infof("[NetService] re-verify dpos peers ok")
+				return
+			}
+
+		}
+	}
 }
 
 // HandleMsgBusSubscriberOnMessage is a handler used for msg-bus subscriber OnMessage method.

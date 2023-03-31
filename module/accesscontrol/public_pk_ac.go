@@ -9,10 +9,14 @@ package accesscontrol
 
 import (
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"chainmaker.org/chainmaker/vm-native/v3/dposmgr"
+	"github.com/gogo/protobuf/proto"
 
 	"chainmaker.org/chainmaker/pb-go/v3/consensus/maxbft"
 
@@ -43,6 +47,9 @@ const (
 
 	//PermissionConsensusOrgId chainconfig orgId for permission consensus, such as tbft
 	PermissionConsensusOrgId = "public"
+
+	//KeyCurrentEpoch current epoch key
+	KeyCurrentEpoch = "CE"
 )
 
 var (
@@ -140,6 +147,9 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	}
 	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
 	msgBus.Register(msgbus.MaxbftEpochConf, pkAcProvider)
+	if chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_DPOS {
+		msgBus.Register(msgbus.ContractEventInfo, pkAcProvider)
+	}
 	//v320_compat Deprecated
 	chainConf.AddWatch(pkAcProvider) //nolint: staticcheck
 	return pkAcProvider, nil
@@ -266,12 +276,46 @@ func (p *pkACProvider) initAdminMembers(trustRootList []*config.TrustRootConfig)
 //	@return error
 func (p *pkACProvider) initConsensusMember(chainConfig *config.ChainConfig) error {
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
-		return p.initDPoSMember(chainConfig.Consensus.Nodes)
+		nodes := p.getDPoSNodes()
+		if nodes == nil {
+			return errors.New("get dpos nodes err")
+		}
+		return p.initDPoSMember(nodes)
 	} else if chainConfig.Consensus.Type == consensus.ConsensusType_TBFT ||
 		chainConfig.Consensus.Type == consensus.ConsensusType_MAXBFT {
 		return p.initPermissionMember(chainConfig.Consensus.Nodes)
 	}
 	return fmt.Errorf("public chain mode does not support other consensus")
+}
+
+func (p *pkACProvider) getDPoSNodes() []*config.OrgConfig {
+	bz, err := p.dataStore.ReadObject(syscontract.SystemContract_DPOS_STAKE.String(), []byte(KeyCurrentEpoch))
+	if err != nil || len(bz) == 0 {
+		p.log.Errorf("read current epoch err: %s", err)
+		return nil
+	}
+	epoch := &syscontract.Epoch{}
+	err = proto.Unmarshal(bz, epoch)
+	if err != nil {
+		p.log.Errorf("unmarshal epoch err: %s", err)
+		return nil
+	}
+	nodes := make([]*config.OrgConfig, 0)
+	orgConfig := &config.OrgConfig{
+		OrgId:  DposOrgId,
+		NodeId: make([]string, 0, len(epoch.ProposerVector)),
+	}
+	for _, validator := range epoch.ProposerVector {
+		nodeID, err := p.dataStore.ReadObject(syscontract.SystemContract_DPOS_STAKE.String(), dposmgr.ToNodeIDKey(validator))
+		if err != nil || len(nodeID) == 0 {
+			p.log.Errorf("read nodeID of the validator[%s] failed, reason: %s", validator, err)
+			return nil
+		}
+		orgConfig.NodeId = append(orgConfig.NodeId, string(nodeID))
+	}
+	nodes = append(nodes, orgConfig)
+
+	return nodes
 }
 
 // initDPoSMember

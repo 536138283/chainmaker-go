@@ -13,21 +13,21 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker/chainconf/v3"
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/logger/v3"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
+	"chainmaker.org/chainmaker/vm/v3"
+
 	batch "chainmaker.org/chainmaker/txpool-batch/v3"
 
 	"chainmaker.org/chainmaker-go/module/consensus/cutover"
 	"chainmaker.org/chainmaker-go/module/txfilter"
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
-	"chainmaker.org/chainmaker/chainconf/v3"
-	"chainmaker.org/chainmaker/localconf/v3"
-	"chainmaker.org/chainmaker/logger/v3"
-	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/common/v3/msgbus"
 	storeHuge "chainmaker.org/chainmaker/store-huge/v3"
 	store "chainmaker.org/chainmaker/store/v3"
-	"chainmaker.org/chainmaker/utils/v3"
-	"chainmaker.org/chainmaker/vm/v3"
-
-	"chainmaker.org/chainmaker/common/v3/msgbus"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
@@ -228,7 +228,7 @@ func (bc *Blockchain) initNetService() (err error) {
 	}
 	var netServiceFactory net.NetServiceFactory
 	if bc.netService, err = netServiceFactory.NewNetService(
-		bc.net, bc.chainId, bc.ac, bc.chainConf, net.WithMsgBus(bc.msgBus)); err != nil {
+		bc.net, bc.chainId, bc.ac, bc.chainConf, bc.store, net.WithMsgBus(bc.msgBus)); err != nil {
 		bc.log.Errorf("new net service failed, %s", err)
 		return
 	}
@@ -875,7 +875,8 @@ func (bc *Blockchain) initConsensus() (err error) {
 	//epoch1 [1,100]
 	//node7 ;
 	if !isConsensusNode &&
-		bc.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_MAXBFT {
+		bc.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_MAXBFT &&
+		bc.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_DPOS {
 		// this node is not a consensus node
 		delete(bc.initModules, moduleNameConsensus)
 		if bc.vmMgr != nil {
@@ -928,8 +929,14 @@ func (bc *Blockchain) initConsensus() (err error) {
 			bc.chainConf.ChainConfig().GetConsensus(),
 			bc.log)
 	}
+	//the dpos consensus module needs to run when it starts
+	if bc.chainConf.ChainConfig().Consensus.Type == consensusPb.ConsensusType_DPOS {
+		err = bc.consensus.Start()
+		if err != nil {
+			return err
+		}
+	}
 	bc.msgBus.Register(msgbus.ChainConfig, bc.consensusSwitchSubscriber)
-
 	return
 }
 

@@ -14,6 +14,12 @@ import (
 	"path/filepath"
 	"testing"
 
+	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
+	"chainmaker.org/chainmaker/protocol/v3/mock"
+	"chainmaker.org/chainmaker/vm-native/v3/dposmgr"
+	"github.com/gogo/protobuf/proto"
+	"github.com/golang/mock/gomock"
+
 	"chainmaker.org/chainmaker/protocol/v3"
 	"chainmaker.org/chainmaker/protocol/v3/test"
 
@@ -687,8 +693,29 @@ func initPKMember(t *testing.T, info *testPkMemberInfo) *testPkMember {
 	require.Nil(t, err)
 	defer cleanFunc()
 	logger := &test.GoLogger{}
-
-	pkProvider, err := newPkACProvider(testPublicPKChainConfig, nil, logger)
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	store := mock.NewMockBlockchainStore(ctrl)
+	epoch := &syscontract.Epoch{
+		ProposerVector:           []string{"aa", "bb", "cc", "dd"},
+		NextEpochCreateHeight:    24,
+		CurrentEpochCreateHeight: 12,
+	}
+	bz, err := proto.Marshal(epoch)
+	if err != nil {
+		return nil
+	}
+	store.EXPECT().ReadObject(syscontract.SystemContract_DPOS_STAKE.String(), []byte(KeyCurrentEpoch)).AnyTimes().Return(
+		bz, nil)
+	store.EXPECT().ReadObject(syscontract.SystemContract_DPOS_STAKE.String(), dposmgr.ToNodeIDKey("aa")).AnyTimes().Return(
+		[]byte("QmQXjPB4DS8fNxsbqWzozSfwRiBbDDZg3t5qTxeb7R8BV5"), nil)
+	store.EXPECT().ReadObject(syscontract.SystemContract_DPOS_STAKE.String(), dposmgr.ToNodeIDKey("bb")).AnyTimes().Return(
+		[]byte("QmRUuqP9WkNmHv2NR8P9RUyBKSdjHuz4uu79hjgM4rWri4"), nil)
+	store.EXPECT().ReadObject(syscontract.SystemContract_DPOS_STAKE.String(), dposmgr.ToNodeIDKey("cc")).AnyTimes().Return(
+		[]byte("Qmd8o58EHnsfBbDikRra4XNsCmArXjXLSdZdkYwDcdsUvQ"), nil)
+	store.EXPECT().ReadObject(syscontract.SystemContract_DPOS_STAKE.String(), dposmgr.ToNodeIDKey("dd")).AnyTimes().Return(
+		[]byte("QmQ8nYaAMm5DdMzf3GaY2NPkmGneqmRyaSJDNRaFwuoxwV"), nil)
+	pkProvider, err := newPkACProvider(testPublicPKChainConfig, store, logger)
 	require.Nil(t, err)
 	require.NotNil(t, pkProvider)
 

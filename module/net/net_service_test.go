@@ -11,9 +11,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	rootLog "chainmaker.org/chainmaker/logger/v3"
+	"chainmaker.org/chainmaker/pb-go/v3/common"
 
 	"chainmaker.org/chainmaker/common/v3/msgbus"
 
@@ -78,6 +82,7 @@ func TestNetService(t *testing.T) {
 		chainId1,
 		nil,
 		nil,
+		nil,
 		WithConsensusNodeUid(pid2),
 	)
 	require.Nil(t, err)
@@ -102,6 +107,7 @@ func TestNetService(t *testing.T) {
 	nsb, err := nsf.NewNetService(
 		b,
 		chainId1,
+		nil,
 		nil,
 		nil,
 		WithConsensusNodeUid(pid1),
@@ -282,4 +288,64 @@ func TestConsistentMsgSubscriber(t *testing.T) {
 	time.Sleep(10 * time.Millisecond)
 	ns.Stop()
 
+}
+func TestOnMessageEpochCreate(t *testing.T) {
+	certPath := filepath.Join("./testdata/cert")
+	defer func() {
+		_ = filepath.Walk(filepath.Join("./"), func(path string, info os.FileInfo, err error) error {
+			if !info.IsDir() && strings.Contains(path, "default.log") {
+				_ = os.Remove(path)
+			}
+			return nil
+		})
+	}()
+	caBytes6666, err := ioutil.ReadFile(filepath.Join(certPath, "ca1.crt"))
+	require.Nil(t, err)
+	caBytes7777, err := ioutil.ReadFile(filepath.Join(certPath, "ca2.crt"))
+	require.Nil(t, err)
+	key1Path := filepath.Join(certPath, "key1.key")
+	cert1Path := filepath.Join(certPath, "cert1.crt")
+
+	readyC := make(chan struct{})
+
+	// start node A
+	var nf NetFactory
+	a, err := nf.NewNet(
+		protocol.Libp2p,
+		WithReadySignalC(readyC),
+		WithListenAddr("/ip4/127.0.0.1/tcp/8888"),
+		WithCrypto(false, key1Path, cert1Path, "", ""),
+	)
+	require.Nil(t, err)
+	//a.AddSeed("/ip4/127.0.0.1/tcp/7777/p2p/" + pid2)
+	a.SetChainCustomTrustRoots(chainId1, [][]byte{caBytes6666, caBytes7777})
+
+	err = a.Start()
+	require.Nil(t, err)
+	logger := rootLog.GetLoggerByChain(rootLog.MODULE_NET, "chainId")
+	ns := &NetService{
+		chainId:          "chainId",
+		localNet:         a,
+		consensusNodeIds: make(map[string]struct{}),
+		ac:               nil,
+		logger:           logger,
+	}
+	netContractEventSubscribe := &NetContractEventSubscribe{ns: ns}
+	contractEvents := make([]*common.ContractEventInfo, 0)
+	contractEvent := &common.ContractEventInfo{
+		BlockHeight:     1,
+		ChainId:         "chainId",
+		Topic:           strconv.Itoa(int(msgbus.DPoSManageEpochCreate)),
+		TxId:            "tx-id",
+		ContractName:    "aa",
+		ContractVersion: "aa",
+		EventData:       []string{"aa", "bb"},
+	}
+	contractEvents = append(contractEvents, contractEvent)
+	contractEventInfoList := &common.ContractEventInfoList{ContractEvents: contractEvents}
+	msg := &msgbus.Message{
+		Topic:   msgbus.ContractEventInfo,
+		Payload: contractEventInfoList,
+	}
+	netContractEventSubscribe.onMessageEpochCreate(msg)
 }
