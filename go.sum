@@ -14,8 +14,6 @@ chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230314034530-b45e3441eb30
 chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230314034530-b45e3441eb30/go.mod h1:Hm8dno3gY6SNd7v7BEQARkMF/F2CCyurzeofehXTOi4=
 chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20230314074753-015c3abcec07 h1:hAsfYUtwJgOayHtF/cf2/illT2b3yq/Kp/Euocqe3hM=
 chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20230314074753-015c3abcec07/go.mod h1:g72Js9SU4fZ4gYY2zrT8QyB7HKznsRrwkH53eZrckUM=
-chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230315094223-5929cb1f84a6 h1:OKS6DikBYVfkzZ8xIx20qugDTywsWkoXqIxWb9HwzTY=
-chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230315094223-5929cb1f84a6/go.mod h1:OFe6MPyutWSvbr8WQVH7HJvFiz522wcRrwMnKUjqjwE=
 chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230331094404-687349289285 h1:aVDE4Z4Is9H1phvjlVHFop0yjIe3ljj3F24JGpEAVGw=
 chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230331094404-687349289285/go.mod h1:barXyYuOuVywY2KaTjfc/02fj22f7c/TJ8UE8DGq7AU=
 chainmaker.org/chainmaker/consensus-utils/v3 v3.0.0/go.mod h1:0E5eHm8JyXWqnsU+5hQUGJaNSheKjbu7HbX/fC9L02U=
@@ -75,8 +73,6 @@ chainmaker.org/chainmaker/store-tikv/v3 v3.0.0/go.mod h1:g+oQZibYuauKEhSCIB4m3Zq
 chainmaker.org/chainmaker/store/v3 v3.0.0/go.mod h1:2Vlyku/49MSzbj5gHeyLCEVAIpnp+KmcOfnZM/Ldhmk=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230306095249-51f985632cb7 h1:xquinmKKv6nHGCHB6NA0Oa2mE+mNbHGDNnzOoG9GKjk=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230306095249-51f985632cb7/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
-chainmaker.org/chainmaker/tbft-engine v1.0.2-0.20230315060636-bff741e42102 h1:HVpSgPIaNRZJjdZ7Bz6QkE4MWqmEYCtI/nm17jtcfH4=
-chainmaker.org/chainmaker/tbft-engine v1.0.2-0.20230315060636-bff741e42102/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=
 chainmaker.org/chainmaker/tbft-engine v1.0.2-0.20230331093856-eac204ff19e2 h1:J8UbMY54X7pR/hPd+MD4Ma7s/27CcCusaQ1fEjMJdjo=
 chainmaker.org/chainmaker/tbft-engine v1.0.2-0.20230331093856-eac204ff19e2/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=
 chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230221092047-dd9fc48a15a0 h1:vHGblg/ZFneSyM1KtexvGcQDBy9zxs+JIZfETbsMp2M=
