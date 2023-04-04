@@ -18,7 +18,7 @@ require (
 	chainmaker.org/chainmaker/net-liquid v1.1.1
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.3-0.20230324030146-d53d46c7ee9f
 	chainmaker.org/chainmaker/protocol/v2 v2.3.3-0.20230320082116-0c7643a35069
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.3-0.20230329061246-cb5cce5fb465
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.3-0.20230404062421-fd0b20a35f0a
 	chainmaker.org/chainmaker/store/v2 v2.3.3
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.2-0.20230322090359-2f5b27d3f752
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230322090502-ccb1f4e8d134
@@ -55,7 +55,7 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.7.1
+	github.com/stretchr/testify v1.8.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802

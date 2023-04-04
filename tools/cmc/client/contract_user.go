@@ -424,7 +424,7 @@ func createUpgradeUserContract(op createUpgradeContractOp) error {
 	}
 
 	var payer []*common.EndorsementEntry
-	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 && len(payerOrgId) > 0 {
+	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
 		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
 			client, payload)
 		if err != nil {
