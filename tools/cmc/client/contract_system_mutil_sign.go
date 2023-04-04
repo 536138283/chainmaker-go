@@ -57,7 +57,7 @@ func multiSignReqCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagAdminKeyFilePaths, flagAdminCrtFilePaths,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagSyncResult,
-		flagGasLimit,
+		flagGasLimit, flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagParams)
@@ -82,6 +82,7 @@ func multiSignVoteCMD() *cobra.Command {
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagTxId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagIsAgree,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult, flagAdminOrgIds, flagGasLimit,
+		flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
@@ -128,7 +129,7 @@ func multiSignTrigCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId, flagSyncResult,
-		flagGasLimit,
+		flagGasLimit, flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
@@ -189,7 +190,20 @@ func multiSignReq() error {
 		return err
 	}
 
-	resp, err = client.MultiSignContractReq(payload, endorsers, timeout, syncResult)
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	if len(payer) == 0 {
+		resp, err = client.MultiSignContractReq(payload, endorsers, timeout, syncResult)
+	} else {
+		resp, err = client.MultiSignContractReqWithPayer(payload, endorsers, payer[0], timeout, syncResult)
+	}
 	if err != nil {
 		return fmt.Errorf("multi sign req failed, %s", err.Error())
 	}
@@ -282,7 +296,22 @@ func multiSignVote() error {
 		}
 	}
 
-	resp, err = client.MultiSignContractVoteWithGasLimit(payload, endorser, isAgree, timeout, gasLimit, syncResult)
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	if len(payer) == 0 {
+		resp, err = client.MultiSignContractVoteWithGasLimit(payload, endorser, isAgree,
+			timeout, gasLimit, syncResult)
+	} else {
+		resp, err = client.MultiSignContractVoteWithGasLimitAndPayer(payload, endorser, payer[0], isAgree,
+			timeout, gasLimit, syncResult)
+	}
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}
@@ -369,7 +398,20 @@ func multiSignTrig() error {
 		}
 	}
 
-	resp, err = client.MultiSignContractTrig(payload, timeout, limit, syncResult)
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	if len(payer) == 0 {
+		resp, err = client.MultiSignContractTrig(payload, timeout, limit, syncResult)
+	} else {
+		resp, err = client.MultiSignContractTrigWithPayer(payload, payer[0], timeout, limit, syncResult)
+	}
 	if err != nil {
 		return fmt.Errorf("multi sign trig failed, %s", err.Error())
 	}
