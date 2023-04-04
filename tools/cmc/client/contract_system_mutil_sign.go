@@ -217,18 +217,15 @@ func multiSignReq() error {
 
 func multiSignVote() error {
 	var (
-		adminKey  string
-		adminCrt  string
-		adminOrg  string
-		adminKeys []string
-		adminCrts []string
-		adminOrgs []string
-		output    []byte
-		err       error
-		payload   *common.Payload
-		endorser  *common.EndorsementEntry
-		client    *sdk.ChainClient
-		resp      *common.TxResponse
+		adminCrt string
+		adminKey string
+		adminOrg string
+		output   []byte
+		err      error
+		payload  *common.Payload
+		endorser *common.EndorsementEntry
+		client   *sdk.ChainClient
+		resp     *common.TxResponse
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -238,40 +235,10 @@ func multiSignVote() error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-		adminKey = adminKeys[0]
-		adminCrt = adminCrts[0]
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-		adminKey = adminKeys[0]
-		adminOrg = adminOrgs[0]
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if len(adminKeys) == 0 {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-		adminKey = adminKeys[0]
+	adminCrt, adminKey, adminOrg, err = getCertOrKeyFromParams(client)
+	if err != nil {
+		return err
 	}
-
 	payload, err = getMultiSignReqInfo(client, txId)
 	if err != nil {
 		return err
@@ -322,6 +289,51 @@ func multiSignVote() error {
 	fmt.Println(string(output))
 
 	return nil
+}
+
+func getCertOrKeyFromParams(client *sdk.ChainClient) (string, string, string, error) {
+	var (
+		adminCrt  string
+		adminKey  string
+		adminOrg  string
+		adminKeys []string
+		adminCrts []string
+		adminOrgs []string
+	)
+	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminCrtFilePaths != "" {
+			adminCrts = strings.Split(adminCrtFilePaths, ",")
+		}
+		if len(adminKeys) != len(adminCrts) {
+			return "", "", "", fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
+		}
+		adminKey = adminKeys[0]
+		adminCrt = adminCrts[0]
+	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminOrgIds != "" {
+			adminOrgs = strings.Split(adminOrgIds, ",")
+		}
+		if len(adminKeys) != len(adminOrgs) {
+			return "", "", "", fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+		}
+		adminKey = adminKeys[0]
+		adminOrg = adminOrgs[0]
+	} else {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if len(adminKeys) == 0 {
+			return "", "", "", fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+		}
+		adminKey = adminKeys[0]
+	}
+	return adminCrt, adminKey, adminOrg, nil
 }
 
 func multiSignQuery() error {
