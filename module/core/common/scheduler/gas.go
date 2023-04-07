@@ -28,14 +28,14 @@ func calcTxGasUsed(txSimContext protocol.TxSimContext, log protocol.Logger) (uin
 
 	// 用户合约，按 Invoke 扣费
 	if !utils.IsNativeContract(contractName) {
-		return calcInvokeTxGasUsed(parameters, gasConfig, log)
+		return calcInvokeTxGasUsed(tx.Payload, gasConfig, log)
 	}
 
 	if contractName == syscontract.SystemContract_CONTRACT_MANAGE.String() {
 		if method == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
 			method == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
 			// Native 合约中的 install & upgrade, 按 Install 扣费
-			return calcInstallTxGasUsed(parameters, gasConfig, log)
+			return calcInstallTxGasUsed(tx.Payload, gasConfig, log)
 		}
 
 	} else if contractName == syscontract.SystemContract_MULTI_SIGN.String() {
@@ -54,26 +54,28 @@ func calcTxGasUsed(txSimContext protocol.TxSimContext, log protocol.Logger) (uin
 				if sysMethod == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
 					sysMethod == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
 					// 针对 install & upgrade 的 multi-sign req, 按 Install 扣费
-					return calcInstallTxGasUsed(parameters, gasConfig, log)
+					return calcInstallTxGasUsed(tx.Payload, gasConfig, log)
 				}
 			}
 		}
 		// 除了 install & upgrade 的 multi-sign, 按 Invoke 扣费
-		return calcInvokeTxGasUsed(parameters, gasConfig, log)
+		return calcInvokeTxGasUsed(tx.Payload, gasConfig, log)
 	}
 
 	// 普通 Native 合约，除了 install & upgrade，都不扣费
 	return uint64(0), nil
 }
 
-func calcInstallTxGasUsed(parameters []*commonPb.KeyValuePair,
+func calcInstallTxGasUsed(payload *commonPb.Payload,
 	gasConfig *gasutils.GasConfig, log protocol.Logger) (uint64, error) {
 	if gasConfig == nil {
 		return 0, nil
 	}
 
+	parameters := payload.Parameters
 	installBaseGas := gasConfig.GetBaseGasForInstall()
-	dataSize := 0
+	dataSize := len(payload.ContractName) + len(payload.Method) + len(payload.TxId)
+
 	for _, kvPair := range parameters {
 		log.Debugf("【gas calc】key = %v, value size = %v", kvPair.Key, len(kvPair.Value))
 		dataSize += len(kvPair.Key) + len(kvPair.Value)
@@ -87,14 +89,16 @@ func calcInstallTxGasUsed(parameters []*commonPb.KeyValuePair,
 	return installBaseGas + dataGas, nil
 }
 
-func calcInvokeTxGasUsed(parameters []*commonPb.KeyValuePair,
+func calcInvokeTxGasUsed(payload *commonPb.Payload,
 	gasConfig *gasutils.GasConfig, log protocol.Logger) (uint64, error) {
 	if gasConfig == nil {
 		return 0, nil
 	}
 
+	parameters := payload.Parameters
 	invokeBaseGas := gasConfig.GetBaseGasForInvoke()
-	dataSize := 0
+	dataSize := len(payload.ContractName) + len(payload.Method) + len(payload.TxId)
+
 	for _, kvPair := range parameters {
 		log.Debugf("【gas calc】key = %v, value size = %v", kvPair.Key, len(kvPair.Value))
 		dataSize += len(kvPair.Key) + len(kvPair.Value)

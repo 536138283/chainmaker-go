@@ -3,6 +3,8 @@ package scheduler
 import (
 	"testing"
 
+	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
+
 	"chainmaker.org/chainmaker/logger/v2"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -38,9 +40,14 @@ func TestCalcInvokeTxGasUsedWithEmptyParameters(t *testing.T) {
 	txSimContext.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	txSimContext.EXPECT().GetTx().Return(tx).AnyTimes()
 
+	gasExpected, err := gasutils.MultiplyGasPrice(
+		len(tx.Payload.ContractName+tx.Payload.Method+tx.Payload.TxId),
+		chainConfig.AccountConfig.DefaultGasPrice)
+	assert.Nil(t, err)
+
 	gasUsed, err := calcTxGasUsed(txSimContext, logger)
 	assert.Nil(t, err)
-	assert.Equal(t, gasUsed, uint64(1000))
+	assert.Equal(t, gasUsed, uint64(1000+gasExpected))
 }
 
 func TestCalcInvokeTxGasUsed(t *testing.T) {
@@ -72,9 +79,14 @@ func TestCalcInvokeTxGasUsed(t *testing.T) {
 	txSimContext.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	txSimContext.EXPECT().GetTx().Return(tx).AnyTimes()
 
+	gasBase, err := gasutils.MultiplyGasPrice(
+		len(tx.Payload.ContractName+tx.Payload.Method+tx.Payload.TxId),
+		chainConfig.AccountConfig.DefaultGasPrice)
+	assert.Nil(t, err)
+
 	gasUsed, err := calcTxGasUsed(txSimContext, logger)
 	assert.Nil(t, err)
-	assert.Equal(t, gasUsed, uint64(1048))
+	assert.Equal(t, gasUsed, uint64(1048+gasBase))
 }
 
 func TestCalcInstallTxGasUsed(t *testing.T) {
@@ -106,9 +118,14 @@ func TestCalcInstallTxGasUsed(t *testing.T) {
 	txSimContext.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	txSimContext.EXPECT().GetTx().Return(tx).AnyTimes()
 
+	gasExpected, err := gasutils.MultiplyGasPrice(
+		len(tx.Payload.ContractName+tx.Payload.Method+tx.Payload.TxId),
+		chainConfig.AccountConfig.InstallGasPrice)
+	assert.Nil(t, err)
+
 	gasUsed, err := calcTxGasUsed(txSimContext, logger)
 	assert.Nil(t, err)
-	assert.Equal(t, gasUsed, uint64(1000024))
+	assert.Equal(t, gasUsed, uint64(1000024+gasExpected))
 }
 
 func TestCalcMultiSignTxGasUsed(t *testing.T) {
@@ -169,7 +186,12 @@ func TestCalcMultiSignTxGasUsed(t *testing.T) {
 	txSimContext.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	txSimContext.EXPECT().GetTx().Return(tx).AnyTimes()
 
+	gasExpected, err := gasutils.MultiplyGasPrice(
+		len(tx.Payload.ContractName+tx.Payload.Method+tx.Payload.TxId),
+		chainConfig.AccountConfig.InstallGasPrice)
+	assert.Nil(t, err)
+
 	gasUsed, err := calcTxGasUsed(txSimContext, logger)
 	assert.Nil(t, err)
-	assert.Equal(t, gasUsed, uint64(1003156))
+	assert.Equal(t, gasUsed, uint64(1003156+gasExpected))
 }
