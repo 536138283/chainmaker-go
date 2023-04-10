@@ -1479,10 +1479,17 @@ func recoverBlockByBatch(
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(indexes) != int(block.Header.TxCount) {
-			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d",
-				block.Header.BlockHeight, block.Header.TxCount, len(indexes))
+
+		expectedCount := len(indexes)
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			expectedCount++
 		}
+
+		if expectedCount != int(block.Header.TxCount) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d, expectedCount:%d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes), expectedCount)
+		}
+
 		if len(batchIds) == 0 {
 			logger.DebugDynamic(func() string {
 				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d], additionalData :%v",
@@ -1511,26 +1518,26 @@ func recoverBlockByBatch(
 			newTxs = append(newTxs, tx...)
 		}
 
+		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIdsLen:%v, num:%d",
+			block.Header.BlockHeight, len(batchIds), len(newTxs)))
+
+		for i, v := range indexes {
+			newBlock.Txs[i] = newTxs[int(v)]
+		}
+
 		// 如果原区块中包含了coinbase交易，需要从提案节点给到的区块中将coinbase交易添加进来
 		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
 			if len(block.Txs) == 0 || block.Txs[0] == nil {
 				return nil, nil, fmt.Errorf("could not get coinbase tx from proposer,height:%d,hash:%x",
 					block.Header.BlockHeight, block.Header.BlockHash)
 			}
-			newTxs = append(newTxs, block.Txs[0])
+			newBlock.Txs[len(newBlock.Txs)-1] = block.Txs[0]
 		}
 
-		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIds:%v, num:%d",
-			block.Header.BlockHeight, batchIds, len(newTxs)))
-
-		if len(newTxs) != int(block.Header.TxCount) {
+		if len(newBlock.Txs) != int(block.Header.TxCount) {
 			return nil, nil,
 				fmt.Errorf("GetAllTxsByBatchIds fail,height: %d, want count: %d, got count: %d",
-					block.Header.BlockHeight, block.Header.TxCount, len(newTxs))
-		}
-
-		for i, v := range indexes {
-			newBlock.Txs[i] = newTxs[int(v)]
+					block.Header.BlockHeight, block.Header.TxCount, len(newBlock.Txs))
 		}
 
 		return newBlock, batchIds, nil
