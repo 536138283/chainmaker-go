@@ -45,11 +45,11 @@ require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.1-0.20230222031539-5d0c4e710360
 	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230324072106-0304419d322e
 	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20230314074553-134b54d23351
-	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20230331095611-dece5362d335
+	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20230407093413-225f3e61901d
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230323082004-81e3df6fd69c
 	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230314034530-b45e3441eb30
 	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20230314074753-015c3abcec07
-	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230331094404-687349289285
+	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230407100902-d7ef906e2bd1
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.1-0.20230221100751-02e92d01a8d6
 	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230222032633-416066e4d7e1
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
