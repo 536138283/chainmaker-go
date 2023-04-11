@@ -128,22 +128,22 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 		return gasRWSet, nil
 	}
 
-	rwSet := txSimContext.GetTxRWSet(isTxSuccess)
-	dataSize := int(0)
-	for _, txRead := range rwSet.TxReads {
-		if !utils.IsNativeContract(txRead.ContractName) {
-			log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
-				txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, txRead.Key, len(txRead.Value))
-			dataSize += calcReadSetItemSize(txRead)
-		}
-	}
-	for _, txWrite := range rwSet.TxWrites {
-		if !utils.IsNativeContract(txWrite.ContractName) {
-			log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
-				txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, txWrite.Key, len(txWrite.Value))
-			dataSize += calcWriteSetItemSize(txWrite)
-		}
-	}
+	//rwSet := txSimContext.GetTxRWSet(isTxSuccess)
+	dataSize := 0
+	//for _, txRead := range rwSet.TxReads {
+	//	if !utils.IsNativeContract(txRead.ContractName) {
+	//		log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
+	//			txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, txRead.Key, len(txRead.Value))
+	//		dataSize += calcReadSetItemSize(txRead)
+	//	}
+	//}
+	//for _, txWrite := range rwSet.TxWrites {
+	//	if !utils.IsNativeContract(txWrite.ContractName) {
+	//		log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
+	//			txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, txWrite.Key, len(txWrite.Value))
+	//		dataSize += calcWriteSetItemSize(txWrite)
+	//	}
+	//}
 
 	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
 	if err != nil {
