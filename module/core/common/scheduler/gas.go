@@ -132,16 +132,16 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 	rwSet := txSimContext.GetTxRWSet(isTxSuccess)
 	dataSize := 0
 	for _, txRead := range rwSet.TxReads {
-		log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
-			txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value))
 		if !utils.IsNativeContract(txRead.ContractName) {
+			log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
+				txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value))
 			dataSize += calcReadSetItemSize(txRead)
 		}
 	}
 	for _, txWrite := range rwSet.TxWrites {
-		log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
-			txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value))
 		if !utils.IsNativeContract(txWrite.ContractName) {
+			log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
+				txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value))
 			dataSize += calcWriteSetItemSize(txWrite)
 		}
 	}
