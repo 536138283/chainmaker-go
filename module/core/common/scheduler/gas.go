@@ -116,6 +116,7 @@ func calcInvokeTxGasUsed(payload *commonPb.Payload,
 func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 	isTxSuccess bool,
 	log protocol.Logger) (uint64, error) {
+	log.Debugf("enter calcTxRWSetGasUsed, isTxSuccess = %v", isTxSuccess)
 
 	gasRWSet := uint64(0)
 	blockVersion := txSimContext.GetBlockVersion()
@@ -132,7 +133,7 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 	dataSize := 0
 	for _, txRead := range rwSet.TxReads {
 		log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
-			txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value))
+			txSimContext.GetTx().GetPayload().TxId, len(txRead.ContractName), string(txRead.Key), len(txRead.Value))
 		//if !utils.IsNativeContract(txRead.ContractName) {
 		//	log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
 		//		txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value))
@@ -141,7 +142,7 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 	}
 	for _, txWrite := range rwSet.TxWrites {
 		log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
-			txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value))
+			txSimContext.GetTx().GetPayload().TxId, len(txWrite.ContractName), string(txWrite.Key), len(txWrite.Value))
 		//if !utils.IsNativeContract(txWrite.ContractName) {
 		//	log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
 		//		txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value))
@@ -149,11 +150,13 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 		//}
 	}
 
+	log.Debugf("begin calculate gas, dataSize = %v, gas_price = %v", dataSize, gasConfig.GetBaseGasForInvoke())
 	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
 	if err != nil {
 		return 0, err
 	}
 
+	log.Debugf("leave calcTxRWSetGasUsed")
 	return gasRWSet, nil
 }
 
