@@ -6,6 +6,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
+	"strings"
 )
 
 // calcTxGasUsed for block version greater than 2030102
@@ -77,7 +78,7 @@ func calcInstallTxGasUsed(payload *commonPb.Payload,
 	dataSize := len(payload.ContractName) + len(payload.Method) + len(payload.TxId)
 
 	for _, kvPair := range parameters {
-		log.Debugf("【gas calc】key = %v, value size = %v", kvPair.Key, len(kvPair.Value))
+		log.Debugf("【gas calc】%v, key = %v, value size = %v", payload.TxId, kvPair.Key, len(kvPair.Value))
 		dataSize += len(kvPair.Key) + len(kvPair.Value)
 	}
 
@@ -100,7 +101,7 @@ func calcInvokeTxGasUsed(payload *commonPb.Payload,
 	dataSize := len(payload.ContractName) + len(payload.Method) + len(payload.TxId)
 
 	for _, kvPair := range parameters {
-		log.Debugf("【gas calc】key = %v, value size = %v", kvPair.Key, len(kvPair.Value))
+		log.Debugf("【gas calc】%v, key = %v, value size = %v", payload.TxId, kvPair.Key, len(kvPair.Value))
 		dataSize += len(kvPair.Key) + len(kvPair.Value)
 	}
 
@@ -110,4 +111,70 @@ func calcInvokeTxGasUsed(payload *commonPb.Payload,
 	}
 
 	return invokeBaseGas + dataGas, nil
+}
+
+func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
+	isTxSuccess bool,
+	log protocol.Logger) (uint64, error) {
+
+	gasRWSet := uint64(0)
+	blockVersion := txSimContext.GetBlockVersion()
+	if blockVersion < blockVersion2312 {
+		return gasRWSet, nil
+	} // for block version < 2030102
+
+	gasConfig := gasutils.NewGasConfig(txSimContext.GetLastChainConfig().AccountConfig)
+	if gasConfig == nil {
+		return gasRWSet, nil
+	}
+
+	rwSet := txSimContext.GetTxRWSet(isTxSuccess)
+	dataSize := int(0)
+	for _, txRead := range rwSet.TxReads {
+		if !utils.IsNativeContract(txRead.ContractName) {
+			log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
+				txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, txRead.Key, len(txRead.Value))
+			dataSize += calcReadSetItemSize(txRead)
+		}
+	}
+	for _, txWrite := range rwSet.TxWrites {
+		if !utils.IsNativeContract(txWrite.ContractName) {
+			log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
+				txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, txWrite.Key, len(txWrite.Value))
+			dataSize += calcWriteSetItemSize(txWrite)
+		}
+	}
+
+	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
+	if err != nil {
+		return 0, err
+	}
+
+	return gasRWSet, nil
+}
+
+func calcReadSetItemSize(txRead *commonPb.TxRead) int {
+	dataSize := len(txRead.ContractName)
+
+	keyLabels := strings.Split(string(txRead.Key), protocol.ContractStoreSeparator)
+	for _, keyLabel := range keyLabels {
+		dataSize += len(keyLabel)
+	}
+
+	dataSize += len(txRead.Value)
+
+	return dataSize
+}
+
+func calcWriteSetItemSize(txWrite *commonPb.TxWrite) int {
+	dataSize := len(txWrite.ContractName)
+
+	keyLabels := strings.Split(string(txWrite.Key), protocol.ContractStoreSeparator)
+	for _, keyLabel := range keyLabels {
+		dataSize += len(keyLabel)
+	}
+
+	dataSize += len(txWrite.Value)
+
+	return dataSize
 }
