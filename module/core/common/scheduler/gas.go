@@ -129,7 +129,7 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 		return gasRWSet, nil
 	}
 
-	rwSet := txSimContext.GetTxRWSet(isTxSuccess)
+	//rwSet := txSimContext.GetTxRWSet(isTxSuccess)
 	dataSize := 0
 	//for _, txRead := range rwSet.TxReads {
 	//	if !utils.IsNativeContract(txRead.ContractName) {
@@ -146,8 +146,8 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 	//	}
 	//}
 
-	log.Debugf("begin calculate gas, dataSize = %v, gas_price = %v, read set size = %v, write set size = %v",
-		dataSize, gasConfig.GetGasPriceForInvoke(), len(rwSet.TxReads), len(rwSet.TxWrites))
+	//log.Debugf("begin calculate gas, dataSize = %v, gas_price = %v, read set size = %v, write set size = %v",
+	//	dataSize, gasConfig.GetGasPriceForInvoke(), len(rwSet.TxReads), len(rwSet.TxWrites))
 	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
 	if err != nil {
 		return 0, err
