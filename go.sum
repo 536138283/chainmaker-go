@@ -13,10 +13,6 @@ chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1 h1:I3reWYbDknyO2NW3LUVCyg4X5A
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1/go.mod h1:RYGd9FjDFWN5TqKOmIpJkWiqJ3WmMz/dZ/axHiOhExE=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0 h1:mkqVcc4qknBDq3VZY/KSzo0leh6br2vjdTPxyc1nUEs=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0/go.mod h1:OXtOwnLA27c3FP2KnCfb+HHlZGph3vXBgtXhBGQpSKA=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2 h1:NqpnUHK19dbyYVsdx2j5rJED3tLefTRYg7b1m8tO3TI=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.2/go.mod h1:eLs9d8Z1SShBX8EUfbXwb3ZbfFk7+jmhrFruqhJtMMc=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230330083018-ca142e2ed222 h1:SqknFf7TybUGR9OOX9AHm4MN1SX2FNb6GSoniZP0ILU=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230330083018-ca142e2ed222/go.mod h1:eLs9d8Z1SShBX8EUfbXwb3ZbfFk7+jmhrFruqhJtMMc=
 chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230407090027-636705f45042 h1:HfMg7dvJQzoiheeIb7D5Eh+JRPybYub7IdkteF+rkZ4=
 chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230407090027-636705f45042/go.mod h1:eLs9d8Z1SShBX8EUfbXwb3ZbfFk7+jmhrFruqhJtMMc=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.0/go.mod h1:9KowPGC3NRiswF0xzvpktKP4s6v/4MI52JCCUiimduM=
@@ -37,8 +33,9 @@ chainmaker.org/chainmaker/net-common v1.2.0/go.mod h1:o+uQGFfylEb/qgFx03j7zSymRL
 chainmaker.org/chainmaker/net-common v1.2.2 h1:2p0gNsr3zTVspYwYTSo+peoztBANveczhW18/jJcHmc=
 chainmaker.org/chainmaker/net-common v1.2.2/go.mod h1:pfTTIYzQ9RxVKsfn7eI8ztlU4hiIT57G8KVTOsSd75A=
 chainmaker.org/chainmaker/net-libp2p v1.2.0/go.mod h1:gqYbyevyMOhh81ny3Y1t7ZPdByuDbVRbC/w/3NOLHxk=
-chainmaker.org/chainmaker/net-libp2p v1.2.2 h1:aWXxzlbC7C6hH0xSLhx5+zKqFF5WcPlaMVAeDjY4i/s=
 chainmaker.org/chainmaker/net-libp2p v1.2.2/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
+chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230411065659-b4f1bbfa2240 h1:IyS88EPME/P3ALOXaOyyb8JnhSAsR4dlYiIbqqvTSgA=
+chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230411065659-b4f1bbfa2240/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
 chainmaker.org/chainmaker/net-liquid v1.1.0/go.mod h1:A1fjmgLv7ejD1eFh320+ZxGB4OWKYi1wgh56TJZ8b/A=
 chainmaker.org/chainmaker/net-liquid v1.1.1 h1:bKXeP0s5IXs2GTzG3YG96t9s8W+6CaVa69+hnxKOp0E=
 chainmaker.org/chainmaker/net-liquid v1.1.1/go.mod h1:mcfWiEenn7JrCyURXozCmrQlZE5Ddw3+vBBusLCwdsI=
@@ -61,14 +58,6 @@ chainmaker.org/chainmaker/store-sqldb/v2 v2.3.2/go.mod h1:5A60V0OoNZ0PnmoVcm8lgD
 chainmaker.org/chainmaker/store-tikv/v2 v2.3.1 h1:EGN7XmRTfjk4j48CGNhT6K2KWxa5tY+hjIIKfEMEg18=
 chainmaker.org/chainmaker/store-tikv/v2 v2.3.1/go.mod h1:rNYGUX2eaVlcVT3ZsYP6+yX7Bejpa+9eRPTrlt3Fc3g=
 chainmaker.org/chainmaker/store/v2 v2.3.3/go.mod h1:wxAn8kEy+A+YPyjaEhJEmf7gV0Tp+zex3UT5wjH+TG8=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230330060931-ca01451d17f3 h1:AVhWwYd2EJ6D5rh8fsqL67S6q2wChgCGodZCOn4OcBg=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230330060931-ca01451d17f3/go.mod h1:0Q82fzhjXyeoNGF90Qv01eSAe/EgbAkCGHVL539jjyE=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230330101504-8455e8dbffde h1:5Rsm2WMpPscAOC53/ugJEkKkbRuSRKgfAleWmJut6bw=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230330101504-8455e8dbffde/go.mod h1:0Q82fzhjXyeoNGF90Qv01eSAe/EgbAkCGHVL539jjyE=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230402093035-111cd536957d h1:0KhInwhKzPBt3r49d9ausUMg+GTeJwbM/qTaCvlD5IA=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230402093035-111cd536957d/go.mod h1:0Q82fzhjXyeoNGF90Qv01eSAe/EgbAkCGHVL539jjyE=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230403063135-2294e4efa1b5 h1:GGzcYervv9uow+yj0uuwkjxVqqO6CCWJlZBihqiUex4=
-chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230403063135-2294e4efa1b5/go.mod h1:0Q82fzhjXyeoNGF90Qv01eSAe/EgbAkCGHVL539jjyE=
 chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230407063327-0ec94826651b h1:McVUGIA/YkaQhQrRpCFX8C3+a86yWej/InrpOsqlgpo=
 chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230407063327-0ec94826651b/go.mod h1:wxAn8kEy+A+YPyjaEhJEmf7gV0Tp+zex3UT5wjH+TG8=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.1 h1:GPXHmfCxgG1VieKvh2xNocRdYwo/wKHRVsgPX20O0BQ=
