@@ -13,8 +13,8 @@ chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1 h1:I3reWYbDknyO2NW3LUVCyg4X5A
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1/go.mod h1:RYGd9FjDFWN5TqKOmIpJkWiqJ3WmMz/dZ/axHiOhExE=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0 h1:mkqVcc4qknBDq3VZY/KSzo0leh6br2vjdTPxyc1nUEs=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0/go.mod h1:OXtOwnLA27c3FP2KnCfb+HHlZGph3vXBgtXhBGQpSKA=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230407090027-636705f45042 h1:HfMg7dvJQzoiheeIb7D5Eh+JRPybYub7IdkteF+rkZ4=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230407090027-636705f45042/go.mod h1:eLs9d8Z1SShBX8EUfbXwb3ZbfFk7+jmhrFruqhJtMMc=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230411080228-82c1603a07dd h1:fX0OfDggxQpiaJt4D3VNQo81i/y29n9Jw7b4MFaiMxc=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230411080228-82c1603a07dd/go.mod h1:eLs9d8Z1SShBX8EUfbXwb3ZbfFk7+jmhrFruqhJtMMc=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.0/go.mod h1:9KowPGC3NRiswF0xzvpktKP4s6v/4MI52JCCUiimduM=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.2 h1:k0rzI7CygkVX2zOSEo/+1+4TDDfxGMK0vYvtHS5qNqM=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.2/go.mod h1:xUJ1FWC9WqclZo68rkFD21+CA4SQe5n9cQjqhzvTeOg=
