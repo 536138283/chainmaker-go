@@ -240,9 +240,9 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 		return verifyResult, err
 	}
 
-	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
+	snapshot := v.snapshotManager.GetSnapshot(lastBlock, newBlock)
 	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
-		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
+		if err = scheduler.VerifyOptimizeChargeGasTx(newBlock, snapshot); err != nil {
 			return nil, err
 		}
 	}

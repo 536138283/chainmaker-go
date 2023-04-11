@@ -43,29 +43,23 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
-
 		// need charge gas, but gasLimit is not set
 		if txNeedChargeGas && tx.Payload.Limit == nil {
-			if tx.Result == nil {
-				// `proposer node` has filter txs out in `dispatchTxsInSenderCollection` function
-				ts.log.Errorf("proposer node with `enable_optimize_gas` mode can't get tx that's gas_limit is nil in this place.")
-
-			} else {
-				// `verify node` should return error result same with `proposer node` do in `dispatchTxsInSenderCollection`
-				txResult := &commonPb.Result{
-					Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
-					ContractResult: &commonPb.ContractResult{
-						Code:    uint32(1),
-						Result:  nil,
-						Message: ErrMsgOfGasLimitNotSet,
-						GasUsed: uint64(0),
-					},
-					RwSetHash: nil,
-					Message:   ErrMsgOfGasLimitNotSet,
-				}
-				txSimContext.SetTxResult(txResult)
-				return false
+			// `verify node` should return error result same with `proposer node` do in `dispatchTxsInSenderCollection`
+			txResult := &commonPb.Result{
+				Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
+				ContractResult: &commonPb.ContractResult{
+					Code:    uint32(1),
+					Result:  nil,
+					Message: ErrMsgOfGasLimitNotSet,
+					GasUsed: uint64(0),
+				},
+				RwSetHash: nil,
+				Message:   ErrMsgOfGasLimitNotSet,
 			}
+			txSimContext.SetTxResult(txResult)
+
+			return false
 		} else if txNeedChargeGas && tx.Payload.Limit != nil {
 			// in `proposer node`:
 			// 	1) tx.Result should be set by `dispatchTxsInSenderCollection()`

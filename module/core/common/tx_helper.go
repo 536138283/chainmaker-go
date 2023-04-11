@@ -570,8 +570,6 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 		result := vt.txResultMap[tx.Payload.TxId]
 
 		if TxPoolType == batch.TxPoolType {
-			// recover result
-			tx.Result = result
 			// calc rw set hash
 			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
 			if err != nil {
@@ -579,7 +577,7 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 					tx.Payload.TxId, rwSet, err)
 				return nil, nil, nil, err
 			}
-			result.RwSetHash = rwsetHash
+			tx.Result.RwSetHash = rwsetHash
 			// calc tx hash with version
 			hash, err := utils.CalcTxHashWithVersion(
 				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(block.Header.BlockVersion))

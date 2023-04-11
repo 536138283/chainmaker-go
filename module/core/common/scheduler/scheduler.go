@@ -1097,19 +1097,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 				tx, snapshot)
 			ts.log.Debugf("tx need charge gas => %v", txNeedChargeGas)
 			if limit == nil && txNeedChargeGas {
-				// tx需要扣费，但是limit没有设置
-				tx.Result = &commonPb.Result{
-					Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
-					ContractResult: &commonPb.ContractResult{
-						Code:    uint32(1),
-						Result:  nil,
-						Message: ErrMsgOfGasLimitNotSet,
-						GasUsed: uint64(0),
-					},
-					RwSetHash: nil,
-					Message:   ErrMsgOfGasLimitNotSet,
-				}
-
+				// tx需要扣费，但是limit没有设置,此处不设置交易结果，在executeTx时赋值
 				runningTxC <- tx
 				continue
 			} else if !txNeedChargeGas {
