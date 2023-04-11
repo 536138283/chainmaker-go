@@ -196,6 +196,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	blockVersion := txSimContext.GetBlockVersion()
 	if blockVersion2312 <= blockVersion {
 		gasUsed, err = calcTxGasUsed(txSimContext, ts.log)
+		ts.log.Debugf("【gas calc】%v, before `RunContract` gasUsed = %v, err = %v",
+			tx.Payload.TxId, gasUsed, err)
 		if err != nil {
 			ts.log.Errorf("calculate tx gas failed, err = %v", err)
 			result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -219,6 +221,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		//}
 		gasRWSet := uint64(0)
 		result.ContractResult.GasUsed += gasRWSet + gasUsed
+		ts.log.Debugf("【gas calc】%v, after `RunContract` gasRWSet = %v, err = %v",
+			tx.Payload.TxId, gasRWSet, err)
 	}
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
