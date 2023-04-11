@@ -146,7 +146,7 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 		}
 	}
 
-	log.Debugf("begin calculate gas, dataSize = %v, gas_price = %v", dataSize, gasConfig.GetBaseGasForInvoke())
+	log.Debugf("begin calculate gas, dataSize = %v, gas_price = %v", dataSize, gasConfig.GetGasPriceForInvoke())
 	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
 	if err != nil {
 		return 0, err

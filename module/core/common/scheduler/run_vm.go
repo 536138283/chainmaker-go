@@ -220,7 +220,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 			result.ContractResult.Message = err.Error()
 			return result, specialTxType, err
 		}
-		contractResultPayload.GasUsed += gasUsed + gasRWSet
+		contractResultPayload.GasUsed += gasRWSet
 		ts.log.Debugf("【gas calc】%v, after `RunContract` gasRWSet = %v, err = %v",
 			tx.Payload.TxId, gasRWSet, err)
 	}
