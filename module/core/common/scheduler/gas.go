@@ -130,7 +130,7 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 	}
 
 	rwSet := txSimContext.GetTxRWSet(isTxSuccess)
-	log.Debugf("【gas calc】%v, calcTxRWSetGasUsed rwSet = %v", rwSet)
+	log.Debugf("【gas calc】%v, calcTxRWSetGasUsed rwSet = %v", txSimContext.GetTx().Payload.TxId, rwSet)
 	dataSize := 0
 	for _, txRead := range rwSet.TxReads {
 		if !utils.IsNativeContract(txRead.ContractName) {
