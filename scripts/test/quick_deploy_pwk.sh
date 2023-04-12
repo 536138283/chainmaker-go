@@ -9,6 +9,7 @@
 node_count=$1
 chain_count=$2
 alreadyBuild=$3
+enableDocker=$4
 if [ ! -d "../../tools/chainmaker-cryptogen" ]; then
   echo "not found chainmaker-go/tools/chainmaker-cryptogen"
   echo "  you can use "
@@ -25,6 +26,9 @@ PROJECT_PATH=$(dirname "${SCRIPT_PATH}")
 
 if  [[ ! -n $node_count ]] ;then
     echo "node cnt is empty"
+    echo "  you can use "
+    echo "             ./prepare_pwk.sh nodeCount chainCount alreadyBuild enableDockerVm"
+    echo "             ./prepare_pwk.sh 4 1 false true"
     exit 1
 fi
 if  [ ! $node_count -eq 1 ] && [ ! $node_count -eq 4 ] && [ ! $node_count -eq 7 ]&& [ ! $node_count -eq 10 ]&& [ ! $node_count -eq 13 ]&& [ ! $node_count -eq 16 ];then
@@ -37,6 +41,13 @@ function start_chainmaker() {
   ./cluster_quick_stop.sh clean
   if [ "${alreadyBuild}" != "true" ]; then
     echo -e "\n\n【generate】 certs and config..."
+    if [ "${enableDocker}" == "true" ]; then
+      echo "【sh】 ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v true  --vtp=tcp --vlog=INFO"
+      ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v true  --vtp=tcp --vlog=INFO
+    else
+      echo "【sh】 ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v false  --vtp=tcp --vlog=INFO"
+      ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v false  --vtp=tcp --vlog=INFO
+    fi
     echo -e "\nINFO\n\n\n" | ./prepare_pwk.sh $node_count $chain_count
     echo -e "\n\n【build】 release..."
     ./build_release.sh
