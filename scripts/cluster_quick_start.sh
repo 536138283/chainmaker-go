@@ -41,7 +41,8 @@ function prepare() {
         for file in `ls $RELEASE_PATH`
         do
             if [[ $file == chainmaker* ]] && [[ $file == *gz ]]; then
-              tar -zxvf $RELEASE_PATH/$file -C $RELEASE_PATH
+              echo "decompression $RELEASE_PATH/$file"
+              tar -zxf $RELEASE_PATH/$file -C $RELEASE_PATH
             fi
         done
     fi

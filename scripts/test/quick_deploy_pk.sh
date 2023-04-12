@@ -41,11 +41,11 @@ function start_chainmaker() {
   if [ "${alreadyBuild}" != "true" ]; then
     echo -e "\n\n【generate】 certs and config..."
     if [ "${enableDocker}" == "true" ]; then
-      echo "【sh】 ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v true  --vtp=tcp --vlog=INFO"
-      ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v true  --vtp=tcp --vlog=INFO
+      echo "【sh】 ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v true  --vtp=tcp --vlog=INFO"
+      ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v true  --vtp=tcp --vlog=INFO
     else
-      echo "【sh】 ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v false  --vtp=tcp --vlog=INFO"
-      ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SM3 -v false  --vtp=tcp --vlog=INFO
+      echo "【sh】 ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v false  --vtp=tcp --vlog=INFO"
+      ./prepare_pk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v false  --vtp=tcp --vlog=INFO
     fi
 #    echo -e "\nINFO\n\n\n" | ./prepare_pk.sh $node_count $chain_count
     echo -e "\n\n【build】 release..."
@@ -82,6 +82,7 @@ function prepare_cmc() {
   rm -rf testdata
   mkdir testdata
   cp $PROJECT_PATH/tools/cmc/testdata/sdk_config_pk.yml testdata/
+  sed -i 's/12301/12391/' testdata/sdk_config_pk.yml
   cp -r $PROJECT_PATH/build/crypto-config/ testdata/
 }
 
@@ -118,6 +119,7 @@ function cmc_test() {
 }
 
 function cat_log() {
+  sleep 1
   grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*1*/log/system.log
 }
 

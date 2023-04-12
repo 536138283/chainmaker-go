@@ -84,6 +84,7 @@ function prepare_cmc() {
   rm -rf testdata
   mkdir testdata
   cp $PROJECT_PATH/tools/cmc/testdata/sdk_config.yml testdata/
+  sed -i 's/12301/12391/' testdata/sdk_config.yml
   cp -r $PROJECT_PATH/build/crypto-config/ testdata/
 }
 
@@ -123,6 +124,7 @@ function cmc_test() {
 }
 
 function cat_log() {
+  sleep 1
   grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*1*/log/system.log
 }
 
