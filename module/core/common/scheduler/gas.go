@@ -129,25 +129,26 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 		return gasRWSet, nil
 	}
 
-	//rwSet := txSimContext.GetTxRWSet(isTxSuccess)
+	rwSet := txSimContext.GetTxRWSet(isTxSuccess)
+	log.Debugf("【gas calc】%v, calcTxRWSetGasUsed rwSet = %v", rwSet)
 	dataSize := 0
-	//for _, txRead := range rwSet.TxReads {
-	//	if !utils.IsNativeContract(txRead.ContractName) {
-	//		log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
-	//			txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value))
-	//		dataSize += calcReadSetItemSize(txRead)
-	//	}
-	//}
-	//for _, txWrite := range rwSet.TxWrites {
-	//	if !utils.IsNativeContract(txWrite.ContractName) {
-	//		log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
-	//			txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value))
-	//		dataSize += calcWriteSetItemSize(txWrite)
-	//	}
-	//}
+	for _, txRead := range rwSet.TxReads {
+		if !utils.IsNativeContract(txRead.ContractName) {
+			log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v",
+				txSimContext.GetTx().GetPayload().TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value))
+			dataSize += calcReadSetItemSize(txRead)
+		}
+	}
+	for _, txWrite := range rwSet.TxWrites {
+		if !utils.IsNativeContract(txWrite.ContractName) {
+			log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v",
+				txSimContext.GetTx().GetPayload().TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value))
+			dataSize += calcWriteSetItemSize(txWrite)
+		}
+	}
 
-	//log.Debugf("begin calculate gas, dataSize = %v, gas_price = %v, read set size = %v, write set size = %v",
-	//	dataSize, gasConfig.GetGasPriceForInvoke(), len(rwSet.TxReads), len(rwSet.TxWrites))
+	log.Debugf("begin calculate gas, dataSize = %v, gas_price = %v, read set size = %v, write set size = %v",
+		dataSize, gasConfig.GetGasPriceForInvoke(), len(rwSet.TxReads), len(rwSet.TxWrites))
 	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
 	if err != nil {
 		return 0, err
