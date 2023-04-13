@@ -227,7 +227,9 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		ts.log.Debugf("【gas calc】%v, before `calcTxEventGasUsed` gasUsed = %v, err = %v",
 			tx.Payload.TxId, contractResultPayload.GasUsed, err)
 
-		gasEvents, err = calcTxEventGasUsed(txSimContext, ts.log)
+		gasEvents, err = calcTxEventGasUsed(
+			txSimContext,
+			contractResultPayload.ContractEvent, ts.log)
 		if err != nil {
 			ts.log.Errorf("calculate tx events gas failed, err = %v", err)
 			result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
