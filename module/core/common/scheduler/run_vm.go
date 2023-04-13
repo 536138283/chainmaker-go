@@ -192,8 +192,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		}
 	}
 
-	var gasUsed = uint64(0)
-	var gasRWSet = uint64(0)
+	gasUsed := uint64(0)
+	gasRWSet := uint64(0)
 	blockVersion := txSimContext.GetBlockVersion()
 	if blockVersion2312 <= blockVersion {
 		gasUsed, err = calcTxGasUsed(txSimContext, ts.log)

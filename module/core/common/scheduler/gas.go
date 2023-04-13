@@ -1,12 +1,13 @@
 package scheduler
 
 import (
+	"strings"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
 	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
-	"strings"
 )
 
 // calcTxGasUsed for block version greater than 2030102
