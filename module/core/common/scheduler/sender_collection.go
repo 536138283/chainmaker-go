@@ -50,7 +50,7 @@ func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
 	log protocol.Logger) map[string]*TxCollection {
-	txCollectionMap := make(map[string]*TxCollection)
+	txCollectionMap := make(map[string]*TxCollection, len(txBatch))
 
 	var err error
 	chainCfg := snapshot.GetLastChainConfig()

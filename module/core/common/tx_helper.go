@@ -275,8 +275,8 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	[][]byte, []*commonpb.Transaction, *RwSetVerifyFailTx, error) {
 
 	verifyBatch := utils.DispatchTxVerifyTask(block.Txs)
-	resultTasks := make(map[int]VerifyBlockBatch)
-	stats := make(map[int]*VerifyStat)
+	resultTasks := make(map[int]VerifyBlockBatch, len(verifyBatch))
+	stats := make(map[int]*VerifyStat, len(verifyBatch))
 	var resultMu sync.Mutex
 	var wg sync.WaitGroup
 	waitCount := len(verifyBatch)
@@ -379,8 +379,9 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*commonpb.Transaction,
 	stat *VerifyStat, block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
 	[][]byte, []*commonpb.Transaction, []string, error) {
-	txHashes := make([][]byte, 0)
-	newAddTxs := make([]*commonpb.Transaction, 0) // tx that verified and not in txpool, need to be added to txpool
+	txHashes := make([][]byte, 0, len(txs))
+	// tx that verified and not in txpool, need to be added to txpool
+	newAddTxs := make([]*commonpb.Transaction, 0, len(txs))
 
 	rwSetVerifyFailTxIds := make([]string, 0)
 	for _, tx := range txs {
