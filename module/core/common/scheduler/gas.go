@@ -188,20 +188,20 @@ func calcTxEventGasUsed(
 	txSimContext protocol.TxSimContext,
 	events []*commonPb.ContractEvent, log protocol.Logger) (uint64, error) {
 
-	gasRWSet := uint64(0)
+	gasEvents := uint64(0)
 	blockVersion := txSimContext.GetBlockVersion()
 	if blockVersion < blockVersion2312 {
-		return gasRWSet, nil
+		return gasEvents, nil
 	} // for block version < 2030102
 
 	gasConfig := gasutils.NewGasConfig(txSimContext.GetLastChainConfig().AccountConfig)
 	if gasConfig == nil {
-		return gasRWSet, nil
+		return gasEvents, nil
 	}
 
 	dataSize := 0
 	for _, event := range events {
-		dataSize += len(event.Topic)
+		dataSize += len(event.ContractName) + len(event.ContractVersion) + len(event.Topic)
 		for _, dataItem := range event.EventData {
 			dataSize += len(dataItem)
 		}
@@ -210,10 +210,10 @@ func calcTxEventGasUsed(
 	log.Debugf("【gas calc】%v, calcTxEventGasUsed, dataSize = %v, gas_price = %v",
 		txSimContext.GetTx().Payload.TxId,
 		dataSize, gasConfig.GetGasPriceForInvoke())
-	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
+	gasEvents, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
 	if err != nil {
 		return 0, err
 	}
 
-	return gasRWSet, nil
+	return gasEvents, nil
 }
