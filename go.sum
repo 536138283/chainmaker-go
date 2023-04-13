@@ -38,6 +38,8 @@ chainmaker.org/chainmaker/net-libp2p v1.2.0/go.mod h1:gqYbyevyMOhh81ny3Y1t7ZPdBy
 chainmaker.org/chainmaker/net-libp2p v1.2.2/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
 chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230411065659-b4f1bbfa2240 h1:IyS88EPME/P3ALOXaOyyb8JnhSAsR4dlYiIbqqvTSgA=
 chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230411065659-b4f1bbfa2240/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
+chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230413095025-700aa8b76478 h1:g1y4lNM+QqCTQoACaQ67VpzFiVqc5QGH1IyqW6v5CCQ=
+chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230413095025-700aa8b76478/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
 chainmaker.org/chainmaker/net-liquid v1.1.0/go.mod h1:A1fjmgLv7ejD1eFh320+ZxGB4OWKYi1wgh56TJZ8b/A=
 chainmaker.org/chainmaker/net-liquid v1.1.1 h1:bKXeP0s5IXs2GTzG3YG96t9s8W+6CaVa69+hnxKOp0E=
 chainmaker.org/chainmaker/net-liquid v1.1.1/go.mod h1:mcfWiEenn7JrCyURXozCmrQlZE5Ddw3+vBBusLCwdsI=
@@ -66,6 +68,10 @@ chainmaker.org/chainmaker/txpool-batch/v2 v2.3.1 h1:GPXHmfCxgG1VieKvh2xNocRdYwo/
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.1/go.mod h1:E9HcWVAbaprvKYI0xA26oQnNj2cDowBIF8i1ZlpbMV8=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230328025736-25ada12cc572 h1:JmwVXdfesfL8wVcwsUCbRmWrMW32r/O9O2RAN5nAFoQ=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230328025736-25ada12cc572/go.mod h1:LkCkoPHV87MS1Ql2VQQAvDfFn6Y29DL4rJAc//z1zPk=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230413081153-26405810aa72 h1:gIpWLLOAOISjvnENntCNrccbCo6Btk+2md3OxyPCEpE=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230413081153-26405810aa72/go.mod h1:LkCkoPHV87MS1Ql2VQQAvDfFn6Y29DL4rJAc//z1zPk=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230413083409-184943319f48 h1:i3j0wQmqz0eHDHhbm8+dVvu6jyk0DnKsswg3Eg3S7C8=
+chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230413083409-184943319f48/go.mod h1:LkCkoPHV87MS1Ql2VQQAvDfFn6Y29DL4rJAc//z1zPk=
 chainmaker.org/chainmaker/txpool-single/v2 v2.3.2-0.20230320121648-4842956d7c71 h1:lhII+yneiuKH2h6kBGtqHU8vDGvrWbtRYoWzT+he9rU=
 chainmaker.org/chainmaker/txpool-single/v2 v2.3.2-0.20230320121648-4842956d7c71/go.mod h1:9Qnjm315kxuF+PnEx0eeEM549h7xUmN1z91FF1tmuus=
 chainmaker.org/chainmaker/utils/v2 v2.3.0/go.mod h1:NXZXc0fVrRCpWqrVyFP/WyobSeT3gz2zmL4uA0Lqvoo=
