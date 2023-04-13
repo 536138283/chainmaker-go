@@ -12,6 +12,9 @@ import (
 	"strings"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common"
+	batch "chainmaker.org/chainmaker/txpool-batch/v3"
+
 	"go.uber.org/atomic"
 
 	"chainmaker.org/chainmaker/common/v3/bitmap"
@@ -351,6 +354,12 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
 			specialTxType, runVmSuccess, applySpecialTx)
 	})
+
+	// 批量交易池的result不在交易中，需要在此处赋值，以免coinbase交易执行失败
+	// 批量交易池场景下，会根据每个批次的rootHash计算来保证交易执行结果的一致性
+	if common.TxPoolType == batch.TxPoolType {
+		tx.Result = txSimContext.GetTxResult()
+	}
 
 	if !applySpecialTx && s.IsSealed() {
 		return false, s.GetSnapshotSize()
