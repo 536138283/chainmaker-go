@@ -183,3 +183,36 @@ func calcWriteSetItemSize(txWrite *commonPb.TxWrite) int {
 
 	return dataSize
 }
+
+func calcTxEventGasUsed(txSimContext protocol.TxSimContext, log protocol.Logger) (uint64, error) {
+	events := txSimContext.GetTxResult().ContractResult.ContractEvent
+
+	gasRWSet := uint64(0)
+	blockVersion := txSimContext.GetBlockVersion()
+	if blockVersion < blockVersion2312 {
+		return gasRWSet, nil
+	} // for block version < 2030102
+
+	gasConfig := gasutils.NewGasConfig(txSimContext.GetLastChainConfig().AccountConfig)
+	if gasConfig == nil {
+		return gasRWSet, nil
+	}
+
+	dataSize := 0
+	for _, event := range events {
+		dataSize += len(event.Topic)
+		for _, dataItem := range event.EventData {
+			dataSize += len(dataItem)
+		}
+	}
+
+	log.Debugf("【gas calc】%v, calcTxEventGasUsed, dataSize = %v, gas_price = %v",
+		txSimContext.GetTx().Payload.TxId,
+		dataSize, gasConfig.GetGasPriceForInvoke())
+	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
+	if err != nil {
+		return 0, err
+	}
+
+	return gasRWSet, nil
+}
