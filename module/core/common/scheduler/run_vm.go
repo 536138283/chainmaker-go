@@ -211,9 +211,9 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	}
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
 		parameters, txSimContext, gasUsed, tx.Payload.TxType)
-	ts.log.Debugf("【gas calc】%v, before `calcTxRWSetGasUsed` gasUsed = %v, err = %v",
-		tx.Payload.TxId, contractResultPayload.GasUsed, err)
 	if blockVersion2312 <= blockVersion {
+		ts.log.Debugf("【gas calc】%v, before `calcTxRWSetGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, contractResultPayload.GasUsed, err)
 		gasRWSet, err = calcTxRWSetGasUsed(txSimContext, txStatusCode == commonPb.TxStatusCode_SUCCESS, ts.log)
 		if err != nil {
 			ts.log.Errorf("calculate tx rw_set gas failed, err = %v", err)
@@ -223,6 +223,10 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 			result.ContractResult.Message = err.Error()
 			return result, specialTxType, err
 		}
+		contractResultPayload.GasUsed += gasRWSet
+		ts.log.Debugf("【gas calc】%v, before `calcTxEventGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, contractResultPayload.GasUsed, err)
+
 		gasEvents, err = calcTxEventGasUsed(txSimContext, ts.log)
 		if err != nil {
 			ts.log.Errorf("calculate tx events gas failed, err = %v", err)
@@ -232,10 +236,10 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 			result.ContractResult.Message = err.Error()
 			return result, specialTxType, err
 		}
-		contractResultPayload.GasUsed += gasRWSet + gasEvents
+		contractResultPayload.GasUsed += gasEvents
 	}
 
-	ts.log.Debugf("【gas calc】%v, after `calcTxRWSetGasUsed` gasUsed = %v, err = %v",
+	ts.log.Debugf("【gas calc】%v, after `calcTxEventGasUsed` gasUsed = %v, err = %v",
 		tx.Payload.TxId, contractResultPayload.GasUsed, err)
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
