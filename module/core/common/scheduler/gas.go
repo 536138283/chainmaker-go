@@ -124,10 +124,12 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 		return gasRWSet, nil
 	} // for block version < 2030102
 
+	log.Debugf("[calcTxRWSetGasUsed] before NewGasConfig()")
 	gasConfig := gasutils.NewGasConfig(txSimContext.GetLastChainConfig().AccountConfig)
 	if gasConfig == nil {
 		return gasRWSet, nil
 	}
+	log.Debugf("[calcTxRWSetGasUsed] after NewGasConfig()")
 
 	dataSize := 0
 	//rwSet := txSimContext.GetTxRWSet(isTxSuccess)
@@ -193,10 +195,12 @@ func calcTxEventGasUsed(txSimContext protocol.TxSimContext, log protocol.Logger)
 		return gasRWSet, nil
 	} // for block version < 2030102
 
+	log.Debugf("[calcTxEventGasUsed] before NewGasConfig()")
 	gasConfig := gasutils.NewGasConfig(txSimContext.GetLastChainConfig().AccountConfig)
 	if gasConfig == nil {
 		return gasRWSet, nil
 	}
+	log.Debugf("[calcTxEventGasUsed] after NewGasConfig()")
 
 	dataSize := 0
 	for _, event := range events {
