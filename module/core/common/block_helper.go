@@ -449,7 +449,7 @@ func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 
 // IsTxDuplicate to check if there is duplicated transactions in one block
 func IsTxDuplicate(txs []*commonPb.Transaction) (duplicate bool, duplicateTxs []string) {
-	txSet := make(map[string]struct{})
+	txSet := make(map[string]struct{}, len(txs))
 	exist := struct{}{}
 	for _, tx := range txs {
 		if tx == nil || tx.Payload == nil {
@@ -727,7 +727,7 @@ func (vb *VerifierBlock) ValidateBlock(
 	//}
 
 	// get contract events
-	contractEventMap := make(map[string][]*commonPb.ContractEvent)
+	contractEventMap := make(map[string][]*commonPb.ContractEvent, len(block.Txs))
 	for _, tx := range block.Txs {
 		var events []*commonPb.ContractEvent
 		if result, ok := txResultMap[tx.Payload.TxId]; ok {
@@ -756,7 +756,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
 		return nil, timeLasts, nil, err
 	}
-	txResultMap := make(map[string]*commonPb.Result)
+	txResultMap := make(map[string]*commonPb.Result, len(block.GetTxs()))
 	for _, tx := range block.GetTxs() {
 		if tx.Result != nil {
 			txResultMap[tx.Payload.TxId] = tx.Result
@@ -847,7 +847,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	//}
 
 	// get contract events
-	contractEventMap := make(map[string][]*commonPb.ContractEvent)
+	contractEventMap := make(map[string][]*commonPb.ContractEvent, len(block.Txs))
 	for _, tx := range block.Txs {
 		var events []*commonPb.ContractEvent
 		if result, ok := txResultMap[tx.Payload.TxId]; ok {
@@ -1365,7 +1365,8 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		newTxs := make([]*commonPb.Transaction, 0)
+		//in most cases the number is the same
+		newTxs := make([]*commonPb.Transaction, 0, int(block.Header.TxCount))
 		for _, tx := range txs {
 			newTxs = append(newTxs, tx...)
 		}
@@ -1461,7 +1462,7 @@ func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
 		fetchTxs = append(fetchTxs, fetchBatch...)
 	}
 
-	txIndex := make(map[string]uint32)
+	txIndex := make(map[string]uint32, len(fetchTxs))
 	for index, tx := range fetchTxs {
 		txIndex[tx.Payload.TxId] = uint32(index)
 	}

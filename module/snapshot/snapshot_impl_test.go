@@ -1015,3 +1015,9 @@ func TestReBuildDag(t *testing.T) {
 		})
 	}
 }
+
+func TestConstructKey(t *testing.T) {
+	contractName := "save"
+	key := []byte("name")
+	fmt.Println(constructKey(contractName, key))
+}
