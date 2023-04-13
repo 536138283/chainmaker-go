@@ -309,7 +309,8 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 		)
 	}
 
-	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
+	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`",
+		contractName, tx.GetPayload().TxId)
 	contract, err := txSimContext.GetContractByName(contractName)
 	if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
