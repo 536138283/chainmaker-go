@@ -129,27 +129,27 @@ func calcTxRWSetGasUsed(txSimContext protocol.TxSimContext,
 		return gasRWSet, nil
 	}
 
-	rwSet := txSimContext.GetTxRWSet(isTxSuccess)
 	dataSize := 0
-	for _, txRead := range rwSet.TxReads {
-		if !utils.IsNativeContract(txRead.ContractName) {
-			dataSize += calcReadSetItemSize(txRead)
-		}
-		log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v, dataSize = %v",
-			txSimContext.GetTx().Payload.TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value), dataSize)
-	}
-	for _, txWrite := range rwSet.TxWrites {
-		if !utils.IsNativeContract(txWrite.ContractName) {
-			dataSize += calcWriteSetItemSize(txWrite)
-		}
-		log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v, dataSize = %v",
-			txSimContext.GetTx().Payload.TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value), dataSize)
-	}
-
-	log.Debugf("【gas calc】%v, calcTxRWSetGasUsed, dataSize = %v, gas_price = %v, read_set(%v), write_set(%v)",
-		txSimContext.GetTx().Payload.TxId,
-		dataSize, gasConfig.GetGasPriceForInvoke(),
-		len(rwSet.TxReads), len(rwSet.TxWrites))
+	//rwSet := txSimContext.GetTxRWSet(isTxSuccess)
+	//for _, txRead := range rwSet.TxReads {
+	//	if !utils.IsNativeContract(txRead.ContractName) {
+	//		dataSize += calcReadSetItemSize(txRead)
+	//	}
+	//	log.Debugf("【gas calc】%v, read key = %v # %v, value size = %v, dataSize = %v",
+	//		txSimContext.GetTx().Payload.TxId, txRead.ContractName, string(txRead.Key), len(txRead.Value), dataSize)
+	//}
+	//for _, txWrite := range rwSet.TxWrites {
+	//	if !utils.IsNativeContract(txWrite.ContractName) {
+	//		dataSize += calcWriteSetItemSize(txWrite)
+	//	}
+	//	log.Debugf("【gas calc】%v, write key = %v # %v, value size = %v, dataSize = %v",
+	//		txSimContext.GetTx().Payload.TxId, txWrite.ContractName, string(txWrite.Key), len(txWrite.Value), dataSize)
+	//}
+	//
+	//log.Debugf("【gas calc】%v, calcTxRWSetGasUsed, dataSize = %v, gas_price = %v, read_set(%v), write_set(%v)",
+	//	txSimContext.GetTx().Payload.TxId,
+	//	dataSize, gasConfig.GetGasPriceForInvoke(),
+	//	len(rwSet.TxReads), len(rwSet.TxWrites))
 	gasRWSet, err := gasutils.MultiplyGasPrice(dataSize, gasConfig.GetGasPriceForInvoke())
 	if err != nil {
 		return 0, err
