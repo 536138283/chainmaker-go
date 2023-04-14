@@ -474,12 +474,6 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// for multi-sign enable_manual_run
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), pubPolicyMajorityAdmin)
-
-	// transaction id blacklist manager
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_TRANSACTION_MANAGER.String()+"-"+
-		syscontract.TransactionManagerFunction_ADD_BLACKLIST_TX_IDS.String(), policyAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_TRANSACTION_MANAGER.String()+"-"+
-		syscontract.TransactionManagerFunction_DELETE_BLACKLIST_TX_IDS.String(), policyAdmin)
 }
 
 // need to consistent with 2.1.0 for dpos
@@ -621,12 +615,6 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
-
-	// transaction id blacklist manager
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_TRANSACTION_MANAGER.String()+"-"+
-		syscontract.TransactionManagerFunction_ADD_BLACKLIST_TX_IDS.String(), policyAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_TRANSACTION_MANAGER.String()+"-"+
-		syscontract.TransactionManagerFunction_DELETE_BLACKLIST_TX_IDS.String(), policyAdmin)
 }
 
 func (p *pkACProvider) verifyPrincipalPolicy(principal,
