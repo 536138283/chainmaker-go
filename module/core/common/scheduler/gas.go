@@ -207,6 +207,8 @@ func calcTxEventGasUsed(
 				dataSize += len(dataItem)
 			}
 		}
+		log.Debugf("【gas calc】%v, event contractName = %v, topic = %v, dataSize = %v",
+			txSimContext.GetTx().Payload.TxId, event.ContractName, string(event.Topic), dataSize)
 	}
 
 	log.Debugf("【gas calc】%v, calcTxEventGasUsed, dataSize = %v, gas_price = %v",
