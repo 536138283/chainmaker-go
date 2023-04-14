@@ -1,8 +1,9 @@
 package scheduler
 
 import (
-	"chainmaker.org/chainmaker/utils/v2"
 	"testing"
+
+	"chainmaker.org/chainmaker/utils/v2"
 
 	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
 
