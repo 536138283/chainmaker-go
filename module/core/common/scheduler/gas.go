@@ -201,12 +201,14 @@ func calcTxEventGasUsed(
 
 	dataSize := 0
 	for _, event := range events {
-		if !!utils.IsNativeContract(event.ContractName) {
+		if !utils.IsNativeContract(event.ContractName) {
 			dataSize += len(event.ContractName) + len(event.ContractVersion) + len(event.Topic)
 			for _, dataItem := range event.EventData {
 				dataSize += len(dataItem)
 			}
 		}
+		log.Debugf("【gas calc】%v, event contractName = %v, topic = %v, dataSize = %v",
+			txSimContext.GetTx().Payload.TxId, event.ContractName, string(event.Topic), dataSize)
 	}
 
 	log.Debugf("【gas calc】%v, calcTxEventGasUsed, dataSize = %v, gas_price = %v",

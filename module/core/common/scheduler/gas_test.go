@@ -3,6 +3,8 @@ package scheduler
 import (
 	"testing"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
 
 	"chainmaker.org/chainmaker/logger/v2"
@@ -194,4 +196,8 @@ func TestCalcMultiSignTxGasUsed(t *testing.T) {
 	gasUsed, err := calcTxGasUsed(txSimContext, logger)
 	assert.Nil(t, err)
 	assert.Equal(t, gasUsed, uint64(1003156+gasExpected))
+}
+
+func TestIsNativeContract(t *testing.T) {
+	assert.Equal(t, utils.IsNativeContract("CHAIN_CONFIG"), true)
 }
