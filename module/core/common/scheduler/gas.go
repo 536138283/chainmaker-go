@@ -201,7 +201,7 @@ func calcTxEventGasUsed(
 
 	dataSize := 0
 	for _, event := range events {
-		if !!utils.IsNativeContract(event.ContractName) {
+		if !utils.IsNativeContract(event.ContractName) {
 			dataSize += len(event.ContractName) + len(event.ContractVersion) + len(event.Topic)
 			for _, dataItem := range event.EventData {
 				dataSize += len(dataItem)
