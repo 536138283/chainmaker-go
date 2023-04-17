@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
-	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -313,60 +314,46 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 	contractName string, topic string, alreadySendHistoryBlockHeight int64) error {
 
 	var (
-		errCode            commonErr.ErrCode
-		err                error
-		errMsg             string
-		eventSubscriber    *subscriber.EventSubscriber
-		historyBlockHeight int64
+		errCode         commonErr.ErrCode
+		err             error
+		errMsg          string
+		lastBlockHeight int64
+		chainId         = tx.Payload.ChainId
 	)
 
-	eventCh := make(chan model.NewContractEvent, 1000)
-
-	chainId := tx.Payload.ChainId
-	if eventSubscriber, err = s.chainMakerServer.GetEventSubscribe(chainId); err != nil {
+	contractEventC := make(chan model.NewContractEvent, 1)
+	updaterCtx, cancelUpdater := context.WithCancel(context.Background())
+	defer cancelUpdater()
+	err = s.startSubscribeContractEvent(updaterCtx, &lastBlockHeight, chainId, contractEventC)
+	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_SUBSCRIBER
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
 		return status.Error(codes.Internal, errMsg)
 	}
 
-	sub := eventSubscriber.SubscribeContractEvent(eventCh)
-	defer sub.Unsubscribe()
+	if alreadySendHistoryBlockHeight == -1 {
+		alreadySendHistoryBlockHeight = atomic.LoadInt64(&lastBlockHeight)
+	}
+
 	for {
 		select {
-		case ev := <-eventCh:
-			contractEventInfoList := ev.ContractEventInfoList.ContractEvents
-
-			blockHeight := int64(contractEventInfoList[0].BlockHeight)
-			if endBlock > 0 && blockHeight > endBlock {
+		case <-contractEventC:
+			// 首先判断是否结束发送数据。
+			// 注意：当且仅当 endBlockHeight != -1 时，才有可能结束发送数据。
+			// 当 endBlockHeight == -1 时，永不结束。
+			if endBlock != -1 && alreadySendHistoryBlockHeight >= endBlock {
 				return status.Error(codes.OK, "OK")
 			}
 
-			if alreadySendHistoryBlockHeight != -1 &&
-				blockHeight > alreadySendHistoryBlockHeight {
-				historyBlockHeight, err = s.sendHistoryContractEvent(store, server, alreadySendHistoryBlockHeight+1,
-					blockHeight, contractName, topic)
+			if alreadySendHistoryBlockHeight < atomic.LoadInt64(&lastBlockHeight) {
+				alreadySendHistoryBlockHeight, err = s.sendHistoryContractEvent(store, server, alreadySendHistoryBlockHeight+1,
+					endBlock, contractName, topic)
 				if err != nil {
 					s.log.Errorf("send history contract event failed, %s", err)
 					return err
 				}
-
-				if endBlock > 0 && historyBlockHeight >= endBlock {
-					return status.Error(codes.OK, "OK")
-				}
-
-				alreadySendHistoryBlockHeight = -1
-				continue
 			}
-
-			if err = s.doSendSubscribeContractEvent(server, contractEventInfoList, contractName, topic); err != nil {
-				return status.Error(codes.Internal, errMsg)
-			}
-
-			if endBlock > 0 && blockHeight >= endBlock {
-				return status.Error(codes.OK, "OK")
-			}
-
 		case <-server.Context().Done():
 			return nil
 		case <-s.ctx.Done():

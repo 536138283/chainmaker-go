@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
-	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -142,59 +143,43 @@ func (s *ApiService) sendNewBlock(store protocol.BlockchainStore, tx *commonPb.T
 		errCode         commonErr.ErrCode
 		err             error
 		errMsg          string
-		eventSubscriber *subscriber.EventSubscriber
-		blockInfo       *commonPb.BlockInfo
+		lastBlockHeight int64
+		chainId         = tx.Payload.ChainId
 	)
 
-	blockCh := make(chan model.NewBlockEvent, 1000)
-
-	chainId := tx.Payload.ChainId
-	if eventSubscriber, err = s.chainMakerServer.GetEventSubscribe(chainId); err != nil {
+	blockC := make(chan model.NewBlockEvent, 1)
+	updaterCtx, cancelUpdater := context.WithCancel(context.Background())
+	defer cancelUpdater()
+	err = s.startSubscribeBlockEvent(updaterCtx, &lastBlockHeight, chainId, blockC)
+	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_SUBSCRIBER
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
 		return status.Error(codes.Internal, errMsg)
 	}
 
-	sub := eventSubscriber.SubscribeBlockEvent(blockCh)
-	defer sub.Unsubscribe()
+	if alreadySendHistoryBlockHeight == -1 {
+		alreadySendHistoryBlockHeight = atomic.LoadInt64(&lastBlockHeight)
+	}
 
 	for {
 		select {
-		case ev := <-blockCh:
-			blockInfo = ev.BlockInfo
+		case <-blockC:
+			// 首先判断是否结束发送数据。
+			// 注意：当且仅当 endBlockHeight != -1 时，才有可能结束发送数据。
+			// 当 endBlockHeight == -1 时，永不结束。
+			if endBlockHeight != -1 && alreadySendHistoryBlockHeight >= endBlockHeight {
+				return status.Error(codes.OK, "OK")
+			}
 
-			if alreadySendHistoryBlockHeight != -1 && int64(blockInfo.Block.Header.BlockHeight) > alreadySendHistoryBlockHeight {
-				_, err = s.sendHistoryBlock(store, server, alreadySendHistoryBlockHeight+1,
-					int64(blockInfo.Block.Header.BlockHeight), withRWSet, onlyHeader, reqSender, reqSenderOrgId)
+			if alreadySendHistoryBlockHeight < atomic.LoadInt64(&lastBlockHeight) {
+				alreadySendHistoryBlockHeight, err = s.sendHistoryBlock(store, server, alreadySendHistoryBlockHeight+1,
+					endBlockHeight, withRWSet, onlyHeader, reqSender, reqSenderOrgId)
 				if err != nil {
 					s.log.Errorf("send history block failed, %s", err)
 					return err
 				}
-
-				alreadySendHistoryBlockHeight = -1
-				continue
 			}
-
-			if reqSender == protocol.RoleLight {
-				newBlock := utils.FilterBlockTxs(reqSenderOrgId, blockInfo.Block)
-				blockInfo = &commonPb.BlockInfo{
-					Block:     newBlock,
-					RwsetList: ev.BlockInfo.RwsetList,
-				}
-			}
-
-			//printAllTxsOfBlock(blockInfo, reqSender, reqSenderOrgId)
-
-			if err = s.dealBlockSubscribeResult(server, blockInfo, withRWSet, onlyHeader); err != nil {
-				s.log.Errorf(err.Error())
-				return status.Error(codes.Internal, err.Error())
-			}
-
-			if endBlockHeight != -1 && int64(blockInfo.Block.Header.BlockHeight) >= endBlockHeight {
-				return status.Error(codes.OK, "OK")
-			}
-
 		case <-server.Context().Done():
 			return nil
 		case <-s.ctx.Done():
