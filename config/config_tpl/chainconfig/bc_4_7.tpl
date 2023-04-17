@@ -217,11 +217,41 @@ resource_policies:
       org_list:
       role_list:
         - admin
+  - resource_name: CHAIN_CONFIG-BLOCK_UPDATE
+    policy:
+      rule: MAJORITY
+      org_list:
+      role_list:
+        - admin
+  - resource_name: CONTRACT_MANAGE-UPGRADE_CONTRACT
+    policy:
+      rule: MAJORITY
+      org_list:
+      role_list:
+        - admin
   - resource_name: CONTRACT_MANAGE-INIT_CONTRACT
     policy:
       rule: ANY
       org_list:
       role_list:
+  - resource_name: CONTRACT_MANAGE-FREEZE_CONTRACT
+    policy:
+      rule: MAJORITY
+      org_list:
+      role_list:
+        - admin
+  - resource_name: CONTRACT_MANAGE-UNFREEZE_CONTRACT
+    policy:
+      rule: MAJORITY
+      org_list:
+      role_list:
+        - admin
+  - resource_name: CONTRACT_MANAGE-REVOKE_CONTRACT
+    policy:
+      rule: MAJORITY
+      org_list:
+      role_list:
+        - admin
 
 # The disabled native contract list
 # Disable the system contract by specifying the system contract name
