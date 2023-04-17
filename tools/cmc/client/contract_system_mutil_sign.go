@@ -191,7 +191,7 @@ func multiSignReq() error {
 	}
 
 	var payer []*common.EndorsementEntry
-	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
+	if len(payerKeyFilePath) > 0 {
 		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
 			client, payload)
 		if err != nil {
@@ -264,7 +264,7 @@ func multiSignVote() error {
 	}
 
 	var payer []*common.EndorsementEntry
-	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
+	if len(payerKeyFilePath) > 0 {
 		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
 			client, payload)
 		if err != nil {
@@ -411,7 +411,7 @@ func multiSignTrig() error {
 	}
 
 	var payer []*common.EndorsementEntry
-	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
+	if len(payerKeyFilePath) > 0 {
 		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
 			client, payload)
 		if err != nil {
