@@ -257,7 +257,8 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	}
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
 
-	contract, err := store.GetContractByName(tx.Payload.ContractName)
+	//contract, err := store.GetContractByName(tx.Payload.ContractName)
+	contract, err := ctx.GetContractByName(tx.Payload.ContractName)
 	if err != nil {
 		s.log.Error(err)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
