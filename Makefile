@@ -22,10 +22,10 @@ GOLDFLAGS += -X "${LOCALCONF_HOME}.GitCommit=${GIT_COMMIT}"
 chainmaker:
     ifeq ($(PLATFORM),"Windows")
 		@echo "build for windows"
-		@rm -rf go.sum && cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker.exe
+		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker.exe
     else
 		@echo "build for linux or mac"
-		@rm -rf go.sum && cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
+		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
     endif
 
 chainmaker-vendor:
