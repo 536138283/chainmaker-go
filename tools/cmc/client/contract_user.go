@@ -73,16 +73,16 @@ func userContractCMD() *cobra.Command {
 // createUserContractCMD create user contract command
 // @return *cobra.Command
 // use as:
-//./cmc client contract user create \
-//--contract-name=fact \
-//--runtime-type=WASMER \
-//--byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
-//--version=1.0 \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--sync-result=true \
-//--params="{}"
+// ./cmc client contract user create \
+// --contract-name=fact \
+// --runtime-type=WASMER \
+// --byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
+// --version=1.0 \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --sync-result=true \
+// --params="{}"
 func createUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -140,7 +140,7 @@ func invokeUserContractCMD() *cobra.Command {
 }
 
 // invokeContractTimesCMD invoke contract and set invoke times
-//多次的并发调用指定合约方法
+// 多次的并发调用指定合约方法
 // @return *cobra.Command
 func invokeContractTimesCMD() *cobra.Command {
 	cmd := &cobra.Command{
@@ -191,16 +191,16 @@ func getUserContractCMD() *cobra.Command {
 // @return *cobra.Command
 // use as:
 // ./cmc client contract user upgrade \
-//--contract-name=fact \
-//--runtime-type=WASMER \
-//--byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
-//--version=2.0 \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true \
-//--params="{}"
+// --contract-name=fact \
+// --runtime-type=WASMER \
+// --byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
+// --version=2.0 \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true \
+// --params="{}"
 func upgradeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade",
@@ -230,12 +230,12 @@ func upgradeUserContractCMD() *cobra.Command {
 // @return *cobra.Command
 // use as:
 // ./cmc client contract user freeze \
-//--contract-name=fact \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true
+// --contract-name=fact \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true
 func freezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "freeze",
@@ -259,13 +259,13 @@ func freezeUserContractCMD() *cobra.Command {
 // unfreezeUserContractCMD unfreeze user contract command
 // @return *cobra.Command
 // use as：
-//./cmc client contract user unfreeze \
-//--contract-name=fact \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true
+// ./cmc client contract user unfreeze \
+// --contract-name=fact \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true
 func unfreezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unfreeze",
@@ -290,12 +290,12 @@ func unfreezeUserContractCMD() *cobra.Command {
 // @return *cobra.Command
 // use as:
 // ./cmc client contract user revoke \
-//--contract-name=fact \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true
+// --contract-name=fact \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true
 func revokeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "revoke",
@@ -424,7 +424,7 @@ func createUpgradeUserContract(op createUpgradeContractOp) error {
 	}
 
 	var payer []*common.EndorsementEntry
-	if len(payerKeyFilePath) > 0 && len(payerCrtFilePath) > 0 {
+	if len(payerKeyFilePath) > 0 {
 		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
 			client, payload)
 		if err != nil {
