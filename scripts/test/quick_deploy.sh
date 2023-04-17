@@ -43,11 +43,11 @@ function start_chainmaker() {
   if [ "${alreadyBuild}" != "true" ]; then
     echo -e "\n\n【generate】 certs and config..."
     if [ "${enableDocker}" == "true" ]; then
-      echo "【sh】 ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v true  --vtp=tcp --vlog=INFO"
-      ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v true  --vtp=tcp --vlog=INFO
+      echo "【sh】 ./prepare.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO -v true -j false --jlog=INFO  --vtp=tcp --vlog=INFO"
+      ./prepare.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO -v true -j false --jlog=INFO  --vtp=tcp --vlog=INFO
     else
-      echo "【sh】 ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v false  --vtp=tcp --vlog=INFO"
-      ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v false  --vtp=tcp --vlog=INFO
+      echo "【sh】 ./prepare.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO -v false -j false --jlog=INFO  --vtp=tcp --vlog=INFO"
+      ./prepare.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO -v false -j false --jlog=INFO  --vtp=tcp --vlog=INFO
     fi
 #    echo -e "\nINFO\n\n\n" | ./prepare.sh $node_count $chain_count
     echo -e "\n\n【build】 release..."

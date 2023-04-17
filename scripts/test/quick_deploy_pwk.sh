@@ -42,11 +42,11 @@ function start_chainmaker() {
   if [ "${alreadyBuild}" != "true" ]; then
     echo -e "\n\n【generate】 certs and config..."
     if [ "${enableDocker}" == "true" ]; then
-      echo "【sh】 ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v true  --vtp=tcp --vlog=INFO"
-      ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v true  --vtp=tcp --vlog=INFO
+      echo "【sh】 ./prepare_pwk.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO --hash SHA256 -v true -j false --jlog=INFO  --vtp=tcp --vlog=INFO"
+      ./prepare_pwk.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO --hash SHA256 -v true -j false --jlog=INFO  --vtp=tcp --vlog=INFO
     else
-      echo "【sh】 ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v false  --vtp=tcp --vlog=INFO"
-      ./prepare_pwk.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO --hash SHA256 -v false  --vtp=tcp --vlog=INFO
+      echo "【sh】 ./prepare_pwk.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO --hash SHA256 -v false -j false --jlog=INFO  --vtp=tcp --vlog=INFO"
+      ./prepare_pwk.sh 4 1 11391 12391 32391 22391 23391 -c 1 -l INFO --hash SHA256 -v false -j false --jlog=INFO  --vtp=tcp --vlog=INFO
     fi
 #    echo -e "\nINFO\n\n\n" | ./prepare_pwk.sh $node_count $chain_count
     echo -e "\n\n【build】 release..."
