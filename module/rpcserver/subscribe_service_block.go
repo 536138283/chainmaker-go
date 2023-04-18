@@ -162,7 +162,10 @@ func (s *ApiService) sendNewBlock(store protocol.BlockchainStore, tx *commonPb.T
 	for {
 		select {
 		case ev := <-blockCh:
-			blockInfo = ev.BlockInfo
+			blockInfo = &commonPb.BlockInfo{
+				Block:     ev.BlockInfo.Block,
+				RwsetList: ev.BlockInfo.RwsetList,
+			}
 
 			if alreadySendHistoryBlockHeight != -1 && int64(blockInfo.Block.Header.BlockHeight) > alreadySendHistoryBlockHeight {
 				_, err = s.sendHistoryBlock(store, server, alreadySendHistoryBlockHeight+1,
@@ -176,12 +179,12 @@ func (s *ApiService) sendNewBlock(store protocol.BlockchainStore, tx *commonPb.T
 				continue
 			}
 
+			// 黑名单交易
+			blockInfo.Block = utils.FilterBlockBlacklistTxs(blockInfo.Block)
+			blockInfo.RwsetList = utils.FilterBlockBlacklistTxRWSet(blockInfo.RwsetList, blockInfo.Block.Header.ChainId)
+
 			if reqSender == protocol.RoleLight {
-				newBlock := utils.FilterBlockTxs(reqSenderOrgId, blockInfo.Block)
-				blockInfo = &commonPb.BlockInfo{
-					Block:     newBlock,
-					RwsetList: ev.BlockInfo.RwsetList,
-				}
+				blockInfo.Block = utils.FilterBlockTxs(reqSenderOrgId, blockInfo.Block)
 			}
 
 			//printAllTxsOfBlock(blockInfo, reqSender, reqSenderOrgId)
@@ -373,6 +376,9 @@ func (s *ApiService) getBlockInfoFromStore(store protocol.BlockchainStore, curbl
 		}
 	}
 
+	// 黑名单交易
+	blockInfo.Block = utils.FilterBlockBlacklistTxs(blockInfo.Block)
+	blockInfo.RwsetList = utils.FilterBlockBlacklistTxRWSet(blockInfo.RwsetList, blockInfo.Block.Header.ChainId)
 	//printAllTxsOfBlock(blockInfo, reqSender, reqSenderOrgId)
 
 	return blockInfo, -1, nil
