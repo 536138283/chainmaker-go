@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"strings"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
@@ -343,10 +345,11 @@ func (s *ApiService) doSendSubscribeTx(server apiPb.RpcNode_SubscribeServer, tx 
 		result *commonPb.SubscribeResult
 	)
 
+	txNew := utils.FilterBlacklistTxs([]*commonPb.Transaction{tx})[0]
 	isReqSenderLightNode := reqSender == protocol.RoleLight
 	isTxRelatedToSender := (tx.Sender != nil) && reqSenderOrgId == tx.Sender.Signer.OrgId
 
-	if result, err = s.getTxSubscribeResult(tx); err != nil {
+	if result, err = s.getTxSubscribeResult(txNew); err != nil {
 		errMsg = fmt.Sprintf("get tx subscribe result failed, %s", err)
 		s.log.Error(errMsg)
 		return errors.New(errMsg)
