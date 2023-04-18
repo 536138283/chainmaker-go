@@ -100,6 +100,8 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
 	mockCommit := newMockCommitter(ctrl, mockLedger)
 	log := &test.GoLogger{}
+	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
+	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
 	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, log)
 	require.NoError(t, service.Start())
 	return service, func() {
