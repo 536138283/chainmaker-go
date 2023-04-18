@@ -67,7 +67,7 @@ docker-build:
 	docker build -t chainmaker -f ./DOCKER/Dockerfile .
 	docker tag chainmaker chainmaker:${VERSION}
 
-docker-build-dev: chainmaker
+docker-build-dev: chainmaker cmc
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
 	docker tag chainmaker chainmaker:${VERSION}
 
