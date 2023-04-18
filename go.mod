@@ -3,35 +3,35 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.3.1
-	chainmaker.org/chainmaker/common/v2 v2.3.2-0.20230315075813-4b70c341d659
+	chainmaker.org/chainmaker/chainconf/v2 v2.3.2-0.20230417104500-89cdfe0e84b2 // v2.3.1.1_qc
+	chainmaker.org/chainmaker/common/v2 v2.3.2-0.20230315075813-4b70c341d659 // v2.3.1.1_qc
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.1
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.1
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230412113252-b9247a9c2c94
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3-0.20230418040609-7ee70ff660be // v2.3.1.1_qc
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.2
-	chainmaker.org/chainmaker/localconf/v2 v2.3.2-0.20230412112206-930cf06ab186
+	chainmaker.org/chainmaker/localconf/v2 v2.3.2-0.20230418040018-f1fde5eeeda4 // v2.3.1.1_qc
 	chainmaker.org/chainmaker/logger/v2 v2.3.0
 	chainmaker.org/chainmaker/net-common v1.2.2
 	chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230413095025-700aa8b76478
 	chainmaker.org/chainmaker/net-liquid v1.1.1
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.2
-	chainmaker.org/chainmaker/protocol/v2 v2.3.2
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.2
-	chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230407063327-0ec94826651b
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.3-0.20230417062357-115b66992ea2 // v2.3.1.1_qc
+	chainmaker.org/chainmaker/protocol/v2 v2.3.3-0.20230417073305-9098317722b4 // v2.3.1.1_qc
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.3-0.20230417152906-6a6d391ce94f // v2.3.1.1_qc
+	chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230417102912-b7933d9b3b82 // v2.3.1.1_qc
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.1
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230413083409-184943319f48
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.2-0.20230320121648-4842956d7c71
-	chainmaker.org/chainmaker/utils/v2 v2.3.2
+	chainmaker.org/chainmaker/utils/v2 v2.3.3-0.20230417100430-e3d266cb2942 // v2.3.1.1_qc
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2
-	chainmaker.org/chainmaker/vm/v2 v2.3.2
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.2 // v2.3.1.1_qc x
+	chainmaker.org/chainmaker/vm-evm/v2 v2.3.2 // v2.3.1.1_qc x
+	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2 // v2.3.1.1_qc x
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230417104601-aa044b879287 // v2.3.1.1_qc
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2 // v2.3.1.1_qc x
+	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2 // v2.3.1.1_qc x
+	chainmaker.org/chainmaker/vm/v2 v2.3.3-0.20230417104741-3442158b83ef // v2.3.1.1_qc
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -63,8 +63,6 @@ require (
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
 	google.golang.org/grpc v1.47.0
-	gorm.io/driver/mysql v1.2.0
-	gorm.io/gorm v1.22.3
 )
 
 require (

@@ -24,7 +24,7 @@ import (
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/store/v2/archive"
+	tbf "chainmaker.org/chainmaker/store/v2/types/blockfile"
 	"chainmaker.org/chainmaker/utils/v2"
 	native "chainmaker.org/chainmaker/vm-native/v2"
 	"chainmaker.org/chainmaker/vm/v2"
@@ -299,9 +299,9 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		s.log.Warn(errMsg)
 
 		resp.Code = txStatusCode
-		if txResult.Message == archive.ErrArchivedBlock.Error() {
+		if txResult.Message == tbf.ErrArchivedBlock.Error() {
 			resp.Code = commonPb.TxStatusCode_ARCHIVED_BLOCK
-		} else if txResult.Message == archive.ErrArchivedTx.Error() {
+		} else if txResult.Message == tbf.ErrArchivedTx.Error() {
 			resp.Code = commonPb.TxStatusCode_ARCHIVED_TX
 		}
 

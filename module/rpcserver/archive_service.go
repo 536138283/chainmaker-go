@@ -103,22 +103,24 @@ func (s *ApiService) doArchiveBlock(tx *commonPb.Transaction) *commonPb.TxRespon
 	return resp
 }
 
-func (s *ApiService) getRestoreBlock(params []*commonPb.KeyValuePair) ([]byte, error) {
-	if len(params) != 1 {
+func (s *ApiService) getRestoreBlocks(params []*commonPb.KeyValuePair) ([][]byte, error) {
+	if len(params) < 1 {
 		return nil, errors.New("params count != 1")
 	}
-
 	key := syscontract.RestoreBlock_FULL_BLOCK.String()
-	if params[0].Key != key {
-		return nil, fmt.Errorf("invalid key, must be %s", key)
+	retData := make([][]byte, 0, len(params))
+	for i := 0; i < len(params); i++ {
+		tempParam := params[i]
+		if tempParam.Key != key {
+			return nil, fmt.Errorf("invalid key, must be %s", key)
+		}
+		fullBlock := tempParam.Value
+		if len(fullBlock) == 0 {
+			return nil, errors.New("empty restore block data")
+		}
+		retData = append(retData, fullBlock)
 	}
-
-	fullBlock := params[0].Value
-	if len(fullBlock) == 0 {
-		return nil, errors.New("empty restore block data")
-	}
-
-	return fullBlock, nil
+	return retData, nil
 }
 
 func (s *ApiService) doRestoreBlock(tx *commonPb.Transaction) *commonPb.TxResponse {
@@ -126,7 +128,7 @@ func (s *ApiService) doRestoreBlock(tx *commonPb.Transaction) *commonPb.TxRespon
 	var (
 		err       error
 		errMsg    string
-		fullBlock []byte
+		fullBlock [][]byte
 		errCode   commonErr.ErrCode
 		store     protocol.BlockchainStore
 		resp      = &commonPb.TxResponse{TxId: tx.Payload.TxId}
@@ -143,7 +145,7 @@ func (s *ApiService) doRestoreBlock(tx *commonPb.Transaction) *commonPb.TxRespon
 		return resp
 	}
 
-	if fullBlock, err = s.getRestoreBlock(tx.Payload.Parameters); err != nil {
+	if fullBlock, err = s.getRestoreBlocks(tx.Payload.Parameters); err != nil {
 		errCode = commonErr.ERR_CODE_CHECK_PAYLOAD_PARAM_ARCHIVE_BLOCK
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
@@ -152,7 +154,7 @@ func (s *ApiService) doRestoreBlock(tx *commonPb.Transaction) *commonPb.TxRespon
 		return resp
 	}
 
-	if err = store.RestoreBlocks([][]byte{fullBlock}); err != nil {
+	if err = store.RestoreBlocks(fullBlock); err != nil {
 		errMsg = fmt.Sprintf("restore block failed, %s", err.Error())
 		s.log.Error(errMsg)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR

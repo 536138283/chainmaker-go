@@ -127,8 +127,8 @@ cert-qta:
 	cd test/scenario0_native && python3 chain1.py
 	cd test/scenario1_evm && python3 chain1.py
 	cd test/scenario2_rust && python3 chain1.py
-	cd test/chain1 && ./stop.sh
-	cd test/chain1 && ./clean.sh
+#	cd test/chain1 && ./stop.sh
+#	cd test/chain1 && ./clean.sh
 
 pub-qta:
 	echo "clear environment"

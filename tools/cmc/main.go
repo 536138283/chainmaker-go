@@ -15,6 +15,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/bulletproofs"
 	"chainmaker.org/chainmaker-go/tools/cmc/cert"
 	"chainmaker.org/chainmaker-go/tools/cmc/client"
+	commandutil "chainmaker.org/chainmaker-go/tools/cmc/command_util"
 	"chainmaker.org/chainmaker-go/tools/cmc/console"
 	"chainmaker.org/chainmaker-go/tools/cmc/gas"
 	"chainmaker.org/chainmaker-go/tools/cmc/hibe"
@@ -56,7 +57,7 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(gas.NewGasManageCMD())
 	mainCmd.AddCommand(txpool.NewTxPoolCMD())
 	mainCmd.AddCommand(version.VersionCMD())
-
+	mainCmd.AddCommand(commandutil.NewUtilCMD())
 	// 后续改成go-sdk
 	//mainCmd.AddCommand(payload.PayloadCMD())
 	//mainCmd.AddCommand(log.LogCMD())
