@@ -8,17 +8,19 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"sync/atomic"
 
-	"github.com/gogo/protobuf/proto"
-
+	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	protocol "chainmaker.org/chainmaker/protocol/v2"
 	utils "chainmaker.org/chainmaker/utils/v2"
+	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
@@ -138,4 +140,80 @@ func (s *ApiService) getRoleFromTx(tx *commonPb.Transaction) (protocol.Role, err
 
 	ac := bc.GetAccessControl()
 	return utils.GetRoleFromTx(tx, ac)
+}
+
+func (s *ApiService) startSubscribeBlockEvent(ctx context.Context, lastBlockHeight *int64, chainId string,
+	dataC chan model.NewBlockEvent) error {
+	db, err := s.chainMakerServer.GetStore(chainId)
+	if err != nil {
+		return err
+	}
+	lastBlock, err := db.GetLastBlock()
+	if err != nil {
+		return err
+	}
+	atomic.StoreInt64(lastBlockHeight, int64(lastBlock.Header.BlockHeight))
+
+	blockEventC := make(chan model.NewBlockEvent, 1)
+	eventSubscriber, err := s.chainMakerServer.GetEventSubscribe(chainId)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		sub := eventSubscriber.SubscribeBlockEvent(blockEventC)
+		defer sub.Unsubscribe()
+
+		for {
+			select {
+			case ev := <-blockEventC:
+				atomic.StoreInt64(lastBlockHeight, int64(ev.BlockInfo.Block.Header.BlockHeight))
+				select {
+				case dataC <- ev:
+				default:
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return nil
+}
+
+func (s *ApiService) startSubscribeContractEvent(ctx context.Context, lastBlockHeight *int64, chainId string,
+	dataC chan model.NewContractEvent) error {
+	db, err := s.chainMakerServer.GetStore(chainId)
+	if err != nil {
+		return err
+	}
+	lastBlock, err := db.GetLastBlock()
+	if err != nil {
+		return err
+	}
+	atomic.StoreInt64(lastBlockHeight, int64(lastBlock.Header.BlockHeight))
+
+	contractEventC := make(chan model.NewContractEvent, 1)
+	eventSubscriber, err := s.chainMakerServer.GetEventSubscribe(chainId)
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		sub := eventSubscriber.SubscribeContractEvent(contractEventC)
+		defer sub.Unsubscribe()
+
+		for {
+			select {
+			case ev := <-contractEventC:
+				atomic.StoreInt64(lastBlockHeight, int64(ev.ContractEventInfoList.ContractEvents[0].BlockHeight))
+				select {
+				case dataC <- ev:
+				default:
+				}
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+	return nil
 }

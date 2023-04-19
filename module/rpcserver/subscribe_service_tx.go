@@ -7,13 +7,12 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 
-	"chainmaker.org/chainmaker/utils/v2"
-
-	"chainmaker.org/chainmaker-go/module/subscriber"
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -21,6 +20,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -186,51 +186,43 @@ func (s *ApiService) sendNewTx(store protocol.BlockchainStore, tx *commonPb.Tran
 		errCode         commonErr.ErrCode
 		err             error
 		errMsg          string
-		eventSubscriber *subscriber.EventSubscriber
-		block           *commonPb.Block
+		lastBlockHeight int64
+		chainId         = tx.Payload.ChainId
 	)
 
-	blockCh := make(chan model.NewBlockEvent, 1000)
-
-	chainId := tx.Payload.ChainId
-	if eventSubscriber, err = s.chainMakerServer.GetEventSubscribe(chainId); err != nil {
+	blockC := make(chan model.NewBlockEvent, 1)
+	updaterCtx, cancelUpdater := context.WithCancel(context.Background())
+	defer cancelUpdater()
+	err = s.startSubscribeBlockEvent(updaterCtx, &lastBlockHeight, chainId, blockC)
+	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_SUBSCRIBER
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
 		return status.Error(codes.Internal, errMsg)
 	}
 
-	sub := eventSubscriber.SubscribeBlockEvent(blockCh)
-	defer sub.Unsubscribe()
+	if alreadySendHistoryBlockHeight == -1 {
+		alreadySendHistoryBlockHeight = atomic.LoadInt64(&lastBlockHeight)
+	}
 
 	for {
 		select {
-		case ev := <-blockCh:
-			block = ev.BlockInfo.Block
+		case <-blockC:
+			// 首先判断是否结束发送数据。
+			// 注意：当且仅当 endBlockHeight != -1 时，才有可能结束发送数据。
+			// 当 endBlockHeight == -1 时，永不结束。
+			if endBlock != -1 && alreadySendHistoryBlockHeight >= endBlock {
+				return status.Error(codes.OK, "OK")
+			}
 
-			if alreadySendHistoryBlockHeight != -1 && int64(block.Header.BlockHeight) > alreadySendHistoryBlockHeight {
-				_, err = s.sendHistoryTx(store, server, alreadySendHistoryBlockHeight+1,
-					int64(block.Header.BlockHeight), contractName, txIds, txIdsMap, reqSender, reqSenderOrgId)
+			if alreadySendHistoryBlockHeight < atomic.LoadInt64(&lastBlockHeight) {
+				alreadySendHistoryBlockHeight, err = s.sendHistoryTx(store, server, alreadySendHistoryBlockHeight+1,
+					endBlock, contractName, txIds, txIdsMap, reqSender, reqSenderOrgId)
 				if err != nil {
 					s.log.Errorf("send history block failed, %s", err)
 					return err
 				}
-
-				alreadySendHistoryBlockHeight = -1
-				continue
 			}
-
-			if err := s.sendSubscribeTx(server, block.Txs, contractName, txIds, txIdsMap,
-				reqSender, reqSenderOrgId); err != nil {
-				errMsg = fmt.Sprintf("send subscribe tx failed, %s", err)
-				s.log.Error(errMsg)
-				return status.Error(codes.Internal, errMsg)
-			}
-
-			if s.checkIsFinish(txIds, endBlock, txIdsMap, ev.BlockInfo) {
-				return status.Error(codes.OK, "OK")
-			}
-
 		case <-server.Context().Done():
 			return nil
 		case <-s.ctx.Done():
@@ -239,19 +231,19 @@ func (s *ApiService) sendNewTx(store protocol.BlockchainStore, tx *commonPb.Tran
 	}
 }
 
-func (s *ApiService) checkIsFinish(txIds []string, endBlock int64,
-	txIdsMap map[string]struct{}, blockInfo *commonPb.BlockInfo) bool {
-
-	if len(txIds) > 0 && len(txIdsMap) == 0 {
-		return true
-	}
-
-	if endBlock != -1 && int64(blockInfo.Block.Header.BlockHeight) >= endBlock {
-		return true
-	}
-
-	return false
-}
+//func (s *ApiService) checkIsFinish(txIds []string, endBlock int64,
+//	txIdsMap map[string]struct{}, blockInfo *commonPb.BlockInfo) bool {
+//
+//	if len(txIds) > 0 && len(txIdsMap) == 0 {
+//		return true
+//	}
+//
+//	if endBlock != -1 && int64(blockInfo.Block.Header.BlockHeight) >= endBlock {
+//		return true
+//	}
+//
+//	return false
+//}
 
 // sendHistoryTx - send history tx to subscriber
 func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
