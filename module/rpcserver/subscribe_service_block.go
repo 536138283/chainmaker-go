@@ -358,6 +358,9 @@ func (s *ApiService) getBlockInfoFromStore(store protocol.BlockchainStore, curbl
 		}
 	}
 
+	// 黑名单交易
+	blockInfo.Block = utils.FilterBlockBlacklistTxs(blockInfo.Block)
+	blockInfo.RwsetList = utils.FilterBlockBlacklistTxRWSet(blockInfo.RwsetList, blockInfo.Block.Header.ChainId)
 	//printAllTxsOfBlock(blockInfo, reqSender, reqSenderOrgId)
 
 	return blockInfo, -1, nil
