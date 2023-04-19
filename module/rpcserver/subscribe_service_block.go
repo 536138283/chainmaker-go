@@ -188,31 +188,31 @@ func (s *ApiService) sendNewBlock(store protocol.BlockchainStore, tx *commonPb.T
 	}
 }
 
-func (s *ApiService) dealBlockSubscribeResult(server apiPb.RpcNode_SubscribeServer, blockInfo *commonPb.BlockInfo,
-	withRWSet, onlyHeader bool) error {
-
-	var (
-		err    error
-		result *commonPb.SubscribeResult
-	)
-
-	if !withRWSet {
-		blockInfo = &commonPb.BlockInfo{
-			Block:     blockInfo.Block,
-			RwsetList: nil,
-		}
-	}
-
-	if result, err = s.getBlockSubscribeResult(blockInfo, onlyHeader); err != nil {
-		return fmt.Errorf("get block subscribe result failed, %s", err)
-	}
-
-	if err := server.Send(result); err != nil {
-		return fmt.Errorf("send block subscribe result by realtime failed, %s", err)
-	}
-
-	return nil
-}
+//func (s *ApiService) dealBlockSubscribeResult(server apiPb.RpcNode_SubscribeServer, blockInfo *commonPb.BlockInfo,
+//	withRWSet, onlyHeader bool) error {
+//
+//	var (
+//		err    error
+//		result *commonPb.SubscribeResult
+//	)
+//
+//	if !withRWSet {
+//		blockInfo = &commonPb.BlockInfo{
+//			Block:     blockInfo.Block,
+//			RwsetList: nil,
+//		}
+//	}
+//
+//	if result, err = s.getBlockSubscribeResult(blockInfo, onlyHeader); err != nil {
+//		return fmt.Errorf("get block subscribe result failed, %s", err)
+//	}
+//
+//	if err := server.Send(result); err != nil {
+//		return fmt.Errorf("send block subscribe result by realtime failed, %s", err)
+//	}
+//
+//	return nil
+//}
 
 // sendHistoryBlock - send history block to subscriber
 func (s *ApiService) sendHistoryBlock(store protocol.BlockchainStore, server apiPb.RpcNode_SubscribeServer,

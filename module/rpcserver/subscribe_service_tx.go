@@ -13,7 +13,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker/utils/v2"
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -21,6 +20,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	protocol "chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -231,19 +231,19 @@ func (s *ApiService) sendNewTx(store protocol.BlockchainStore, tx *commonPb.Tran
 	}
 }
 
-func (s *ApiService) checkIsFinish(txIds []string, endBlock int64,
-	txIdsMap map[string]struct{}, blockInfo *commonPb.BlockInfo) bool {
-
-	if len(txIds) > 0 && len(txIdsMap) == 0 {
-		return true
-	}
-
-	if endBlock != -1 && int64(blockInfo.Block.Header.BlockHeight) >= endBlock {
-		return true
-	}
-
-	return false
-}
+//func (s *ApiService) checkIsFinish(txIds []string, endBlock int64,
+//	txIdsMap map[string]struct{}, blockInfo *commonPb.BlockInfo) bool {
+//
+//	if len(txIds) > 0 && len(txIdsMap) == 0 {
+//		return true
+//	}
+//
+//	if endBlock != -1 && int64(blockInfo.Block.Header.BlockHeight) >= endBlock {
+//		return true
+//	}
+//
+//	return false
+//}
 
 // sendHistoryTx - send history tx to subscriber
 func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
