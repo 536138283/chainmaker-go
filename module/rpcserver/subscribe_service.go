@@ -56,7 +56,9 @@ func (s *ApiService) Subscribe(req *commonPb.TxRequest, server apiPb.RpcNode_Sub
 		Payload:   req.Payload,
 		Sender:    req.Sender,
 		Endorsers: req.Endorsers,
-		Result:    nil}
+		Result:    nil,
+		Payer:     req.Payer,
+	}
 
 	errCode, errMsg = s.validate(tx)
 	if errCode != commonErr.ERR_CODE_OK {
