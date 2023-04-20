@@ -1454,7 +1454,8 @@ func recoverBlockByBatch(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
+	if block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY &&
+		chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_RAFT {
 
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
