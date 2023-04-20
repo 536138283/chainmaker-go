@@ -1262,6 +1262,7 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 			Result:    block.Txs[i].Result,
 			Sender:    block.Txs[i].Sender,
 			Endorsers: block.Txs[i].Endorsers,
+			Payer:     block.Txs[i].Payer,
 		}
 
 	}
