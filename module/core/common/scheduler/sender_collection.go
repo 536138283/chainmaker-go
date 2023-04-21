@@ -244,11 +244,6 @@ func getAccountBalanceFromSnapshot2310(
 	return balance, nil
 }
 
-const TxStatusCode_GET_ACCOUNT_BALANCE_FAILED = commonPb.TxStatusCode(10001)
-const TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED = commonPb.TxStatusCode(10002)
-const TxStatusCode_GET_ACCOUNT_STATUS_FAILED = commonPb.TxStatusCode(10003)
-const TxStatusCode_ACCOUNT_STATUS_LOCKED = commonPb.TxStatusCode((10004))
-
 func getAccountBalanceFromSnapshot2312(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, commonPb.TxStatusCode) {
 
@@ -261,7 +256,7 @@ func getAccountBalanceFromSnapshot2312(
 		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 		[]byte(accountmgr.AccountPrefix+address))
 	if err != nil {
-		return -1, TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
+		return -1, commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
 	}
 
 	if len(balanceData) == 0 {
@@ -269,7 +264,7 @@ func getAccountBalanceFromSnapshot2312(
 	} else {
 		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
 		if err != nil {
-			return 0, TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
+			return 0, commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
 		}
 	}
 
@@ -278,7 +273,7 @@ func getAccountBalanceFromSnapshot2312(
 		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 		[]byte(accountmgr.FrozenPrefix+address))
 	if err != nil {
-		return -1, TxStatusCode_GET_ACCOUNT_STATUS_FAILED
+		return -1, commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED
 	}
 
 	if len(frozenData) == 0 {
@@ -293,7 +288,7 @@ func getAccountBalanceFromSnapshot2312(
 	log.Debugf("balance = %v, freeze = %v", balance, frozen)
 
 	if frozen {
-		return 0, TxStatusCode_ACCOUNT_STATUS_LOCKED
+		return 0, commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED
 	}
 
 	return balance, commonPb.TxStatusCode_SUCCESS

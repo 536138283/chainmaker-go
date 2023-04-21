@@ -91,48 +91,48 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 					txSimContext.SetTxResult(txResult)
 					return false
 
-				} else if tx.Result.Code == TxStatusCode_GET_ACCOUNT_BALANCE_FAILED {
+				} else if tx.Result.Code == commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED {
 
 					ts.log.Debugf("get account balance failed. address = %v, public key = %s", addr, pk)
 					errMsg := fmt.Sprintf("get account `%s` balance failed.", addr)
 
-					txResult.Code = TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
+					txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
 					txResult.Message = errMsg
 					txResult.ContractResult.Message = errMsg
 
 					txSimContext.SetTxResult(txResult)
 					return false
 
-				} else if tx.Result.Code == TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED {
+				} else if tx.Result.Code == commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED {
 
 					ts.log.Debugf("parse account balance failed. address = %v, public key = %s", addr, pk)
 					errMsg := fmt.Sprintf("parse account `%s` balance failed.", addr)
 
-					txResult.Code = TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
+					txResult.Code = commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
 					txResult.Message = errMsg
 					txResult.ContractResult.Message = errMsg
 
 					txSimContext.SetTxResult(txResult)
 					return false
 
-				} else if tx.Result.Code == TxStatusCode_GET_ACCOUNT_STATUS_FAILED {
+				} else if tx.Result.Code == commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED {
 
 					ts.log.Debugf("get account status failed. address = %v, public key = %s", addr, pk)
 					errMsg := fmt.Sprintf("get account `%s` status failed.", addr)
 
-					txResult.Code = TxStatusCode_GET_ACCOUNT_STATUS_FAILED
+					txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED
 					txResult.Message = errMsg
 					txResult.ContractResult.Message = errMsg
 
 					txSimContext.SetTxResult(txResult)
 					return false
 
-				} else if tx.Result.Code == TxStatusCode_ACCOUNT_STATUS_LOCKED {
+				} else if tx.Result.Code == commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED {
 
 					ts.log.Debugf("account has been locked. address = %v, public key = %s", addr, pk)
 					errMsg := fmt.Sprintf("the account `%s` has been locked.", addr)
 
-					txResult.Code = TxStatusCode_ACCOUNT_STATUS_LOCKED
+					txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED
 					txResult.Message = errMsg
 					txResult.ContractResult.Message = errMsg
 

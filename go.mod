@@ -16,7 +16,7 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.3-0.20230323022145-0fd97e4b5a04
 	chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230414104946-c1a7b6272d46
 	chainmaker.org/chainmaker/net-liquid v1.1.1
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.3-0.20230417091122-a72c0f589ac1
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.3-0.20230421032319-a1f48b4c32bb
 	chainmaker.org/chainmaker/protocol/v2 v2.3.3-0.20230320082116-0c7643a35069
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.3-0.20230404062421-fd0b20a35f0a
 	chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230407063422-9aaffffece93
