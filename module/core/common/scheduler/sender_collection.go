@@ -127,13 +127,12 @@ func preHandleTxCollectionMap2312(
 	snapshot protocol.Snapshot,
 	log protocol.Logger) {
 
-	var err error
 	for senderAddress, txCollection := range txCollectionMap {
 		// get the account balance from snapshot
 		var errCode commonPb.TxStatusCode
 		txCollection.accountBalance, errCode = getAccountBalanceFromSnapshot2312(senderAddress, snapshot, log)
 		if errCode != commonPb.TxStatusCode_SUCCESS {
-			errMsg := fmt.Sprintf("get account balance failed: err = %v", err)
+			errMsg := fmt.Sprintf("get account balance failed: errCode = %v", errCode)
 			log.Error(errMsg)
 			for _, tx := range txCollection.txs {
 				tx.Result = &commonPb.Result{

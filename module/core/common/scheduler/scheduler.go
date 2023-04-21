@@ -1149,6 +1149,11 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 
 				runningTxC <- tx
 				continue
+
+			} else if txNeedChargeGas && tx.Result != nil {
+				runningTxC <- tx
+				continue
+
 			} else if !txNeedChargeGas {
 				// tx 不需要扣费
 				gasLimit = int64(0)
