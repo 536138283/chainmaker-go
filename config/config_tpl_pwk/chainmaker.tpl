@@ -383,6 +383,13 @@ storage:
   # Minimum block height not allowed to be archived
   unarchive_block_height: 300000
 
+  # Archive dir scan interval time(s), default: 10(s)
+  archive_check_interval: 10
+
+  # Restore data merge on chain data wait time,
+  # restore action start after "restoreBlock" action finished "restore_interval" time(s), default: 60(s)
+  restore_interval: 60
+
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
