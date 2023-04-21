@@ -109,7 +109,7 @@ func newTx(txId string, contractId *commonPb.Contract, parameterMap map[string]s
 			},
 			RwSetHash: nil,
 		},
-		Sender: &commonPb.EndorsementEntry{Signer: &acPb.Member{OrgId: "org1", MemberInfo: []byte("cert1...")},
+		Sender: &commonPb.EndorsementEntry{Signer: &acPb.Member{OrgId: "org1", MemberInfo: []byte("-----BEGIN CERTIFICATE-----\nMIICdDCCAhqgAwIBAgIDDqVbMAoGCCqGSM49BAMCMIGIMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEeMBwGA1UEChMVd3gt\nb3JnLmNoYWlubWFrZXIub3JnMRIwEAYDVQQLEwlyb290LWNlcnQxITAfBgNVBAMT\nGGNhLnd4LW9yZy5jaGFpbm1ha2VyLm9yZzAeFw0yMjA4MjMwMzExNTlaFw0yNzA4\nMjIwMzExNTlaMIGPMQswCQYDVQQGEwJDTjEQMA4GA1UECBMHQmVpamluZzEQMA4G\nA1UEBxMHQmVpamluZzEeMBwGA1UEChMVd3gtb3JnLmNoYWlubWFrZXIub3JnMQ8w\nDQYDVQQLEwZjbGllbnQxKzApBgNVBAMTImNsaWVudDEuc2lnbi53eC1vcmcuY2hh\naW5tYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAASk26B+moZKChBk\nhoZ35x21a9YkRGldmVn32pDPSBKYgML57B7aJke0Sh38ULVZUfHMsYin4sYBbyY9\njqQaIR5bo2owaDAOBgNVHQ8BAf8EBAMCBsAwKQYDVR0OBCIEIOYu3/LFYp+U2FaF\nQehWEd9wYY4zx4hiDb/YhYysSA+7MCsGA1UdIwQkMCKAIEKT6aAzVPy7Fhu6s1GJ\nWFp2pZRwxoHdLivN2/18vPckMAoGCCqGSM49BAMCA0gAMEUCIQDOFsdUTe9XQ8iz\nfEjdeQGYyS80PCFnobU70bfFbGu9bQIgNLcZhs1nG6RM/bEdwDQeSSJExBK9NkuC\nch16zyC5Krk=\n-----END CERTIFICATE-----")},
 			Signature: []byte("sign1"),
 		},
 	}
