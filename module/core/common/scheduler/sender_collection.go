@@ -83,9 +83,24 @@ func getSenderTxCollection(
 		txCollection.txs = append(txCollection.txs, tx)
 	}
 
+	if chainCfg.GetBlockVersion() < blockVersion2312 {
+		preHandleTxCollectionMap2310(txCollectionMap, snapshot, log)
+	} else {
+		preHandleTxCollectionMap2312(txCollectionMap, snapshot, log)
+	}
+
+	return txCollectionMap
+}
+
+func preHandleTxCollectionMap2310(
+	txCollectionMap map[string]*TxCollection,
+	snapshot protocol.Snapshot,
+	log protocol.Logger) {
+
+	var err error
 	for senderAddress, txCollection := range txCollectionMap {
 		// get the account balance from snapshot
-		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot, log)
+		txCollection.accountBalance, err = getAccountBalanceFromSnapshotLe2312(senderAddress, snapshot, log)
 		if err != nil {
 			errMsg := fmt.Sprintf("get account balance failed: err = %v", err)
 			log.Error(errMsg)
@@ -101,11 +116,41 @@ func getSenderTxCollection(
 					RwSetHash: nil,
 					Message:   errMsg,
 				}
+
 			}
 		}
 	}
+}
 
-	return txCollectionMap
+func preHandleTxCollectionMap2312(
+	txCollectionMap map[string]*TxCollection,
+	snapshot protocol.Snapshot,
+	log protocol.Logger) {
+
+	var err error
+	for senderAddress, txCollection := range txCollectionMap {
+		// get the account balance from snapshot
+		var errCode commonPb.TxStatusCode
+		txCollection.accountBalance, errCode = getAccountBalanceFromSnapshot2312(senderAddress, snapshot, log)
+		if errCode != commonPb.TxStatusCode_SUCCESS {
+			errMsg := fmt.Sprintf("get account balance failed: err = %v", err)
+			log.Error(errMsg)
+			for _, tx := range txCollection.txs {
+				tx.Result = &commonPb.Result{
+					Code: errCode,
+					ContractResult: &commonPb.ContractResult{
+						Code:    uint32(1),
+						Result:  nil,
+						Message: errMsg,
+						GasUsed: uint64(0),
+					},
+					RwSetHash: nil,
+					Message:   errMsg,
+				}
+
+			}
+		}
+	}
 }
 
 func (s SenderCollection) Clear() {
@@ -114,7 +159,7 @@ func (s SenderCollection) Clear() {
 	}
 }
 
-func getAccountBalanceFromSnapshot(
+func getAccountBalanceFromSnapshotLe2312(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	chainConfig := snapshot.GetLastChainConfig()
 	blockVersion := chainConfig.GetBlockVersion()
@@ -198,4 +243,59 @@ func getAccountBalanceFromSnapshot2310(
 	}
 
 	return balance, nil
+}
+
+const TxStatusCode_GET_ACCOUNT_BALANCE_FAILED = commonPb.TxStatusCode(10001)
+const TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED = commonPb.TxStatusCode(10002)
+const TxStatusCode_GET_ACCOUNT_STATUS_FAILED = commonPb.TxStatusCode(10003)
+const TxStatusCode_ACCOUNT_STATUS_LOCKED = commonPb.TxStatusCode((10004))
+
+func getAccountBalanceFromSnapshot2312(
+	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, commonPb.TxStatusCode) {
+
+	var err error
+	var balance int64
+	var frozen bool
+
+	// 查询账户的余额
+	balanceData, err := snapshot.GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		[]byte(accountmgr.AccountPrefix+address))
+	if err != nil {
+		return -1, TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
+	}
+
+	if len(balanceData) == 0 {
+		balance = int64(0)
+	} else {
+		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
+		if err != nil {
+			return 0, TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
+		}
+	}
+
+	// 查询账户的状态
+	frozenData, err := snapshot.GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		[]byte(accountmgr.FrozenPrefix+address))
+	if err != nil {
+		return -1, TxStatusCode_GET_ACCOUNT_STATUS_FAILED
+	}
+
+	if len(frozenData) == 0 {
+		frozen = false
+	} else {
+		if string(frozenData) == "0" {
+			frozen = false
+		} else if string(frozenData) == "1" {
+			frozen = true
+		}
+	}
+	log.Debugf("balance = %v, freeze = %v", balance, frozen)
+
+	if frozen {
+		return 0, TxStatusCode_ACCOUNT_STATUS_LOCKED
+	}
+
+	return balance, commonPb.TxStatusCode_SUCCESS
 }
