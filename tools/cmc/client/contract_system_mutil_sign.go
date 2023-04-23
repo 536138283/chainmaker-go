@@ -354,11 +354,11 @@ func multiSignQuery() error {
 
 	params := []*common.KeyValuePair{
 		{
-			Key:   flagTruncateModel,
+			Key:   "truncateModel",
 			Value: []byte(truncateModel),
 		},
 		{
-			Key:   flagTruncateValueLen,
+			Key:   "truncateValueLen",
 			Value: []byte(truncateValueLen),
 		},
 	}
