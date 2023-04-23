@@ -288,7 +288,7 @@ func getAccountBalanceFromSnapshot2312(
 	log.Debugf("balance = %v, freeze = %v", balance, frozen)
 
 	if frozen {
-		return 0, commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED
+		return 0, commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN
 	}
 
 	return balance, commonPb.TxStatusCode_SUCCESS
