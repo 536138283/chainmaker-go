@@ -24,25 +24,27 @@ var (
 	sdkConfPath string // SDK配置路径
 
 	// 合约参数
-	abiFilePath     string
-	contractName    string
-	contractAddress string
-	version         string
-	byteCodePath    string
-	runtimeType     string
-	timeout         int64
-	sendTimes       int
-	method          string
-	params          string
-	orgId           string
-	chainId         string
-	syncResult      bool
-	enableCertHash  bool
-	blockHeight     uint64
-	withRWSet       bool
-	truncateValue   bool
-	isAgree         bool
-	txId            string
+	abiFilePath      string
+	contractName     string
+	contractAddress  string
+	version          string
+	byteCodePath     string
+	runtimeType      string
+	timeout          int64
+	sendTimes        int
+	method           string
+	params           string
+	orgId            string
+	chainId          string
+	syncResult       bool
+	enableCertHash   bool
+	blockHeight      uint64
+	withRWSet        bool
+	truncateValue    bool
+	truncateValueLen string
+	truncateModel    string
+	isAgree          bool
+	txId             string
 
 	adminKeyFilePaths string
 	adminCrtFilePaths string
@@ -113,6 +115,7 @@ const (
 	flagBlockHeight                      = "block-height"
 	flagWithRWSet                        = "with-rw-set"
 	flagTruncateModel                    = "truncate-model"
+	flagTruncateValueLen                 = "truncate-value-len"
 	flagTruncateValue                    = "truncate-value"
 	flagIsAgree                          = "is-agree"
 	flagTxId                             = "tx-id"
@@ -291,6 +294,14 @@ func init() {
 		flagMultiSignEnableManualRun,
 		false,
 		"enable or disable manual run feature of multi-sign")
+	flags.StringVar(&truncateModel,
+		flagTruncateModel,
+		"",
+		"the type of truncate multi-sign info")
+	flags.StringVar(&truncateValueLen,
+		flagTruncateValueLen,
+		"",
+		"the type of truncate multi-sign info")
 
 	if sdkConfPath == "" {
 		sdkConfPath = util.EnvSdkConfPath
