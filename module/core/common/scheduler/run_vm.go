@@ -127,12 +127,12 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 					txSimContext.SetTxResult(txResult)
 					return false
 
-				} else if tx.Result.Code == commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED {
+				} else if tx.Result.Code == commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN {
 
 					ts.log.Debugf("account has been frozen. address = %v, public key = %s", addr, pk)
 					errMsg := fmt.Sprintf("the account `%s` has been frozen.", addr)
 
-					txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED
+					txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN
 					txResult.Message = errMsg
 					txResult.ContractResult.Message = errMsg
 
