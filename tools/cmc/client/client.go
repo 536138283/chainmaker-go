@@ -112,6 +112,7 @@ const (
 	flagEnableCertHash                   = "enable-cert-hash"
 	flagBlockHeight                      = "block-height"
 	flagWithRWSet                        = "with-rw-set"
+	flagTruncateModel                    = "truncate-model"
 	flagTruncateValue                    = "truncate-value"
 	flagIsAgree                          = "is-agree"
 	flagTxId                             = "tx-id"
