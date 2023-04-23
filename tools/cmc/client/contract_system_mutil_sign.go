@@ -106,7 +106,7 @@ func multiSignQueryCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
-		flagTruncateModel, flagTruncateValue,
+		flagTruncateModel, flagTruncateValueLen,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
