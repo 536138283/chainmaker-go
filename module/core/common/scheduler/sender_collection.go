@@ -100,7 +100,7 @@ func preHandleTxCollectionMap2310(
 	var err error
 	for senderAddress, txCollection := range txCollectionMap {
 		// get the account balance from snapshot
-		txCollection.accountBalance, err = getAccountBalanceFromSnapshotLe2312(senderAddress, snapshot, log)
+		txCollection.accountBalance, err = getAccountBalanceFromSnapshotLt2312(senderAddress, snapshot, log)
 		if err != nil {
 			errMsg := fmt.Sprintf("get account balance failed: err = %v", err)
 			log.Error(errMsg)
@@ -110,7 +110,7 @@ func preHandleTxCollectionMap2310(
 					ContractResult: &commonPb.ContractResult{
 						Code:    uint32(1),
 						Result:  nil,
-						Message: errMsg,
+						Message: "",
 						GasUsed: uint64(0),
 					},
 					RwSetHash: nil,
@@ -158,7 +158,7 @@ func (s SenderCollection) Clear() {
 	}
 }
 
-func getAccountBalanceFromSnapshotLe2312(
+func getAccountBalanceFromSnapshotLt2312(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	chainConfig := snapshot.GetLastChainConfig()
 	blockVersion := chainConfig.GetBlockVersion()

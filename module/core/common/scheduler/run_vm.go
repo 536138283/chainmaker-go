@@ -129,8 +129,8 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 
 				} else if tx.Result.Code == commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED {
 
-					ts.log.Debugf("account has been locked. address = %v, public key = %s", addr, pk)
-					errMsg := fmt.Sprintf("the account `%s` has been locked.", addr)
+					ts.log.Debugf("account has been frozen. address = %v, public key = %s", addr, pk)
+					errMsg := fmt.Sprintf("the account `%s` has been frozen.", addr)
 
 					txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_LOCKED
 					txResult.Message = errMsg
