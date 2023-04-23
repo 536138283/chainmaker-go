@@ -83,7 +83,7 @@ function cmc_test() {
 
   ## create contract
   ./cmc client contract user create \
-    --contract-name=fact2 \
+    --contract-name=fact \
     --runtime-type=WASMER \
     --byte-code-path=../test/wasm/rust-fact-2.0.0.wasm \
     --version=1.0 \
@@ -92,30 +92,6 @@ function cmc_test() {
     --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.tls.crt \
     --sync-result=true \
     --params="{}"
-
-./cmc client contract user upgrade \
---contract-name=fact2 \
---runtime-type=WASMER \
---byte-code-path=../test/wasm/rust-fact-2.0.0.wasm \
---version=4.0 \
---sdk-conf-path=./testdata/sdk_config.yml \
---admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.key,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.key \
---admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.crt,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.crt \
---org-id=wx-org1.chainmaker.org \
---sync-result=true \
---params="{}"
-
-./cmc client contract user upgrade \
---contract-name=fact2 \
---runtime-type=WASMER \
---byte-code-path=../test/wasm/rust-fact-2.0.0.wasm \
---version=5.0 \
---sdk-conf-path=./testdata/sdk_config2.yml \
---admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.key,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.key \
---admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.crt,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.crt \
---org-id=wx-org1.chainmaker.org \
---sync-result=true \
---params="{}"
 
   ## invoke tx
   ./cmc client contract user invoke \
