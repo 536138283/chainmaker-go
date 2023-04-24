@@ -118,6 +118,8 @@ chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230423091921-9b4116d3f09b h1:H
 chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230423091921-9b4116d3f09b/go.mod h1:B0MqsykYdg1mvfbYd4s6iEbqg0x+oNNsRwXCEZFTbFo=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230423101128-8601b497e157 h1:xN6fKgyJ4yOw5jxSZU8O/Br2bkMjDaHiOLI2IIh0xkg=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230423101128-8601b497e157/go.mod h1:B0MqsykYdg1mvfbYd4s6iEbqg0x+oNNsRwXCEZFTbFo=
+chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230424025001-8fb9295f2ad8 h1:YRE3GNOUskQK8RHN3ZuJt487Ov6uPT5Ajp5ZVTp3UFk=
+chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230424025001-8fb9295f2ad8/go.mod h1:B0MqsykYdg1mvfbYd4s6iEbqg0x+oNNsRwXCEZFTbFo=
 chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2 h1:PwDrWjyW5Fkp/nD99/oexg0rn3q5/2DWpJWZxeC4u5o=
 chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2/go.mod h1:qLeuS7TrLW2ypI94XCF1qbmmpZ/pDG/Hbx0U8SFlaLI=
 chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2 h1:uGVaf++aaxAhV+SSl2Lgbn1uM8L0nughp5TJQPnEhfI=
