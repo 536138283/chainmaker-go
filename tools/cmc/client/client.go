@@ -297,11 +297,11 @@ func init() {
 	flags.StringVar(&truncateModel,
 		flagTruncateModel,
 		"",
-		"the type of truncate multi-sign info")
+		"the type of truncating multi-sign info")
 	flags.StringVar(&truncateValueLen,
 		flagTruncateValueLen,
-		"",
-		"the type of truncate multi-sign info")
+		"0",
+		"the max length of truncating multi-sign info")
 
 	if sdkConfPath == "" {
 		sdkConfPath = util.EnvSdkConfPath
