@@ -106,6 +106,7 @@ func multiSignQueryCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
+		flagTruncateModel, flagTruncateValueLen,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
@@ -351,7 +352,17 @@ func multiSignQuery() error {
 	}
 	defer client.Stop()
 
-	resp, err = client.MultiSignContractQuery(txId)
+	params := []*common.KeyValuePair{
+		{
+			Key:   "truncateModel",
+			Value: []byte(truncateModel),
+		},
+		{
+			Key:   "truncateValueLen",
+			Value: []byte(truncateValueLen),
+		},
+	}
+	resp, err = client.MultiSignContractQueryWithParams(txId, params)
 	if err != nil {
 		return fmt.Errorf("multi sign query failed, %s", err.Error())
 	}
