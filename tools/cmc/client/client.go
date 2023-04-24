@@ -300,7 +300,7 @@ func init() {
 		"the type of truncating multi-sign info")
 	flags.StringVar(&truncateValueLen,
 		flagTruncateValueLen,
-		"0",
+		"",
 		"the max length of truncating multi-sign info")
 
 	if sdkConfPath == "" {
