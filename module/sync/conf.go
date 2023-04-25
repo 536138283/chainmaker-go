@@ -80,13 +80,13 @@ func (c *BlockSyncServerConf) SetBatchSizeFromOneNode(n uint64) *BlockSyncServer
 
 //SetProcessBlockTicker set time interval for processing blocks
 func (c *BlockSyncServerConf) SetProcessBlockTicker(n float64) *BlockSyncServerConf {
-	c.processBlockTick = time.Duration(n * float64(time.Second))
+	c.processBlockTick = time.Duration(n * float64(time.Millisecond))
 	return c
 }
 
 //SetSchedulerTicker set time interval for scheduling block request
 func (c *BlockSyncServerConf) SetSchedulerTicker(n float64) *BlockSyncServerConf {
-	c.schedulerTick = time.Duration(n * float64(time.Second))
+	c.schedulerTick = time.Duration(n * float64(time.Millisecond))
 	return c
 }
 

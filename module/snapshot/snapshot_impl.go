@@ -9,7 +9,6 @@ package snapshot
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"go.uber.org/atomic"
@@ -511,15 +510,16 @@ func (s *SnapshotImpl) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet) *c
 // buildDictAndPos build read/write key dict and read/write key pos
 func (s *SnapshotImpl) buildDictAndPos(txRWSetTable []*commonPb.TxRWSet) (map[string][]uint32, map[string][]uint32,
 	map[uint32]map[string]uint32, map[uint32]map[string]uint32) {
-	readKeyDict := make(map[string][]uint32, 1024)
-	writeKeyDict := make(map[string][]uint32, 1024)
-	readPos := make(map[uint32]map[string]uint32)
-	writePos := make(map[uint32]map[string]uint32)
+	//Suppose there are at least 4 keys in each transaction，2 read and 2 write
+	readKeyDict := make(map[string][]uint32, len(txRWSetTable)*2)
+	writeKeyDict := make(map[string][]uint32, len(txRWSetTable)*2)
+	readPos := make(map[uint32]map[string]uint32, len(txRWSetTable))
+	writePos := make(map[uint32]map[string]uint32, len(txRWSetTable))
 	for i := uint32(0); i < uint32(len(txRWSetTable)); i++ {
 		readTableItemForI := txRWSetTable[i].TxReads
 		writeTableItemForI := txRWSetTable[i].TxWrites
-		readPos[i] = make(map[string]uint32)
-		writePos[i] = make(map[string]uint32)
+		readPos[i] = make(map[string]uint32, len(readTableItemForI))
+		writePos[i] = make(map[string]uint32, len(writeTableItemForI))
 		// put all read key in to readKeyDict and set their pos into readPos and writePos
 		for _, keyForI := range readTableItemForI {
 			key := string(keyForI.Key)
@@ -594,10 +594,12 @@ func (s *SnapshotImpl) buildReachMap(i uint32, txRWSet *commonPb.TxRWSet, readKe
 
 // constructKey construct keys: contractName#key
 func constructKey(contractName string, key []byte) string {
-	var builder strings.Builder
-	builder.WriteString(contractName)
-	builder.Write(key)
-	return builder.String()
+	// with higher performance
+	return contractName + string(key)
+	//var builder strings.Builder
+	//builder.WriteString(contractName)
+	//builder.Write(key)
+	//return builder.String()
 }
 
 // SetBlockFingerprint set block fingerprint
