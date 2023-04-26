@@ -70,7 +70,7 @@ type TxScheduler struct {
 }
 
 // Transaction dependency in adjacency table representation
-type dagNeighbors map[int]bool
+type dagNeighbors map[int]struct{}
 
 type TxIdAndExecOrderType struct {
 	string
@@ -367,7 +367,7 @@ func (ts *TxScheduler) getTxRWSetTable(snapshot protocol.Snapshot, block *common
 }
 
 func (ts *TxScheduler) getContractEventMap(block *commonPb.Block) map[string][]*commonPb.ContractEvent {
-	contractEventMap := make(map[string][]*commonPb.ContractEvent)
+	contractEventMap := make(map[string][]*commonPb.ContractEvent, len(block.Txs))
 	for _, tx := range block.Txs {
 		event := tx.Result.ContractResult.ContractEvent
 		contractEventMap[tx.Payload.TxId] = event
@@ -400,7 +400,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		return txRWSetMap, snapshot.GetTxResultMap(), nil
 	}
 	ts.log.Infof("simulate with dag start, size %d", len(block.Txs))
-	txMapping := make(map[int]*commonPb.Transaction)
+	txMapping := make(map[int]*commonPb.Transaction, len(block.Txs))
 	for index, tx := range block.Txs {
 		txMapping[index] = tx
 	}
@@ -507,8 +507,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 	[]int, map[int]dagNeighbors, map[int]dagNeighbors, error) {
-	dagRemain := make(map[int]dagNeighbors)
-	reverseDagRemain := make(map[int]dagNeighbors)
+	dagRemain := make(map[int]dagNeighbors, len(dag.Vertexes))
+	reverseDagRemain := make(map[int]dagNeighbors, len(dag.Vertexes)*4)
 	var txIndexBatch []int
 	for txIndex, neighbors := range dag.Vertexes {
 		if neighbors == nil {
@@ -528,11 +528,11 @@ func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 			if int(neighbor) >= txIndex {
 				return nil, nil, nil, fmt.Errorf("dag has neighbor >= txIndex, txIndex: %d, neighbor: %d", txIndex, neighbor)
 			}
-			dn[int(neighbor)] = true
+			dn[int(neighbor)] = struct{}{}
 			if _, ok := reverseDagRemain[int(neighbor)]; !ok {
 				reverseDagRemain[int(neighbor)] = make(dagNeighbors)
 			}
-			reverseDagRemain[int(neighbor)][txIndex] = true
+			reverseDagRemain[int(neighbor)][txIndex] = struct{}{}
 		}
 		dagRemain[txIndex] = dn
 	}
@@ -1227,7 +1227,7 @@ func (ts *TxScheduler) createChargeGasTx(
 	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
 
 	// 构造参数
-	parameters := make([]*commonPb.KeyValuePair, 0)
+	parameters := make([]*commonPb.KeyValuePair, 0, len(senderCollection.txsMap))
 	for address, txCollection := range senderCollection.txsMap {
 		totalGasUsed := int64(0)
 		for _, tx := range txCollection.txs {
@@ -1319,7 +1319,7 @@ func (ts *TxScheduler) executeChargeGasTx(
 		return txSimContext
 	}
 
-	params := make(map[string][]byte)
+	params := make(map[string][]byte, len(tx.Payload.Parameters))
 	for _, item := range tx.Payload.Parameters {
 		address := item.Key
 		data := item.Value
@@ -1404,7 +1404,7 @@ func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
 }
 
 func getSenderTxsMap(txBatch []*commonPb.Transaction) map[[32]byte][]*commonPb.Transaction {
-	senderTxsMap := make(map[[32]byte][]*commonPb.Transaction)
+	senderTxsMap := make(map[[32]byte][]*commonPb.Transaction, len(txBatch))
 	for _, tx := range txBatch {
 		hashKey, _ := getSenderHashKey(tx)
 		senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
