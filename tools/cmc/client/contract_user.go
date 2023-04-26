@@ -660,10 +660,32 @@ func getUserContract() error {
 		if params != "" {
 			kvsMap := make(map[string]interface{})
 			err := json.Unmarshal([]byte(params), &kvsMap)
-			if err != nil {
-				return err
+			if err == nil {
+				kvs = util.ConvertParameters(kvsMap)
+			} else {
+				var pms []*Param
+				err = json.Unmarshal([]byte(params), &pms)
+				if err != nil {
+					return err
+				}
+				for _, pm := range pms {
+					if pm.IsFile {
+						byteCode, err := ioutil.ReadFile(pm.Value)
+						if err != nil {
+							return err
+						}
+						kvs = append(kvs, &common.KeyValuePair{
+							Key:   pm.Key,
+							Value: byteCode,
+						})
+					} else {
+						kvs = append(kvs, &common.KeyValuePair{
+							Key:   pm.Key,
+							Value: []byte(pm.Value),
+						})
+					}
+				}
 			}
-			kvs = util.ConvertParameters(kvsMap)
 		}
 	}
 
