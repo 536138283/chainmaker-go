@@ -199,7 +199,7 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 }
 
 // dealQuery - deal query tx
-// nolint: complexity
+// nolint: gocyclo
 func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
 	var (
 		err     error
