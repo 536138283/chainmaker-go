@@ -629,42 +629,9 @@ func getUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	var kvs []*common.KeyValuePair
-	var contractAbi *abi.ABI
-
-	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
-		abiBytes, err := ioutil.ReadFile(abiFilePath)
-		if err != nil {
-			return err
-		}
-
-		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
-		if err != nil {
-			return err
-		}
-
-		inputData, err := util.Pack(contractAbi, method, params)
-		if err != nil {
-			return err
-		}
-
-		inputDataHexStr := hex.EncodeToString(inputData)
-
-		kvs = []*common.KeyValuePair{
-			{
-				Key:   "data",
-				Value: []byte(inputDataHexStr),
-			},
-		}
-	} else {
-		if params != "" {
-			kvsMap := make(map[string]interface{})
-			err := json.Unmarshal([]byte(params), &kvsMap)
-			if err != nil {
-				return err
-			}
-			kvs = util.ConvertParameters(kvsMap)
-		}
+	kvs, contractAbi, err := generateKVs()
+	if err != nil {
+		return err
 	}
 
 	resp, err := client.QueryContract(contractName, method, kvs, -1)
@@ -700,6 +667,74 @@ func getUserContract() error {
 	}
 	util.PrintPrettyJson(output)
 	return nil
+}
+
+func generateKVs() (kvs []*common.KeyValuePair, contractAbi *abi.ABI, err error) {
+	// handle evm params
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		inputData, err := util.Pack(contractAbi, method, params)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+
+		return kvs, contractAbi, nil
+
+	}
+
+	// handle common params
+	if params != "" {
+		kvsMap := make(map[string]interface{})
+		err := json.Unmarshal([]byte(params), &kvsMap)
+		if err == nil {
+			kvs = util.ConvertParameters(kvsMap)
+		} else {
+			var pms []*Param
+			err = json.Unmarshal([]byte(params), &pms)
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, pm := range pms {
+				if pm.IsFile {
+					byteCode, err := ioutil.ReadFile(pm.Value)
+					if err != nil {
+						return nil, nil, err
+					}
+					kvs = append(kvs, &common.KeyValuePair{
+						Key:   pm.Key,
+						Value: byteCode,
+					})
+				} else {
+					kvs = append(kvs, &common.KeyValuePair{
+						Key:   pm.Key,
+						Value: []byte(pm.Value),
+					})
+				}
+			}
+		}
+
+		return kvs, nil, nil
+	}
+
+	return []*common.KeyValuePair{}, nil, nil
 }
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {
