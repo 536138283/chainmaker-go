@@ -1017,10 +1017,12 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	}
 	// put consensus qc into block
 	lastProposed.AdditionalData = block.AdditionalData
+	// shallow copy, create a new block to prevent panic during storage in marshal
+	commitBlock := CopyBlock(lastProposed)
 
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
-		chain.commonCommit.CommitBlock(lastProposed, rwSetMap, conEventMap)
+		chain.commonCommit.CommitBlock(commitBlock, rwSetMap, conEventMap) // use commitBlock
 	if err != nil {
 		chain.log.Errorf("block common commit failed: %s, blockHeight: (%d)",
 			err.Error(), lastProposed.Header.BlockHeight)
@@ -1610,4 +1612,14 @@ func ClearProposeRepeatTimerMap() {
 		ProposeRepeatTimerMap.Delete(key)
 		return true
 	})
+}
+
+// CopyBlock generates a new block with a old block, internally using the same pointer
+func CopyBlock(block *commonPb.Block) *commonPb.Block {
+	return &commonPb.Block{
+		Header:         block.Header,
+		Dag:            block.Dag,
+		Txs:            block.Txs,
+		AdditionalData: block.AdditionalData,
+	}
 }
