@@ -173,6 +173,7 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		resp    = &commonPb.TxResponse{}
 	)
 
+	s.log.Debugf("ApiService invoke tx => id = %v, type = %v", tx.Payload.TxId, tx.Payload.TxType)
 	if tx.Payload.ChainId != SYSTEM_CHAIN {
 		errCode, errMsg = s.validate(tx)
 		if errCode != commonErr.ERR_CODE_OK {
