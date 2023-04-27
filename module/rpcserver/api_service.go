@@ -212,7 +212,6 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	)
 
 	chainId := tx.Payload.ChainId
-	s.log.Debugf("【gas calc】%v, dealQuery => 1")
 	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
 		errCode = commonErr.ERR_CODE_GET_STORE
 		errMsg = s.getErrMsg(errCode, err)
@@ -286,7 +285,6 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	gasUsed := uint64(0)
 	gasRWSet := uint64(0)
 	gasEvents := uint64(0)
-	s.log.Debugf("【gas calc】%v, blockVersion = %v", blockVersion)
 	if blockVersion2312 <= blockVersion {
 		gasUsed, err = calcTxGasUsed(ctx, s.log)
 		s.log.Debugf("【gas calc】%v, before `RunContract` gasUsed = %v, err = %v",
@@ -301,7 +299,7 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		}
 	}
 	txResult, _, txStatusCode := vmMgr.RunContract(contract, tx.Payload.Method,
-		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
+		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, gasUsed, tx.Payload.TxType)
 	s.log.DebugDynamic(func() string {
 		contractJson, _ := json.Marshal(contract)
 		return fmt.Sprintf("vmMgr.RunContract: txStatusCode:%d, resultCode:%d, contractName[%s](%s), "+
