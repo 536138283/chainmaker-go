@@ -280,6 +280,23 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 			return resp
 		}
 	}
+
+	gasUsed := uint64(0)
+	gasRWSet := uint64(0)
+	gasEvents := uint64(0)
+	if blockVersion2312 <= blockVersion {
+		gasUsed, err = calcTxGasUsed(ctx, s.log)
+		s.log.Debugf("【gas calc】%v, before `RunContract` gasUsed = %v, err = %v",
+			tx.Payload.TxId, gasUsed, err)
+		if err != nil {
+			s.log.Errorf("calculate tx gas failed, err = %v", err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.ContractResult.Code = uint32(1)
+			resp.ContractResult.Message = err.Error()
+			return resp
+		}
+	}
 	txResult, _, txStatusCode := vmMgr.RunContract(contract, tx.Payload.Method,
 		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
 	s.log.DebugDynamic(func() string {
@@ -289,6 +306,35 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 			txStatusCode, txResult.Code, tx.Payload.ContractName, string(contractJson), tx.Payload.Method,
 			tx.Payload.TxType, txResult.Message, len(txResult.Result))
 	})
+	if blockVersion2312 <= blockVersion {
+		s.log.Debugf("【gas calc】%v, before `calcTxRWSetGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, txResult.GasUsed, err)
+		gasRWSet, err = calcTxRWSetGasUsed(ctx, txStatusCode == commonPb.TxStatusCode_SUCCESS, s.log)
+		if err != nil {
+			s.log.Errorf("calculate tx rw_set gas failed, err = %v", err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.ContractResult.Code = uint32(1)
+			resp.ContractResult.Message = err.Error()
+			return resp
+		}
+		txResult.GasUsed += gasRWSet
+		s.log.Debugf("【gas calc】%v, before `calcTxEventGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, txResult.GasUsed, err)
+
+		gasEvents, err = calcTxEventGasUsed(
+			ctx, txResult.ContractEvent, s.log)
+		if err != nil {
+			s.log.Errorf("calculate tx events gas failed, err = %v", err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.ContractResult.Code = uint32(1)
+			resp.ContractResult.Message = err.Error()
+			return resp
+		}
+		txResult.GasUsed += gasEvents
+	}
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
