@@ -37,8 +37,8 @@ chainmaker.org/chainmaker/net-common v1.2.2 h1:2p0gNsr3zTVspYwYTSo+peoztBANveczh
 chainmaker.org/chainmaker/net-common v1.2.2/go.mod h1:pfTTIYzQ9RxVKsfn7eI8ztlU4hiIT57G8KVTOsSd75A=
 chainmaker.org/chainmaker/net-libp2p v1.2.0/go.mod h1:gqYbyevyMOhh81ny3Y1t7ZPdByuDbVRbC/w/3NOLHxk=
 chainmaker.org/chainmaker/net-libp2p v1.2.2/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
-chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230413095025-700aa8b76478 h1:g1y4lNM+QqCTQoACaQ67VpzFiVqc5QGH1IyqW6v5CCQ=
-chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230413095025-700aa8b76478/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
+chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230508074849-af124d39d5ce h1:96JVgx8p7xTLDX0bh0CYmEFfMSSLNJ7qvVjBWgqGj/Y=
+chainmaker.org/chainmaker/net-libp2p v1.2.3-0.20230508074849-af124d39d5ce/go.mod h1:O0FA1HgAGZs0gPmvBSWxpNzsK2BaNsRjqJzl4QqSN48=
 chainmaker.org/chainmaker/net-liquid v1.1.0/go.mod h1:A1fjmgLv7ejD1eFh320+ZxGB4OWKYi1wgh56TJZ8b/A=
 chainmaker.org/chainmaker/net-liquid v1.1.1 h1:bKXeP0s5IXs2GTzG3YG96t9s8W+6CaVa69+hnxKOp0E=
 chainmaker.org/chainmaker/net-liquid v1.1.1/go.mod h1:mcfWiEenn7JrCyURXozCmrQlZE5Ddw3+vBBusLCwdsI=
@@ -88,7 +88,6 @@ chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2 h1:xzaUoD8J77/etboXDwTW05aAbrlhp9PJX
 chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2/go.mod h1:GG5rF7nqhmMDmipNsRJiBVjhgC3R3JlLEr+LeKkKkgE=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.0/go.mod h1:4pJrMVuqt5C/cordDjC1xSqjxGTawdFDkJMOfIRSfT0=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.2/go.mod h1:kbLdrmDoNKG/PB/O0eNFZB3D3+RYC8sZEbmpCc46sx0=
-chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230417104601-aa044b879287 h1:ztyJ72tzTUevwemR8Db3gDYv1ZgArIGK1ZOVgQew+PA=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230417104601-aa044b879287/go.mod h1:kzH7Bh+S+8dg3XOp0RjvuzxRgebITJx/lh78U3dkWes=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230424070836-5b2adee6ac72 h1:nURDqGEwovlrDllnNn6+FlYIkff74i5ttuHoYf9ljJI=
 chainmaker.org/chainmaker/vm-native/v2 v2.3.3-0.20230424070836-5b2adee6ac72/go.mod h1:ky+cGJr8U6fjFVUamI/ie8Ux1/VorMEdbB83T7aag/4=
