@@ -25,7 +25,7 @@ done
 
 
 # stop chainmaker node
-pid=`ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep |  awk  '{print $2}'`
+pid=`ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml {tagName}" | grep -v grep |  awk  '{print $2}'`
 if [ ! -z ${pid} ];then
     kill $pid
     echo "chainmaker is stopping..."
@@ -64,9 +64,9 @@ config_file="../config/{org_id}/chainmaker.yml"
 # config_file="../../config/wx-org1-solo/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
-go_vm_container_name=VM-GO-{org_id}
+go_vm_container_name=VM-GO-{org_id}-{tagName}
 # Deprecated docker vm container
-docker_vm_container_name=DOCKERVM-{org_id}
+docker_vm_container_name=DOCKERVM-{org_id}-{tagName}
 
 if [[ $chainmaker_vm_go_enable == "true" ]]; then
  enable_go_vm_container=true
