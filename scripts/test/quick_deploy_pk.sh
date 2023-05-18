@@ -83,6 +83,8 @@ function prepare_cmc() {
   mkdir testdata
   cp $PROJECT_PATH/tools/cmc/testdata/sdk_config_pk.yml testdata/
   sed -i 's/12301/12391/' testdata/sdk_config_pk.yml
+  sed -i 's/chain1/chainmaker_pk/' testdata/sdk_config_pk.yml
+  sed -i 's/SHA256/SM3/' testdata/sdk_config_pk.yml
   cp -r $PROJECT_PATH/build/crypto-config/ testdata/
 }
 
