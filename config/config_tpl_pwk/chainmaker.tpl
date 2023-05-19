@@ -542,11 +542,11 @@ vm:
   # Common configs of docker vm
   common:
     # Grpc configs during communication between chainmaker and contract VM
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
+    # Grpc max send message size, Default size is 100, unit: MB
     max_send_msg_size: 100
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
+    # Grpc max receive message size, Default size is 100, unit: MB
     max_recv_msg_size: 100
-    # Grpc dialing timeout of the following 2 servers, default size is 10, uint: s
+    # Grpc dialing timeout, default size is 10, uint: s
     dial_timeout: 10
 
     #  Configs of docker runtime server (handle messages with contract sandbox)

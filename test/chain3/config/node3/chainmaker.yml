@@ -502,11 +502,11 @@ vm:
     # Log level of docker vm
     log_level: INFO
 
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
+    # Grpc max send message size, Default size is 100, unit: MB
     max_send_msg_size: 100
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
+    # Grpc max receive message size, Default size is 100, unit: MB
     max_recv_msg_size: 100
-    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
+    # Grpc dialing timeout, default size is 100, uint: s
     dial_timeout: 10
 
     # max process num for execute original txs
