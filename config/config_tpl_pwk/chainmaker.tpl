@@ -541,6 +541,14 @@ storage:
 vm:
   # Common configs of docker vm
   common:
+    # Grpc configs during communication between chainmaker and contract VM
+    # Grpc max send message size, Default size is 100, unit: MB
+    max_send_msg_size: 100
+    # Grpc max receive message size, Default size is 100, unit: MB
+    max_recv_msg_size: 100
+    # Grpc dialing timeout, default size is 10, uint: s
+    dial_timeout: 10
+
     #  Configs of docker runtime server (handle messages with contract sandbox)
     runtime_server:
       # runtime server host, default 127.0.0.1
@@ -567,15 +575,6 @@ vm:
 
     # Log level of docker vm go
     log_level: {docker_go_log_level}
-
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
-    max_send_msg_size: 100
-
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
-    max_recv_msg_size: 100
-
-    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
-    dial_timeout: 10
 
     # max process num for execute original txs
     max_concurrency: 20
@@ -610,15 +609,6 @@ vm:
 
     # Log level of docker vm java
     log_level: {docker_java_log_level}
-
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
-    max_send_msg_size: 100
-
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
-    max_recv_msg_size: 100
-
-    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
-    dial_timeout: 10
 
     # max process num for execute original txs
     max_concurrency: 20

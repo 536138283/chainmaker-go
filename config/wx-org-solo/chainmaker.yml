@@ -81,8 +81,8 @@ rpc:
     mode: twoway
     priv_key_file: ../config/wx-org-solo/certs/wx-org.chainmaker.org/node/consensus1/consensus1.tls.key
     cert_file: ../config/wx-org-solo/certs/wx-org.chainmaker.org/node/consensus1/consensus1.tls.crt
-  max_send_msg_size: 30
-  max_recv_msg_size: 30
+  max_send_msg_size: 100
+  max_recv_msg_size: 100
 
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
@@ -209,6 +209,14 @@ debug:
 vm:
 
   common:
+    # Grpc configs during communication between chainmaker and contract VM
+    # Grpc max send message size, Default size is 100, unit: MB
+    max_send_msg_size: 100
+    # Grpc max receive message size, Default size is 100, unit: MB
+    max_recv_msg_size: 100
+    # Grpc dialing timeout, default size is 10, uint: s
+    dial_timeout: 10
+
     #  Configs of docker runtime server (handle messages with contract sandbox)
     runtime_server:
       # Runtime server port, default 32351
@@ -231,16 +239,8 @@ vm:
     # Log level of docker vm go
     log_level: INFO
 
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
-    max_send_msg_size: 100
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
-    max_recv_msg_size: 100
-    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
-    dial_timeout: 10
-
     # max process num for execute original txs
     max_concurrency: 20
-
 
     # Configs of contract engine server (handle messages with contract engine)
     contract_engine:
@@ -266,13 +266,6 @@ vm:
     log_in_console: false
     # Log level of docker vm go
     log_level: INFO
-
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
-    max_send_msg_size: 100
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
-    max_recv_msg_size: 100
-    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
-    dial_timeout: 10
 
     # max process num for execute original txs
     max_concurrency: 20

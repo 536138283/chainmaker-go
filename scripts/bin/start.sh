@@ -103,9 +103,9 @@ function start_vm_go() {
   runtime_server_host=$chainmaker_vm_common_runtime_server_host
   runtime_server_port=$chainmaker_vm_common_runtime_server_port
   contract_engine_port=$chainmaker_vm_go_contract_engine_port
-  rpc_timeout=$chainmaker_vm_go_dial_timeout
-  rpc_max_send_size=$chainmaker_vm_go_max_send_msg_size
-  rpc_max_recv_size=$chainmaker_vm_go_max_recv_msg_size
+  rpc_timeout=$chainmaker_vm_common_dial_timeout
+  rpc_max_send_size=$chainmaker_vm_common_max_send_msg_size
+  rpc_max_recv_size=$chainmaker_vm_common_max_recv_msg_size
   log_in_console=$chainmaker_vm_go_log_in_console
   max_concurrency=$chainmaker_vm_go_max_concurrency
   slow_disable=$chainmaker_vm_go_slow_disable
@@ -202,9 +202,9 @@ function start_vm_java() {
   runtime_server_host=$chainmaker_vm_common_runtime_server_host
   runtime_server_port=$chainmaker_vm_common_runtime_server_port
   contract_engine_port=$chainmaker_vm_java_contract_engine_port
-  rpc_timeout=$chainmaker_vm_java_dial_timeout
-  rpc_max_send_size=$chainmaker_vm_java_max_send_msg_size
-  rpc_max_recv_size=$chainmaker_vm_java_max_recv_msg_size
+  rpc_timeout=$chainmaker_vm_common_dial_timeout
+  rpc_max_send_size=$chainmaker_vm_common_max_send_msg_size
+  rpc_max_recv_size=$chainmaker_vm_common_max_recv_msg_size
   log_in_console=$chainmaker_vm_java_log_in_console
   max_concurrency=$chainmaker_vm_java_max_concurrency
   slow_disable=$chainmaker_vm_java_slow_disable

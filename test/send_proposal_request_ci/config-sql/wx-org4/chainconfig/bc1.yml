@@ -27,6 +27,7 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+    - "dockerjava"
 
 
 # 交易、区块相关配置
