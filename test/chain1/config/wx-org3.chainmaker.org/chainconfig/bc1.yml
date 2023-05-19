@@ -49,6 +49,7 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+    - "dockerjava"
 
 # Block proposing related settings
 block:

@@ -63,7 +63,7 @@ require (
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230417084144-e46cdc804468
 	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230221090402-f92abd690383
 	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1
-	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230313082624-af47a1b26f13
+	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230519075144-8318a7f9a102
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230221095549-19da485e2300
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
 	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230329092758-b259f89bb5ad
