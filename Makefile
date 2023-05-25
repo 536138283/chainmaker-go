@@ -176,7 +176,7 @@ generate-vendor:
 	cp -a ../common/crypto/bulletproofs/bulletproofs_cgo/c_lib ./vendor/chainmaker.org/chainmaker/common/v2/crypto/bulletproofs/bulletproofs_cgo/c_lib/
 	# 虚拟机 wasmer-go 相关
 	mkdir -p ./vendor/chainmaker.org/chainmaker/vm-wasmer/v2/wasmer-go/
-	cp -a ${GOPATH}/pkg/mod/chainmaker.org/chainmaker/vm-wasmer/v2@v2.3.1/wasmer-go ./vendor/chainmaker.org/chainmaker/vm-wasmer/v2/wasmer-go/
+	cp -a ${GOPATH}/pkg/mod/chainmaker.org/chainmaker/vm-wasmer/v2@v2.3.2/wasmer-go ./vendor/chainmaker.org/chainmaker/vm-wasmer/v2/wasmer-go/
 #	cp -a ../common/crypto/bulletproofs/bulletproofs_cgo/c_lib ./vendor/chainmaker.org/chainmaker/common/v2/crypto/bulletproofs/bulletproofs_cgo
 #	cp -a ../chainmaker/common/crypto/bulletproofs/bulletproofs_cgo/c_lib/libbulletproofs.a /usr/lib/
 
@@ -186,6 +186,9 @@ package-source-code: generate-commit-id generate-vendor
 vendor-build:
 	#ln -s vendor/chainmaker.org/chainmaker/vm-wasmer/v2/wasmer-go/wasmer-go/packaged/lib/linux-aarch64/libwasmer.so /usr/lib
 	cd main && go build -mod=vendor -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
+
+vendor-build-cmc:
+	cd tools/cmc &&  go build -mod=vendor -ldflags '${GOLDFLAGS}' -o ../../bin/chainmaker
 
 docker-build-vendor: generate-commit-id generate-vendor
 	rm -rf build/ data/ log/ bin/
