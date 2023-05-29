@@ -161,7 +161,9 @@ generate-commit-id:
 	echo `git log -1 | awk 'NR==1'` > commit_id
 
 generate-vendor:
-	sudo -S rm -rf vendor
+	sed -i "s/go 1.16/go 1.18/g" go.mod
+	go mod tidy
+	rm -rf vendor
 	go mod vendor
 	# 注意：执行此方法前需要切换common项目到对应分支或commit
 	# 密码学 gmssl 相关

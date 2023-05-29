@@ -1,8 +1,9 @@
-FROM golang:1.16.6 as builder
+FROM golang:1.18.10 as builder
 ENV GOPROXY=https://goproxy.cn,direct
 ENV GOPRIVATE=chainmaker.org
 COPY . /chainmaker-go
-RUN cd /chainmaker-go && go mod tidy && make vendor-build && make vendor-build-cmc
+#RUN cd /chainmaker-go && make vendor-build && make vendor-build-cmc
+RUN cd /chainmaker-go && make vendor-build
 
 # the second stage
 FROM ubuntu:20.04
