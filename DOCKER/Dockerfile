@@ -1,7 +1,7 @@
 FROM golang:1.16.6 as builder
 ENV GOPROXY=https://goproxy.cn,direct
 ENV GOPRIVATE=chainmaker.org
-COPY . /chainmaker-go -.git/ -bin/ -data/ -log/ -build/
+COPY . /chainmaker-go
 RUN cd /chainmaker-go && go mod tidy && make && make cmc
 
 # the second stage
