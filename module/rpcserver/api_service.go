@@ -370,16 +370,12 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
 
-	var bytecode []byte
-	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
-		contract.RuntimeType != commonPb.RuntimeType_GO &&
-		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO {
-		bytecode, err = store.GetContractBytecode(contract.Name)
-		if err != nil {
-			s.log.Error(err)
-			return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
-		}
+	bytecode, err := s.getContractBytecodeForRunContract(contract, store)
+	if err != nil {
+		s.log.Error(err)
+		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
+
 	ctx, err := s.makeQueryContext(tx, chainId, store, blockVersion, vmMgr)
 	if err != nil {
 		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
@@ -745,4 +741,21 @@ func (s *ApiService) GetConsensusHeight(ctx context.Context,
 		return nil, err
 	}
 	return wrapperspb.UInt64(height), nil
+}
+
+// getContractBytecodeForRunContract gets the contract byte code for RunContract
+// no need to return bytecode for native vm or docker vm,
+// docker vm(include go, docker_go, docker_java), vm-engine will get the byte code from runtime
+// @param *common.Contract
+// @return []byte
+// @return error
+func (s *ApiService) getContractBytecodeForRunContract(contract *commonPb.Contract,
+	store protocol.BlockchainStore) ([]byte, error) {
+	if contract.RuntimeType == commonPb.RuntimeType_NATIVE ||
+		contract.RuntimeType == commonPb.RuntimeType_GO ||
+		contract.RuntimeType == commonPb.RuntimeType_DOCKER_GO ||
+		contract.RuntimeType == commonPb.RuntimeType_DOCKER_JAVA {
+		return nil, nil
+	}
+	return store.GetContractBytecode(contract.Name)
 }
