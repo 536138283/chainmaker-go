@@ -373,7 +373,8 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	var bytecode []byte
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
 		contract.RuntimeType != commonPb.RuntimeType_GO &&
-		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO {
+		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
+		contract.RuntimeType != commonPb.RuntimeType_DOCKER_JAVA {
 		bytecode, err = store.GetContractBytecode(contract.Name)
 		if err != nil {
 			s.log.Error(err)
