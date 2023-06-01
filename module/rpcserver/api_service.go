@@ -749,7 +749,8 @@ func (s *ApiService) GetConsensusHeight(ctx context.Context,
 // @param *common.Contract
 // @return []byte
 // @return error
-func (s *ApiService) getContractBytecodeForRunContract(contract *commonPb.Contract, store protocol.BlockchainStore) ([]byte, error) {
+func (s *ApiService) getContractBytecodeForRunContract(contract *commonPb.Contract,
+	store protocol.BlockchainStore) ([]byte, error) {
 	if contract.RuntimeType == commonPb.RuntimeType_NATIVE ||
 		contract.RuntimeType == commonPb.RuntimeType_GO ||
 		contract.RuntimeType == commonPb.RuntimeType_DOCKER_GO ||
