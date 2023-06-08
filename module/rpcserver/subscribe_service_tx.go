@@ -261,6 +261,8 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 	i := startBlockHeight
 	for {
 		select {
+		case <-server.Context().Done():
+			return -1, nil
 		case <-s.ctx.Done():
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
