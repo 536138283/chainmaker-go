@@ -934,7 +934,7 @@ func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy,
 func (p *pkACProvider) refinePrincipal(principal protocol.Principal) (protocol.Principal, error) {
 	endorsements := principal.GetEndorsement()
 	msg := principal.GetMessage()
-	refinedEndorsement := p.refineEndorsements(endorsements, msg)
+	refinedEndorsement := p.RefineEndorsements(endorsements, msg)
 	if len(refinedEndorsement) <= 0 {
 		return nil, fmt.Errorf("refine endorsements failed, all endorsers have failed verification")
 	}
@@ -954,7 +954,7 @@ func (p *pkACProvider) refinePrincipal(principal protocol.Principal) (protocol.P
 //	@param endorsements
 //	@param msg
 //	@return []*common.EndorsementEntry
-func (p *pkACProvider) refineEndorsements(endorsements []*common.EndorsementEntry,
+func (p *pkACProvider) RefineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
 	refinedSigners := map[string]bool{}
