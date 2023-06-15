@@ -19,7 +19,7 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.3-0.20230423095641-a1c0b34537df
 	chainmaker.org/chainmaker/protocol/v2 v2.3.3-0.20230320082116-0c7643a35069
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.3-0.20230423094233-ca8bdae0463f
-	chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230407063422-9aaffffece93
+	chainmaker.org/chainmaker/store/v2 v2.3.4-0.20230614061853-74bd58f0dda9
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.2-0.20230424091028-38d72f915fed
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2-0.20230424090951-3366ba8de01c
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.2-0.20230424090824-a0bcea447b97
