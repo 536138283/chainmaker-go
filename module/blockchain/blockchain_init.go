@@ -213,6 +213,10 @@ func (bc *Blockchain) initNetService() (err error) {
 	return
 }
 
+// initStore add next time
+//  @Description:
+//  @receiver bc
+//  @return err
 func (bc *Blockchain) initStore() (err error) {
 	_, ok := bc.initModules[moduleNameStore]
 	if ok {
