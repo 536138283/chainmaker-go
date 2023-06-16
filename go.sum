@@ -75,8 +75,8 @@ chainmaker.org/chainmaker/store-sqldb/v3 v3.0.0/go.mod h1:X5yVSyBvCr73NcWGF9fxPh
 chainmaker.org/chainmaker/store-tikv/v3 v3.0.0 h1:RcrsdI3X1+0yKxO98TzbX16zqhf++4tVuZVK8tPS+cw=
 chainmaker.org/chainmaker/store-tikv/v3 v3.0.0/go.mod h1:g+oQZibYuauKEhSCIB4m3Zq5udUqk5Txxpc0ot22JmE=
 chainmaker.org/chainmaker/store/v3 v3.0.0/go.mod h1:2Vlyku/49MSzbj5gHeyLCEVAIpnp+KmcOfnZM/Ldhmk=
-chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230414090321-bf6e5c92f257 h1:YFL+pHRYesjEnNOcmELqRJbM878ZCAQhFvAtlqyZXMk=
-chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230414090321-bf6e5c92f257/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
+chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230616023049-a7f967a898d5 h1:gFSVp7iCaU5e7rDpcoTAultnHt2eDMSRsR9AvSamICo=
+chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230616023049-a7f967a898d5/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230407095751-3a0fa6187bcc h1:mDyl14k3rVwy8HGqrGdJb9sClYC3F/v3BDY+qYqUnac=
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230407095751-3a0fa6187bcc/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=
 chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230616041854-bed8e9577701 h1:yQ0c6VSPkPj+vxDw/Bm7ndoALBS/mlgV6qeidQCf7uI=
