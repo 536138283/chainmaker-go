@@ -55,7 +55,6 @@ chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230403094202-15abde0af085/go.mod h
 chainmaker.org/chainmaker/protocol/v3 v3.0.0/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230222032756-e5c7c7928339/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230228074744-8dbdcfac9f82/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
-chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230313071045-45e5e0108b20 h1:NedWM9Y3wy/+hx69X0JO2ENJsC/3pFtiZKWPN/tLKrk=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230313071045-45e5e0108b20/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230609043805-0878c246a1fe h1:2L4414WUeemoAIoCHukKpOz38VcmEOzXrnTxIXf15uA=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230609043805-0878c246a1fe/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
@@ -99,8 +98,6 @@ chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca h1:acP
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca/go.mod h1:0EcvWXdRQRG7s+mQdbMLCV2GXcQc9dN8lpYHZAGKPxA=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.0/go.mod h1:ZiG6aLOy/kuOWihp9BJurvSpCZ2fZ3qwdatiqy+qSQA=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230324074642-0141ca65cffa/go.mod h1:ouc0kBFI5IpESh1bboD6qSXYw45Npf3aXPh5vT9utEk=
-chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230523081524-bf4d3a767d9b h1:balQN+U11/QtCA44Hod0CouMEc6hE6HfEV/W7VCId0A=
-chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230523081524-bf4d3a767d9b/go.mod h1:ouc0kBFI5IpESh1bboD6qSXYw45Npf3aXPh5vT9utEk=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230609054157-a2f9f6d68571 h1:o+zv0jf8MhXTDqIXwmaDfqPBmVuz7rKf2MLW3Lb+tow=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230609054157-a2f9f6d68571/go.mod h1:gaf2sm6ciXchA9JUO9Z+cbcT+XfSAn8QNhUuGzn5T+w=
 chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230221095827-a6639b3b5017 h1:I0B+nJ/mjKP3Gov3xnKyoQAITL/DLalSqwfiMFS2JNE=

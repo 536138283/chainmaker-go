@@ -10,7 +10,6 @@ import (
 	"golang.org/x/sync/singleflight"
 
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
-	"chainmaker.org/chainmaker/pb-go/v3/config"
 )
 
 var sf singleflight.Group
@@ -30,6 +29,152 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 	}
 
 	return true
+}
+
+// guardForExecuteTx300 guard for execute tx after 300 version
+func (ts *TxScheduler) guardForExecuteTx300(
+	tx *commonPb.Transaction, txSimContext protocol.TxSimContext, enableGas bool,
+	enableOptimizeChargeGas bool, snapshot protocol.Snapshot, collection *SenderCollection) (txIsAllow bool) {
+	txNeedChargeGas := ts.checkNativeFilter(
+		tx.Payload.ContractName,
+		tx.Payload.Method,
+		tx,
+		txSimContext.GetSnapshot())
+
+	switch {
+	case enableOptimizeChargeGas:
+		return ts.guardForExecuteTx300WithOptimizeChargeGas(tx, txSimContext, txNeedChargeGas, snapshot, collection)
+	case enableGas:
+		return ts.guardForExecuteTx300WithChargeGas(tx, txSimContext, txNeedChargeGas)
+	default:
+		return true
+	}
+}
+
+// guardForExecuteTx300WithChargeGas guard for execute tx with charge gas after 300 version
+func (ts *TxScheduler) guardForExecuteTx300WithChargeGas(
+	tx *commonPb.Transaction, txSimContext protocol.TxSimContext, txNeedChargeGas bool) (txIsAllow bool) {
+
+	if !txNeedChargeGas {
+		return true
+	}
+
+	if tx.Payload.Limit == nil {
+		setTxResultForGasLimitNotSet(txSimContext)
+		if tx.Result == nil {
+			tx.Result = txSimContext.GetTxResult()
+		}
+		return false
+	}
+
+	return true
+}
+
+// guardForExecuteTx300WithOptimizeChargeGas guard for execute tx with optimize charge gas after 300 version
+func (ts *TxScheduler) guardForExecuteTx300WithOptimizeChargeGas(
+	tx *commonPb.Transaction, txSimContext protocol.TxSimContext, txNeedChargeGas bool,
+	snapshot protocol.Snapshot, senderCollection *SenderCollection) (txIsAllow bool) {
+
+	// 不需要gas扣费
+	if !txNeedChargeGas {
+		return true
+	}
+
+	// 未设置gaslimit，直接报错
+	if tx.Payload.Limit == nil {
+		setTxResultForGasLimitNotSet(txSimContext)
+		return false
+	}
+
+	// 开启了gas优化，但是senderCollection为空，则执行交易
+	if senderCollection == nil || senderCollection.txsMap == nil {
+		return true
+	}
+
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("begin check [txid:%s]account balance", tx.Payload.TxId)
+	})
+
+	chainCfg := snapshot.GetLastChainConfig()
+
+	// get the public key from tx
+	pk, err := getPkFromTx(tx, snapshot)
+	if err != nil {
+		ts.log.Errorf("getPkFromTx failed: err = %v", err)
+		return false
+	}
+
+	// convert the public key to `ZX` or `CM` or `EVM` address
+	addr, err := publicKeyToAddress(pk, chainCfg)
+	if err != nil {
+		ts.log.Error("publicKeyToAddress failed: err = %v", err)
+		return false
+	}
+
+	value, _ := senderCollection.txsMap.Load(addr)
+	collection, ok := value.(*TxCollection)
+	if !ok {
+		ts.log.Error("get tx collection fail")
+		return false
+	}
+
+	collection.mu.Lock()
+	defer collection.mu.Unlock()
+
+	balance := collection.accountBalance
+	limit := int64(tx.Payload.Limit.GasLimit)
+
+	// 校验余额是否足够
+	if balance-limit < 0 {
+		pkStr, _ := collection.publicKey.String()
+		ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
+		setTxResultForGasBalanceNotEnough(txSimContext, addr)
+
+		if tx.Result == nil {
+			tx.Result = txSimContext.GetTxResult()
+		}
+
+		return false
+	}
+
+	collection.accountBalance = collection.accountBalance - limit
+	senderCollection.txsMap.Store(addr, collection)
+
+	return true
+}
+
+// setTxResultForGasBalanceNotEnough set tx result about gas balance not enough
+func setTxResultForGasBalanceNotEnough(txSimContext protocol.TxSimContext, addr string) {
+	errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
+	txResult := &commonPb.Result{
+		Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
+		ContractResult: &commonPb.ContractResult{
+			Code:    uint32(1),
+			Result:  nil,
+			Message: errMsg,
+			GasUsed: uint64(0),
+		},
+		RwSetHash: nil,
+		Message:   errMsg,
+	}
+
+	txSimContext.SetTxResult(txResult)
+}
+
+// setTxResultForGasLimitNotSet set tx result about gas limit not set
+func setTxResultForGasLimitNotSet(txSimContext protocol.TxSimContext) {
+	txResult := &commonPb.Result{
+		Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
+		ContractResult: &commonPb.ContractResult{
+			Code:    uint32(1),
+			Result:  nil,
+			Message: ErrMsgOfGasLimitNotSet,
+			GasUsed: uint64(0),
+		},
+		RwSetHash: nil,
+		Message:   ErrMsgOfGasLimitNotSet,
+	}
+	txSimContext.SetTxResult(txResult)
 }
 
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
@@ -69,21 +214,13 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  2) tx.Result should be set in `runVM()` later
 			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
 				pk, _ := getPkFromTx(tx, snapshot)
-				val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
-					chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
-					return chainCfg, err
-				})
-				if err != nil {
-					ts.log.Errorf("get LastChainConfig error: %v", err)
-					return false
-				}
-				chainCfg, ok := val.(*config.ChainConfig)
-				if !ok {
-					ts.log.Errorf("failed to transfer chainConfig from interface to struct")
-				}
-				//chainCfg := txSimContext.GetLastChainConfig()
+				chainCfg := snapshot.GetLastChainConfig()
 				addr, _ := publicKeyToAddress(pk, chainCfg)
-				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
+
+				ts.log.DebugDynamic(func() string {
+					return fmt.Sprintf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
+				})
+
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
 				txResult := &commonPb.Result{
 					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
