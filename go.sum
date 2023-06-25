@@ -81,6 +81,8 @@ chainmaker.org/chainmaker/tbft-engine v0.0.0-20230407095751-3a0fa6187bcc h1:mDyl
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230407095751-3a0fa6187bcc/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=
 chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230616041854-bed8e9577701 h1:yQ0c6VSPkPj+vxDw/Bm7ndoALBS/mlgV6qeidQCf7uI=
 chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230616041854-bed8e9577701/go.mod h1:fRUrSJSg+ROOzTWwZm82l3tS6BHMDOwLHyKnkUITfzc=
+chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230625040208-c799d7e09093 h1:p52MKQX4r/lOLzUmndrSas9AHni7lS7nTPfGLyDbAxA=
+chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230625040208-c799d7e09093/go.mod h1:fRUrSJSg+ROOzTWwZm82l3tS6BHMDOwLHyKnkUITfzc=
 chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230417084026-6156efbe061c h1:Nx7CE7RFK9zFYpPz6AjXskqA/Sk8o6/5OsYJtMUnsRM=
 chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230417084026-6156efbe061c/go.mod h1:KCG7PbGP2o2JYMTxxoAS+NmgSfAYMNvOUr9bGMaS7Lg=
 chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230417084144-e46cdc804468 h1:3ipMiVDhRFUUvo1fi8Y8ymp6NkJ4vfMVQtc4AMPZqfo=
