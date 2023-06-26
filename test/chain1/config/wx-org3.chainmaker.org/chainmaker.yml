@@ -404,7 +404,7 @@ storage:
   # db_prefix: org1_
 
   # Minimum block height not allowed to be archived
-  unarchive_block_height: 300000
+  unarchive_block_height: 10
 
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]

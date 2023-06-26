@@ -66,7 +66,7 @@ func (server *ChainMakerServer) Init() error {
 	return nil
 }
 
-// Init ChainMakerServer.
+// InitForRebuildDbs init ChainMakerServer.
 func (server *ChainMakerServer) InitForRebuildDbs(chainId string) error {
 	var err error
 	log.Debug("begin init chain maker rebuild dbs server...")

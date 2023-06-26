@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package snapshot
 
 import (
+	"errors"
 	"fmt"
 	"math/rand"
 	"reflect"
@@ -37,6 +38,23 @@ type MockSimContextImpl struct {
 	txRwSet      *commonPb.TxRWSet
 	currentDepth int
 	txResult     *commonPb.Result
+	gasRemaining uint64
+}
+
+func (s *MockSimContextImpl) SubtractGas(gasUsed uint64) error {
+	if int64(s.gasRemaining) < 0 {
+		return errors.New("gas is not enough")
+	}
+	s.gasRemaining -= gasUsed
+	if int64(s.gasRemaining) < 0 {
+		return errors.New("gas is not enough")
+	}
+	return nil
+}
+
+func (s *MockSimContextImpl) GetGasRemaining() uint64 {
+	//TODO implement me
+	panic("implement me")
 }
 
 func (s *MockSimContextImpl) GetBlockFingerprint() string {

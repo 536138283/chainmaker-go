@@ -8,7 +8,7 @@ else
     endif
 endif
 
-VERSION=v2.3.1.2
+VERSION=v2.3.2
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
@@ -127,8 +127,8 @@ cert-qta:
 	cd test/scenario0_native && python3 chain1.py
 	cd test/scenario1_evm && python3 chain1.py
 	cd test/scenario2_rust && python3 chain1.py
-	cd test/chain1 && ./stop.sh
-	cd test/chain1 && ./clean.sh
+#	cd test/chain1 && ./stop.sh
+#	cd test/chain1 && ./clean.sh
 
 pub-qta:
 	echo "clear environment"
