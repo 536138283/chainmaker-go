@@ -32,7 +32,7 @@ config_file="../config/{org_id}/chainmaker.yml"
 # config_file="../../config/wx-org1-solo/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
-VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.1"
+VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.1.2"
 DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.1"
 START_FULL_MODE=""
 
@@ -60,7 +60,7 @@ done
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
 function start_vm_go() {
-  container_name=VM-GO-{org_id}
+  container_name=VM-GO-{org_id}-{tagName}
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -140,7 +140,7 @@ function start_vm_go() {
     -e SLOW_STEP_TIME="$slow_step_time" \
     -e SLOW_TX_TIME="$slow_tx_time" \
     -e PROCESS_TIMEOUT="$process_timeout" \
-    --name VM-GO-{org_id} \
+    --name $container_name \
     --privileged $VM_GO_IMAGE_NAME \
     > /dev/null
 
@@ -165,7 +165,7 @@ function start_vm_go() {
       -e SLOW_STEP_TIME="$slow_step_time" \
       -e SLOW_TX_TIME="$slow_tx_time" \
       -e PROCESS_TIMEOUT="$process_timeout" \
-      --name VM-GO-{org_id} \
+      --name $container_name \
       --privileged $VM_GO_IMAGE_NAME \
        > /dev/null
   fi
@@ -184,7 +184,7 @@ function start_vm_go() {
 
 # if enable Deprecated docker vm service and use unix domain socket, it will start a docker vm container
 function start_docker_vm_go() {
-  container_name=DOCKERVM-{org_id}
+  container_name=DOCKERVM-{org_id}-{tagName}
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -238,7 +238,7 @@ function start_docker_vm_go() {
     -e ENV_USER_NUM=9000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
     -v "$docker_vm_mount_path":/mount \
     -v "$docker_vm_log_path":/log \
-    --name DOCKERVM-{org_id} \
+    --name $container_name \
     --privileged $DOCKER_VM_IMAGE_NAME \
     > /dev/null
 
@@ -280,7 +280,7 @@ function start_vm_containers() {
     fi
 }
 
-pid=$(ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep |  awk  '{print $2}')
+pid=$(ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml {tagName}" | grep -v grep |  awk  '{print $2}')
 if [ -z "${pid}" ];then
     # check if enable go vm
     if [[ $chainmaker_vm_go_enable == "true" ]]; then
@@ -297,8 +297,8 @@ if [ -z "${pid}" ];then
     fi
 
     # start chainmaker
-    #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > /dev/null 2>&1 &
-    nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > panic.log 2>&1 &
+    #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml {tagName} > /dev/null 2>&1 &
+    nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml {tagName} > panic.log 2>&1 &
     echo "chainmaker is starting, pls check log..."
 else
     echo "chainmaker is already started"

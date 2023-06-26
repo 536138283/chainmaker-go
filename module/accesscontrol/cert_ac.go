@@ -693,7 +693,7 @@ func (cp *certACProvider) VerifyPrincipal(principal protocol.Principal) (bool, e
 func (cp *certACProvider) refinePrincipal(principal protocol.Principal) (protocol.Principal, error) {
 	endorsements := principal.GetEndorsement()
 	msg := principal.GetMessage()
-	refinedEndorsement := cp.refineEndorsements(endorsements, msg)
+	refinedEndorsement := cp.RefineEndorsements(endorsements, msg)
 	if len(refinedEndorsement) <= 0 {
 		return nil, fmt.Errorf("refine endorsements failed, all endorsers have failed verification")
 	}
@@ -706,7 +706,7 @@ func (cp *certACProvider) refinePrincipal(principal protocol.Principal) (protoco
 	return refinedPrincipal, nil
 }
 
-func (cp *certACProvider) refineEndorsements(endorsements []*common.EndorsementEntry,
+func (cp *certACProvider) RefineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
 	refinedSigners := map[string]bool{}

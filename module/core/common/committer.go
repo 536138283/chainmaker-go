@@ -117,7 +117,7 @@ func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*com
 		return fmt.Sprintf("start publish contractEventsInfo: block[%d] ",
 			block.Header.BlockHeight)
 	})
-	var eventsInfo []*commonpb.ContractEventInfo
+	eventsInfo := make([]*commonpb.ContractEventInfo, 0, len(events))
 	for _, t := range events {
 		eventInfo := &commonpb.ContractEventInfo{
 			BlockHeight:     block.Header.BlockHeight,
@@ -136,7 +136,7 @@ func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*com
 
 func rearrangeContractEvent(block *commonpb.Block,
 	conEventMap map[string][]*commonpb.ContractEvent) []*commonpb.ContractEvent {
-	conEvent := make([]*commonpb.ContractEvent, 0)
+	conEvent := make([]*commonpb.ContractEvent, 0, len(block.Txs))
 	if conEventMap == nil {
 		return conEvent
 	}

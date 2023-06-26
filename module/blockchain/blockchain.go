@@ -5,7 +5,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 SPDX-License-Identifier: Apache-2.0
 */
 
-// Package blockchain is an instance with an unique chainid. Will be initilized when chainmaker server startup.
+// Package blockchain is an instance with a unique chainid. Will be initilized when chainmaker server startup.
 package blockchain
 
 import (

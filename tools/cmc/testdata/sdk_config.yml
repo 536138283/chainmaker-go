@@ -31,6 +31,8 @@ chain_client:
   # txid配置项：默认支持TimestampKey，如果开启enableNormalKey则使用NormalKey
   enable_normal_key: false
 
+  enable_tx_result_dispatcher: true
+
   nodes:
     - # 节点地址，格式为：IP:端口:连接数
       node_addr: "127.0.0.1:12301"
