@@ -449,7 +449,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	return txHashes, txNewAdd, nil, nil
 }
 
-// verifyTx verify tx, return tx hashs, tx list, rw set verify failed tx tds, error
+// verifyTx verify tx, return tx hashes, tx list, rw set verify failed tx tds, error
 // VerifyTxs verify transactions in block
 // include if transaction is double spent, transaction signature
 func (vt *VerifierTx) verifierTxsWithRWSet(block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
@@ -534,6 +534,15 @@ func (vt *VerifierTx) verifierTxsWithRWSet(block *commonpb.Block, mode protocol.
 	return txHashes, nil
 }
 
+// verifyTx verify txs
+//  @receiver vt
+//  @param txs
+//  @param txsRet
+//  @param stat
+//  @param block
+//  @param txsMap
+//  @param mode
+//  @param verifyMode
 func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*commonpb.Transaction,
 	stat *VerifyStat, block *commonpb.Block, txsMap map[string]struct{}, mode protocol.VerifyMode, verifyMode uint8) (
 	[][]byte, []*commonpb.Transaction, []string, error) {
@@ -631,6 +640,13 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 	return txHashes, newAddTxs, nil, nil
 }
 
+// verifyTxWithRWSet verify tx with rw set
+//  @receiver vt
+//  @param txs
+//  @param stat
+//  @param block
+//  @return [][]byte
+//  @return error
 func (vt *VerifierTx) verifyTxWithRWSet(txs []*commonpb.Transaction,
 	stat *VerifyStat, block *commonpb.Block) ([][]byte, error) {
 	txHashes := make([][]byte, 0)
@@ -665,8 +681,11 @@ func (vt *VerifierTx) verifyTxWithRWSet(txs []*commonpb.Transaction,
 	return txHashes, nil
 }
 
-// ValidateTxRules validate Transactions and return remain Transactions and Transactions that
-// need to be removed
+// ValidateTxRules validate Transactions and return remain txs and txs that need to be removed
+//  @param filter
+//  @param txs
+//  @return removeTxs
+//  @return remainTxs
 func ValidateTxRules(filter protocol.TxFilter, txs []*commonpb.Transaction) (
 	removeTxs []*commonpb.Transaction, remainTxs []*commonpb.Transaction) {
 	txIds := utils.GetTxIds(txs)
@@ -693,6 +712,9 @@ func ValidateTxRules(filter protocol.TxFilter, txs []*commonpb.Transaction) (
 }
 
 // validateTxIds validate tx ids
+//  @param filter
+//  @param ids
+//  @return errorIdIndexes
 func validateTxIds(filter protocol.TxFilter, ids []string) (errorIdIndexes []int) {
 	for i, id := range ids {
 		err := filter.ValidateRule(id, commonpb.RuleType_AbsoluteExpireTime)
@@ -704,6 +726,10 @@ func validateTxIds(filter protocol.TxFilter, ids []string) (errorIdIndexes []int
 }
 
 // IntegersContains integers contains
+//  @Description:
+//  @param array
+//  @param val
+//  @return bool
 func IntegersContains(array []int, val int) bool {
 	for i := 0; i < len(array); i++ {
 		if array[i] == val {
@@ -714,6 +740,10 @@ func IntegersContains(array []int, val int) bool {
 }
 
 // GetBatchIds get batch ids
+//  @param block
+//  @return []string
+//  @return []uint32
+//  @return error
 func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 	if batchIdsByte, ok := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]; ok {
 		txBatchInfo, err := DeserializeTxBatchInfo(batchIdsByte)
@@ -727,6 +757,16 @@ func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 }
 
 // calStatsAvg Calculate STATS averages
+//  @param stats
+//  @return total
+//  @return sig
+//  @return db
+//  @return other
+//  @return fp
+//  @return filterCosts
+//  @return dbCosts
+//  @return totalFilterCosts
+//  @return totalDbCosts
 func calStatsAvg(stats map[int]*VerifyStat) (total, sig, db, other int, fp uint32,
 	filterCosts, dbCosts, totalFilterCosts, totalDbCosts int64) {
 	var count int
@@ -760,4 +800,51 @@ func calStatsAvg(stats map[int]*VerifyStat) (total, sig, db, other int, fp uint3
 		dbCosts /= int64(fp)
 	}
 	return
+}
+
+// GetInvalidTxSets get invalid tx sets(txId=>struct{}),use for OnReceiveRwSetVerifyFailTxs
+//  @param invalidTxIds
+//  @return map[string]struct{}
+func GetInvalidTxSets(invalidTxIds []string) map[string]struct{} {
+	invalidTxSets := make(map[string]struct{}, len(invalidTxIds))
+	for _, txIds := range invalidTxIds {
+		invalidTxSets[txIds] = struct{}{}
+	}
+
+	return invalidTxSets
+}
+
+// RemoveInvalidTxsForFollower remove invalid txs for follower,use for OnReceiveRwSetVerifyFailTxs
+//  @param txPool
+//  @param invalidTxIds
+func RemoveInvalidTxsForFollower(txPool protocol.TxPool, invalidTxIds []string) {
+	txsRet, _ := txPool.GetTxsByTxIds(invalidTxIds)
+	txs := make([]*commonpb.Transaction, 0)
+	for _, v := range txsRet {
+		txs = append(txs, v)
+	}
+	txPool.RemoveTxs(txs, protocol.EVIL)
+}
+
+// RemoveInvalidTxsForProposer remove invalid txs for proposer, use for OnReceiveRwSetVerifyFailTxs
+//  @param txPool
+//  @param invalidTxSets
+//  @param block
+func RemoveInvalidTxsForProposer(txPool protocol.TxPool,
+	invalidTxSets map[string]struct{}, block *commonpb.Block) {
+
+	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
+	for _, tx := range block.Txs {
+		if _, ok := invalidTxSets[tx.Payload.TxId]; ok {
+			removeTxs = append(removeTxs, tx)
+			continue
+		}
+
+		retryTxs = append(retryTxs, tx)
+	}
+
+	// retry txs and remove txs in tx pool
+	txPool.RetryTxs(retryTxs)
+	txPool.RemoveTxs(removeTxs, protocol.EVIL)
 }

@@ -52,7 +52,7 @@ type CoreEngineConfig struct {
 	ABFTCache *cache.AbftCache
 }
 
-// StoreHelper store heloer interface
+// StoreHelper store helper interface
 type StoreHelper interface {
 	// RollBack roll back func return error
 	RollBack(*commonpb.Block, protocol.BlockchainStore) error

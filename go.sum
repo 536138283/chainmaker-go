@@ -9,8 +9,8 @@ chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20230314074553-134b54d23351
 chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20230314074553-134b54d23351/go.mod h1:JMeh6wWUZQppQhRu5StnnEQe5S3EJgog1ibkzndpJMo=
 chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20230407093413-225f3e61901d h1:lAA5IMkazydbhyjBfDy5XyCZ/4Q/sJMIzHjGaCYsAco=
 chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20230407093413-225f3e61901d/go.mod h1:SRWDfoWAQ40tkXsTWJzQ6Ly8ao8Fk1Pp7KAyPrK1PCs=
-chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230427043543-ef351f3bc43e h1:/4eppJxVUUDDcX1z4RO3+Fb3NELY6Tec7YtByVOWRfQ=
-chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230427043543-ef351f3bc43e/go.mod h1:VQzeCOh1z/bwkvx/HcgCwDrcJAzBbZnNFKsTGZJF4Mc=
+chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230630041501-8d9d31a4b328 h1:3BJtS4YpiIKAV6cgPwMG3mtj7s4voGfDBgXHYaZ+HdI=
+chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230630041501-8d9d31a4b328/go.mod h1:sT2cZWJUVhSl+zUaj17kLmvNMGY/J/mXITV10Ld29kE=
 chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230314034530-b45e3441eb30 h1:S/voFrsa7Y/+MksNKXo+9GTZYXZ026jFyaXPblMfFnc=
 chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230314034530-b45e3441eb30/go.mod h1:Hm8dno3gY6SNd7v7BEQARkMF/F2CCyurzeofehXTOi4=
 chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20230314074753-015c3abcec07 h1:hAsfYUtwJgOayHtF/cf2/illT2b3yq/Kp/Euocqe3hM=
@@ -50,8 +50,10 @@ chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230216024812-b23c0b763f70/go.mod h
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230227075549-1cc85cb3f495/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230228090426-a95613721c65/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230307032214-b2c839d1cca6/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
-chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230403094202-15abde0af085 h1:RRYZd8ji7/TmJ2QHO/oh8o682dsPZNwlacygzCzu438=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230403094202-15abde0af085/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
+chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230629025134-43656e091e20/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
+chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230630070457-0cb5336725df h1:TEqqVEX9MRGz28txbyhKiXHcdjWbXOh5dGduyo0DRDg=
+chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230630070457-0cb5336725df/go.mod h1:2TOkD2WZsMx82cVbPXru/zN3wJ61OazUS9uyWXyIOr4=
 chainmaker.org/chainmaker/protocol/v3 v3.0.0/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230222032756-e5c7c7928339/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230228074744-8dbdcfac9f82/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
@@ -79,8 +81,6 @@ chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230616023049-a7f967a898d5 h1:gFSVp
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230616023049-a7f967a898d5/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230407095751-3a0fa6187bcc h1:mDyl14k3rVwy8HGqrGdJb9sClYC3F/v3BDY+qYqUnac=
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230407095751-3a0fa6187bcc/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=
-chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230616041854-bed8e9577701 h1:yQ0c6VSPkPj+vxDw/Bm7ndoALBS/mlgV6qeidQCf7uI=
-chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230616041854-bed8e9577701/go.mod h1:fRUrSJSg+ROOzTWwZm82l3tS6BHMDOwLHyKnkUITfzc=
 chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230625040208-c799d7e09093 h1:p52MKQX4r/lOLzUmndrSas9AHni7lS7nTPfGLyDbAxA=
 chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230625040208-c799d7e09093/go.mod h1:fRUrSJSg+ROOzTWwZm82l3tS6BHMDOwLHyKnkUITfzc=
 chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230417084026-6156efbe061c h1:Nx7CE7RFK9zFYpPz6AjXskqA/Sk8o6/5OsYJtMUnsRM=

@@ -31,7 +31,7 @@ else
    lint_check "module/accesscontrol" 15
    lint_check "module/blockchain" 15
   lint_check "module/consensus" 15
-  lint_check "module/core" 14
+  lint_check "module/core" 13
   lint_check "module/net" 12
   lint_check "module/rpcserver" 6
   lint_check "module/snapshot" 15
