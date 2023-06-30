@@ -229,7 +229,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 				return fmt.Sprintf("publish verfiy failed rw set txs, "+
 					"block height:%d, err: %s", newBlock.Header.BlockHeight, err.Error())
 			})
-			verifyResult = parseVerifyResult(newBlock, true, txRWSetMap, rwSetVerifyFailTx)
+			verifyResult = parseVerifyResult(newBlock, false, txRWSetMap, rwSetVerifyFailTx)
 			v.msgBus.Publish(msgbus.VerifyResult, verifyResult)
 		}
 
