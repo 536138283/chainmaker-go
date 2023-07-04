@@ -117,6 +117,19 @@ func (s SenderCollection) Clear() {
 	}
 }
 
+func getAddressFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (string, error) {
+	chainConfig := snapshot.GetLastChainConfig()
+	pk, err := getPkFromTx(tx, snapshot)
+	if err != nil {
+		return "", err
+	}
+	address, err := publicKeyToAddress(pk, chainConfig)
+	if err != nil {
+		return "", err
+	}
+	return address, nil
+}
+
 func getAccountBalanceFromSnapshot(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	chainConfig := snapshot.GetLastChainConfig()

@@ -257,13 +257,11 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 
 // prepare4 is used only by TestSchedule4
 func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int, setVM bool) (
-	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
+	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction, map[string]*commonPb.Result,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
-	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
-	for i := 0; i < txCount; i++ {
-		txRWSetTable[i] = &commonPb.TxRWSet{TxId: fmt.Sprintf("a000000000000000000000000000%04d", i)}
-	}
 	var txTable = make([]*commonPb.Transaction, txCount)
+	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	var txResultMap = make(map[string]*commonPb.Result)
 
 	ctl := gomock.NewController(t)
 	snapshot := mock.NewMockSnapshot(ctl)
@@ -325,8 +323,9 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	block := newBlock()
 
 	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
-	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
+	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
+	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
@@ -347,24 +346,15 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	if setVM {
 		vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
 	}
-	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
+	return vmMgr, txRWSetTable, txTable, txResultMap, snapshot, scheduler, contractId, block
 }
 
 // prepare5 is used only by TestSchedule5
 func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableConflictsBitWindow bool, txCount int, setVM bool) (
-	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction,
+	*mock.MockVmManager, []*commonPb.TxRWSet, []*commonPb.Transaction, map[string]*commonPb.Result,
 	*mock.MockSnapshot, protocol.TxScheduler, *commonPb.Contract, *commonPb.Block) {
-	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
-	for i := 0; i < txCount; i++ {
-		txRWSetTable[i] = &commonPb.TxRWSet{TxId: fmt.Sprintf("a000000000000000000000000000%04d", i)}
-	}
-	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
-	snapshot := mock.NewMockSnapshot(ctl)
-	vmMgr := mock.NewMockVmManager(ctl)
-	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
-	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
 	chainConf := mock.NewMockChainConf(ctl)
 	ledgerCache := mock.NewMockLedgerCache(ctl)
 	crypto := configpb.CryptoConfig{
@@ -390,6 +380,16 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	}
 	chainConf.EXPECT().ChainConfig().AnyTimes().Return(chainConfig)
 
+	snapshot := mock.NewMockSnapshot(ctl)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+	vmMgr := mock.NewMockVmManager(ctl)
+	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	vmMgr.EXPECT().AfterSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
+
+	var txRWSetTable = make([]*commonPb.TxRWSet, txCount)
+	var txTable = make([]*commonPb.Transaction, txCount)
+	var txResultMap = make(map[string]*commonPb.Result)
+
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
@@ -414,12 +414,12 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	block := newBlock()
 
 	snapshot.EXPECT().GetTxTable().AnyTimes().Return(txTable)
-	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
 	snapshot.EXPECT().GetSnapshotSize().AnyTimes().Return(len(txTable))
+	snapshot.EXPECT().GetTxRWSetTable().AnyTimes().Return(txRWSetTable)
+	snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResultMap)
 	snapshot.EXPECT().GetSpecialTxTable().AnyTimes().Return([]*commonPb.Transaction{})
 	snapshot.EXPECT().GetBlockFingerprint().AnyTimes().Return(strconv.FormatUint(block.Header.BlockHeight, 10))
 	snapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return([]byte("1000000000"), nil)
-	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 	blockChainStore := mock.NewMockBlockchainStore(ctl)
 	// simulate calling GetContractByName(...) 3 times
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(contractId.Name)).Return(contractId, nil).AnyTimes()
@@ -434,7 +434,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	if setVM {
 		vmMgr.EXPECT().RunContract(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().Return(contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS)
 	}
-	return vmMgr, txRWSetTable, txTable, snapshot, scheduler, contractId, block
+	return vmMgr, txRWSetTable, txTable, txResultMap, snapshot, scheduler, contractId, block
 }
 
 func TestSchedule(t *testing.T) {
@@ -633,7 +633,8 @@ func TestSchedule4(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 2, true)
+	_, txRWSetTable, txTable, txResultMap, snapshot, scheduler, contractId, block := prepare4(
+		t, true, false, false, 2, true)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
@@ -641,6 +642,17 @@ func TestSchedule4(t *testing.T) {
 
 	txTable[0] = tx0
 	txTable[1] = tx1
+	for i, tx := range txTable {
+		txResultMap[tx.Payload.TxId] = &commonPb.Result{
+			Code:    commonPb.TxStatusCode_SUCCESS,
+			Message: "OK",
+			ContractResult: &commonPb.ContractResult{
+				Code:    0,
+				Message: "OK",
+				GasUsed: uint64(10 + i),
+			},
+		}
+	}
 	txRWSetTable[0] = &commonPb.TxRWSet{
 		TxId: tx0.Payload.TxId,
 		TxReads: []*commonPb.TxRead{{
@@ -701,7 +713,8 @@ func TestSchedule5(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyFile = TestPrivKeyFile
 	localconf.ChainMakerConfig.NodeConfig.CertFile = TestCertFile
 	localconf.ChainMakerConfig.NodeConfig.PrivKeyPassword = "11111111"
-	_, txRWSetTable, txTable, snapshot, scheduler, contractId, block := prepare5(t, true, false, true, 2, true)
+	_, txRWSetTable, txTable, txResultMap, snapshot, scheduler, contractId, block := prepare5(
+		t, true, false, true, 2, true)
 
 	parameters := make(map[string]string, 8)
 	tx0 := newTxWithPubKeyAndGasLimit("a0000000000000000000000000000001", contractId, parameters, 101)
@@ -741,6 +754,17 @@ func TestSchedule5(t *testing.T) {
 			Key:          []byte("K3"),
 			Value:        []byte("V3"),
 		}},
+	}
+	for i, tx := range txRWSetTable {
+		txResultMap[tx.TxId] = &commonPb.Result{
+			Code:    commonPb.TxStatusCode_SUCCESS,
+			Message: "OK",
+			ContractResult: &commonPb.ContractResult{
+				Code:    0,
+				Message: "OK",
+				GasUsed: uint64(10 + i),
+			},
+		}
 	}
 
 	// simulate Calling ApplyTxSimContext(...) 3 times
@@ -1051,25 +1075,6 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 			sealTimes:         1,
 			wantErr:           true, // last tx should be gas type
 		},
-		//{
-		//	name:              "test1",
-		//	dag:               dagNormal,
-		//	applyTxSimContext: applyTxSimContextNormal,
-		//	runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
-		//		txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
-		//		*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
-		//		txId := txContext.GetTx().GetPayload().GetTxId()
-		//		if txId == txId0 {
-		//			return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
-		//		} else if txId == txId1 {
-		//			return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
-		//		} else {
-		//			return contractResult, protocol.ExecOrderTxTypeChargeGas, commonPb.TxStatusCode_SUCCESS
-		//		}
-		//	},
-		//	sealTimes: 1,
-		//	wantErr:   false,
-		//},
 		{
 			name:              "test2",
 			dag:               dagNormal,
@@ -1089,7 +1094,7 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			vmMgr, _, _, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 3, false)
+			vmMgr, _, _, _, snapshot, scheduler, contractId, block := prepare4(t, true, false, false, 3, false)
 
 			parameters := make(map[string]string, 8)
 			tx0 := newTx(txId0, contractId, parameters)
