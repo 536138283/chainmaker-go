@@ -247,7 +247,7 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 				return "append coinbase tx to block ..."
 			})
 			//添加coinbaseTx到区块中，并修改dag
-			ts.appendCoinbaseTx(block, snapshot, senderCollection)
+			ts.appendCoinbaseTx(block, snapshot)
 			block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
 		}
 
@@ -258,7 +258,7 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 		ts.log.DebugDynamic(func() string {
 			return "append charge gas tx to block ..."
 		})
-		ts.appendChargeGasTx(block, snapshot, senderCollection)
+		ts.appendChargeGasTx(block, snapshot)
 		// gas交易没有对应的blockType
 	}
 }
@@ -1235,10 +1235,9 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 // 3) append tx to DAG struct
 func (ts *TxScheduler) appendChargeGasTx(
 	block *commonPb.Block,
-	snapshot protocol.Snapshot,
-	senderCollection *SenderCollection) {
+	snapshot protocol.Snapshot) {
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => createChargeGasTx() begin ")
-	tx, err := ts.createChargeGasTx(senderCollection)
+	tx, err := ts.createChargeGasTx(snapshot)
 	if err != nil {
 		return
 	}
@@ -1257,11 +1256,10 @@ func (ts *TxScheduler) appendChargeGasTx(
 // 3) append tx to DAG struct
 func (ts *TxScheduler) appendCoinbaseTx(
 	block *commonPb.Block,
-	snapshot protocol.Snapshot,
-	senderCollection *SenderCollection) {
+	snapshot protocol.Snapshot) {
 	ts.log.Debug("TxScheduler => appendCoinbaseTx() => createCoinbaseTx() begin ")
 	//创建coinbase交易
-	tx, err := ts.createCoinbaseTx(senderCollection)
+	tx, err := ts.createCoinbaseTx(snapshot)
 	if err != nil {
 		return
 	}
@@ -1296,37 +1294,40 @@ func (ts *TxScheduler) signTxPayload(
 }
 
 func (ts *TxScheduler) createChargeGasTx(
-	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
+	snapshot protocol.Snapshot) (*commonPb.Transaction, error) {
+
+	address2TotalGas := make(map[string]uint64)
+
+	txTable := snapshot.GetTxTable()
+	txMap := snapshot.GetTxResultMap()
+	for _, tx := range txTable {
+		address, err := getAddressFromTx(tx, snapshot)
+		if err != nil {
+			ts.log.Errorf("getAddressFromTx failed: err = %v", err)
+			continue
+		}
+
+		totalGas, exists := address2TotalGas[address]
+		if !exists {
+			totalGas = uint64(0)
+			address2TotalGas[address] = totalGas
+		}
+
+		txResult := txMap[tx.Payload.TxId]
+		totalGas += txResult.ContractResult.GasUsed
+
+		address2TotalGas[address] = totalGas
+	}
 
 	// 构造参数
 	parameters := make([]*commonPb.KeyValuePair, 0)
-
-	senderCollection.txsMap.Range(func(key, value interface{}) bool {
-		address, ok := key.(string)
-		if !ok {
-			ts.log.Warnf("get address fail")
-		}
-
-		txCollection, ok := value.(*TxCollection)
-		if !ok {
-			ts.log.Warnf("get txCollection fail")
-		}
-
-		totalGasUsed := int64(0)
-		for _, tx := range txCollection.txs {
-			if tx.Result != nil {
-				totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
-			}
-		}
-
+	for address, totalGas := range address2TotalGas {
 		keyValuePair := commonPb.KeyValuePair{
 			Key:   address,
-			Value: []byte(fmt.Sprintf("%d", totalGasUsed)),
+			Value: []byte(fmt.Sprintf("%d", totalGas)),
 		}
 		parameters = append(parameters, &keyValuePair)
-
-		return true
-	})
+	}
 
 	// 构造 Payload
 	payload := &commonPb.Payload{
@@ -1378,37 +1379,34 @@ func (ts *TxScheduler) createChargeGasTx(
 
 //nolint: unused
 func (ts *TxScheduler) createCoinbaseTx(
-	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
+	snapshot protocol.Snapshot) (*commonPb.Transaction, error) {
 
 	senders := make(map[string][]byte)
 	parameters := make([]*commonPb.KeyValuePair, 0)
-	if senderCollection != nil {
-		// 构造 gas 参数
-		senderCollection.txsMap.Range(func(key, value interface{}) bool {
-			address, ok := key.(string)
-			if !ok {
-				ts.log.Warnf("get address fail")
-			}
 
-			txCollection, ok := value.(*TxCollection)
-			if !ok {
-				ts.log.Warnf("get txCollection fail")
-			}
+	address2TotalGas := make(map[string]uint64)
+	txTable := snapshot.GetTxTable()
+	txMap := snapshot.GetTxResultMap()
+	for _, tx := range txTable {
+		address, err := getAddressFromTx(tx, snapshot)
+		if err != nil {
+			ts.log.Errorf("getAddressFromTx failed: err = %v", err)
+			continue
+		}
 
-			totalGasUsed := int64(0)
-			for _, tx := range txCollection.txs {
-				if tx.Result != nil {
-					totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
-				}
-			}
-			//keyValuePair := commonPb.KeyValuePair{
-			//	Key:   address,
-			//	Value: []byte(fmt.Sprintf("%d", totalGasUsed)),
-			//}
-			senders[address] = []byte(fmt.Sprintf("%d", totalGasUsed))
+		totalGas, exists := address2TotalGas[address]
+		if !exists {
+			totalGas = uint64(0)
+			address2TotalGas[address] = totalGas
+		}
 
-			return true
-		})
+		txResult := txMap[tx.Payload.TxId]
+		totalGas += txResult.ContractResult.GasUsed
+
+		address2TotalGas[address] = totalGas
+	}
+	for address, totalGas := range address2TotalGas {
+		senders[address] = []byte(fmt.Sprintf("%d", totalGas))
 	}
 
 	senderBytes, err := json.Marshal(senders)
