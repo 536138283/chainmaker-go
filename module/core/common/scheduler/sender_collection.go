@@ -3,6 +3,7 @@ package scheduler
 import (
 	"fmt"
 	"strconv"
+	"sync"
 
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"chainmaker.org/chainmaker/vm-native/v3/accountmgr"
@@ -16,7 +17,7 @@ import (
 // key: address
 // value: tx collection will address's other data
 type SenderCollection struct {
-	txsMap map[string]*TxCollection
+	txsMap *sync.Map
 }
 
 // TxCollection tx collection struct
@@ -28,6 +29,9 @@ type TxCollection struct {
 	// total gas added each tx
 	totalGasUsed int64
 	txs          []*commonPb.Transaction
+
+	// Mutex for synchronizing concurrent access to accountBalance
+	mu sync.Mutex
 }
 
 func (g *TxCollection) String() string {
@@ -51,8 +55,8 @@ func NewSenderCollection(
 func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
-	log protocol.Logger) map[string]*TxCollection {
-	txCollectionMap := make(map[string]*TxCollection)
+	log protocol.Logger) *sync.Map {
+	txCollectionMap := new(sync.Map)
 
 	var err error
 	chainCfg := snapshot.GetLastChainConfig()
@@ -72,20 +76,37 @@ func getSenderTxCollection(
 			continue
 		}
 
-		txCollection, exists := txCollectionMap[address]
-		if !exists {
-			txCollection = &TxCollection{
-				publicKey:      pk,
-				accountBalance: int64(0),
-				totalGasUsed:   int64(0),
-				txs:            make([]*commonPb.Transaction, 0),
-			}
-			txCollectionMap[address] = txCollection
+		txCollection, loaded := txCollectionMap.LoadOrStore(address, &TxCollection{
+			publicKey:      pk,
+			accountBalance: int64(0),
+			totalGasUsed:   int64(0),
+			txs:            make([]*commonPb.Transaction, 0),
+		})
+
+		collection, ok := txCollection.(*TxCollection)
+		if !ok {
+			log.Error("get collection failed")
+			continue
 		}
-		txCollection.txs = append(txCollection.txs, tx)
+
+		collection.txs = append(collection.txs, tx)
+
+		if !loaded {
+			txCollectionMap.Store(address, collection)
+		}
 	}
 
-	for senderAddress, txCollection := range txCollectionMap {
+	txCollectionMap.Range(func(key, value interface{}) bool {
+		senderAddress, ok := key.(string)
+		if !ok {
+			log.Warnf("get sender address fail")
+		}
+
+		txCollection, ok := value.(*TxCollection)
+		if !ok {
+			log.Warnf("get tx collection fail")
+		}
+
 		// get the account balance from snapshot
 		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot, log)
 		if err != nil {
@@ -105,16 +126,18 @@ func getSenderTxCollection(
 				}
 			}
 		}
-	}
+		return true
+	})
 
 	return txCollectionMap
 }
 
 // Clear clear addr in txs map
-func (s SenderCollection) Clear() {
-	for addr := range s.txsMap {
-		delete(s.txsMap, addr)
-	}
+func (s *SenderCollection) Clear() {
+	s.txsMap.Range(func(key, value interface{}) bool {
+		s.txsMap.Delete(key)
+		return true
+	})
 }
 
 func getAddressFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (string, error) {
@@ -130,6 +153,7 @@ func getAddressFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (str
 	return address, nil
 }
 
+// getAccountBalanceFromSnapshot get account balance from snapshot
 func getAccountBalanceFromSnapshot(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	chainConfig := snapshot.GetLastChainConfig()
@@ -143,6 +167,7 @@ func getAccountBalanceFromSnapshot(
 	return getAccountBalanceFromSnapshot2310(address, snapshot, log)
 }
 
+// getAccountBalanceFromSnapshot2300 get account balance from snapshot for 2300 version
 func getAccountBalanceFromSnapshot2300(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 
@@ -167,6 +192,7 @@ func getAccountBalanceFromSnapshot2300(
 	return balance, nil
 }
 
+// getAccountBalanceFromSnapshot2310 get account balance from snapshot for 2310 version
 func getAccountBalanceFromSnapshot2310(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
 	var err error
