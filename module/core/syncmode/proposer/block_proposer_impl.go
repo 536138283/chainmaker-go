@@ -570,56 +570,38 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
 // OnReceiveRwSetVerifyFailTxs remove verify fail txs, deal with rw set verify fail txs
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
 
+	// deal case tx pool type not equal tx pool type batch
 	if common.TxPoolType == batch.TxPoolType {
 		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
 		return
 	}
 
+	bp.log.Infof("remove rw set verify failed txs, block height:%d,hash:%x",
+		rwSetVerifyFailTxs.BlockHeight, rwSetVerifyFailTxs.BlockHash)
+
 	// get block by height from proposal cache
 	height := rwSetVerifyFailTxs.BlockHeight
-	block := bp.proposalCache.GetSelfProposedBlockAt(height)
+	hash := rwSetVerifyFailTxs.BlockHash
+	invalidTxIds := rwSetVerifyFailTxs.TxIds
 
-	bp.log.DebugDynamic(func() string {
-		return fmt.Sprintf("remove rw set verify failed txs, block height:%d", height)
-	})
+	// get block by height & hash from proposal cache
+	block, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(hash, height)
+
+	// get invalid txs set
+	invalidTxSets := common.GetInvalidTxSets(invalidTxIds)
 
 	// if block is nil, remove tx from tx pool
 	if block == nil {
-		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
-		txs := make([]*commonpb.Transaction, 0)
-		for _, v := range txsRet {
-			txs = append(txs, v)
-		}
-		bp.txPool.RemoveTxs(txs, protocol.EVIL)
+		// delete invalid txs from tx pool
+		common.RemoveInvalidTxsForFollower(bp.txPool, invalidTxIds)
 		return
 	}
 
-	// collect retry txs and remove txs
-	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
-	for _, tx := range block.Txs {
-		for _, txId := range rwSetVerifyFailTxs.TxIds {
-			if tx.Payload.TxId == txId {
-				txsMap[txId] = tx
-				removeTxs = append(removeTxs, tx)
-				break
-			}
-		}
-	}
+	// for proposer
+	common.RemoveInvalidTxsForProposer(bp.txPool, invalidTxSets, block)
 
-	for _, tx := range block.Txs {
-		if _, ok := txsMap[tx.Payload.TxId]; !ok {
-			retryTxs = append(retryTxs, tx)
-		}
-	}
-
-	// retry txs and remove txs in tx pool
-	bp.txPool.RetryTxs(retryTxs)
-	bp.txPool.RemoveTxs(removeTxs, protocol.EVIL)
-
-	// clear proposal cache at the height
-	bp.proposalCache.ClearProposedBlockAt(height)
+	// clear proposal cache
+	bp.proposalCache.ClearTheBlock(block)
 }
 
 /*

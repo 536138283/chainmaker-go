@@ -745,10 +745,8 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		return
 	}
 
-	bp.log.DebugDynamic(func() string {
-		return fmt.Sprintf("remove rw set verify failed txs, block height:%d",
-			rwSetVerifyFailTxs.BlockHeight)
-	})
+	bp.log.Infof("remove rw set verify failed txs, block height:%d,hash:%x",
+		rwSetVerifyFailTxs.BlockHeight, rwSetVerifyFailTxs.BlockHash)
 
 	height := rwSetVerifyFailTxs.BlockHeight
 	hash := rwSetVerifyFailTxs.BlockHash
