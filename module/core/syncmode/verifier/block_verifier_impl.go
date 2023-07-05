@@ -166,6 +166,12 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 }
 
 // VerifyBlockSync only maxbft use this method
+//  @Description:
+//  @receiver v
+//  @param block
+//  @param mode
+//  @return *consensuspb.VerifyResult
+//  @return error
 func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
 	mode protocol.VerifyMode) (*consensuspb.VerifyResult, error) {
 	//TODO implement me
@@ -173,6 +179,11 @@ func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
 }
 
 // VerifyBlock to check if block is valid
+//  @Description:
+//  @receiver v
+//  @param block
+//  @param mode
+//  @return err
 func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (err error) {
 
 	startTick := utils.CurrentTimeMillisSeconds()
@@ -296,6 +307,12 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 }
 
 // VerifyBlockWithRwSets to check if block is valid
+//  @Description:
+//  @receiver v
+//  @param block
+//  @param rwsets
+//  @param mode
+//  @return err
 func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	rwsets []*commonpb.TxRWSet, mode protocol.VerifyMode) (err error) {
 
@@ -399,6 +416,9 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 var _ msgbus.Subscriber = (*BlockVerifierImpl)(nil)
 
 // OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
+//  @Description:
+//  @receiver v
+//  @param msg
 func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
@@ -435,6 +455,15 @@ func (v *BlockVerifierImpl) OnQuit() {
 }
 
 // validateBlock validate block
+//  @Description:
+//  @receiver v
+//  @param block
+//  @param lastBlock
+//  @param mode
+//  @return map[string]*commonpb.TxRWSet
+//  @return map[string][]*commonpb.ContractEvent
+//  @return map[string]int64
+//  @return hashType
 func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode protocol.VerifyMode) (
 	map[string]*commonpb.TxRWSet,
 	map[string][]*commonpb.ContractEvent,
@@ -471,6 +500,15 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 }
 
 // validateBlockWithRWSets validate block with rw sets
+//  @Description:
+//  @receiver v
+//  @param block
+//  @param lastBlock
+//  @param mode
+//  @param txRWSetMap
+//  @return map[string][]*commonpb.ContractEvent
+//  @return map[string]int64
+//  @return error
 func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block, mode protocol.VerifyMode,
 	txRWSetMap map[string]*commonpb.TxRWSet) (
 	map[string][]*commonpb.ContractEvent, map[string]int64, error) {
@@ -491,11 +529,21 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 }
 
 // verifyVoteSig verify vote signatures
+//  @Description:
+//  @receiver v
+//  @param block
+//  @return error
 func (v *BlockVerifierImpl) verifyVoteSig(block *commonpb.Block) error {
 	return consensus.VerifyBlockSignatures(v.chainConf, v.ac, v.blockchainStore, block, v.ledgerCache)
 }
 
 // parseVerifyResult pater verify result, return verify result
+//  @Description:
+//  @param block
+//  @param isValid
+//  @param txsRwSet
+//  @param rwSetVerifyFailTxs
+//  @return *consensuspb.VerifyResult
 func parseVerifyResult(block *commonpb.Block, isValid bool,
 	txsRwSet map[string]*commonpb.TxRWSet, rwSetVerifyFailTxs *common.RwSetVerifyFailTx) *consensuspb.VerifyResult {
 	verifyResult := &consensuspb.VerifyResult{
@@ -520,6 +568,10 @@ func parseVerifyResult(block *commonpb.Block, isValid bool,
 }
 
 // cutBlocks cut blocks
+//  @Description:
+//  @receiver v
+//  @param blocksToCut
+//  @param blockToKeep
 func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
 	if common.TxPoolType == batch.TxPoolType {
 		err := v.cutBlocksForBatchPool(blocksToCut, blockToKeep)
@@ -553,6 +605,12 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 }
 
+// cutBlocksForBatchPool cut blocks for batch pool
+//  @Description:
+//  @receiver v
+//  @param blocksToCut
+//  @param blockToKeep
+//  @return error
 func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) error {
 
 	keepBatchIdsMap := make(map[string]interface{})
@@ -593,6 +651,12 @@ func (v *BlockVerifierImpl) cutBlocksForBatchPool(blocksToCut []*commonpb.Block,
 }
 
 // verifyRepeat to check if the block has verified before
+//  @Description:
+//  @receiver v
+//  @param block
+//  @param startTick
+//  @param mode
+//  @return isRepeat
 func (v *BlockVerifierImpl) verifyRepeat(block *commonpb.Block, startTick int64,
 	mode protocol.VerifyMode) (isRepeat bool) {
 	b, txRwSet, _ := v.proposalCache.GetProposedBlock(block)

@@ -617,9 +617,9 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 	// retry txs and remove txs in tx pool
 	bp.txPool.RetryTxs(retryTxs)
 	bp.txPool.RemoveTxs(removeTxs, protocol.EVIL)
+
 	// clear proposal cache at the height
 	bp.proposalCache.ClearProposedBlockAt(height)
-
 }
 
 /*

@@ -231,6 +231,7 @@ func (bp *BlockProposerImpl) doPropose(lastBlock, blockBatch *commonpb.Block) er
 	return nil
 }
 
+// getTxBatchFromTxPool get txs from tx pool
 func (bp *BlockProposerImpl) getTxBatchFromTxPool(ctx context.Context, height uint64) {
 	for {
 		select {

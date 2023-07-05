@@ -740,57 +740,90 @@ func (bp *BlockProposerImpl) shouldProposeByMaxBFTSync(height uint64, preHash []
 // OnReceiveRwSetVerifyFailTxs remove verify fail txs, deal with rw set verify fail txs
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
 	// deal case tx pool type not equal tx pool type batch
-
 	if common.TxPoolType == batch.TxPoolType {
 		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
 		return
 	}
 
-	// get block by height from proposal cache
-	height := rwSetVerifyFailTxs.BlockHeight
-	block := bp.proposalCache.GetSelfProposedBlockAt(height)
-
 	bp.log.DebugDynamic(func() string {
-		return fmt.Sprintf("remove rw set verify failed txs, block height:%d", height)
+		return fmt.Sprintf("remove rw set verify failed txs, block height:%d",
+			rwSetVerifyFailTxs.BlockHeight)
 	})
 
-	// if block is nil, remove tx from tx pool
+	height := rwSetVerifyFailTxs.BlockHeight
+	hash := rwSetVerifyFailTxs.BlockHash
+	invalidTxIds := rwSetVerifyFailTxs.TxIds
+
+	// get block by height & hash from proposal cache
+	block, _ := bp.proposalCache.GetProposedBlockByHashAndHeight(hash, height)
+
+	// get invalid txs set
+	invalidTxSets := common.GetInvalidTxSets(invalidTxIds)
+
+	// if block is nil, remove tx from tx pool(for follower)
 	if block == nil {
-		txsRet, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
-		txs := make([]*commonpb.Transaction, 0)
-		for _, v := range txsRet {
-			txs = append(txs, v)
-		}
-		bp.txPool.RemoveTxs(txs, protocol.EVIL)
+		// delete invalid txs from tx pool
+		common.RemoveInvalidTxsForFollower(bp.txPool, invalidTxIds)
+
+		// Remove other caches that contain invalid txs.
+		// (true for searching forward, false for searching backward)
+		removeOtherInvalidCache(bp.proposalCache, height, invalidTxSets, true)
+		removeOtherInvalidCache(bp.proposalCache, height, invalidTxSets, false)
+
 		return
 	}
 
-	// collect retry txs and remove txs
-	retryTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	removeTxs := make([]*commonpb.Transaction, 0, len(block.Txs))
-	txsMap := make(map[string]*commonpb.Transaction, len(block.Txs))
-	for _, tx := range block.Txs {
-		for _, txId := range rwSetVerifyFailTxs.TxIds {
-			if tx.Payload.TxId == txId {
-				txsMap[txId] = tx
-				removeTxs = append(removeTxs, tx)
-				break
+	// for proposer
+	common.RemoveInvalidTxsForProposer(bp.txPool, invalidTxSets, block)
+
+	// clear proposal cache
+	bp.proposalCache.ClearTheBlock(block)
+
+	// Remove other caches that contain invalid txs.
+	// (true for searching forward, false for searching backward)
+	removeOtherInvalidCache(bp.proposalCache, height, invalidTxSets, true)
+	removeOtherInvalidCache(bp.proposalCache, height, invalidTxSets, false)
+}
+
+// removeOtherInvalidCache remove other proposal caches that include invalid transactions.
+func removeOtherInvalidCache(proposalCache protocol.ProposalCache,
+	height uint64, invalidTxSets map[string]struct{}, forward bool) {
+
+	var increment int64
+	if forward {
+		increment = 1
+	} else {
+		increment = -1
+	}
+
+	for i := int64(0); i < 4; i++ {
+		targetHeight := int64(height) + increment*i
+		if targetHeight < 0 {
+			break
+		}
+
+		// retrieve all block caches at this height.
+		proposedBlocks := proposalCache.GetProposedBlocksAt(uint64(targetHeight))
+		if len(proposedBlocks) == 0 {
+			continue
+		}
+
+		// Iterate through the block list, find the cache containing invalid txs, and clear it
+		for _, block := range proposedBlocks {
+			if len(block.Txs) == 0 {
+				continue
+			}
+
+			for _, tx := range block.Txs {
+				if _, ok := invalidTxSets[tx.Payload.TxId]; ok {
+
+					// The cache can be deleted if there is a invalid tx.
+					proposalCache.ClearTheBlock(block)
+					break
+				}
 			}
 		}
 	}
-
-	for _, tx := range block.Txs {
-		if _, ok := txsMap[tx.Payload.TxId]; !ok {
-			retryTxs = append(retryTxs, tx)
-		}
-	}
-
-	// retry txs and remove txs in tx pool
-	bp.txPool.RetryTxs(retryTxs)
-	bp.txPool.RemoveTxs(removeTxs, protocol.EVIL)
-	// clear proposal cache at the height
-	bp.proposalCache.ClearProposedBlockAt(height)
-
 }
 
 // getFetchBatchFromPool fetch txs from tx pool at the height, return batch ids, fetch batch txs, fetch batches
@@ -880,6 +913,7 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 	return nil, newBatchIds, nil
 }
 
+// removeAndRetryTx remove and retry txs from tx pool
 func (bp *BlockProposerImpl) removeAndRetryTx(
 	height uint64, batchIds []string, removeTxs, fetchBatch []*commonpb.Transaction, mode int) (
 	[]string, []*commonpb.Transaction, [][]*commonpb.Transaction) {
@@ -904,6 +938,7 @@ func (bp *BlockProposerImpl) removeAndRetryTx(
 
 }
 
+// fetchBatchWithoutDupTxInSameBranch prevent duplicate transactions within the same batch.
 func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, preHash []byte, batchIds []string,
 	fetchBatch []*commonpb.Transaction, fetchBatches [][]*commonpb.Transaction) ([]string, []*commonpb.Transaction,
 	[][]*commonpb.Transaction) {
@@ -933,34 +968,6 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, p
 
 	return batchIds, finalBatch, fetchBatches
 }
-
-//// isIdle, to check if proposer is idle
-//func (bp *BlockProposerImpl) isIdle() bool {
-//	bp.idleMu.Lock()
-//	defer bp.idleMu.Unlock()
-//	return bp.idle
-//}
-//
-///*
-// * shouldProposeByBFT, check if node should propose new block
-// * Only for *BFT consensus
-// * if node is proposer, and node is not propose right now, and last proposed block is committed, then return true
-// */
-//func (bp *BlockProposerImpl) shouldProposeByBFT(height uint64) bool {
-//	if !bp.isIdle() {
-//		// concurrent control, proposer is proposing now
-//		bp.log.Debugf("proposer is busy, not propose [%d] ", height)
-//		return false
-//	}
-//	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
-//	if committedBlock == nil {
-//		bp.log.Errorf("no committed block found")
-//		return false
-//	}
-//	currentHeight := committedBlock.Header.BlockHeight
-//	// proposing height must higher than current height
-//	return currentHeight+1 == height
-//}
 
 // getFetchBatch return fetchBatch
 func getFetchBatch(fetchBatches [][]*commonpb.Transaction) []*commonpb.Transaction {
