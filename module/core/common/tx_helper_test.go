@@ -32,7 +32,8 @@ import (
 //	}
 //
 //	proposalCache := newMockProposalCache(t)
-//	proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
+//	proposalCache.EXPECT().GetProposedBlockByHashAndHeight(gomock.Any(),
+//	gomock.Any()).Return(nil, nil).AnyTimes()
 //
 //	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
 //
