@@ -192,28 +192,24 @@ func createBlock(height uint64) *commonpb.Block {
 	return block
 }
 
-//
-//func createNewTestTx(txID string) *commonpb.Transaction {
-//	//var hash = []byte("0123456789")
-//	return &commonpb.Transaction{
-//		Payload: &commonpb.Payload{
-//			ChainId:        "Chain1",
-//			TxType:         0,
-//			TxId:           txID,
-//			Timestamp:      CurrentTimeMillisSeconds(),
-//			ExpirationTime: 0,
-//		},
-//		Result: &commonpb.Result{
-//			Code:           commonpb.TxStatusCode_SUCCESS,
-//			ContractResult: nil,
-//			RwSetHash:      nil,
-//		},
-//	}
-//}
-//
-//func CurrentTimeMillisSeconds() int64 {
-//	return time.Now().UnixNano() / 1e6
-//}
+func createNewTestTx(txID string) *commonpb.Transaction {
+	//var hash = []byte("0123456789")
+	return &commonpb.Transaction{
+		Payload: &commonpb.Payload{
+			ChainId:        "Chain1",
+			TxType:         0,
+			TxId:           txID,
+			Timestamp:      utils.CurrentTimeMillisSeconds(),
+			ExpirationTime: 0,
+		},
+		Result: &commonpb.Result{
+			Code:           commonpb.TxStatusCode_SUCCESS,
+			ContractResult: nil,
+			RwSetHash:      nil,
+		},
+	}
+}
+
 //
 //// the sync way fo finalize block
 //func FinalizeBlockSync(
