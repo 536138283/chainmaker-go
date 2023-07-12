@@ -40,7 +40,7 @@
 
 ## cmc清理链上区块数据命令
 ```powershell
-./cmc archive archive 10000 --sdk-conf-path ./testdata/sdk_config.yml 
+./cmc archive archive 10000 --timeout 20 --sdk-conf-path ./testdata/sdk_config.yml 
 ```  
 
 ## restore 恢复链上区块数据命令,恢复到指定高度
