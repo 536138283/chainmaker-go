@@ -483,12 +483,22 @@ if [ "$ENABLE_VM_GO" == "" ] ;then
 
         echo "begin node$i trust config..."
         if  [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
+          trust_path=""
+          c=0
+          for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
+          do
+            c=$(($c+1))
+            if  [ $c -eq $i ]; then
+              trust_path=$file
+              break
+            fi
+          done
           for ((k = 1; k < $CHAIN_CNT + 1; k = k + 1)); do
             for file in `ls -t $BUILD_CRYPTO_CONFIG_PATH`
             do
                 org_id_tmp="\ - org_id: \"${file}\""
                 org_root="\ \ \ root:"
-                org_root_tmp="\ \ \ \ \ - \"../config/wx-org${i}.chainmaker.org/keys/admin/${file}/admin.pem\""
+                org_root_tmp="\ \ \ \ \ - \"../config/${trust_path}/keys/admin/${file}/admin.pem\""
                 if [ "${system}" = "Linux" ]; then
                   xsed "${BC_YML_TRUST_ROOT_LINE}i\ ${org_root_tmp}" node$i/chainconfig/bc$k.yml
                   xsed "${BC_YML_TRUST_ROOT_LINE}i\ ${org_root}" node$i/chainconfig/bc$k.yml
