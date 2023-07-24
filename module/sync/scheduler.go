@@ -296,9 +296,11 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 		sch.pendingTime[i] = sch.lastRequest
 		sch.pendingBlocks[i] = peer
 	}
-	if err := sch.sendSyncBlockRequest(peer, pendingHeight, sch.BatchesizeInEachReq,
-		localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable); err != nil {
-		return nil, err
+	sch.log.Infof("request block[height: %d] from node [%s], BatchesSizeInReq: %d", pendingHeight, peer,
+		sch.BatchesizeInEachReq)
+	if err := sch.sender.sendMsg(syncPb.SyncMsg_BLOCK_SYNC_REQ, bz, peer); err != nil {
+		sch.log.Warnf("send sync block request for height[%d], fail: %s", pendingHeight, err.Error())
+		return nil, nil //retutn nil prevent external printing errors, example:routine
 	}
 	return nil, nil
 }

@@ -151,7 +151,8 @@ func (s *RPCServer) Start() error {
 		}
 	}
 
-	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
+	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
+		localconf.ChainMakerConfig.RpcConfig.Port)
 	conn, err := net.Listen("tcp", endPoint)
 	if err != nil {
 		return fmt.Errorf("TCP listen failed, %s", err.Error())
@@ -461,7 +462,8 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 		dopts = append(dopts, grpc.WithInsecure())
 	}
 
-	endPoint := fmt.Sprintf(":%d", localconf.ChainMakerConfig.RpcConfig.Port)
+	// NOTE: the mix http server certificate is valid for 127.0.0.1, so we must use 127.0.0.1
+	endPoint := fmt.Sprintf("%s:%d", "127.0.0.1", localconf.ChainMakerConfig.RpcConfig.Port)
 
 	gwmux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard,
@@ -469,7 +471,7 @@ func newGateway(chainMakerServer *blockchain.ChainMakerServer) (http.Handler, er
 		),
 	)
 
-	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, "localhost"+endPoint, dopts); err != nil {
+	if err := apiPb.RegisterRpcNodeHandlerFromEndpoint(ctx, gwmux, endPoint, dopts); err != nil {
 		log.Errorf("new gateway failed, RegisterRpcNodeHandlerFromEndpoint err: %v", err)
 		return nil, err
 	}

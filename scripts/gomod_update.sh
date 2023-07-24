@@ -8,24 +8,26 @@
 
 set -x
 BRANCH=$1
+BRANCH_OLD='v2.3.0_qc'
+
 if [[ ! -n $BRANCH ]]; then
-				  BRANCH="develop"
+				  BRANCH="v2.3.2_qc"
 fi
 cd ..
 
 go get chainmaker.org/chainmaker/chainconf/v2@${BRANCH}
 go get chainmaker.org/chainmaker/common/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-maxbft/v2@${BRANCH}
-go get chainmaker.org/chainmaker/consensus-dpos/v2@${BRANCH}
-go get chainmaker.org/chainmaker/consensus-raft/v2@${BRANCH}
-go get chainmaker.org/chainmaker/consensus-solo/v2@${BRANCH}
+go get chainmaker.org/chainmaker/consensus-dpos/v2@${BRANCH_OLD}
+go get chainmaker.org/chainmaker/consensus-raft/v2@${BRANCH_OLD}
+go get chainmaker.org/chainmaker/consensus-solo/v2@${BRANCH_OLD}
 go get chainmaker.org/chainmaker/consensus-tbft/v2@${BRANCH}
-go get chainmaker.org/chainmaker/consensus-utils/v2@${BRANCH}
+go get chainmaker.org/chainmaker/consensus-utils/v2@${BRANCH_OLD}
 go get chainmaker.org/chainmaker/localconf/v2@${BRANCH}
-go get chainmaker.org/chainmaker/logger/v2@${BRANCH}
-go get chainmaker.org/chainmaker/net-common@${BRANCH}
-go get chainmaker.org/chainmaker/net-libp2p@${BRANCH}
-go get chainmaker.org/chainmaker/net-liquid@${BRANCH}
+go get chainmaker.org/chainmaker/logger/v2@${BRANCH_OLD}
+go get chainmaker.org/chainmaker/net-common@v1.2.2_qc
+go get chainmaker.org/chainmaker/net-libp2p@v1.2.2_qc
+go get chainmaker.org/chainmaker/net-liquid@v1.1.1_qc
 go get chainmaker.org/chainmaker/pb-go/v2@${BRANCH}
 go get chainmaker.org/chainmaker/protocol/v2@${BRANCH}
 go get chainmaker.org/chainmaker/sdk-go/v2@${BRANCH}

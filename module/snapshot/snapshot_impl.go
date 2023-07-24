@@ -9,7 +9,6 @@ package snapshot
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"go.uber.org/atomic"
@@ -374,6 +373,7 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 
 	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
 	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
+	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", txSimContext.GetTx().Payload.TxId, txRWSet)
 	txResult = txSimContext.GetTxResult()
 
 	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.txTable) {
@@ -414,7 +414,9 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 	runVmSuccess bool) {
 	// Append to read table
 	applySeq := len(s.txTable)
-	// compatible with version lower than 2201
+	// compatible with version lower than 2201, failed transaction should not apply read set to snapshot
+	// that may cause next transaction read out an error value. Failed transaction can produce invalid read set
+	// by read, write and then read again the same value.
 	if s.blockVersion < 2201 || runVmSuccess {
 		for _, txRead := range txRWSet.TxReads {
 			finalKey := constructKey(txRead.ContractName, txRead.Key)
@@ -529,15 +531,16 @@ func (s *SnapshotImpl) BuildDAG(isSql bool, txRWSetTable []*commonPb.TxRWSet) *c
 // buildDictAndPos build read/write key dict and read/write key pos
 func (s *SnapshotImpl) buildDictAndPos(txRWSetTable []*commonPb.TxRWSet) (map[string][]uint32, map[string][]uint32,
 	map[uint32]map[string]uint32, map[uint32]map[string]uint32) {
-	readKeyDict := make(map[string][]uint32, 1024)
-	writeKeyDict := make(map[string][]uint32, 1024)
-	readPos := make(map[uint32]map[string]uint32)
-	writePos := make(map[uint32]map[string]uint32)
+	//Suppose there are at least 4 keys in each transaction，2 read and 2 write
+	readKeyDict := make(map[string][]uint32, len(txRWSetTable)*2)
+	writeKeyDict := make(map[string][]uint32, len(txRWSetTable)*2)
+	readPos := make(map[uint32]map[string]uint32, len(txRWSetTable))
+	writePos := make(map[uint32]map[string]uint32, len(txRWSetTable))
 	for i := uint32(0); i < uint32(len(txRWSetTable)); i++ {
 		readTableItemForI := txRWSetTable[i].TxReads
 		writeTableItemForI := txRWSetTable[i].TxWrites
-		readPos[i] = make(map[string]uint32)
-		writePos[i] = make(map[string]uint32)
+		readPos[i] = make(map[string]uint32, len(readTableItemForI))
+		writePos[i] = make(map[string]uint32, len(writeTableItemForI))
 		// put all read key in to readKeyDict and set their pos into readPos and writePos
 		for _, keyForI := range readTableItemForI {
 			key := string(keyForI.Key)
@@ -612,10 +615,12 @@ func (s *SnapshotImpl) buildReachMap(i uint32, txRWSet *commonPb.TxRWSet, readKe
 
 // constructKey construct key: contractName#key
 func constructKey(contractName string, key []byte) string {
-	var builder strings.Builder
-	builder.WriteString(contractName)
-	builder.Write(key)
-	return builder.String()
+	// with higher performance
+	return contractName + string(key)
+	//var builder strings.Builder
+	//builder.WriteString(contractName)
+	//builder.Write(key)
+	//return builder.String()
 }
 
 // SetBlockFingerprint set block fingerprint

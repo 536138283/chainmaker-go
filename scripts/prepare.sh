@@ -15,7 +15,7 @@ function checkEnv() {
       if [ "$?" != "0" ];then
         echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
       fi
-      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH'
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH (brew link --force gnu-getopt)'
       exit
     fi
   fi
@@ -24,7 +24,7 @@ checkEnv
 
 set -e
 
-VERSION=2040000
+VERSION='"2030200"'
 
 NODE_CNT=$1
 CHAIN_CNT=$2
@@ -42,7 +42,7 @@ BUILD_CONFIG_PATH=${BUILD_PATH}/config
 CRYPTOGEN_TOOL_PATH=${PROJECT_PATH}/tools/chainmaker-cryptogen
 CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/crypto_config_template.yml
-CRYPTOGEN_TOOL_TEST_KEYS=${CRYPTOGEN_TOOL_PATH}/config/test_keys.yml
+CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
 
 BC_YML_TRUST_ROOT_LINE=$(awk '/trust roots list start/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
 BC_YML_TRUST_ROOT_LINE_END=$(awk '/trust roots list end/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
@@ -162,16 +162,16 @@ function generate_certs() {
     fi
 
     cp $CRYPTOGEN_TOOL_CONF crypto_config.yml
-    cp $CRYPTOGEN_TOOL_TEST_KEYS test_keys.yml
+    cp $CRYPTOGEN_TOOL_PKCS11_KEYS pkcs11_keys.yml
 
     xsed "s%count: 4%count: ${NODE_CNT}%g" crypto_config.yml
 
-    ${CRYPTOGEN_TOOL_BIN} generate -c ./crypto_config.yml  -p ./test_keys.yml
+    ${CRYPTOGEN_TOOL_BIN} generate -c ./crypto_config.yml  -p ./pkcs11_keys.yml
 }
 
 function generate_config() {
     LOG_LEVEL="" # default INFO
-    CONSENSUS_TYPE=0 # default  1
+    CONSENSUS_TYPE=-1 # default  1
     MONITOR_PORT=14321
     PPROF_PORT=24321
     TRUSTED_PORT=13301
@@ -200,8 +200,8 @@ function generate_config() {
     done
 
     # set CONSENSUS_TYPE
-    if [ $CONSENSUS_TYPE == 0 ] ;then
-      if  [ $NODE_CNT -gt 1 ] && [ "$CONSENSUS_TYPE" == "0" ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
+      if  [ $NODE_CNT -gt 1 ] ;then
         read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
         if  [ ! -z "$tmp" ] ;then
           if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
@@ -221,8 +221,12 @@ function generate_config() {
         fi
       fi
     fi
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
           CONSENSUS_TYPE=1
+    fi
+    if [ $CONSENSUS_TYPE == 3 ] && [ $NODE_CNT -lt 4 ] ;then
+      echo  "the current version of maxbft does not support the deployment of less than four nodes"
+      exit
     fi
     echo "param CONSENSUS_TYPE $CONSENSUS_TYPE"
 
@@ -371,7 +375,7 @@ function generate_config() {
             fi
 
             xsed "s%{chain_id}%chain$j%g" node$i/chainconfig/bc$j.yml
-            xsed "s%{version}%\"$VERSION\"%g" node$i/chainconfig/bc$j.yml
+            xsed "s%{version}%$VERSION%g" node$i/chainconfig/bc$j.yml
             xsed "s%{org_top_path}%$file%g" node$i/chainconfig/bc$j.yml
 
             if  [ $NODE_CNT -eq 7 ] || [ $NODE_CNT -eq 13 ] || [ $NODE_CNT -eq 16 ]; then
@@ -398,7 +402,7 @@ function generate_config() {
             if [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
               xsed "${BC_YML_TRUST_ROOT_LINE},${BC_YML_TRUST_ROOT_LINE_END}d" node$i/chainconfig/bc$j.yml
             fi
-            echo "begin node$i chain$CHAIN_CNT cert config..."
+            echo "begin node$i chain$j cert config..."
 
             c=0
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`

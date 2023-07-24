@@ -151,7 +151,7 @@ net:
 # Other tx_pool settings can be found in tx_Pool_config.go
 txpool:
   # tx_pool type, can be single, normal, batch.
-  # By default the tx_pool type is single.
+  # By default the tx_pool type is normal.
   # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
   pool_type: "normal"
 
@@ -404,7 +404,7 @@ storage:
   # db_prefix: org1_
 
   # Minimum block height not allowed to be archived
-  unarchive_block_height: 300000
+  unarchive_block_height: 10
 
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
@@ -416,7 +416,7 @@ storage:
   logdb_segment_async: false
 
   # file size of .fdb, MB, default: 20
-  logdb_segment_size: 128
+  logdb_segment_size: 1
 
   # bigfilter config
   enable_bigfilter: false    #default false

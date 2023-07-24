@@ -58,6 +58,7 @@ func multiSignReqCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagAdminKeyFilePaths, flagAdminCrtFilePaths,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagParams, flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagSyncResult,
+		flagGasLimit, flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagParams)
@@ -81,7 +82,8 @@ func multiSignVoteCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId, flagTxId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagIsAgree,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult, flagAdminOrgIds,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagSyncResult, flagAdminOrgIds, flagGasLimit,
+		flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
@@ -105,6 +107,7 @@ func multiSignQueryCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId,
+		flagTruncateModel, flagTruncateValueLen,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
@@ -128,7 +131,7 @@ func multiSignTrigCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagConcurrency, flagTotalCountPerGoroutine, flagSdkConfPath, flagOrgId, flagChainId,
 		flagTimeout, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagEnableCertHash, flagTxId, flagSyncResult,
-		flagGasLimit,
+		flagGasLimit, flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagTxId)
@@ -177,7 +180,8 @@ func multiSignReq() error {
 		}
 
 	}
-	payload = client.CreateMultiSignReqPayload(pairs)
+
+	payload = client.CreateMultiSignReqPayloadWithGasLimit(pairs, gasLimit)
 
 	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
 	if err != nil {
@@ -188,7 +192,20 @@ func multiSignReq() error {
 		return err
 	}
 
-	resp, err = client.MultiSignContractReq(payload, endorsers, timeout, syncResult)
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	if len(payer) == 0 {
+		resp, err = client.MultiSignContractReq(payload, endorsers, timeout, syncResult)
+	} else {
+		resp, err = client.MultiSignContractReqWithPayer(payload, endorsers, payer[0], timeout, syncResult)
+	}
 	if err != nil {
 		return fmt.Errorf("multi sign req failed, %s", err.Error())
 	}
@@ -202,18 +219,15 @@ func multiSignReq() error {
 
 func multiSignVote() error {
 	var (
-		adminKey  string
-		adminCrt  string
-		adminOrg  string
-		adminKeys []string
-		adminCrts []string
-		adminOrgs []string
-		output    []byte
-		err       error
-		payload   *common.Payload
-		endorser  *common.EndorsementEntry
-		client    *sdk.ChainClient
-		resp      *common.TxResponse
+		adminCrt string
+		adminKey string
+		adminOrg string
+		output   []byte
+		err      error
+		payload  *common.Payload
+		endorser *common.EndorsementEntry
+		client   *sdk.ChainClient
+		resp     *common.TxResponse
 	)
 
 	client, err = util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
@@ -223,40 +237,10 @@ func multiSignVote() error {
 	}
 	defer client.Stop()
 
-	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminCrtFilePaths != "" {
-			adminCrts = strings.Split(adminCrtFilePaths, ",")
-		}
-		if len(adminKeys) != len(adminCrts) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
-		}
-		adminKey = adminKeys[0]
-		adminCrt = adminCrts[0]
-	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if adminOrgIds != "" {
-			adminOrgs = strings.Split(adminOrgIds, ",")
-		}
-		if len(adminKeys) != len(adminOrgs) {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-		adminKey = adminKeys[0]
-		adminOrg = adminOrgs[0]
-	} else {
-		if adminKeyFilePaths != "" {
-			adminKeys = strings.Split(adminKeyFilePaths, ",")
-		}
-		if len(adminKeys) == 0 {
-			return fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
-		}
-		adminKey = adminKeys[0]
+	adminCrt, adminKey, adminOrg, err = getCertOrKeyFromParams(client)
+	if err != nil {
+		return err
 	}
-
 	payload, err = getMultiSignReqInfo(client, txId)
 	if err != nil {
 		return err
@@ -279,10 +263,24 @@ func multiSignVote() error {
 		if err != nil {
 			return fmt.Errorf("multi sign vote failed, %s", err.Error())
 		}
-
 	}
 
-	resp, err = client.MultiSignContractVote(payload, endorser, isAgree, timeout, syncResult)
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	if len(payer) == 0 {
+		resp, err = client.MultiSignContractVoteWithGasLimit(payload, endorser, isAgree,
+			timeout, gasLimit, syncResult)
+	} else {
+		resp, err = client.MultiSignContractVoteWithGasLimitAndPayer(payload, endorser, payer[0], isAgree,
+			timeout, gasLimit, syncResult)
+	}
 	if err != nil {
 		return fmt.Errorf("multi sign vote failed, %s", err.Error())
 	}
@@ -293,6 +291,51 @@ func multiSignVote() error {
 	fmt.Println(string(output))
 
 	return nil
+}
+
+func getCertOrKeyFromParams(client *sdk.ChainClient) (string, string, string, error) {
+	var (
+		adminCrt  string
+		adminKey  string
+		adminOrg  string
+		adminKeys []string
+		adminCrts []string
+		adminOrgs []string
+	)
+	if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminCrtFilePaths != "" {
+			adminCrts = strings.Split(adminCrtFilePaths, ",")
+		}
+		if len(adminKeys) != len(adminCrts) {
+			return "", "", "", fmt.Errorf(ADMIN_ORGID_KEY_CERT_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminCrts))
+		}
+		adminKey = adminKeys[0]
+		adminCrt = adminCrts[0]
+	} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if adminOrgIds != "" {
+			adminOrgs = strings.Split(adminOrgIds, ",")
+		}
+		if len(adminKeys) != len(adminOrgs) {
+			return "", "", "", fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+		}
+		adminKey = adminKeys[0]
+		adminOrg = adminOrgs[0]
+	} else {
+		if adminKeyFilePaths != "" {
+			adminKeys = strings.Split(adminKeyFilePaths, ",")
+		}
+		if len(adminKeys) == 0 {
+			return "", "", "", fmt.Errorf(ADMIN_ORGID_KEY_LENGTH_NOT_EQUAL_FORMAT, len(adminKeys), len(adminOrgs))
+		}
+		adminKey = adminKeys[0]
+	}
+	return adminCrt, adminKey, adminOrg, nil
 }
 
 func multiSignQuery() error {
@@ -310,7 +353,17 @@ func multiSignQuery() error {
 	}
 	defer client.Stop()
 
-	resp, err = client.MultiSignContractQuery(txId)
+	params := []*common.KeyValuePair{
+		{
+			Key:   "truncateModel",
+			Value: []byte(truncateModel),
+		},
+		{
+			Key:   "truncateValueLen",
+			Value: []byte(truncateValueLen),
+		},
+	}
+	resp, err = client.MultiSignContractQueryWithParams(txId, params)
 	if err != nil {
 		return fmt.Errorf("multi sign query failed, %s", err.Error())
 	}
@@ -369,7 +422,20 @@ func multiSignTrig() error {
 		}
 	}
 
-	resp, err = client.MultiSignContractTrig(payload, timeout, limit, syncResult)
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	if len(payer) == 0 {
+		resp, err = client.MultiSignContractTrig(payload, timeout, limit, syncResult)
+	} else {
+		resp, err = client.MultiSignContractTrigWithPayer(payload, payer[0], timeout, limit, syncResult)
+	}
 	if err != nil {
 		return fmt.Errorf("multi sign trig failed, %s", err.Error())
 	}

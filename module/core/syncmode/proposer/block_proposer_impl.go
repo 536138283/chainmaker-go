@@ -281,12 +281,14 @@ func (bp *BlockProposerImpl) proposeBlock() {
 	}
 
 	proposingHeight := lastBlock.Header.BlockHeight + 1
-	//if !bp.shouldProposeByBFT(proposingHeight) {
-	//	return
-	//}
+	if !bp.shouldProposeByBFT(proposingHeight) {
+		return
+	}
 	if !bp.isIdle() {
 		// concurrent control, proposer is proposing now
-		bp.log.Debugf("proposer is busy, not propose [%d] ", proposingHeight)
+		bp.log.DebugDynamic(func() string {
+			return fmt.Sprintf("proposer is busy, not propose [%d] ", proposingHeight)
+		})
 		return
 	}
 	if !bp.setNotIdle() {
@@ -446,7 +448,7 @@ func (bp *BlockProposerImpl) OnReceiveProposeStatusChange(proposeStatus bool) {
 	bp.proposalCache.ResetProposedAt(height + 1) // proposer status changed, reset this round proposed status
 	bp.setIsSelfProposer(proposeStatus)
 	if !bp.isSelfProposer() {
-		bp.yieldProposing() // try to yield if proposer self is proposing right now.
+		//bp.yieldProposing() // try to yield if proposer self is proposing right now.
 		bp.log.Debug("current node is not proposer ")
 		return
 	}
@@ -480,7 +482,7 @@ func (bp *BlockProposerImpl) yieldProposing() bool {
 	defer bp.idleMu.Unlock()
 	if !bp.idle {
 		bp.finishProposeC <- true
-		bp.idle = true
+		//bp.idle = true
 		return true
 	}
 	return false
@@ -723,21 +725,22 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 		}
 
 		blockFinger := utils.CalcBlockFingerPrint(selfProposedBlock)
-		timeNow, err := bp.getLastProposeTimeByBlockFinger(string(blockFinger))
+		lastProposeTime, err := bp.getLastProposeTimeByBlockFinger(string(blockFinger))
 
 		if err != nil {
 			bp.log.Errorf("proposer fail, get last propose time by hash err %s", err.Error())
 			return false
 		}
 
-		if timeNow == 0 {
+		if lastProposeTime == 0 {
 			return false
 		}
 
-		if utils.CurrentTimeMillisSeconds()-timeNow >= 1000 {
+		if utils.CurrentTimeMillisSeconds()-lastProposeTime >= 1000 {
 			// Repeat propose block if node has proposed before at the same height
 			bp.proposalCache.SetProposedAt(height)
 			_, txsRwSet, _ := bp.proposalCache.GetProposedBlock(selfProposedBlock)
+			common.ProposeRepeatTimerMap.Store(string(blockFinger), utils.CurrentTimeMillisSeconds())
 
 			cutBlock := new(commonpb.Block)
 			if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||

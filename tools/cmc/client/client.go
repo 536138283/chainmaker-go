@@ -33,45 +33,53 @@ var (
 	sm4Key string
 
 	// 合约参数
-	abiFilePath     string
-	contractName    string
-	contractAddress string
-	version         string
-	byteCodePath    string
-	runtimeType     string
-	timeout         int64
-	sendTimes       int
-	method          string
-	params          string
-	orgId           string
-	chainId         string
-	syncResult      bool
-	enableCertHash  bool
-	blockHeight     uint64
-	withRWSet       bool
-	truncateValue   bool
-	isAgree         bool
-	txId            string
+	abiFilePath      string
+	contractName     string
+	contractAddress  string
+	version          string
+	byteCodePath     string
+	runtimeType      string
+	timeout          int64
+	sendTimes        int
+	method           string
+	params           string
+	orgId            string
+	chainId          string
+	syncResult       bool
+	enableCertHash   bool
+	blockHeight      uint64
+	withRWSet        bool
+	truncateValue    bool
+	truncateValueLen string
+	truncateModel    string
+	isAgree          bool
+	txId             string
 
 	adminKeyFilePaths string
 	adminCrtFilePaths string
 	adminOrgIds       string
+
+	payerKeyFilePath string
+	payerCrtFilePath string
+	payerOrgId       string
 
 	userTlsKeyFilePath  string
 	userTlsCrtFilePath  string
 	userSignKeyFilePath string
 	userSignCrtFilePath string
 
-	blockInterval   uint32
-	txParameterSize uint32
-	nodeOrgId       string
-	nodeIdOld       string
-	nodeId          string
-	nodeIds         string
-	trustRootOrgId  string
-	trustRootPaths  []string
-	certFilePaths   string
-	certCrlPath     string
+	blockInterval    uint32
+	extraConfigKey   string
+	extraConfigValue string
+	txParameterSize  uint32
+	nodeOrgId        string
+	nodeIdOld        string
+	nodeId           string
+	nodeIds          string
+	trustRootOrgId   string
+	trustRootPaths   []string
+	certFilePaths    string
+	certCrlPath      string
 
 	address   string
 	amount    string
@@ -126,6 +134,8 @@ const (
 	flagEnableCertHash                   = "enable-cert-hash"
 	flagBlockHeight                      = "block-height"
 	flagWithRWSet                        = "with-rw-set"
+	flagTruncateModel                    = "truncate-model"
+	flagTruncateValueLen                 = "truncate-value-len"
 	flagTruncateValue                    = "truncate-value"
 	flagIsAgree                          = "is-agree"
 	flagTxId                             = "tx-id"
@@ -136,12 +146,17 @@ const (
 	flagAdminKeyFilePaths                = "admin-key-file-paths"
 	flagAdminCrtFilePaths                = "admin-crt-file-paths"
 	flagAdminOrgIds                      = "admin-org-ids"
+	flagPayerKeyFilePath                 = "payer-key-file-path"
+	flagPayerCrtFilePath                 = "payer-crt-file-path"
+	flagPayerOrgId                       = "payer-org-id"
 	flagUserTlsKeyFilePath               = "user-tlskey-file-path"
 	flagUserTlsCrtFilePath               = "user-tlscrt-file-path"
 	flagUserSignKeyFilePath              = "user-signkey-file-path"
 	flagUserSignCrtFilePath              = "user-signcrt-file-path"
 	flagTimeout                          = "timeout"
 	flagBlockInterval                    = "block-interval"
+	flagExtraConfigKey                   = "extra-config-key"
+	flagExtraConfigValue                 = "extra-config-value"
 	flagTxParameterSize                  = "tx-parameter-size"
 	flagNodeOrgId                        = "node-org-id"
 	flagNodeIdOld                        = "node-id-old"
@@ -261,6 +276,10 @@ func init() {
 	flags.StringVar(&adminCrtFilePaths, flagAdminCrtFilePaths, "", "specify admin cert file paths, use ',' to separate")
 	flags.StringVar(&adminOrgIds, flagAdminOrgIds, "", "specify admin org-ids, use ',' to separate")
 
+	flags.StringVar(&payerKeyFilePath, flagPayerKeyFilePath, "", "specify payer key file path")
+	flags.StringVar(&payerCrtFilePath, flagPayerCrtFilePath, "", "specify payer cert file path")
+	flags.StringVar(&payerOrgId, flagPayerOrgId, "", "specify payer org-id")
+
 	flags.StringVar(&userTlsKeyFilePath, flagUserTlsKeyFilePath, "", "specify user tls key file path for "+
 		"chainclient tls connection")
 	flags.StringVar(&userTlsCrtFilePath, flagUserTlsCrtFilePath, "", "specify user tls cert file path for "+
@@ -283,6 +302,10 @@ func init() {
 	flags.StringVar(&trustMemberInfoPath, flagTrustMemberCrtPath, "", "specify the ca file path")
 	flags.StringVar(&trustMemberRole, flagTrustMemberRole, "", "specify trust member role")
 	flags.StringVar(&trustMemberNodeId, flagTrustMemberNodeId, "", "specify trust member node id")
+
+	// consensus extra config
+	flags.StringVar(&extraConfigKey, flagExtraConfigKey, "", "extra config key")
+	flags.StringVar(&extraConfigValue, flagExtraConfigValue, "", "extra config value")
 
 	// 证书管理
 	flags.StringVar(&certFilePaths, flagCertFilePaths, "", "specify cert file paths, use ',' to separate")
@@ -329,6 +352,14 @@ func init() {
 		flagMultiSignEnableManualRun,
 		false,
 		"enable or disable manual run feature of multi-sign")
+	flags.StringVar(&truncateModel,
+		flagTruncateModel,
+		"",
+		"the type of truncating multi-sign info")
+	flags.StringVar(&truncateValueLen,
+		flagTruncateValueLen,
+		"",
+		"the max length of truncating multi-sign info")
 
 	if sdkConfPath == "" {
 		sdkConfPath = util.EnvSdkConfPath

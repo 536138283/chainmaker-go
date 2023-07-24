@@ -20,8 +20,8 @@ log:
   # Logger configuration file path.
   config_file: ../config/{org_path}/log.yml
 
-# Crypto engine config
-crypto_engine: tjfoc #support gmssl, tencentsm and tjfoc
+# Crypto engine config, support gmssl, tencentsm and tjfoc
+crypto_engine: tjfoc # [*]
 
 # Chains the node currently joined in
 blockchain:
@@ -51,35 +51,8 @@ node:
 
   # fast sync settings
   fast_sync:
-    # Enable it or not
+    # Enable it or not, true means do not execute smart contract
     enabled: true  # [*]
-
-    # The number of blocks that did not perform fast synchronization at the end
-    min_full_blocks: 10
-
-  # PKCS#11 crypto settings
-  pkcs11:
-    # Enable it or not
-    enabled: false  # [*]
-
-    # Type only support pkcs11 and sdf
-    type: pkcs11
-
-    # Path for the pkcs11 interface file(.so)
-    library: /usr/local/lib64/pkcs11/libupkcs11.so
-
-    # Label for the slot to be used
-    label: HSM
-
-    # HSM Password
-    password: 11111111
-
-    # Size for HSM session cache, default value is 10.
-    session_cache_size: 10
-
-    # Hash algorithm is used to calculate SKI.
-    # It can be SHA256 or SM3.
-    hash: "SHA256"  # [*]
 
 # Network Settings
 net:
@@ -133,7 +106,7 @@ net:
 # Other txpool settings can be found in tx_Pool_config.go
 txpool:
   # tx_pool type, can be single, normal, batch.
-  # By default the tx_pool type is single.
+  # By default the tx_pool type is normal.
   # Note: please delete dump_tx_wal folder in storage.store_path when change tx_pool type
   pool_type: "normal"
 
@@ -164,6 +137,8 @@ rpc:
   # RPC type, can only be grpc now
   provider: grpc  # [*]
 
+  # RPC host eg. 127.0.0.1,0.0.0.0,localhost
+  host: 0.0.0.0
   # RPC port
   port: {rpc_port}
 
@@ -222,32 +197,44 @@ tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
   # 3 is recommended.
   type: 0
+
   # sharding bird's nest config
   # total keys = sharding.length * sharding.birds_nest.length * sharding.birds_nest.cuckoo.max_num_keys
   sharding:
     # sharding number
     length: 5
+
     # sharding task timeout in seconds
     timeout: 60
+
+    # memory storage to disk
     snapshot:
       # serialize type
-      # 0 Serialization by height interval
-      # 1 Serialization by time interval
+      # 0 serialization by height interval
+      # 1 serialization by time interval
       type: 0
+
+      # effective when type is 1
       timed:
         # Time interval in seconds
         interval: 10
+
+      # effective when type is 0
       block_height:
         # Block height interval
         interval: 10
-      # Serialization interval in seconds
+
+      # effective when type is 1, serialization interval in seconds, compatible with version 221
       serialize_interval: 10
-      # file path
+
+      # storage to disk file path
       path: ../data/{org_id}/tx_filter
+
     # bird's nest config
     birds_nest:
       # bird's nest size
       length: 10
+
       # Transaction filter rules
       rules:
         # Absolute expiration time /second
@@ -258,42 +245,57 @@ tx_filter:
         #
         # absolute expire time = total keys / number of requests per day
         absolute_expire_time: 172800
+
       cuckoo:
         # 0 NormalKey; 1 TimestampKey
         key_type: 1
+
         # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
         # If you are using a semi-sorted bucket, the default is 4
         # 2 is recommended.
         tags_per_bucket: 2
+
         # num of bits for each item, which is length of tag(fingerprint)
         # 11 is recommended.
         bits_per_item: 11
+
         # keys number
         max_num_keys: 2000000
+
         # 0 TableTypeSingle normal single table
         # 1 TableTypePacked packed table, use semi-sort to save 1 bit per item
         # 0 is recommended
         table_type: 0
+
   # bird's nest config
   # total keys = birds_nest.length * birds_nest.cuckoo.max_num_keys
   birds_nest:
     # bird's nest size
     length: 10
+
+    # memory storage to disk
     snapshot:
       # serialize type
-      # 0 Serialization by height interval
-      # 1 Serialization by time interval
+      # 0 serialization by height interval
+      # 1 serialization by time interval
       type: 0
+
+      # effective when type is 1
       timed:
         # Time interval in seconds
         interval: 10
+
+      # effective when type is 0
       block_height:
         # Block height interval
         interval: 10
-      # Serialization interval in seconds
+
+      # effective when type is 1, serialization interval in seconds, compatible with version 221
       serialize_interval: 10
-      # file path
+
+      # storage to disk file path
       path: ../data/{org_id}/tx_filter
+
     # Transaction filter rules
     rules:
       # Absolute expiration time /second
@@ -304,18 +306,23 @@ tx_filter:
       #
       # absolute expire time = total keys / number of requests per day
       absolute_expire_time: 172800
+
     cuckoo:
       # 0 NormalKey; 1 TimestampKey
       key_type: 1
+
       # num of tags for each bucket, which is b in paper. tag is fingerprint, which is f in paper.
       # If you are using a semi-sorted bucket, the default is 4
       # 2 is recommended.
       tags_per_bucket: 2
+
       # num of bits for each item, which is length of tag(fingerprint)
       # 11 is recommended.
       bits_per_item: 11
+
       # keys number
       max_num_keys: 2000000
+
       # 0 TableTypeSingle normal single table
       # 1 TableTypePacked packed table, use semi-sort to save 1 bit per item
       # 0 is recommended
@@ -371,46 +378,83 @@ storage:
   store_path: ../data/{org_id}/ledgerData1 # [*]
 
   # Prefix for mysql db name
-  # db_prefix: org1_
+  # db_prefix: org1_  # [*]
 
   # Minimum block height not allowed to be archived
   unarchive_block_height: 300000
 
+  # Archive dir scan interval time(s), default: 10(s)
+  archive_check_interval: 10
+
+  # Restore data merge on chain data wait time,
+  # restore action start after "restoreBlock" action finished "restore_interval" time(s), default: 60(s)
+  restore_interval: 60
+
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
-  # Disable block file db, default: false
-  disable_block_file_db: false
+  # Disable block file db, default: true
+  disable_block_file_db: false  # [*]
 
-  # async write block in file block db to disk, default: false, so default is sync write disk
+  # async write block in file block db to disk (by blockfiledb or wal), default: false, so default is sync write disk
   logdb_segment_async: false
 
-  # file size of .fdb, MB, default: 20
+  # file size of stored block file
+  # if disable_block_file_db: false, we use block filedb, this means .fdb file size(MB), default: 64
+  # if disable_block_file_db: true, we use wal, this means .wal file size(MB), default: 20
   logdb_segment_size: 128
 
-  # bigfilter config
-  enable_bigfilter: false    #default false
+  # read bfdb block file time out(ms), default: 1000
+  read_bfdb_timeout: 1000
+
+  # bigfilter config, default false
+  enable_bigfilter: false
+
+  # effective when enable_bigfilter is true
   bigfilter_config:
-    redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"   #redis host:port
-    redis_password: abcpass  #redis password
-    tx_capacity: 1000000000   #support max transaction capacity
-    fp_rate: 0.000000001      #false postive rate
-  # RWC config               default 1000000
-  enable_rwc: true #default false
-  rolling_window_cache_capacity: 55000 # greater than max_txpool_size*1.1
+    # redis host:port
+    redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"
+
+    # redis password
+    redis_password: abcpass
+
+    # support max transaction capacity
+    tx_capacity: 1000000000
+
+    # false postive rate
+    fp_rate: 0.000000001
+
+  # RWC config, default false
+  enable_rwc: true
+
+  # effective when enable_rwc is true, default 1000000
+  # suggest greater than max_txpool_size*1.1
+  rolling_window_cache_capacity: 55000
 
   # Symmetric encryption key:16 bytes key
   # If pkcs11 is enabled, it is the keyID
   # encrypt_key: "1234567890123456"
-  write_block_type: 0  # 0普通写模式，1快速写模式
+
+  # 0 common write，1 quick write
+  write_block_type: 0
+
+  # record DB slow log (INFO level) when query spend time more than this value (millisecond), 0 means no record
+  slow_log: 0
+
   # state db cache
+  disable_state_cache: false # default enable state cache
+
+  # effective when disable_state_cache is false
   state_cache_config:
     # key/value ttl time, ns
     life_window: 3000000000000
+
     # interval between removing expired keys and values(clean up).
     clean_window: 1000000000
+
     # max size of entry in bytes.
     max_entry_size: 500
+
     # max cache size MB
     hard_max_cache_size: 1024
 
@@ -418,13 +462,14 @@ storage:
   blockdb_config:
     # Databases type support leveldb, sql, badgerdb, tikvdb
     provider: leveldb # [*]
+
     # If provider is leveldb, leveldb_config should not be null.
     leveldb_config:
       # LevelDb store path
       store_path: ../data/{org_id}/block
 
     # Example for sql provider
-    # Databases type support leveldb, sql, badgerdb,tikvdb
+    # Databases type support leveldb, sql, badgerdb, tikvdb
     # provider: sql # [*]
     # If provider is sql, sqldb_config should not be null.
     # sqldb_config:
@@ -458,19 +503,25 @@ storage:
       # grpc_keep_alive_time: 10 # keep connnet alive count, default: 10
       # grpc_keep_alive_timeout: 3  # keep connnect alive time, default: 3
       # write_batch_size: 128 # commit tikv bacth size each time, default: 128
+
   # State db config
   statedb_config:
     provider: leveldb
     leveldb_config:
       store_path: ../data/{org_id}/state
 
-  # History db config
+  # History db config, default enable history db
+  disable_historydb: false
   historydb_config:
     provider: leveldb
+    disable_key_history: false
+    disable_contract_history: true
+    disable_account_history: true
     leveldb_config:
       store_path: ../data/{org_id}/history
 
-  # Result db config
+  # Result db config, default enable result db
+  disable_resultdb: false
   resultdb_config:
     provider: leveldb
     leveldb_config:
@@ -478,7 +529,6 @@ storage:
 
   # Disable contract event database or not. If it is false, contract_eventdb_config must be mysql
   disable_contract_eventdb: true
-  # Contract event db config
   contract_eventdb_config:
     # Event db only support sql
     provider: sql
@@ -495,26 +545,33 @@ vm:
   go:
     # Enable docker go virtual machine, default: false
     enable: {enable_vm_go}
+
     # Mount data path in chainmaker, include contracts, uds socks
     data_mount_path: ../data/{org_id}/go
+
     # Mount log path in chainmaker
     log_mount_path: ../log/{org_id}/go
+
     # Communication protocol, used for chainmaker and docker manager communication
     # 1. tcp: docker vm uses TCP to communicate with chain
     # 2. uds: docker vm uses unix domain socket to communicate with chain
     protocol: {vm_go_protocol}
+
     # If use a customized VM configuration file, supplement it; else, do not configure
     # Priority: chainmaker.yml > vm.yml > default settings
     # dockervm_config_path: /config_path/vm.yml
     # Whether to print log on terminal
     log_in_console: false
-    # Log level of docker vm
+
+    # Log level of docker vm go
     log_level: {vm_go_log_level}
 
     # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
     max_send_msg_size: 100
+
     # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
     max_recv_msg_size: 100
+
     # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
     dial_timeout: 10
 
@@ -523,6 +580,8 @@ vm:
 
     #  Configs of docker runtime server (handle messages with contract sandbox)
     runtime_server:
+      # runtime server host, default 127.0.0.1
+      # host: 127.0.0.1
       # Runtime server port, default 32351
       port: {vm_go_runtime_port}
 
@@ -530,8 +589,9 @@ vm:
     contract_engine:
       # Docker vm contract engine server host, default 127.0.0.1
       host: 127.0.0.1
+
       # Docker vm contract engine server port, default 22351
       port: {vm_go_engine_port}
+
       # Max number of connection created to connect docker vm service
       max_connection: 5
-

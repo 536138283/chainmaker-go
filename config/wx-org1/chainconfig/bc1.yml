@@ -6,7 +6,7 @@
 #
 
 chain_id: chain1                    # 链标识
-version: v1.0.0                     # 链版本
+version: "2030100"
 sequence: 0                         # 配置版本
 auth_type: "permissionedWithCert"   # 认证类型
 
@@ -53,9 +53,18 @@ core:
 
 # gas account config
 account_config:
+  # the flag to control if subtracting gas from transaction's origin account when sending tx.
   enable_gas: false
+  # Deprecated，the default gas count set for admin account.
   gas_count: 0
-  default_gas: 0
+  # the minimum gas count to be subtracted from transaction's origin account for invoking tx.
+  default_gas: 100
+  # the gas price per byte for invoking tx.
+  default_gas_price: 0.1
+  # the minimum gas count to be subtracted from transaction's origin account for installing|upgrading tx.
+  install_base_gas: 10000
+  # the gas price per byte for installing tx.
+  install_gas_price: 0.001
 
 #共识配置
 consensus:

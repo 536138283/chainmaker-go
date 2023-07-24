@@ -1396,6 +1396,16 @@ func TestBlockchain_initTxPool(t *testing.T) {
 }
 
 func TestBlockchain_initVM(t *testing.T) {
+	c := gomock.NewController(t)
+	defer c.Finish()
+	msgBus := msgbusMock.NewMockMessageBus(c)
+	msgBus.EXPECT().Register(gomock.Any(), gomock.Any()).Return().AnyTimes()
+	iter := mock.NewMockStateIterator(c)
+	iter.EXPECT().Release().Return().AnyTimes()
+	iter.EXPECT().Next().Return(false).AnyTimes()
+	store := mock.NewMockBlockchainStore(c)
+	store.EXPECT().SelectObject(gomock.Any(), gomock.Any(), gomock.Any()).Return(iter, nil).AnyTimes()
+
 	type fields struct {
 		log             *logger.CMLogger
 		genesis         string
@@ -1440,6 +1450,8 @@ func TestBlockchain_initVM(t *testing.T) {
 					return chainConf
 				}(),
 				initModules: map[string]struct{}{},
+				msgBus:      msgBus,
+				store:       store,
 			},
 			wantErr: false,
 		},

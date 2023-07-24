@@ -464,3 +464,175 @@ func newSetInvokeBaseGasCMD() *cobra.Command {
 	})
 	return cmd
 }
+
+// newSetInvokeGasPriceCMD set VM base gas of invoke tx
+// @return *cobra.Command
+func newSetInvokeGasPriceCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-invoke-gas-price",
+		Short: "set VM base gas price of invoke tx",
+		Long:  "set VM base gas price of invoke tx",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			//// 1.Chain Client
+			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
+			if err != nil {
+				return err
+			}
+			defer cc.Stop()
+
+			//// 2.Set base gas
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+
+			payload, err := cc.CreateSetInvokeGasPricePayload(price)
+			if err != nil {
+				return err
+			}
+			endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := cc.SendGasManageRequest(payload, endorsers, -1, syncResult)
+			if err != nil {
+				return err
+			}
+
+			util.PrintPrettyJson(resp)
+			return nil
+		},
+	}
+
+	util.AttachFlags(cmd, flags, []string{
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult, flagSdkConfPath,
+	})
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagPrice,
+	})
+	return cmd
+}
+
+// newSetInstallBaseGasCMD enable or disable gas feature
+// @return *cobra.Command
+func newSetInstallBaseGasCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-install-base-gas",
+		Short: "set install base gas",
+		Long:  "set install base gas",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			//// 1.Chain Client
+			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
+			if err != nil {
+				return err
+			}
+			defer cc.Stop()
+
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+
+			//// 2.Enable or disable gas feature
+			chainConfig, err := cc.GetChainConfig()
+			if err != nil {
+				return err
+			}
+			isGasEnabled := false
+			if chainConfig.AccountConfig != nil {
+				isGasEnabled = chainConfig.AccountConfig.EnableGas
+			}
+
+			if !isGasEnabled {
+				return errors.New("`enable_gas` flag is not set")
+			}
+
+			payload, err := cc.CreateSetInstallBaseGasPayload(amount)
+			if err != nil {
+				return err
+			}
+			endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := cc.SendChainConfigUpdateRequest(payload, endorsers, -1, syncResult)
+			if err != nil {
+				return err
+			}
+
+			err = util.CheckProposalRequestResp(resp, false)
+			if err != nil {
+				return err
+			}
+
+			output, err := prettyjson.Marshal("OK")
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(output))
+			return nil
+		},
+	}
+
+	util.AttachFlags(cmd, flags, []string{
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult, flagSdkConfPath,
+	})
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagAmount,
+	})
+	return cmd
+}
+
+// newSetInstallGasPriceCMD set VM base gas of invoke tx
+// @return *cobra.Command
+func newSetInstallGasPriceCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "set-install-gas-price",
+		Short: "set VM base gas price of install|upgrade tx",
+		Long:  "set VM base gas price of install|upgrade tx",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			//// 1.Chain Client
+			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
+			if err != nil {
+				return err
+			}
+			defer cc.Stop()
+
+			//// 2.Set base gas
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+
+			payload, err := cc.CreateSetInstallGasPricePayload(price)
+			if err != nil {
+				return err
+			}
+			endorsers, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := cc.SendGasManageRequest(payload, endorsers, -1, syncResult)
+			if err != nil {
+				return err
+			}
+
+			util.PrintPrettyJson(resp)
+			return nil
+		},
+	}
+
+	util.AttachFlags(cmd, flags, []string{
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagSyncResult, flagSdkConfPath,
+	})
+
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagPrice,
+	})
+	return cmd
+}

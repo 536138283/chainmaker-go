@@ -22,6 +22,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/store/v2"
 	"chainmaker.org/chainmaker/utils/v2"
+	gasutils "chainmaker.org/chainmaker/utils/v2/gas"
 	"chainmaker.org/chainmaker/vm/v2"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
@@ -35,14 +36,25 @@ import (
 	"chainmaker.org/chainmaker-go/module/snapshot"
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	blockSync "chainmaker.org/chainmaker-go/module/sync"
+	"chainmaker.org/chainmaker-go/module/txfilter"
+	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	"chainmaker.org/chainmaker-go/module/txpool"
 	componentVm "chainmaker.org/chainmaker-go/module/vm"
+	"chainmaker.org/chainmaker/chainconf/v2"
 	"chainmaker.org/chainmaker/common/v2/container"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	consensusUtils "chainmaker.org/chainmaker/consensus-utils/v2"
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/logger/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/store/v2"
 	"chainmaker.org/chainmaker/store/v2/conf"
+	"chainmaker.org/chainmaker/utils/v2"
+	native "chainmaker.org/chainmaker/vm-native/v2"
+	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/mitchellh/mapstructure"
 )
 
@@ -213,6 +225,10 @@ func (bc *Blockchain) initNetService() (err error) {
 	return
 }
 
+// initStore add next time
+//  @Description:
+//  @receiver bc
+//  @return err
 func (bc *Blockchain) initStore() (err error) {
 	_, ok := bc.initModules[moduleNameStore]
 	if ok {
@@ -667,8 +683,17 @@ func (bc *Blockchain) initVM() (err error) {
 			consensusStateWrapper,
 		)
 	}
+	bc.initVMNative()
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
+}
+
+func (bc *Blockchain) initVMNative() {
+	chainConfig := bc.chainConf.ChainConfig()
+	vmlog := logger.GetLoggerByChain(logger.MODULE_VM, bc.chainId)
+
+	gasConfig := gasutils.NewGasConfig(chainConfig.AccountConfig)
+	native.InitInstance(bc.chainId, gasConfig, vmlog, bc.msgBus, bc.store)
 }
 
 func (bc *Blockchain) addVmManager(vmType string,

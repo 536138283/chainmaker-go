@@ -9,6 +9,7 @@
 node_count=$1
 chain_count=$2
 alreadyBuild=$3
+enableDocker=$4
 
 if [ ! -d "../../tools/chainmaker-cryptogen" ]; then
   echo "not found chainmaker-go/tools/chainmaker-cryptogen"
@@ -24,7 +25,10 @@ SCRIPT_PATH=$(dirname "${CURRENT_PATH}")
 PROJECT_PATH=$(dirname "${SCRIPT_PATH}")
 
 if  [[ ! -n $node_count ]] ;then
-    echo "node cnt is empty"
+  echo "node cnt is empty"
+  echo "  default port is 11391 12391, you can use "
+  echo "             ./quick_deploy.sh nodeCount chainCount alreadyBuild enableDockerVm"
+  echo "             ./quick_deploy.sh 4 1 false true"
     exit 1
 fi
 if  [ ! $node_count -eq 1 ] && [ ! $node_count -eq 4 ] && [ ! $node_count -eq 7 ]&& [ ! $node_count -eq 10 ]&& [ ! $node_count -eq 13 ]&& [ ! $node_count -eq 16 ];then
@@ -38,7 +42,14 @@ function start_chainmaker() {
 
   if [ "${alreadyBuild}" != "true" ]; then
     echo -e "\n\n【generate】 certs and config..."
-    echo -e "\nINFO\n\n\n" | ./prepare.sh $node_count $chain_count
+    if [ "${enableDocker}" == "true" ]; then
+      echo "【sh】 ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v true  --vtp=tcp --vlog=INFO"
+      ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v true  --vtp=tcp --vlog=INFO
+    else
+      echo "【sh】 ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v false  --vtp=tcp --vlog=INFO"
+      ./prepare.sh 4 1 11391 12391 32391 22391 -c 1 -l INFO -v false  --vtp=tcp --vlog=INFO
+    fi
+#    echo -e "\nINFO\n\n\n" | ./prepare.sh $node_count $chain_count
     echo -e "\n\n【build】 release..."
     ./build_release.sh
   fi
@@ -73,6 +84,7 @@ function prepare_cmc() {
   rm -rf testdata
   mkdir testdata
   cp $PROJECT_PATH/tools/cmc/testdata/sdk_config.yml testdata/
+  sed -i 's/12301/12391/' testdata/sdk_config.yml
   cp -r $PROJECT_PATH/build/crypto-config/ testdata/
 }
 
@@ -112,6 +124,7 @@ function cmc_test() {
 }
 
 function cat_log() {
+  sleep 1
   grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*1*/log/system.log
 }
 

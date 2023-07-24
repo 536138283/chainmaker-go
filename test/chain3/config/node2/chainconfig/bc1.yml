@@ -12,7 +12,7 @@
 chain_id: chain3
 
 # chain maker version
-version: "2040000"
+version: "2030100"
 
 # chain config sequence
 sequence: 0
@@ -122,18 +122,9 @@ consensus:
     - key: stake.epochValidatorNum
       value: "4"
     - key: stake.epochBlockNum
-      value: "12"
+      value: "10"
     - key: stake.completionUnbondingEpochNum
       value: "1"
-    # Distribution and slashing config
-    - key: distribution.fromSlashing
-      value: "0"
-    - key: distribution.perBlock
-      value: "100"
-    - key: distribution.gasExchangeRate
-      value: "1"
-    - key: slashing.perBlock
-      value: "100"
     - key: stake.candidate:EVHDmhMBjMfwL6ZLXWw7gVpf2aHzJYZTFx7VfjsE1XrF
       value: "2500000"
     - key: stake.candidate:8pkw9n2Ady3RzwWdYnS1SRhUm9v19DLwT4mXcijKakAn

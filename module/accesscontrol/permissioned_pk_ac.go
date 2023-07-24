@@ -215,7 +215,7 @@ func (pp *permissionedPkACProvider) initConsensusMember(consensusConf []*config.
 func (pp *permissionedPkACProvider) refinePrincipal(principal protocol.Principal) (protocol.Principal, error) {
 	endorsements := principal.GetEndorsement()
 	msg := principal.GetMessage()
-	refinedEndorsement := pp.refineEndorsements(endorsements, msg)
+	refinedEndorsement := pp.RefineEndorsements(endorsements, msg)
 	if len(refinedEndorsement) <= 0 {
 		return nil, fmt.Errorf("refine endorsements failed, all endorsers have failed verification")
 	}
@@ -235,7 +235,7 @@ func (pp *permissionedPkACProvider) refinePrincipal(principal protocol.Principal
 //  @param msg
 //  @return []*common.EndorsementEntry
 //
-func (pp *permissionedPkACProvider) refineEndorsements(endorsements []*common.EndorsementEntry,
+func (pp *permissionedPkACProvider) RefineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
 	refinedSigners := map[string]bool{}

@@ -15,7 +15,7 @@ function checkEnv() {
       if [ "$?" != "0" ];then
         echo 'Please install brew for Mac: ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"'
       fi
-      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH'
+      echo 'Please install gnu-getopt for Mac: brew install gnu-getopt and set to PATH (brew link --force gnu-getopt)'
       exit
     fi
   fi
@@ -24,7 +24,7 @@ checkEnv
 
 set -e
 
-VERSION=2040000
+VERSION='"2030102"'
 
 NODE_CNT=$1
 CHAIN_CNT=$2
@@ -173,7 +173,7 @@ function generate_keys() {
 
 function generate_config() {
     LOG_LEVEL="" # default INFO
-    CONSENSUS_TYPE=0 # default  1
+    CONSENSUS_TYPE=-1 # default  1
     HASH_TYPE="" # SHA256
     MONITOR_PORT=14321
     PPROF_PORT=24321
@@ -206,20 +206,20 @@ function generate_config() {
     done
 
     # set CONSENSUS_TYPE
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
       if  [ $NODE_CNT -gt 1 ] ;then
-        read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+        read -p "input consensus type (1-TBFT(default),4-RAFT): " tmp
         if  [ ! -z "$tmp" ] ;then
-          if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+          if [ $tmp -eq 1 ] || [ $tmp -eq 4 ] ;then
             CONSENSUS_TYPE=$tmp
           else
             echo "invalid consensus type [" $tmp "], so use default"
           fi
         fi
       else
-        read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+        read -p "input consensus type (0-SOLO,1-TBFT(default),4-RAFT): " tmp
         if  [ ! -z "$tmp" ] ;then
-          if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+          if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 4 ] ;then
             CONSENSUS_TYPE=$tmp
           else
             echo "unknown consensus type [" $tmp "], so use default"
@@ -227,7 +227,7 @@ function generate_config() {
         fi
       fi
     fi
-    if [ $CONSENSUS_TYPE == 0 ] ;then
+    if [ $CONSENSUS_TYPE == -1 ] ;then
           CONSENSUS_TYPE=1
     fi
     echo "param CONSENSUS_TYPE $CONSENSUS_TYPE"
@@ -393,7 +393,7 @@ function generate_config() {
 
             xsed "s%{chain_id}%chain$j%g" node$i/chainconfig/bc$j.yml
             xsed "s%{hash_type}%$HASH_TYPE%g" node$i/chainconfig/bc$j.yml
-            xsed "s%{version}%\"$VERSION\"%g" node$i/chainconfig/bc$j.yml
+            xsed "s%{version}%$VERSION%g" node$i/chainconfig/bc$j.yml
 
             if  [ $NODE_CNT -eq 7 ] || [ $NODE_CNT -eq 13 ] || [ $NODE_CNT -eq 16 ]; then
                 xsed "s%#\(.*\)- org_id:%\1- org_id:%g" node$i/chainconfig/bc$j.yml
@@ -406,7 +406,7 @@ function generate_config() {
             if [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
               xsed "${BC_YML_TRUST_ROOT_LINE},${BC_YML_TRUST_ROOT_LINE_END}d" node$i/chainconfig/bc$j.yml
             fi
-            echo "begin node$i chain$CHAIN_CNT key config..."
+            echo "begin node$i chain$j key config..."
 
             c=0
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`

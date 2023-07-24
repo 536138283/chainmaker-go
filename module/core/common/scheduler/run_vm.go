@@ -35,36 +35,32 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
 	txNeedChargeGas := ts.checkNativeFilter(
+		txSimContext.GetBlockVersion(),
 		tx.Payload.ContractName,
 		tx.Payload.Method,
 		tx,
-		txSimContext.GetBlockchainStore())
+		txSimContext.GetSnapshot())
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
 
 		// need charge gas, but gasLimit is not set
 		if txNeedChargeGas && tx.Payload.Limit == nil {
-			if tx.Result == nil {
-				// `proposer node` has filter txs out in `dispatchTxsInSenderCollection` function
-				ts.log.Errorf("proposer node with `enable_optimize_gas` mode can't get tx that's gas_limit is nil in this place.")
-
-			} else {
-				// `verify node` should return error result same with `proposer node` do in `dispatchTxsInSenderCollection`
-				txResult := &commonPb.Result{
-					Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
-					ContractResult: &commonPb.ContractResult{
-						Code:    uint32(1),
-						Result:  nil,
-						Message: ErrMsgOfGasLimitNotSet,
-						GasUsed: uint64(0),
-					},
-					RwSetHash: nil,
-					Message:   ErrMsgOfGasLimitNotSet,
-				}
-				txSimContext.SetTxResult(txResult)
-				return false
+			// `verify node` should return error result same with `proposer node` do in `dispatchTxsInSenderCollection`
+			txResult := &commonPb.Result{
+				Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
+				ContractResult: &commonPb.ContractResult{
+					Code:    uint32(1),
+					Result:  nil,
+					Message: ErrMsgOfGasLimitNotSet,
+					GasUsed: uint64(0),
+				},
+				RwSetHash: nil,
+				Message:   ErrMsgOfGasLimitNotSet,
 			}
+			txSimContext.SetTxResult(txResult)
+			return false
+
 		} else if txNeedChargeGas && tx.Payload.Limit != nil {
 			// in `proposer node`:
 			// 	1) tx.Result should be set by `dispatchTxsInSenderCollection()`
@@ -72,37 +68,90 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			// in `verify node`:
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
-			if tx.Result != nil && tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
-				pk, _ := getPkFromTx(tx, snapshot)
-				val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
-					chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
-					return chainCfg, err
-				})
-				if err != nil {
-					ts.log.Errorf("get LastChainConfig error: %v", err)
-					return false
-				}
-				chainCfg, ok := val.(*config.ChainConfig)
-				if !ok {
-					ts.log.Errorf("failed to transfer chainConfig from interface to struct")
-				}
-				//chainCfg := txSimContext.GetLastChainConfig()
-				addr, _ := publicKeyToAddress(pk, chainCfg)
-				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
-				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
+			pk, _ := getPayerPkFromTx(tx, snapshot)
+			val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
+				chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+				return chainCfg, err
+			})
+			if err != nil {
+				ts.log.Errorf("get LastChainConfig error: %v", err)
+				return false
+			}
+			chainCfg, ok := val.(*config.ChainConfig)
+			if !ok {
+				ts.log.Errorf("failed to transfer chainConfig from interface to struct")
+			}
+			//chainCfg := txSimContext.GetLastChainConfig()
+			addr, _ := publicKeyToAddress(pk, chainCfg)
+			if tx.Result != nil {
 				txResult := &commonPb.Result{
-					Code: commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED,
 					ContractResult: &commonPb.ContractResult{
 						Code:    uint32(1),
 						Result:  nil,
-						Message: errMsg,
 						GasUsed: uint64(0),
 					},
 					RwSetHash: nil,
-					Message:   errMsg,
 				}
-				txSimContext.SetTxResult(txResult)
-				return false
+
+				if tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
+					ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
+					errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
+
+					txResult.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
+					txResult.Message = errMsg
+					txResult.ContractResult.Message = errMsg
+
+					txSimContext.SetTxResult(txResult)
+					return false
+
+				} else if tx.Result.Code == commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED {
+
+					ts.log.Debugf("get account balance failed. address = %v, public key = %s", addr, pk)
+					errMsg := fmt.Sprintf("get account `%s` balance failed.", addr)
+
+					txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
+					txResult.Message = errMsg
+					txResult.ContractResult.Message = errMsg
+
+					txSimContext.SetTxResult(txResult)
+					return false
+
+				} else if tx.Result.Code == commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED {
+
+					ts.log.Debugf("parse account balance failed. address = %v, public key = %s", addr, pk)
+					errMsg := fmt.Sprintf("parse account `%s` balance failed.", addr)
+
+					txResult.Code = commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
+					txResult.Message = errMsg
+					txResult.ContractResult.Message = errMsg
+
+					txSimContext.SetTxResult(txResult)
+					return false
+
+				} else if tx.Result.Code == commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED {
+
+					ts.log.Debugf("get account status failed. address = %v, public key = %s", addr, pk)
+					errMsg := fmt.Sprintf("get account `%s` status failed.", addr)
+
+					txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED
+					txResult.Message = errMsg
+					txResult.ContractResult.Message = errMsg
+
+					txSimContext.SetTxResult(txResult)
+					return false
+
+				} else if tx.Result.Code == commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN {
+
+					ts.log.Debugf("account has been frozen. address = %v, public key = %s", addr, pk)
+					errMsg := fmt.Sprintf("the account `%s` has been frozen.", addr)
+
+					txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN
+					txResult.Message = errMsg
+					txResult.ContractResult.Message = errMsg
+
+					txSimContext.SetTxResult(txResult)
+					return false
+				}
 			}
 		}
 	} else if enableGas {
@@ -216,16 +265,64 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		}
 	}
 
+	gasUsed := uint64(0)
+	gasRWSet := uint64(0)
+	gasEvents := uint64(0)
+	blockVersion := txSimContext.GetBlockVersion()
+	if blockVersion2312 <= blockVersion {
+		gasUsed, err = calcTxGasUsed(txSimContext, ts.log)
+		ts.log.Debugf("【gas calc】%v, before `RunContract` gasUsed = %v, err = %v",
+			tx.Payload.TxId, gasUsed, err)
+		if err != nil {
+			ts.log.Errorf("calculate tx gas failed, err = %v", err)
+			result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			result.Message = err.Error()
+			result.ContractResult.Code = uint32(1)
+			result.ContractResult.Message = err.Error()
+			return result, specialTxType, err
+		}
+	}
 	contractResultPayload, specialTxType, txStatusCode = ts.VmManager.RunContract(contract, method, byteCode,
-		parameters, txSimContext, 0, tx.Payload.TxType)
+		parameters, txSimContext, gasUsed, tx.Payload.TxType)
+	if blockVersion2312 <= blockVersion {
+		ts.log.Debugf("【gas calc】%v, before `calcTxRWSetGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, contractResultPayload.GasUsed, err)
+		gasRWSet, err = calcTxRWSetGasUsed(txSimContext, txStatusCode == commonPb.TxStatusCode_SUCCESS, ts.log)
+		if err != nil {
+			ts.log.Errorf("calculate tx rw_set gas failed, err = %v", err)
+			result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			result.Message = err.Error()
+			result.ContractResult.Code = uint32(1)
+			result.ContractResult.Message = err.Error()
+			return result, specialTxType, err
+		}
+		contractResultPayload.GasUsed += gasRWSet
+		ts.log.Debugf("【gas calc】%v, before `calcTxEventGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, contractResultPayload.GasUsed, err)
 
+		gasEvents, err = calcTxEventGasUsed(
+			txSimContext,
+			contractResultPayload.ContractEvent, ts.log)
+		if err != nil {
+			ts.log.Errorf("calculate tx events gas failed, err = %v", err)
+			result.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			result.Message = err.Error()
+			result.ContractResult.Code = uint32(1)
+			result.ContractResult.Message = err.Error()
+			return result, specialTxType, err
+		}
+		contractResultPayload.GasUsed += gasEvents
+	}
+
+	ts.log.Debugf("【gas calc】%v, after `calcTxEventGasUsed` gasUsed = %v, err = %v",
+		tx.Payload.TxId, contractResultPayload.GasUsed, err)
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetBlockchainStore()) {
+		if !ts.checkNativeFilter(txSimContext.GetBlockVersion(), contract.Name, method, tx, txSimContext.GetSnapshot()) {
 			return result, specialTxType, err
 		}
 
@@ -285,7 +382,8 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 		)
 	}
 
-	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`", contractName, tx.GetPayload().TxId)
+	ts.log.Debugf("runVM => txSimContext.GetContractByName(`%s`) for tx `%v`",
+		contractName, tx.GetPayload().TxId)
 	contract, err := txSimContext.GetContractByName(contractName)
 	if err != nil {
 		ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
@@ -331,7 +429,7 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 	// refund gas
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
-		if !ts.checkNativeFilter(contract.Name, method, tx, txSimContext.GetBlockchainStore()) {
+		if !ts.checkNativeFilter(txSimContext.GetBlockVersion(), contract.Name, method, tx, txSimContext.GetSnapshot()) {
 			return result, specialTxType, err
 		}
 

@@ -32,8 +32,8 @@ config_file="../config/{org_id}/chainmaker.yml"
 # config_file="../../config/wx-org1-solo/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
-VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0"
-DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.4.0"
+VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.2"
+DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.1"
 START_FULL_MODE=""
 
 # read params
@@ -60,7 +60,7 @@ done
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
 function start_vm_go() {
-  container_name=VM-GO-{org_id}
+  container_name=VM-GO-{org_id}-{tagName}
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -99,6 +99,8 @@ function start_vm_go() {
 
   protocol=$chainmaker_vm_go_protocol
   vm_go_log_level=$chainmaker_vm_go_log_level
+  dockervm_config_path=$chainmaker_vm_go_dockervm_config_path
+  runtime_server_host=$chainmaker_vm_go_runtime_server_host
   runtime_server_port=$chainmaker_vm_go_runtime_server_port
   contract_engine_port=$chainmaker_vm_go_contract_engine_port
   rpc_timeout=$chainmaker_vm_go_dial_timeout
@@ -106,13 +108,23 @@ function start_vm_go() {
   rpc_max_recv_size=$chainmaker_vm_go_max_recv_msg_size
   log_in_console=$chainmaker_vm_go_log_in_console
   max_concurrency=$chainmaker_vm_go_max_concurrency
-  slow_tx_step_time=$chainmaker_vm_slow_tx_log_step_base_time
-  slow_tx_time=$chainmaker_vm_slow_tx_log_tx_base_time
-  process_timeout=$chainmaker_vm_process_timeout
+  slow_disable=$chainmaker_vm_go_slow_disable
+  slow_step_time=$chainmaker_vm_go_slow_step_time
+  slow_tx_time=$chainmaker_vm_go_slow_tx_time
+  process_timeout=$chainmaker_vm_go_process_timeout
+
+  if [[ $dockervm_config_path != "" ]];then
+    if [[ "${dockervm_config_path:0:1}" != "/" ]];then
+        dockervm_config_path=$(pwd)/$dockervm_config_path
+    fi
+    if [ ! -d $mount_path/config  ];then
+        mkdir $mount_path/config
+    fi
+    cp $dockervm_config_path $mount_path/config/vm.yml
+  fi
 
   if [[ $protocol = "uds" ]]
   then
-
     docker run -itd \
     -v "$mount_path":/mount \
     -v "$log_path":/log \
@@ -124,22 +136,22 @@ function start_vm_go() {
     -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
     -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
     -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
-    -e SLOW_TX_STEP_TIME="$slow_tx_step_time" \
+    -e SLOW_DISABLE="$slow_disable" \
+    -e SLOW_STEP_TIME="$slow_step_time" \
     -e SLOW_TX_TIME="$slow_tx_time" \
     -e PROCESS_TIMEOUT="$process_timeout" \
-    --name VM-GO-{org_id} \
+    --name $container_name \
     --privileged $VM_GO_IMAGE_NAME \
     > /dev/null
 
   else
-
       EXPOSE_PORT=$contract_engine_port
-
       docker run -itd \
       --net=host \
       -v "$mount_path":/mount \
       -v "$log_path":/log \
       -e CHAIN_RPC_PROTOCOL="1" \
+      -e CHAIN_HOST="$runtime_server_host" \
       -e CHAIN_RPC_PORT="$contract_engine_port" \
       -e SANDBOX_RPC_PORT="$runtime_server_port" \
       -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
@@ -149,17 +161,18 @@ function start_vm_go() {
       -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
       -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
-      -e SLOW_TX_STEP_TIME="$slow_tx_step_time" \
+      -e SLOW_DISABLE="$slow_disable" \
+      -e SLOW_STEP_TIME="$slow_step_time" \
       -e SLOW_TX_TIME="$slow_tx_time" \
       -e PROCESS_TIMEOUT="$process_timeout" \
-      --name VM-GO-{org_id} \
+      --name $container_name \
       --privileged $VM_GO_IMAGE_NAME \
        > /dev/null
   fi
 
   retval="$?"
   if [ $retval -ne 0 ]; then
-    echo "Fail to run docker vm."
+    echo "failed to run docker vm."
     exit 1
   fi
 
@@ -169,10 +182,9 @@ function start_vm_go() {
   sleep 3
 }
 
-
 # if enable Deprecated docker vm service and use unix domain socket, it will start a docker vm container
 function start_docker_vm_go() {
-  container_name=DOCKERVM-{org_id}
+  container_name=DOCKERVM-{org_id}-{tagName}
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then
@@ -226,7 +238,7 @@ function start_docker_vm_go() {
     -e ENV_USER_NUM=9000 -e ENV_MAX_CONCURRENCY=100 -e ENV_TX_TIME_LIMIT=8 \
     -v "$docker_vm_mount_path":/mount \
     -v "$docker_vm_log_path":/log \
-    --name DOCKERVM-{org_id} \
+    --name $container_name \
     --privileged $DOCKER_VM_IMAGE_NAME \
     > /dev/null
 
@@ -268,7 +280,7 @@ function start_vm_containers() {
     fi
 }
 
-pid=$(ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml" | grep -v grep |  awk  '{print $2}')
+pid=$(ps -ef | grep chainmaker | grep "\-c ../config/{org_id}/chainmaker.yml {tagName}" | grep -v grep |  awk  '{print $2}')
 if [ -z "${pid}" ];then
     # check if enable go vm
     if [[ $chainmaker_vm_go_enable == "true" ]]; then
@@ -285,8 +297,8 @@ if [ -z "${pid}" ];then
     fi
 
     # start chainmaker
-    #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > /dev/null 2>&1 &
-    nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml > panic.log 2>&1 &
+    #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml {tagName} > /dev/null 2>&1 &
+    nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml {tagName} > panic.log 2>&1 &
     echo "chainmaker is starting, pls check log..."
 else
     echo "chainmaker is already started"

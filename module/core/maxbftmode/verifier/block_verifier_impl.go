@@ -337,7 +337,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		return err
 	}
 	lastPool := utils.CurrentTimeMillisSeconds() - startPoolTick
-	contractEventMap, timeLasts, rwSetVerifyFailTx, err := v.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
+	contractEventMap, timeLasts, err := v.validateBlockWithRWSets(newBlock, lastBlock, mode, txRWSetMap)
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
@@ -457,7 +457,7 @@ func (v *BlockVerifierImpl) validateBlock(block,
 // validateBlockWithRWSets validate block with rw sets
 func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block, mode protocol.VerifyMode,
 	txRWSetMap map[string]*commonpb.TxRWSet) (
-	map[string][]*commonpb.ContractEvent, map[string]int64, *common.RwSetVerifyFailTx, error) {
+	map[string][]*commonpb.ContractEvent, map[string]int64, error) {
 	hashType := v.chainConf.ChainConfig().Crypto.Hash
 	timeLasts := make(map[string]int64)
 	var err error
@@ -471,12 +471,17 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 	}
 
 	err = common.CheckPreBlock(block, lastBlock)
+	// proposed height == proposing height - 1
+	proposedHeight := lastBlock.Header.BlockHeight
+	// check if this block height is 1 bigger than last block height
+	lastBlockHash := lastBlock.Header.BlockHash
+	err = common.CheckPreBlock(block, lastBlockHash, proposedHeight)
 	if err != nil {
-		return nil, timeLasts, nil, err
+		return nil, timeLasts, err
 	}
 
 	// ValidateBlockWithRWSets block by verifier
-	return v.verifierBlock.ValidateBlockWithRWSets(block, lastBlock, hashType, timeLasts, txRWSetMap, mode)
+	return v.verifierBlock.ValidateBlockWithRWSets(block, hashType, timeLasts, txRWSetMap, mode)
 }
 
 // checkPreBlock_MAXBFT check prepare block by max bft consensus type

@@ -18,6 +18,7 @@ func (bc *Blockchain) Stop() {
 	// 4、net service
 	// 5、tx pool
 	// 6、vm
+	// 7、store
 
 	var stopModules = make([]map[string]func() error, 0)
 	if bc.isModuleStartUp(moduleNameNetService) {
@@ -25,6 +26,9 @@ func (bc *Blockchain) Stop() {
 	}
 	if bc.isModuleStartUp(moduleNameConsensus) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameConsensus: bc.stopConsensus})
+	}
+	if bc.isModuleStartUp(moduleNameVM) {
+		stopModules = append(stopModules, map[string]func() error{moduleNameVM: bc.stopVM})
 	}
 	if bc.isModuleStartUp(moduleNameCore) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameCore: bc.stopCoreEngine})
@@ -35,8 +39,8 @@ func (bc *Blockchain) Stop() {
 	if bc.isModuleStartUp(moduleNameTxPool) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameTxPool: bc.stopTxPool})
 	}
-	if bc.isModuleStartUp(moduleNameVM) {
-		stopModules = append(stopModules, map[string]func() error{moduleNameVM: bc.stopVM})
+	if bc.isModuleStartUp(moduleNameStore) {
+		stopModules = append(stopModules, map[string]func() error{moduleNameStore: bc.stopStore})
 	}
 
 	total := len(stopModules)
@@ -161,5 +165,17 @@ func (bc *Blockchain) stopVM() error {
 		return err
 	}
 	delete(bc.startModules, moduleNameVM)
+	return nil
+}
+
+func (bc *Blockchain) stopStore() error {
+	// stop store
+	err := bc.store.Close()
+	if err != nil {
+		bc.log.Errorf("stop store failed, %s", err)
+
+		return err
+	}
+	delete(bc.startModules, moduleNameStore)
 	return nil
 }

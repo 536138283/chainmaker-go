@@ -6,7 +6,7 @@
 #
 
 chain_id: chain1                    # 链标识
-version: v2.3.0                     # 链版本
+version: "2030101"
 sequence: 0                         # 配置版本
 auth_type: "permissionedWithCert"   # 认证类型
 
@@ -55,7 +55,14 @@ account_config:
   enable_gas: false
   gas_count: 0
   gas_admin_address: ""
-  default_gas: 1234567
+  # the minimum gas count to be subtracted from transaction's origin account for invoking tx.
+  default_gas: 100
+  # the gas price per byte for invoking tx.
+  default_gas_price: 0.1
+  # the minimum gas count to be subtracted from transaction's origin account for installing|upgrading tx.
+  install_base_gas: 10000
+  # the gas price per byte for installing tx.
+  install_gas_price: 0.001
 
 #共识配置
 consensus:
