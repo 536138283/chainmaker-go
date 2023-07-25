@@ -8,6 +8,8 @@
 
 set -x
 BRANCH=$1
+BRANCH_OLD='v2.3.0_qc'
+
 if [[ ! -n $BRANCH ]]; then
 				  BRANCH="v3.0.0_qc"
 fi

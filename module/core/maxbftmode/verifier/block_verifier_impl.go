@@ -458,6 +458,7 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 	// check if this block height is 1 bigger than last block height
 	lastBlockHash := lastBlock.Header.BlockHash
 	err = common.CheckPreBlock(block, lastBlockHash, proposedHeight)
+
 	if err != nil {
 		return nil, timeLasts, err
 	}

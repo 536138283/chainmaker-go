@@ -412,7 +412,7 @@ if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
             fi
 
             xsed "s%{chain_id}%chain$j%g" node$i/chainconfig/bc$j.yml
-            xsed "s%{version}%\"$VERSION\"%g" node$i/chainconfig/bc$j.yml
+            xsed "s%{version}%$VERSION%g" node$i/chainconfig/bc$j.yml
             xsed "s%{hash_type}%$HASH_TYPE%g" node$i/chainconfig/bc$j.yml
 
             if  [ $NODE_CNT -eq 7 ] || [ $NODE_CNT -eq 13 ]; then
@@ -430,7 +430,6 @@ if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
                TOTAL=$(($NODE_CNT*2500000))
                xsed "s%{erc20_total}%$TOTAL%g" node$i/chainconfig/bc$j.yml
                xsed "s%{epochValidatorNum}%$NODE_CNT%g" node$i/chainconfig/bc$j.yml
-               xsed "s%{epochBlockNum}%$(($NODE_CNT*3))%g" node$i/chainconfig/bc$j.yml
             fi
 
             c=0

@@ -37,13 +37,11 @@ require (
 	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
 	google.golang.org/grpc v1.47.0
-	gorm.io/driver/mysql v1.2.0
-	gorm.io/gorm v1.22.3
 )
 
 require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.1-0.20230222031539-5d0c4e710360
-	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230324072106-0304419d322e
+	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230724053752-2714154e9069
 	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20230314074553-134b54d23351
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20230407093413-225f3e61901d
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230630041501-8d9d31a4b328
@@ -53,23 +51,23 @@ require (
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.1-0.20230221100751-02e92d01a8d6
 	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230222032633-416066e4d7e1
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
-	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230630070457-0cb5336725df
-	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230612035210-5657359868b6
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230307071315-4e0b22717c63
-	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230414090330-dce26745086d
-	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230616023049-a7f967a898d5
+	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230720104329-8d2d7d83456c
+	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230720104811-9dda42edd574
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230725025825-58d80b22911d
+	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527
+	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230724090153-4780ffc66f7c
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230625040208-c799d7e09093
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230417084026-6156efbe061c
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230417084144-e46cdc804468
-	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230221090402-f92abd690383
+	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230720133344-9fe00f26d9ec
 	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230519075144-8318a7f9a102
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230221095549-19da485e2300
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230609054157-a2f9f6d68571
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230724053754-d6f43ed9e300
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230221095827-a6639b3b5017
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.1-0.20230221095707-a6ef1151257e
-	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230602093917-8a8eb4cd8450
+	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230724093800-d6a6eb5fb718
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect

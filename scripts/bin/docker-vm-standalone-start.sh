@@ -7,7 +7,10 @@
 
 LOG_PATH=$(pwd)/log
 LOG_LEVEL=INFO
+EXPOSE_PORT=22351
 RUNTIME_PORT=32351
+CONTAINER_NAME=chainmaker-vm-go
+IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.2"
 DOCKER_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v3.0.0"
 DOCKER_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine-java:v3.0.0"
 

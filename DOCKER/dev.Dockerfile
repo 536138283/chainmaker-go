@@ -14,6 +14,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y tzdata && \
 COPY ./main/libwasmer_runtime_c_api.so /usr/lib/libwasmer.so
 COPY ./main/prebuilt/linux/wxdec /usr/bin
 COPY ./bin/chainmaker /chainmaker-go/bin/
+COPY ./bin/cmc /usr/bin/
 COPY ./config /chainmaker-go/config/
 RUN mkdir -p /chainmaker-go/log/
 RUN chmod 755 /usr/bin/wxdec

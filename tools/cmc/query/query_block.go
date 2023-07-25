@@ -108,7 +108,7 @@ func newQueryBlockByHashOnChainCMD() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			blkWithRWSetOnChain, err := cc.GetFullBlockByHeight(height)
+			blkWithRWSetOnChain, err := cc.GetBlockByHeight(height, true)
 			if err != nil {
 				return err
 			}

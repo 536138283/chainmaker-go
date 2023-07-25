@@ -382,6 +382,13 @@ storage:
   # Minimum block height not allowed to be archived
   unarchive_block_height: 300000
 
+  # Archive dir scan interval time(s), default: 10(s)
+  archive_check_interval: 10
+
+  # Restore data merge on chain data wait time,
+  # restore action start after "restoreBlock" action finished "restore_interval" time(s), default: 60(s)
+  restore_interval: 60
+
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
@@ -554,7 +561,6 @@ vm:
   go:
     # Enable docker go virtual machine, default: false
     enable: {enable_docker_go}
-
     # Mount data path in chainmaker, include contracts, uds socks
     data_mount_path: ../data/{org_id}/go
 
@@ -568,16 +574,27 @@ vm:
     log_in_console: false
 
     # Log level of docker vm go
+    log_level: {vm_go_log_level}
+
+    # Log level of docker vm go
+
     log_level: {docker_go_log_level}
 
     # max process num for execute original txs
     max_concurrency: 20
 
+    #  Configs of docker runtime server (handle messages with contract sandbox)
+    runtime_server:
+      # runtime server host, default 127.0.0.1
+      # host: 127.0.0.1
+      # Runtime server port, default 32351
+      port: {vm_go_runtime_port}
 
     # Configs of contract engine server (handle messages with contract engine)
     contract_engine:
       # Docker vm contract engine server host, default 127.0.0.1
       host: 127.0.0.1
+
       # Docker vm contract engine server port, default 22351
       port: {docker_go_engine_port}
       # Max number of connection created to connect docker vm service

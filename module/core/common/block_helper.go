@@ -299,11 +299,11 @@ func InitNewBlock(
 	if utils.IsConfBlock(lastBlock) {
 		preConfHeight = lastBlock.Header.BlockHeight
 	}
-
 	blockVersion := chainConf.ChainConfig().GetBlockVersion()
 	if blockVersion == 0 {
 		blockVersion = protocol.DefaultBlockVersion
 	}
+
 	// construct block
 	block := &commonPb.Block{
 		// construct block header
@@ -506,7 +506,7 @@ func IsBlockHashValid(block *commonPb.Block, hashType string) error {
 
 // IsTxDuplicate to check if there is duplicated transactions in one block
 func IsTxDuplicate(txs []*commonPb.Transaction) (duplicate bool, duplicateTxs []string) {
-	txSet := make(map[string]struct{})
+	txSet := make(map[string]struct{}, len(txs))
 	exist := struct{}{}
 	for _, tx := range txs {
 		if tx == nil || tx.Payload == nil {
@@ -825,7 +825,7 @@ func (vb *VerifierBlock) ValidateBlock(
 	//}
 
 	// get contract events
-	contractEventMap := make(map[string][]*commonPb.ContractEvent)
+	contractEventMap := make(map[string][]*commonPb.ContractEvent, len(block.Txs))
 	for _, tx := range block.Txs {
 		var events []*commonPb.ContractEvent
 		if result, ok := txResultMap[tx.Payload.TxId]; ok {
@@ -854,7 +854,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
 		return nil, timeLasts, err
 	}
-	txResultMap := make(map[string]*commonPb.Result)
+	txResultMap := make(map[string]*commonPb.Result, len(block.GetTxs()))
 	for _, tx := range block.GetTxs() {
 		if tx.Result != nil {
 			txResultMap[tx.Payload.TxId] = tx.Result
@@ -939,7 +939,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	//}
 
 	// get contract events
-	contractEventMap := make(map[string][]*commonPb.ContractEvent)
+	contractEventMap := make(map[string][]*commonPb.ContractEvent, len(block.Txs))
 	for _, tx := range block.Txs {
 		var events []*commonPb.ContractEvent
 		if result, ok := txResultMap[tx.Payload.TxId]; ok {
@@ -1189,10 +1189,12 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	}
 	// put consensus qc into block
 	lastProposed.AdditionalData = block.AdditionalData
+	// shallow copy, create a new block to prevent panic during storage in marshal
+	commitBlock := CopyBlock(lastProposed)
 
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
-		chain.commonCommit.CommitBlock(lastProposed, rwSetMap, conEventMap)
+		chain.commonCommit.CommitBlock(commitBlock, rwSetMap, conEventMap) // use commitBlock
 	if err != nil {
 		chain.log.Errorf("block common commit failed: %s, blockHeight: (%d)",
 			err.Error(), lastProposed.Header.BlockHeight)
@@ -1406,6 +1408,7 @@ func GetTurboBlock(block, turboBlock *commonPb.Block,
 			Result:    block.Txs[i].Result,
 			Sender:    block.Txs[i].Sender,
 			Endorsers: block.Txs[i].Endorsers,
+			Payer:     block.Txs[i].Payer,
 		}
 
 	}
@@ -1514,7 +1517,8 @@ func recoverBlockByBatch(
 			return nil, nil, err
 		}
 
-		newTxs := make([]*commonPb.Transaction, 0)
+		//in most cases the number is the same
+		newTxs := make([]*commonPb.Transaction, 0, int(block.Header.TxCount))
 		for _, tx := range txs {
 			newTxs = append(newTxs, tx...)
 		}
@@ -1668,7 +1672,7 @@ func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
 		fetchTxs = append(fetchTxs, fetchBatch...)
 	}
 
-	txIndex := make(map[string]uint32)
+	txIndex := make(map[string]uint32, len(fetchTxs))
 	for index, tx := range fetchTxs {
 		txIndex[tx.Payload.TxId] = uint32(index)
 	}
@@ -1836,6 +1840,16 @@ func ClearProposeRepeatTimerMap() {
 		ProposeRepeatTimerMap.Delete(key)
 		return true
 	})
+}
+
+// CopyBlock generates a new block with a old block, internally using the same pointer
+func CopyBlock(block *commonPb.Block) *commonPb.Block {
+	return &commonPb.Block{
+		Header:         block.Header,
+		Dag:            block.Dag,
+		Txs:            block.Txs,
+		AdditionalData: block.AdditionalData,
+	}
 }
 
 func (chain *BlockCommitterImpl) removeInvalidChildBlock(height uint64, hashMap map[string]struct{}) {
