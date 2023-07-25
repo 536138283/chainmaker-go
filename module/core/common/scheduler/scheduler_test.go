@@ -48,30 +48,29 @@ var (
 	TestCertFile    = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
 )
 
-//func TestDag(t *testing.T) {
-//	for i := 0; i < 10; i++ {
+//	func TestDag(t *testing.T) {
+//		for i := 0; i < 10; i++ {
 //
-//		neb1 := &commonPb.DAG_Neighbor{
-//			Neighbors: []int32{1, 2, 3, 4},
+//			neb1 := &commonPb.DAG_Neighbor{
+//				Neighbors: []int32{1, 2, 3, 4},
+//			}
+//			neb2 := &commonPb.DAG_Neighbor{
+//				Neighbors: []int32{1, 2, 3, 4},
+//			}
+//			neb3 := &commonPb.DAG_Neighbor{
+//				Neighbors: []int32{1, 2, 3, 4},
+//			}
+//			vs := make([]*commonPb.DAG_Neighbor, 3)
+//			vs[0] = neb1
+//			vs[1] = neb2
+//			vs[2] = neb3
+//			dag := &commonPb.DAG{
+//				Vertexes: vs,
+//			}
+//			marshal, _ := proto.Marshal(dag)
+//			println("Dag", hex.EncodeToString(marshal))
 //		}
-//		neb2 := &commonPb.DAG_Neighbor{
-//			Neighbors: []int32{1, 2, 3, 4},
-//		}
-//		neb3 := &commonPb.DAG_Neighbor{
-//			Neighbors: []int32{1, 2, 3, 4},
-//		}
-//		vs := make([]*commonPb.DAG_Neighbor, 3)
-//		vs[0] = neb1
-//		vs[1] = neb2
-//		vs[2] = neb3
-//		dag := &commonPb.DAG{
-//			Vertexes: vs,
-//		}
-//		marshal, _ := proto.Marshal(dag)
-//		println("Dag", hex.EncodeToString(marshal))
 //	}
-//}
-//
 func newTx(txId string, contractId *commonPb.Contract, parameterMap map[string]string) *commonPb.Transaction {
 
 	var parameters []*commonPb.KeyValuePair
@@ -426,6 +425,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	blockChainStore.EXPECT().GetContractByName(gomock.Eq(sysContractId.Name)).Return(sysContractId, nil).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(contractId.Name).AnyTimes()
 	blockChainStore.EXPECT().GetContractBytecode(sysContractId.Name).AnyTimes()
+	blockChainStore.EXPECT().GetLastChainConfig().Return(chainConfig, nil).AnyTimes()
 	ledgerCache.EXPECT().CurrentHeight().Return(block.Header.BlockHeight-1, nil).AnyTimes()
 
 	snapshot.EXPECT().GetBlockchainStore().AnyTimes().Return(blockChainStore)
@@ -773,7 +773,7 @@ func TestSchedule5(t *testing.T) {
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
-
+	snapshot.EXPECT().GetLastChainConfig().Return(&configpb.ChainConfig{}).AnyTimes()
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},
 	}
