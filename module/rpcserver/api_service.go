@@ -324,6 +324,7 @@ func ErrorResponse(txId string, code commonPb.TxStatusCode, msg string) *commonP
 // @param *commonPb.Transaction
 // @param protocol.TxSource
 // @return *commonPb.TxResponse
+// nolint
 func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
 	var (
 		err     error
@@ -476,14 +477,14 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		} else if txResult.Message == tbf.ErrArchivedTx.Error() {
 			respCode = commonPb.TxStatusCode_ARCHIVED_TX
 		}
-		resp := ErrorResponse(tx.Payload.TxId, respCode, errMsg)
+		resp = ErrorResponse(tx.Payload.TxId, respCode, errMsg)
 		resp.ContractResult = txResult
 
 		return resp
 	}
 
 	if txResult.Code == 1 {
-		resp := ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_CONTRACT_FAIL,
+		resp = ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_CONTRACT_FAIL,
 			commonPb.TxStatusCode_CONTRACT_FAIL.String())
 		resp.ContractResult = txResult
 		return resp
