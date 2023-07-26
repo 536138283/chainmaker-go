@@ -62,7 +62,9 @@ func (s *ApiService) Subscribe(req *commonPb.TxRequest, server apiPb.RpcNode_Sub
 		Payload:   req.Payload,
 		Sender:    req.Sender,
 		Endorsers: req.Endorsers,
-		Result:    nil}
+		Result:    nil,
+		Payer:     req.Payer,
+	}
 
 	if shouldValidateTx(tx) {
 		errCode, errMsg = s.validate(tx)

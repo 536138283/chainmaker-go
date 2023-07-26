@@ -27,7 +27,7 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v3/txpool"
 	"chainmaker.org/chainmaker/protocol/v3"
-	"chainmaker.org/chainmaker/store/v3/archive"
+	tbf "chainmaker.org/chainmaker/store/v3/types/blockfile"
 	"chainmaker.org/chainmaker/utils/v3"
 	"chainmaker.org/chainmaker/vm/v3"
 	"github.com/prometheus/client_golang/prometheus"
@@ -160,7 +160,9 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 		Payload:   req.Payload,
 		Sender:    req.Sender,
 		Endorsers: req.Endorsers,
-		Result:    nil}, protocol.RPC)
+		Result:    nil,
+		Payer:     req.Payer,
+	}, protocol.RPC)
 
 	// audit log format: ip:port|orgId|chainId|TxType|TxId|Timestamp|ContractName|Method|retCode|retCodeMsg|retMsg
 	s.logBrief.Infof("|%s|%s|%s|%s|%s|%d|%s|%s|%d|%s|%s", GetClientAddr(ctx), req.Sender.Signer.OrgId,
@@ -226,6 +228,7 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		resp    = &commonPb.TxResponse{}
 	)
 
+	s.log.Debugf("ApiService invoke tx => id = %v, type = %v", tx.Payload.TxId, tx.Payload.TxType)
 	if shouldValidateTx(tx) {
 		errCode, errMsg = s.validate(tx)
 		if errCode != commonErr.ERR_CODE_OK {
@@ -321,6 +324,7 @@ func ErrorResponse(txId string, code commonPb.TxStatusCode, msg string) *commonP
 // @param *commonPb.Transaction
 // @param protocol.TxSource
 // @return *commonPb.TxResponse
+// nolint
 func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
 	var (
 		err     error
@@ -328,10 +332,10 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		errCode commonErr.ErrCode
 		store   protocol.BlockchainStore
 		vmMgr   protocol.VmManager
+		resp    = &commonPb.TxResponse{TxId: tx.Payload.TxId}
 	)
 
 	chainId := tx.Payload.ChainId
-
 	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
 		errCode = commonErr.ERR_CODE_GET_STORE
 		errMsg = s.getErrMsg(errCode, err)
@@ -354,7 +358,17 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		s.log.Error(err)
 		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
+	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
 
+	var snap protocol.Snapshot
+	snap, err = snapshot.NewQuerySnapshot(store, log)
+	if err != nil {
+		s.log.Error(err)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = err.Error()
+		resp.TxId = tx.Payload.TxId
+		return resp
+	}
 	blockVersion := s.getBlockVersion(chainId)
 	contractName := tx.Payload.ContractName
 	method := tx.Payload.Method
@@ -364,7 +378,13 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		method = syscontract.EthereumFunction_Unpack.String()
 		tx.Payload.TxType = commonPb.TxType_ETH_TX
 	}
-	contract, err := store.GetContractByName(contractName)
+	if blockVersion == 0 {
+		blockVersion = protocol.DefaultBlockVersion
+	}
+	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
+
+	//contract, err := store.GetContractByName(tx.Payload.ContractName)
+	contract, err := ctx.GetContractByName(contractName)
 	if err != nil {
 		s.log.Error(err)
 		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
@@ -376,12 +396,29 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
 
-	ctx, err := s.makeQueryContext(tx, chainId, store, blockVersion, vmMgr)
+	ctx, err = s.makeQueryContext(tx, chainId, store, blockVersion, vmMgr)
 	if err != nil {
 		return ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_INTERNAL_ERROR, err.Error())
 	}
+
+	gasUsed := uint64(0)
+	gasRWSet := uint64(0)
+	gasEvents := uint64(0)
+	if blockVersion2312 <= blockVersion {
+		gasUsed, err = calcTxGasUsed(ctx, s.log)
+		s.log.Debugf("【gas calc】%v, before `RunContract` gasUsed = %v, err = %v",
+			tx.Payload.TxId, gasUsed, err)
+		if err != nil {
+			s.log.Errorf("calculate tx gas failed, err = %v", err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.ContractResult.Code = uint32(1)
+			resp.ContractResult.Message = err.Error()
+			return resp
+		}
+	}
 	txResult, _, txStatusCode := vmMgr.RunContract(contract, method,
-		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, 0, tx.Payload.TxType)
+		bytecode, s.kvPair2Map(tx.Payload.Parameters), ctx, gasUsed, tx.Payload.TxType)
 	s.log.DebugDynamic(func() string {
 		contractJson, _ := json.Marshal(contract)
 		return fmt.Sprintf("vmMgr.RunContract: txStatusCode:%d, resultCode:%d, contractName[%s](%s), "+
@@ -393,6 +430,35 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		txResult.GasUsed = 21000
 		s.log.Infof("Tx[%s] EstimateGas result:%d, update to 21000", tx.Payload.TxId, txResult.GasUsed)
 	}
+	if blockVersion2312 <= blockVersion {
+		s.log.Debugf("【gas calc】%v, before `calcTxRWSetGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, txResult.GasUsed, err)
+		gasRWSet, err = calcTxRWSetGasUsed(ctx, txStatusCode == commonPb.TxStatusCode_SUCCESS, s.log)
+		if err != nil {
+			s.log.Errorf("calculate tx rw_set gas failed, err = %v", err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.ContractResult.Code = uint32(1)
+			resp.ContractResult.Message = err.Error()
+			return resp
+		}
+		txResult.GasUsed += gasRWSet
+		s.log.Debugf("【gas calc】%v, before `calcTxEventGasUsed` gasUsed = %v, err = %v",
+			tx.Payload.TxId, txResult.GasUsed, err)
+
+		gasEvents, err = calcTxEventGasUsed(
+			ctx, txResult.ContractEvent, s.log)
+		if err != nil {
+			s.log.Errorf("calculate tx events gas failed, err = %v", err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.ContractResult.Code = uint32(1)
+			resp.ContractResult.Message = err.Error()
+			return resp
+		}
+		txResult.GasUsed += gasEvents
+	}
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
@@ -406,24 +472,23 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		s.log.Warn(errMsg)
 
 		respCode := txStatusCode
-		if txResult.Message == archive.ErrArchivedBlock.Error() {
+		if txResult.Message == tbf.ErrArchivedBlock.Error() {
 			respCode = commonPb.TxStatusCode_ARCHIVED_BLOCK
-		} else if txResult.Message == archive.ErrArchivedTx.Error() {
+		} else if txResult.Message == tbf.ErrArchivedTx.Error() {
 			respCode = commonPb.TxStatusCode_ARCHIVED_TX
 		}
-		resp := ErrorResponse(tx.Payload.TxId, respCode, errMsg)
+		resp = ErrorResponse(tx.Payload.TxId, respCode, errMsg)
 		resp.ContractResult = txResult
 
 		return resp
 	}
 
 	if txResult.Code == 1 {
-		resp := ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_CONTRACT_FAIL,
+		resp = ErrorResponse(tx.Payload.TxId, commonPb.TxStatusCode_CONTRACT_FAIL,
 			commonPb.TxStatusCode_CONTRACT_FAIL.String())
 		resp.ContractResult = txResult
 		return resp
 	}
-	resp := &commonPb.TxResponse{}
 	resp.Code = commonPb.TxStatusCode_SUCCESS
 	resp.Message = commonPb.TxStatusCode_SUCCESS.String()
 	resp.ContractResult = txResult

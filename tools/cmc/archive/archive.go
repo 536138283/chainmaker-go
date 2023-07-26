@@ -1,133 +1,90 @@
-// Copyright (C) BABEC. All rights reserved.
-// Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
-//
-// SPDX-License-Identifier: Apache-2.0
+/*
+Copyright (C) BABEC. All rights reserved.
+Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
-// Package archive 对节点的区块链数据进行归档相关的操作
+SPDX-License-Identifier: Apache-2.0
+*/
+
 package archive
 
 import (
-	"encoding/binary"
 	"errors"
+	"fmt"
+	"strconv"
 	"strings"
 
-	"github.com/spf13/cobra"
-	"github.com/spf13/pflag"
-	"gorm.io/gorm"
-
-	"chainmaker.org/chainmaker-go/tools/cmc/archive/db/mysql"
-	"chainmaker.org/chainmaker-go/tools/cmc/archive/model"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	"github.com/spf13/cobra"
 )
 
-const (
-	defaultDbType                 = "mysql"
-	configBlockArchiveErrorString = "config block do not need archive"
-)
-
-var (
-	// sdk config file path
-	sdkConfPath string
-
-	chainId string
-
-	dbType                  string
-	dbDest                  string
-	target                  string
-	blocks                  uint64
-	secretKey               string
-	restoreStartBlockHeight uint64
-)
-
-const (
-	//// Common flags
-	flagSdkConfPath = "sdk-conf-path"
-	flagChainId     = "chain-id"
-
-	//// Archive flags
-	// Off-chain database type. eg. mysql,mongodb,pgsql
-	flagDbType = "type"
-	// Off-chain database destination. eg. user:password:localhost:port
-	flagDbDest = "dest"
-	// 1.Archive target block height, stop archiving (include this block) after reaching this height.
-	// 2.Archive target date, archive all blocks before this date.
-	flagTarget = "target"
-	// Number of blocks to be archived this time
-	flagBlocks = "blocks"
-	// Secret Key for calc Hmac
-	flagSecretKey = "secret-key"
-	// block height of restore
-	flagStartBlockHeight = "start-block-height"
-)
-
-// NewArchiveCMD new archive blockchain data and restore blockchain data command
-func NewArchiveCMD() *cobra.Command {
+func newArchiveCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "archive",
-		Short: "archive blockchain data",
-		Long:  "archive blockchain data and restore blockchain data",
-	}
+		Use:   "archive [archive block height]",
+		Short: "archive block file under height",
+		Long:  "archive block file under height",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cleanHeight, parseErr := strconv.ParseUint(args[0], 10, 64)
+			if parseErr != nil {
+				msg := fmt.Sprintf("args should be integer ,now is [%s], parse error [%s]",
+					args[0], parseErr.Error())
+				return errors.New(msg)
+			}
+			return runArchiveCMD(cleanHeight)
 
-	cmd.AddCommand(newDumpCMD())
-	cmd.AddCommand(newRestoreCMD())
-	cmd.AddCommand(newQueryOffChainCMD())
+		},
+	}
+	util.AttachAndRequiredFlags(cmd, flags, []string{
+		flagSdkConfPath, flagTimeOut,
+	})
+	util.AttachFlags(cmd, flags, []string{flagCleanIgnoreArchivedHeight})
 
 	return cmd
 }
 
-var flags *pflag.FlagSet
-
-func init() {
-	flags = &pflag.FlagSet{}
-
-	flags.StringVar(&chainId, flagChainId, "", "Chain ID")
-	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")
-	flags.StringVar(&dbType, flagDbType, "mysql", "Database type. eg. mysql")
-	flags.StringVar(&dbDest, flagDbDest, "", "Database destination. eg. user:password:localhost:port")
-	flags.StringVar(&target, flagTarget, "", "Height or Date of the target block for this archive task."+
-		" eg."+
-		" 100 (block height) or \"2006-01-02 15:04:05\" (date)")
-	flags.Uint64Var(&blocks, flagBlocks, 1000, "Number of blocks to be archived this time")
-	flags.StringVar(&secretKey, flagSecretKey, "", "Secret Key for calc Hmac")
-	flags.Uint64Var(&restoreStartBlockHeight, flagStartBlockHeight, 0, "Restore starting block height")
-
-	if sdkConfPath == "" {
-		sdkConfPath = util.EnvSdkConfPath
-	}
-}
-
-// initDb Connecting database, migrate tables.
-func initDb() (*gorm.DB, error) {
-	// parse params
-	dbName := model.DbName(chainId)
-	dbDestSlice := strings.Split(dbDest, ":")
-	if len(dbDestSlice) != 4 {
-		return nil, errors.New("invalid database destination")
-	}
-
-	// initialize database
-	db, err := mysql.InitDb(dbDestSlice[0], dbDestSlice[1], dbDestSlice[2], dbDestSlice[3], dbName, true)
+func runArchiveCMD(cleanHeight uint64) error {
+	// create chain client
+	cc, err := util.CreateChainClient(sdkConfPath, "",
+		"", "", "", "", "")
 	if err != nil {
-		return nil, err
+		return err
+	}
+	defer cc.Stop()
+	// 在这里先先校验一下cleanheight是否小于归档中心的高度
+	if strings.ToLower(strings.TrimSpace(ignoreCleanArchivedHeight)) != "y" {
+		archiveClient := cc.GetArchiveService()
+		archivedHeight, _, _, err1 := archiveClient.GetArchivedStatus()
+		if err1 != nil {
+			return err1
+		}
+		if cleanHeight > archivedHeight {
+			return fmt.Errorf(
+				"param height [%d] must not be greater than max height [%d] in archivecenter",
+				cleanHeight, archivedHeight)
+		}
+	}
+	// archivedBlkHeightOnChain, queryArchivedErr := cc.GetArchivedBlockHeight()
+	// if queryArchivedErr != nil {
+	// 	fmt.Printf("query GetArchivedBlockHeight error %s", queryArchivedErr.Error())
+	// } else {
+	// 	fmt.Printf("query GetArchivedBlockHeight  %d \n", archivedBlkHeightOnChain)
+	// }
+	payload, payloadErr := cc.CreateArchiveBlockPayload(cleanHeight)
+	if payloadErr != nil {
+		return payloadErr
 	}
 
-	// migrate sysinfo table
-	err = db.AutoMigrate(&model.Sysinfo{})
-	if err != nil {
-		return nil, err
+	resp, respErr := cc.SendArchiveBlockRequest(payload, int64(timeOut))
+	if respErr != nil {
+		return fmt.Errorf(
+			"send archive request error [%s],call GetArchivedBlockHeight for archivedHeight on chain",
+			respErr.Error())
 	}
-	return db, nil
-}
 
-// hmac SM3(Fchain_id+Fblock_height+Fblock_with_rwset+key)
-func hmac(chainId string, blkHeight uint64, blkWithRWSetBytes []byte, secretKey string) (string, error) {
-	blkHeightBytes := make([]byte, 8)
-	binary.LittleEndian.PutUint64(blkHeightBytes, blkHeight)
-
-	var data []byte
-	data = append(data, []byte(chainId)...)
-	data = append(data, blkHeightBytes...)
-	data = append(data, blkWithRWSetBytes...)
-	data = append(data, []byte(secretKey)...)
-	return util.SM3(data)
+	checkResult := util.CheckProposalRequestResp(resp, false)
+	if checkResult != nil {
+		return fmt.Errorf("runArchiveCMD  failed error %s , resp message: %#v", checkResult.Error(), *resp)
+	}
+	fmt.Println("chain has got archive command!")
+	return nil
 }

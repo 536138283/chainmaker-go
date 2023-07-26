@@ -20,7 +20,7 @@ package verifier
 //	"encoding/json"
 //	"fmt"
 //	"github.com/golang/mock/gomock"
-//	"github.com/panjf2000/ants/v2"
+//	"github.com/panjf2000/ants/v3"
 //	"sync"
 //	"testing"
 //)

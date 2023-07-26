@@ -21,6 +21,7 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -339,10 +340,11 @@ func (s *ApiService) doSendSubscribeTx(server apiPb.RpcNode_SubscribeServer, tx 
 		result *commonPb.SubscribeResult
 	)
 
+	txNew := utils.FilterBlacklistTxs([]*commonPb.Transaction{tx})[0]
 	isReqSenderLightNode := reqSender == protocol.RoleLight
 	isTxRelatedToSender := (tx.Sender != nil) && reqSenderOrgId == tx.Sender.Signer.OrgId
 
-	if result, err = s.getTxSubscribeResult(tx); err != nil {
+	if result, err = s.getTxSubscribeResult(txNew); err != nil {
 		errMsg = fmt.Sprintf("get tx subscribe result failed, %s", err)
 		s.log.Error(errMsg)
 		return errors.New(errMsg)

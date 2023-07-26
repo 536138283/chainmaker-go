@@ -36,6 +36,9 @@ contract:
   # If it is true, storage.statedb_config.provider in chainmaker.yml should be sql.
   enable_sql_support: false
 
+  # If it is true, Only creators are allowed to upgrade contract.
+  only_creator_can_upgrade: false
+
 # Virtual machine related settings
 vm:
   #0:chainmaker, 1:zxl, 2:ethereum
@@ -107,8 +110,14 @@ account_config:
   enable_gas: false
   # Deprecated，the default gas count set for admin account.
   gas_count: 0
-  # the minimum gas count to be subtracted from transaction's origin account.
-  default_gas: 0
+  # the minimum gas count to be subtracted from transaction's origin account for invoking tx.
+  default_gas: 100
+  # the gas price per byte for invoking tx, accurate to 6 digits after the decimal point.
+  default_gas_price: 0.1
+  # the minimum gas count to be subtracted from transaction's origin account for installing|upgrading tx.
+  install_base_gas: 10000
+  # the gas price per byte for installing tx, accurate to 6 digits after the decimal point.
+  install_gas_price: 0.001
 
 # Consensus settings
 consensus:

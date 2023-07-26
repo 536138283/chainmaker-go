@@ -19,6 +19,7 @@ var (
 	adminOrgIds       string
 	address           string
 	amount            int64
+	price             string
 )
 
 const (
@@ -30,6 +31,7 @@ const (
 	flagAdminOrgIds       = "admin-org-ids"
 	flagAddress           = "address"
 	flagAmount            = "amount"
+	flagPrice             = "price"
 )
 
 // NewGasManageCMD new gas management command
@@ -49,6 +51,9 @@ func NewGasManageCMD() *cobra.Command {
 	cmd.AddCommand(newUnfrozenGasAccountCMD())
 	cmd.AddCommand(newGetGasAccountStatusCMD())
 	cmd.AddCommand(newSetInvokeBaseGasCMD())
+	cmd.AddCommand(newSetInvokeGasPriceCMD())
+	cmd.AddCommand(newSetInstallBaseGasCMD())
+	cmd.AddCommand(newSetInstallGasPriceCMD())
 
 	return cmd
 }
@@ -66,6 +71,7 @@ func init() {
 	flags.StringVar(&adminOrgIds, flagAdminOrgIds, "", "specify admin org-ids, use ',' to separate")
 	flags.StringVar(&address, flagAddress, "", "address of account")
 	flags.Int64Var(&amount, flagAmount, 0, "amount of gas")
+	flags.StringVar(&price, flagPrice, "0", "price of one byte")
 
 	if sdkConfPath == "" {
 		sdkConfPath = util.EnvSdkConfPath

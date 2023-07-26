@@ -18,6 +18,7 @@ import (
 	"chainmaker.org/chainmaker/logger/v3"
 	"chainmaker.org/chainmaker/protocol/v3"
 	"chainmaker.org/chainmaker/utils/v3"
+	gasutils "chainmaker.org/chainmaker/utils/v3/gas"
 	"chainmaker.org/chainmaker/vm/v3"
 
 	batch "chainmaker.org/chainmaker/txpool-batch/v3"
@@ -27,7 +28,7 @@ import (
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
 	"chainmaker.org/chainmaker/common/v3/msgbus"
 	storeHuge "chainmaker.org/chainmaker/store-huge/v3"
-	store "chainmaker.org/chainmaker/store/v3"
+	"chainmaker.org/chainmaker/store/v3"
 
 	"chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker-go/module/consensus"
@@ -47,6 +48,7 @@ import (
 	storePb "chainmaker.org/chainmaker/pb-go/v3/store"
 	storeHugeConf "chainmaker.org/chainmaker/store-huge/v3/conf"
 	storeConf "chainmaker.org/chainmaker/store/v3/conf"
+	native "chainmaker.org/chainmaker/vm-native/v3"
 )
 
 const (
@@ -236,6 +238,11 @@ func (bc *Blockchain) initNetService() (err error) {
 	return
 }
 
+// initStore add next time
+//
+//	@Description:
+//	@receiver bc
+//	@return err
 func (bc *Blockchain) initStore() (err error) {
 	_, ok := bc.initModules[moduleNameStore]
 	if ok {
@@ -775,8 +782,17 @@ func (bc *Blockchain) initVM() (err error) {
 			consensusStateWrapper,
 		)
 	}
+	bc.initVMNative()
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
+}
+
+func (bc *Blockchain) initVMNative() {
+	chainConfig := bc.chainConf.ChainConfig()
+	vmlog := logger.GetLoggerByChain(logger.MODULE_VM, bc.chainId)
+
+	gasConfig := gasutils.NewGasConfig(chainConfig.AccountConfig)
+	native.InitInstance(bc.chainId, gasConfig, vmlog, bc.msgBus, bc.store)
 }
 
 func (bc *Blockchain) addVmManager(vmType string,

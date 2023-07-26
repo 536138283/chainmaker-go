@@ -225,18 +225,18 @@ function generate_config() {
     # set CONSENSUS_TYPE
     if [ $CONSENSUS_TYPE == -1 ] ;then
       if  [ $NODE_CNT -gt 1 ] ;then
-        read -p "input consensus type (1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+        read -p "input consensus type (1-TBFT(default),4-RAFT): " tmp
         if  [ ! -z "$tmp" ] ;then
-          if [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+          if [ $tmp -eq 1 ] || [ $tmp -eq 4 ] ;then
             CONSENSUS_TYPE=$tmp
           else
             echo "invalid consensus type [" $tmp "], so use default"
           fi
         fi
       else
-        read -p "input consensus type (0-SOLO,1-TBFT(default),3-MAXBFT,4-RAFT): " tmp
+        read -p "input consensus type (0-SOLO,1-TBFT(default),4-RAFT): " tmp
         if  [ ! -z "$tmp" ] ;then
-          if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 3 ] || [ $tmp -eq 4 ] ;then
+          if  [ $tmp -eq 0 ] || [ $tmp -eq 1 ] || [ $tmp -eq 4 ] ;then
             CONSENSUS_TYPE=$tmp
           else
             echo "unknown consensus type [" $tmp "], so use default"
@@ -427,7 +427,7 @@ if [ "$ENABLE_VM_GO" == "" ] ;then
 
             xsed "s%{chain_id}%chain$j%g" node$i/chainconfig/bc$j.yml
             xsed "s%{hash_type}%$HASH_TYPE%g" node$i/chainconfig/bc$j.yml
-            xsed "s%{version}%\"$VERSION\"%g" node$i/chainconfig/bc$j.yml
+            xsed "s%{version}%$VERSION%g" node$i/chainconfig/bc$j.yml
 
             if  [ $NODE_CNT -eq 7 ] || [ $NODE_CNT -eq 13 ] || [ $NODE_CNT -eq 16 ]; then
                 xsed "s%#\(.*\)- org_id:%\1- org_id:%g" node$i/chainconfig/bc$j.yml

@@ -33,29 +33,35 @@ var (
 	sm4Key string
 
 	// 合约参数
-	abiFilePath     string
-	contractName    string
-	contractAddress string
-	version         string
-	byteCodePath    string
-	runtimeType     string
-	timeout         int64
-	sendTimes       int
-	method          string
-	params          string
-	orgId           string
-	chainId         string
-	syncResult      bool
-	enableCertHash  bool
-	blockHeight     uint64
-	withRWSet       bool
-	truncateValue   bool
-	isAgree         bool
-	txId            string
+	abiFilePath      string
+	contractName     string
+	contractAddress  string
+	version          string
+	byteCodePath     string
+	runtimeType      string
+	timeout          int64
+	sendTimes        int
+	method           string
+	params           string
+	orgId            string
+	chainId          string
+	syncResult       bool
+	enableCertHash   bool
+	blockHeight      uint64
+	withRWSet        bool
+	truncateValue    bool
+	truncateValueLen string
+	truncateModel    string
+	isAgree          bool
+	txId             string
 
 	adminKeyFilePaths string
 	adminCrtFilePaths string
 	adminOrgIds       string
+
+	payerKeyFilePath string
+	payerCrtFilePath string
+	payerOrgId       string
 
 	userTlsKeyFilePath  string
 	userTlsCrtFilePath  string
@@ -135,6 +141,8 @@ const (
 	flagEnableCertHash                   = "enable-cert-hash"
 	flagBlockHeight                      = "block-height"
 	flagWithRWSet                        = "with-rw-set"
+	flagTruncateModel                    = "truncate-model"
+	flagTruncateValueLen                 = "truncate-value-len"
 	flagTruncateValue                    = "truncate-value"
 	flagIsAgree                          = "is-agree"
 	flagTxId                             = "tx-id"
@@ -145,6 +153,9 @@ const (
 	flagAdminKeyFilePaths                = "admin-key-file-paths"
 	flagAdminCrtFilePaths                = "admin-crt-file-paths"
 	flagAdminOrgIds                      = "admin-org-ids"
+	flagPayerKeyFilePath                 = "payer-key-file-path"
+	flagPayerCrtFilePath                 = "payer-crt-file-path"
+	flagPayerOrgId                       = "payer-org-id"
 	flagUserTlsKeyFilePath               = "user-tlskey-file-path"
 	flagUserTlsCrtFilePath               = "user-tlscrt-file-path"
 	flagUserSignKeyFilePath              = "user-signkey-file-path"
@@ -284,6 +295,10 @@ func init() {
 	flags.StringVar(&adminCrtFilePaths, flagAdminCrtFilePaths, "", "specify admin cert file paths, use ',' to separate")
 	flags.StringVar(&adminOrgIds, flagAdminOrgIds, "", "specify admin org-ids, use ',' to separate")
 
+	flags.StringVar(&payerKeyFilePath, flagPayerKeyFilePath, "", "specify payer key file path")
+	flags.StringVar(&payerCrtFilePath, flagPayerCrtFilePath, "", "specify payer cert file path")
+	flags.StringVar(&payerOrgId, flagPayerOrgId, "", "specify payer org-id")
+
 	flags.StringVar(&userTlsKeyFilePath, flagUserTlsKeyFilePath, "", "specify user tls key file path for "+
 		"chainclient tls connection")
 	flags.StringVar(&userTlsCrtFilePath, flagUserTlsCrtFilePath, "", "specify user tls cert file path for "+
@@ -363,6 +378,14 @@ func init() {
 		flagMultiSignEnableManualRun,
 		false,
 		"enable or disable manual run feature of multi-sign")
+	flags.StringVar(&truncateModel,
+		flagTruncateModel,
+		"",
+		"the type of truncating multi-sign info")
+	flags.StringVar(&truncateValueLen,
+		flagTruncateValueLen,
+		"",
+		"the max length of truncating multi-sign info")
 
 	if sdkConfPath == "" {
 		sdkConfPath = util.EnvSdkConfPath

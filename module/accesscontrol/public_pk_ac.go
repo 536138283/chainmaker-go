@@ -202,8 +202,6 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 			chainConfig = maxbftCfg.ChainConfig
 		}
 	}
-
-	err = pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
 	lastestPolicyMap := &sync.Map{}
 	for _, resourcePolicy := range chainConfig.ResourcePolicies {
 		if pkAcProvider.ValidateResourcePolicy(resourcePolicy) {
@@ -214,6 +212,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 	pkAcProvider.lastestPolicyMap = lastestPolicyMap
 
 	err = pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
+
 	if err != nil {
 		return nil, fmt.Errorf("new public AC provider failed: %s", err.Error())
 	}
@@ -794,6 +793,19 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	// for slashing contract
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_DPOS_SLASHING.String()+"-"+
 		syscontract.DPoSSlashingFunction_SET_SLASHING_PER_BLOCK.String(), pubPolicyMajorityAdmin)
+	// disable trust root add & delete for public mode
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyMajorityAdmin)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyMajorityAdmin)
+
+	// for consensus ext xxx
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), pubPolicyForbidden)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
 	// disable trust root add & delete for public mode
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyMajorityAdmin)

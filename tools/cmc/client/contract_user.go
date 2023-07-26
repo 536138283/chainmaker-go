@@ -75,16 +75,16 @@ func userContractCMD() *cobra.Command {
 // createUserContractCMD create user contract command
 // @return *cobra.Command
 // use as:
-//./cmc client contract user create \
-//--contract-name=fact \
-//--runtime-type=WASMER \
-//--byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
-//--version=1.0 \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--sync-result=true \
-//--params="{}"
+// ./cmc client contract user create \
+// --contract-name=fact \
+// --runtime-type=WASMER \
+// --byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
+// --version=1.0 \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --sync-result=true \
+// --params="{}"
 func createUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create",
@@ -99,7 +99,8 @@ func createUserContractCMD() *cobra.Command {
 		flagUserTlsKeyFilePath, flagUserTlsCrtFilePath, flagUserSignKeyFilePath, flagUserSignCrtFilePath,
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash, flagAbiFilePath,
-		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit,
+		flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds, flagGasLimit, flagPayerKeyFilePath,
+		flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagContractName)
@@ -134,7 +135,8 @@ func invokeUserContractCMD() *cobra.Command {
 		flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId, flagSendTimes,
 		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagGasLimit, flagTxId, flagContractAddress, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath, flagPayerKeyFilePath,
+		flagPayerCrtFilePath, flagPayerOrgId,
 	})
 	return cmd
 }
@@ -165,7 +167,7 @@ func invokeOutUserContractCMD() *cobra.Command {
 }
 
 // invokeContractTimesCMD invoke contract and set invoke times
-//多次的并发调用指定合约方法
+// 多次的并发调用指定合约方法
 // @return *cobra.Command
 func invokeContractTimesCMD() *cobra.Command {
 	cmd := &cobra.Command{
@@ -182,7 +184,8 @@ func invokeContractTimesCMD() *cobra.Command {
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId,
 		flagSendTimes, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
 		flagContractAddress, flagGasLimit, flagRespResultToString,
-		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath, flagPayerKeyFilePath,
+		flagPayerCrtFilePath, flagPayerOrgId,
 	})
 	return cmd
 }
@@ -240,16 +243,16 @@ func getOutUserContractCMD() *cobra.Command {
 // @return *cobra.Command
 // use as:
 // ./cmc client contract user upgrade \
-//--contract-name=fact \
-//--runtime-type=WASMER \
-//--byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
-//--version=2.0 \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true \
-//--params="{}"
+// --contract-name=fact \
+// --runtime-type=WASMER \
+// --byte-code-path=./testdata/claim-wasm-demo/rust-fact-2.0.0.wasm \
+// --version=2.0 \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true \
+// --params="{}"
 func upgradeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "upgrade",
@@ -265,6 +268,7 @@ func upgradeUserContractCMD() *cobra.Command {
 		flagSdkConfPath, flagContractName, flagVersion, flagByteCodePath, flagOrgId, flagChainId, flagSendTimes,
 		flagRuntimeType, flagTimeout, flagParams, flagSyncResult, flagEnableCertHash, flagContractAddress,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagGasLimit, flagAbiFilePath,
+		flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
 	})
 
 	cmd.MarkFlagRequired(flagVersion)
@@ -278,12 +282,12 @@ func upgradeUserContractCMD() *cobra.Command {
 // @return *cobra.Command
 // use as:
 // ./cmc client contract user freeze \
-//--contract-name=fact \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true
+// --contract-name=fact \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true
 func freezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "freeze",
@@ -307,13 +311,13 @@ func freezeUserContractCMD() *cobra.Command {
 // unfreezeUserContractCMD unfreeze user contract command
 // @return *cobra.Command
 // use as：
-//./cmc client contract user unfreeze \
-//--contract-name=fact \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true
+// ./cmc client contract user unfreeze \
+// --contract-name=fact \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true
 func unfreezeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "unfreeze",
@@ -338,12 +342,12 @@ func unfreezeUserContractCMD() *cobra.Command {
 // @return *cobra.Command
 // use as:
 // ./cmc client contract user revoke \
-//--contract-name=fact \
-//--sdk-conf-path=./testdata/sdk_config.yml \
-//--admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
-//--admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
-//--org-id=wx-org1.chainmaker.org \
-//--sync-result=true
+// --contract-name=fact \
+// --sdk-conf-path=./testdata/sdk_config.yml \
+// --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key
+// --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt
+// --org-id=wx-org1.chainmaker.org \
+// --sync-result=true
 func revokeUserContractCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "revoke",
@@ -470,7 +474,22 @@ func createUpgradeUserContract(op createUpgradeContractOp) error {
 	if err != nil {
 		return err
 	}
-	resp, err := client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
+
+	var payer []*common.EndorsementEntry
+	if len(payerKeyFilePath) > 0 {
+		payer, err = util.MakeEndorsement([]string{payerKeyFilePath}, []string{payerCrtFilePath}, []string{payerOrgId},
+			client, payload)
+		if err != nil {
+			fmt.Printf("MakePayerEndorsement failed, %s", err)
+			return err
+		}
+	}
+	var resp *common.TxResponse
+	if len(payer) == 0 {
+		resp, err = client.SendContractManageRequest(payload, endorsementEntrys, timeout, syncResult)
+	} else {
+		resp, err = client.SendContractManageRequestWithPayer(payload, endorsementEntrys, payer[0], timeout, syncResult)
+	}
 	if err != nil {
 		return err
 	}
@@ -662,42 +681,9 @@ func getUserContract() error {
 		return errors.New("either contract-name or contract-address must be set")
 	}
 
-	var kvs []*common.KeyValuePair
-	var contractAbi *abi.ABI
-
-	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
-		abiBytes, err := ioutil.ReadFile(abiFilePath)
-		if err != nil {
-			return err
-		}
-
-		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
-		if err != nil {
-			return err
-		}
-
-		inputData, err := util.Pack(contractAbi, method, params)
-		if err != nil {
-			return err
-		}
-
-		inputDataHexStr := hex.EncodeToString(inputData)
-
-		kvs = []*common.KeyValuePair{
-			{
-				Key:   "data",
-				Value: []byte(inputDataHexStr),
-			},
-		}
-	} else {
-		if params != "" {
-			kvsMap := make(map[string]interface{})
-			err := json.Unmarshal([]byte(params), &kvsMap)
-			if err != nil {
-				return err
-			}
-			kvs = util.ConvertParameters(kvsMap)
-		}
+	kvs, contractAbi, err := generateKVs()
+	if err != nil {
+		return err
 	}
 
 	resp, err := client.QueryContract(contractName, method, kvs, -1)
@@ -733,6 +719,74 @@ func getUserContract() error {
 	}
 	util.PrintPrettyJson(output)
 	return nil
+}
+
+func generateKVs() (kvs []*common.KeyValuePair, contractAbi *abi.ABI, err error) {
+	// handle evm params
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := ioutil.ReadFile(abiFilePath)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return nil, nil, err
+		}
+
+		inputData, err := util.Pack(contractAbi, method, params)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		inputDataHexStr := hex.EncodeToString(inputData)
+
+		kvs = []*common.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputDataHexStr),
+			},
+		}
+
+		return kvs, contractAbi, nil
+
+	}
+
+	// handle common params
+	if params != "" {
+		kvsMap := make(map[string]interface{})
+		err := json.Unmarshal([]byte(params), &kvsMap)
+		if err == nil {
+			kvs = util.ConvertParameters(kvsMap)
+		} else {
+			var pms []*Param
+			err = json.Unmarshal([]byte(params), &pms)
+			if err != nil {
+				return nil, nil, err
+			}
+			for _, pm := range pms {
+				if pm.IsFile {
+					byteCode, err := ioutil.ReadFile(pm.Value)
+					if err != nil {
+						return nil, nil, err
+					}
+					kvs = append(kvs, &common.KeyValuePair{
+						Key:   pm.Key,
+						Value: byteCode,
+					})
+				} else {
+					kvs = append(kvs, &common.KeyValuePair{
+						Key:   pm.Key,
+						Value: []byte(pm.Value),
+					})
+				}
+			}
+		}
+
+		return kvs, nil, nil
+	}
+
+	return []*common.KeyValuePair{}, nil, nil
 }
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {
