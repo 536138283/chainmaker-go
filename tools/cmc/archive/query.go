@@ -194,15 +194,19 @@ func newQueryBlockByTxIdCMD() *cobra.Command {
 	return cmd
 }
 
+// OutPutBlockHeader is a struct for output block header
 type OutPutBlockHeader struct {
 	BlockHeader *common.BlockHeader `json:"block_header"`
 	BlockHash   string              `json:"block_hash"`
 }
+
+// OutPutBlock is a struct for output block
 type OutPutBlock struct {
 	Block  *common.Block      `json:"block"`
 	Header *OutPutBlockHeader `json:"header"`
 }
 
+// OutPutBlockWithRWSet is a struct for output block with rwset
 type OutPutBlockWithRWSet struct {
 	BlockWithRWSet *store.BlockWithRWSet
 	Block          *OutPutBlock

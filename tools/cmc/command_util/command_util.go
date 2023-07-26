@@ -10,6 +10,8 @@ var (
 	flags *pflag.FlagSet
 )
 
+// NewUtilCMD create util command
+// @return *cobra.Command
 func NewUtilCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "util",

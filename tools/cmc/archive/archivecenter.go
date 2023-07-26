@@ -34,6 +34,8 @@ const (
 	flagBatch                     = "batch"
 )
 
+// NewArchiveCMD create archive command
+// @return *cobra.Command
 func NewArchiveCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "archive",
