@@ -55,7 +55,7 @@ require (
 	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230720104811-9dda42edd574
 	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230725034901-64090986caa9
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527
-	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726031110-9d34338e2ce3
+	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726073456-c2221a8d7e93
 	chainmaker.org/chainmaker/tbft-engine v0.0.0-20230704082412-e139622e1c1e // indirect
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230625081602-bbebcb202a3b
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230417100949-e4adad349ae3
@@ -65,8 +65,8 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230725032821-933a69285067
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230724112908-eeaf88648204
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230724053754-d6f43ed9e300
-	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230725023117-0bd9076fec9a
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230726082629-2018cd016133
+	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230726065243-a0dd6f3544e3
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.1-0.20230221095707-a6ef1151257e
 	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230724093800-d6a6eb5fb718
 	github.com/go-echarts/go-echarts/v2 v2.2.4
