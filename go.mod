@@ -62,7 +62,7 @@ require (
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230417095823-c88727dfd888
 	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230720133344-9fe00f26d9ec
 	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1
-	chainmaker.org/chainmaker/vm-engine/v3 v3.0.0
+	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230725032821-933a69285067
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230724112908-eeaf88648204
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
 	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230724053754-d6f43ed9e300
@@ -74,6 +74,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
 	github.com/huin/goupnp v1.0.1-0.20210310174557-0ca763054c88 // indirect
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
+	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/protobuf v1.28.0
