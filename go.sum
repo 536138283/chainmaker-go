@@ -79,8 +79,8 @@ chainmaker.org/chainmaker/store-tikv/v3 v3.0.1-0.20230724082926-10bf5366ecd2 h1:
 chainmaker.org/chainmaker/store-tikv/v3 v3.0.1-0.20230724082926-10bf5366ecd2/go.mod h1:ewO5VncMloCH0gHqy6yAo8JbG0w0DNfPZOWA+6nr/K8=
 chainmaker.org/chainmaker/store/v3 v3.0.0/go.mod h1:2Vlyku/49MSzbj5gHeyLCEVAIpnp+KmcOfnZM/Ldhmk=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230616023049-a7f967a898d5/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
-chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230724090153-4780ffc66f7c h1:8mEDGFH1muT+SCzG+keFMie78phtrpjYUkD2yuajbys=
-chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230724090153-4780ffc66f7c/go.mod h1:XVqaiOVvu5MRrVgwQuY4cmOGHmVOV/DYc7lXQfUbGIc=
+chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726031110-9d34338e2ce3 h1:I4o3m6Er7pFajVBKkxX0sv0abr0vbCuhx69RhlejBzA=
+chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726031110-9d34338e2ce3/go.mod h1:XVqaiOVvu5MRrVgwQuY4cmOGHmVOV/DYc7lXQfUbGIc=
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230407095751-3a0fa6187bcc/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230704082412-e139622e1c1e h1:IezOs0pIojMAzdBNmzVRjp59PqKy40g6Pe6WKCTE3fA=
 chainmaker.org/chainmaker/tbft-engine v0.0.0-20230704082412-e139622e1c1e/go.mod h1:JiGVWu99YEtv3c7U3+ZLME+lAhQMYhh7FsSOeSpR158=

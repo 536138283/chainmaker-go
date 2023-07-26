@@ -489,7 +489,8 @@ func (sch *scheduler) handleSyncedBlockMsg(msg *SyncedBlockMsg) (queue.Item, err
 // 1. validateFailed，verification failed，mark block state as "newBlock" waiting to be re-requested later
 // at the same time, the node this block from needs to be removed from the locally cached peer data
 // because it maybe a bad guy.
-// 2. addErr, failed to submit block data to local ledger，mark block state as "newBlock" waiting to be re-requested later
+// 2. addErr, failed to submit block data to local ledger，
+// mark block state as "newBlock" waiting to be re-requested later
 func (sch *scheduler) handleProcessedBlockResp(msg *ProcessedBlockResp) (queue.Item, error) {
 	sch.log.Debugf("process block [height:%d] status[%d] from node"+
 		" [%s], pendingHeight: %d", msg.height, msg.status, msg.from, sch.pendingRecvHeight)
@@ -591,7 +592,8 @@ func (sch *scheduler) updateSchedulerBySyncBlockBatch(msgFrom string, o interfac
 		}
 		batchs := resyncBlock[len(resyncBlock)-1] - resyncBlock[0] + 1
 		if err := sch.sendSyncBlockRequest(msgFrom, resyncBlock[0], batchs, true); err != nil {
-			sch.log.Warn("re-request config block[%d] with rwset from peer[%s] failed [%s]", resyncBlock[0], msgFrom, err)
+			sch.log.Warn("re-request config block[%d] with rwset from peer[%s] failed [%s]",
+				resyncBlock[0], msgFrom, err)
 			return needToProcess
 		}
 		sch.lastRequest = time.Now()
