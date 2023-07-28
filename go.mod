@@ -3,8 +3,8 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/net-common v1.3.1-0.20230223023638-0e228ea9e991
-	chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230223072813-a5e923aff765
+	chainmaker.org/chainmaker/net-common v1.3.1-0.20230728084553-c48b42399aec
+	chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230728085853-0248fd38d445
 	chainmaker.org/chainmaker/net-liquid v1.3.1-0.20230223072558-6fd272f8e2bc
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
@@ -57,9 +57,9 @@ require (
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527
 	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726073456-c2221a8d7e93
 	chainmaker.org/chainmaker/tbft-engine v0.0.0-20230704082412-e139622e1c1e // indirect
-	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230625081602-bbebcb202a3b
-	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230417100949-e4adad349ae3
-	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230417095823-c88727dfd888
+	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230728075704-6587d1bc64dd
+	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230728085238-3a2f9e0591cd
+	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230728083850-dc45b753c7a5
 	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230720133344-9fe00f26d9ec
 	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230725032821-933a69285067
