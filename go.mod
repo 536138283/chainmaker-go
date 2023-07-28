@@ -47,7 +47,7 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20230703081204-fa2aa05da9eb
 	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20230724024044-966261e08ee3
 	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20230314074753-015c3abcec07
-	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230407100902-d7ef906e2bd1
+	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20230728083550-6240b6c33aee
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.1-0.20230221100751-02e92d01a8d6
 	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230720141317-c3b4502e2792
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
@@ -56,7 +56,6 @@ require (
 	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230725034901-64090986caa9
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527
 	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726073456-c2221a8d7e93
-	chainmaker.org/chainmaker/tbft-engine v0.0.0-20230704082412-e139622e1c1e // indirect
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230728075704-6587d1bc64dd
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230728085238-3a2f9e0591cd
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230728083850-dc45b753c7a5
