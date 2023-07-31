@@ -61,6 +61,9 @@ func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId stri
 		chainConf.ChainConfig().AuthType = protocol.PermissionedWithCert
 	}
 
+	log.Debugf("new ac provider, auth type: %s, consensus type: %s",
+		chainConf.ChainConfig().AuthType, chainConf.ChainConfig().Consensus.Type)
+
 	// authType 和 consensusType 是否匹配
 	switch chainConf.ChainConfig().AuthType {
 	case protocol.PermissionedWithCert, protocol.Identity:
