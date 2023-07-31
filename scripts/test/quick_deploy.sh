@@ -55,8 +55,9 @@ function start_chainmaker() {
   fi
   echo -e "\n\n【start】 chainmaker..."
   ./cluster_quick_start.sh normal
-  sleep 3
+  sleep 5
 
+  echo
   echo "【chainmaker】 process..."
   ps -ef | grep chainmaker
   chainmaker_count=$(ps -ef | grep chainmaker | wc -l)
@@ -100,8 +101,6 @@ function cmc_test() {
     --byte-code-path=../test/wasm/rust-fact-2.0.0.wasm \
     --version=1.0 \
     --sdk-conf-path=./testdata/sdk_config.yml \
-    --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.tls.key,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.tls.key,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.tls.key,./testdata/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.tls.key \
-    --admin-crt-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.tls.crt,./testdata/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.tls.crt \
     --sync-result=true \
     --params="{}"
 
@@ -125,7 +124,7 @@ function cmc_test() {
 
 function cat_log() {
   sleep 1
-  grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*1*/log/system.log
+  grep --color=auto "all necessary\|ERROR\|put block" $PROJECT_PATH/build/release/chainmaker-*/log/system.log
 }
 
 start_chainmaker
