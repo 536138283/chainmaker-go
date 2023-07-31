@@ -10,6 +10,7 @@ package rpcserver
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -17,11 +18,10 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/http2"
-	"golang.org/x/net/http2/h2c"
-
 	localconf "chainmaker.org/chainmaker/localconf/v2"
 	logger "chainmaker.org/chainmaker/logger/v2"
+	"golang.org/x/net/http2"
+	"golang.org/x/net/http2/h2c"
 	"golang.org/x/time/rate"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -233,10 +233,14 @@ func splitMethodName(fullMethodName string) (string, string) {
 }
 
 func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	var http2Server = &http2.Server{
+		MaxConcurrentStreams: math.MaxUint32,
+	}
+
 	if otherHandler == nil {
 		return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			grpcServer.ServeHTTP(w, r)
-		}), &http2.Server{})
+		}), http2Server)
 	}
 
 	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -245,7 +249,7 @@ func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 		} else {
 			otherHandler.ServeHTTP(w, r)
 		}
-	}), &http2.Server{})
+	}), http2Server)
 }
 
 // StreamRecoveryInterceptor - set stream recovery interceptor
