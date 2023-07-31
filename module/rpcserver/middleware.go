@@ -10,6 +10,7 @@ package rpcserver
 import (
 	"context"
 	"fmt"
+	"math"
 	"net"
 	"net/http"
 	"runtime/debug"
@@ -275,10 +276,14 @@ func splitMethodName(fullMethodName string) (string, string) {
 // @param otherHandler
 // @return http.Handler
 func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Handler {
+	var http2Server = &http2.Server{
+		MaxConcurrentStreams: math.MaxUint32,
+	}
+
 	if otherHandler == nil {
 		return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			grpcServer.ServeHTTP(w, r)
-		}), &http2.Server{})
+		}), http2Server)
 	}
 
 	return h2c.NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -287,7 +292,7 @@ func GrpcHandlerFunc(grpcServer *grpc.Server, otherHandler http.Handler) http.Ha
 		} else {
 			otherHandler.ServeHTTP(w, r)
 		}
-	}), &http2.Server{})
+	}), http2Server)
 }
 
 // StreamRecoveryInterceptor - set stream recovery interceptor
