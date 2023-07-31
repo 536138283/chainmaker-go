@@ -57,6 +57,7 @@ function start_chainmaker() {
   echo -e "\n\nstart..."
   sleep 5
 
+  echo
   echo "【chainmaker】 process..."
   ps -ef | grep chainmaker
   chainmaker_count=$(ps -ef | grep chainmaker | wc -l)
@@ -99,8 +100,6 @@ function cmc_test() {
     --byte-code-path=../test/wasm/rust-fact-2.0.0.wasm \
     --version=1.0 \
     --sdk-conf-path=./testdata/sdk_config_pwk.yml \
-    --admin-org-ids=wx-org1.chainmaker.org,wx-org2.chainmaker.org,wx-org3.chainmaker.org,wx-org4.chainmaker.org \
-    --admin-key-file-paths=./testdata/crypto-config/wx-org1.chainmaker.org/admin/admin.key,./testdata/crypto-config/wx-org2.chainmaker.org/admin/admin.key,./testdata/crypto-config/wx-org3.chainmaker.org/admin/admin.key,./testdata/crypto-config/wx-org4.chainmaker.org/admin/admin.key \
     --sync-result=true \
     --params="{}"
 

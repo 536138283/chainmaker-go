@@ -24,7 +24,7 @@ checkEnv
 
 set -e
 
-VERSION=3000000
+VERSION='"3000000"'
 
 NODE_CNT=$1
 CHAIN_CNT=$2
@@ -55,8 +55,8 @@ function show_help() {
     echo "               -c consense-type: 1-TBFT,3-MAXBFT,5-DPOS"
     echo "               -l log-level: DEBUG,INFO,WARN,ERROR"
     echo "               -v docker-vm-enable: true,false"
-    echo "               -j docker-java-enable: true,false"
     echo "                  --vlog vm go log level: DEBUG,INFO,WARN,ERROR"
+    echo "               -j docker-java-enable: true,false"
     echo "                  --jlog vm go log level: DEBUG,INFO,WARN,ERROR"
     echo "               -h show help"
     echo "                  --hash hash type: SHA256,SM3"
@@ -296,7 +296,6 @@ if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
       echo "param DOCKER_GO_LOG_LEVEL $DOCKER_GO_LOG_LEVEL"
     fi
     echo "param ENABLE_VM_GO $ENABLE_VM_GO"
-    echo
 
     # set ENABLE_VM_JAVA
     if [ "$ENABLE_VM_JAVA" == "" ] ;then
@@ -328,7 +327,6 @@ if [ "$DOCKER_GO_LOG_LEVEL" == "" ] ;then
       echo "param DOCKER_JAVA_LOG_LEVEL $DOCKER_JAVA_LOG_LEVEL"
     fi
     echo "param ENABLE_VM_JAVA $ENABLE_VM_JAVA"
-    echo
 
     cd "${BUILD_PATH}"
     if [ -d config ]; then

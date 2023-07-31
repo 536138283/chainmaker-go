@@ -53,8 +53,9 @@ function start_chainmaker() {
   fi
   echo -e "\n\n【start】 chainmaker..."
   ./cluster_quick_start.sh normal
-  sleep 3
+  sleep 5
 
+  echo
   echo "【chainmaker】 process..."
   ps -ef | grep chainmaker
   chainmaker_count=$(ps -ef | grep chainmaker | wc -l)

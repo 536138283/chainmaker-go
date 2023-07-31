@@ -24,7 +24,7 @@ checkEnv
 
 set -e
 
-VERSION=3000000
+VERSION='"3000000"'
 
 NODE_CNT=$1
 CHAIN_CNT=$2
@@ -57,8 +57,8 @@ function show_help() {
     echo "               -c consense-type: 1-TBFT,3-MAXBFT,4-RAFT "
     echo "               -l log-level: DEBUG,INFO,WARN,ERROR"
     echo "               -v docker-vm-enable: true,false"
-    echo "               -j docker-java-enable: true,false"
     echo "                  --vlog vm go log level: DEBUG,INFO,WARN,ERROR"
+    echo "               -j docker-java-enable: true,false"
     echo "                  --jlog vm go log level: DEBUG,INFO,WARN,ERROR"
     echo "               -h show help"
     echo "    eg1: prepare.sh 4 1"
@@ -188,9 +188,9 @@ function generate_config() {
     PPROF_PORT=24321
     TRUSTED_PORT=13301
     VM_GO_CONTAINER_NAME_PREFIX="chainmaker-vm-go-container"
+
     ENABLE_VM_GO="" # default false
     DOCKER_GO_LOG_LEVEL="" # default INFO
-
     ENABLE_VM_JAVA="" # default false
     DOCKER_JAVA_LOG_LEVEL="" # default INFO
 
@@ -292,7 +292,6 @@ function generate_config() {
       echo "param DOCKER_GO_LOG_LEVEL $DOCKER_GO_LOG_LEVEL"
     fi
     echo "param ENABLE_VM_GO $ENABLE_VM_GO"
-    echo
 
     # set ENABLE_VM_JAVA
     if [ "$ENABLE_VM_JAVA" == "" ] ;then
@@ -324,7 +323,6 @@ function generate_config() {
       echo "param DOCKER_JAVA_LOG_LEVEL $DOCKER_JAVA_LOG_LEVEL"
     fi
     echo "param ENABLE_VM_JAVA $ENABLE_VM_JAVA"
-    echo
 
     cd "${BUILD_PATH}"
     if [ -d config ]; then
