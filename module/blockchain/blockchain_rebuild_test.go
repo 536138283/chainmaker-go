@@ -7,7 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 package blockchain
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/consensus/cutover"
@@ -233,44 +235,45 @@ func TestBlockchain_createOldStore(t *testing.T) {
 		ok          bool
 		storeEngine string
 	}
+	oldPath := fmt.Sprintf("./createOldStore1_%d", time.Now().Unix())
 	localconf.ChainMakerConfig = &localconf.CMConfig{
 		StorageConfig: map[string]interface{}{
-			"store_path": "./createOldStore",
+			"store_path": oldPath,
 			"blockdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore",
+					"store_path": oldPath,
 				},
 			},
 			"statedb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore",
+					"store_path": oldPath,
 				},
 			},
 			"historydb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore",
+					"store_path": oldPath,
 				},
 			},
 			"resultdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore",
+					"store_path": oldPath,
 				},
 			},
 			"txexistdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore",
+					"store_path": oldPath,
 				},
 			},
 			"disable_contract_eventdb": true,
 			"contract_eventdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore",
+					"store_path": oldPath,
 				},
 			},
 		},
@@ -376,14 +379,15 @@ func TestBlockchain_createOldStore1(t *testing.T) {
 		ok          bool
 		storeEngine string
 	}
+	oldPath := fmt.Sprintf("./createOldStore1_%d", time.Now().Unix())
 
 	localconf.ChainMakerConfig = &localconf.CMConfig{
 		StorageConfig: map[string]interface{}{
-			"store_path":      "./createOldStore1",
+			"store_path":      oldPath,
 			"engine_provider": "store-huge",
 			"block_file_config": map[string]interface{}{
-				"online_file_system":  "./createOldStore1/metadb_tmp/online1",
-				"archive_file_system": "./createOldStore1/metadb_tmp/archive1",
+				"online_file_system":  fmt.Sprintf("%s/metadb_tmp/online1", oldPath),
+				"archive_file_system": fmt.Sprintf("%s/metadb_tmp/archive1", oldPath),
 			},
 			"storage_config_version": map[string]interface{}{
 				"major_version": 1,
@@ -392,38 +396,38 @@ func TestBlockchain_createOldStore1(t *testing.T) {
 			"blockdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore1",
+					"store_path": oldPath,
 				},
 			},
 			"statedb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore1",
+					"store_path": oldPath,
 				},
 			},
 			"historydb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore1",
+					"store_path": oldPath,
 				},
 			},
 			"resultdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore1",
+					"store_path": oldPath,
 				},
 			},
 			"txexistdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore1",
+					"store_path": oldPath,
 				},
 			},
 			"disable_contract_eventdb": true,
 			"contract_eventdb_config": map[string]interface{}{
 				"provider": "leveldb",
 				"leveldb_config": map[string]interface{}{
-					"store_path": "./createOldStore1",
+					"store_path": oldPath,
 				},
 			},
 		},
