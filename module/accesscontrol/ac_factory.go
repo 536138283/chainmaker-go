@@ -61,6 +61,9 @@ func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId stri
 		chainConf.ChainConfig().AuthType = protocol.PermissionedWithCert
 	}
 
+	log.Debugf("new ac provider, auth type: %s, consensus type: %s",
+		chainConf.ChainConfig().AuthType, chainConf.ChainConfig().Consensus.Type)
+
 	// authType 和 consensusType 是否匹配
 	switch chainConf.ChainConfig().AuthType {
 	case protocol.PermissionedWithCert, protocol.Identity:
@@ -75,7 +78,8 @@ func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId stri
 		}
 	case protocol.Public:
 		if chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_RAFT ||
-			chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MBFT {
+			chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MBFT ||
+			chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MAXBFT {
 			return nil,
 				fmt.Errorf("new ac provid" +
 					"er failed, the consensus type does not match the authentication type")
