@@ -8,6 +8,8 @@ package blockchain
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -235,7 +237,7 @@ func TestBlockchain_createOldStore(t *testing.T) {
 		ok          bool
 		storeEngine string
 	}
-	oldPath := fmt.Sprintf("./createOldStore1_%d", time.Now().Unix())
+	oldPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "createOldStore")
 	localconf.ChainMakerConfig = &localconf.CMConfig{
 		StorageConfig: map[string]interface{}{
 			"store_path": oldPath,
@@ -379,8 +381,8 @@ func TestBlockchain_createOldStore1(t *testing.T) {
 		ok          bool
 		storeEngine string
 	}
-	oldPath := fmt.Sprintf("./createOldStore1_%d", time.Now().Unix())
 
+	oldPath := filepath.Join(os.TempDir(), fmt.Sprintf("%d", time.Now().Nanosecond()), "createOldStore1")
 	localconf.ChainMakerConfig = &localconf.CMConfig{
 		StorageConfig: map[string]interface{}{
 			"store_path":      oldPath,
