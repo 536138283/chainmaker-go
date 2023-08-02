@@ -1877,13 +1877,3 @@ func (chain *BlockCommitterImpl) removeInvalidChildBlock(height uint64, hashMap 
 
 	chain.removeInvalidChildBlock(height+1, princeBlocks)
 }
-
-// CopyBlock generates a new block with a old block, internally using the same pointer
-func CopyBlock(block *commonPb.Block) *commonPb.Block {
-	return &commonPb.Block{
-		Header:         block.Header,
-		Dag:            block.Dag,
-		Txs:            block.Txs,
-		AdditionalData: block.AdditionalData,
-	}
-}
