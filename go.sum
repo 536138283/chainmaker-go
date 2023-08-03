@@ -61,8 +61,8 @@ chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230720104811-9dda42edd574 h1:B5
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230720104811-9dda42edd574/go.mod h1:4hUfc6/fRo+XqcpN4BnOh0LVMkPrBdkw4I/IHOnWia4=
 chainmaker.org/chainmaker/raftwal/v3 v3.0.0 h1:BXrGLmyF0iqrWS55ae+FukxIJDgNcby2CFj18PpoZ20=
 chainmaker.org/chainmaker/raftwal/v3 v3.0.0/go.mod h1:YCbtQtz6PY2QpLNSH0JrdjtTmRj5v4Y38FQ8pVrL/Ys=
-chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230728073910-bfe00c1dc02d h1:4aRfBNoc6OiuM2YOZC7b6J887uxXWR98lyIbkPpqHyY=
-chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230728073910-bfe00c1dc02d/go.mod h1:V+bk2ZJQl05F7KI9cJ+T9bGUCKHquJmRnGvvd9/EPdc=
+chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230803070130-f6042a6a7b55 h1:t8rc2iWeVvYGWX7P3paM7bF7ce4LKfi41Th1VBH9kyQ=
+chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230803070130-f6042a6a7b55/go.mod h1:V+bk2ZJQl05F7KI9cJ+T9bGUCKHquJmRnGvvd9/EPdc=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.0/go.mod h1:o8WRrGnldefpMcw1H73l8zsyJVcj0+zXi03a80YWwSw=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae h1:y9/Ox0sdIev7r/hNU0X9mswksvSzU2PMovwgOjgIM/k=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae/go.mod h1:wgNdfjtDf1eMEyPFjlLB2Og4a/7/eefLp4VWOtEjOMQ=
