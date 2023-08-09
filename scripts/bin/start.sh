@@ -160,7 +160,7 @@ function start_vm_go() {
 
 # if enable docker vm service and use unix domain socket, run a vm docker container
 function start_vm_java() {
-  container_name=VM-JAVA-{org_id}
+  container_name=VM-JAVA-{org_id}-{tagName}
   #check container exists
   exist=$(docker ps -f name="$container_name" --format '{{.Names}}')
   if [ "$exist" ]; then

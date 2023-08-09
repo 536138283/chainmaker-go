@@ -64,7 +64,7 @@ config_file="../config/{org_id}/chainmaker.yml"
 # config_file="../../config/wx-org1-solo/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
-java_vm_container_name=VM-JAVA-{org_id}
+java_vm_container_name=VM-JAVA-{org_id}-{tagName}
 go_vm_container_name=VM-GO-{org_id}-{tagName}
 # Deprecated docker vm container
 docker_vm_container_name=DOCKERVM-{org_id}-{tagName}
