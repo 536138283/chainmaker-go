@@ -6,10 +6,10 @@ require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.2
 	chainmaker.org/chainmaker/common/v2 v2.3.3-0.20230802100303-5b967c9b41cb
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.2
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.3-0.20230810105834-f4428981f67e
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.2
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.3
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.4-0.20230810111205-9538865718e3
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.3
 	chainmaker.org/chainmaker/localconf/v2 v2.3.2
 	chainmaker.org/chainmaker/logger/v2 v2.3.0
