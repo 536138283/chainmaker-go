@@ -134,7 +134,7 @@ account_config:
 # Consensus settings
 consensus:
   # Consensus type
-  # 0-SOLO, 1-TBFT, 3-MAXBFT, 4-RAFT, 5-DPOS, 6-ABFT
+  # 0-SOLO, 1-TBFT, 3-MAXBFT, 4-RAFT, 6-ABFT
   type: {consensus_type}
 
   # Consensus node list
