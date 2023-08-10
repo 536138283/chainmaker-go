@@ -121,7 +121,7 @@ account_config:
 
 # Consensus settings
 consensus:
-  # Consensus type: 1-TBFT,5-DPOS
+  # Consensus type: 1-TBFT,3-MAXBFT,5-DPOS
   type: {consensus_type}
 
   # Consensus node list start
