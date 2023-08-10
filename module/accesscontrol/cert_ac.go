@@ -146,7 +146,6 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	}
 
 	certACProvider.acService.initResourcePolicy(chainConfig.ResourcePolicies, localOrgId)
-	certACProvider.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, localOrgId)
 
 	certACProvider.opts.KeyUsages = make([]x509.ExtKeyUsage, 1)
 	certACProvider.opts.KeyUsages[0] = x509.ExtKeyUsageAny
@@ -575,29 +574,6 @@ func (cp *certACProvider) ValidateResourcePolicy(resourcePolicy *config.Resource
 	return cp.acService.validateResourcePolicy(resourcePolicy)
 }
 
-// CreatePrincipalForTargetOrg creates a principal for "SELF" type principal,
-// which needs to convert SELF to a specific organization id in one authentication
-func (cp *certACProvider) CreatePrincipalForTargetOrg(resourceName string,
-	endorsements []*common.EndorsementEntry, message []byte,
-	targetOrgId string) (protocol.Principal, error) {
-	return cp.acService.createPrincipalForTargetOrg(resourceName, endorsements, message, targetOrgId)
-}
-
-// CreatePrincipal creates a principal for one time authentication
-func (cp *certACProvider) CreatePrincipal(resourceName string, endorsements []*common.EndorsementEntry,
-	message []byte) (
-	protocol.Principal, error) {
-	return cp.acService.createPrincipal(resourceName, endorsements, message)
-}
-
-func (cp *certACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
-	return cp.acService.lookUpPolicy(resourceName)
-}
-
-func (cp *certACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
-	return cp.acService.lookUpExceptionalPolicy(resourceName)
-}
-
 func (cp *certACProvider) GetMemberStatus(pbMember *pbac.Member) (pbac.MemberStatus, error) {
 
 	member, err := cp.NewMember(pbMember)
@@ -663,30 +639,6 @@ func (cp *certACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data
 		crlPEM, rest = pem.Decode(rest)
 	}
 	return true, nil
-}
-
-// VerifyPrincipal verifies if the principal for the resource is met
-func (cp *certACProvider) VerifyPrincipal(principal protocol.Principal) (bool, error) {
-
-	if atomic.LoadInt32(&cp.acService.orgNum) <= 0 {
-		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
-	}
-
-	refinedPrincipal, err := cp.refinePrincipal(principal)
-	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
-	}
-
-	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
-		return true, nil
-	}
-
-	p, err := cp.acService.lookUpPolicyByResourceName(principal.GetResourceName())
-	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
-	}
-
-	return cp.acService.verifyPrincipalPolicy(principal, refinedPrincipal, p)
 }
 
 // all-in-one validation for signing members: certificate chain/whitelist, signature, policies
@@ -1008,34 +960,6 @@ func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *conf
 	return nil
 }
 
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
-func (cp *certACProvider) GetValidEndorsements(principal protocol.Principal) ([]*common.EndorsementEntry, error) {
-	if atomic.LoadInt32(&cp.acService.orgNum) <= 0 {
-		return nil, fmt.Errorf("authentication fail: empty organization list or trusted node list on this chain")
-	}
-	refinedPolicy, err := cp.refinePrincipal(principal)
-	if err != nil {
-		return nil, fmt.Errorf("authentication fail, not a member on this chain: [%v]", err)
-	}
-	endorsements := refinedPolicy.GetEndorsement()
-
-	p, err := cp.acService.lookUpPolicyByResourceName(principal.GetResourceName())
-	if err != nil {
-		return nil, fmt.Errorf("authentication fail: [%v]", err)
-	}
-	orgListRaw := p.GetOrgList()
-	roleListRaw := p.GetRoleList()
-	orgList := map[string]bool{}
-	roleList := map[protocol.Role]bool{}
-	for _, orgRaw := range orgListRaw {
-		orgList[orgRaw] = true
-	}
-	for _, roleRaw := range roleListRaw {
-		roleList[roleRaw] = true
-	}
-	return cp.acService.getValidEndorsements(orgList, roleList, endorsements), nil
-}
-
 //GetAllPolicy returns all default policies
 func (p *certACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
@@ -1045,11 +969,61 @@ func (p *certACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 		policyMap[k] = newPbPolicyFromPolicy(v)
 		return true
 	})
-	p.acService.exceptionalPolicyMap.Range(func(key, value interface{}) bool {
+	p.acService.senderPolicyMap.Range(func(key, value interface{}) bool {
 		k, _ := key.(string)
 		v, _ := value.(*policy)
 		policyMap[k] = newPbPolicyFromPolicy(v)
 		return true
 	})
 	return policyMap, nil
+}
+
+// VerifyPrincipalLT2330 verifies if the principal for the resource is met
+func (cp *certACProvider) VerifyPrincipalLT2330(principal protocol.Principal, blockVersion uint32) (bool, error) {
+	if blockVersion <= 220 {
+		return verifyPrincipal220(cp, principal)
+
+	} else if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(cp, principal)
+	}
+
+	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
+}
+
+//GetValidEndorsementsLT2330 filters all endorsement entries and returns all valid ones
+func (cp *certACProvider) GetValidEndorsementsLT2330(
+	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
+
+	if blockVersion <= 220 {
+		return cp.GetValidEndorsements220(principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return cp.GetValidEndorsements2320(principal)
+	}
+	return nil, fmt.Errorf("`GetValidEndorsementsLT2330` should not used by blockVersion(%d)", blockVersion)
+}
+
+// VerifyMsgPrincipal verifies if the principal for the resource is met
+func (cp *certACProvider) VerifyMsgPrincipal(principal protocol.Principal, blockVersion uint32) (bool, error) {
+	return verifyMsgPrincipal(cp, principal, blockVersion)
+}
+
+// VerifyTxPrincipal verifies if the principal for the resource is met
+func (cp *certACProvider) VerifyTxPrincipal(tx *common.Transaction, txBytes []byte, blockVersion uint32) (bool, error) {
+	return verifyTxPrincipal(cp, tx, txBytes, blockVersion)
+}
+
+// VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
+func (cp *certACProvider) VerifyMultiSignTxPrincipal(
+	mInfo *syscontract.MultiSignInfo,
+	blockVersion uint32) (syscontract.MultiSignStatus, error) {
+
+	return verifyMultiSignTxPrincipal(cp, mInfo, cp.acService.log, blockVersion)
+}
+
+// IsRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
+// it's implements must be the same with vm-native/supportRule
+func (cp *certACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
+	return isRuleSupportedByMultiSign(cp, resourceName, cp.acService.log, blockVersion)
 }

@@ -8,9 +8,11 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -23,9 +25,49 @@ import (
 
 func TestInitAccessControlService(t *testing.T) {
 	logger := test.NewTestLogger(t)
-	acServices := initAccessControlService(testHashType, protocol.Identity, nil, logger)
+	acServices := initAccessControlService(testHashType, protocol.PermissionedWithCert, nil, logger)
 	acServices.initResourcePolicy(testChainConfig.ResourcePolicies, testOrg1)
 	require.NotNil(t, acServices)
+
+	// check resource name policy number
+	resourceNamePolicyNum := 0
+	acServices.resourceNamePolicyMap.Range(func(key, val interface{}) bool {
+		resourceNamePolicyNum++
+		return true
+	})
+	require.Equal(t, resourceNamePolicyNum, 48)
+
+	// check sender policy number
+	senderPolicyNum := 0
+	acServices.senderPolicyMap.Range(func(key, val interface{}) bool {
+		senderPolicyNum++
+		return true
+	})
+	require.Equal(t, senderPolicyNum, 6)
+
+	// tx_type policy number
+	txTypePolicyNum := 0
+	acServices.txTypePolicyMap.Range(func(key, val interface{}) bool {
+		txTypePolicyNum++
+		return true
+	})
+	require.Equal(t, txTypePolicyNum, 4)
+
+	// msg_type policy number
+	msgTypePolicyNum := 0
+	acServices.msgTypePolicyMap.Range(func(key, val interface{}) bool {
+		msgTypePolicyNum++
+		return true
+	})
+	require.Equal(t, msgTypePolicyNum, 2)
+
+	// latest policy number
+	latestPolicyNum := 0
+	acServices.latestPolicyMap.Range(func(key, val interface{}) bool {
+		latestPolicyNum++
+		return true
+	})
+	require.Equal(t, latestPolicyNum, 2)
 }
 
 func TestValidateResourcePolicy(t *testing.T) {
@@ -126,7 +168,7 @@ func TestVerifyPrincipalPolicy(t *testing.T) {
 		Signer:    org1AdminPb,
 		Signature: org1AdminSig,
 	}
-	policy, err := acServices.lookUpPolicy(common.TxType_QUERY_CONTRACT.String())
+	policy, err := acServices.lookUpPolicy2320(common.TxType_QUERY_CONTRACT.String())
 	require.Nil(t, err)
 	require.Equal(t, policyRead.GetPbPolicy(), policy)
 
@@ -137,4 +179,69 @@ func TestVerifyPrincipalPolicy(t *testing.T) {
 	ok, err := acServices.verifyPrincipalPolicy(principal, principal, policyRead)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
+}
+
+func walkResourceName(key, value interface{}) bool {
+	fmt.Printf("%v \t [resource_name] \t %v \n", key, value)
+	return true
+}
+
+func walkExceptional(key, value interface{}) bool {
+	fmt.Printf("%v \t [exceptional] \t %v \n", key, value)
+	return true
+}
+
+func TestCertInitData_2320(t *testing.T) {
+	ac := accessControlService{
+		resourceNamePolicyMap2320: &sync.Map{},
+		exceptionalPolicyMap2320:  &sync.Map{},
+	}
+
+	ac.createDefaultResourcePolicyForCert_2320()
+
+	ac.resourceNamePolicyMap2320.Range(walkResourceName)
+
+	ac.exceptionalPolicyMap2320.Range(walkExceptional)
+}
+
+func TestCertInitData(t *testing.T) {
+	ac := accessControlService{
+		txTypePolicyMap:       &sync.Map{},
+		msgTypePolicyMap:      &sync.Map{}, // map[string]*policy , messageType  -> *policy
+		senderPolicyMap:       &sync.Map{}, // map[string]*policy , resourceName -> *policy
+		resourceNamePolicyMap: &sync.Map{}, // map[string]*policy , resourceName -> *policy
+	}
+	ac.createDefaultResourcePolicyForCert("wx-org.chainmaker.org")
+
+	ac.resourceNamePolicyMap.Range(walkResourceName)
+
+	fmt.Println()
+
+	ac.senderPolicyMap.Range(walkExceptional)
+}
+
+func TestPwkInitData_2320(t *testing.T) {
+	ac := accessControlService{
+		resourceNamePolicyMap2320: &sync.Map{},
+		exceptionalPolicyMap2320:  &sync.Map{},
+	}
+	ac.createDefaultResourcePolicyForPK_2320()
+
+	ac.resourceNamePolicyMap2320.Range(walkResourceName)
+
+	ac.exceptionalPolicyMap2320.Range(walkExceptional)
+}
+
+func TestPwkInitData(t *testing.T) {
+	ac := accessControlService{
+		msgTypePolicyMap:      &sync.Map{},
+		txTypePolicyMap:       &sync.Map{},
+		resourceNamePolicyMap: &sync.Map{},
+		senderPolicyMap:       &sync.Map{},
+	}
+	ac.createDefaultResourcePolicyForPK("wx-org.chainmaker.org")
+
+	ac.resourceNamePolicyMap.Range(walkResourceName)
+
+	ac.senderPolicyMap.Range(walkExceptional)
 }

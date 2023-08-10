@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -198,6 +199,28 @@ var testChainConfig = &config.ChainConfig{
 			OrgId:      testOrg5,
 			Role:       "admin",
 			MemberInfo: testTrustMember2,
+		},
+	},
+	ResourcePolicies: []*config.ResourcePolicy{
+		{
+			ResourceName: "CHAIN_CONFIG-NODE_ID_UPDATE",
+			Policy: &acPb.Policy{
+				Rule:    string(protocol.RuleSelf),
+				OrgList: nil,
+				RoleList: []string{
+					string(protocol.RoleAdmin),
+				},
+			},
+		},
+		{
+			ResourceName: "CHAIN_CONFIG-CERTS_FREEZE",
+			Policy: &acPb.Policy{
+				Rule:    string(protocol.RuleAny),
+				OrgList: nil,
+				RoleList: []string{
+					string(protocol.RoleAdmin),
+				},
+			},
 		},
 	},
 }

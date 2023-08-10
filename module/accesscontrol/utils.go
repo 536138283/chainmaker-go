@@ -8,6 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"crypto/sha256"
 	"encoding/pem"
 	"fmt"
@@ -218,4 +220,67 @@ func getBlockVersionAndResourceName(resourceNameWithPrefix string) (blockVersion
 	}
 
 	return blockVersion, resourceName
+}
+
+func verifyMsgPrincipal(p acProviderInner,
+	principal protocol.Principal, blockVersion uint32) (bool, error) {
+
+	if blockVersion <= 220 {
+		return verifyPrincipal220(p, principal)
+	}
+
+	if blockVersion < 2030300 {
+		return verifyPrincipal2320(p, principal)
+	}
+
+	return verifyMsgTypePrincipal2330(p, principal, blockVersion)
+}
+
+func verifyTxPrincipal(p acProviderInner, tx *common.Transaction, txBytes []byte, blockVersion uint32) (bool, error) {
+
+	if blockVersion <= 220 {
+		if err := verifyTxAuth220(tx, txBytes, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	if blockVersion < 2030300 {
+		if err := verifyTxAuth2320(tx, txBytes, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return verifyTxAuth2330(tx, txBytes, p, blockVersion)
+}
+
+// VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
+func verifyMultiSignTxPrincipal(
+	p acProviderInner,
+	mInfo *syscontract.MultiSignInfo,
+	log protocol.Logger,
+	blockVersion uint32) (syscontract.MultiSignStatus, error) {
+
+	if blockVersion < 2030300 {
+		return mInfo.Status, fmt.Errorf(
+			"func `verifyMultiSignTxPrincipal` cannot be used in blockVersion(%v)", blockVersion)
+	}
+	return verifyMultiSignTxPrincipal2330(p, mInfo, blockVersion, log)
+}
+
+// isRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
+// it's implements must be the same with vm-native/supportRule
+func isRuleSupportedByMultiSign(p acProviderInner,
+	resourceName string, log protocol.Logger, blockVersion uint32) error {
+
+	if blockVersion < 220 {
+		isRuleSupportedByMultiSign220(p, resourceName, log)
+	}
+
+	if blockVersion < 2030300 {
+		isRuleSupportedByMultiSign2320(resourceName, p, log)
+	}
+
+	return isRuleSupportedByMultiSign2330(p, resourceName, blockVersion, log)
 }
