@@ -672,7 +672,7 @@ mrY0z9cE
 `,
 }
 
-// nolint
+// nolint:varcheck
 var testCRL = `-----BEGIN CRL-----
 MIIBNjCB3AIBATAKBggqhkjOPQQDAjBfMQswCQYDVQQGEwJDTjEQMA4GA1UECBMH
 QmVpamluZzEQMA4GA1UEBxMHQmVpamluZzENMAsGA1UEChMEb3JnMTELMAkGA1UE

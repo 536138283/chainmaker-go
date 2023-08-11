@@ -256,7 +256,7 @@ func verifyTxPrincipal(p acProviderInner, tx *common.Transaction, txBytes []byte
 	return verifyTxAuth2330(tx, txBytes, p, blockVersion)
 }
 
-// VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
+// verifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
 func verifyMultiSignTxPrincipal(
 	p acProviderInner,
 	mInfo *syscontract.MultiSignInfo,
