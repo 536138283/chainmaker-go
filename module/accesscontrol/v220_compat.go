@@ -17,16 +17,15 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker/localconf/v2"
-
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
+	"chainmaker.org/chainmaker/localconf/v2"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -543,6 +542,13 @@ func verifyTxAuth220(t *commonPb.Transaction, txBytes []byte, ac acProvider220) 
 
 	//resourceId = blockVersion + ":" + resourceId, for compatible, options[0] = blockVersion
 	//resourceId = utils.AddPrefix(resourceId, options)
+
+	if txBytes == nil {
+		txBytes, err = utils.CalcUnsignedTxBytes(t)
+		if err != nil {
+			return fmt.Errorf("get tx bytes failed, err = %v", err)
+		}
+	}
 
 	// sender authentication
 	_, err = ac.lookUpExceptionalPolicy220(resourceId)

@@ -3,6 +3,8 @@ package accesscontrol
 import (
 	"testing"
 
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -27,7 +29,7 @@ func TestGetMemberStatus(t *testing.T) {
 	require.Equal(t, acPb.MemberStatus_NORMAL, memberStatus)
 }
 
-func testInitFunc(t *testing.T) map[string]*orgMember {
+func testInitCertFunc(t *testing.T) map[string]*orgMember {
 	_, cleanFunc, err := createTempDirWithCleanFunc()
 	require.Nil(t, err)
 	defer cleanFunc()
@@ -83,4 +85,37 @@ func testCreateEndorsementEntry(orgMember *orgMember, roleType protocol.Role, ha
 		Signer:    signerResource,
 		Signature: sigResource,
 	}, nil
+}
+
+func TestNative_GetChainConfig(t *testing.T) {
+	testNative_GetChainConfig(blockVersion220, t)
+
+	testNative_GetChainConfig(blockVersion2320, t)
+
+	testNative_GetChainConfig(blockVersion2320, t)
+}
+
+func testNative_GetChainConfig(blockVersion uint32, t *testing.T) {
+	// initialize
+	testPkOrgMember := testInitCertFunc(t)
+	orgMemberInfo1 := testPkOrgMember[testOrg1]
+
+	var (
+		tx  *common.Transaction
+		err error
+		ok  bool
+	)
+
+	//【valid】test case
+	tx = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_GET_CHAIN_CONFIG.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
 }
