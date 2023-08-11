@@ -242,7 +242,7 @@ function start_vm_java() {
   -e SLOW_STEP_TIME="$slow_step_time" \
   -e SLOW_TX_TIME="$slow_tx_time" \
   -e PROCESS_TIMEOUT="$process_timeout" \
-  --name VM-JAVA-{org_id} \
+  --name $container_name \
   --privileged $VM_JAVA_IMAGE_NAME \
    > /dev/null
 
