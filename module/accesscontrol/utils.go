@@ -8,14 +8,15 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"crypto/sha256"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
 	"strconv"
 	"strings"
+
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 
@@ -225,11 +226,11 @@ func getBlockVersionAndResourceName(resourceNameWithPrefix string) (blockVersion
 func verifyMsgPrincipal(p acProviderInner,
 	principal protocol.Principal, blockVersion uint32) (bool, error) {
 
-	if blockVersion <= 220 {
+	if blockVersion <= blockVersion220 {
 		return verifyPrincipal220(p, principal)
 	}
 
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		return verifyPrincipal2320(p, principal)
 	}
 
@@ -238,14 +239,14 @@ func verifyMsgPrincipal(p acProviderInner,
 
 func verifyTxPrincipal(p acProviderInner, tx *common.Transaction, txBytes []byte, blockVersion uint32) (bool, error) {
 
-	if blockVersion <= 220 {
+	if blockVersion <= blockVersion220 {
 		if err := verifyTxAuth220(tx, txBytes, p); err != nil {
 			return false, err
 		}
 		return true, nil
 	}
 
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		if err := verifyTxAuth2320(tx, txBytes, p); err != nil {
 			return false, err
 		}
@@ -274,12 +275,12 @@ func verifyMultiSignTxPrincipal(
 func isRuleSupportedByMultiSign(p acProviderInner,
 	resourceName string, log protocol.Logger, blockVersion uint32) error {
 
-	if blockVersion < 220 {
-		isRuleSupportedByMultiSign220(p, resourceName, log)
+	if blockVersion < blockVersion220 {
+		return isRuleSupportedByMultiSign220(p, resourceName, log)
 	}
 
-	if blockVersion < 2030300 {
-		isRuleSupportedByMultiSign2320(resourceName, p, log)
+	if blockVersion < blockVersion2330 {
+		return isRuleSupportedByMultiSign2320(resourceName, p, log)
 	}
 
 	return isRuleSupportedByMultiSign2330(p, resourceName, blockVersion, log)

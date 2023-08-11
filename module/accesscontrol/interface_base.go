@@ -1,10 +1,11 @@
 package accesscontrol
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
 	"fmt"
 	"sync/atomic"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/protocol/v2"
 )
 
 type acProviderBase interface {

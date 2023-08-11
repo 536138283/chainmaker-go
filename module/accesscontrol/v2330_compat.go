@@ -1,13 +1,14 @@
 package accesscontrol
 
 import (
+	"errors"
+	"fmt"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"errors"
-	"fmt"
 )
 
 // *************************************
@@ -86,7 +87,8 @@ func (cp *certACProvider) findFromEndorsementsPolicies(resourceName string, bloc
 		cp.acService.latestPolicyMap, cp.acService.resourceNamePolicyMap)
 }
 
-func (pp *permissionedPkACProvider) findFromEndorsementsPolicies(resourceName string, blockVersion uint32) (*policy, error) {
+func (pp *permissionedPkACProvider) findFromEndorsementsPolicies(
+	resourceName string, blockVersion uint32) (*policy, error) {
 	return findFromEndorsementsPolicies(
 		resourceName, blockVersion,
 		pp.acService.latestPolicyMap, pp.acService.resourceNamePolicyMap)
@@ -223,14 +225,17 @@ func verifyEndorsementsPrincipal2330(p acProvider2330,
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte, p acProvider2330, blockVersion uint32) (bool, error) {
+func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte,
+	p acProvider2330, blockVersion uint32) (bool, error) {
 	var principalInst protocol.Principal
 	var err error
 	var allow bool
 
-	acProvider, ok := p.(acProvider2330)
-	if !ok {
-		return false, fmt.Errorf("provider is not implement acProvider2330 interface")
+	if txBytes == nil {
+		txBytes, err = utils.CalcUnsignedTxBytes(tx)
+		if err != nil {
+			return false, fmt.Errorf("get tx bytes failed, err = %v", err)
+		}
 	}
 
 	txType := tx.Payload.TxType
@@ -245,12 +250,16 @@ func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte, p acProvider2330
 	if err != nil {
 		return false, fmt.Errorf("fail to construct authentication principal for %s : %s", txType.String(), err)
 	}
-	allow, err = verifyTxTypePrincipal2330(acProvider, principalInst, blockVersion)
+	allow, err = verifyTxTypePrincipal2330(p, principalInst, blockVersion)
 	if err != nil {
 		return false, fmt.Errorf("authentication error: %s", err)
 	}
 	if !allow {
 		return false, fmt.Errorf("authentication failed")
+	}
+
+	if txType != commonPb.TxType_INVOKE_CONTRACT {
+		return true, nil
 	}
 
 	// check sender
@@ -262,7 +271,7 @@ func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte, p acProvider2330
 	if err != nil {
 		return false, fmt.Errorf("fail to construct authentication principal for %s : %s", resourceName, err)
 	}
-	allow, err = verifySenderPrincipal2330(acProvider, principalInst, blockVersion)
+	allow, err = verifySenderPrincipal2330(p, principalInst, blockVersion)
 	if err != nil {
 		return false, fmt.Errorf("authentication error: %s", err)
 	}
@@ -289,7 +298,7 @@ func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte, p acProvider2330
 	if !ok {
 		return false, fmt.Errorf("fail to convert principal obj")
 	}
-	allow, err = verifyEndorsementsPrincipal2330(acProvider, tx, principalPtr, blockVersion)
+	allow, err = verifyEndorsementsPrincipal2330(p, tx, principalPtr, blockVersion)
 	if err != nil {
 		return false, fmt.Errorf("authentication error for %s-%s: %s", tx.Payload.ContractName, tx.Payload.Method, err)
 	}
@@ -300,7 +309,8 @@ func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte, p acProvider2330
 	return true, nil
 }
 
-func isRuleSupportedByMultiSign2330(p acProvider2330, resourceName string, blockVersion uint32, log protocol.Logger) error {
+func isRuleSupportedByMultiSign2330(
+	p acProvider2330, resourceName string, blockVersion uint32, log protocol.Logger) error {
 	policy, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
 		// not found then there is no authority which means no need to sign multi sign

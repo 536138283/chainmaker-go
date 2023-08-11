@@ -124,7 +124,7 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		bc  *blockchain.Blockchain
 	)
 
-	_, err = s.chainMakerServer.GetChainConf(tx.Payload.ChainId)
+	chainConfig, err := s.chainMakerServer.GetChainConf(tx.Payload.ChainId)
 	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_CHAIN_CONF
 		errMsg = s.getErrMsg(errCode, err)
@@ -150,7 +150,8 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		return
 	}
 
-	if err = utils.VerifyTxWithoutPayload(tx, tx.Payload.ChainId, bc.GetAccessControl()); err != nil {
+	blockVersion := chainConfig.ChainConfig().GetBlockVersion()
+	if err = utils.VerifyTxWithoutPayload(tx, tx.Payload.ChainId, bc.GetAccessControl(), blockVersion); err != nil {
 		errCode = commonErr.ERR_CODE_TX_VERIFY_FAILED
 		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s", errCode.String(), err.Error(), tx.Payload.TxId,
 			hex.EncodeToString(tx.Sender.Signer.MemberInfo))

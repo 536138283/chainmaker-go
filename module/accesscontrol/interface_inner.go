@@ -1,15 +1,12 @@
 package accesscontrol
 
 import (
+	"fmt"
+	"sync"
+
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"fmt"
-	"sync"
-)
-
-const (
-	blockVersion2330 = uint32(2030300)
 )
 
 type acProvider220 interface {

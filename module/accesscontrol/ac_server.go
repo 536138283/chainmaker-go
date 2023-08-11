@@ -826,26 +826,6 @@ func buildOrgListRoleListOfPolicyForVerifyPrincipal(p *policy) (map[string]bool,
 	return orgList, roleList
 }
 
-func (acs *accessControlService) lookUpPolicy(resourceName string) (*pbac.Policy, error) {
-	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
-
-	if blockVersion > 0 && blockVersion <= 220 {
-		policy, err := acs.lookUpPolicy220(policyResourceName)
-		if err != nil {
-			return nil, err
-		}
-		return policy, nil
-	}
-
-	if p, ok := acs.latestPolicyMap.Load(policyResourceName); ok {
-		return p.(*policy).GetPbPolicy(), nil
-	}
-	if p, ok := acs.resourceNamePolicyMap.Load(policyResourceName); ok {
-		return p.(*policy).GetPbPolicy(), nil
-	}
-	return nil, fmt.Errorf("policy not found for resource %s", policyResourceName)
-}
-
 // setVerifyOptionsFunc used to set verifyOptionsFunc which will check if  certificate chain valid
 func (acs *accessControlService) setVerifyOptionsFunc(verifyOptionsFunc func() *bcx509.VerifyOptions) {
 	acs.getCertVerifyOptions = verifyOptionsFunc

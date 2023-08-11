@@ -1,17 +1,18 @@
 package accesscontrol
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
-	"fmt"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 // ******************************************************
@@ -216,7 +217,7 @@ func TestPublicPKVerifyAnyPolicy(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, memberInfo1.admin)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -228,7 +229,7 @@ func TestPublicPKVerifyAnyPolicy(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, memberInfo1.client)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -261,7 +262,7 @@ func TestPublicPKVerifyMajorityPolicy(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, memberInfo3.admin)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -278,7 +279,7 @@ func TestPublicPKVerifyMajorityPolicy(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, memberInfo3.admin)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -298,7 +299,7 @@ func TestPublicPKVerifyMajorityPolicy(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, memberInfo4.client)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -322,7 +323,7 @@ func TestPublicPKVerifyForbiddenPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, memberInfo1.admin)
 	require.Nil(t, err)
 
-	ok, err := memberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err := memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)

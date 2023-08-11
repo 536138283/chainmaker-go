@@ -1,6 +1,12 @@
 package accesscontrol
 
 import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"testing"
+
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/helper"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -9,14 +15,9 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/protocol/v2/test"
-	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"path/filepath"
-	"testing"
 )
 
 // ****************************************************
@@ -374,7 +375,7 @@ func TestPermissionedPKVerifySelfPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -387,7 +388,7 @@ func TestPermissionedPKVerifySelfPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo2.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -401,7 +402,7 @@ func TestPermissionedPKVerifySelfPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.client)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -434,7 +435,7 @@ func TestPermissionedPKVerifyMajorityPrincipal(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo4.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo2.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = orgMemberInfo2.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -451,7 +452,7 @@ func TestPermissionedPKVerifyMajorityPrincipal(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -470,7 +471,7 @@ func TestPermissionedPKVerifyMajorityPrincipal(t *testing.T) {
 	require.Nil(t, err)
 	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.client)
 	require.Nil(t, err)
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, blockVersion2330)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)

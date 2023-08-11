@@ -1,12 +1,13 @@
 package accesscontrol
 
 import (
+	"testing"
+
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	"github.com/stretchr/testify/require"
-	"testing"
 )
 
 func TestGetMemberStatus(t *testing.T) {

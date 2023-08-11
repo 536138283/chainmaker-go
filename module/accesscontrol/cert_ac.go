@@ -980,7 +980,7 @@ func (p *certACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 
 // VerifyPrincipalLT2330 verifies if the principal for the resource is met
 func (cp *certACProvider) VerifyPrincipalLT2330(principal protocol.Principal, blockVersion uint32) (bool, error) {
-	if blockVersion <= 220 {
+	if blockVersion <= blockVersion220 {
 		return verifyPrincipal220(cp, principal)
 
 	} else if blockVersion < blockVersion2330 {
@@ -994,7 +994,7 @@ func (cp *certACProvider) VerifyPrincipalLT2330(principal protocol.Principal, bl
 func (cp *certACProvider) GetValidEndorsementsLT2330(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
-	if blockVersion <= 220 {
+	if blockVersion <= blockVersion220 {
 		return cp.GetValidEndorsements220(principal)
 	}
 

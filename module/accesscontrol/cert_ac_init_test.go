@@ -8,12 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -671,6 +672,7 @@ mrY0z9cE
 `,
 }
 
+// nolint
 var testCRL = `-----BEGIN CRL-----
 MIIBNjCB3AIBATAKBggqhkjOPQQDAjBfMQswCQYDVQQGEwJDTjEQMA4GA1UECBMH
 QmVpamluZzEQMA4GA1UEBxMHQmVpamluZzENMAsGA1UEChMEb3JnMTELMAkGA1UE

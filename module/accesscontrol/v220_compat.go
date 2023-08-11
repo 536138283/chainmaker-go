@@ -9,7 +9,6 @@ This file is for version compatibility
 package accesscontrol
 
 import (
-	"chainmaker.org/chainmaker/localconf/v2"
 	"crypto/x509"
 	"encoding/hex"
 	"encoding/pem"
@@ -17,6 +16,8 @@ import (
 	"fmt"
 	"strings"
 	"sync/atomic"
+
+	"chainmaker.org/chainmaker/localconf/v2"
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 

@@ -8,12 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
@@ -481,7 +482,7 @@ func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePol
 func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
-	if blockVersion > 0 && blockVersion <= 220 {
+	if blockVersion > 0 && blockVersion <= blockVersion220 {
 		return p.lookUpPolicy220(policyResourceName)
 	}
 
@@ -528,7 +529,7 @@ func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 // VerifyPrincipalLT2330 verifies if the principal for the resource is met
 func (pk *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, blockVersion uint32) (bool, error) {
 
-	if blockVersion <= 220 {
+	if blockVersion <= blockVersion220 {
 		return verifyPrincipal220(pk, principal)
 
 	} else if blockVersion < blockVersion2330 {
@@ -542,7 +543,7 @@ func (pk *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, bloc
 func (pk *pkACProvider) GetValidEndorsementsLT2330(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
-	if blockVersion <= 220 {
+	if blockVersion <= blockVersion220 {
 		return pk.GetValidEndorsements220(principal)
 	}
 
