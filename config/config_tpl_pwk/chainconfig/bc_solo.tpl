@@ -74,6 +74,14 @@ block:
   # should be within the range of [10,10000]
   block_interval: 10
 
+  # To enable this attribute, ensure that the clock of the node is consistent
+  # Verify the block timestamp or not
+  block_timestamp_verify: false
+
+  # block timeout, in second.
+  # if abs(now - block_timestamp) > block_timeout, the block is invalid.
+  block_timeout: 10
+
 # Core settings
 core:
   # Max scheduling time of a block, in second.
