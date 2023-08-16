@@ -81,7 +81,7 @@ block:
 
   # block timeout, in second.
   # if abs(now - block_timestamp) > block_timeout, the block is invalid.
-  block_timeout: 10
+  block_timeout: 30
 
 # Core settings
 core:
