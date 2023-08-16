@@ -249,7 +249,7 @@ func init() {
 	flags.Uint32Var(&blockInterval, flagBlockInterval, 2000, "block interval timeout in milliseconds, default 2000ms")
 	flags.Uint32Var(&txParameterSize, flagTxParameterSize, 10, "tx parameter size, default 10MB")
 	flags.BoolVar(&blockTimestampVerify, flagBlockTimestampVerify, false, "block timestamp verify, default false")
-	flags.Uint32Var(&blockTimeout, flagBlockTimeout, 10, "block timestamp timeout, default 10S")
+	flags.Uint32Var(&blockTimeout, flagBlockTimeout, 30, "block timestamp timeout, default 10S")
 	flags.StringVar(&nodeOrgId, flagNodeOrgId, "", "specify node org id")
 	flags.StringVar(&nodeIdOld, flagNodeIdOld, "", "specify old node id")
 	flags.StringVar(&nodeId, flagNodeId, "", "specify node id(which will be added or update to")
