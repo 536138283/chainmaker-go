@@ -30,7 +30,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230811092531-e7604015a070
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230724112908-eeaf88648204
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230811035146-e034a3a81538
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230817033218-9bcd536cf5cb
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230726065243-a0dd6f3544e3
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.1-0.20230221095707-a6ef1151257e
 	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230803091343-03f5312de2fa

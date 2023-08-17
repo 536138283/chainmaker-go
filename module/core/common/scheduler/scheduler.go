@@ -1423,6 +1423,8 @@ func (ts *TxScheduler) createChargeGasTx(
 		parameters = append(parameters, &keyValuePair)
 	}
 
+	ts.log.Debugf("charge_gas_tx's params = %v", parameters)
+
 	// 构造 Payload
 	payload := &commonPb.Payload{
 		ChainId:        ts.chainConf.ChainConfig().ChainId,
