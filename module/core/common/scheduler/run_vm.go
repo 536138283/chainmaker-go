@@ -33,6 +33,7 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
 	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
 
+	blockVersion := txSimContext.GetBlockVersion()
 	txNeedChargeGas := ts.checkNativeFilter(
 		txSimContext.GetBlockVersion(),
 		tx.Payload.ContractName,
@@ -67,9 +68,9 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			// in `verify node`:
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
-			pk, _ := getPayerPkFromTx(tx, snapshot)
+			//pk, _ := getPayerPkFromTx(tx, snapshot, ts.ac, blockVersion)
 			chainCfg := txSimContext.GetLastChainConfig()
-			addr, _ := publicKeyToAddress(pk, chainCfg)
+			addr, pk, _ := getPayerAddressFromTx(tx, snapshot, ts.ac, blockVersion, chainCfg)
 			if tx.Result != nil {
 				txResult := &commonPb.Result{
 					ContractResult: &commonPb.ContractResult{

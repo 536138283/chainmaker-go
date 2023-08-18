@@ -197,6 +197,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
+	ac := initAC(ctl)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
@@ -225,7 +226,7 @@ func prepare(t *testing.T, enableSenderGroup, enableConflictsBitWindow bool, txC
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache, ac)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -270,6 +271,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
+	ac := initAC(ctl)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
@@ -302,7 +304,7 @@ func prepare4(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache, ac)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",
@@ -357,6 +359,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	var txTable = make([]*commonPb.Transaction, txCount)
 
 	ctl := gomock.NewController(t)
+	ac := initAC(ctl)
 	snapshot := mock.NewMockSnapshot(ctl)
 	vmMgr := mock.NewMockVmManager(ctl)
 	vmMgr.EXPECT().BeforeSchedule(gomock.Any(), gomock.Any()).Return().AnyTimes()
@@ -389,7 +392,7 @@ func prepare5(t *testing.T, enableOptimizeChargeGas, enableSenderGroup, enableCo
 	storeHelper := mock.NewMockStoreHelper(ctl)
 	storeHelper.EXPECT().GetPoolCapacity().Return(runtime.NumCPU() * 4).AnyTimes()
 	var schedulerFactory TxSchedulerFactory
-	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
+	scheduler := schedulerFactory.NewTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache, ac)
 	contractId := &commonPb.Contract{
 		Name:        "ContractName",
 		Version:     "1",

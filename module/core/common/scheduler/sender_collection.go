@@ -39,9 +39,11 @@ func (g *TxCollection) String() string {
 func NewSenderCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider,
+	blockVersion uint32,
 	log protocol.Logger) *SenderCollection {
 	return &SenderCollection{
-		txsMap: getSenderTxCollection(txBatch, snapshot, log),
+		txsMap: getSenderTxCollection(txBatch, snapshot, ac, blockVersion, log),
 	}
 }
 
@@ -49,6 +51,8 @@ func NewSenderCollection(
 func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider,
+	blockVersion uint32,
 	log protocol.Logger) map[string]*TxCollection {
 	txCollectionMap := make(map[string]*TxCollection, len(txBatch))
 
@@ -57,7 +61,7 @@ func getSenderTxCollection(
 
 	for _, tx := range txBatch {
 		// get the public key from tx
-		pk, err2 := getPayerPkFromTx(tx, snapshot)
+		pk, err2 := getPayerPkFromTx(tx, snapshot, ac, blockVersion)
 		if err2 != nil {
 			log.Errorf("getPayerPkFromTx failed: err = %v", err)
 			continue

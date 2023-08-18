@@ -47,6 +47,8 @@ const (
 	blockVersion2300       = uint32(2300)
 	blockVersion2310       = uint32(2030100)
 	blockVersion2312       = uint32(2030102)
+	blockVersion2320       = uint32(2030200)
+	blockVersion2330       = uint32(2030300)
 )
 
 const (
@@ -67,6 +69,7 @@ type TxScheduler struct {
 	signer          protocol.SigningMember
 	ledgerCache     protocol.LedgerCache
 	contractCache   *sync.Map
+	ac              protocol.AccessControlProvider
 }
 
 // Transaction dependency in adjacency table representation
@@ -123,7 +126,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	var senderCollection *SenderCollection
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
-		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
+		senderCollection = NewSenderCollection(txBatch, snapshot, ts.ac, block.Header.BlockVersion, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
 		ts.log.Debugf("before prepare `SenderGroup` ")
@@ -971,7 +974,60 @@ func (ts *TxScheduler) checkMultiSignFilter2312(
 }
 
 // todo: merge with getPayerPk
-func getPayerPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+func getPayerPkFromTx(
+	tx *commonPb.Transaction,
+	snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider,
+	blockVersion uint32) (crypto.PublicKey, error) {
+
+	if blockVersion < blockVersion2330 {
+		return getPayerPkFromTx2320(tx, snapshot)
+	}
+
+	return getPayerPkFromTx2330(tx, ac)
+}
+
+func getPayerAddressFromTx(tx *commonPb.Transaction,
+	snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider,
+	blockVersion uint32,
+	chainConfig *configPb.ChainConfig) (string, crypto.PublicKey, error) {
+
+	var (
+		pk           crypto.PublicKey
+		err          error
+		addressBytes []byte
+	)
+
+	// 从预设的合约空间里获取 payer address
+	if blockVersion >= blockVersion2330 {
+		contractName := tx.GetPayload().GetContractName()
+		method := tx.GetPayload().GetMethod()
+		addressBytes, err = utils.GetContractMethodPayer(snapshot, contractName, method)
+		if err != nil {
+			return "", nil, fmt.Errorf("get contract method payer failed, error: %v", err)
+		}
+		if addressBytes != nil {
+			return string(addressBytes), pk, nil
+		}
+	}
+
+	// 从 tx 中获取 payer pk
+	pk, err = getPayerPkFromTx(tx, snapshot, ac, blockVersion)
+	if err != nil {
+		return "", nil, fmt.Errorf("getPayerPkFromTx error: %v", err)
+	}
+
+	addressStr, err := publicKeyToAddress(pk, chainConfig)
+	if err != nil {
+		return "", pk, fmt.Errorf("publicKeyToAddress failed: err = %v", err)
+	}
+
+	return addressStr, pk, nil
+
+}
+
+func getPayerPkFromTx2320(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
 
 	var err error
 	var pk []byte
@@ -1023,6 +1079,28 @@ func getPayerPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (cry
 	}
 
 	return publicKey, nil
+}
+
+func getPayerPkFromTx2330(
+	tx *commonPb.Transaction,
+	ac protocol.AccessControlProvider) (crypto.PublicKey, error) {
+
+	var (
+		err error
+	)
+
+	payerMember := getTxPayerSigner(tx)
+	if payerMember == nil {
+		err = errors.New(" can not find sender from tx ")
+		return nil, err
+	}
+
+	member, err := ac.NewMember(payerMember)
+	if err != nil {
+		return nil, err
+	}
+
+	return member.GetPk(), nil
 }
 
 func (ts *TxScheduler) getPayerPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction) ([]byte, error) {
@@ -1413,7 +1491,7 @@ func getSenderTxsMap(txBatch []*commonPb.Transaction) map[[32]byte][]*commonPb.T
 }
 
 func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
-	sender := getTxPayerSigner(tx)
+	sender := getTxSenderSigner(tx)
 	keyBytes, err := sender.Marshal()
 	if err != nil {
 		return [32]byte{}, err
@@ -1433,6 +1511,10 @@ func publicKeyToAddress(pk crypto.PublicKey, chainCfg *configPb.ChainConfig) (st
 		publicKeyString = "ZX" + publicKeyString
 	}
 	return publicKeyString, nil
+}
+
+func getTxSenderSigner(tx *commonPb.Transaction) *accesscontrol.Member {
+	return tx.GetSender().GetSigner()
 }
 
 func getTxPayerSigner(tx *commonPb.Transaction) *accesscontrol.Member {

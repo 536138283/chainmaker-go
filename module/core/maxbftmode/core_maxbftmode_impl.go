@@ -69,7 +69,8 @@ func NewCoreEngine(cf *conf.CoreEngineConfig) (*CoreEngine, error) {
 		cf.VmMgr,
 		cf.ChainConf,
 		cf.StoreHelper,
-		cf.LedgerCache)
+		cf.LedgerCache,
+		cf.AC)
 	core.quitC = make(<-chan interface{})
 
 	var err error

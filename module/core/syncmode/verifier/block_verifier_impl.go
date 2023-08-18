@@ -135,6 +135,7 @@ func (v *BlockVerifierImpl) VerifyBlockSync(block *commonpb.Block,
 // VerifyBlock to check if block is valid
 func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.VerifyMode) (err error) {
 
+	blockVersion := block.Header.BlockVersion
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err = utils.IsEmptyBlock(block); err != nil {
 		v.log.Error(err)
@@ -204,7 +205,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
 	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
-		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot); err != nil {
+		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot, v.ac, blockVersion); err != nil {
 			return err
 		}
 	}

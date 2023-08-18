@@ -98,7 +98,7 @@ func TestNewCoreEngine(t *testing.T) {
 
 				var schedulerFactory scheduler.TxSchedulerFactory
 				core.txScheduler = schedulerFactory.NewTxScheduler(
-					cf.VmMgr, cf.ChainConf, cf.StoreHelper, ledgerCache)
+					cf.VmMgr, cf.ChainConf, cf.StoreHelper, ledgerCache, ac)
 				core.quitC = make(<-chan interface{})
 
 				var err error
