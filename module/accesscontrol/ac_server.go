@@ -450,6 +450,9 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
+	// for vm support list add new vm type
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
@@ -634,6 +637,9 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
+	// for vm support list add new vm type
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), policyConfig)
 
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)

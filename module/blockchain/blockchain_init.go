@@ -40,7 +40,6 @@ import (
 	"chainmaker.org/chainmaker-go/module/subscriber"
 	blockSync "chainmaker.org/chainmaker-go/module/sync"
 	"chainmaker.org/chainmaker-go/module/txpool"
-	componentVm "chainmaker.org/chainmaker-go/module/vm"
 	"chainmaker.org/chainmaker/common/v3/container"
 	consensusUtils "chainmaker.org/chainmaker/consensus-utils/v3"
 	"chainmaker.org/chainmaker/pb-go/v3/common"
@@ -708,10 +707,11 @@ func (bc *Blockchain) initVM() (err error) {
 		chainConfig := bc.chainConf.ChainConfig()
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
+		// 从 genesis 读 support list  添加到 VmManager的
 		for _, vmType := range chainConfig.Vm.SupportList {
 			bc.addVmManager(vmType, supportedVmManagerList)
-			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+			if vm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
+				bc.addVmManager(vm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
 		consensusStateWrapper := consensus.NewConsensusStateWrapper()
@@ -762,8 +762,8 @@ func (bc *Blockchain) initVM() (err error) {
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			bc.addVmManager(vmType, supportedVmManagerList)
-			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+			if vm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
+				bc.addVmManager(vm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
 		consensusStateWrapper := consensus.NewConsensusStateWrapper()
@@ -783,6 +783,7 @@ func (bc *Blockchain) initVM() (err error) {
 		)
 	}
 	bc.initVMNative()
+	bc.msgBus.Register(msgbus.ChainConfig, bc.vmMgr)
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
 }
@@ -797,7 +798,8 @@ func (bc *Blockchain) initVMNative() {
 
 func (bc *Blockchain) addVmManager(vmType string,
 	supportedVmManagerList map[common.RuntimeType]protocol.VmInstancesManager) {
-	vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
+	vmInstancesManagerProvider := vm.GetVmProvider(vmType)
+	// 初始化 vmInstancesManager
 	vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
 	if err != nil {
 		bc.log.Errorf("create instance manager failed, %v", err)
@@ -806,7 +808,7 @@ func (bc *Blockchain) addVmManager(vmType string,
 		bc.log.Debugf("vm instances manager of %s is nil", vmType)
 		return
 	}
-	runtime := componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]
+	runtime := vm.VmTypeToRunTimeType[strings.ToUpper(vmType)]
 	supportedVmManagerList[runtime] = vmInstancesManager
 }
 
