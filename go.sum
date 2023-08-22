@@ -123,8 +123,8 @@ chainmaker.org/third_party/badger/v3 v3.0.0 h1:8fPIUB8dyCCPu2QbQbp6r4QcixYVK7KOd
 chainmaker.org/third_party/badger/v3 v3.0.0/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 chainmaker.org/third_party/cuckoo-filter v1.0.1 h1:rMRTRnui5zjbDN+t1q5HxXYiISf0PJuMMfhanMHzGCU=
 chainmaker.org/third_party/cuckoo-filter v1.0.1/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
-chainmaker.org/third_party/go-conn-security-multistream v1.0.0 h1:0711HqAff+ne98dIJ28opQj0qZiZk9HNSP0xiXG5FNQ=
-chainmaker.org/third_party/go-conn-security-multistream v1.0.0/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
+chainmaker.org/third_party/go-conn-security-multistream v1.0.2 h1:N7uO41Ie6oe35/Y+YBjmEk37+ciKAw+NLcCZJGMfF7E=
+chainmaker.org/third_party/go-conn-security-multistream v1.0.2/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
 chainmaker.org/third_party/goleveldb v1.1.0 h1:W6xG1ysvaI4aX4uI7ZB6FMPmWg7abkEv9FoLl5lB9kM=
 chainmaker.org/third_party/goleveldb v1.1.0/go.mod h1:7aC8mnQ0XjdIgSSoZfGGBE8QHMPl7QKbJVSzPavj47Y=
 chainmaker.org/third_party/q-tls-common v1.0.0/go.mod h1:3QHGT4coGjNeYQamQwCxdQx04Zf8WMB0FCQN8eaedog=
