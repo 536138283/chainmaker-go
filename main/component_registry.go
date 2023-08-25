@@ -9,7 +9,6 @@ package main
 import (
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/txpool"
-	"chainmaker.org/chainmaker-go/module/vm"
 	abft "chainmaker.org/chainmaker/consensus-abft/v3"
 	dpos "chainmaker.org/chainmaker/consensus-dpos/v3"
 	maxbft "chainmaker.org/chainmaker/consensus-maxbft/v3"
@@ -31,6 +30,7 @@ import (
 	gasm "chainmaker.org/chainmaker/vm-gasm/v3"
 	wasmer "chainmaker.org/chainmaker/vm-wasmer/v3"
 	wxvm "chainmaker.org/chainmaker/vm-wxvm/v3"
+	"chainmaker.org/chainmaker/vm/v3"
 )
 
 func init() {

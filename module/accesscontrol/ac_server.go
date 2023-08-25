@@ -450,23 +450,11 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
+	// for vm support list add new vm type
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), policyConfig)
 
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(), policyConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_FREEZE_CONTRACT.String(), policyConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_UNFREEZE_CONTRACT.String(), policyConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_REVOKE_CONTRACT.String(), policyConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_GRANT_CONTRACT_ACCESS.String(), policyConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), policyConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig)
+	acs.createDefaultContractManageResourcePolicy()
 
 	// certificate management
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
@@ -486,6 +474,25 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	// for charge gas in optimize mode
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+}
+
+func (acs *accessControlService) createDefaultContractManageResourcePolicy() {
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_FREEZE_CONTRACT.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_UNFREEZE_CONTRACT.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_REVOKE_CONTRACT.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_GRANT_CONTRACT_ACCESS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), policyConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig)
 }
 
 func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId string) {
@@ -634,7 +641,23 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_SWITCH.String(), policyConfig)
+	// for vm support list add new vm type
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), policyConfig)
 
+	acs.createDefaultContractManageResourcePolicyForPK()
+
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
+		syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), policySelfConfig)
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
+		syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), policySelfConfig)
+
+	// for charging gas in optimize mode
+	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+}
+
+func (acs *accessControlService) createDefaultContractManageResourcePolicyForPK() {
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
@@ -650,16 +673,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 		syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), policyConfig)
 	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig)
-
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
-		syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), policySelfConfig)
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
-		syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), policySelfConfig)
-
-	// for charging gas in optimize mode
-	acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+		syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig) //
 }
 
 //

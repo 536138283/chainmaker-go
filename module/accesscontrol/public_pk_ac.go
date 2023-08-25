@@ -632,6 +632,10 @@ func (p *pkACProvider) createDefaultResourcePolicy() {
 	// for coinbase in optimize mode or tbft
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_COINBASE.String()+"-"+
 		syscontract.CoinbaseFunction_RUN_COINBASE.String(), policyConsensus)
+
+	// for vm support list add new vm type
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), pubPolicyMajorityAdmin)
 }
 
 // need to consistent with 2.1.0 for dpos
@@ -819,6 +823,10 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
 	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
+
+	// for vm support list add new vm type
+	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), pubPolicyMajorityAdmin)
 }
 
 // verifyPrincipalPolicy
