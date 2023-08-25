@@ -710,8 +710,8 @@ func (bc *Blockchain) initVM() (err error) {
 		// 从 genesis 读 support list  添加到 VmManager的
 		for _, vmType := range chainConfig.Vm.SupportList {
 			bc.addVmManager(vmType, supportedVmManagerList)
-			if vm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(vm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+			if protocol.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
+				bc.addVmManager(protocol.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
 		consensusStateWrapper := consensus.NewConsensusStateWrapper()
@@ -762,8 +762,8 @@ func (bc *Blockchain) initVM() (err error) {
 
 		for _, vmType := range chainConfig.Vm.SupportList {
 			bc.addVmManager(vmType, supportedVmManagerList)
-			if vm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(vm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+			if protocol.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
+				bc.addVmManager(protocol.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
 			}
 		}
 		consensusStateWrapper := consensus.NewConsensusStateWrapper()
@@ -808,7 +808,7 @@ func (bc *Blockchain) addVmManager(vmType string,
 		bc.log.Debugf("vm instances manager of %s is nil", vmType)
 		return
 	}
-	runtime := vm.VmTypeToRunTimeType[strings.ToUpper(vmType)]
+	runtime := protocol.VmTypeToRunTimeType[strings.ToUpper(vmType)]
 	supportedVmManagerList[runtime] = vmInstancesManager
 }
 
