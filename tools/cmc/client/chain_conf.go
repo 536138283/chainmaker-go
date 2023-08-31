@@ -31,6 +31,7 @@ func chainConfigCMD() *cobra.Command {
 	chainConfigCmd.AddCommand(configConsensueExtraCMD())
 	chainConfigCmd.AddCommand(configTrustMemberCMD())
 	chainConfigCmd.AddCommand(alterAddrTypeCMD())
+	chainConfigCmd.AddCommand(vmSupportListCMD())
 	chainConfigCmd.AddCommand(permissionResourceCMD())
 	chainConfigCmd.AddCommand(configSwitchConsensusCMD())
 	chainConfigCmd.AddCommand(enableMultiSignManualRunCMD())
