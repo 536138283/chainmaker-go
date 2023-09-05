@@ -304,13 +304,35 @@ func (pp *permissionedPkACProvider) GetValidEndorsementsLT2330(
 // VerifyMsgPrincipal verifies if the principal for the resource is met
 func (pp *permissionedPkACProvider) VerifyMsgPrincipal(
 	principal protocol.Principal, blockVersion uint32) (bool, error) {
-	return verifyMsgPrincipal(pp, principal, blockVersion)
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(pp, principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(pp, principal)
+	}
+
+	return verifyMsgTypePrincipal(pp, principal, blockVersion)
 }
 
 // VerifyTxPrincipal verifies if the principal for the resource is met
 func (pp *permissionedPkACProvider) VerifyTxPrincipal(
-	tx *common.Transaction, txBytes []byte, blockVersion uint32) (bool, error) {
-	return verifyTxPrincipal(pp, tx, txBytes, blockVersion)
+	tx *common.Transaction, resourceName string, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		if err := verifyTxPrincipal220(tx, pp); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	if blockVersion < blockVersion2330 {
+		if err := verifyTxPrincipal2320(tx, resourceName, pp); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return verifyTxPrincipal(tx, resourceName, pp, blockVersion)
 }
 
 // VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
@@ -318,11 +340,23 @@ func (pp *permissionedPkACProvider) VerifyMultiSignTxPrincipal(
 	mInfo *syscontract.MultiSignInfo,
 	blockVersion uint32) (syscontract.MultiSignStatus, error) {
 
-	return verifyMultiSignTxPrincipal(pp, mInfo, pp.acService.log, blockVersion)
+	if blockVersion < blockVersion2330 {
+		return mInfo.Status, fmt.Errorf(
+			"func `verifyMultiSignTxPrincipal` cannot be used in blockVersion(%v)", blockVersion)
+	}
+	return verifyMultiSignTxPrincipal(pp, mInfo, blockVersion, pp.acService.log)
 }
 
 // IsRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
 // it's implements must be the same with vm-native/supportRule
 func (pp *permissionedPkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
-	return isRuleSupportedByMultiSign(pp, resourceName, pp.acService.log, blockVersion)
+	if blockVersion < blockVersion220 {
+		return isRuleSupportedByMultiSign220(pp, resourceName, pp.acService.log)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return isRuleSupportedByMultiSign2320(resourceName, pp, pp.acService.log)
+	}
+
+	return isRuleSupportedByMultiSign(pp, resourceName, blockVersion, pp.acService.log)
 }

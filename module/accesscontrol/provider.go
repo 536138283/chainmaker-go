@@ -104,7 +104,7 @@ func (pk *pkACProvider) findFromEndorsementsPolicies(resourceName string, blockV
 //  function utils
 // ****************************************************
 
-func verifyMsgTypePrincipal2330(p acProvider2330,
+func verifyMsgTypePrincipal(p acProvider,
 	principal protocol.Principal, blockVersion uint32) (allow bool, err error) {
 
 	if p.getTotalVoterNum() <= 0 {
@@ -128,16 +128,29 @@ func verifyMsgTypePrincipal2330(p acProvider2330,
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-func verifyTxTypePrincipal2330(p acProvider2330,
-	principal protocol.Principal, blockVersion uint32) (allow bool, err error) {
+func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
+	txBytes []byte, blockVersion uint32, bypassSignVerify bool) (allow bool, err error) {
 
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
 
-	refinedPrincipal, err := p.refinePrincipal(principal)
+	txType := tx.Payload.TxType
+	principal, err := p.CreatePrincipal(
+		txType.String(),
+		[]*commonPb.EndorsementEntry{tx.Sender},
+		txBytes,
+	)
 	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+		return false, fmt.Errorf("fail to construct authentication principal for %s : %s", txType.String(), err)
+	}
+
+	refinedPrincipal := principal
+	if !bypassSignVerify {
+		refinedPrincipal, err = p.refinePrincipal(principal)
+		if err != nil {
+			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+		}
 	}
 
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
@@ -152,16 +165,29 @@ func verifyTxTypePrincipal2330(p acProvider2330,
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-func verifySenderPrincipal2330(p acProvider2330,
-	principal protocol.Principal, blockVersion uint32) (allow bool, err error) {
+func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byte,
+	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
 
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
 
-	refinedPrincipal, err := p.refinePrincipal(principal)
+	resourceName := utils.GetTxResourceName(tx)
+	principal, err := p.CreatePrincipal(
+		resourceName,
+		[]*commonPb.EndorsementEntry{tx.Sender},
+		txBytes,
+	)
 	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+		return false, fmt.Errorf("fail to construct authentication principal for %s : %s", resourceName, err)
+	}
+
+	refinedPrincipal := principal
+	if !bypassVerifySign {
+		refinedPrincipal, err = p.refinePrincipal(principal)
+		if err != nil {
+			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+		}
 	}
 
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
@@ -179,24 +205,16 @@ func verifySenderPrincipal2330(p acProvider2330,
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-func verifyEndorsementsPrincipal2330(p acProvider2330,
-	tx *commonPb.Transaction,
-	principal *principal, blockVersion uint32) (allow bool, err error) {
+func verifyEndorsementsPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byte,
+	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
 
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
 
-	refinedPrincipal, err := p.refinePrincipal(principal)
-	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
-	}
-
-	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
-		return true, nil
-	}
-
-	pol, err := p.findFromEndorsementsPolicies(principal.GetResourceName(), blockVersion)
+	// 查找 resourceName 的策略
+	resourceName := utils.GetTxResourceName(tx)
+	pol, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
 		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 	}
@@ -204,6 +222,13 @@ func verifyEndorsementsPrincipal2330(p acProvider2330,
 		return true, nil
 	}
 
+	// 构建 endorsements
+	endorsements := tx.Endorsers
+	if endorsements == nil {
+		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
+	}
+
+	var principal protocol.Principal
 	if pol.rule == protocol.RuleSelf {
 		var targetOrg string
 		parameterPairs := tx.Payload.Parameters
@@ -215,42 +240,53 @@ func verifyEndorsementsPrincipal2330(p acProvider2330,
 					break
 				}
 			}
-			if targetOrg == "" {
-				return false, fmt.Errorf("verification rule is [SELF], but org_id is not set in the parameter")
-			}
-			principal.targetOrg = targetOrg
 		}
+		if targetOrg == "" {
+			return false, fmt.Errorf("verification rule is [SELF], but org_id is not set in the parameter")
+		}
+		principal, err = p.CreatePrincipalForTargetOrg(resourceName, endorsements, txBytes, targetOrg)
+	} else {
+		principal, err = p.CreatePrincipal(resourceName, endorsements, txBytes)
+	}
+	if err != nil {
+		return false, fmt.Errorf("fail to construct authentication principal for %s: %s",
+			resourceName, err)
+	}
+
+	refinedPrincipal := principal
+	if !bypassVerifySign {
+		refinedPrincipal, err = p.refinePrincipal(principal)
+		if err != nil {
+			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+		}
+	}
+
+	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
+		return true, nil
 	}
 
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte,
-	p acProvider2330, blockVersion uint32) (bool, error) {
-	var principalInst protocol.Principal
+func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
+	p acProvider, blockVersion uint32) (bool, error) {
 	var err error
 	var allow bool
+	var crossCall bool
 
-	if txBytes == nil {
-		txBytes, err = utils.CalcUnsignedTxBytes(tx)
-		if err != nil {
-			return false, fmt.Errorf("get tx bytes failed, err = %v", err)
-		}
+	txBytes, err := utils.CalcUnsignedTxBytes(tx)
+	if err != nil {
+		return false, fmt.Errorf("get tx bytes failed, err = %v", err)
 	}
-
 	txType := tx.Payload.TxType
-	resourceName := tx.Payload.ContractName + "-" + tx.Payload.Method
+	txResourceId := utils.GetTxResourceName(tx)
+	crossCall = false
+	if txResourceId != resourceId {
+		crossCall = true
+	}
 
 	// check tx_type
-	principalInst, err = p.CreatePrincipal(
-		txType.String(),
-		[]*commonPb.EndorsementEntry{tx.Sender},
-		txBytes,
-	)
-	if err != nil {
-		return false, fmt.Errorf("fail to construct authentication principal for %s : %s", txType.String(), err)
-	}
-	allow, err = verifyTxTypePrincipal2330(p, principalInst, blockVersion)
+	allow, err = verifyTxTypePrincipal(p, tx, txBytes, blockVersion, crossCall)
 	if err != nil {
 		return false, fmt.Errorf("authentication error: %s", err)
 	}
@@ -263,15 +299,8 @@ func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte,
 	}
 
 	// check sender
-	principalInst, err = p.CreatePrincipal(
-		resourceName,
-		[]*commonPb.EndorsementEntry{tx.Sender},
-		txBytes,
-	)
-	if err != nil {
-		return false, fmt.Errorf("fail to construct authentication principal for %s : %s", resourceName, err)
-	}
-	allow, err = verifySenderPrincipal2330(p, principalInst, blockVersion)
+
+	allow, err = verifySenderPrincipal(p, tx, txBytes, blockVersion, crossCall)
 	if err != nil {
 		return false, fmt.Errorf("authentication error: %s", err)
 	}
@@ -280,37 +309,19 @@ func verifyTxAuth2330(tx *commonPb.Transaction, txBytes []byte,
 	}
 
 	// check endorsements
-	if txType != commonPb.TxType_INVOKE_CONTRACT {
-		return true, nil
-	}
-
-	endorsements := tx.Endorsers
-	if endorsements == nil {
-		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
-	}
-
-	principalInst, err = p.CreatePrincipal(resourceName, endorsements, txBytes)
+	allow, err = verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, crossCall)
 	if err != nil {
-		return false, fmt.Errorf("fail to construct authentication principal for %s-%s: %s",
-			tx.Payload.ContractName, tx.Payload.Method, err)
-	}
-	principalPtr, ok := principalInst.(*principal)
-	if !ok {
-		return false, fmt.Errorf("fail to convert principal obj")
-	}
-	allow, err = verifyEndorsementsPrincipal2330(p, tx, principalPtr, blockVersion)
-	if err != nil {
-		return false, fmt.Errorf("authentication error for %s-%s: %s", tx.Payload.ContractName, tx.Payload.Method, err)
+		return false, fmt.Errorf("authentication error for %s: %s", resourceId, err)
 	}
 	if !allow {
-		return false, fmt.Errorf("authentication failed for %s-%s", tx.Payload.ContractName, tx.Payload.Method)
+		return false, fmt.Errorf("authentication failed for %s", resourceId)
 	}
 
 	return true, nil
 }
 
-func isRuleSupportedByMultiSign2330(
-	p acProvider2330, resourceName string, blockVersion uint32, log protocol.Logger) error {
+func isRuleSupportedByMultiSign(
+	p acProvider, resourceName string, blockVersion uint32, log protocol.Logger) error {
 	policy, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
 		// not found then there is no authority which means no need to sign multi sign
@@ -323,7 +334,7 @@ func isRuleSupportedByMultiSign2330(
 	return nil
 }
 
-func isMultiSignRefused2330(p acProvider2330, resourceName string, rejects []*commonPb.EndorsementEntry,
+func isMultiSignRefused(p acProvider, resourceName string, rejects []*commonPb.EndorsementEntry,
 	payload *commonPb.Payload, blockVersion uint32, log protocol.Logger) (bool, error) {
 
 	totalVotes := p.getTotalVoterNum()
@@ -375,7 +386,7 @@ func isMultiSignRefused2330(p acProvider2330, resourceName string, rejects []*co
 	}
 }
 
-func verifyMultiSignTxPrincipal2330(p acProvider2330, mInfo *syscontract.MultiSignInfo,
+func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	blockVersion uint32, log protocol.Logger) (syscontract.MultiSignStatus, error) {
 
 	if mInfo.Status != syscontract.MultiSignStatus_PROCESSING {
@@ -405,11 +416,7 @@ func verifyMultiSignTxPrincipal2330(p acProvider2330, mInfo *syscontract.MultiSi
 			Payload:   mInfo.Payload,
 			Endorsers: agreeEndorsements,
 		}
-		txBytes, err := utils.CalcUnsignedTxBytes(tx)
-		if err != nil {
-			return mInfo.Status, err
-		}
-		agree, err := verifyTxPrincipal(p, tx, txBytes, blockVersion)
+		agree, err := verifyTxPrincipal(tx, resourceName, p, blockVersion)
 		if err != nil {
 			return mInfo.Status, err
 		}
@@ -419,7 +426,7 @@ func verifyMultiSignTxPrincipal2330(p acProvider2330, mInfo *syscontract.MultiSi
 	}
 
 	// 根据 reject 的数量判断多签状态
-	refuse, err := isMultiSignRefused2330(p, resourceName, rejectEndorsements, mInfo.Payload, blockVersion, log)
+	refuse, err := isMultiSignRefused(p, resourceName, rejectEndorsements, mInfo.Payload, blockVersion, log)
 	if err != nil {
 		return mInfo.Status, err
 	}

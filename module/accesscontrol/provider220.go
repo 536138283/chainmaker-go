@@ -531,24 +531,18 @@ func verifyPrincipal220(p acProvider220, principal protocol.Principal) (bool, er
 // verify transaction sender's authentication (include signature verification,
 //cert-chain verification, access verification)
 // move from ChainMaker/utils/transaction.go
-func verifyTxAuth220(t *commonPb.Transaction, txBytes []byte, ac acProvider220) error {
+func verifyTxPrincipal220(t *commonPb.Transaction, ac acProvider220) error {
 
 	var principal protocol.Principal
 	var err error
+	txBytes, err := utils.CalcUnsignedTxBytes(t)
+	if err != nil {
+		return fmt.Errorf("get tx bytes failed, err = %v", err)
+	}
 
 	endorsements := []*commonPb.EndorsementEntry{t.Sender}
 	txType := t.Payload.TxType
 	resourceId := t.Payload.ContractName + "-" + t.Payload.Method
-
-	//resourceId = blockVersion + ":" + resourceId, for compatible, options[0] = blockVersion
-	//resourceId = utils.AddPrefix(resourceId, options)
-
-	if txBytes == nil {
-		txBytes, err = utils.CalcUnsignedTxBytes(t)
-		if err != nil {
-			return fmt.Errorf("get tx bytes failed, err = %v", err)
-		}
-	}
 
 	// sender authentication
 	_, err = ac.lookUpExceptionalPolicy220(resourceId)

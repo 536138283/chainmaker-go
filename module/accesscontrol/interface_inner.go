@@ -19,7 +19,7 @@ type acProvider220 interface {
 }
 
 type acProvider2320 interface {
-	acProvider220
+	acProviderBase
 
 	lookUpPolicy2320(resourceName string) (*acPb.Policy, error)
 	lookUpExceptionalPolicy2320(resourceName string) (*acPb.Policy, error)
@@ -27,8 +27,8 @@ type acProvider2320 interface {
 	GetValidEndorsements2320(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
 }
 
-type acProvider2330 interface {
-	acProvider2320
+type acProvider interface {
+	acProviderBase
 
 	lookUpPolicyByTxType(txType string, blockVersion uint32) (*policy, error)
 	lookUpPolicyByMsgType(msgType string, blockVersion uint32) (*policy, error)
@@ -36,14 +36,10 @@ type acProvider2330 interface {
 	findFromEndorsementsPolicies(resourceName string, blockVersion uint32) (*policy, error)
 }
 
-type acProviderInner interface {
-	acProvider2330
-}
-
 func lookUpPolicyByTxType(txType string, blockVersion uint32,
 	latestPolicyMap *sync.Map, policyMap *sync.Map) (*policy, error) {
 
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 
@@ -80,7 +76,7 @@ func lookUpPolicyByMsgType(msgType string, blockVersion uint32,
 
 func findFromSenderPolicies(resourceName string, blockVersion uint32,
 	latestPolicyMap *sync.Map, policyMap *sync.Map) (*policy, error) {
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 
@@ -97,7 +93,7 @@ func findFromSenderPolicies(resourceName string, blockVersion uint32,
 
 func findFromEndorsementsPolicies(resourceName string, blockVersion uint32,
 	latestPolicyMap *sync.Map, policyMap *sync.Map) (*policy, error) {
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 

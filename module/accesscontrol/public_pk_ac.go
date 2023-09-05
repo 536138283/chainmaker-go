@@ -554,26 +554,60 @@ func (pk *pkACProvider) GetValidEndorsementsLT2330(
 }
 
 // VerifyMsgPrincipal verifies if the principal for the resource is met
-func (pk *pkACProvider) VerifyMsgPrincipal(principal protocol.Principal, blockVersion uint32) (bool, error) {
-	return verifyMsgPrincipal(pk, principal, blockVersion)
+func (p *pkACProvider) VerifyMsgPrincipal(principal protocol.Principal, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(p, principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(p, principal)
+	}
+
+	return verifyMsgTypePrincipal(p, principal, blockVersion)
 }
 
 // VerifyTxPrincipal verifies if the principal for the resource is met
-func (pk *pkACProvider) VerifyTxPrincipal(
-	tx *common.Transaction, txBytes []byte, blockVersion uint32) (bool, error) {
-	return verifyTxPrincipal(pk, tx, txBytes, blockVersion)
+func (p *pkACProvider) VerifyTxPrincipal(tx *common.Transaction,
+	resourceName string, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		if err := verifyTxPrincipal220(tx, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	if blockVersion < blockVersion2330 {
+		if err := verifyTxPrincipal2320(tx, resourceName, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return verifyTxPrincipal(tx, resourceName, p, blockVersion)
 }
 
 // VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
-func (pk *pkACProvider) VerifyMultiSignTxPrincipal(
+func (p *pkACProvider) VerifyMultiSignTxPrincipal(
 	mInfo *syscontract.MultiSignInfo,
 	blockVersion uint32) (syscontract.MultiSignStatus, error) {
 
-	return verifyMultiSignTxPrincipal(pk, mInfo, pk.log, blockVersion)
+	if blockVersion < blockVersion2330 {
+		return mInfo.Status, fmt.Errorf(
+			"func `verifyMultiSignTxPrincipal` cannot be used in blockVersion(%v)", blockVersion)
+	}
+	return verifyMultiSignTxPrincipal(p, mInfo, blockVersion, p.log)
 }
 
 // IsRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
 // it's implements must be the same with vm-native/supportRule
-func (pk *pkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
-	return isRuleSupportedByMultiSign(pk, resourceName, pk.log, blockVersion)
+func (p *pkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
+	if blockVersion < blockVersion220 {
+		return isRuleSupportedByMultiSign220(p, resourceName, p.log)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return isRuleSupportedByMultiSign2320(resourceName, p, p.log)
+	}
+
+	return isRuleSupportedByMultiSign(p, resourceName, blockVersion, p.log)
 }

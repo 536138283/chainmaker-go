@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 )
 
 // ****************************************************
@@ -239,24 +240,17 @@ func verifyPrincipal2320(p acProvider2320, principal protocol.Principal) (bool, 
 // verify transaction sender's authentication (include signature verification,
 //cert-chain verification, access verification)
 // move from ChainMaker/utils/transaction.go
-func verifyTxAuth2320(t *commonPb.Transaction, txBytes []byte, ac acProvider2320) error {
+func verifyTxPrincipal2320(t *commonPb.Transaction, resourceId string, ac acProvider2320) error {
 
 	var principal protocol.Principal
 	var err error
+	txBytes, err := utils.CalcUnsignedTxBytes(t)
+	if err != nil {
+		return fmt.Errorf("get tx bytes failed, err = %v", err)
+	}
 
 	endorsements := []*commonPb.EndorsementEntry{t.Sender}
 	txType := t.Payload.TxType
-	resourceId := t.Payload.ContractName + "-" + t.Payload.Method
-
-	//resourceId = blockVersion + ":" + resourceId, for compatible, options[0] = blockVersion
-	//resourceId = utils.AddPrefix(resourceId, options)
-
-	if txBytes == nil {
-		txBytes, err = utils.CalcUnsignedTxBytes(t)
-		if err != nil {
-			return fmt.Errorf("get tx bytes failed, err = %v", err)
-		}
-	}
 
 	// sender authentication
 	_, err = ac.lookUpExceptionalPolicy2320(resourceId)

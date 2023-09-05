@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/utils/v2"
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
@@ -115,7 +116,8 @@ func testNative_GetChainConfig(blockVersion uint32, t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion)
+	resourceName := utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 }

@@ -15,7 +15,6 @@ import (
 	"time"
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"

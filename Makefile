@@ -25,7 +25,6 @@ chainmaker:
 		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker.exe
     else
 		@echo "build for linux or mac"
-		@echo ${GOLDFLAGS}
 		@cd main && go mod tidy && go build -ldflags '${GOLDFLAGS}' -o ../bin/chainmaker
     endif
 
