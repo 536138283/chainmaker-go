@@ -9,12 +9,14 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -57,6 +59,7 @@ var (
 	useTLS         bool
 	useShortCrt    bool
 
+	inputDataFile      string
 	hostsString        string
 	hostnamesString    string
 	userCrtPathsString string
@@ -98,6 +101,9 @@ var (
 	authTypeUint32 uint32
 	authType       sdk.AuthType
 	gasLimit       uint64
+
+	inputDataList []string
+	inputDataC    = make(chan string, 1)
 )
 
 type KeyValuePair struct {
@@ -205,6 +211,31 @@ func ParallelCMD() *cobra.Command {
 				panic(err)
 			}
 			fmt.Println("tx content: ", pairsString)
+
+			if inputDataFile != "" {
+				log.Infof("loading input data file: %s", inputDataFile)
+				file, err := os.Open(inputDataFile)
+				if err != nil {
+					log.Fatal(err)
+				}
+				defer file.Close()
+
+				scanner := bufio.NewScanner(file)
+				for scanner.Scan() {
+					inputDataList = append(inputDataList, scanner.Text())
+				}
+				if scanner.Err() != nil {
+					log.Fatal(scanner.Err())
+				}
+				log.Infof("load %s completed", inputDataFile)
+
+				go func() {
+					for i := 0; i < len(inputDataList); i++ {
+						inputDataC <- inputDataList[i]
+					}
+					close(inputDataC)
+				}()
+			}
 		},
 	}
 
@@ -238,6 +269,7 @@ func ParallelCMD() *cobra.Command {
 	flags.Uint32Var(&authTypeUint32, "auth-type", 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
 	flags.Uint64Var(&gasLimit, "gas-limit", 0, "gas limit in uint64 type")
 	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
+	flags.StringVar(&inputDataFile, "input-data-file", "", "input data file for solidity contract test")
 
 	cmd.AddCommand(invokeCMD())
 	cmd.AddCommand(queryCMD())
@@ -534,12 +566,21 @@ func (t *Thread) Start() {
 		default:
 			start := time.Now()
 			var err error
+			var inputData string
+			if inputDataFile != "" {
+				var ok bool
+				inputData, ok = <-inputDataC
+				if !ok {
+					t.doneChan <- struct{}{}
+					return
+				}
+			}
 			if authType == sdk.Public {
-				err = t.handler.handle(t.client, t.sk3, "", "", i)
+				err = t.handler.handle(t.client, t.sk3, "", "", i, inputData)
 			} else if authType == sdk.PermissionedWithKey {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i, inputData)
 			} else {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], signCrtPaths[t.index], i)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], signCrtPaths[t.index], i, inputData)
 			}
 
 			elapsed := time.Since(start)
@@ -618,7 +659,7 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, erro
 
 // Handler do multi-thread operation action
 type Handler interface {
-	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int) error
+	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int, inputData string) error
 }
 
 // invokeHandler contract invoke handler
@@ -647,7 +688,7 @@ type InvokerMsg struct {
 }
 
 func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int) error {
+	userCrtPath string, loopId int, inputData string) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
@@ -669,6 +710,13 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 		if err != nil {
 			return err
 		}
+	} else if inputData != "" {
+		pairs = []*commonPb.KeyValuePair{
+			{
+				Key:   "data",
+				Value: []byte(inputData),
+			},
+		}
 	}
 
 	//fmt.Println("[exec_handle]orgId: ", orgId, ", userCrtPath: ", userCrtPath, ", loopId: ", loopId, ", method1: ", method1, ", pairs1: ", pairs1, ", method: ", method, ", pairs: ", pairs)
@@ -679,13 +727,12 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 
 	resp, err = sendRequest(sk3, client, &InvokerMsg{txType: commonPb.TxType_INVOKE_CONTRACT,
 		txId: txId, chainId: chainId}, orgId, userCrtPath, payloadBytes, nil)
-	if err != nil {
-		return err
-	}
-
 	if outputResult {
 		msg := fmt.Sprintf(resultStr, orgId, loopId, method, txId, resp)
 		fmt.Println(msg)
+	}
+	if err != nil {
+		return err
 	}
 
 	if checkResult && resp.Code != commonPb.TxStatusCode_SUCCESS {
@@ -701,7 +748,7 @@ type queryHandler struct {
 }
 
 func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int) error {
+	userCrtPath string, loopId int, inputData string) error {
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
@@ -740,7 +787,7 @@ type createContractHandler struct {
 }
 
 func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int) error {
+	userCrtPath string, loopId int, inputData string) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)
@@ -796,7 +843,7 @@ type upgradeContractHandler struct {
 }
 
 func (h *upgradeContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string,
-	userCrtPath string, loopId int) error {
+	userCrtPath string, loopId int, inputData string) error {
 	txId := utils.GetTimestampTxId()
 
 	wasmBin, err := ioutil.ReadFile(wasmPath)
