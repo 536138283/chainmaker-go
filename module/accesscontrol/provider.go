@@ -1,14 +1,13 @@
 package accesscontrol
 
 import (
-	"errors"
-	"fmt"
-
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
+	"errors"
+	"fmt"
 )
 
 // *************************************
@@ -324,9 +323,15 @@ func isRuleSupportedByMultiSign(
 	p acProvider, resourceName string, blockVersion uint32, log protocol.Logger) error {
 	policy, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
-		// not found then there is no authority which means no need to sign multi sign
+		err = fmt.Errorf("find endorsement policy for resource[%s] failed, err = %v", resourceName, err)
 		log.Warn(err)
-		return errors.New("this resource[" + resourceName + "] doesn't support to online multi sign")
+		return err
+	}
+	if policy == nil {
+		// not found then there is no authority which means no need to sign multi sign
+		err = fmt.Errorf("this resource[%s] doesn't support to online multi sign", resourceName)
+		log.Warn(err)
+		return err
 	}
 	if policy.GetRule() == protocol.RuleSelf {
 		return errors.New("this resource[" + resourceName + "] is the self rule and doesn't support to online multi sign")
@@ -334,56 +339,52 @@ func isRuleSupportedByMultiSign(
 	return nil
 }
 
-func isMultiSignRefused(p acProvider, resourceName string, rejects []*commonPb.EndorsementEntry,
-	payload *commonPb.Payload, blockVersion uint32, log protocol.Logger) (bool, error) {
+func isMultiSignPassed(p acProvider, tx *commonPb.Transaction, policy *policy, blockVersion uint32) (bool, error) {
 
-	totalVotes := p.getTotalVoterNum()
-	data, err := payload.Marshal()
+	txBytes, err := utils.CalcUnsignedTxBytes(tx)
 	if err != nil {
-		return false, fmt.Errorf("marshal MultiSignInfo.Payload failed, err = %v", err)
+		return false, fmt.Errorf("isMultiSignPassed(...) failed, err = %v", err)
 	}
 
-	refinedRejects := p.RefineEndorsements(rejects, data)
-	policy, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
+	return verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, true)
+}
+
+func isMultiSignRefused(p acProvider, tx *commonPb.Transaction, pol *policy, blockVersion uint32) (bool, error) {
+
+	txBytes, err := utils.CalcUnsignedTxBytes(tx)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("isMultiSignPassed(...) failed, err = %v", err)
 	}
 
-	switch policy.GetRule() {
+	refusedPolicy := &policy{
+		orgList:  pol.orgList,
+		roleList: pol.roleList,
+	}
+	switch pol.GetRule() {
 	case protocol.RuleForbidden:
-		log.Infof("policy of multi-sign tx should not be `%v`", protocol.RuleForbidden)
-		return false, fmt.Errorf("policy of multi-sign tx should not be `%v`", protocol.RuleForbidden)
-
-	case protocol.RuleAny:
-		if len(refinedRejects) == totalVotes {
-			log.Infof("rule = %v, %d rejects make multi-sign tx failed.", protocol.RuleAny, len(refinedRejects))
-			return true, nil
-		}
-		log.Infof("rule = %v, multi-sign tx has %d/%d validate rejects", protocol.RuleAny, len(refinedRejects), totalVotes)
-		return false, nil
-
-	case protocol.RuleMajority:
-		if 2*len(refinedRejects) >= totalVotes {
-			log.Infof("rule = %v, %d rejects make multi-sign tx failed.", protocol.RuleMajority, len(refinedRejects))
-			return true, nil
-		}
-		log.Infof("rule = %v, multi-sign tx has less than half validate rejects", protocol.RuleMajority)
-		return false, nil
-
-	case protocol.RuleAll:
-		if len(refinedRejects) > 0 {
-			log.Infof("rule = %v, %d rejects make multi-sign tx failed.", protocol.RuleAll, len(refinedRejects))
-			return true, nil
-		}
-		log.Infof("rule = %v, multi-sign tx has no validate rejects", protocol.RuleAll)
-		return false, nil
-
+		return true, fmt.Errorf("policy of multi-sign tx should not be `%v`", protocol.RuleForbidden)
 	case protocol.RuleSelf:
-		return false, fmt.Errorf("unsupported policy `%v`", protocol.RuleSelf)
-
-	default:
-		return false, fmt.Errorf("unsupported policy `%v`", policy.GetRule())
+		return true, fmt.Errorf("policy of multi-sign tx should not be `%v`", protocol.RuleSelf)
+	case protocol.RuleAny:
+		refusedPolicy.rule = protocol.RuleAll
+	case protocol.RuleAll:
+		refusedPolicy.rule = protocol.RuleAny
+	case protocol.RuleMajority:
+		refusedPolicy.rule = protocol.RuleMajority
 	}
+
+	refused, err := verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, true)
+	if refused {
+		return true, err
+	}
+
+	if pol.GetRule() == protocol.RuleMajority {
+		if 2*len(tx.Endorsers) == p.getTotalVoterNum() {
+			return true, nil
+		}
+	}
+
+	return false, nil
 }
 
 func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
@@ -410,14 +411,23 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	log.Debugf("endorsers agreed num => %v", len(agreeEndorsements))
 	log.Debugf("endorsers rejected num => %v", len(rejectEndorsements))
 
+	policy, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
+	if err != nil {
+		return mInfo.Status, err
+	}
+	if policy == nil {
+		return mInfo.Status, nil
+	}
+
 	// 根据 agree 的数量判断多签状态
 	if len(agreeEndorsements) > 0 {
-		tx := &commonPb.Transaction{
+		tx := commonPb.Transaction{
 			Payload:   mInfo.Payload,
 			Endorsers: agreeEndorsements,
 		}
-		agree, err := verifyTxPrincipal(tx, resourceName, p, blockVersion)
+		agree, err := isMultiSignPassed(p, &tx, policy, blockVersion)
 		if err != nil {
+			log.Infof("isMultiSignPassed(...) return error, err = %v", err)
 			return mInfo.Status, err
 		}
 		if agree {
@@ -425,14 +435,22 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 		}
 	}
 
-	// 根据 reject 的数量判断多签状态
-	refuse, err := isMultiSignRefused(p, resourceName, rejectEndorsements, mInfo.Payload, blockVersion, log)
-	if err != nil {
-		return mInfo.Status, err
-	}
+	// 根据 agree 的数量判断多签状态
+	if len(rejectEndorsements) > 0 {
+		tx := commonPb.Transaction{
+			Payload:   mInfo.Payload,
+			Endorsers: rejectEndorsements,
+		}
+		// 根据 reject 的数量判断多签状态
+		refuse, err := isMultiSignRefused(p, &tx, policy, blockVersion)
+		if err != nil {
+			log.Infof("isMultiSignRefused(...) return error, err = %v", err)
+			return mInfo.Status, err
+		}
 
-	if refuse {
-		return syscontract.MultiSignStatus_REFUSED, nil
+		if refuse {
+			return syscontract.MultiSignStatus_REFUSED, nil
+		}
 	}
 
 	return mInfo.Status, nil
