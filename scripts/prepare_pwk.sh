@@ -306,6 +306,8 @@ function generate_config() {
     fi
     if [ "$ENABLE_VM_GO" == "" ] ;then
       ENABLE_VM_GO="false"
+      VM_GO_TRANSPORT_PROTOCOL="tcp"
+      VM_GO_LOG_LEVEL="INFO"
     elif [ $ENABLE_VM_GO == "true" ] ;then
       echo "param VM_GO_LOG_LEVEL $VM_GO_LOG_LEVEL"
       echo "param VM_GO_TRANSPORT_PROTOCOL $VM_GO_TRANSPORT_PROTOCOL"
