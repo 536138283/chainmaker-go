@@ -287,18 +287,18 @@ func (pp *permissionedPkACProvider) VerifyPrincipalLT2330(
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
-//GetValidEndorsementsLT2330 filters all endorsement entries and returns all valid ones
-func (pp *permissionedPkACProvider) GetValidEndorsementsLT2330(
+//GetValidEndorsements filters all endorsement entries and returns all valid ones
+func (pp *permissionedPkACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
 	if blockVersion <= blockVersion220 {
-		return pp.GetValidEndorsements220(principal)
+		return pp.getValidEndorsements220(principal)
 	}
 
 	if blockVersion < blockVersion2330 {
-		return pp.GetValidEndorsements2320(principal)
+		return pp.getValidEndorsements2320(principal)
 	}
-	return nil, fmt.Errorf("`GetValidEndorsementsLT2330` should not used by blockVersion(%d)", blockVersion)
+	return pp.getValidEndorsements(principal, blockVersion)
 }
 
 // VerifyMsgPrincipal verifies if the principal for the resource is met

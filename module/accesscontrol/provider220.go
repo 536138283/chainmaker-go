@@ -333,7 +333,7 @@ func (cp *certACProvider) lookUpPolicyByResourceName220(resourceName string) (*p
 	return cp.acService.lookUpPolicyByResourceName220(resourceName)
 }
 
-func (cp *certACProvider) GetValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error) {
+func (cp *certACProvider) getValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error) {
 
 	if atomic.LoadInt32(&cp.acService.orgNum) <= 0 {
 		return nil, fmt.Errorf("authentication fail: empty organization list or trusted node list on this chain")
@@ -377,7 +377,7 @@ func (pp *permissionedPkACProvider) lookUpPolicyByResourceName220(resourceName s
 	return pp.acService.lookUpPolicyByResourceName220(resourceName)
 }
 
-func (pp *permissionedPkACProvider) GetValidEndorsements220(
+func (pp *permissionedPkACProvider) getValidEndorsements220(
 	principal protocol.Principal) ([]*commonPb.EndorsementEntry, error) {
 
 	if atomic.LoadInt32(&pp.acService.orgNum) <= 0 {
@@ -436,7 +436,7 @@ func (pk *pkACProvider) lookUpPolicyByResourceName220(resourceName string) (*pol
 	return p.(*policy), nil
 }
 
-func (pk *pkACProvider) GetValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error) {
+func (pk *pkACProvider) getValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error) {
 
 	refinedPolicy, err := pk.refinePrincipal(principal)
 	if err != nil {
@@ -454,7 +454,7 @@ func (pk *pkACProvider) GetValidEndorsements220(principal protocol.Principal) ([
 	for _, roleRaw := range roleListRaw {
 		roleList[roleRaw] = true
 	}
-	return pk.getValidEndorsements(orgList, roleList, endorsements), nil
+	return pk.getValidEndorsementsInner(orgList, roleList, endorsements), nil
 }
 
 // ****************************************************

@@ -365,7 +365,8 @@ func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.End
 
 func (p *pkACProvider) verifyRuleMajorityCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
 	role := protocol.RoleAdmin
-	refinedEndorsements := p.getValidEndorsements(map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
+	refinedEndorsements := p.getValidEndorsementsInner(
+		map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
 	numOfValid := len(refinedEndorsements)
 	p.log.Debugf("verifyRuleMajorityAdminCase: numOfValid=[%d], p.adminNum=[%d]", numOfValid, p.adminNum)
 	if float64(numOfValid) > float64(p.adminNum)/2.0 {
@@ -438,7 +439,7 @@ func (p *pkACProvider) RefineEndorsements(endorsements []*common.EndorsementEntr
 	return refinedEndorsement
 }
 
-func (p *pkACProvider) getValidEndorsements(orgList map[string]bool, roleList map[protocol.Role]bool,
+func (p *pkACProvider) getValidEndorsementsInner(orgList map[string]bool, roleList map[protocol.Role]bool,
 	endorsements []*common.EndorsementEntry) []*common.EndorsementEntry {
 	var refinedEndorsements []*common.EndorsementEntry
 	for _, endorsement := range endorsements {
@@ -539,18 +540,18 @@ func (pk *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, bloc
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
-//GetValidEndorsementsLT2330 filters all endorsement entries and returns all valid ones
-func (pk *pkACProvider) GetValidEndorsementsLT2330(
+//GetValidEndorsements filters all endorsement entries and returns all valid ones
+func (pk *pkACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
 	if blockVersion <= blockVersion220 {
-		return pk.GetValidEndorsements220(principal)
+		return pk.getValidEndorsements220(principal)
 	}
 
 	if blockVersion < blockVersion2330 {
-		return pk.GetValidEndorsements2320(principal)
+		return pk.getValidEndorsements2320(principal)
 	}
-	return nil, fmt.Errorf("`GetValidEndorsementsLT2330` should not used by blockVersion(%d)", blockVersion)
+	return pk.getValidEndorsements(principal, blockVersion)
 }
 
 // VerifyMsgPrincipal verifies if the principal for the resource is met

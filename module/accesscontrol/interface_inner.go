@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
+
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 )
 
 type acProvider220 interface {
@@ -15,7 +16,7 @@ type acProvider220 interface {
 	lookUpPolicy220(resourceName string) (*acPb.Policy, error)
 	lookUpExceptionalPolicy220(resourceName string) (*acPb.Policy, error)
 	lookUpPolicyByResourceName220(resourceName string) (*policy, error)
-	GetValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
+	getValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
 }
 
 type acProvider2320 interface {
@@ -24,7 +25,7 @@ type acProvider2320 interface {
 	lookUpPolicy2320(resourceName string) (*acPb.Policy, error)
 	lookUpExceptionalPolicy2320(resourceName string) (*acPb.Policy, error)
 	lookUpPolicyByResourceName2320(resourceName string) (*policy, error)
-	GetValidEndorsements2320(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
+	getValidEndorsements2320(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
 }
 
 type acProvider interface {
@@ -34,6 +35,8 @@ type acProvider interface {
 	lookUpPolicyByMsgType(msgType string, blockVersion uint32) (*policy, error)
 	findFromSenderPolicies(resourceName string, blockVersion uint32) (*policy, error)
 	findFromEndorsementsPolicies(resourceName string, blockVersion uint32) (*policy, error)
+
+	getValidEndorsements(principal protocol.Principal, blockVersion uint32) ([]*commonPb.EndorsementEntry, error)
 }
 
 func lookUpPolicyByTxType(txType string, blockVersion uint32,

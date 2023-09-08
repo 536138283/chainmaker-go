@@ -1,13 +1,15 @@
 package accesscontrol
 
 import (
+	"errors"
+	"fmt"
+	"sync/atomic"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"errors"
-	"fmt"
 )
 
 // *************************************
@@ -97,6 +99,89 @@ func (pk *pkACProvider) findFromEndorsementsPolicies(resourceName string, blockV
 	return findFromEndorsementsPolicies(
 		resourceName, blockVersion,
 		pk.latestPolicyMap, pk.resourceNamePolicyMap)
+}
+
+// ****************************************************
+//  getValidEndorsements2330
+// ****************************************************
+func (cp *certACProvider) getValidEndorsements(
+	principal protocol.Principal, blockVersion uint32) ([]*commonPb.EndorsementEntry, error) {
+
+	if atomic.LoadInt32(&cp.acService.orgNum) <= 0 {
+		return nil, fmt.Errorf("authentication fail: empty organization list or trusted node list on this chain")
+	}
+	refinedPolicy, err := cp.refinePrincipal(principal)
+	if err != nil {
+		return nil, fmt.Errorf("authentication fail, not a member on this chain: [%v]", err)
+	}
+	endorsements := refinedPolicy.GetEndorsement()
+
+	p, err := cp.findFromEndorsementsPolicies(principal.GetResourceName(), blockVersion)
+	if err != nil {
+		return nil, fmt.Errorf("authentication fail: [%v]", err)
+	}
+	orgListRaw := p.GetOrgList()
+	roleListRaw := p.GetRoleList()
+	orgList := map[string]bool{}
+	roleList := map[protocol.Role]bool{}
+	for _, orgRaw := range orgListRaw {
+		orgList[orgRaw] = true
+	}
+	for _, roleRaw := range roleListRaw {
+		roleList[roleRaw] = true
+	}
+	return cp.acService.getValidEndorsements(orgList, roleList, endorsements), nil
+}
+
+func (pp *permissionedPkACProvider) getValidEndorsements(
+	principal protocol.Principal, blockVersion uint32) ([]*commonPb.EndorsementEntry, error) {
+
+	if atomic.LoadInt32(&pp.acService.orgNum) <= 0 {
+		return nil, fmt.Errorf("authentication fail: empty organization list or trusted node list on this chain")
+	}
+	refinedPolicy, err := pp.refinePrincipal(principal)
+	if err != nil {
+		return nil, fmt.Errorf("authentication fail, not a member on this chain: [%v]", err)
+	}
+	endorsements := refinedPolicy.GetEndorsement()
+
+	p, err := pp.findFromEndorsementsPolicies(principal.GetResourceName(), blockVersion)
+	if err != nil {
+		return nil, fmt.Errorf("authentication fail: [%v]", err)
+	}
+	orgListRaw := p.GetOrgList()
+	roleListRaw := p.GetRoleList()
+	orgList := map[string]bool{}
+	roleList := map[protocol.Role]bool{}
+	for _, orgRaw := range orgListRaw {
+		orgList[orgRaw] = true
+	}
+	for _, roleRaw := range roleListRaw {
+		roleList[roleRaw] = true
+	}
+	return pp.acService.getValidEndorsements(orgList, roleList, endorsements), nil
+}
+
+func (p *pkACProvider) getValidEndorsements(
+	principal protocol.Principal, blockVersion uint32) ([]*commonPb.EndorsementEntry, error) {
+
+	refinedPolicy, err := p.refinePrincipal(principal)
+	if err != nil {
+		return nil, fmt.Errorf("refinePrincipal fail in GetValidEndorsements: [%v]", err)
+	}
+	endorsements := refinedPolicy.GetEndorsement()
+
+	pol, err := p.findFromEndorsementsPolicies(principal.GetResourceName(), blockVersion)
+	if err != nil {
+		return nil, fmt.Errorf("lookUpPolicyByResourceName fail in GetValidEndorsements: [%v]", err)
+	}
+	roleListRaw := pol.GetRoleList()
+	orgList := map[string]bool{}
+	roleList := map[protocol.Role]bool{}
+	for _, roleRaw := range roleListRaw {
+		roleList[roleRaw] = true
+	}
+	return p.getValidEndorsementsInner(orgList, roleList, endorsements), nil
 }
 
 // ****************************************************
@@ -395,7 +480,6 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	}
 
 	resourceName := mInfo.Payload.ContractName + "-" + mInfo.Payload.Method
-
 	agreeEndorsements := make([]*commonPb.EndorsementEntry, len(mInfo.VoteInfos))
 	rejectEndorsements := make([]*commonPb.EndorsementEntry, len(mInfo.VoteInfos))
 
