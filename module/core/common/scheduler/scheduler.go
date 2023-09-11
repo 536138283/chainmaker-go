@@ -81,6 +81,7 @@ type TxScheduler struct {
 	signer        protocol.SigningMember
 	ledgerCache   protocol.LedgerCache
 	contractCache *sync.Map
+	addressCache  *sync.Map
 }
 
 // Transaction dependency in adjacency table representation
@@ -132,7 +133,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	var senderCollection *SenderCollection
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
-		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
+		senderCollection = NewSenderCollection(txBatch, snapshot, ts.addressCache, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
 		ts.log.Debugf("before prepare `SenderGroup` ")
@@ -213,6 +214,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)
 	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, nil)
+	timeCostDag := time.Since(startTime)
 
 	// fill up dag about account balance not enough
 	fillGasBalanceErrDag(block, snapshot, blockVersion)
@@ -227,8 +229,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, block %d, success %d, txs execution cost %v, "+
-		"dag building cost %v, total used %v, tps %v", block.Header.BlockHeight,
-		len(block.Dag.Vertexes), timeCostA, timeCostB-timeCostA, timeCostB,
+		"dag building cost %v, coinbase cost %v, total used %v, tps %v", block.Header.BlockHeight,
+		len(block.Dag.Vertexes), timeCostA, timeCostDag-timeCostA, timeCostB-timeCostDag, timeCostB,
 		float64(len(block.Dag.Vertexes))/(float64(timeCostB)/1e9))
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
@@ -513,7 +515,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
-		senderCollection = NewSenderCollection(block.Txs, snapshot, ts.log)
+		senderCollection = NewSenderCollection(block.Txs, snapshot, ts.addressCache, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	}
 
@@ -1390,15 +1392,25 @@ func (ts *TxScheduler) signTxPayload(
 func (ts *TxScheduler) createChargeGasTx(
 	snapshot protocol.Snapshot) (*commonPb.Transaction, error) {
 
+	var (
+		err     error
+		address string
+	)
 	address2TotalGas := make(map[string]uint64)
 
 	txTable := snapshot.GetTxTable()
 	txMap := snapshot.GetTxResultMap()
 	for _, tx := range txTable {
-		address, err := getAddressFromTx(tx, snapshot)
-		if err != nil {
-			ts.log.Errorf("getAddressFromTx failed: err = %v", err)
-			continue
+		addressVal, ok := ts.addressCache.Load(tx.Payload.TxId)
+		if ok {
+			address, _ = addressVal.(string)
+		} else {
+			ts.log.Warnf("load address from cache failed for unknown reason")
+			address, err = getAddressFromTx(tx, snapshot)
+			if err != nil {
+				ts.log.Errorf("getAddressFromTx failed: err = %v", err)
+				continue
+			}
 		}
 
 		totalGas, exists := address2TotalGas[address]
@@ -1477,17 +1489,26 @@ func (ts *TxScheduler) createChargeGasTx(
 func (ts *TxScheduler) createCoinbaseTx(
 	snapshot protocol.Snapshot) (*commonPb.Transaction, error) {
 
+	var (
+		err     error
+		address string
+	)
 	senders := make(map[string][]byte)
 	parameters := make([]*commonPb.KeyValuePair, 0)
-
 	address2TotalGas := make(map[string]uint64)
 	txTable := snapshot.GetTxTable()
 	txMap := snapshot.GetTxResultMap()
 	for _, tx := range txTable {
-		address, err := getAddressFromTx(tx, snapshot)
-		if err != nil {
-			ts.log.Errorf("getAddressFromTx failed: err = %v", err)
-			continue
+		addressVal, ok := ts.addressCache.Load(tx.Payload.TxId)
+		if ok {
+			address, _ = addressVal.(string)
+		} else {
+			ts.log.Warnf("load address from cache failed for unknown reason")
+			address, err = getAddressFromTx(tx, snapshot)
+			if err != nil {
+				ts.log.Errorf("getAddressFromTx failed, err = %v", err)
+				continue
+			}
 		}
 
 		totalGas, exists := address2TotalGas[address]
