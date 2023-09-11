@@ -1314,6 +1314,7 @@ func TestTxScheduler_parseParameter(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 			got, err := ts.parseParameter2220(tt.args.parameterPairs, false)
 			if (err != nil) != tt.wantErr {
@@ -1421,6 +1422,7 @@ func TestTxScheduler_dumpDAG(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 			ts.dumpDAG(tt.args.dag, tt.args.txs)
 		})
@@ -1642,6 +1644,7 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 			gotRe, err := ts.chargeGasLimit(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result)
 			if (err != nil) != tt.wantErr {
@@ -1855,6 +1858,7 @@ func TestTxScheduler_refundGas(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 			gotRe, err := ts.refundGas(tt.args.accountMangerContract, tt.args.tx, tt.args.txSimContext, tt.args.contractName, tt.args.method, tt.args.pk, tt.args.result, tt.args.contractResultPayload)
 			if (err != nil) != tt.wantErr {
@@ -2057,6 +2061,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 			gotAccountMangerContract, gotPk, err := ts.getAccountMgrContractAndPk(tt.args.txSimContext, tt.args.tx, tt.args.contractName, tt.args.method)
 			if (err != nil) != tt.wantErr {
@@ -2138,6 +2143,7 @@ func TestTxScheduler_checkGasEnable(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 			if got := ts.checkGasEnable(); got != tt.want {
 				t.Errorf("checkGasEnable() = %v, want %v", got, tt.want)
@@ -2203,6 +2209,7 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 			if got := ts.checkNativeFilter(tt.args.blockVersion, tt.args.contractName, tt.args.method, nil, nil); got != tt.want {
 				t.Errorf("checkNativeFilter() = %v, want %v", got, tt.want)
@@ -3323,6 +3330,7 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				addressCache:    &sync.Map{},
 			}
 
 			got, err := ts.getPayerPk(tt.args.txSimContext, tt.args.tx)
