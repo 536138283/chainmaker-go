@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.3-0.20230816083956-847f1567baaa
-	chainmaker.org/chainmaker/common/v2 v2.3.2
+	chainmaker.org/chainmaker/common/v2 v2.3.3-0.20230802100303-5b967c9b41cb
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.2
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.2
@@ -28,7 +28,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.4
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.3
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20230816021811-874ae48a8c28
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20230907070638-8d5000930994
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2
 	chainmaker.org/chainmaker/vm/v2 v2.3.3
