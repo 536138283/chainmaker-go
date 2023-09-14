@@ -83,9 +83,6 @@ func findFromSenderPolicies(resourceName string, blockVersion uint32,
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 
-	if pol, ok := latestPolicyMap.Load(resourceName); ok {
-		return pol.(*policy), nil
-	}
 	if pol, ok := policyMap.Load(resourceName); ok {
 		return pol.(*policy), nil
 	}

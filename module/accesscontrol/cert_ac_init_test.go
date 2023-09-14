@@ -8,13 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
@@ -203,19 +203,9 @@ var testChainConfig = &config.ChainConfig{
 	},
 	ResourcePolicies: []*config.ResourcePolicy{
 		{
-			ResourceName: "CHAIN_CONFIG-NODE_ID_UPDATE",
+			ResourceName: "TEST_CONTRACT-TEST_METHOD_ALL",
 			Policy: &acPb.Policy{
-				Rule:    string(protocol.RuleSelf),
-				OrgList: nil,
-				RoleList: []string{
-					string(protocol.RoleAdmin),
-				},
-			},
-		},
-		{
-			ResourceName: "CHAIN_CONFIG-CERTS_FREEZE",
-			Policy: &acPb.Policy{
-				Rule:    string(protocol.RuleAny),
+				Rule:    string(protocol.RuleAll),
 				OrgList: nil,
 				RoleList: []string{
 					string(protocol.RoleAdmin),

@@ -1,14 +1,13 @@
 package accesscontrol
 
 import (
+	"fmt"
 	"testing"
 
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/utils/v2"
 
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	"github.com/stretchr/testify/require"
 )
@@ -43,81 +42,277 @@ func testInitCertFunc(t *testing.T) map[string]*orgMember {
 	return orgMemberMap
 }
 
-func testCreateEndorsementEntry(orgMember *orgMember, roleType protocol.Role, hashType, msg string) (*common.EndorsementEntry, error) {
-	var (
-		sigResource    []byte
-		err            error
-		signerResource *acPb.Member
-	)
-	switch roleType {
-	case protocol.RoleConsensusNode:
-		sigResource, err = orgMember.consensus.Sign(hashType, []byte(msg))
-		if err != nil {
-			return nil, err
-		}
+func TestCert_VerifyPolicyDefault(t *testing.T) {
+	testCert_VerifyPolicyDefault(blockVersion220, t)
 
-		signerResource, err = orgMember.consensus.GetMember()
-		if err != nil {
-			return nil, err
-		}
-	case protocol.RoleAdmin:
-		sigResource, err = orgMember.admin.Sign(hashType, []byte(msg))
-		if err != nil {
-			return nil, err
-		}
+	testCert_VerifyPolicyDefault(blockVersion2320, t)
 
-		signerResource, err = orgMember.admin.GetMember()
-		if err != nil {
-			return nil, err
-		}
-	default:
-		sigResource, err = orgMember.client.Sign(hashType, []byte(msg))
-		if err != nil {
-			return nil, err
-		}
-
-		signerResource, err = orgMember.client.GetMember()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &common.EndorsementEntry{
-		Signer:    signerResource,
-		Signature: sigResource,
-	}, nil
+	testCert_VerifyPolicyDefault(blockVersion2330, t)
 }
 
-func TestNative_GetChainConfig(t *testing.T) {
-	testNative_GetChainConfig(blockVersion220, t)
-
-	testNative_GetChainConfig(blockVersion2320, t)
-
-	testNative_GetChainConfig(blockVersion2320, t)
-}
-
-func testNative_GetChainConfig(blockVersion uint32, t *testing.T) {
+func testCert_VerifyPolicyDefault(blockVersion uint32, t *testing.T) {
 	// initialize
-	testPkOrgMember := testInitCertFunc(t)
-	orgMemberInfo1 := testPkOrgMember[testOrg1]
+	testCertOrgMember := testInitCertFunc(t)
+	orgMemberInfo1 := testCertOrgMember[testOrg1]
 
 	var (
-		tx  *common.Transaction
 		err error
 		ok  bool
 	)
 
 	//【valid】test case
-	tx = testCreateTx(
-		syscontract.SystemContract_CHAIN_CONFIG.String(),
-		syscontract.ChainConfigFunction_GET_CHAIN_CONFIG.String(),
-		"test-txid-12345")
+	defaultPolicyTx := testCreateTx(
+		"CHAIN_CONFIG", "NODE_ID_UPDATE", "test-txid-12345")
 
-	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
+	err = testAppendSender2Tx(defaultPolicyTx, testPKHashType, orgMemberInfo1.admin)
 	require.Nil(t, err)
 
-	resourceName := utils.GetTxResourceName(tx)
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
+	resourceName := utils.GetTxResourceName(defaultPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(defaultPolicyTx, resourceName, blockVersion)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
+}
+
+func TestCert_VerifyPolicyMajority(t *testing.T) {
+	testCert_VerifyPolicyMajority(blockVersion220, t)
+
+	testCert_VerifyPolicyMajority(blockVersion2320, t)
+
+	testCert_VerifyPolicyMajority(blockVersion2330, t)
+}
+
+func testCert_VerifyPolicyMajority(blockVersion uint32, t *testing.T) {
+	// initialize
+	testCertOrgMember := testInitCertFunc(t)
+	orgMemberInfo1 := testCertOrgMember[testOrg1]
+	orgMemberInfo2 := testCertOrgMember[testOrg2]
+	orgMemberInfo3 := testCertOrgMember[testOrg3]
+	orgMemberInfo4 := testCertOrgMember[testOrg4]
+
+	var (
+		err error
+		ok  bool
+	)
+
+	//【valid】test case
+	majorityPolicyTx := testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo4.admin)
+	require.Nil(t, err)
+
+	resourceName := utils.GetTxResourceName(majorityPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(majorityPolicyTx, resourceName, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
+
+	//【invalid】no enough endorsers
+	majorityPolicyTx = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo4.client)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(majorityPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(majorityPolicyTx, resourceName, blockVersion)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
+	fmt.Printf("Got expected error, err = %v \n\n", err)
+}
+
+func TestCert_VerifyPolicyAny(t *testing.T) {
+	testCert_VerifyPolicyAny(blockVersion220, t)
+
+	testCert_VerifyPolicyAny(blockVersion2320, t)
+
+	testCert_VerifyPolicyAny(blockVersion2330, t)
+}
+
+func testCert_VerifyPolicyAny(blockVersion uint32, t *testing.T) {
+	// initialize
+	testCertOrgMember := testInitCertFunc(t)
+	orgMemberInfo1 := testCertOrgMember[testOrg1]
+
+	var (
+		err error
+		ok  bool
+	)
+
+	// 【valid】 test case
+	anyPolicyTx := testCreateTx(
+		syscontract.SystemContract_CERT_MANAGE.String(),
+		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(anyPolicyTx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+
+	resourceName := utils.GetTxResourceName(anyPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(anyPolicyTx, resourceName, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
+
+	// 【invalid】role is not match
+	anyPolicyTx = testCreateTx(
+		syscontract.SystemContract_CERT_MANAGE.String(),
+		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(anyPolicyTx, testPKHashType, orgMemberInfo1.client)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(anyPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(anyPolicyTx, resourceName, blockVersion)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
+	fmt.Printf("Got expected error, err = %v \n\n", err)
+}
+
+func TestCert_VerifyPolicyAll(t *testing.T) {
+	//testCert_VerifyPolicyAll(blockVersion220, t)
+	//testCert_VerifyPolicyAll(blockVersion2320, t)
+
+	testCert_VerifyPolicyAll(blockVersion2330, t)
+}
+
+func testCert_VerifyPolicyAll(blockVersion uint32, t *testing.T) {
+	// initialize
+	testCertOrgMember := testInitCertFunc(t)
+	orgMemberInfo1 := testCertOrgMember[testOrg1]
+	orgMemberInfo2 := testCertOrgMember[testOrg2]
+	orgMemberInfo3 := testCertOrgMember[testOrg3]
+	orgMemberInfo4 := testCertOrgMember[testOrg4]
+
+	var (
+		err error
+		ok  bool
+	)
+
+	// 【valid】 test case
+	allPolicyTx := testCreateTx(
+		"TEST_CONTRACT", "TEST_METHOD_ALL", "test-txid-12345")
+
+	err = testAppendSender2Tx(allPolicyTx, testPKHashType, orgMemberInfo1.client)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(allPolicyTx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(allPolicyTx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(allPolicyTx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(allPolicyTx, testPKHashType, orgMemberInfo4.admin)
+	require.Nil(t, err)
+
+	resourceName := utils.GetTxResourceName(allPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(allPolicyTx, resourceName, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
+
+	// 【invalid】no enough endorsement
+	allPolicyTx = testCreateTx(
+		"TEST_CONTRACT", "TEST_METHOD_ALL", "test-txid-12345")
+
+	err = testAppendSender2Tx(allPolicyTx, testPKHashType, orgMemberInfo1.client)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(allPolicyTx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(allPolicyTx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(allPolicyTx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(allPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(allPolicyTx, resourceName, blockVersion)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
+	fmt.Printf("Got expected error, err = %v \n\n", err)
+}
+
+func TestCert_VerifyPolicySelf(t *testing.T) {
+	testCert_VerifyPolicySelf(blockVersion220, t)
+
+	testCert_VerifyPolicySelf(blockVersion2320, t)
+
+	testCert_VerifyPolicySelf(blockVersion2330, t)
+}
+
+func testCert_VerifyPolicySelf(blockVersion uint32, t *testing.T) {
+	// initialize
+	testCertOrgMember := testInitCertFunc(t)
+	orgMemberInfo1 := testCertOrgMember[testOrg1]
+	orgMemberInfo2 := testCertOrgMember[testOrg2]
+
+	var (
+		err error
+		ok  bool
+	)
+
+	// 【valid】 test case
+	txDeleteCertAlias := testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(txDeleteCertAlias, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+
+	resourceName := utils.GetTxResourceName(txDeleteCertAlias)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(txDeleteCertAlias, resourceName, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
+
+	// 【invalid】role is not match
+	txDeleteCertAlias = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(txDeleteCertAlias, testPKHashType, orgMemberInfo1.client)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(txDeleteCertAlias)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(txDeleteCertAlias, resourceName, blockVersion)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
+	fmt.Printf("Got expected error, err = %v \n\n", err)
+
+	// 【invalid】orgId is not match
+	txDeleteCertAlias = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(txDeleteCertAlias, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(txDeleteCertAlias)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(txDeleteCertAlias, resourceName, blockVersion)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
+	fmt.Printf("Got expected error, err = %v \n\n", err)
+
 }

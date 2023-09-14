@@ -292,12 +292,27 @@ func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byt
 func verifyEndorsementsPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byte,
 	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
 
+	resourceName := utils.GetTxResourceName(tx)
+	return verifyEndorsementsPrincipalCommon(p, tx, txBytes, resourceName, blockVersion, bypassVerifySign)
+}
+
+func verifyMultiSignEndorsementsPrincipal(p acProvider, tx *commonPb.Transaction, resourceName string,
+	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
+	txBytes, err := utils.CalcUnsignedTxBytes(tx)
+	if err != nil {
+		return false, err
+	}
+	return verifyEndorsementsPrincipalCommon(p, tx, txBytes, resourceName, blockVersion, bypassVerifySign)
+}
+
+func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, txBytes []byte, resourceName string,
+	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
+
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
 
 	// 查找 resourceName 的策略
-	resourceName := utils.GetTxResourceName(tx)
 	pol, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
 		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
@@ -350,6 +365,7 @@ func verifyEndorsementsPrincipal(p acProvider, tx *commonPb.Transaction, txBytes
 	}
 
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
+
 }
 
 func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
@@ -424,22 +440,14 @@ func isRuleSupportedByMultiSign(
 	return nil
 }
 
-func isMultiSignPassed(p acProvider, tx *commonPb.Transaction, policy *policy, blockVersion uint32) (bool, error) {
+func isMultiSignPassed(p acProvider, tx *commonPb.Transaction, resourceName string,
+	policy *policy, blockVersion uint32) (bool, error) {
 
-	txBytes, err := utils.CalcUnsignedTxBytes(tx)
-	if err != nil {
-		return false, fmt.Errorf("isMultiSignPassed(...) failed, err = %v", err)
-	}
-
-	return verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, true)
+	return verifyMultiSignEndorsementsPrincipal(p, tx, resourceName, blockVersion, true)
 }
 
-func isMultiSignRefused(p acProvider, tx *commonPb.Transaction, pol *policy, blockVersion uint32) (bool, error) {
-
-	txBytes, err := utils.CalcUnsignedTxBytes(tx)
-	if err != nil {
-		return false, fmt.Errorf("isMultiSignPassed(...) failed, err = %v", err)
-	}
+func isMultiSignRefused(p acProvider, tx *commonPb.Transaction, resourceName string,
+	pol *policy, blockVersion uint32) (bool, error) {
 
 	refusedPolicy := &policy{
 		orgList:  pol.orgList,
@@ -458,7 +466,7 @@ func isMultiSignRefused(p acProvider, tx *commonPb.Transaction, pol *policy, blo
 		refusedPolicy.rule = protocol.RuleMajority
 	}
 
-	refused, err := verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, true)
+	refused, err := verifyMultiSignEndorsementsPrincipal(p, tx, resourceName, blockVersion, true)
 	if refused {
 		return true, err
 	}
@@ -479,7 +487,7 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 		return mInfo.Status, fmt.Errorf("multi-sign status `%v` is not permitted to verify", mInfo.Status)
 	}
 
-	resourceName := mInfo.Payload.ContractName + "-" + mInfo.Payload.Method
+	resourceName := mInfo.ContractName + "-" + mInfo.Method
 	agreeEndorsements := make([]*commonPb.EndorsementEntry, len(mInfo.VoteInfos))
 	rejectEndorsements := make([]*commonPb.EndorsementEntry, len(mInfo.VoteInfos))
 
@@ -509,14 +517,15 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 			Payload:   mInfo.Payload,
 			Endorsers: agreeEndorsements,
 		}
-		agree, err := isMultiSignPassed(p, &tx, policy, blockVersion)
+		agree, err := isMultiSignPassed(p, &tx, resourceName, policy, blockVersion)
 		if err != nil {
 			log.Infof("isMultiSignPassed(...) return error, err = %v", err)
-			return mInfo.Status, err
 		}
 		if agree {
-			return syscontract.MultiSignStatus_PASSED, nil
+			mInfo.Status = syscontract.MultiSignStatus_PASSED
+			return mInfo.Status, nil
 		}
+
 	}
 
 	// 根据 agree 的数量判断多签状态
@@ -526,14 +535,13 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 			Endorsers: rejectEndorsements,
 		}
 		// 根据 reject 的数量判断多签状态
-		refuse, err := isMultiSignRefused(p, &tx, policy, blockVersion)
+		refuse, err := isMultiSignRefused(p, &tx, resourceName, policy, blockVersion)
+		if refuse {
+			mInfo.Status = syscontract.MultiSignStatus_REFUSED
+			return mInfo.Status, nil
+		}
 		if err != nil {
 			log.Infof("isMultiSignRefused(...) return error, err = %v", err)
-			return mInfo.Status, err
-		}
-
-		if refuse {
-			return syscontract.MultiSignStatus_REFUSED, nil
 		}
 	}
 
