@@ -67,7 +67,7 @@ func TestInitAccessControlService(t *testing.T) {
 		latestPolicyNum++
 		return true
 	})
-	require.Equal(t, latestPolicyNum, 2)
+	require.Equal(t, latestPolicyNum, 1)
 }
 
 func TestValidateResourcePolicy(t *testing.T) {

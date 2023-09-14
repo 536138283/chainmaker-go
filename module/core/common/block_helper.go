@@ -628,10 +628,20 @@ func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block,
 	return lastBlock, nil
 }
 
-// validateBlock, validate block and transactions
+// ValidateBlock validate block and transactions
 func (vb *VerifierBlock) ValidateBlock(
 	block, lastBlock *commonPb.Block, hashType string, timeLasts map[string]int64, mode protocol.VerifyMode) (
 	map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, map[string]int64, *RwSetVerifyFailTx, error) {
+
+	// verify block stamp
+	if vb.chainConf.ChainConfig().Block.BlockTimestampVerify && mode != protocol.SYNC_VERIFY {
+		currentTime := utils.CurrentTimeSeconds()
+		if currentTime-block.Header.BlockTimestamp > int64(vb.chainConf.ChainConfig().Block.BlockTimeout) {
+			return nil, nil, nil, nil, fmt.Errorf(
+				"verify block[%d-%x] timestamp fail, blocktimestamp:%d, current timestamp:%d",
+				block.Header.BlockHeight, block.Header.BlockHash, block.Header.BlockTimestamp, currentTime)
+		}
+	}
 
 	if err := IsBlockHashValid(block, vb.chainConf.ChainConfig().Crypto.Hash); err != nil {
 		return nil, nil, timeLasts, nil, err

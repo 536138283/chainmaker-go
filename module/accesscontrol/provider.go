@@ -398,9 +398,8 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 		return true, nil
 	}
 
-	// check sender
-
-	allow, err = verifySenderPrincipal(p, tx, txBytes, blockVersion, crossCall)
+	// check sender: because sender has been verified by tx_type checking
+	allow, err = verifySenderPrincipal(p, tx, txBytes, blockVersion, true)
 	if err != nil {
 		return false, fmt.Errorf("authentication error: %s", err)
 	}

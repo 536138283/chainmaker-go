@@ -3,7 +3,7 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.3.2
+	chainmaker.org/chainmaker/chainconf/v2 v2.3.3-0.20230816083956-847f1567baaa
 	chainmaker.org/chainmaker/common/v2 v2.3.3-0.20230802100303-5b967c9b41cb
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.2
@@ -14,9 +14,9 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.3
 	chainmaker.org/chainmaker/net-libp2p v1.2.3
 	chainmaker.org/chainmaker/net-liquid v1.1.1
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.3
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.4-0.20230816082411-b53eaefa782b
 	chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20230908075601-8ac01988dfd5
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20230803071128-54587139af25
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20230816083237-9d2bb39bc7d8
 	chainmaker.org/chainmaker/store/v2 v2.3.4
 	chainmaker.org/chainmaker/utils/v2 v2.3.4-0.20230911073606-abfc38524d68
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2
