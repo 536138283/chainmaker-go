@@ -320,7 +320,6 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("begin proposing block[%d], fetch tx num[%d]",
 			height, len(fetchBatch)))
 		if len(fetchBatch) == 0 {
-			bp.log.DebugDynamic(filtercommon.LoggingFixLengthFunc("no txs in tx pool, proposing block stopped"))
 			// fetch Tx from other block
 			fetchFromOtherBlockStart := utils.CurrentTimeMillisSeconds()
 			fetchBatch, batchIds = bp.FetchTxFromOtherBlock(height, preHash)
