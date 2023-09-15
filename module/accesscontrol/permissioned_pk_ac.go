@@ -13,13 +13,14 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"encoding/hex"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	"chainmaker.org/chainmaker/pb-go/v2/common"
@@ -95,7 +96,6 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 	}
 
 	ppacProvider.acService.initResourcePolicy(chainConfig.ResourcePolicies, localOrgId)
-	ppacProvider.acService.initResourcePolicy_220(chainConfig.ResourcePolicies, localOrgId)
 
 	return ppacProvider, nil
 }
@@ -237,31 +237,6 @@ func (pp *permissionedPkACProvider) ValidateResourcePolicy(resourcePolicy *confi
 	return pp.acService.validateResourcePolicy(resourcePolicy)
 }
 
-// CreatePrincipalForTargetOrg creates a principal for "SELF" type principal,
-// which needs to convert SELF to a sepecific organization id in one authentication
-func (pp *permissionedPkACProvider) CreatePrincipalForTargetOrg(resourceName string,
-	endorsements []*common.EndorsementEntry, message []byte,
-	targetOrgId string) (protocol.Principal, error) {
-	return pp.acService.createPrincipalForTargetOrg(resourceName, endorsements, message, targetOrgId)
-}
-
-// CreatePrincipal creates a principal for one time authentication
-func (pp *permissionedPkACProvider) CreatePrincipal(resourceName string, endorsements []*common.EndorsementEntry,
-	message []byte) (
-	protocol.Principal, error) {
-	return pp.acService.createPrincipal(resourceName, endorsements, message)
-}
-
-// LookUpPolicy returns corresponding policy configured for the given resource name
-func (pp *permissionedPkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
-	return pp.acService.lookUpPolicy(resourceName)
-}
-
-// LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
-func (pp *permissionedPkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
-	return pp.acService.lookUpExceptionalPolicy(resourceName)
-}
-
 //GetMemberStatus get the status information of the member
 func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.MemberStatus, error) {
 	if _, err := pp.newNodeMember(member); err != nil {
@@ -274,59 +249,6 @@ func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.M
 //VerifyRelatedMaterial verify the member's relevant identity material
 func (pp *permissionedPkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 	return true, nil
-}
-
-// VerifyPrincipal verifies if the principal for the resource is met
-func (pp *permissionedPkACProvider) VerifyPrincipal(principal protocol.Principal) (bool, error) {
-
-	if atomic.LoadInt32(&pp.acService.orgNum) <= 0 {
-		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
-	}
-
-	refinedPrincipal, err := pp.refinePrincipal(principal)
-	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
-	}
-
-	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
-		return true, nil
-	}
-
-	p, err := pp.acService.lookUpPolicyByResourceName(principal.GetResourceName())
-	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
-	}
-
-	return pp.acService.verifyPrincipalPolicy(principal, refinedPrincipal, p)
-}
-
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
-func (pp *permissionedPkACProvider) GetValidEndorsements(principal protocol.Principal) (
-	[]*common.EndorsementEntry, error) {
-	if atomic.LoadInt32(&pp.acService.orgNum) <= 0 {
-		return nil, fmt.Errorf("authentication fail: empty organization list or trusted node list on this chain")
-	}
-	refinedPolicy, err := pp.refinePrincipal(principal)
-	if err != nil {
-		return nil, fmt.Errorf("authentication fail, not a member on this chain: [%v]", err)
-	}
-	endorsements := refinedPolicy.GetEndorsement()
-
-	p, err := pp.acService.lookUpPolicyByResourceName(principal.GetResourceName())
-	if err != nil {
-		return nil, fmt.Errorf("authentication fail: [%v]", err)
-	}
-	orgListRaw := p.GetOrgList()
-	roleListRaw := p.GetRoleList()
-	orgList := map[string]bool{}
-	roleList := map[protocol.Role]bool{}
-	for _, orgRaw := range orgListRaw {
-		orgList[orgRaw] = true
-	}
-	for _, roleRaw := range roleListRaw {
-		roleList[roleRaw] = true
-	}
-	return pp.acService.getValidEndorsements(orgList, roleList, endorsements), nil
 }
 
 func (pp *permissionedPkACProvider) newNodeMember(member *pbac.Member) (protocol.Member, error) {
@@ -342,11 +264,99 @@ func (p *permissionedPkACProvider) GetAllPolicy() (map[string]*pbac.Policy, erro
 		policyMap[k] = newPbPolicyFromPolicy(v)
 		return true
 	})
-	p.acService.exceptionalPolicyMap.Range(func(key, value interface{}) bool {
+	p.acService.senderPolicyMap.Range(func(key, value interface{}) bool {
 		k, _ := key.(string)
 		v, _ := value.(*policy)
 		policyMap[k] = newPbPolicyFromPolicy(v)
 		return true
 	})
 	return policyMap, nil
+}
+
+// VerifyPrincipalLT2330 verifies if the principal for the resource is met
+func (pp *permissionedPkACProvider) VerifyPrincipalLT2330(
+	principal protocol.Principal, blockVersion uint32) (bool, error) {
+
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(pp, principal)
+
+	} else if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(pp, principal)
+	}
+
+	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
+}
+
+//GetValidEndorsements filters all endorsement entries and returns all valid ones
+func (pp *permissionedPkACProvider) GetValidEndorsements(
+	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
+
+	if blockVersion <= blockVersion220 {
+		return pp.getValidEndorsements220(principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return pp.getValidEndorsements2320(principal)
+	}
+	return pp.getValidEndorsements(principal, blockVersion)
+}
+
+// VerifyMsgPrincipal verifies if the principal for the resource is met
+func (pp *permissionedPkACProvider) VerifyMsgPrincipal(
+	principal protocol.Principal, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(pp, principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(pp, principal)
+	}
+
+	return verifyMsgTypePrincipal(pp, principal, blockVersion)
+}
+
+// VerifyTxPrincipal verifies if the principal for the resource is met
+func (pp *permissionedPkACProvider) VerifyTxPrincipal(
+	tx *common.Transaction, resourceName string, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		if err := verifyTxPrincipal220(tx, pp); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	if blockVersion < blockVersion2330 {
+		if err := verifyTxPrincipal2320(tx, resourceName, pp); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return verifyTxPrincipal(tx, resourceName, pp, blockVersion)
+}
+
+// VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
+func (pp *permissionedPkACProvider) VerifyMultiSignTxPrincipal(
+	mInfo *syscontract.MultiSignInfo,
+	blockVersion uint32) (syscontract.MultiSignStatus, error) {
+
+	if blockVersion < blockVersion2330 {
+		return mInfo.Status, fmt.Errorf(
+			"func `verifyMultiSignTxPrincipal` cannot be used in blockVersion(%v)", blockVersion)
+	}
+	return verifyMultiSignTxPrincipal(pp, mInfo, blockVersion, pp.acService.log)
+}
+
+// IsRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
+// it's implements must be the same with vm-native/supportRule
+func (pp *permissionedPkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
+	if blockVersion < blockVersion220 {
+		return isRuleSupportedByMultiSign220(pp, resourceName, pp.acService.log)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return isRuleSupportedByMultiSign2320(resourceName, pp, pp.acService.log)
+	}
+
+	return isRuleSupportedByMultiSign(pp, resourceName, blockVersion, pp.acService.log)
 }

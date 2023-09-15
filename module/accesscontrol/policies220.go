@@ -6,9 +6,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
-func (acs *accessControlService) createDefaultResourcePolicy_220(localOrgId string) {
-
-	policyArchive.orgList = []string{localOrgId}
+func (acs *accessControlService) createDefaultResourcePolicyForCert_220() {
 
 	acs.resourceNamePolicyMap220.Store(protocol.ResourceNameReadData, policyRead)
 	acs.resourceNamePolicyMap220.Store(protocol.ResourceNameWriteData, policyWrite)
@@ -164,9 +162,7 @@ func (acs *accessControlService) createDefaultResourcePolicy_220(localOrgId stri
 
 }
 
-func (acs *accessControlService) createDefaultResourcePolicyForPK_220(localOrgId string) {
-
-	policyArchive.orgList = []string{localOrgId}
+func (acs *accessControlService) createDefaultResourcePolicyForPK_220() {
 
 	acs.resourceNamePolicyMap220.Store(protocol.ResourceNameReadData, policyRead)
 	acs.resourceNamePolicyMap220.Store(protocol.ResourceNameWriteData, policyWrite)
@@ -450,7 +446,7 @@ func (p *pkACProvider) createDefaultResourcePolicyForDPoS_220() {
 		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pubPolicyMajorityAdmin)
 }
 
-func (p *pkACProvider) createDefaultResourcePolicy_220() {
+func (p *pkACProvider) createDefaultResourcePolicyForCommon_220() {
 
 	p.resourceNamePolicyMap220.Store(protocol.ResourceNameConsensusNode, pubPolicyConsensus)
 	// for txtype
