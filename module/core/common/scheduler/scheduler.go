@@ -1384,7 +1384,6 @@ func (ts *TxScheduler) signTxPayload(
 
 	// using the default hash type of the chain
 	hashType := ts.chainConf.ChainConfig().GetCrypto().Hash
-	ts.log.Infof("hashType=%s,payloadBytes=%s", hashType, payloadBytes)
 	if ts.signer == nil {
 		//TODO:这里为nil，签名失败，但是整体流程成功。
 		return nil, errors.New("ts.signer is nil")
