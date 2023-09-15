@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
 	"chainmaker.org/chainmaker/common/v2/concurrentlru"
@@ -25,7 +27,6 @@ import (
 
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
@@ -96,14 +97,15 @@ type pkACProvider struct {
 
 	dataStore protocol.BlockchainStore
 
-	resourceNamePolicyMap *sync.Map
-
-	exceptionalPolicyMap *sync.Map
-
-	resourceNamePolicyMap220 *sync.Map
-	exceptionalPolicyMap220  *sync.Map
-
-	lastestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
+	txTypePolicyMap           *sync.Map
+	msgTypePolicyMap          *sync.Map
+	senderPolicyMap           *sync.Map
+	resourceNamePolicyMap     *sync.Map
+	resourceNamePolicyMap220  *sync.Map
+	exceptionalPolicyMap220   *sync.Map
+	resourceNamePolicyMap2320 *sync.Map
+	exceptionalPolicyMap2320  *sync.Map
+	latestPolicyMap           *sync.Map // map[string]*policy , resourceName -> *policy
 }
 
 type publicAdminMemberModel struct {
@@ -128,27 +130,34 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 func newPkACProvider(chainConfig *config.ChainConfig,
 	store protocol.BlockchainStore, log protocol.Logger) (*pkACProvider, error) {
 	pkAcProvider := &pkACProvider{
-		adminNum:                 0,
-		hashType:                 chainConfig.Crypto.Hash,
-		authType:                 chainConfig.AuthType,
-		adminMember:              &sync.Map{},
-		consensusMember:          &sync.Map{},
-		memberCache:              concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
-		log:                      log,
-		dataStore:                store,
-		resourceNamePolicyMap:    &sync.Map{},
-		exceptionalPolicyMap:     &sync.Map{},
-		resourceNamePolicyMap220: &sync.Map{},
-		exceptionalPolicyMap220:  &sync.Map{},
-		lastestPolicyMap:         &sync.Map{},
+		adminNum:                  0,
+		hashType:                  chainConfig.Crypto.Hash,
+		authType:                  chainConfig.AuthType,
+		adminMember:               &sync.Map{},
+		consensusMember:           &sync.Map{},
+		memberCache:               concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		log:                       log,
+		dataStore:                 store,
+		txTypePolicyMap:           &sync.Map{},
+		msgTypePolicyMap:          &sync.Map{},
+		senderPolicyMap:           &sync.Map{},
+		resourceNamePolicyMap:     &sync.Map{},
+		resourceNamePolicyMap220:  &sync.Map{},
+		exceptionalPolicyMap220:   &sync.Map{},
+		resourceNamePolicyMap2320: &sync.Map{},
+		exceptionalPolicyMap2320:  &sync.Map{},
+		latestPolicyMap:           &sync.Map{},
 	}
 
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
-		pkAcProvider.createDefaultResourcePolicyForDPoS()
+
 		pkAcProvider.createDefaultResourcePolicyForDPoS_220()
+		pkAcProvider.createDefaultResourcePolicyForDPoS_2320()
+		pkAcProvider.createDefaultResourcePolicyForDPoS()
 	} else {
-		pkAcProvider.createDefaultResourcePolicy()
-		pkAcProvider.createDefaultResourcePolicy_220()
+		pkAcProvider.createDefaultResourcePolicyForCommon_220()
+		pkAcProvider.createDefaultResourcePolicyForCommon_2320()
+		pkAcProvider.createDefaultResourcePolicyForCommon()
 	}
 
 	lastestPolicyMap := &sync.Map{}
@@ -158,7 +167,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 			lastestPolicyMap.Store(resourcePolicy.ResourceName, policy)
 		}
 	}
-	pkAcProvider.lastestPolicyMap = lastestPolicyMap
+	pkAcProvider.latestPolicyMap = lastestPolicyMap
 
 	err := pkAcProvider.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {
@@ -329,311 +338,6 @@ func (p *pkACProvider) NewMemberFromAcs(pbMember *pbac.Member) (protocol.Member,
 	return member, nil
 }
 
-func (p *pkACProvider) createDefaultResourcePolicy() {
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameReadData, policyRead)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameWriteData, policyWrite)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateSelfConfig, policySelfConfig)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
-
-	// for txtype
-	p.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), pubPolicyTransaction)
-	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
-	p.resourceNamePolicyMap.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
-	p.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
-
-	// exceptional resourceName
-	p.exceptionalPolicyMap.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PRIVATE_COMPUTE.String()+"-"+
-		syscontract.PrivateComputeFunction_SAVE_CA_CERT.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PRIVATE_COMPUTE.String()+"-"+
-		syscontract.PrivateComputeFunction_SAVE_ENCLAVE_REPORT.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_MEMBER_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_MEMBER_DELETE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_MEMBER_UPDATE.String(), pubPolicyForbidden)
-
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ID_ADD.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ID_DELETE.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ID_UPDATE.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ORG_UPDATE.String(), pubPolicyMajorityAdmin)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_PERMISSION_UPDATE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_PERMISSION_DELETE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERT_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_FREEZE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_UNFREEZE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_DELETE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_REVOKE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERT_ALIAS_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
-		syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
-		syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), pubPolicyForbidden)
-
-	// disable contract access for public mode
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_GRANT_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractQueryFunction_GET_DISABLED_CONTRACT_LIST.String(), pubPolicyForbidden)
-
-	// forbidden charge gas by go sdk
-	//p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-	//	syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-
-	// forbidden refund gas vm by go sdk
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
-
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_INIT_CONTRACT.String(), pubPolicyManage)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(), pubPolicyManage)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_FREEZE_CONTRACT.String(), pubPolicyManage)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_UNFREEZE_CONTRACT.String(), pubPolicyManage)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_REVOKE_CONTRACT.String(), pubPolicyManage)
-
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CORE_UPDATE.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyMajorityAdmin)
-
-	// for admin management
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pubPolicyMajorityAdmin)
-	// disable trust root add & delete for public mode
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyMajorityAdmin)
-
-	// for consensus ext xxx
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), policyConfig)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), policyConfig)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), policyConfig)
-
-	// for gas admin
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
-	// for charge gas in optimize mode
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
-	// for set invoke base gas
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), pubPolicyMajorityAdmin)
-	// move set admin method to chain config module
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
-
-	// for multi-sign enable_manual_run
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), pubPolicyMajorityAdmin)
-}
-
-// need to consistent with 2.1.0 for dpos
-func (p *pkACProvider) createDefaultResourcePolicyForDPoS() {
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameReadData, policyRead)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameWriteData, policyWrite)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateSelfConfig, policySelfConfig)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameUpdateConfig, policyConfig)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
-	p.resourceNamePolicyMap.Store(protocol.ResourceNameP2p, policyP2P)
-
-	// for txtype
-	p.resourceNamePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), pubPolicyTransaction)
-	p.resourceNamePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
-	p.resourceNamePolicyMap.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
-	p.resourceNamePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
-
-	// exceptional resourceName
-	p.exceptionalPolicyMap.Store(protocol.ResourceNamePrivateCompute, pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PRIVATE_COMPUTE.String()+"-"+
-		syscontract.PrivateComputeFunction_SAVE_CA_CERT.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PRIVATE_COMPUTE.String()+"-"+
-		syscontract.PrivateComputeFunction_SAVE_ENCLAVE_REPORT.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_MEMBER_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_MEMBER_DELETE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_MEMBER_UPDATE.String(), pubPolicyForbidden)
-
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ID_ADD.String(), pubPolicyForbidden)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ID_DELETE.String(), pubPolicyForbidden)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ID_UPDATE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ORG_UPDATE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_NODE_ORG_DELETE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_PERMISSION_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_PERMISSION_UPDATE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_PERMISSION_DELETE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERT_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_FREEZE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_UNFREEZE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_DELETE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_REVOKE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERT_ALIAS_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
-		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
-		syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
-		syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), pubPolicyForbidden)
-
-	// multisign enable_manual_run
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), pubPolicyForbidden)
-	// disable multisign for public mode
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_MULTI_SIGN.String()+"-"+
-		syscontract.MultiSignFunction_REQ.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_MULTI_SIGN.String()+"-"+
-		syscontract.MultiSignFunction_VOTE.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_MULTI_SIGN.String()+"-"+
-		syscontract.MultiSignFunction_QUERY.String(), pubPolicyForbidden)
-
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CORE_UPDATE.String(), pubPolicyManage)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), pubPolicyManage)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyManage)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(), pubPolicyManage)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_FREEZE_CONTRACT.String(), pubPolicyManage)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_UNFREEZE_CONTRACT.String(), pubPolicyManage)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_REVOKE_CONTRACT.String(), pubPolicyManage)
-	// disable contract access for public mode
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_GRANT_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-		syscontract.ContractQueryFunction_GET_DISABLED_CONTRACT_LIST.String(), pubPolicyForbidden)
-
-	// disable gas related native contract
-	//p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-	//	syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyForbidden)
-	p.exceptionalPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyForbidden)
-	// for charge gas in optimize mode
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
-
-	// for admin management
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pubPolicyMajorityAdmin)
-	// disable trust root add & delete for public mode
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyMajorityAdmin)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyMajorityAdmin)
-
-	// for consensus ext xxx
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), pubPolicyForbidden)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
-	p.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-		syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
-}
-
-func (p *pkACProvider) verifyPrincipalPolicy(principal,
-	refinedPrincipal protocol.Principal, pol *policy) (bool, error) {
-	endorsements := refinedPrincipal.GetEndorsement()
-	rule := pol.GetRule()
-	switch rule {
-	case protocol.RuleForbidden:
-		return false, fmt.Errorf("public authentication fail: [%s] is forbidden to access",
-			refinedPrincipal.GetResourceName())
-	case protocol.RuleAny:
-		return p.verifyRuleAnyCase(pol, endorsements)
-	case protocol.RuleMajority:
-		return p.verifyRuleMajorityCase(pol, endorsements)
-	default:
-		return false, fmt.Errorf("public authentication fail: [%s] is not supported", rule)
-	}
-}
-
 func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
 	roleList := p.buildRoleListForVerifyPrincipal(pol)
 	for _, endorsement := range endorsements {
@@ -661,7 +365,8 @@ func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.End
 
 func (p *pkACProvider) verifyRuleMajorityCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
 	role := protocol.RoleAdmin
-	refinedEndorsements := p.getValidEndorsements(map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
+	refinedEndorsements := p.getValidEndorsementsInner(
+		map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
 	numOfValid := len(refinedEndorsements)
 	p.log.Debugf("verifyRuleMajorityAdminCase: numOfValid=[%d], p.adminNum=[%d]", numOfValid, p.adminNum)
 	if float64(numOfValid) > float64(p.adminNum)/2.0 {
@@ -678,26 +383,6 @@ func (p *pkACProvider) buildRoleListForVerifyPrincipal(pol *policy) map[protocol
 		roleList[roleRaw] = true
 	}
 	return roleList
-}
-
-func (p *pkACProvider) lookUpPolicyByResourceName(resourceName string) (*policy, error) {
-	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
-
-	if blockVersion > 0 && blockVersion <= 220 {
-		return p.lookUpPolicyByResourceName220(policyResourceName)
-	}
-
-	if p, ok := p.lastestPolicyMap.Load(policyResourceName); ok {
-		return p.(*policy), nil
-	}
-	pol, ok := p.resourceNamePolicyMap.Load(policyResourceName)
-	if !ok {
-		if pol, ok = p.exceptionalPolicyMap.Load(policyResourceName); !ok {
-			return nil, fmt.Errorf("look up access policy failed, did not configure access policy "+
-				"for resource %s", policyResourceName)
-		}
-	}
-	return pol.(*policy), nil
 }
 
 // all-in-one validation for signing members: signature, policies
@@ -754,7 +439,7 @@ func (p *pkACProvider) RefineEndorsements(endorsements []*common.EndorsementEntr
 	return refinedEndorsement
 }
 
-func (p *pkACProvider) getValidEndorsements(orgList map[string]bool, roleList map[protocol.Role]bool,
+func (p *pkACProvider) getValidEndorsementsInner(orgList map[string]bool, roleList map[protocol.Role]bool,
 	endorsements []*common.EndorsementEntry) []*common.EndorsementEntry {
 	var refinedEndorsements []*common.EndorsementEntry
 	for _, endorsement := range endorsements {
@@ -798,11 +483,11 @@ func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePol
 func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
 
-	if blockVersion > 0 && blockVersion <= 220 {
+	if blockVersion > 0 && blockVersion <= blockVersion220 {
 		return p.lookUpPolicy220(policyResourceName)
 	}
 
-	if p, ok := p.lastestPolicyMap.Load(policyResourceName); ok {
+	if p, ok := p.latestPolicyMap.Load(policyResourceName); ok {
 		return p.(*policy).GetPbPolicy(), nil
 	}
 
@@ -812,71 +497,6 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	}
 	pbPolicy := pol.(*policy).GetPbPolicy()
 	return pbPolicy, nil
-}
-
-// LookUpExceptionalPolicy returns corresponding exceptional policy configured for the given resource name
-func (p *pkACProvider) LookUpExceptionalPolicy(resourceName string) (*pbac.Policy, error) {
-	blockVersion, policyResourceName := getBlockVersionAndResourceName(resourceName)
-
-	if blockVersion > 0 && blockVersion <= 220 {
-		return p.lookUpExceptionalPolicy220(policyResourceName)
-	}
-
-	if p, ok := p.lastestPolicyMap.Load(policyResourceName); ok {
-		return p.(*policy).GetPbPolicy(), nil
-	}
-
-	pol, ok := p.exceptionalPolicyMap.Load(policyResourceName)
-	if !ok {
-		return nil, fmt.Errorf("exceptional policy not found for resource %s", policyResourceName)
-	}
-	pbPolicy := pol.(*policy).GetPbPolicy()
-	return pbPolicy, nil
-}
-
-// CreatePrincipal creates a principal for one time authentication
-func (p *pkACProvider) CreatePrincipal(resourceName string, endorsements []*common.EndorsementEntry,
-	message []byte) (protocol.Principal, error) {
-
-	if len(endorsements) == 0 || message == nil {
-		return nil, fmt.Errorf("setup access control principal failed, a principal should contain valid (non-empty)" +
-			" signer information, signature, and message")
-	}
-	if endorsements[0] == nil {
-		return nil, fmt.Errorf("setup access control principal failed, signer-signature pair should not be nil")
-	}
-	return &principal{
-		resourceName: resourceName,
-		endorsement:  endorsements,
-		message:      message,
-		targetOrg:    "",
-	}, nil
-}
-
-func (p *pkACProvider) CreatePrincipalForTargetOrg(resourceName string,
-	endorsements []*common.EndorsementEntry, message []byte, targetOrgId string) (protocol.Principal, error) {
-
-	return nil, fmt.Errorf("setup access control principal failed, CreatePrincipalForTargetOrg is not supported")
-}
-
-// VerifyPrincipal verifies if the principal for the resource is met
-func (p *pkACProvider) VerifyPrincipal(principal protocol.Principal) (bool, error) {
-
-	refinedPrincipal, err := p.refinePrincipal(principal)
-	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
-	}
-
-	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
-		return true, nil
-	}
-
-	pol, err := p.lookUpPolicyByResourceName(principal.GetResourceName())
-	if err != nil {
-		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
-	}
-
-	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
 //GetMemberStatus get the status information of the member
@@ -889,27 +509,6 @@ func (p *pkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []
 	return true, nil
 }
 
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
-func (p *pkACProvider) GetValidEndorsements(principal protocol.Principal) ([]*common.EndorsementEntry, error) {
-	refinedPolicy, err := p.refinePrincipal(principal)
-	if err != nil {
-		return nil, fmt.Errorf("refinePrincipal fail in GetValidEndorsements: [%v]", err)
-	}
-	endorsements := refinedPolicy.GetEndorsement()
-
-	pol, err := p.lookUpPolicyByResourceName(principal.GetResourceName())
-	if err != nil {
-		return nil, fmt.Errorf("lookUpPolicyByResourceName fail in GetValidEndorsements: [%v]", err)
-	}
-	roleListRaw := pol.GetRoleList()
-	orgList := map[string]bool{}
-	roleList := map[protocol.Role]bool{}
-	for _, roleRaw := range roleListRaw {
-		roleList[roleRaw] = true
-	}
-	return p.getValidEndorsements(orgList, roleList, endorsements), nil
-}
-
 //GetAllPolicy returns all default policies
 func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
@@ -919,11 +518,97 @@ func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 		policyMap[k] = newPbPolicyFromPolicy(v)
 		return true
 	})
-	p.exceptionalPolicyMap.Range(func(key, value interface{}) bool {
+	p.senderPolicyMap.Range(func(key, value interface{}) bool {
 		k, _ := key.(string)
 		v, _ := value.(*policy)
 		policyMap[k] = newPbPolicyFromPolicy(v)
 		return true
 	})
 	return policyMap, nil
+}
+
+// VerifyPrincipalLT2330 verifies if the principal for the resource is met
+func (pk *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, blockVersion uint32) (bool, error) {
+
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(pk, principal)
+
+	} else if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(pk, principal)
+	}
+
+	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
+}
+
+//GetValidEndorsements filters all endorsement entries and returns all valid ones
+func (pk *pkACProvider) GetValidEndorsements(
+	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
+
+	if blockVersion <= blockVersion220 {
+		return pk.getValidEndorsements220(principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return pk.getValidEndorsements2320(principal)
+	}
+	return pk.getValidEndorsements(principal, blockVersion)
+}
+
+// VerifyMsgPrincipal verifies if the principal for the resource is met
+func (p *pkACProvider) VerifyMsgPrincipal(principal protocol.Principal, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(p, principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(p, principal)
+	}
+
+	return verifyMsgTypePrincipal(p, principal, blockVersion)
+}
+
+// VerifyTxPrincipal verifies if the principal for the resource is met
+func (p *pkACProvider) VerifyTxPrincipal(tx *common.Transaction,
+	resourceName string, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		if err := verifyTxPrincipal220(tx, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	if blockVersion < blockVersion2330 {
+		if err := verifyTxPrincipal2320(tx, resourceName, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return verifyTxPrincipal(tx, resourceName, p, blockVersion)
+}
+
+// VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
+func (p *pkACProvider) VerifyMultiSignTxPrincipal(
+	mInfo *syscontract.MultiSignInfo,
+	blockVersion uint32) (syscontract.MultiSignStatus, error) {
+
+	if blockVersion < blockVersion2330 {
+		return mInfo.Status, fmt.Errorf(
+			"func `verifyMultiSignTxPrincipal` cannot be used in blockVersion(%v)", blockVersion)
+	}
+	return verifyMultiSignTxPrincipal(p, mInfo, blockVersion, p.log)
+}
+
+// IsRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
+// it's implements must be the same with vm-native/supportRule
+func (p *pkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
+	if blockVersion < blockVersion220 {
+		return isRuleSupportedByMultiSign220(p, resourceName, p.log)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return isRuleSupportedByMultiSign2320(resourceName, p, p.log)
+	}
+
+	return isRuleSupportedByMultiSign(p, resourceName, blockVersion, p.log)
 }

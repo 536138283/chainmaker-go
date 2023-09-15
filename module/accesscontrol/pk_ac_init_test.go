@@ -9,28 +9,27 @@ package accesscontrol
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
-	"path/filepath"
+	"sync"
 	"testing"
 
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/protocol/v2/test"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/utils/v2"
 
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/helper"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/protocol/v2"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	TestPK1 = `-----BEGIN PUBLIC KEY-----
+	ConsensusPK1 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCwu3sB7+5LJMtqsP2Y3sn5eW8b
 r/dv1d9WXa6p0UEsUoVY4bgDZ471X9e0htnZUWcuvI5B0wHkoaJiKhUxSk5AJ8OY
 5IvFI0OqQS07IMqIj3/u3iERVluuawA5IUjPFmCiubJ/Pb/JZCpFDQbZb209h7Vs
 OkD1v94WlNJN8sm7qQIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK1 = `-----BEGIN RSA PRIVATE KEY-----
+	ConsensusSK1 = `-----BEGIN RSA PRIVATE KEY-----
 MIICWwIBAAKBgQCwu3sB7+5LJMtqsP2Y3sn5eW8br/dv1d9WXa6p0UEsUoVY4bgD
 Z471X9e0htnZUWcuvI5B0wHkoaJiKhUxSk5AJ8OY5IvFI0OqQS07IMqIj3/u3iER
 VluuawA5IUjPFmCiubJ/Pb/JZCpFDQbZb209h7VsOkD1v94WlNJN8sm7qQIDAQAB
@@ -45,15 +44,15 @@ jnC9H1dMrCl0w3ywpx8gc7DbDEHt1zPkhGprnKWcCx2bnpieAl5zlqeOZSbxL4Hd
 VOBCImaMh9pqnuuBTwJATglQw9U1JbQ10Xq85MdJAVwbd1DgXmM1NAF4V+aeVpFf
 V2+2cdpXmxG5Hrp9dy/oR8AGLPQ/JFeUYDxjEU5GNw==
 -----END RSA PRIVATE KEY-----`
-	TestNodeId1 = "QmQXjPB4DS8fNxsbqWzozSfwRiBbDDZg3t5qTxeb7R8BV5"
+	ConsensusId1 = "QmQXjPB4DS8fNxsbqWzozSfwRiBbDDZg3t5qTxeb7R8BV5"
 
-	TestPK2 = `-----BEGIN PUBLIC KEY-----
+	ConsensusPK2 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDcGCdkB7vruKPcGXIneql989b3
 pGYfE7icZBHdNrCY6QqDqhFytlLL/zVTpDJVopOQRAonEyZtbhFFPoMntIwRR7Uw
 oePfJmPw/woQ7oLJtVWW1a9am15ZIMro/dCzywi1Z6qlU+Vf1uOR7YzPF1OeIymv
 0SXG2DMny9m1OJ40ZwIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK2 = `-----BEGIN RSA PRIVATE KEY-----
+	ConsensusSK2 = `-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQDcGCdkB7vruKPcGXIneql989b3pGYfE7icZBHdNrCY6QqDqhFy
 tlLL/zVTpDJVopOQRAonEyZtbhFFPoMntIwRR7UwoePfJmPw/woQ7oLJtVWW1a9a
 m15ZIMro/dCzywi1Z6qlU+Vf1uOR7YzPF1OeIymv0SXG2DMny9m1OJ40ZwIDAQAB
@@ -68,15 +67,15 @@ ovZX2gIrPTmVriz/LMvROjHsQQneeSKrwMOlQU06NYUeU7iY8VJUjSKdMQj6sQvi
 jDTzGVnUxA5aoEoYRHsCQG9bw6jejRyQ0CM3Xv1gurAy089LyDF04mn7GuHWFj6B
 0NBQdGsuTBTxd0uXa/kMEwd3F782IEL2h1tDCBjhYAM=
 -----END RSA PRIVATE KEY-----`
-	TestNodeId2 = "QmRUuqP9WkNmHv2NR8P9RUyBKSdjHuz4uu79hjgM4rWri4"
+	ConsensusId2 = "QmRUuqP9WkNmHv2NR8P9RUyBKSdjHuz4uu79hjgM4rWri4"
 
-	TestPK3 = `-----BEGIN PUBLIC KEY-----
+	ConsensusPK3 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC4YX5dJBVlHNh6LKAd2dTeW9yx
 NWbAPGzgiCF8tOmRuJ+jfBt2VY8GkBxMwPwsEf8mp/4l1NXRp/jSJ69SRwU06rb4
 ujl7NzkeBwzc7cFbFxoqoKeI0nmIJcn7tI2YCSX7HtoddnsyLZNCFFKDRB/Db4f1
 5Z5rDZWMAMlxeffoGQIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK3 = `-----BEGIN RSA PRIVATE KEY-----
+	ConsensusSK3 = `-----BEGIN RSA PRIVATE KEY-----
 MIICXQIBAAKBgQC4YX5dJBVlHNh6LKAd2dTeW9yxNWbAPGzgiCF8tOmRuJ+jfBt2
 VY8GkBxMwPwsEf8mp/4l1NXRp/jSJ69SRwU06rb4ujl7NzkeBwzc7cFbFxoqoKeI
 0nmIJcn7tI2YCSX7HtoddnsyLZNCFFKDRB/Db4f15Z5rDZWMAMlxeffoGQIDAQAB
@@ -91,15 +90,15 @@ NfHL1SDCtDlxppgFQnI7vzaoJKFzVg2AHQJAQ/xwVwQFLr6VxrYoPEFINq5E3oI1
 4MEq8cchioF+RhhdnK0CQQCxsKE9Q6Cc+u1LzzZ3mwIJnjSmnpXAsGbP40kCEqHH
 Aw0Q6CM4gQkL4N0LgqqmyWglIkfCscVOTA50OGYEioxj
 -----END RSA PRIVATE KEY-----`
-	TestNodeId3 = "Qmd8o58EHnsfBbDikRra4XNsCmArXjXLSdZdkYwDcdsUvQ"
+	ConsensusId3 = "Qmd8o58EHnsfBbDikRra4XNsCmArXjXLSdZdkYwDcdsUvQ"
 
-	TestPK4 = `-----BEGIN PUBLIC KEY-----
+	ConsensusPK4 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDjToONx0tUBD3lvXscgXkR81r8
 c1doBh02g0tjseWeOehROM0hIVYHeY/6CoBtmdXSIlc0ITI/dm4wLw47egkd6gQO
 ph2EeuFarzTcXJjztBZElDXEQpppj4E5vx7Qp21uc4uAv/x5o6ORy0tL90bo/n/z
 bUzV0TbkOzV4pib2swIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK4 = `-----BEGIN RSA PRIVATE KEY-----
+	ConsensusSK4 = `-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQDjToONx0tUBD3lvXscgXkR81r8c1doBh02g0tjseWeOehROM0h
 IVYHeY/6CoBtmdXSIlc0ITI/dm4wLw47egkd6gQOph2EeuFarzTcXJjztBZElDXE
 Qpppj4E5vx7Qp21uc4uAv/x5o6ORy0tL90bo/n/zbUzV0TbkOzV4pib2swIDAQAB
@@ -114,15 +113,15 @@ wQDnTW7ROEN+EQu+cmDLCNC2tBY86owRDr8/EP1ykb73CLjniGj5N/d/5PT/9F3Y
 ZU/2z1nP3uxpB85dC/ECQCHuQLatz4sIVuHYQNl2nRiu+1eNfgpB6wGtIh3O782/
 Wk0+loBRjk4pBj9djnlephMX9gHptNqyYvJtM3LMJm0=
 -----END RSA PRIVATE KEY-----`
-	TestNodeId4 = "QmQ8nYaAMm5DdMzf3GaY2NPkmGneqmRyaSJDNRaFwuoxwV"
+	ConsensusId4 = "QmQ8nYaAMm5DdMzf3GaY2NPkmGneqmRyaSJDNRaFwuoxwV"
 
-	TestPK5 = `-----BEGIN PUBLIC KEY-----
+	TrustRootPk1 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDJ2H7PWt3l8CF+zvQuRssnVAyY
 xyB4tZ6KpXPpb9Y7fzK4mju8pBBFyErBSNM5uqgGYrnmf9Plh3MZvwSGd5ZVHZ3b
 f9qx4cttzzAMsHcjra6AJ44qo5jxX0bVIiyErqEqGvYvAqUEb7Ye0kFKs/Z2tq2e
 o79CwhOI0TLHOpby8wIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK5 = `-----BEGIN RSA PRIVATE KEY-----
+	TrustRootSK1 = `-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQDJ2H7PWt3l8CF+zvQuRssnVAyYxyB4tZ6KpXPpb9Y7fzK4mju8
 pBBFyErBSNM5uqgGYrnmf9Plh3MZvwSGd5ZVHZ3bf9qx4cttzzAMsHcjra6AJ44q
 o5jxX0bVIiyErqEqGvYvAqUEb7Ye0kFKs/Z2tq2eo79CwhOI0TLHOpby8wIDAQAB
@@ -138,13 +137,13 @@ BPs2k0VPHowW2r0NdQJBAIVCNla0HUB1+1qtsI1qJHqzbI5eXTjEmKJ3FHxYvC9U
 E0pyQvClu6PjjyAWRNMSGms4slKFgGffMJf4o1nkB1k=
 -----END RSA PRIVATE KEY-----`
 
-	TestPK6 = `-----BEGIN PUBLIC KEY-----
+	TrustRootPK2 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDEyJWuNjX1BNfsbPtmgzcbfFzb
 tHTbOH6I9svBaOAL8B1VyPK+RGIHtZgU5D4EOyWmFTwuXIQ98XGAkQHCJm75mKcG
 Th/a3Q0HAf9guR8q5MT+mp0yckHuieMKQD30RafxoZi9H3LBKyGR2KMkNLjdhL3o
 Vj+jFNeHf0gOkiQifwIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK6 = `-----BEGIN RSA PRIVATE KEY-----
+	TrustRootSK2 = `-----BEGIN RSA PRIVATE KEY-----
 MIICXQIBAAKBgQDEyJWuNjX1BNfsbPtmgzcbfFzbtHTbOH6I9svBaOAL8B1VyPK+
 RGIHtZgU5D4EOyWmFTwuXIQ98XGAkQHCJm75mKcGTh/a3Q0HAf9guR8q5MT+mp0y
 ckHuieMKQD30RafxoZi9H3LBKyGR2KMkNLjdhL3oVj+jFNeHf0gOkiQifwIDAQAB
@@ -160,13 +159,13 @@ hpyh7o6CYcs8xebU5FECQQCH0ZcTXrcX452gG+WUUL+0M0uDy4tF7KOkO89Aisqm
 9Pr4zSK60hTtx3dAuD83HhezMjBxRqLHjLk0QcuNgHeq
 -----END RSA PRIVATE KEY-----`
 
-	TestPK7 = `-----BEGIN PUBLIC KEY-----
+	TrustRootPK3 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC++M/QNw2iVFY6lOKZsFLu2poh
 8OzNpc//BO6nfp+9ByuaaM2fL8oWt5bGGAxHRbBdt2UA6MgD5fi8ATFygHdy7RHL
 4WwgaCv7VM4E4EI2LPrPMUj8ufQG+Pp1t4OQU4FdYCq6eQCc49bPkTcEKnDt24wJ
 yz8mDNPU5pEP/c509QIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK7 = `-----BEGIN RSA PRIVATE KEY-----
+	TrustRootSK3 = `-----BEGIN RSA PRIVATE KEY-----
 MIICXAIBAAKBgQC++M/QNw2iVFY6lOKZsFLu2poh8OzNpc//BO6nfp+9ByuaaM2f
 L8oWt5bGGAxHRbBdt2UA6MgD5fi8ATFygHdy7RHL4WwgaCv7VM4E4EI2LPrPMUj8
 ufQG+Pp1t4OQU4FdYCq6eQCc49bPkTcEKnDt24wJyz8mDNPU5pEP/c509QIDAQAB
@@ -182,13 +181,13 @@ vvV4gM7E5Y13yBSjwQJBAIrxmftYFKaIQI4AiHlQ+vDVxjqpern9lY/DidTZpZ6H
 h1iX7Cg1KNPMmf5lX6vBAvR8jy2W4mQS81yWQucFmmw=
 -----END RSA PRIVATE KEY-----`
 
-	TestPK8 = `-----BEGIN PUBLIC KEY-----
+	TrustRootPK4 = `-----BEGIN PUBLIC KEY-----
 MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDQOJSqXyNB+Q62cXT+lx4TGNDU
 Ast/pGwRFzPo+Ofef7lafQqu60gbkq4spQYqEgWyd7xr5tEw3tnQr3VEnSaQu2nS
 gJDcT4yol0brUV0b2im9PNA45Q8QT+cZVILPLf3jJZtIxBFLps9q2Js65Xc8P314
 UGClc2AZd8w7G7MLlwIDAQAB
 -----END PUBLIC KEY-----`
-	TestSK8 = `-----BEGIN RSA PRIVATE KEY-----
+	TrustRootSK4 = `-----BEGIN RSA PRIVATE KEY-----
 MIICXQIBAAKBgQDQOJSqXyNB+Q62cXT+lx4TGNDUAst/pGwRFzPo+Ofef7lafQqu
 60gbkq4spQYqEgWyd7xr5tEw3tnQr3VEnSaQu2nSgJDcT4yol0brUV0b2im9PNA4
 5Q8QT+cZVILPLf3jJZtIxBFLps9q2Js65Xc8P314UGClc2AZd8w7G7MLlwIDAQAB
@@ -202,6 +201,158 @@ So3L30AHo4aYGu9Zyqwz5HfLdd2/U0111C/agdFUiArZemnxMO3adQEXNM0CQBxu
 gY+ux6Up7qImwtyhdZAIEvSNsNJCxswwnyw+Ka/TzuyKp1ZHI0dKlOlPmTmQvdw2
 9EzxUFNaBoKKUAe/7M0CQQDqPspBjU5ihqx/HFGnFHcVvtyhpUh8SHHltKgR2igJ
 5rAc8ICzKkgr5Cqd/yQDaT5R1mtYdgd+AvZ/ucEvDDgK
+-----END RSA PRIVATE KEY-----`
+
+	ClientPK1 = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA57b1SHQKXl47qa/35WaX
+3UNI/UTBIPxcJjJIW84hYBOMDWGwBQHE1n+l+b9FctQXRIpB/DBPasRvg8YfUSN0
+5Rexv3/s+Z/nIXXlVaatwBV+tCb97iqKurYJpMuxJmOhe68ENgFGZkUfAMvByHfP
+VfzKg2y8gZmsxyfPnZ0dPZpm/xSzdceNI49iWLFvCARkKEjuO0rjL8tqk3cxY5uT
+DSov68UEbyhQOYTodLlByY9uwzQOF74TUWV7ZiEfDoFwaiJi7Q+60wQm9oPS/Xeo
+E97IfA9tEKe7kKmBQZxoI8vyStPUQ1WEFn+wtcB67pS9dEpTRWBgmQYtLtkq4lcH
+RQIDAQAB
+-----END PUBLIC KEY-----`
+
+	ClientSK1 = `-----BEGIN RSA PRIVATE KEY-----
+MIIEpQIBAAKCAQEA57b1SHQKXl47qa/35WaX3UNI/UTBIPxcJjJIW84hYBOMDWGw
+BQHE1n+l+b9FctQXRIpB/DBPasRvg8YfUSN05Rexv3/s+Z/nIXXlVaatwBV+tCb9
+7iqKurYJpMuxJmOhe68ENgFGZkUfAMvByHfPVfzKg2y8gZmsxyfPnZ0dPZpm/xSz
+dceNI49iWLFvCARkKEjuO0rjL8tqk3cxY5uTDSov68UEbyhQOYTodLlByY9uwzQO
+F74TUWV7ZiEfDoFwaiJi7Q+60wQm9oPS/XeoE97IfA9tEKe7kKmBQZxoI8vyStPU
+Q1WEFn+wtcB67pS9dEpTRWBgmQYtLtkq4lcHRQIDAQABAoIBAQCcJrKzaefW4oAo
+gTp4sKOk64QTkbLozMg4wWf73jSlr2aRWgSpyyBgQNOUM67UjFNF0DpZfiD23Xwc
+/HX8Uv2iqU4StF35dyXmabHr/5BVwuaI90Hmr2qgGq7zDIXMThXz6OTYlBFiODCF
+c8qakwr5cory+GMsn2hNKeoC2G9tJAirf+5Bj5xDx5JTwtggUr5NUR37fyeAa2Wh
+atqY5cb2k3MEqr6p1zZZ5GLNADvgzXWK+XeDNA/x8AqwHM6ETpljwBd8Rx5EHwjd
+6tj7K1oBW43s5lMBe4K0cOgLAGpK48Ck0DZ++8CovqQSQUe7OsIY1MX5ZSrwpKuh
+vyjiDMehAoGBAP7rtxozJkhXP899UZsB9q5QuRMLTZruFNFEgjRRsEc+Qr6O25qf
+cEzE3yO2EpAmSMS570eK596SvjO6Jd1GM/e/AUnGlOJ3fEOt58ICNWV9V3RdhFwi
+Nmmqj3yXhiSsQU695+1NwFViajaXTDjXP/LskJP2hLpolIrkwOanKryZAoGBAOiy
+F4zP/RdbhM1CjkyJXHaG8Uru/jimOuKSHhpHnANeNQrMylM4IYH33/GFIIS7hsJg
+9ohH5XMnslp1CjbEvjDXuurJx5TFBMFCPy3LppQDKZBLnWyNGBsSDu6/oq+/ozIA
+KVTEGlQvqZDQCaxXwvxHFB1w+xlHXAdsY0TVL7+NAoGAVXwEHeQTLWUcv969c+aX
+q2LkfU9oCdFW58o6g4L1Qx7M0Qwk9lgLF6NZVKdk2DQOaPIVHH+nO8snvz7oHajC
+Go1RyESwfrUk1alGs5d8AnmizyHhFehfKNYKYfSKBlhBWj9yu/A71CY5ie74n4MH
+LdZIsWWUotIZJe6KBY7/VNkCgYEAscHaW6dHH+C5wlNlgPItwB21lhib+4qA0TPt
+6wVpGOmOe4GVzZzDfBVu7YFVJhBbEYIg0lqZ3S4mARQHiW8iGw2xrEoYPH2E9F03
+BjTcO5Vu2tvollPyZjuVTKz4CmnKsReOe0KTGlyOnCFQQmeIfE+P/i2go97vXnxe
+GOcCYsECgYEAhB0srmyo49HErxPBzVKN1bVz1GczVtUUVx0tJLhvdM43vTZeXMnl
+EstwZWXf3UB5FRsmHSZoBhRmkNzFQ54pM/hlGaGrirgYowMfe5j0Zd0jZBQqpApW
+YET1/PeQXaF1V9k8wmmZHuLdgo8tw90x0GVCcmxs3UHlGsEJ0ggnCOk=
+-----END RSA PRIVATE KEY-----`
+
+	ClientPK2 = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAw4tNkDyjmr+X+X49ydLY
+Zg1xfu/pykqQtp+Uj9yOajRLuDvPJ5a7Xw/sZ5CVTC3YYeVMNXsAdi3OC9epONXp
+1DWjx75Ey+DfQGjpB1ugLFMnWaundj5FSe8kQ7Q6bFM0hrmhhVT4XIabg1NRNr/X
+RObHGpIgxIBkEJp88hGMhhrrJXla07p5UOmGPywSJTcxosIhuQ5AenE2anHrQJ2j
+QfbJOMcdL8cujw0VNjLxlGLPh0y0F6g0ee++/aS2Mn1Jw9vZkA4YOEzTt3Qg7Scr
+1WdrmYnH6eqZb/tHJmCn5E8CmN+KHhVzzuI7NB8P4tBq/N7ho/jq3RRgT1psw51g
+swIDAQAB
+-----END PUBLIC KEY-----`
+
+	ClientSK2 = `-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAw4tNkDyjmr+X+X49ydLYZg1xfu/pykqQtp+Uj9yOajRLuDvP
+J5a7Xw/sZ5CVTC3YYeVMNXsAdi3OC9epONXp1DWjx75Ey+DfQGjpB1ugLFMnWaun
+dj5FSe8kQ7Q6bFM0hrmhhVT4XIabg1NRNr/XRObHGpIgxIBkEJp88hGMhhrrJXla
+07p5UOmGPywSJTcxosIhuQ5AenE2anHrQJ2jQfbJOMcdL8cujw0VNjLxlGLPh0y0
+F6g0ee++/aS2Mn1Jw9vZkA4YOEzTt3Qg7Scr1WdrmYnH6eqZb/tHJmCn5E8CmN+K
+HhVzzuI7NB8P4tBq/N7ho/jq3RRgT1psw51gswIDAQABAoIBACyTqQ7kg/dXDfIW
+UUedBS/eiK0DTCyNawf2wQs6oEydt1U8bTD9L6GwI5hIYYCIQveuKf1XGPfX4UzZ
+0P3f5fo2cCusuEox7TLlt5mxzYXNPv82HmraLzl3hrDYeSkQnrzHvIaEpEmTdggu
+CimM+in+4gywmz+wdR9D2I/maD55pfbHwFE6G8NypcY4cDJxxgHYBya1FussKToP
+5dtx4Ck2VgPJycCw1naAlkeP6v3mC/tBFW+YZoezS6JpTynsxPT2XFTrNstYV8x2
+UrgLtKMSU4uwlsSnHxa4Yf3Kme6WlLwamN9Qj7QoCiWT+csDYbjwpJFRK651f5Hl
+HIuW7mECgYEA9wOzC42/6G01yP0fkbm0ZpWp2mqu8U24mguS/2GHRtAsvs5r0XCx
+wOQiIT/CTu2qr+ISlzjAOmFPgGqaEBTXFNP+VUhsyL9SxN0G1yuvyC1ZaZL55eXz
+3i+QMkHurtyHkXj0elCGoKig80pjD4BEceAEAnR0JG8hF0QnTAohTl8CgYEAyqhK
+eMrWfxxYFEo8XskamnZWs8JoZbhaxYaJYkCxrm9Y9ijVwH9daSe/NeV5Balf4R0n
+u2TfPF+aXH9arXZ6s9hMh9s00LJcOSEOX4LY17eQDbYpTb2KPFnbIjh3Ut312wr0
+xx3uhk2Ihh7RMP9qpk9UO1bmXDKS4dTnWTCvpi0CgYAr0rkyJIzWhIGVTesK5IJv
+7L98o46z+tD0a3dB3aCtXIODuoWAW9j9Wrv/YBtt+1Zb6+TWdVgNQ3RiWQdKMRhT
+dqTZpoa+OstJZ9kt1W9TOVBynYO+WMSiN5gCgpYA6dkXYvkktiKcYC5l212lw2Dh
+PxgXA2gTiq+5O/soz2dHSwKBgGk4Zao/zoyiv8yRGrUv/yMRrESa/K9Lv71s8+nS
+oy5pW6w7WXgf6PUPEQU/xs08uq5b/+QZJJrpHHFIImGL8XttI5cqJkrxQFbdJeRL
+QKEICsBDw0A82Agrs04aOUIKQntfPeYgUVbj7K2OVJj3FH2TFK3WmbZm/8JHU3MI
+hzplAoGAV5TKxE+8UW36vXi+iC6BexiK1GeJmLZ+stJtiGU2vUN9ZlIdEIL60EN7
+ahLL6pWe+yFhNzeA7HZErIuq3lOR+zCbyYeQYRUaWXJ6ENpBHyxvkcAkh3+BI1Ea
+VHumj5cFWtDxA/G3tM2Vk0h8iIy9q4HDtun42pdtAHNJGCbKA8c=
+-----END RSA PRIVATE KEY-----`
+
+	ClientPK3 = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt0BqW4FOBWO7G+G1Qoo+
+EAH9vsg4F8Q6X+AC4MR0fY/npL/5ERy0YZHYsp5AEaRqoqfySfwSXEpm+AMip6Un
+eKYJM1ZoBK5UJMzvRO55UDGHSEm4KV25UZKHHQrxLzUf8nA7ZbXTdc+h5RDKX0B6
+AOtXtpAqjUiYGf/ITdeJO+CS9OuKWUOiPS9oIOD+OMDkTFIrz2pC3R1Zezlmze2w
+rfNQSIjXJJzAvzJb1CnAgmMl4zERXDuQLqz9g8qZt1OQ2UTnzbRQA57UAuojtooL
+g6ld0MPIYhR3D7u1EmPF1npQUz+zG9QRQAfioC9I1O+IbLpDSyek1MECVbpR1PZg
+2wIDAQAB
+-----END PUBLIC KEY-----`
+
+	ClientSK3 = `-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAt0BqW4FOBWO7G+G1Qoo+EAH9vsg4F8Q6X+AC4MR0fY/npL/5
+ERy0YZHYsp5AEaRqoqfySfwSXEpm+AMip6UneKYJM1ZoBK5UJMzvRO55UDGHSEm4
+KV25UZKHHQrxLzUf8nA7ZbXTdc+h5RDKX0B6AOtXtpAqjUiYGf/ITdeJO+CS9OuK
+WUOiPS9oIOD+OMDkTFIrz2pC3R1Zezlmze2wrfNQSIjXJJzAvzJb1CnAgmMl4zER
+XDuQLqz9g8qZt1OQ2UTnzbRQA57UAuojtooLg6ld0MPIYhR3D7u1EmPF1npQUz+z
+G9QRQAfioC9I1O+IbLpDSyek1MECVbpR1PZg2wIDAQABAoIBAQCljgSIduFN7TP1
+lIx1eP9o5uOfoLNMhXNXesIe3l1/sqrMJMOXuh8cpu7nMCEhzzCnkqNKQ/kyd+Ve
+2zZLzuFCFn7pan6++9/4/0yLMgdXc+eMX02J0arDD2YRzvjmdVBPbyW6VfKc1OCm
+Wez68P1IJ1YvET/gNF1136fO65KIDGnY4rdqnyz6rbsSwzWYY+P60xSTX9KATbBo
+I6mu66F7ANTMmlo6XpxITOCQhdFDL4Py8RggDusujdAIB8RS7Kz0M4mpdZIGBIR0
+5KwV0l8m2guLyLCTanyMvBes4/c2tfdIbyiNgjhaPb1wOaPLnEIVzreU5mCNyiH5
+qAveTdKBAoGBAPKRmeZZ5jkTNTpg+mdpwxbSMqX2vrqhSztejTAHgrJYxgk7nvTC
+9SNw9NLivc3DZYIgxNHLTt1dt2yPq0mU+HbjwvxVgD9qIlHtcx5xUSGX/JE5jcTf
+lbQmLdG0oY4+KHXc1WRxLhOmCd+0H5AyDmC4kvSpSDjBkM4C1V71NCCjAoGBAMFl
+/0fcifbe8KRApt93Zz+YQUkCZqw9wcnBrwIDp1nl7PnJo89n4JcD1Rquf0a53jxc
+DKnAjx5m3h7Q8fs9KKKeuCGmfO5FVdxJy2pvZOQAHMp9dTDOBrwIRG9HOZG5ics/
++jtPhsy9xDaKAMLRTIg8OhDxXoQ8PCOQ3uf8QOppAoGBAOqowGF/hqCgXFXli1iP
+kBN7tVOoqEqTztvYVG2qVl2CU9KKwvO1xsBKfg2lHEj6RjDk0oLCU8EC8HctZV8B
+pnwdSnwhmre+TQVE2KESrpH5HnS/YM6cHY7xgFHmlIOuziV3RVitxQ1tCxBGiGJO
+imo3JLNbMGr3lsY1J4V9YLhRAoGAa1MADNANXAuyPWSHdoGbsYX7zNlhQvpunVk3
+loWSjGf1T1Uf68x4rTV6QHlPtl8VPifS+y0Z/0QUxcMsVkFFWKF+C2aJ8+xUTpBB
+K0qwEXsifxiKPVBIGnb4C0zaXM0686kIY3upkdtJlP6Wl4Zw0zWg/6AC1J1cvlv5
+54FsQOkCgYB017jnQQlm4LIG7hcDj2lSwMnhe3g4bJMu5SQnQdsqQuUHfvFX3xkz
+MHvuEY0DCymy3Y9tlBBNoeT0+IDR9NYkaerYpXyn0nsoJeB4OWjbvNGP6YlptaxK
+7wfn/wzBsNmwvWRqVG5pIn6j7PsYJy9yfryVQaSRxJBiCTDe5QSqFg==
+-----END RSA PRIVATE KEY-----`
+
+	ClientPK4 = `-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAwIBsfUYDenouuKQpYmNM
+QflcAaugnXlaJsMxLshDP6QmMS1jFPcAIZBGPnRiznnpj0yWi5ppl+WvV8MH18n4
+quPTGOs2caUM0jh80Y2FY6+/zXGGZ7Df4z0u825l1VImXB83sZjBXVProchc8WeR
+ES3jsCejuFrOrbbSzgqlSK0pkKDjVSPRzvQHPIvrpGFKDx3fxJgSGq8/gYSySyAL
+h3QaKkAlYl6MM48pfNMYgvmmUMAR82FE/4TmYlkNzlPTRS7pAqtpbkxOlbhsDIQ3
+COCocGGpHdTN1Jc4ZoKr6TkZezXDmX7PcuSThF8SqUI30acrdHYfENuT7q5df0bX
+8wIDAQAB
+-----END PUBLIC KEY-----`
+
+	ClientSK4 = `-----BEGIN RSA PRIVATE KEY-----
+MIIEogIBAAKCAQEAwIBsfUYDenouuKQpYmNMQflcAaugnXlaJsMxLshDP6QmMS1j
+FPcAIZBGPnRiznnpj0yWi5ppl+WvV8MH18n4quPTGOs2caUM0jh80Y2FY6+/zXGG
+Z7Df4z0u825l1VImXB83sZjBXVProchc8WeRES3jsCejuFrOrbbSzgqlSK0pkKDj
+VSPRzvQHPIvrpGFKDx3fxJgSGq8/gYSySyALh3QaKkAlYl6MM48pfNMYgvmmUMAR
+82FE/4TmYlkNzlPTRS7pAqtpbkxOlbhsDIQ3COCocGGpHdTN1Jc4ZoKr6TkZezXD
+mX7PcuSThF8SqUI30acrdHYfENuT7q5df0bX8wIDAQABAoIBABLLt0wYDPjlezBe
+HwhTR7vdXCVxm5Ikqi/EuUWnGiHZpj0BAH6oi2O7kZBBjvA4KRzrzns9DXheXduE
+2HwyZUxSSGdTeBJqmjDggRd46QBNxb2KiyQOuh2W+MGeEuVcSxCNn8OAdcjmC8jV
+JnYPtbNmtqeZhzvV6f4+LqEdmvvYeRsnLliHHdU5mpS1/m8FJpE3W/d1GZQ2KVN3
+nmqrSYSaqTfPI5dV7Ij9OeO37basFAKC5JfPcQ/7EY0aKi9rlgbOIUfa8+LDG2ve
+X2f6t7n2OkOWpRBv+JzvrJU31k5tlTYqQJc2OfxJT1EI+Lj6fXMj9Upiosq8TR+X
+8XwBVuECgYEA6+RB3Q4rYeEoWsphABYmmlYRyJp6GXMyxA9FZttFxV9SPc+HX8px
+tWHeq6yCKh0+UjuVeydJH6d/XGAfwYrhxGAgY+Be1dT3fn4mWmc2iq4x/cTvW2VA
+5ebuFBnDxqq8oCNCMjlZwkABOFrhPww/MzehqVQ5Kj9dXvVuYlnQXEMCgYEA0OlK
+CpHNvHJ6lrXBVn3iIQu+OyMxfi7B/dds3c7rWWd0exSTlwwVK60DY6bgfxNyfWKz
+zmr1L30P62CHqJ1PCOsNKAo+/BtP2EEa9ZZWC9yqGNB0t8Y37fkXTFmw31ADbfOt
+Xd5zp+wlLqlMyeTQg1D0Kxk9becDO70oagu0spECgYBxzRfdTlWtjdNLIbF0Ojt7
+X6SKs8PN/V5zaa6gtY5ObvMdML5tfxwmVkX3am0NZjhHsckmtcg4RjVSWmlXlOng
+NEPMC1WVMX4I/1D/ciXE987UT6rt28ZYY3VeKyPg90Oyue/YjQR5iylLh8R9ByqC
+SgdqymAdup4QDrWnKw8zQwKBgA78PPhnHwfeelanMPggTYErU3jwfFNdzUKFGmUK
+u60NE7jkb/XMwxP/9BdI2B+laHgABX/QAkhmwyaSJQj+R7YPDkGKApyY5PBRMzrc
+js2JBZaEFWs9R7PFQ1uRr3NFTQmtCgmKtGceNEiVklGFHUPeIbWZuONSR9QYLHb2
+4f5RAoGAEKyhTOiYFIDT7nigSncSPaetehnYM+OmudXn2NlBXKnHTc9+3YmeJuJr
+Ob0yRE9CD0mXHTYpJfb9T2y/GQQCL5xeV6JuSHUFET2bH2sas/CS+5sTtOe1ObK7
+5RwvOyELHncqgGEzi9A0CsfmE0rjoK1UXquz1gBV0rTvifWy4Ts=
 -----END RSA PRIVATE KEY-----`
 
 	TestPK = `-----BEGIN PUBLIC KEY-----
@@ -361,43 +512,63 @@ Ob0yRE9CD0mXHTYpJfb9T2y/GQQCL5xeV6JuSHUFET2bH2sas/CS+5sTtOe1ObK7
 )
 
 var testConsensus1PKInfo = &testPKInfo{
-	TestPK1,
-	TestSK1,
+	ConsensusPK1,
+	ConsensusSK1,
 }
 
 var testConsensus2PKInfo = &testPKInfo{
-	TestPK2,
-	TestSK2,
+	ConsensusPK2,
+	ConsensusSK2,
 }
 
 var testConsensus3PKInfo = &testPKInfo{
-	TestPK3,
-	TestSK3,
+	ConsensusPK3,
+	ConsensusSK3,
 }
 
 var testConsensus4PKInfo = &testPKInfo{
-	TestPK4,
-	TestSK4,
+	ConsensusPK4,
+	ConsensusSK4,
 }
 
 var testAdmin1PKInfo = &testPKInfo{
-	TestPK5,
-	TestSK5,
+	TrustRootPk1,
+	TrustRootSK1,
 }
 
 var testAdmin2PKInfo = &testPKInfo{
-	TestPK6,
-	TestSK6,
+	TrustRootPK2,
+	TrustRootSK2,
 }
 
 var testAdmin3PKInfo = &testPKInfo{
-	TestPK7,
-	TestSK7,
+	TrustRootPK3,
+	TrustRootSK3,
 }
 
 var testAdmin4PKInfo = &testPKInfo{
-	TestPK8,
-	TestSK8,
+	TrustRootPK4,
+	TrustRootSK4,
+}
+
+var testClient1PKInfo = &testPKInfo{
+	ClientPK1,
+	ClientSK1,
+}
+
+var testClient2PKInfo = &testPKInfo{
+	ClientPK2,
+	ClientSK2,
+}
+
+var testClient3PKInfo = &testPKInfo{
+	ClientPK3,
+	ClientSK3,
+}
+
+var testClient4PKInfo = &testPKInfo{
+	ClientPK4,
+	ClientSK4,
 }
 
 // var testClient1PKInfo = &testPKInfo{
@@ -424,6 +595,13 @@ const (
 	testPermissionedKeyAuthType = "permissionedwithkey"
 )
 
+var (
+	test1PermissionedPKACProvider protocol.AccessControlProvider
+	test2PermissionedPKACProvider protocol.AccessControlProvider
+	test1PublicPKACProvider       protocol.AccessControlProvider
+	test2PublicPKACProvider       protocol.AccessControlProvider
+)
+
 var testPermissionedPKChainConfig = &config.ChainConfig{
 	ChainId:  testChainId,
 	Version:  testVersion,
@@ -438,16 +616,16 @@ var testPermissionedPKChainConfig = &config.ChainConfig{
 		Type: 0,
 		Nodes: []*config.OrgConfig{{
 			OrgId:  testOrg1,
-			NodeId: []string{TestNodeId1},
+			NodeId: []string{ConsensusId1},
 		}, {
 			OrgId:  testOrg2,
-			NodeId: []string{TestNodeId2},
+			NodeId: []string{ConsensusId2},
 		}, {
 			OrgId:  testOrg3,
-			NodeId: []string{TestNodeId3},
+			NodeId: []string{ConsensusId3},
 		}, {
 			OrgId:  testOrg4,
-			NodeId: []string{TestNodeId4},
+			NodeId: []string{ConsensusId4},
 		},
 		},
 		ExtConfig: nil,
@@ -455,19 +633,19 @@ var testPermissionedPKChainConfig = &config.ChainConfig{
 	TrustRoots: []*config.TrustRootConfig{
 		{
 			OrgId: testOrg1,
-			Root:  []string{TestPK5},
+			Root:  []string{TrustRootPk1},
 		},
 		{
 			OrgId: testOrg2,
-			Root:  []string{TestPK6},
+			Root:  []string{TrustRootPK2},
 		},
 		{
 			OrgId: testOrg3,
-			Root:  []string{TestPK7},
+			Root:  []string{TrustRootPK3},
 		},
 		{
 			OrgId: testOrg4,
-			Root:  []string{TestPK8},
+			Root:  []string{TrustRootPK4},
 		},
 	},
 }
@@ -493,101 +671,6 @@ gFh3kIKkVF43OghVeK5nokm4c/2HCRn/zsGKXdLeFhpT3Gpntao8kJ8LJBbEuz0T
 type testPKInfo struct {
 	pk string
 	sk string
-}
-
-type testPkMemberInfo struct {
-	consensus *testPKInfo
-	admin     *testPKInfo
-}
-
-type testPkOrgMemberInfo struct {
-	testPkMemberInfo
-	orgId string
-}
-
-type testPkOrgMember struct {
-	orgId      string
-	acProvider protocol.AccessControlProvider
-	consensus  protocol.SigningMember
-	admin      protocol.SigningMember
-}
-
-var testPKOrgMemberInfoMap = map[string]*testPkOrgMemberInfo{
-	testOrg1: {
-		testPkMemberInfo: testPkMemberInfo{
-			consensus: testConsensus1PKInfo,
-			admin:     testAdmin1PKInfo,
-		},
-		orgId: testOrg1,
-	},
-	testOrg2: {
-		testPkMemberInfo: testPkMemberInfo{
-			consensus: testConsensus2PKInfo,
-			admin:     testAdmin2PKInfo,
-		},
-		orgId: testOrg2,
-	},
-	testOrg3: {
-		testPkMemberInfo: testPkMemberInfo{
-			consensus: testConsensus3PKInfo,
-			admin:     testAdmin3PKInfo,
-		},
-		orgId: testOrg3,
-	},
-	testOrg4: {
-		testPkMemberInfo: testPkMemberInfo{
-			consensus: testConsensus4PKInfo,
-			admin:     testAdmin4PKInfo,
-		},
-		orgId: testOrg4,
-	},
-}
-
-func initPKOrgMember(t *testing.T, info *testPkOrgMemberInfo) *testPkOrgMember {
-	td, cleanFunc, err := createTempDirWithCleanFunc()
-	require.Nil(t, err)
-	defer cleanFunc()
-	logger := &test.GoLogger{}
-
-	ppkProvider, err := newPermissionedPkACProvider(testPermissionedPKChainConfig,
-		info.orgId, nil, logger)
-	require.Nil(t, err)
-	require.NotNil(t, ppkProvider)
-
-	localPrivKeyFile := filepath.Join(td, info.orgId+".key")
-
-	err = ioutil.WriteFile(localPrivKeyFile, []byte(info.consensus.sk), os.ModePerm)
-	require.Nil(t, err)
-
-	consensus, err := InitPKSigningMember(ppkProvider.GetHashAlg(), info.orgId, localPrivKeyFile, "")
-	require.Nil(t, err)
-
-	err = ioutil.WriteFile(localPrivKeyFile, []byte(info.admin.sk), os.ModePerm)
-	require.Nil(t, err)
-
-	admin, err := InitPKSigningMember(ppkProvider.GetHashAlg(), info.orgId, localPrivKeyFile, "")
-	require.Nil(t, err)
-
-	return &testPkOrgMember{
-		orgId:      info.orgId,
-		acProvider: ppkProvider,
-		consensus:  consensus,
-		admin:      admin,
-	}
-}
-
-func testInitPermissionedPKFunc(t *testing.T) map[string]*testPkOrgMember {
-	_, cleanFunc, err := createTempDirWithCleanFunc()
-	require.Nil(t, err)
-	defer cleanFunc()
-
-	var testPkOrgMember = make(map[string]*testPkOrgMember, len(testPKOrgMemberInfoMap))
-	for orgId, info := range testPKOrgMemberInfoMap {
-		testPkOrgMember[orgId] = initPKOrgMember(t, info)
-	}
-	test1PermissionedPKACProvider = testPkOrgMember[testOrg1].acProvider
-	test2PermissionedPKACProvider = testPkOrgMember[testOrg2].acProvider
-	return testPkOrgMember
 }
 
 const (
@@ -652,77 +735,129 @@ var testPublicPKChainConfig = &config.ChainConfig{
 	TrustRoots: []*config.TrustRootConfig{
 		{
 			OrgId: testPublicTrustRootOrgId,
-			Root:  []string{TestPK5, TestPK6, TestPK7, TestPK8},
+			Root:  []string{TrustRootPk1, TrustRootPK2, TrustRootPK3, TrustRootPK4},
 		},
 	},
 }
 
-var testPKMemberInfoMap = map[string]*testPkMemberInfo{
-	testOrg1: {
-		consensus: testConsensus1PKInfo,
-		admin:     testAdmin1PKInfo,
-	},
-	testOrg2: {
-		consensus: testConsensus2PKInfo,
-		admin:     testAdmin2PKInfo,
-	},
-	testOrg3: {
-		consensus: testConsensus3PKInfo,
-		admin:     testAdmin3PKInfo,
-	},
-	testOrg4: {
-		consensus: testConsensus4PKInfo,
-		admin:     testAdmin4PKInfo,
-	},
-}
-
-type testPkMember struct {
-	acProvider protocol.AccessControlProvider
-	consensus  protocol.SigningMember
-	admin      protocol.SigningMember
-}
-
-func initPKMember(t *testing.T, info *testPkMemberInfo) *testPkMember {
-	td, cleanFunc, err := createTempDirWithCleanFunc()
-	require.Nil(t, err)
-	defer cleanFunc()
-	logger := &test.GoLogger{}
-
-	pkProvider, err := newPkACProvider(testPublicPKChainConfig, nil, logger)
-	require.Nil(t, err)
-	require.NotNil(t, pkProvider)
-
-	localPrivKeyFile := filepath.Join(td, "public.key")
-
-	err = ioutil.WriteFile(localPrivKeyFile, []byte(info.consensus.sk), os.ModePerm)
-	require.Nil(t, err)
-
-	consensus, err := InitPKSigningMember(pkProvider.GetHashAlg(), "", localPrivKeyFile, "")
-	require.Nil(t, err)
-
-	err = ioutil.WriteFile(localPrivKeyFile, []byte(info.admin.sk), os.ModePerm)
-	require.Nil(t, err)
-
-	admin, err := InitPKSigningMember(pkProvider.GetHashAlg(), "", localPrivKeyFile, "")
-	require.Nil(t, err)
-
-	return &testPkMember{
-		acProvider: pkProvider,
-		consensus:  consensus,
-		admin:      admin,
+func testCreateTx(contractName string, method string, txId string) *common.Transaction {
+	tx := &common.Transaction{
+		Payload: &common.Payload{
+			ContractName: contractName,
+			Method:       method,
+			Parameters: []*common.KeyValuePair{
+				{
+					Key:   protocol.ConfigNameOrgId,
+					Value: []byte(testOrg1),
+				},
+			},
+			TxId: txId,
+		},
 	}
+
+	return tx
 }
 
-func testInitPublicPKFunc(t *testing.T) map[string]*testPkMember {
-	_, cleanFunc, err := createTempDirWithCleanFunc()
-	require.Nil(t, err)
-	defer cleanFunc()
-
-	var testPkMember = make(map[string]*testPkMember, len(testPKMemberInfoMap))
-	for orgId, info := range testPKMemberInfoMap {
-		testPkMember[orgId] = initPKMember(t, info)
+func testAppendSender2Tx(tx *common.Transaction, hashType string, sender protocol.SigningMember) error {
+	txBytes, err := utils.CalcUnsignedTxBytes(tx)
+	if err != nil {
+		return fmt.Errorf("marshal tx failed, err = %v", err)
 	}
-	test1PublicPKACProvider = testPkMember[testOrg1].acProvider
-	test2PublicPKACProvider = testPkMember[testOrg2].acProvider
-	return testPkMember
+
+	signature, err := sender.Sign(hashType, txBytes)
+	if err != nil {
+		return err
+	}
+
+	senderMember, err := sender.GetMember()
+	if err != nil {
+		return err
+	}
+
+	tx.Sender = &common.EndorsementEntry{
+		Signer:    senderMember,
+		Signature: signature,
+	}
+
+	return nil
+}
+
+func testAppendEndorsement2Tx(tx *common.Transaction, hashType string, endorser protocol.SigningMember) error {
+	txBytes, err := utils.CalcUnsignedTxBytes(tx)
+	if err != nil {
+		return fmt.Errorf("marshal tx failed, err = %v", err)
+	}
+
+	signature, err := endorser.Sign(hashType, txBytes)
+	if err != nil {
+		return err
+	}
+
+	endorserMember, err := endorser.GetMember()
+	if err != nil {
+		return err
+	}
+
+	tx.Endorsers = append(tx.Endorsers, &common.EndorsementEntry{
+		Signer:    endorserMember,
+		Signature: signature,
+	})
+
+	return nil
+}
+
+func TestPublicInitPolicyForCommon(t *testing.T) {
+	ac := pkACProvider{
+		txTypePolicyMap:       &sync.Map{},
+		msgTypePolicyMap:      &sync.Map{},
+		resourceNamePolicyMap: &sync.Map{},
+		senderPolicyMap:       &sync.Map{},
+	}
+
+	ac.createDefaultResourcePolicyForCommon()
+
+	ac.resourceNamePolicyMap.Range(walkResourceName)
+
+	ac.senderPolicyMap.Range(walkExceptional)
+}
+
+func TestPublicInitPolicyForCommon_2320(t *testing.T) {
+	ac := pkACProvider{
+		resourceNamePolicyMap2320: &sync.Map{},
+		exceptionalPolicyMap2320:  &sync.Map{},
+	}
+
+	ac.createDefaultResourcePolicyForCommon_2320()
+
+	ac.resourceNamePolicyMap2320.Range(walkResourceName)
+
+	ac.exceptionalPolicyMap2320.Range(walkExceptional)
+}
+
+func TestPublicInitPolicyForDPoS(t *testing.T) {
+	ac := pkACProvider{
+		txTypePolicyMap:       &sync.Map{},
+		msgTypePolicyMap:      &sync.Map{},
+		resourceNamePolicyMap: &sync.Map{},
+		senderPolicyMap:       &sync.Map{},
+	}
+
+	ac.createDefaultResourcePolicyForDPoS()
+
+	ac.resourceNamePolicyMap.Range(walkResourceName)
+
+	ac.senderPolicyMap.Range(walkExceptional)
+}
+
+func TestPublicInitPolicyForDPoS_2320(t *testing.T) {
+	ac := pkACProvider{
+		resourceNamePolicyMap2320: &sync.Map{},
+		exceptionalPolicyMap2320:  &sync.Map{},
+	}
+
+	ac.createDefaultResourcePolicyForDPoS_2320()
+
+	ac.resourceNamePolicyMap2320.Range(walkResourceName)
+
+	ac.exceptionalPolicyMap2320.Range(walkExceptional)
 }

@@ -116,7 +116,8 @@ func TestBlockVerifierImpl_VerifyBlock(t *testing.T) {
 	snapshotMgr.EXPECT().GetSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()
+	ac.EXPECT().VerifyMsgPrincipal(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	ac.EXPECT().VerifyTxPrincipal(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 	txScheduler.EXPECT().SimulateWithDag(gomock.Any(), gomock.Any()).Return(rwSetmap, txResultMap, nil).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{
@@ -299,7 +300,8 @@ func TestBlockVerifierImpl_VerifyBlockWithRwSets(t *testing.T) {
 	snapshotMgr.EXPECT().GetSnapshot(gomock.Any(), gomock.Any()).AnyTimes().Return(snapshot)
 	blockchainStoreImpl.EXPECT().BeginDbTransaction(gomock.Any()).AnyTimes()
 	ac.EXPECT().CreatePrincipal(gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes()
-	ac.EXPECT().VerifyPrincipal(gomock.Any()).Return(true, nil).AnyTimes()
+	ac.EXPECT().VerifyMsgPrincipal(gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
+	ac.EXPECT().VerifyTxPrincipal(gomock.Any(), gomock.Any(), gomock.Any()).Return(true, nil).AnyTimes()
 	txScheduler.EXPECT().SimulateWithDag(gomock.Any(), gomock.Any()).Return(rwSetmap, txResultMap, nil).AnyTimes()
 
 	consensus := configpb.ConsensusConfig{

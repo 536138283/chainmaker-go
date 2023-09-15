@@ -14,6 +14,7 @@ import (
 	"testing"
 	"time"
 
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
@@ -198,6 +199,18 @@ var testChainConfig = &config.ChainConfig{
 			OrgId:      testOrg5,
 			Role:       "admin",
 			MemberInfo: testTrustMember2,
+		},
+	},
+	ResourcePolicies: []*config.ResourcePolicy{
+		{
+			ResourceName: "TEST_CONTRACT-TEST_METHOD_ALL",
+			Policy: &acPb.Policy{
+				Rule:    string(protocol.RuleAll),
+				OrgList: nil,
+				RoleList: []string{
+					string(protocol.RoleAdmin),
+				},
+			},
 		},
 	},
 }
@@ -648,6 +661,7 @@ mrY0z9cE
 `,
 }
 
+// nolint:varcheck
 var testCRL = `-----BEGIN CRL-----
 MIIBNjCB3AIBATAKBggqhkjOPQQDAjBfMQswCQYDVQQGEwJDTjEQMA4GA1UECBMH
 QmVpamluZzEQMA4GA1UEBxMHQmVpamluZzENMAsGA1UEChMEb3JnMTELMAkGA1UE

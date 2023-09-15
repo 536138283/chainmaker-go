@@ -184,7 +184,8 @@ func txPrepare(t *testing.T) (*VerifierTx, *commonpb.Block) {
 
 	principal := mock.NewMockPrincipal(ctl)
 	ac.EXPECT().CreatePrincipal("123", nil, nil).AnyTimes().Return(principal, nil)
-	ac.EXPECT().VerifyPrincipal(principal).AnyTimes().Return(true, nil)
+	ac.EXPECT().VerifyMsgPrincipal(principal, gomock.Any()).AnyTimes().Return(true, nil)
+	ac.EXPECT().VerifyTxPrincipal(principal, gomock.Any(), gomock.Any()).AnyTimes().Return(true, nil)
 	verifyTxConf := &VerifierTxConfig{
 		Block:       block,
 		TxRWSetMap:  txRWSetMap,
