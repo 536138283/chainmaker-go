@@ -22,7 +22,7 @@ var once sync.Once
 var _instance *coreEngineFactory
 
 // Factory return the global core engine factory.
-//nolint: revive
+// nolint: revive
 func Factory() *coreEngineFactory {
 	once.Do(func() { _instance = new(coreEngineFactory) })
 	return _instance

@@ -990,28 +990,52 @@ func (cp *certACProvider) VerifyPrincipalLT2330(principal protocol.Principal, bl
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
-//GetValidEndorsementsLT2330 filters all endorsement entries and returns all valid ones
-func (cp *certACProvider) GetValidEndorsementsLT2330(
+//GetValidEndorsements filters all endorsement entries and returns all valid ones
+func (cp *certACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
 	if blockVersion <= blockVersion220 {
-		return cp.GetValidEndorsements220(principal)
+		return cp.getValidEndorsements220(principal)
 	}
 
 	if blockVersion < blockVersion2330 {
-		return cp.GetValidEndorsements2320(principal)
+		return cp.getValidEndorsements2320(principal)
 	}
-	return nil, fmt.Errorf("`GetValidEndorsementsLT2330` should not used by blockVersion(%d)", blockVersion)
+
+	return cp.getValidEndorsements(principal, blockVersion)
 }
 
 // VerifyMsgPrincipal verifies if the principal for the resource is met
 func (cp *certACProvider) VerifyMsgPrincipal(principal protocol.Principal, blockVersion uint32) (bool, error) {
-	return verifyMsgPrincipal(cp, principal, blockVersion)
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(cp, principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(cp, principal)
+	}
+
+	return verifyMsgTypePrincipal(cp, principal, blockVersion)
 }
 
 // VerifyTxPrincipal verifies if the principal for the resource is met
-func (cp *certACProvider) VerifyTxPrincipal(tx *common.Transaction, txBytes []byte, blockVersion uint32) (bool, error) {
-	return verifyTxPrincipal(cp, tx, txBytes, blockVersion)
+func (cp *certACProvider) VerifyTxPrincipal(tx *common.Transaction,
+	resourceName string, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		if err := verifyTxPrincipal220(tx, cp); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	if blockVersion < blockVersion2330 {
+		if err := verifyTxPrincipal2320(tx, resourceName, cp); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return verifyTxPrincipal(tx, resourceName, cp, blockVersion)
 }
 
 // VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
@@ -1019,11 +1043,23 @@ func (cp *certACProvider) VerifyMultiSignTxPrincipal(
 	mInfo *syscontract.MultiSignInfo,
 	blockVersion uint32) (syscontract.MultiSignStatus, error) {
 
-	return verifyMultiSignTxPrincipal(cp, mInfo, cp.acService.log, blockVersion)
+	if blockVersion < blockVersion2330 {
+		return mInfo.Status, fmt.Errorf(
+			"func `verifyMultiSignTxPrincipal` cannot be used in blockVersion(%v)", blockVersion)
+	}
+	return verifyMultiSignTxPrincipal(cp, mInfo, blockVersion, cp.acService.log)
 }
 
 // IsRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
 // it's implements must be the same with vm-native/supportRule
 func (cp *certACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
-	return isRuleSupportedByMultiSign(cp, resourceName, cp.acService.log, blockVersion)
+	if blockVersion < blockVersion220 {
+		return isRuleSupportedByMultiSign220(cp, resourceName, cp.acService.log)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return isRuleSupportedByMultiSign2320(resourceName, cp, cp.acService.log)
+	}
+
+	return isRuleSupportedByMultiSign(cp, resourceName, blockVersion, cp.acService.log)
 }

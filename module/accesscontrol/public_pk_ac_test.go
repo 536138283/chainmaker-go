@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
@@ -217,7 +219,8 @@ func TestPublicPKVerifyAnyPolicy(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, memberInfo1.admin)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName := utils.GetTxResourceName(tx)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion2330)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -229,7 +232,8 @@ func TestPublicPKVerifyAnyPolicy(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, memberInfo1.client)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -262,7 +266,8 @@ func TestPublicPKVerifyMajorityPolicy(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, memberInfo3.admin)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName := utils.GetTxResourceName(tx)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion2330)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -279,7 +284,8 @@ func TestPublicPKVerifyMajorityPolicy(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, memberInfo3.admin)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -299,7 +305,8 @@ func TestPublicPKVerifyMajorityPolicy(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, memberInfo4.client)
 	require.Nil(t, err)
 
-	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = memberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -323,7 +330,8 @@ func TestPublicPKVerifyForbiddenPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, memberInfo1.admin)
 	require.Nil(t, err)
 
-	ok, err := memberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName := utils.GetTxResourceName(tx)
+	ok, err := memberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion2330)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)

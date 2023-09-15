@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
+
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 )
 
 type acProvider220 interface {
@@ -15,35 +16,33 @@ type acProvider220 interface {
 	lookUpPolicy220(resourceName string) (*acPb.Policy, error)
 	lookUpExceptionalPolicy220(resourceName string) (*acPb.Policy, error)
 	lookUpPolicyByResourceName220(resourceName string) (*policy, error)
-	GetValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
+	getValidEndorsements220(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
 }
 
 type acProvider2320 interface {
-	acProvider220
+	acProviderBase
 
 	lookUpPolicy2320(resourceName string) (*acPb.Policy, error)
 	lookUpExceptionalPolicy2320(resourceName string) (*acPb.Policy, error)
 	lookUpPolicyByResourceName2320(resourceName string) (*policy, error)
-	GetValidEndorsements2320(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
+	getValidEndorsements2320(principal protocol.Principal) ([]*commonPb.EndorsementEntry, error)
 }
 
-type acProvider2330 interface {
-	acProvider2320
+type acProvider interface {
+	acProviderBase
 
 	lookUpPolicyByTxType(txType string, blockVersion uint32) (*policy, error)
 	lookUpPolicyByMsgType(msgType string, blockVersion uint32) (*policy, error)
 	findFromSenderPolicies(resourceName string, blockVersion uint32) (*policy, error)
 	findFromEndorsementsPolicies(resourceName string, blockVersion uint32) (*policy, error)
-}
 
-type acProviderInner interface {
-	acProvider2330
+	getValidEndorsements(principal protocol.Principal, blockVersion uint32) ([]*commonPb.EndorsementEntry, error)
 }
 
 func lookUpPolicyByTxType(txType string, blockVersion uint32,
 	latestPolicyMap *sync.Map, policyMap *sync.Map) (*policy, error) {
 
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 
@@ -80,13 +79,10 @@ func lookUpPolicyByMsgType(msgType string, blockVersion uint32,
 
 func findFromSenderPolicies(resourceName string, blockVersion uint32,
 	latestPolicyMap *sync.Map, policyMap *sync.Map) (*policy, error) {
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 
-	if pol, ok := latestPolicyMap.Load(resourceName); ok {
-		return pol.(*policy), nil
-	}
 	if pol, ok := policyMap.Load(resourceName); ok {
 		return pol.(*policy), nil
 	}
@@ -97,7 +93,7 @@ func findFromSenderPolicies(resourceName string, blockVersion uint32,
 
 func findFromEndorsementsPolicies(resourceName string, blockVersion uint32,
 	latestPolicyMap *sync.Map, policyMap *sync.Map) (*policy, error) {
-	if blockVersion < 2030300 {
+	if blockVersion < blockVersion2330 {
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 

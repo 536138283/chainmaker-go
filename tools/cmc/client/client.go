@@ -59,18 +59,20 @@ var (
 	userSignKeyFilePath string
 	userSignCrtFilePath string
 
-	blockInterval    uint32
-	extraConfigKey   string
-	extraConfigValue string
-	txParameterSize  uint32
-	nodeOrgId        string
-	nodeIdOld        string
-	nodeId           string
-	nodeIds          string
-	trustRootOrgId   string
-	trustRootPaths   []string
-	certFilePaths    string
-	certCrlPath      string
+	blockInterval        uint32
+	extraConfigKey       string
+	extraConfigValue     string
+	txParameterSize      uint32
+	blockTimestampVerify bool
+	blockTimeout         uint32
+	nodeOrgId            string
+	nodeIdOld            string
+	nodeId               string
+	nodeIds              string
+	trustRootOrgId       string
+	trustRootPaths       []string
+	certFilePaths        string
+	certCrlPath          string
 
 	address   string
 	amount    string
@@ -138,6 +140,8 @@ const (
 	flagExtraConfigKey                   = "extra-config-key"
 	flagExtraConfigValue                 = "extra-config-value"
 	flagTxParameterSize                  = "tx-parameter-size"
+	flagBlockTimestampVerify             = "block-timestamp-verify"
+	flagBlockTimeout                     = "block-timeout"
 	flagNodeOrgId                        = "node-org-id"
 	flagNodeIdOld                        = "node-id-old"
 	flagNodeId                           = "node-id"
@@ -244,6 +248,8 @@ func init() {
 	// 链配置
 	flags.Uint32Var(&blockInterval, flagBlockInterval, 2000, "block interval timeout in milliseconds, default 2000ms")
 	flags.Uint32Var(&txParameterSize, flagTxParameterSize, 10, "tx parameter size, default 10MB")
+	flags.BoolVar(&blockTimestampVerify, flagBlockTimestampVerify, false, "block timestamp verify, default false")
+	flags.Uint32Var(&blockTimeout, flagBlockTimeout, 30, "block timestamp timeout, default 10S")
 	flags.StringVar(&nodeOrgId, flagNodeOrgId, "", "specify node org id")
 	flags.StringVar(&nodeIdOld, flagNodeIdOld, "", "specify old node id")
 	flags.StringVar(&nodeId, flagNodeId, "", "specify node id(which will be added or update to")

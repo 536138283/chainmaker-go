@@ -365,7 +365,8 @@ func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.End
 
 func (p *pkACProvider) verifyRuleMajorityCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
 	role := protocol.RoleAdmin
-	refinedEndorsements := p.getValidEndorsements(map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
+	refinedEndorsements := p.getValidEndorsementsInner(
+		map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
 	numOfValid := len(refinedEndorsements)
 	p.log.Debugf("verifyRuleMajorityAdminCase: numOfValid=[%d], p.adminNum=[%d]", numOfValid, p.adminNum)
 	if float64(numOfValid) > float64(p.adminNum)/2.0 {
@@ -438,7 +439,7 @@ func (p *pkACProvider) RefineEndorsements(endorsements []*common.EndorsementEntr
 	return refinedEndorsement
 }
 
-func (p *pkACProvider) getValidEndorsements(orgList map[string]bool, roleList map[protocol.Role]bool,
+func (p *pkACProvider) getValidEndorsementsInner(orgList map[string]bool, roleList map[protocol.Role]bool,
 	endorsements []*common.EndorsementEntry) []*common.EndorsementEntry {
 	var refinedEndorsements []*common.EndorsementEntry
 	for _, endorsement := range endorsements {
@@ -539,41 +540,75 @@ func (pk *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, bloc
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
-//GetValidEndorsementsLT2330 filters all endorsement entries and returns all valid ones
-func (pk *pkACProvider) GetValidEndorsementsLT2330(
+//GetValidEndorsements filters all endorsement entries and returns all valid ones
+func (pk *pkACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
 	if blockVersion <= blockVersion220 {
-		return pk.GetValidEndorsements220(principal)
+		return pk.getValidEndorsements220(principal)
 	}
 
 	if blockVersion < blockVersion2330 {
-		return pk.GetValidEndorsements2320(principal)
+		return pk.getValidEndorsements2320(principal)
 	}
-	return nil, fmt.Errorf("`GetValidEndorsementsLT2330` should not used by blockVersion(%d)", blockVersion)
+	return pk.getValidEndorsements(principal, blockVersion)
 }
 
 // VerifyMsgPrincipal verifies if the principal for the resource is met
-func (pk *pkACProvider) VerifyMsgPrincipal(principal protocol.Principal, blockVersion uint32) (bool, error) {
-	return verifyMsgPrincipal(pk, principal, blockVersion)
+func (p *pkACProvider) VerifyMsgPrincipal(principal protocol.Principal, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		return verifyPrincipal220(p, principal)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return verifyPrincipal2320(p, principal)
+	}
+
+	return verifyMsgTypePrincipal(p, principal, blockVersion)
 }
 
 // VerifyTxPrincipal verifies if the principal for the resource is met
-func (pk *pkACProvider) VerifyTxPrincipal(
-	tx *common.Transaction, txBytes []byte, blockVersion uint32) (bool, error) {
-	return verifyTxPrincipal(pk, tx, txBytes, blockVersion)
+func (p *pkACProvider) VerifyTxPrincipal(tx *common.Transaction,
+	resourceName string, blockVersion uint32) (bool, error) {
+	if blockVersion <= blockVersion220 {
+		if err := verifyTxPrincipal220(tx, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	if blockVersion < blockVersion2330 {
+		if err := verifyTxPrincipal2320(tx, resourceName, p); err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+
+	return verifyTxPrincipal(tx, resourceName, p, blockVersion)
 }
 
 // VerifyMultiSignTxPrincipal verify if the multi-sign tx should be finished
-func (pk *pkACProvider) VerifyMultiSignTxPrincipal(
+func (p *pkACProvider) VerifyMultiSignTxPrincipal(
 	mInfo *syscontract.MultiSignInfo,
 	blockVersion uint32) (syscontract.MultiSignStatus, error) {
 
-	return verifyMultiSignTxPrincipal(pk, mInfo, pk.log, blockVersion)
+	if blockVersion < blockVersion2330 {
+		return mInfo.Status, fmt.Errorf(
+			"func `verifyMultiSignTxPrincipal` cannot be used in blockVersion(%v)", blockVersion)
+	}
+	return verifyMultiSignTxPrincipal(p, mInfo, blockVersion, p.log)
 }
 
 // IsRuleSupportedByMultiSign verify the policy of resourceName is supported by multi-sign
 // it's implements must be the same with vm-native/supportRule
-func (pk *pkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
-	return isRuleSupportedByMultiSign(pk, resourceName, pk.log, blockVersion)
+func (p *pkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVersion uint32) error {
+	if blockVersion < blockVersion220 {
+		return isRuleSupportedByMultiSign220(p, resourceName, p.log)
+	}
+
+	if blockVersion < blockVersion2330 {
+		return isRuleSupportedByMultiSign2320(resourceName, p, p.log)
+	}
+
+	return isRuleSupportedByMultiSign(p, resourceName, blockVersion, p.log)
 }

@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/helper"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -354,7 +356,15 @@ func testPermissionedPKCreateEndorsementEntry(
 // 		Verify Transaction
 // ***************************************************
 
-func TestPermissionedPKVerifySelfPrincipal(t *testing.T) {
+func TestPWK_VerifyPolicySelf(t *testing.T) {
+	testPWK_VerifyPoliicySelf(blockVersion220, t)
+
+	testPWK_VerifyPoliicySelf(blockVersion2320, t)
+
+	testPWK_VerifyPoliicySelf(blockVersion2330, t)
+}
+
+func testPWK_VerifyPoliicySelf(blockVersion uint32, t *testing.T) {
 	// initialize
 	testPkOrgMember := testInitPermissionedPKFunc(t)
 	orgMemberInfo1 := testPkOrgMember[testOrg1]
@@ -375,7 +385,8 @@ func TestPermissionedPKVerifySelfPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName := utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -388,10 +399,11 @@ func TestPermissionedPKVerifySelfPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo2.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
-	fmt.Printf("【invalid case】: err = %v \n", err)
+	fmt.Printf("【invalid case】: err = %v \n\n", err)
 
 	//【invalid】 sender role not matched
 	tx = testCreateTx(
@@ -402,13 +414,22 @@ func TestPermissionedPKVerifySelfPrincipal(t *testing.T) {
 	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.client)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
-	fmt.Printf("【invalid case】: err = %v \n", err)
+	fmt.Printf("【invalid case】: err = %v \n\n", err)
 }
 
-func TestPermissionedPKVerifyMajorityPrincipal(t *testing.T) {
+func TestPWK_VerifyPolicyMajority(t *testing.T) {
+	testPWK_VerifyPolicyMajority(blockVersion220, t)
+
+	testPWK_VerifyPolicyMajority(blockVersion2320, t)
+
+	testPWK_VerifyPolicyMajority(blockVersion2330, t)
+}
+
+func testPWK_VerifyPolicyMajority(blockVersion uint32, t *testing.T) {
 	var (
 		err error
 		ok  bool
@@ -435,7 +456,8 @@ func TestPermissionedPKVerifyMajorityPrincipal(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo4.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo2.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName := utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo2.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.Nil(t, err)
 	require.Equal(t, true, ok)
 
@@ -452,7 +474,8 @@ func TestPermissionedPKVerifyMajorityPrincipal(t *testing.T) {
 	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.admin)
 	require.Nil(t, err)
 
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n", err)
@@ -463,16 +486,18 @@ func TestPermissionedPKVerifyMajorityPrincipal(t *testing.T) {
 		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
 		"test-txid-12345")
 
-	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
+	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.client)
 	require.Nil(t, err)
-	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo2.client)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo2.admin)
 	require.Nil(t, err)
 	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.client)
 	require.Nil(t, err)
-	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.client)
-	require.Nil(t, err)
-	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, nil, blockVersion2330)
+
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
-	fmt.Printf("【invalid case】: err = %v \n", err)
+	fmt.Printf("【invalid case】: err = %v \n\n", err)
 }
