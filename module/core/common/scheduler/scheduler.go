@@ -128,11 +128,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
+	addressCache := make(map[string]string, len(txBatch))
 	var senderGroup *SenderGroup
 	var senderCollection *SenderCollection
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
-		senderCollection = NewSenderCollection(txBatch, snapshot, ts.log)
+		senderCollection = NewSenderCollection(txBatch, snapshot, addressCache, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
 		ts.log.Debugf("before prepare `SenderGroup` ")
@@ -213,6 +214,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	snapshot.Seal()
 	timeCostA := time.Since(startTime)
 	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, nil)
+	timeCostDag := time.Since(startTime)
 
 	// fill up dag about account balance not enough
 	fillGasBalanceErrDag(block, snapshot, blockVersion)
@@ -223,12 +225,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	}
 
 	// 添加gas交易或coinbase交易
-	ts.addChargeGasTxOrCoinbaseTx(blockVersion, block, snapshot, senderCollection, enableOptimizeChargeGas)
+	ts.addChargeGasTxOrCoinbaseTx(blockVersion, block, snapshot, addressCache, enableOptimizeChargeGas)
 
 	timeCostB := time.Since(startTime)
 	ts.log.Infof("schedule tx batch finished, block %d, success %d, txs execution cost %v, "+
-		"dag building cost %v, total used %v, tps %v", block.Header.BlockHeight,
-		len(block.Dag.Vertexes), timeCostA, timeCostB-timeCostA, timeCostB,
+		"dag building cost %v, coinbase cost %v, total used %v, tps %v", block.Header.BlockHeight,
+		len(block.Dag.Vertexes), timeCostA, timeCostDag-timeCostA, timeCostB-timeCostDag, timeCostB,
 		float64(len(block.Dag.Vertexes))/(float64(timeCostB)/1e9))
 
 	txRWSetMap := ts.getTxRWSetTable(snapshot, block)
@@ -239,7 +241,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 
 func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 	blockVersion uint32, block *commonPb.Block, snapshot protocol.Snapshot,
-	senderCollection *SenderCollection, enableOptimizeChargeGas bool) {
+	addressCache map[string]string, enableOptimizeChargeGas bool) {
 
 	// 软分叉处理，240版本后gas交易变更为coinbase交易
 	if blockVersion >= blockVersion3000000 {
@@ -249,7 +251,7 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 				return "append coinbase tx to block ..."
 			})
 			//添加coinbaseTx到区块中，并修改dag
-			ts.appendCoinbaseTx(block, snapshot)
+			ts.appendCoinbaseTx(block, addressCache, snapshot)
 			block.Header.BlockType = block.Header.BlockType | commonPb.BlockType_HAS_COINBASE
 		}
 
@@ -260,7 +262,7 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 		ts.log.DebugDynamic(func() string {
 			return "append charge gas tx to block ..."
 		})
-		ts.appendChargeGasTx(block, snapshot)
+		ts.appendChargeGasTx(block, addressCache, snapshot)
 		// gas交易没有对应的blockType
 	}
 }
@@ -509,11 +511,12 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	}
 
 	var senderCollection *SenderCollection
+	addressCache := make(map[string]string, snapshot.GetSnapshotSize())
 	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
-		senderCollection = NewSenderCollection(block.Txs, snapshot, ts.log)
+		senderCollection = NewSenderCollection(block.Txs, snapshot, addressCache, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	}
 
@@ -1329,9 +1332,10 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 // 3) append tx to DAG struct
 func (ts *TxScheduler) appendChargeGasTx(
 	block *commonPb.Block,
+	addressCache map[string]string,
 	snapshot protocol.Snapshot) {
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => createChargeGasTx() begin ")
-	tx, err := ts.createChargeGasTx(snapshot)
+	tx, err := ts.createChargeGasTx(addressCache, snapshot)
 	if err != nil {
 		return
 	}
@@ -1350,10 +1354,11 @@ func (ts *TxScheduler) appendChargeGasTx(
 // 3) append tx to DAG struct
 func (ts *TxScheduler) appendCoinbaseTx(
 	block *commonPb.Block,
+	addressCache map[string]string,
 	snapshot protocol.Snapshot) {
 	ts.log.Debug("TxScheduler => appendCoinbaseTx() => createCoinbaseTx() begin ")
 	//创建coinbase交易
-	tx, err := ts.createCoinbaseTx(snapshot)
+	tx, err := ts.createCoinbaseTx(addressCache, snapshot)
 	if err != nil {
 		return
 	}
@@ -1379,7 +1384,6 @@ func (ts *TxScheduler) signTxPayload(
 
 	// using the default hash type of the chain
 	hashType := ts.chainConf.ChainConfig().GetCrypto().Hash
-	ts.log.Infof("hashType=%s,payloadBytes=%s", hashType, payloadBytes)
 	if ts.signer == nil {
 		//TODO:这里为nil，签名失败，但是整体流程成功。
 		return nil, errors.New("ts.signer is nil")
@@ -1387,18 +1391,25 @@ func (ts *TxScheduler) signTxPayload(
 	return ts.signer.Sign(hashType, payloadBytes)
 }
 
-func (ts *TxScheduler) createChargeGasTx(
+func (ts *TxScheduler) createChargeGasTx(addressCache map[string]string,
 	snapshot protocol.Snapshot) (*commonPb.Transaction, error) {
 
+	var (
+		err error
+	)
 	address2TotalGas := make(map[string]uint64)
 
 	txTable := snapshot.GetTxTable()
 	txMap := snapshot.GetTxResultMap()
 	for _, tx := range txTable {
-		address, err := getAddressFromTx(tx, snapshot)
-		if err != nil {
-			ts.log.Errorf("getAddressFromTx failed: err = %v", err)
-			continue
+		address, ok := addressCache[tx.Payload.TxId]
+		if !ok {
+			ts.log.Warnf("load address from cache failed for unknown reason")
+			address, err = getAddressFromTx(tx, snapshot)
+			if err != nil {
+				ts.log.Errorf("getAddressFromTx failed: err = %v", err)
+				continue
+			}
 		}
 
 		totalGas, exists := address2TotalGas[address]
@@ -1474,20 +1485,26 @@ func (ts *TxScheduler) createChargeGasTx(
 }
 
 // nolint: unused
-func (ts *TxScheduler) createCoinbaseTx(
+func (ts *TxScheduler) createCoinbaseTx(addressCache map[string]string,
 	snapshot protocol.Snapshot) (*commonPb.Transaction, error) {
 
+	var (
+		err error
+	)
 	senders := make(map[string][]byte)
 	parameters := make([]*commonPb.KeyValuePair, 0)
-
 	address2TotalGas := make(map[string]uint64)
 	txTable := snapshot.GetTxTable()
 	txMap := snapshot.GetTxResultMap()
 	for _, tx := range txTable {
-		address, err := getAddressFromTx(tx, snapshot)
-		if err != nil {
-			ts.log.Errorf("getAddressFromTx failed: err = %v", err)
-			continue
+		address, ok := addressCache[tx.Payload.TxId]
+		if !ok {
+			ts.log.Warnf("load address from cache failed for unknown reason")
+			address, err = getAddressFromTx(tx, snapshot)
+			if err != nil {
+				ts.log.Errorf("getAddressFromTx failed, err = %v", err)
+				continue
+			}
 		}
 
 		totalGas, exists := address2TotalGas[address]

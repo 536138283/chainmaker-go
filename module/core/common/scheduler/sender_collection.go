@@ -45,9 +45,10 @@ func (g *TxCollection) String() string {
 func NewSenderCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
+	txAddressMap map[string]string,
 	log protocol.Logger) *SenderCollection {
 	return &SenderCollection{
-		txsMap: getSenderTxCollection(txBatch, snapshot, log),
+		txsMap: getSenderTxCollection(txBatch, snapshot, txAddressMap, log),
 	}
 }
 
@@ -55,6 +56,7 @@ func NewSenderCollection(
 func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
+	txAddressMap map[string]string,
 	log protocol.Logger) *sync.Map {
 	txCollectionMap := new(sync.Map)
 
@@ -76,6 +78,7 @@ func getSenderTxCollection(
 			continue
 		}
 
+		txAddressMap[tx.Payload.TxId] = address
 		txCollection, loaded := txCollectionMap.LoadOrStore(address, &TxCollection{
 			publicKey:      pk,
 			accountBalance: int64(0),
