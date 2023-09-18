@@ -56,6 +56,8 @@ chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230720104329-8d2d7d83456c/go.mod h
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230816100859-72777856a695/go.mod h1:U3DqaK0asBogYcyienUVAxsteNN/rmus38Q0XkdK5yw=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230825081043-55ee76b49999 h1:jRpr4VeBWnmKS23/ekb03FI0hcV85W0nUoGHgTZ/UQY=
 chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230825081043-55ee76b49999/go.mod h1:U3DqaK0asBogYcyienUVAxsteNN/rmus38Q0XkdK5yw=
+chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230918113224-638ac1a70e81 h1:7ZIN3ltl+dR7VEd06od/UiZ5tOBEowTiHu2Bur2Jncc=
+chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230918113224-638ac1a70e81/go.mod h1:U3DqaK0asBogYcyienUVAxsteNN/rmus38Q0XkdK5yw=
 chainmaker.org/chainmaker/protocol/v3 v3.0.0/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230222032756-e5c7c7928339/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
 chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230228074744-8dbdcfac9f82/go.mod h1:yN976Ig+JZ10a9QbJ1MCm5EVTp8EIpIzhzHn8yaUl00=
@@ -108,6 +110,8 @@ chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230829061336-f6ff3566b032 h1:i
 chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230829061336-f6ff3566b032/go.mod h1:RtHbeieziMB9zMfvZqGceqTVfWfyQHW72jLq0MiwHgM=
 chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230817082616-b46a5f9e32c1 h1:3QI6ET2n/lDCx2V8YEVS9cPVrxXkszpJVmh9xWYhikE=
 chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230817082616-b46a5f9e32c1/go.mod h1:nBxUAMVW3c2kN6M0kbBAuTGkmta6EOR/mxdYoMFFrpo=
+chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230918113958-8cfc1a246be5 h1:1udP4ibHrSNyLKiZY+3uk+icp4/AC8QijsC9qcEXCMs=
+chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230918113958-8cfc1a246be5/go.mod h1:oTHsmAxM3dF7Nld1a7Jy+TKIfFetHz3ZtpKWZXsw7M0=
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca h1:acPQFBeDvqs+W9j9CAAXkDDVyS7RedUvBKqMxycReQU=
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca/go.mod h1:0EcvWXdRQRG7s+mQdbMLCV2GXcQc9dN8lpYHZAGKPxA=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.0/go.mod h1:ZiG6aLOy/kuOWihp9BJurvSpCZ2fZ3qwdatiqy+qSQA=
