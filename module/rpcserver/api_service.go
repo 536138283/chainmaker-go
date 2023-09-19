@@ -11,6 +11,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"time"
 
 	"chainmaker.org/chainmaker-go/module/blockchain"
 	"chainmaker.org/chainmaker-go/module/snapshot"
@@ -127,7 +128,7 @@ func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*co
 	if err != nil {
 		return nil, err
 	}
-	resp := s.invoke(req, protocol.RPC)
+	resp := s.invoke(ctx, req, protocol.RPC, false)
 
 	from := ethbase.BytesToAddress(req.Sender.Signer.MemberInfo)
 	valueBytes := req.Payload.GetParameter(commonPb.EthTxParameterKey_VALUE.String())
@@ -156,13 +157,13 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
 	})
 
-	resp := s.invoke(&commonPb.Transaction{
+	resp := s.invoke(ctx, &commonPb.Transaction{
 		Payload:   req.Payload,
 		Sender:    req.Sender,
 		Endorsers: req.Endorsers,
 		Result:    nil,
 		Payer:     req.Payer,
-	}, protocol.RPC)
+	}, protocol.RPC, false)
 
 	// audit log format: ip:port|orgId|chainId|TxType|TxId|Timestamp|ContractName|Method|retCode|retCodeMsg|retMsg
 	s.logBrief.Infof("|%s|%s|%s|%s|%s|%d|%s|%s|%d|%s|%s", GetClientAddr(ctx), req.Sender.Signer.OrgId,
@@ -221,11 +222,12 @@ func (s *ApiService) getErrMsg(errCode commonErr.ErrCode, err error) string {
 // @param *commonPb.Transaction
 // @param protocol.TxSource
 // @return *commonPb.TxResponse
-func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
+func (s *ApiService) invoke(ctx context.Context, tx *commonPb.Transaction, source protocol.TxSource,
+	syncResult bool) *commonPb.TxResponse {
 	var (
 		errCode commonErr.ErrCode
 		errMsg  string
-		resp    = &commonPb.TxResponse{}
+		resp    = &commonPb.TxResponse{TxId: tx.Payload.TxId}
 	)
 
 	s.log.Debugf("ApiService invoke tx => id = %v, type = %v", tx.Payload.TxId, tx.Payload.TxType)
@@ -234,14 +236,13 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		if errCode != commonErr.ERR_CODE_OK {
 			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 			resp.Message = errMsg
-			resp.TxId = tx.Payload.TxId
 			return resp
 		}
 	}
 
 	switch tx.Payload.TxType {
 	case commonPb.TxType_INVOKE_CONTRACT, commonPb.TxType_ETH_TX:
-		return s.dealTransact(tx, source)
+		return s.dealTransact(ctx, tx, source, syncResult)
 	case commonPb.TxType_QUERY_CONTRACT:
 		return s.dealQuery(tx, source)
 	case commonPb.TxType_ARCHIVE:
@@ -252,10 +253,9 @@ func (s *ApiService) invoke(tx *commonPb.Transaction, source protocol.TxSource) 
 		return s.dealHotColdDataSeparate(tx)
 	default:
 		s.log.Warnf("unsupported tx_type tx[%s]", tx.Payload.TxId)
-		return &commonPb.TxResponse{
-			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,
-			Message: commonErr.ERR_CODE_TXTYPE.String(),
-		}
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = commonErr.ERR_CODE_TXTYPE.String()
+		return resp
 	}
 }
 
@@ -595,13 +595,25 @@ func (s *ApiService) kvPair2Map(kvPair []*commonPb.KeyValuePair) map[string][]by
 // @param *commonPb.Transaction
 // @param protocol.TxSource
 // @return *commonPb.TxResponse
-func (s *ApiService) dealTransact(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
+func (s *ApiService) dealTransact(ctx context.Context, tx *commonPb.Transaction, source protocol.TxSource,
+	syncResult bool) *commonPb.TxResponse {
 	var (
-		err     error
-		errMsg  string
-		errCode commonErr.ErrCode
-		resp    = &commonPb.TxResponse{TxId: tx.Payload.TxId}
+		err       error
+		resp      = &commonPb.TxResponse{TxId: tx.Payload.TxId}
+		txResultC <-chan *txResultExt
 	)
+
+	// if sync result, register tx first
+	if syncResult {
+		txResultC, err = dispatcher.register(tx.Payload.ChainId, tx.Payload.TxId)
+		if err != nil {
+			s.log.Error(err)
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			return resp
+		}
+		defer dispatcher.unregister(tx.Payload.ChainId, tx.Payload.TxId)
+	}
 
 	err = s.chainMakerServer.AddTx(tx.Payload.ChainId, tx, source)
 
@@ -609,22 +621,41 @@ func (s *ApiService) dealTransact(tx *commonPb.Transaction, source protocol.TxSo
 	s.updateTxSizeHistogram(tx, err)
 
 	if err != nil {
-		errMsg = fmt.Sprintf("Add tx failed, %s, chainId:%s, txId:%s",
+		errMsg := fmt.Sprintf("Add tx failed, %s, chainId:%s, txId:%s",
 			err.Error(), tx.Payload.ChainId, tx.Payload.TxId)
 		s.log.Warn(errMsg)
 
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 		resp.Message = errMsg
-		resp.TxId = tx.Payload.TxId
 		return resp
 	}
 
 	s.log.Debugf("Add tx success, chainId:%s, txId:%s", tx.Payload.ChainId, tx.Payload.TxId)
 
-	errCode = commonErr.ERR_CODE_OK
-	resp.Code = commonPb.TxStatusCode_SUCCESS
-	resp.Message = errCode.String()
-	resp.TxId = tx.Payload.TxId
+	// if sync result, wait tx result
+	if syncResult {
+		timeout := time.Duration(localconf.ChainMakerConfig.RpcConfig.SyncTxResultTimeout) * time.Second
+		ticker := time.NewTicker(timeout)
+		defer ticker.Stop()
+		select {
+		case r := <-txResultC:
+			resp.Code = r.Result.Code
+			resp.Message = r.Result.Message
+			resp.ContractResult = r.Result.ContractResult
+			resp.TxTimestamp = r.TxTimestamp
+			resp.TxBlockHeight = r.TxBlockHeight
+		case <-ctx.Done():
+			resp.Code = commonPb.TxStatusCode_TIMEOUT
+			resp.Message = ctx.Err().Error()
+		case <-ticker.C:
+			resp.Code = commonPb.TxStatusCode_TIMEOUT
+			resp.Message = fmt.Sprintf("request reached sync_tx_result_timeout, timeout=%s", timeout)
+		}
+	} else {
+		resp.Code = commonPb.TxStatusCode_SUCCESS
+		resp.Message = commonErr.ERR_CODE_OK.String()
+	}
+
 	return resp
 }
 
@@ -700,6 +731,11 @@ func (s *ApiService) CheckNewBlockChainConfig(context.Context, *configPb.CheckNe
 			Message: err.Error(),
 		}, nil
 	}
+
+	if dispatcher != nil {
+		dispatcher.evacuateChilds()
+	}
+
 	return &configPb.CheckNewBlockChainConfigResponse{
 		Code: int32(0),
 	}, nil

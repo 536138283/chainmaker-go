@@ -90,6 +90,8 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 		return nil, fmt.Errorf("new http grpc server failed, %s", err.Error())
 	}
 
+	dispatcher = newTxResultDispatcher(chainMakerServer)
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		mRecv = monitor.NewCounterVec(monitor.SUBSYSTEM_GRPC, "grpc_msg_received_total",
 			"Total number of RPC messages received on the server.",
@@ -196,6 +198,9 @@ func (s *RPCServer) Stop() {
 	s.isShutdown = true
 	s.cancel()
 	s.grpcServer.Stop()
+	if dispatcher != nil {
+		dispatcher.stop()
+	}
 	s.log.Info("RPCServer is stopped!")
 }
 
