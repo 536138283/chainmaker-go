@@ -243,13 +243,11 @@ function generate_config() {
         if  [ $enable_vm_go == "yes" ] || [ $enable_vm_go == "YES" ]; then
             ENABLE_VM_GO="true"
         else
-            echo "disable vm go"
+            ENABLE_VM_GO="false"
         fi
       fi
     fi
-    if [ "$ENABLE_VM_GO" == "" ] ;then
-      ENABLE_VM_GO="false"
-    fi
+
     echo "param ENABLE_VM_GO $ENABLE_VM_GO"
     echo
 
