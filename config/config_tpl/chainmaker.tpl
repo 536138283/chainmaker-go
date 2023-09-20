@@ -186,6 +186,11 @@ rpc:
   # The minium value is 10.
   check_chain_conf_trust_roots_change_interval: 60
 
+  # API SendRequestSync timeout in seconds.
+  # SendRequestSync return response with tx execution result.
+  # The default value is 60, recommend set it to 60
+  sync_tx_result_timeout: 60
+
   # restful api gateway
   gateway:
     # enable restful api
