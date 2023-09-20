@@ -1422,22 +1422,10 @@ func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 	txExecOrderTypeMap map[string]protocol.ExecOrderTxType) (uint32, uint32, uint32, error) {
 
-	var txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount uint32
-	for _, v := range txExecOrderTypeMap {
-		switch v {
-		case protocol.ExecOrderTxTypeNormal:
-			txExecOrderNormalCount++
-		case protocol.ExecOrderTxTypeIterator:
-			txExecOrderIteratorCount++
-		case protocol.ExecOrderTxTypeChargeGas:
-			txExecOrderChargeGasCount++
-		}
-	}
-	if (IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
-		(!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
-		return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-			fmt.Errorf("charge gas enabled but charge gas tx is not 1")
-	}
+	txExecOrderNormalCount := uint32(0)
+	txExecOrderIteratorCount := uint32(0)
+	txExecOrderChargeGasCount := uint32(0)
+
 	// check type are all correct
 	for i, tx := range block.Txs {
 		t, ok := txExecOrderTypeMap[tx.Payload.GetTxId()]
@@ -1445,20 +1433,30 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
 				fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
 		}
-		var typeShouldBe protocol.ExecOrderTxType
-		if uint32(i) < txExecOrderNormalCount {
-			typeShouldBe = protocol.ExecOrderTxTypeNormal
-		} else {
-			typeShouldBe = protocol.ExecOrderTxTypeIterator
-		}
-		if IsOptimizeChargeGasEnabled(ts.chainConf) && uint32(i+1) == uint32(len(block.Txs)) {
-			typeShouldBe = protocol.ExecOrderTxTypeChargeGas
-		}
-		if t != typeShouldBe {
-			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-				fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+
+		if t == protocol.ExecOrderTxTypeNormal {
+			if txExecOrderIteratorCount == 0 {
+				txExecOrderNormalCount++
+			} else {
+				txExecOrderIteratorCount++
+			}
+		} else if t == protocol.ExecOrderTxTypeIterator {
+			txExecOrderIteratorCount++
+		} else if t == protocol.ExecOrderTxTypeChargeGas {
+			txExecOrderChargeGasCount++
+			if uint32(i+1) != uint32(len(block.Txs)) {
+				return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+					fmt.Errorf("`charge_gas` tx is unexpected, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+			}
 		}
 	}
+
+	if (IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 1) ||
+		(!IsOptimizeChargeGasEnabled(ts.chainConf) && txExecOrderChargeGasCount != 0) {
+		return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+			fmt.Errorf("charge gas enabled but charge gas tx is not 1")
+	}
+
 	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, nil
 }
 
