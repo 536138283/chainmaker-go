@@ -261,7 +261,7 @@ function generate_config() {
         if  [ $enable_vm_go == "yes" ] || [ $enable_vm_go == "YES" ]; then
             ENABLE_VM_GO="true"
         else
-            echo "unknown input [" $enable_vm_go "], so use default"
+            echo "disable vm go"
         fi
       fi
     fi
