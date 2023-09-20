@@ -2927,7 +2927,7 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "Test_EnableGas_With_Normal_Iter_ChargeGas",
+			name: "Test_DisableGas_With_Normal_Iter_ChargeGas",
 			fields: fields{
 				EnableOptimizeChargeGas: false,
 				EnableGas:               false,

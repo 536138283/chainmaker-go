@@ -1444,7 +1444,7 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 			txExecOrderIteratorCount++
 		} else if t == protocol.ExecOrderTxTypeChargeGas {
 			txExecOrderChargeGasCount++
-			if !IsOptimizeChargeGasEnabled(ts.chainConf) || uint32(i+1) != uint32(len(block.Txs)) {
+			if uint32(i+1) != uint32(len(block.Txs)) {
 				return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
 					fmt.Errorf("`charge_gas` tx is unexpected, txId:%s, index:%d", tx.Payload.GetTxId(), i)
 			}
