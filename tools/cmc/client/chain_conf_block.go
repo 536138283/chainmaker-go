@@ -24,6 +24,7 @@ func updateBlockConfigCMD() *cobra.Command {
 	}
 	cmd.AddCommand(updateBlockIntervalCMD())
 	cmd.AddCommand(updateTxParameterSizeCMD())
+	cmd.AddCommand(updateBlockTimestampCMD())
 
 	return cmd
 }
@@ -68,13 +69,18 @@ func updateBlockInterval() error {
 		return fmt.Errorf("get chain config failed, %s", err.Error())
 	}
 	txTimestampVerify := chainConfig.Block.TxTimestampVerify
+	blockTimestampVerify = chainConfig.Block.BlockTimestampVerify
 	txTimeout := chainConfig.Block.TxTimeout
 	blockTxCap := chainConfig.Block.BlockTxCapacity
 	blockSize := chainConfig.Block.BlockSize
 	txParameterSize = chainConfig.Block.TxParameterSize
 
-	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, txTimeout, blockTxCap,
-		blockSize, blockInterval, txParameterSize)
+	if blockTimestampVerify && chainConfig.Block.BlockTimeout > 0 {
+		blockTimeout = chainConfig.Block.BlockTimeout
+	}
+
+	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, blockTimestampVerify, txTimeout,
+		blockTimeout, blockTxCap, blockSize, blockInterval, txParameterSize)
 	if err != nil {
 		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
 	}
@@ -136,13 +142,18 @@ func updateTxParameterSize() error {
 		return fmt.Errorf("get chain config failed, %s", err.Error())
 	}
 	txTimestampVerify := chainConfig.Block.TxTimestampVerify
+	blockTimestampVerify = chainConfig.Block.BlockTimestampVerify
 	txTimeout := chainConfig.Block.TxTimeout
 	blockTxCap := chainConfig.Block.BlockTxCapacity
 	blockSize := chainConfig.Block.BlockSize
 	blockInterval = chainConfig.Block.BlockInterval
 
-	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, txTimeout, blockTxCap,
-		blockSize, blockInterval, txParameterSize)
+	if blockTimestampVerify && chainConfig.Block.BlockTimeout > 0 {
+		blockTimeout = chainConfig.Block.BlockTimeout
+	}
+
+	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, blockTimestampVerify,
+		txTimeout, blockTimeout, blockTxCap, blockSize, blockInterval, txParameterSize)
 	if err != nil {
 		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
 	}
@@ -152,6 +163,75 @@ func updateTxParameterSize() error {
 		return err
 	}
 
+	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+	if err != nil {
+		return fmt.Errorf("send chain config update request failed, %s", err.Error())
+	}
+	err = util.CheckProposalRequestResp(resp, false)
+	if err != nil {
+		return fmt.Errorf("check proposal request resp failed, %s", err.Error())
+	}
+	fmt.Printf("response %+v\n", resp)
+	return nil
+}
+
+// updateBlockTimestampCMD update block timestamp verify
+// @return *cobra.Command
+func updateBlockTimestampCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "updateblocktimestamp",
+		Short: "update block timestamp verify",
+		Long:  "update block timestamp verify",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return updateBlockTimestamp()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagChainId,
+		flagSdkConfPath, flagOrgId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagBlockTimestampVerify,
+		flagBlockTimeout,
+	})
+
+	cmd.MarkFlagRequired(flagBlockTimestampVerify)
+	cmd.MarkFlagRequired(flagBlockTimeout)
+
+	return cmd
+}
+
+func updateBlockTimestamp() error {
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath)
+	if err != nil {
+		return err
+	}
+	defer client.Stop()
+
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
+	}
+	chainConfig, err := client.GetChainConfig()
+	if err != nil {
+		return fmt.Errorf("get chain config failed, %s", err.Error())
+	}
+	txTimestampVerify := chainConfig.Block.TxTimestampVerify
+	txTimeout := chainConfig.Block.TxTimeout
+	blockTxCap := chainConfig.Block.BlockTxCapacity
+	blockSize := chainConfig.Block.BlockSize
+	blockInterval = chainConfig.Block.BlockInterval
+	txParameterSize = chainConfig.Block.TxParameterSize
+
+	payload, err := client.CreateChainConfigBlockUpdatePayload(txTimestampVerify, blockTimestampVerify,
+		txTimeout, blockTimeout, blockTxCap, blockSize, blockInterval, txParameterSize)
+	if err != nil {
+		return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
+	}
+
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+	if err != nil {
+		return err
+	}
 	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
 	if err != nil {
 		return fmt.Errorf("send chain config update request failed, %s", err.Error())
