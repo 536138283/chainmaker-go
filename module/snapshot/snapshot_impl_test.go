@@ -287,7 +287,8 @@ func testSnapshot(t *testing.T, i int) {
 			// TODO: Use of weak random number generator (math/rand instead of crypto/rand) ?
 			txSimContext.txExecSeq = int32(rand.Intn(len(snapshot.txTable) + 1)) //nolint: gosec
 
-			applyResult, _ := snapshot.ApplyTxSimContext(txSimContext, protocol.ExecOrderTxTypeNormal, true, false)
+			applyResult, _ := snapshot.ApplyTxSimContext(txSimContext, protocol.ExecOrderTxTypeNormal,
+				true, false)
 			atomic.AddInt64(&count, 1)
 			if !applyResult {
 				fmt.Printf("!!!")
