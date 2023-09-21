@@ -157,6 +157,7 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
 	})
 
+	startTime := time.Now()
 	resp := s.invoke(ctx, &commonPb.Transaction{
 		Payload:   req.Payload,
 		Sender:    req.Sender,
@@ -164,11 +165,13 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 		Result:    nil,
 		Payer:     req.Payer,
 	}, protocol.RPC, false)
+	elapsed := time.Since(startTime)
 
 	// audit log format: ip:port|orgId|chainId|TxType|TxId|Timestamp|ContractName|Method|retCode|retCodeMsg|retMsg
-	s.logBrief.Infof("|%s|%s|%s|%s|%s|%d|%s|%s|%d|%s|%s", GetClientAddr(ctx), req.Sender.Signer.OrgId,
+	// |invokeElapsed
+	s.logBrief.Infof("|%s|%s|%s|%s|%s|%d|%s|%s|%d|%s|%s|%d", GetClientAddr(ctx), req.Sender.Signer.OrgId,
 		req.Payload.ChainId, req.Payload.TxType, req.Payload.TxId, req.Payload.Timestamp, req.Payload.ContractName,
-		req.Payload.Method, resp.Code, resp.Code, resp.Message)
+		req.Payload.Method, resp.Code, resp.Code, resp.Message, elapsed.Milliseconds())
 
 	return resp, nil
 }
