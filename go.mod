@@ -3,7 +3,7 @@ module chainmaker.org/chainmaker-go
 go 1.16
 
 require (
-	chainmaker.org/chainmaker/chainconf/v3 v3.0.1-0.20230720141624-cbf816ebbaad
+	chainmaker.org/chainmaker/chainconf/v3 v3.0.1-0.20230921070210-34bf6552752b
 	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230811074120-282dfd5c33a5
 	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20230314074553-134b54d23351
 	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20230407102347-455cf7024e05
@@ -17,9 +17,9 @@ require (
 	chainmaker.org/chainmaker/net-common v1.3.1-0.20230728092037-e374a414e360
 	chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230728092025-dfbeab83c976
 	chainmaker.org/chainmaker/net-liquid v1.3.1-0.20230821014059-afb56fc3a2bf
-	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230918113224-638ac1a70e81
-	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230825102159-ca17e2c84a5d
-	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230830094511-03fbc88cf859
+	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230921064005-9da3083ed74c
+	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20230921065304-b1a0dec96b71
+	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230921073406-acf92a7a39e7
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527
 	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726073456-c2221a8d7e93
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230901105341-634ff2de75cb
@@ -30,7 +30,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230829061336-f6ff3566b032
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230918113958-8cfc1a246be5
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230825080935-d45f85751b49
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20230921085457-2d19532a90be
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230726065243-a0dd6f3544e3
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.1-0.20230221095707-a6ef1151257e
 	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230825080950-ca4d080d4328
