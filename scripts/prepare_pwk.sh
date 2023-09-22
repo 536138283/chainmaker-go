@@ -56,15 +56,13 @@ function show_help() {
     echo "               -c consense-type: 1-TBFT,4-RAFT "
     echo "               -l log-level: DEBUG,INFO,WARN,ERROR"
     echo "               -v docker-vm-enable: true,false"
-    echo "                  --vtp  vm go transport protocol: tcp,uds"
-    echo "                  --vlog vm go log level: DEBUG,INFO,WARN,ERROR"
     echo "               -h show help"
     echo "                  --hash hash type: SHA256,SM3"
     echo "    eg1: prepare_pwk.sh 4 1"
     echo "    eg2: prepare_pwk.sh 4 1 11301 12301"
     echo "    eg2: prepare_pwk.sh 4 1 11301 12301 32351 22351"
-    echo "    eg2: prepare_pwk.sh 4 1 11301 12301 32351 22351 -c 1 -l INFO --hash SHA256 -v false  --vtp=tcp --vlog=INFO"
-    echo "    eg2: prepare_pwk.sh 4 1 11201 12201 32251 22251 -c 1 -l INFO --hash SM3    -v true   --vtp=tcp --vlog=INFO"
+    echo "    eg2: prepare_pwk.sh 4 1 11301 12301 32351 22351 -c 1 -l INFO --hash SHA256 -v false "
+    echo "    eg2: prepare_pwk.sh 4 1 11201 12201 32251 22251 -c 1 -l INFO --hash SM3    -v true  "
 }
 
 if ( [ $# -eq 1 ] && [ "$1" ==  "-h" ] ) ; then
@@ -180,10 +178,8 @@ function generate_config() {
     TRUSTED_PORT=13301
     VM_GO_CONTAINER_NAME_PREFIX="chainmaker-vm-go-container"
     ENABLE_VM_GO="" # default false
-    VM_GO_LOG_LEVEL="" # default INFO
-    VM_GO_TRANSPORT_PROTOCOL="" # default tcp, uds
 
-    set -- $(getopt -u -o c:l:v: -l vtp:,vlog:,hash: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
+    set -- $(getopt -u -o c:l:v: -l hash: "$@")   # -o 接收短参数， -l 接收长参数， 需要参数值的在参数后面添加:
     while [ -n "$1" ]; do
         case "$1" in
             -c) CONSENSUS_TYPE=$2
@@ -194,12 +190,6 @@ function generate_config() {
                 HASH_TYPE=$2
                 shift ;;
             -v) ENABLE_VM_GO=$2
-                shift ;;
-            --vtp)
-                VM_GO_TRANSPORT_PROTOCOL=$2
-                shift ;;
-            --vlog)
-                VM_GO_LOG_LEVEL=$2
                 shift
         esac
         shift
@@ -270,46 +260,12 @@ function generate_config() {
       if  [ ! -z "$enable_vm_go" ]; then
         if  [ $enable_vm_go == "yes" ] || [ $enable_vm_go == "YES" ]; then
             ENABLE_VM_GO="true"
-
-            if [ "$VM_GO_TRANSPORT_PROTOCOL" == "" ] ;then
-              read -p "vm go transport protocol (uds|tcp(default))" transport_protocol
-              if [ ! -z "$transport_protocol" ]; then
-                  if [ $transport_protocol == "tcp" ] || [ $transport_protocol == "TCP" ]; then
-                      VM_GO_TRANSPORT_PROTOCOL="tcp"
-                  elif [ $transport_protocol == "uds" ] || [ $transport_protocol == "UDS" ]; then
-                      VM_GO_TRANSPORT_PROTOCOL="uds"
-                  else
-                      echo "unknown input [" $transport_protocol "], so use default"
-                  fi
-              fi
-            fi
-            if [ "$VM_GO_TRANSPORT_PROTOCOL" == "" ] ;then
-              VM_GO_TRANSPORT_PROTOCOL="tcp"
-            fi
-
-            if [ "$VM_GO_LOG_LEVEL" == "" ] ;then
-                read -p "input vm go log level (DEBUG|INFO(default)|WARN|ERROR): " vm_go_log_level
-                if  [ ! -z "$vm_go_log_level" ] ;then
-                if  [ $vm_go_log_level == "DEBUG" ] || [ $vm_go_log_level == "INFO" ] || [ $vm_go_log_level == "WARN" ] || [ $vm_go_log_level == "ERROR" ];then
-                    VM_GO_LOG_LEVEL=$vm_go_log_level
-                else
-                    echo "unknown vm go log level [" $vm_go_log_level "], so use default"
-                fi
-              fi
-            fi
-            if [ "$VM_GO_LOG_LEVEL" == "" ] ;then
-              VM_GO_LOG_LEVEL="INFO"
-            fi
-
+        else
+            ENABLE_VM_GO="false"
         fi
       fi
     fi
-    if [ "$ENABLE_VM_GO" == "" ] ;then
-      ENABLE_VM_GO="false"
-    elif [ $ENABLE_VM_GO == "true" ] ;then
-      echo "param VM_GO_LOG_LEVEL $VM_GO_LOG_LEVEL"
-      echo "param VM_GO_TRANSPORT_PROTOCOL $VM_GO_TRANSPORT_PROTOCOL"
-    fi
+
     echo "param ENABLE_VM_GO $ENABLE_VM_GO"
     echo
 
@@ -341,8 +297,6 @@ function generate_config() {
         xsed "s%{dockervm_container_name}%"${VM_GO_CONTAINER_NAME_PREFIX}$i"%g" node$i/chainmaker.yml
         xsed "s%{vm_go_runtime_port}%$(($VM_GO_RUNTIME_PORT+$i-1))%g" node$i/chainmaker.yml
         xsed "s%{vm_go_engine_port}%$(($VM_GO_ENGINE_PORT+$i-1))%g" node$i/chainmaker.yml
-        xsed "s%{vm_go_log_level}%$VM_GO_LOG_LEVEL%g" node$i/chainmaker.yml
-        xsed "s%{vm_go_protocol}%$VM_GO_TRANSPORT_PROTOCOL%g" node$i/chainmaker.yml
 
         system=$(uname)
 
