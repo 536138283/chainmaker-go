@@ -326,10 +326,11 @@ func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.Batch
 // ApplyTxSimContext add TxSimContext to the snapshot, return current applied tx num whether success of not
 func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, applySpecialTx bool) (bool, int) {
-	tx := txSimContext.GetTx()
+
 	s.log.DebugDynamic(func() string {
-		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
-			specialTxType, runVmSuccess, applySpecialTx)
+		tx := txSimContext.GetTx()
+		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v",
+			tx.Payload.TxId, specialTxType, runVmSuccess, applySpecialTx)
 	})
 
 	if !applySpecialTx && s.IsSealed() {
@@ -343,19 +344,60 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 		return false, len(s.txTable)
 	}
 
-	txExecSeq := txSimContext.GetTxExecSeq()
-	var txRWSet *commonPb.TxRWSet
-	var txResult *commonPb.Result
+	// When scheduling, the applySpecialTx is false, it should return
+	// len(s.txTable) + len(s.specialTxTable) for all tx, because maybe normal tx after a specialTx.
+	if !applySpecialTx {
+		return s.applyNormalTxForSchedule(txSimContext, specialTxType, runVmSuccess)
+	}
+	// When simulate with dag or schedule special tx, it only returns len(s.txTable)
+	return s.applyAllTxForSimulate(txSimContext, specialTxType, runVmSuccess)
+}
 
-	if !applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator {
+// Only apply normal tx, but return normal and special tx count, so schedule can be finished
+func (s *SnapshotImpl) applyNormalTxForSchedule(txSimContext protocol.TxSimContext,
+	specialTxType protocol.ExecOrderTxType, runVmSuccess bool) (bool, int) {
+
+	tx := txSimContext.GetTx()
+	if specialTxType == protocol.ExecOrderTxTypeIterator {
 		s.specialTxTable = append(s.specialTxTable, tx)
 		return true, len(s.txTable) + len(s.specialTxTable)
 	}
 
+	txExecSeq := txSimContext.GetTxExecSeq()
 	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
-	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
-	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", txSimContext.GetTx().Payload.TxId, txRWSet)
-	txResult = txSimContext.GetTxResult()
+	txRWSet := txSimContext.GetTxRWSet(runVmSuccess)
+	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", tx.Payload.TxId, txRWSet)
+	txResult := txSimContext.GetTxResult()
+	if txExecSeq >= len(s.txTable) {
+		s.apply(tx, txRWSet, txResult, runVmSuccess)
+		return true, len(s.txTable) + len(s.specialTxTable)
+	}
+
+	// Check whether the dependent state has been modified during the running it
+	for _, txRead := range txRWSet.TxReads {
+		finalKey := constructKey(txRead.ContractName, txRead.Key)
+		if sv, ok := s.writeTable[finalKey]; ok {
+			if sv.seq >= txExecSeq {
+				s.log.Debugf("Key Conflicted %+v-%+v, tx id:%s", sv.seq, txExecSeq, tx.Payload.TxId)
+				return false, len(s.txTable) + len(s.specialTxTable)
+			}
+		}
+	}
+
+	s.apply(tx, txRWSet, txResult, runVmSuccess)
+	return true, len(s.txTable) + len(s.specialTxTable)
+}
+
+// Only apply normal tx, but return normal and special tx count, so schedule can be finished
+func (s *SnapshotImpl) applyAllTxForSimulate(txSimContext protocol.TxSimContext,
+	specialTxType protocol.ExecOrderTxType, runVmSuccess bool) (bool, int) {
+
+	tx := txSimContext.GetTx()
+	txExecSeq := txSimContext.GetTxExecSeq()
+	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
+	txRWSet := txSimContext.GetTxRWSet(runVmSuccess)
+	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", tx.Payload.TxId, txRWSet)
+	txResult := txSimContext.GetTxResult()
 
 	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.txTable) {
 		s.apply(tx, txRWSet, txResult, runVmSuccess)
