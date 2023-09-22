@@ -588,13 +588,6 @@ vm:
     # max process num for execute original txs
     max_concurrency: 20
 
-    #  Configs of docker runtime server (handle messages with contract sandbox)
-    runtime_server:
-      # runtime server host, default 127.0.0.1
-      # host: 127.0.0.1
-      # Runtime server port, default 32351
-      port: {vm_go_runtime_port}
-
     # Configs of contract engine server (handle messages with contract engine)
     contract_engine:
       # Docker vm contract engine server host, default 127.0.0.1
