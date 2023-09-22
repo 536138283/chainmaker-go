@@ -25,7 +25,7 @@ require (
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230901105341-634ff2de75cb
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230901101617-70e324545ab1
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230901103029-97b1c26654aa
-	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230919022829-19c6e23eb790
+	chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230922105552-b325df41de1a
 	chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230829061336-f6ff3566b032
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230918113958-8cfc1a246be5
@@ -86,7 +86,7 @@ replace (
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.2
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.0
 	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v1.0.1
-	github.com/lucas-clemente/quic-go => chainmaker.org/third_party/quic-go v1.2.0
+	github.com/lucas-clemente/quic-go => chainmaker.org/third_party/quic-go v1.2.1-0.20230821024043-27eaf3d844cd
 	github.com/marten-seemann/qtls-go1-16 => chainmaker.org/third_party/qtls-go1-16 v1.2.0
 	github.com/marten-seemann/qtls-go1-17 => chainmaker.org/third_party/qtls-go1-17 v1.2.0
 	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.2.0

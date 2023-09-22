@@ -103,8 +103,9 @@ chainmaker.org/chainmaker/utils/v3 v3.0.0/go.mod h1:BNrC1CwEcYgYkTvEtivvYXHWaspY
 chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230112025723-92669b41065d/go.mod h1:TnNpXpj6ZvmYIq3amz2A3yBnlON1BXZ2XkAmv4WhUIw=
 chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230221090402-f92abd690383/go.mod h1:TnNpXpj6ZvmYIq3amz2A3yBnlON1BXZ2XkAmv4WhUIw=
 chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230720133344-9fe00f26d9ec/go.mod h1:r3jmUVMcRSSEaqFHfVbJRhtFVnKTASlyjutfULPhjhs=
-chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230919022829-19c6e23eb790 h1:LAYCBgkUuaznbudne2Z6YQ2n4CJeBHWOsrsAf+01Sdg=
 chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230919022829-19c6e23eb790/go.mod h1:r3jmUVMcRSSEaqFHfVbJRhtFVnKTASlyjutfULPhjhs=
+chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230922105552-b325df41de1a h1:LEddRcRaVNZPw9w/xU7cQkmLX8BmjEVXFhMebcRDkII=
+chainmaker.org/chainmaker/utils/v3 v3.0.1-0.20230922105552-b325df41de1a/go.mod h1:r3jmUVMcRSSEaqFHfVbJRhtFVnKTASlyjutfULPhjhs=
 chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1 h1:IpCWu9xMgh4zkDVlrwX4AF2tXm0Bt9akEDoTfbwl7bU=
 chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1/go.mod h1:eCBqHOtKBfP9/jw6jf/0Aj8Iee6s8hsJaEV6Rs977Po=
 chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230829061336-f6ff3566b032 h1:iMexuke9NF6Eh3Sc96eQnK1t1BDncMs/ULET49J8E1g=
@@ -144,8 +145,8 @@ chainmaker.org/third_party/qtls-go1-18 v1.2.0 h1:8SWV1aPUry+33gKhg4f+HAxksg0zhh8
 chainmaker.org/third_party/qtls-go1-18 v1.2.0/go.mod h1:0Ft2hxoyNLIc0FF68bFzAaAv8qp3QaTrnHp4anVvdEc=
 chainmaker.org/third_party/qtls-go1-19 v1.1.0 h1:d/HI8nThX1Ae1vhs6n8NjmxrHWFG+kFFEZ5z2754GOc=
 chainmaker.org/third_party/qtls-go1-19 v1.1.0/go.mod h1:6vgQjOuzfKhbFoSdcMPwmSn/lB+KCo+l/9YdMPdDA6s=
-chainmaker.org/third_party/quic-go v1.2.0 h1:+OoBhGYPGIWGldW+GoV7s9eUU745mFtVgSQkmyMHX2g=
-chainmaker.org/third_party/quic-go v1.2.0/go.mod h1:QkyI7QPu8cTEJtKBprPD+YHy8A+hJ3DK4mUSbR8ZjEw=
+chainmaker.org/third_party/quic-go v1.2.1-0.20230821024043-27eaf3d844cd h1:By2G5ahtDkB77SqeLUrlZwCIgu3TQSysQg4PEgsUdlI=
+chainmaker.org/third_party/quic-go v1.2.1-0.20230821024043-27eaf3d844cd/go.mod h1:QkyI7QPu8cTEJtKBprPD+YHy8A+hJ3DK4mUSbR8ZjEw=
 chainmaker.org/third_party/redisbloom-go v1.0.0 h1:R5I2K9zYfOoAMJP4Qn3Rk6OVpt+1s84KHHFiZWCX+q4=
 chainmaker.org/third_party/redisbloom-go v1.0.0/go.mod h1:l3Qe0jvaVir3n3IsuB2RfAtSKg7Zb/FxeV4XB1dyWjU=
 chainmaker.org/third_party/tikv-client-go v1.0.0 h1:3EtxVgVbqvC473GsdvzwfSit/C4fjRx7mmJ6erLQors=
