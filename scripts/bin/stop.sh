@@ -31,6 +31,9 @@ if [ ! -z ${pid} ];then
     echo "chainmaker is stopping..."
 fi
 
+if [ ! -z "${pid}" ];then
+    lsof -p "$pid" +r 1 &>/dev/null
+fi
 
 # check if need to stop vm containers
 function parse_yaml {
@@ -115,8 +118,4 @@ then
   fi
 fi
 
-
-if [ ! -z "${pid}" ];then
-    lsof -p "$pid" +r 1 &>/dev/null
-fi
 echo "chainmaker is stopped"
