@@ -151,6 +151,16 @@ func (s *RPCServer) Start() error {
 			log.Errorf("GetTLSConfig, failed, %s", err.Error())
 			return err
 		}
+
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+			var acs []protocol.AccessControlProvider
+			acs, err = s.chainMakerServer.GetAllAC()
+			if err != nil {
+				log.Errorf("get all AccessControlProvider failed, %s", err.Error())
+				return err
+			}
+			tlsConfig.VerifyPeerCertificate = createMixVerifyPeerCertificateFunc(acs, s.log)
+		}
 	}
 
 	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
