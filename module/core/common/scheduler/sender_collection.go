@@ -59,7 +59,7 @@ func getSenderTxCollection(
 	chainCfg := snapshot.GetLastChainConfig()
 
 	for _, tx := range txBatch {
-		address, pk, err := getPayerAddressFromTx(tx, snapshot, ac, blockVersion, chainCfg)
+		address, pk, err := getPayerAddressAndPkFromTx(tx, snapshot, ac, blockVersion, chainCfg)
 		if err != nil {
 			continue
 		}

@@ -872,12 +872,26 @@ func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimCon
 			return nil, nil, err
 		}
 
-		pk, err = ts.getPayerPk(txSimContext, tx)
+		ac, err := txSimContext.GetAccessControl()
+		if err != nil {
+			ts.log.Error(err.Error())
+			return nil, nil, err
+		}
+		_, publicKey, err := getPayerAddressAndPkFromTx(tx,
+			txSimContext.GetSnapshot(),
+			ac,
+			txSimContext.GetBlockVersion(),
+			txSimContext.GetLastChainConfig())
 		if err != nil {
 			ts.log.Error(err.Error())
 			return accountMangerContract, nil, err
 		}
-		return accountMangerContract, pk, err
+		pk, err := publicKey.String()
+		if err != nil {
+			ts.log.Error(err.Error())
+			return accountMangerContract, nil, err
+		}
+		return accountMangerContract, []byte(pk), err
 	}
 	return nil, nil, nil
 }
@@ -1030,7 +1044,7 @@ func getPayerPkFromTx(
 	return publicKey, nil
 }
 
-func getPayerAddressFromTx(tx *commonPb.Transaction,
+func getPayerAddressAndPkFromTx(tx *commonPb.Transaction,
 	snapshot protocol.Snapshot,
 	ac protocol.AccessControlProvider,
 	blockVersion uint32,
@@ -1038,27 +1052,37 @@ func getPayerAddressFromTx(tx *commonPb.Transaction,
 
 	var (
 		pk           crypto.PublicKey
+		pkBytes      []byte
+		senderMember protocol.Member
 		err          error
-		addressBytes []byte
 	)
 
 	// 从预设的合约空间里获取 payer address
-	if blockVersion >= blockVersion2330 {
+	if blockVersion < blockVersion2330 {
+		// 从 tx 中获取 payer pk
+		pk, err = getPayerPkFromTx(tx, snapshot)
+		if err != nil {
+			return "", nil, fmt.Errorf("getPayerPkFromTx error: %v", err)
+		}
+	} else {
 		contractName := tx.GetPayload().GetContractName()
 		method := tx.GetPayload().GetMethod()
-		addressBytes, err = utils.GetContractMethodPayer(snapshot, contractName, method)
+		pkBytes, err = utils.GetContractMethodPayerPK(snapshot, contractName, method)
 		if err != nil {
 			return "", nil, fmt.Errorf("get contract method payer failed, error: %v", err)
 		}
-		if addressBytes != nil {
-			return string(addressBytes), pk, nil
+		if pkBytes != nil { // 取到预先设置的 payer public key
+			pk, err = asym.PublicKeyFromPEM(pkBytes)
+			if err != nil {
+				return "", nil, fmt.Errorf("public key from pem failed, error: %v", err)
+			}
+		} else { // 未取到 payer，使用 sender public key
+			senderMember, err = ac.NewMember(tx.GetSender().GetSigner())
+			if err != nil {
+				return "", nil, fmt.Errorf("get sender member failed, error: %v", err)
+			}
+			pk = senderMember.GetPk()
 		}
-	}
-
-	// 从 tx 中获取 payer pk
-	pk, err = getPayerPkFromTx(tx, snapshot)
-	if err != nil {
-		return "", nil, fmt.Errorf("getPayerPkFromTx error: %v", err)
 	}
 
 	addressStr, err := publicKeyToAddress(pk, chainConfig)
@@ -1068,48 +1092,6 @@ func getPayerAddressFromTx(tx *commonPb.Transaction,
 
 	return addressStr, pk, nil
 
-}
-
-func (ts *TxScheduler) getPayerPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction) ([]byte, error) {
-
-	var err error
-	var pk []byte
-	sender := getTxPayerSigner(tx)
-	if sender == nil {
-		err = errors.New(" can not find sender from tx ")
-		ts.log.Error(err.Error())
-		return nil, err
-	}
-
-	switch sender.MemberType {
-	case accesscontrol.MemberType_CERT:
-		pk, err = publicKeyFromCert(sender.MemberInfo)
-		if err != nil {
-			ts.log.Error(err.Error())
-			return nil, err
-		}
-	case accesscontrol.MemberType_CERT_HASH:
-		var certInfo *commonPb.CertInfo
-		infoHex := hex.EncodeToString(sender.MemberInfo)
-		if certInfo, err = wholeCertInfo(txSimContext, infoHex); err != nil {
-			ts.log.Error(err.Error())
-			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
-		}
-
-		if pk, err = publicKeyFromCert(certInfo.Cert); err != nil {
-			ts.log.Error(err.Error())
-			return nil, err
-		}
-
-	case accesscontrol.MemberType_PUBLIC_KEY:
-		pk = sender.MemberInfo
-	default:
-		err = fmt.Errorf("invalid member type: %s", sender.MemberType)
-		ts.log.Error(err.Error())
-		return nil, err
-	}
-
-	return pk, nil
 }
 
 // dispatchTxs dispatch txs from:
