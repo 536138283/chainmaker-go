@@ -143,6 +143,11 @@ rpc:
   # The minium value is 10.
   check_chain_conf_trust_roots_change_interval: 60
 
+  # API SendRequestSync timeout in seconds.
+  # SendRequestSync return response with tx execution result.
+  # The default value is 60, recommend set it to 60
+  sync_tx_result_timeout: 60
+
   # restful api gateway
   gateway:
     # enable restful api
@@ -549,7 +554,7 @@ vm:
     # Communication protocol, used for chainmaker and docker manager communication
     # 1. tcp: docker vm uses TCP to communicate with chain
     # 2. uds: docker vm uses unix domain socket to communicate with chain
-    protocol: {vm_go_protocol}
+    protocol: tcp
 
     # If use a customized VM configuration file, supplement it; else, do not configure
     # Priority: chainmaker.yml > vm.yml > default settings
@@ -558,7 +563,7 @@ vm:
     log_in_console: false
 
     # Log level of docker vm go
-    log_level: {vm_go_log_level}
+    log_level: INFO
 
     # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
     max_send_msg_size: 100

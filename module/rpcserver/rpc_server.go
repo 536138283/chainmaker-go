@@ -84,6 +84,8 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 		return nil, fmt.Errorf("new http grpc server failed, %s", err.Error())
 	}
 
+	dispatcher = newTxResultDispatcher(chainMakerServer)
+
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		mRecv = monitor.NewCounterVec(monitor.SUBSYSTEM_GRPC, "grpc_msg_received_total",
 			"Total number of RPC messages received on the server.",
@@ -149,6 +151,16 @@ func (s *RPCServer) Start() error {
 			log.Errorf("GetTLSConfig, failed, %s", err.Error())
 			return err
 		}
+
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+			var acs []protocol.AccessControlProvider
+			acs, err = s.chainMakerServer.GetAllAC()
+			if err != nil {
+				log.Errorf("get all AccessControlProvider failed, %s", err.Error())
+				return err
+			}
+			tlsConfig.VerifyPeerCertificate = createMixVerifyPeerCertificateFunc(acs, s.log)
+		}
 	}
 
 	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
@@ -188,6 +200,9 @@ func (s *RPCServer) Stop() {
 	s.isShutdown = true
 	s.cancel()
 	s.grpcServer.Stop()
+	if dispatcher != nil {
+		dispatcher.stop()
+	}
 	s.log.Info("RPCServer is stopped!")
 }
 

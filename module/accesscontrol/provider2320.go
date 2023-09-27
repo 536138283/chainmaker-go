@@ -5,11 +5,12 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 )
 
 // ****************************************************
@@ -250,13 +251,6 @@ func verifyTxPrincipal2320(t *commonPb.Transaction, resourceId string, ac acProv
 
 	endorsements := []*commonPb.EndorsementEntry{t.Sender}
 	txType := t.Payload.TxType
-
-	if txBytes == nil {
-		txBytes, err = utils.CalcUnsignedTxBytes(t)
-		if err != nil {
-			return fmt.Errorf("get tx bytes failed, err = %v", err)
-		}
-	}
 
 	// sender authentication
 	_, err = ac.lookUpExceptionalPolicy2320(resourceId)
