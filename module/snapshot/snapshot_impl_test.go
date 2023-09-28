@@ -27,7 +27,6 @@ import (
 	vmPb "chainmaker.org/chainmaker/pb-go/v3/vm"
 	"chainmaker.org/chainmaker/protocol/v3"
 	"chainmaker.org/chainmaker/protocol/v3/test"
-	uatomic "go.uber.org/atomic"
 	uberAtomic "go.uber.org/atomic"
 )
 
@@ -429,7 +428,7 @@ func dumpDAG(dag *commonPb.DAG) {
 var snapshot = &SnapshotImpl{
 	lock:            sync.RWMutex{},
 	blockchainStore: nil,
-	sealed:          uatomic.NewBool(false),
+	sealed:          uberAtomic.NewBool(false),
 	chainId:         "",
 	blockTimestamp:  0,
 	blockProposer:   nil,
@@ -447,7 +446,7 @@ type fields struct {
 	//lock            sync.RWMutex
 	blockchainStore protocol.BlockchainStore
 	log             protocol.Logger
-	sealed          *uatomic.Bool
+	sealed          *uberAtomic.Bool
 	chainId         string
 	blockTimestamp  int64
 	blockProposer   *acPb.Member
@@ -619,7 +618,7 @@ func TestReBuildDag(t *testing.T) {
 					},
 				},
 				log:    logger.GetLogger("test"),
-				sealed: uatomic.NewBool(false),
+				sealed: uberAtomic.NewBool(false),
 			},
 			blockDagRwSetTable: []*commonPb.TxRWSet{
 				{
@@ -706,7 +705,7 @@ func TestReBuildDag(t *testing.T) {
 					},
 				},
 				log:    logger.GetLogger("test"),
-				sealed: uatomic.NewBool(false),
+				sealed: uberAtomic.NewBool(false),
 			},
 			blockDagRwSetTable: []*commonPb.TxRWSet{
 				{
@@ -787,7 +786,7 @@ func TestReBuildDag(t *testing.T) {
 					},
 				},
 				log:    logger.GetLogger("test"),
-				sealed: uatomic.NewBool(false),
+				sealed: uberAtomic.NewBool(false),
 			},
 			blockDagRwSetTable: []*commonPb.TxRWSet{
 				{
@@ -868,7 +867,7 @@ func TestReBuildDag(t *testing.T) {
 					},
 				},
 				log:    logger.GetLogger("test"),
-				sealed: uatomic.NewBool(false),
+				sealed: uberAtomic.NewBool(false),
 			},
 			blockDagRwSetTable: []*commonPb.TxRWSet{
 				{
@@ -949,7 +948,7 @@ func TestReBuildDag(t *testing.T) {
 					},
 				},
 				log:    logger.GetLogger("test"),
-				sealed: uatomic.NewBool(false),
+				sealed: uberAtomic.NewBool(false),
 			},
 			blockDagRwSetTable: []*commonPb.TxRWSet{
 				{
@@ -1042,4 +1041,159 @@ func TestConstructKey(t *testing.T) {
 	contractName := "save"
 	key := []byte("name")
 	fmt.Println(constructKey(contractName, key))
+}
+
+func TestSnapshotImpl_ApplyTxSimContext(t *testing.T) {
+	type fields struct {
+		lock             sync.RWMutex
+		blockchainStore  protocol.BlockchainStore
+		log              protocol.Logger
+		sealed           *uberAtomic.Bool
+		chainId          string
+		blockTimestamp   int64
+		blockHeight      uint64
+		blockVersion     uint32
+		preBlockHash     []byte
+		preSnapshot      protocol.Snapshot
+		blockFingerprint string
+		lastChainConfig  *config.ChainConfig
+		txRWSetTable     []*commonPb.TxRWSet
+		txTable          []*commonPb.Transaction
+		specialTxTable   []*commonPb.Transaction
+		txResultMap      map[string]*commonPb.Result
+		readTable        map[string]*sv
+		writeTable       map[string]*sv
+		txRoot           []byte
+		dagHash          []byte
+		rwSetHash        []byte
+	}
+	type args struct {
+		txSimContext   protocol.TxSimContext
+		specialTxType  protocol.ExecOrderTxType
+		runVmSuccess   bool
+		applySpecialTx bool
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   bool
+		want1  int
+	}{
+		// TODO: Add test cases.
+		{
+			name: "normal",
+			fields: fields{
+				lock: sync.RWMutex{},
+				txRWSetTable: []*commonPb.TxRWSet{
+					{
+						TxId: "3",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key3"),
+								Value: []byte("new value of key3"),
+							},
+						},
+					},
+					{
+						TxId: "2",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key2"),
+								Value: []byte("new value of key2"),
+							},
+						},
+					},
+					{
+						TxId: "1",
+						TxWrites: []*commonPb.TxWrite{
+							{
+								Key:   []byte("key1"),
+								Value: []byte("new value of key1"),
+							},
+						},
+					},
+				},
+				txTable:        make([]*commonPb.Transaction, 0),
+				specialTxTable: make([]*commonPb.Transaction, 0),
+				txResultMap:    make(map[string]*commonPb.Result),
+				readTable:      make(map[string]*sv),
+				writeTable:     make(map[string]*sv),
+				log:            logger.GetLogger("test"),
+				sealed:         uberAtomic.NewBool(false),
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &SnapshotImpl{
+				lock:             tt.fields.lock,
+				blockchainStore:  tt.fields.blockchainStore,
+				log:              tt.fields.log,
+				sealed:           tt.fields.sealed,
+				chainId:          tt.fields.chainId,
+				blockTimestamp:   tt.fields.blockTimestamp,
+				blockHeight:      tt.fields.blockHeight,
+				blockVersion:     tt.fields.blockVersion,
+				preBlockHash:     tt.fields.preBlockHash,
+				preSnapshot:      tt.fields.preSnapshot,
+				blockFingerprint: tt.fields.blockFingerprint,
+				lastChainConfig:  tt.fields.lastChainConfig,
+				txRWSetTable:     tt.fields.txRWSetTable,
+				txTable:          tt.fields.txTable,
+				specialTxTable:   tt.fields.specialTxTable,
+				txResultMap:      tt.fields.txResultMap,
+				readTable:        tt.fields.readTable,
+				writeTable:       tt.fields.writeTable,
+				txRoot:           tt.fields.txRoot,
+				dagHash:          tt.fields.dagHash,
+				rwSetHash:        tt.fields.rwSetHash,
+			}
+			var size int
+			for i, txRWSet := range tt.fields.txRWSetTable {
+				txSimContext := &MockSimContextImpl{
+					txExecSeq:    int32(i),
+					tx:           &commonPb.Transaction{Payload: &commonPb.Payload{TxId: txRWSet.GetTxId()}},
+					txRwSet:      txRWSet,
+					currentDepth: 0,
+					txResult:     nil,
+				}
+				var txType protocol.ExecOrderTxType
+				if i%2 == 0 {
+					txType = protocol.ExecOrderTxTypeNormal
+				} else {
+					txType = protocol.ExecOrderTxTypeIterator
+				}
+
+				_, got1 := s.ApplyTxSimContext(txSimContext, txType, true, false)
+				if got1 != i+1 {
+					t.Errorf("error apply size")
+				}
+				size = got1
+			}
+
+			for i, txRWSet := range tt.fields.txRWSetTable {
+				txRWSet.TxId = txRWSet.TxId + strconv.Itoa(i)
+				txSimContext := &MockSimContextImpl{
+					txExecSeq:    int32(size),
+					tx:           &commonPb.Transaction{Payload: &commonPb.Payload{TxId: txRWSet.GetTxId()}},
+					txRwSet:      txRWSet,
+					currentDepth: 0,
+					txResult:     nil,
+				}
+				var txType protocol.ExecOrderTxType
+				if i%2 == 0 {
+					txType = protocol.ExecOrderTxTypeNormal
+				} else {
+					txType = protocol.ExecOrderTxTypeIterator
+				}
+
+				_, got1 := s.ApplyTxSimContext(txSimContext, txType, true, true)
+				if got1 != s.GetSnapshotSize() {
+					t.Errorf("error apply size")
+				}
+				size = got1
+			}
+		})
+	}
 }
