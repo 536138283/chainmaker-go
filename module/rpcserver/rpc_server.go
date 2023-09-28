@@ -84,7 +84,11 @@ func NewRPCServer(chainMakerServer *blockchain.ChainMakerServer) (*RPCServer, er
 		return nil, fmt.Errorf("new http grpc server failed, %s", err.Error())
 	}
 
-	dispatcher = newTxResultDispatcher(chainMakerServer)
+	dispatcher, err = NewRootDispatcher(chainMakerServer)
+	if err != nil {
+		return nil, fmt.Errorf("new root dispatcher failed, %s", err.Error())
+	}
+	dispatcher.Start()
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		mRecv = monitor.NewCounterVec(monitor.SUBSYSTEM_GRPC, "grpc_msg_received_total",
@@ -200,9 +204,7 @@ func (s *RPCServer) Stop() {
 	s.isShutdown = true
 	s.cancel()
 	s.grpcServer.Stop()
-	if dispatcher != nil {
-		dispatcher.stop()
-	}
+	dispatcher.Stop()
 	s.log.Info("RPCServer is stopped!")
 }
 
@@ -236,6 +238,10 @@ func (s *RPCServer) Restart(reason string) error {
 		errMsg := fmt.Sprintf("RPCServer restart for reason [%s] failed, %s", reason, err.Error())
 		s.log.Errorf(errMsg)
 		return errors.New(errMsg)
+	}
+
+	if err := dispatcher.CheckAndUpdate(); err != nil {
+		s.log.Errorf("dispatcher.CheckAndUpdate failed: %s", err.Error())
 	}
 
 	s.log.Infof("RPCServer is restarted, reason: %s", reason)
