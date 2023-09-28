@@ -16,7 +16,7 @@ go mod edit -replace 	github.com/dgraph-io/badger/v3=chainmaker.org/third_party/
 go mod tidy
 go mod edit -replace 	github.com/linvon/cuckoo-filter=chainmaker.org/third_party/cuckoo-filter@chainmaker
 go mod tidy
-go mod edit -replace 	github.com/lucas-clemente/quic-go=chainmaker.org/third_party/quic-go@master
+go mod edit -replace 	github.com/lucas-clemente/quic-go=chainmaker.org/third_party/quic-go@chainmaker
 go mod tidy
 go mod edit -replace 	github.com/marten-seemann/qtls-go1-19=chainmaker.org/third_party/qtls-go1-19@chainmaker
 go mod tidy
