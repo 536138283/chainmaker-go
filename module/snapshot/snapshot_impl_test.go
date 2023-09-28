@@ -1045,7 +1045,7 @@ func TestConstructKey(t *testing.T) {
 
 func TestSnapshotImpl_ApplyTxSimContext(t *testing.T) {
 	type fields struct {
-		lock             sync.RWMutex
+		//lock             sync.RWMutex
 		blockchainStore  protocol.BlockchainStore
 		log              protocol.Logger
 		sealed           *uberAtomic.Bool
@@ -1067,24 +1067,24 @@ func TestSnapshotImpl_ApplyTxSimContext(t *testing.T) {
 		dagHash          []byte
 		rwSetHash        []byte
 	}
-	type args struct {
-		txSimContext   protocol.TxSimContext
-		specialTxType  protocol.ExecOrderTxType
-		runVmSuccess   bool
-		applySpecialTx bool
-	}
+	//type args struct {
+	//	txSimContext   protocol.TxSimContext
+	//	specialTxType  protocol.ExecOrderTxType
+	//	runVmSuccess   bool
+	//	applySpecialTx bool
+	//}
 	tests := []struct {
 		name   string
 		fields fields
-		args   args
-		want   bool
-		want1  int
+		//args   args
+		//want   bool
+		//want1  int
 	}{
 		// TODO: Add test cases.
 		{
 			name: "normal",
 			fields: fields{
-				lock: sync.RWMutex{},
+				//lock: sync.RWMutex{},
 				txRWSetTable: []*commonPb.TxRWSet{
 					{
 						TxId: "3",
@@ -1127,7 +1127,7 @@ func TestSnapshotImpl_ApplyTxSimContext(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &SnapshotImpl{
-				lock:             tt.fields.lock,
+				lock:             sync.RWMutex{},
 				blockchainStore:  tt.fields.blockchainStore,
 				log:              tt.fields.log,
 				sealed:           tt.fields.sealed,
