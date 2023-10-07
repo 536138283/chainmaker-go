@@ -1882,17 +1882,41 @@ func getTxGasLimit(tx *commonPb.Transaction) (uint64, error) {
 func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 	txExecOrderTypeMap map[string]protocol.ExecOrderTxType) (uint32, uint32, uint32, uint32, error) {
 
-	var txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount, txExecOrderCoinBaseCount uint32
-	for _, v := range txExecOrderTypeMap {
-		switch v {
-		case protocol.ExecOrderTxTypeNormal:
-			txExecOrderNormalCount++
-		case protocol.ExecOrderTxTypeIterator:
+	txExecOrderNormalCount := uint32(0)
+	txExecOrderIteratorCount := uint32(0)
+	txExecOrderChargeGasCount := uint32(0)
+	txExecOrderCoinBaseCount := uint32(0)
+
+	// check type are all correct
+	for i, tx := range block.Txs {
+		t, ok := txExecOrderTypeMap[tx.Payload.GetTxId()]
+		if !ok {
+			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
+				txExecOrderCoinBaseCount, fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
+		}
+
+		if t == protocol.ExecOrderTxTypeNormal {
+			if txExecOrderIteratorCount == 0 {
+				txExecOrderNormalCount++
+			} else {
+				txExecOrderIteratorCount++
+			}
+		} else if t == protocol.ExecOrderTxTypeIterator {
 			txExecOrderIteratorCount++
-		case protocol.ExecOrderTxTypeChargeGas:
+		} else if t == protocol.ExecOrderTxTypeChargeGas {
 			txExecOrderChargeGasCount++
-		case protocol.ExecOrderTxTypeCoinbase:
+			if uint32(i+1) != uint32(len(block.Txs)) {
+				return txExecOrderNormalCount, txExecOrderIteratorCount,
+					txExecOrderChargeGasCount, txExecOrderCoinBaseCount,
+					fmt.Errorf("`charge_gas` tx is unexpected, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+			}
+		} else if t == protocol.ExecOrderTxTypeCoinbase {
 			txExecOrderCoinBaseCount++
+			if uint32(i+1) != uint32(len(block.Txs)) {
+				return txExecOrderNormalCount, txExecOrderIteratorCount,
+					txExecOrderChargeGasCount, txExecOrderCoinBaseCount,
+					fmt.Errorf("`coinbase` tx is unexpected, txId:%s, index:%d", tx.Payload.GetTxId(), i)
+			}
 		}
 	}
 
@@ -1916,30 +1940,11 @@ func (ts *TxScheduler) verifyExecOrderTxType(block *commonPb.Block,
 		}
 	}
 
-	// check type are all correct
-	for i, tx := range block.Txs {
-		t, ok := txExecOrderTypeMap[tx.Payload.GetTxId()]
-		if !ok {
-			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-				txExecOrderCoinBaseCount, fmt.Errorf("cannot get tx ExecOrderTxType, txId:%s", tx.Payload.GetTxId())
-		}
-		var typeShouldBe protocol.ExecOrderTxType
-		if uint32(i) < txExecOrderNormalCount {
-			typeShouldBe = protocol.ExecOrderTxTypeNormal
-		} else {
-			typeShouldBe = protocol.ExecOrderTxTypeIterator
-		}
-
-		typeShouldBe = ts.getTypeShouldBeByBlockVersion(blockVersion, i, block, typeShouldBe)
-		if t != typeShouldBe {
-			return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
-				txExecOrderCoinBaseCount, fmt.Errorf("tx type mismatch, txId:%s, index:%d", tx.Payload.GetTxId(), i)
-		}
-	}
 	return txExecOrderNormalCount, txExecOrderIteratorCount, txExecOrderChargeGasCount,
 		txExecOrderCoinBaseCount, nil
 }
 
+// nolint
 func (ts *TxScheduler) getTypeShouldBeByBlockVersion(blockVersion uint32, i int,
 	block *commonPb.Block, typeShouldBe protocol.ExecOrderTxType) protocol.ExecOrderTxType {
 	// 240 以后，gas交易变更为coinbase交易
