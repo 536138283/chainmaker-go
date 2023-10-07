@@ -2706,9 +2706,8 @@ func TestCheckCycleExists(t *testing.T) {
 
 func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 	type fields struct {
-		EnableOptimizeChargeGas  bool
-		EnableConflictsBitWindow bool
-		EnableGas                bool
+		EnableOptimizeChargeGas bool
+		EnableGas               bool
 	}
 	type args struct {
 		txExecOrderTypeMap map[string]protocol.ExecOrderTxType
@@ -2720,14 +2719,14 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 		want    uint32
 		want1   uint32
 		want2   uint32
+		want3   uint32
 		wantErr bool
 	}{
 		{
-			name: "test0",
+			name: "Test_DIsableGas_With_Normal_Iter_Iter",
 			fields: fields{
-				EnableOptimizeChargeGas:  false,
-				EnableConflictsBitWindow: true,
-				EnableGas:                false,
+				EnableOptimizeChargeGas: false,
+				EnableGas:               false,
 			},
 			args: args{
 				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
@@ -2739,83 +2738,84 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 			want:    1,
 			want1:   2,
 			want2:   0,
+			want3:   0,
 			wantErr: false,
 		},
 		{
-			name: "test1",
+			name: "Test_DisableGas_With_Normal_Iter_Coinbase",
 			fields: fields{
-				EnableOptimizeChargeGas:  false,
-				EnableConflictsBitWindow: true,
-				EnableGas:                false,
+				EnableOptimizeChargeGas: false,
+				EnableGas:               false,
 			},
 			args: args{
 				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
 					txId0: protocol.ExecOrderTxTypeNormal,
 					txId1: protocol.ExecOrderTxTypeIterator,
-					txId2: protocol.ExecOrderTxTypeChargeGas,
+					txId2: protocol.ExecOrderTxTypeCoinbase,
 				},
 			},
 			want:    1,
 			want1:   1,
-			want2:   1,
+			want2:   0,
+			want3:   1,
 			wantErr: true,
 		},
-		//{
-		//	name: "test2",
-		//	fields: fields{
-		//		EnableOptimizeChargeGas:  true,
-		//		EnableConflictsBitWindow: true,
-		//		EnableGas:                true,
-		//	},
-		//	args: args{
-		//		txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
-		//			txId0: protocol.ExecOrderTxTypeNormal,
-		//			txId1: protocol.ExecOrderTxTypeIterator,
-		//			txId2: protocol.ExecOrderTxTypeChargeGas,
-		//		},
-		//	},
-		//	want:    1,
-		//	want1:   1,
-		//	want2:   1,
-		//	wantErr: false,
-		//},
 		{
-			name: "test3",
+			name: "Test_EnableGas_With_Normal_Iter_Coinbase",
 			fields: fields{
-				EnableOptimizeChargeGas:  true,
-				EnableConflictsBitWindow: true,
-				EnableGas:                true,
+				EnableOptimizeChargeGas: true,
+				EnableGas:               true,
 			},
 			args: args{
 				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
 					txId0: protocol.ExecOrderTxTypeNormal,
-					txId1: protocol.ExecOrderTxTypeChargeGas,
-					txId2: protocol.ExecOrderTxTypeIterator,
+					txId1: protocol.ExecOrderTxTypeIterator,
+					txId2: protocol.ExecOrderTxTypeCoinbase,
 				},
 			},
 			want:    1,
 			want1:   1,
-			want2:   1,
+			want2:   0,
+			want3:   1,
+			wantErr: false,
+		},
+		{
+			name: "Test_EnableGas_With_Normal_Coinbase_Iter",
+			fields: fields{
+				EnableOptimizeChargeGas: true,
+				EnableGas:               true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeCoinbase,
+					txId2: protocol.ExecOrderTxTypeIterator,
+				},
+			},
+			want:    1,
+			want1:   0,
+			want2:   0,
+			want3:   1,
 			wantErr: true,
 		},
 		{
-			name: "test4",
+			name: "Test_EnableGas_With_Iter_Normal_Coinbase",
 			fields: fields{
-				EnableOptimizeChargeGas:  true,
-				EnableConflictsBitWindow: true,
-				EnableGas:                true,
+				EnableOptimizeChargeGas: true,
+				EnableGas:               true,
 			},
 			args: args{
 				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
 					txId0: protocol.ExecOrderTxTypeIterator,
 					txId1: protocol.ExecOrderTxTypeNormal,
-					txId2: protocol.ExecOrderTxTypeChargeGas,
+					txId2: protocol.ExecOrderTxTypeCoinbase,
 				},
 			},
-			want:    1,
-			want1:   1,
-			want2:   1,
-			wantErr: true,
+			want:    0,
+			want1:   2,
+			want2:   0,
+			want3:   1,
+			wantErr: false,
 		},
 	}
 	for _, tt := range tests {
@@ -2825,7 +2825,7 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 			chainConfig := &configpb.ChainConfig{
 				Core: &configpb.CoreConfig{
 					EnableOptimizeChargeGas:  tt.fields.EnableOptimizeChargeGas,
-					EnableConflictsBitWindow: tt.fields.EnableConflictsBitWindow,
+					EnableConflictsBitWindow: true,
 				},
 				AccountConfig: &configpb.GasAccountConfig{
 					EnableGas: tt.fields.EnableGas,
@@ -2857,7 +2857,10 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 				},
 			}
 			block.Txs = []*commonPb.Transaction{tx0, tx1, tx2}
-			got, got1, got2, _, err := ts.verifyExecOrderTxType(block, tt.args.txExecOrderTypeMap)
+			got, got1, got2, got3, err := ts.verifyExecOrderTxType(block, tt.args.txExecOrderTypeMap)
+			if err != nil {
+				t.Logf("got err => %v", err)
+			}
 			if (err != nil) != tt.wantErr {
 				t.Errorf("verifyExecOrderTxType() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -2871,15 +2874,17 @@ func TestTxScheduler_verifyExecOrderTxType(t *testing.T) {
 			if got2 != tt.want2 {
 				t.Errorf("verifyExecOrderTxType() got2 = %v, want %v", got2, tt.want2)
 			}
+			if got3 != tt.want3 {
+				t.Errorf("verifyExecOrderTxType() got3 = %v, want %v", got3, tt.want3)
+			}
 		})
 	}
 }
 
 func TestTxScheduler_compareDag(t *testing.T) {
 	type fields struct {
-		EnableOptimizeChargeGas  bool
-		EnableConflictsBitWindow bool
-		EnableGas                bool
+		EnableOptimizeChargeGas bool
+		EnableGas               bool
 	}
 	type args struct {
 		txExecOrderTypeMap map[string]protocol.ExecOrderTxType
@@ -2892,11 +2897,10 @@ func TestTxScheduler_compareDag(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "test0",
+			name: "Test_Disable_With_2-Normal_3-Iter",
 			fields: fields{
-				EnableOptimizeChargeGas:  false,
-				EnableConflictsBitWindow: true,
-				EnableGas:                false,
+				EnableOptimizeChargeGas: false,
+				EnableGas:               false,
 			},
 			args: args{
 				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
@@ -2929,11 +2933,10 @@ func TestTxScheduler_compareDag(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name: "test1",
+			name: "Test_EnableGas_With_2-Normal_3-Iter",
 			fields: fields{
-				EnableOptimizeChargeGas:  true,
-				EnableConflictsBitWindow: true,
-				EnableGas:                true,
+				EnableOptimizeChargeGas: true,
+				EnableGas:               true,
 			},
 			args: args{
 				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
@@ -2966,11 +2969,10 @@ func TestTxScheduler_compareDag(t *testing.T) {
 			wantErr: true,
 		},
 		{
-			name: "test2",
+			name: "Test_EnableGas_With_2-Normal_2-Iter_ChargeGas",
 			fields: fields{
-				EnableOptimizeChargeGas:  true,
-				EnableConflictsBitWindow: true,
-				EnableGas:                true,
+				EnableOptimizeChargeGas: true,
+				EnableGas:               true,
 			},
 			args: args{
 				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
@@ -2978,6 +2980,42 @@ func TestTxScheduler_compareDag(t *testing.T) {
 					txId1: protocol.ExecOrderTxTypeNormal,
 					txId2: protocol.ExecOrderTxTypeIterator,
 					txId3: protocol.ExecOrderTxTypeIterator,
+					txId4: protocol.ExecOrderTxTypeChargeGas,
+				},
+				dag: &commonPb.DAG{
+					Vertexes: []*commonPb.DAG_Neighbor{
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{},
+						},
+						{
+							Neighbors: []uint32{0, 1},
+						},
+						{
+							Neighbors: []uint32{2},
+						},
+						{
+							Neighbors: []uint32{0, 1, 2, 3},
+						},
+					},
+				},
+			},
+			wantErr: false,
+		},
+		{
+			name: "Test_EnableGas_With_2-Normal_1-Iter_1-Normal_ChargeGas",
+			fields: fields{
+				EnableOptimizeChargeGas: true,
+				EnableGas:               true,
+			},
+			args: args{
+				txExecOrderTypeMap: map[string]protocol.ExecOrderTxType{
+					txId0: protocol.ExecOrderTxTypeNormal,
+					txId1: protocol.ExecOrderTxTypeNormal,
+					txId2: protocol.ExecOrderTxTypeIterator,
+					txId3: protocol.ExecOrderTxTypeNormal,
 					txId4: protocol.ExecOrderTxTypeChargeGas,
 				},
 				dag: &commonPb.DAG{
@@ -3011,7 +3049,7 @@ func TestTxScheduler_compareDag(t *testing.T) {
 			chainConfig := &configpb.ChainConfig{
 				Core: &configpb.CoreConfig{
 					EnableOptimizeChargeGas:  tt.fields.EnableOptimizeChargeGas,
-					EnableConflictsBitWindow: tt.fields.EnableConflictsBitWindow,
+					EnableConflictsBitWindow: true,
 				},
 				AccountConfig: &configpb.GasAccountConfig{
 					EnableGas: tt.fields.EnableGas,
