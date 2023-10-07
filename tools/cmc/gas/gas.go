@@ -20,6 +20,13 @@ var (
 	address           string
 	amount            int64
 	price             string
+	contractName      string
+	method            string
+	multiSign         bool
+	gasLimit          uint64
+	payerKeyFilePath  string
+	payerCrtFilePath  string
+	payerOrgId        string
 )
 
 const (
@@ -32,6 +39,13 @@ const (
 	flagAddress           = "address"
 	flagAmount            = "amount"
 	flagPrice             = "price"
+	flagContractName      = "contract-name"
+	flagMethod            = "method"
+	flagMultiSign         = "multi-sign"
+	flagGasLimit          = "gas-limit"
+	flagPayerKeyFilePath  = "payer-key-file-path"
+	flagPayerCrtFilePath  = "payer-crt-file-path"
+	flagPayerOrgId        = "payer-org-id"
 )
 
 // NewGasManageCMD new gas management command
@@ -55,6 +69,11 @@ func NewGasManageCMD() *cobra.Command {
 	cmd.AddCommand(newSetInstallBaseGasCMD())
 	cmd.AddCommand(newSetInstallGasPriceCMD())
 
+	cmd.AddCommand(setContractMethodPayerCMD())
+	cmd.AddCommand(unsetContractMethodPayerCMD())
+	cmd.AddCommand(queryContractMethodPayerCMD())
+	cmd.AddCommand(queryTxPayerCMD())
+
 	return cmd
 }
 
@@ -72,6 +91,13 @@ func init() {
 	flags.StringVar(&address, flagAddress, "", "address of account")
 	flags.Int64Var(&amount, flagAmount, 0, "amount of gas")
 	flags.StringVar(&price, flagPrice, "0", "price of one byte")
+	flags.StringVar(&contractName, flagContractName, "", "name of contract")
+	flags.StringVar(&method, flagMethod, "", "name of method")
+	flags.BoolVar(&multiSign, flagMultiSign, false, "whether use multi-sign to send request")
+	flags.Uint64Var(&gasLimit, flagGasLimit, 0, "gas limit in uint64 type")
+	flags.StringVar(&payerKeyFilePath, flagPayerKeyFilePath, "", "specify payer key file path")
+	flags.StringVar(&payerCrtFilePath, flagPayerCrtFilePath, "", "specify payer cert file path")
+	flags.StringVar(&payerOrgId, flagPayerOrgId, "", "specify payer org-id")
 
 	if sdkConfPath == "" {
 		sdkConfPath = util.EnvSdkConfPath
