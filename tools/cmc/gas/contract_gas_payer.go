@@ -1,9 +1,9 @@
 package gas
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"strings"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -19,9 +19,9 @@ import (
 
 func setContractMethodPayerCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set-payer [contract_name] [method] [payer_address]",
+		Use:   "set-payer contract_name [method] payer_address",
 		Short: "set gas payer for contract method",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			var (
 				err error
 			)
@@ -47,9 +47,18 @@ func setContractMethodPayerCMD() *cobra.Command {
 			}
 
 			// 构建参数
-			message := contractName
-			message += ":" + method
-			message += ":" + address
+			message := ""
+			if len(args) == 3 {
+				message += args[0]
+				message += ":" + args[1]
+				message += ":" + args[2]
+			} else if len(args) == 2 {
+				message += args[0]
+				message += ":"
+				message += ":" + args[1]
+			} else {
+				return errors.New("command syntax error")
+			}
 			message += ":" + uuid.GetUUID()
 			signature, err := sdkutils.SignPayloadBytesWithHashType(
 				privateKey,
@@ -75,6 +84,10 @@ func setContractMethodPayerCMD() *cobra.Command {
 			}
 
 			var params []*common.KeyValuePair
+			params = append(params, &common.KeyValuePair{
+				Key:   "PARAMETERS",
+				Value: []byte(message),
+			})
 			params = append(params, &common.KeyValuePair{
 				Key:   "ENDORSEMENT_ENTRY",
 				Value: endorsementBytes,
@@ -116,22 +129,22 @@ func setContractMethodPayerCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagContractName, flagMethod, flagAddress, flagMultiSign,
 		flagPayerKeyFilePath, flagPayerCrtFilePath, flagPayerOrgId,
-		flagSdkConfPath, flagGasLimit,
+		flagSdkConfPath, flagGasLimit, flagMultiSign,
 	})
 
-	cmd.MarkFlagRequired(flagContractName)
-	cmd.MarkFlagRequired(flagAddress)
+	cmd.MarkFlagRequired(flagPayerKeyFilePath)
+	cmd.MarkFlagRequired(flagPayerCrtFilePath)
+	cmd.MarkFlagRequired(flagPayerOrgId)
 
 	return cmd
 }
 
 func unsetContractMethodPayerCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "unset-payer [contract_name] [method]",
+		Use:   "unset-payer contract_name [method]",
 		Short: "clear the gas payer setting for contract's method",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			var (
 				err error
 			)
@@ -143,52 +156,25 @@ func unsetContractMethodPayerCMD() *cobra.Command {
 			}
 			defer client.Stop()
 
-			payerKeyPem, err := ioutil.ReadFile(payerKeyFilePath)
-			if err != nil {
-				return err
-			}
-			payerCertPem, err := ioutil.ReadFile(payerCrtFilePath)
-			if err != nil {
-				return err
-			}
-			privateKey, err := asym.PrivateKeyFromPEM(payerKeyPem, nil)
-			if err != nil {
-				return err
-			}
-
 			// 构建参数
-			message := contractName
-			message += ":" + method
-			message += ":" + address
-			message += ":" + uuid.GetUUID()
-			signature, err := sdkutils.SignPayloadBytesWithHashType(
-				privateKey,
-				client.GetHashType(),
-				[]byte(message))
-			if err != nil {
-				return err
-			}
-
-			memberInfo := payerCertPem
-			var memberType acPb.MemberType
-			if client.GetAuthType() == sdk.PermissionedWithCert {
-				memberType = acPb.MemberType_CERT
-			} else if client.GetAuthType() == sdk.PermissionedWithKey {
-				memberType = acPb.MemberType_PUBLIC_KEY
-			} else if client.GetAuthType() == sdk.Public {
-				memberType = acPb.MemberType_PUBLIC_KEY
-			}
-			endorsement := sdkutils.NewEndorserWithMemberType(payerOrgId, memberInfo, memberType, signature)
-			endorsementBytes, err := proto.Marshal(endorsement)
-			if err != nil {
-				return err
-			}
-
 			var params []*common.KeyValuePair
-			params = append(params, &common.KeyValuePair{
-				Key:   "ENDORSEMENT_ENTRY",
-				Value: endorsementBytes,
-			})
+			if len(args) == 2 {
+				params = append(params, &common.KeyValuePair{
+					Key:   "CONTRACT_NAME",
+					Value: []byte(args[0]),
+				})
+				params = append(params, &common.KeyValuePair{
+					Key:   "METHOD",
+					Value: []byte(args[1]),
+				})
+			} else if len(args) == 1 {
+				params = append(params, &common.KeyValuePair{
+					Key:   "CONTRACT_NAME",
+					Value: []byte(args[0]),
+				})
+			} else {
+				return errors.New("command syntax error")
+			}
 
 			// 构建 payload
 			var payload *common.Payload
@@ -226,44 +212,46 @@ func unsetContractMethodPayerCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagContractName, flagMethod, flagAddress, flagMultiSign,
 		flagSdkConfPath,
 	})
-
-	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
 }
 
 func queryContractMethodPayerCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "query-payer [contract_name] [method]",
+		Use:   "query-method-payer contract_name [method]",
 		Short: "query the payer setting for the contract's method",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			var (
 				err error
 			)
 
+			// 获取 client
 			client, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
 			if err != nil {
 				return err
 			}
 			defer client.Stop()
 
+			// 构建参数
 			var params []*common.KeyValuePair
-			contractName = strings.TrimSpace(contractName)
-			if contractName != "" {
+			if len(args) == 1 {
 				params = append(params, &common.KeyValuePair{
 					Key:   "CONTRACT_NAME",
-					Value: []byte(contractName),
+					Value: []byte(args[0]),
 				})
-			}
-			method = strings.TrimSpace(method)
-			if method != "" {
+			} else if len(args) == 2 {
+				params = append(params, &common.KeyValuePair{
+					Key:   "CONTRACT_NAME",
+					Value: []byte(args[0]),
+				})
 				params = append(params, &common.KeyValuePair{
 					Key:   "METHOD",
-					Value: []byte(method),
+					Value: []byte(args[1]),
 				})
+			} else {
+				return errors.New("command syntax error")
 			}
 
 			// 构建 payload
@@ -293,20 +281,17 @@ func queryContractMethodPayerCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagContractName, flagMethod, flagAddress,
 		flagSdkConfPath,
 	})
-
-	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
 }
 
 func queryTxPayerCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "query-tx-payer [txId]",
+		Use:   "query-tx-payer txId",
 		Short: "query the payer address of the tx",
-		RunE: func(_ *cobra.Command, _ []string) error {
+		RunE: func(_ *cobra.Command, args []string) error {
 			var (
 				err error
 			)
@@ -318,19 +303,13 @@ func queryTxPayerCMD() *cobra.Command {
 			defer client.Stop()
 
 			var params []*common.KeyValuePair
-			contractName = strings.TrimSpace(contractName)
-			if contractName != "" {
+			if len(args) == 1 {
 				params = append(params, &common.KeyValuePair{
-					Key:   "CONTRACT_NAME",
-					Value: []byte(contractName),
+					Key:   "TX_ID",
+					Value: []byte(args[0]),
 				})
-			}
-			method = strings.TrimSpace(method)
-			if method != "" {
-				params = append(params, &common.KeyValuePair{
-					Key:   "METHOD",
-					Value: []byte(method),
-				})
+			} else {
+				errors.New("command syntax error")
 			}
 
 			// 构建 payload
@@ -360,11 +339,8 @@ func queryTxPayerCMD() *cobra.Command {
 	}
 
 	util.AttachFlags(cmd, flags, []string{
-		flagContractName, flagMethod, flagAddress,
-		flagSdkConfPath,
+		flagSdkConfPath, flagSyncResult,
 	})
-
-	cmd.MarkFlagRequired(flagContractName)
 
 	return cmd
 }
