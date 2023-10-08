@@ -372,6 +372,8 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyAdmin)
 
 		// cert alias management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
@@ -546,6 +548,8 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyAdmin)
 
 		// certs alias management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+

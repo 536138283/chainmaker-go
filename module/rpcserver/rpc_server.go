@@ -408,8 +408,9 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 		PermitWithoutStream: true,            // Allow pings even when there are no active streams
 	}
 	var kasp = keepalive.ServerParameters{
-		Time:    5 * time.Second, // Ping the client if it is idle for 5 seconds to ensure the connection is still active
-		Timeout: 1 * time.Second, // Wait 1 second for the ping ack before assuming the connection is dead
+		Time:              5 * time.Second, // Ping the client if it is idle for 5 seconds
+		Timeout:           1 * time.Second, // Wait 1 second for the ping ack before assuming the connection is dead
+		MaxConnectionIdle: 5 * time.Minute, // Idle connection would be closed by sending a GoAway
 	}
 	opts = append(opts, grpc.KeepaliveEnforcementPolicy(kaep), grpc.KeepaliveParams(kasp))
 

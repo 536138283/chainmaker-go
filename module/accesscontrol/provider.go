@@ -487,8 +487,8 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	}
 
 	resourceName := mInfo.ContractName + "-" + mInfo.Method
-	agreeEndorsements := make([]*commonPb.EndorsementEntry, len(mInfo.VoteInfos))
-	rejectEndorsements := make([]*commonPb.EndorsementEntry, len(mInfo.VoteInfos))
+	var agreeEndorsements []*commonPb.EndorsementEntry
+	var rejectEndorsements []*commonPb.EndorsementEntry
 
 	for _, voteInfo := range mInfo.VoteInfos {
 		if voteInfo.Vote == syscontract.VoteStatus_AGREE {
@@ -499,6 +499,7 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 			log.Warnf("unknown vote action, voteInfo.Vote = %v", voteInfo.Vote)
 		}
 	}
+	log.Debugf("multiSignInfo => %v", mInfo)
 	log.Debugf("endorsers agreed num => %v", len(agreeEndorsements))
 	log.Debugf("endorsers rejected num => %v", len(rejectEndorsements))
 

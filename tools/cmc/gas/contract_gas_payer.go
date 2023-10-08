@@ -96,17 +96,25 @@ func setContractMethodPayerCMD() *cobra.Command {
 			// 构建 payload
 			var payload *common.Payload
 			if multiSign {
+				params = append(params, &common.KeyValuePair{
+					Key:   "SYS_CONTRACT_NAME",
+					Value: []byte(syscontract.SystemContract_ACCOUNT_MANAGER.String()),
+				})
+				params = append(params, &common.KeyValuePair{
+					Key:   "SYS_METHOD",
+					Value: []byte(syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String()),
+				})
 				payload = client.CreatePayload(
 					"", common.TxType_INVOKE_CONTRACT,
 					syscontract.SystemContract_MULTI_SIGN.String(),
 					syscontract.MultiSignFunction_REQ.String(),
 					params,
-					0, nil)
+					0, &common.Limit{GasLimit: gasLimit})
 			} else {
 				payload = client.CreatePayload(
 					"", common.TxType_INVOKE_CONTRACT,
 					syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-					syscontract.GasAccountFunction_SET_METHOD_PAYER.String(),
+					syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(),
 					params,
 					0, &common.Limit{GasLimit: gasLimit})
 			}
@@ -116,6 +124,7 @@ func setContractMethodPayerCMD() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			fmt.Printf("request = %v \n", request.String())
 
 			// 发送 Request, 读取 Response
 			resp, err := client.SendTxRequest(request, -1, true)
@@ -189,7 +198,7 @@ func unsetContractMethodPayerCMD() *cobra.Command {
 				payload = client.CreatePayload(
 					"", common.TxType_INVOKE_CONTRACT,
 					syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-					syscontract.GasAccountFunction_UNSET_METHOD_PAYER.String(),
+					syscontract.GasAccountFunction_UNSET_CONTRACT_METHOD_PAYER.String(),
 					params,
 					0, &common.Limit{GasLimit: gasLimit})
 			}
@@ -258,7 +267,7 @@ func queryContractMethodPayerCMD() *cobra.Command {
 			payload := client.CreatePayload(
 				"", common.TxType_INVOKE_CONTRACT,
 				syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-				syscontract.GasAccountFunction_GET_METHOD_PAYER.String(),
+				syscontract.GasAccountFunction_GET_CONTRACT_METHOD_PAYER.String(),
 				params,
 				0, &common.Limit{GasLimit: gasLimit})
 
