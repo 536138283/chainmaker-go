@@ -68,14 +68,14 @@ block:
   tx_timeout: 600
 
   # Max transaction count in a block.
-  block_tx_capacity: 100
+  block_tx_capacity: 1000
 
-  # Max block size, in MB
-  block_size: 50
+  # Max block size, in MB, Default unlimited, Use block_tx_capacity to limit block size
+  block_size: 500
 
   # The interval of block proposing attempts, in millisecond.
   # should be within the range of [10,10000]
-  block_interval: 10
+  block_interval: 200
 
   # To enable this attribute, ensure that the clock of the node is consistent
   # Verify the block timestamp or not
@@ -83,9 +83,10 @@ block:
 
   # block timeout, in second.
   # if abs(now - block_timestamp) > block_timeout, the block is invalid.
-  block_timeout: 10
+  block_timeout: 30
 
-  tx_parameter_size: 40
+  # maximum value per parameter, MB
+  tx_parameter_size: 50
 
 # Core settings
 core:
