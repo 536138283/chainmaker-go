@@ -36,9 +36,42 @@ func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
 func IsCoinBaseTx(tx *commonPb.Transaction) bool {
 	if tx == nil || tx.Payload == nil ||
 		tx.Payload.ContractName != syscontract.SystemContract_COINBASE.String() ||
-		tx.Payload.Method == syscontract.CoinbaseFunction_RUN_COINBASE.String() {
+		tx.Payload.Method != syscontract.CoinbaseFunction_RUN_COINBASE.String() ||
+		tx.Payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
 		return false
 	}
 
-	return false
+	return true
+}
+
+// IsGasTx Returns true if it is a gas transaction
+func IsGasTx(tx *commonPb.Transaction) bool {
+	if tx == nil || tx.Payload == nil ||
+		tx.Payload.ContractName != syscontract.SystemContract_ACCOUNT_MANAGER.String() ||
+		tx.Payload.Method != syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() ||
+		tx.Payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
+		return false
+	}
+
+	return true
+}
+
+// FilterCoinBaseTxOrGasTx filter coinbase tx or gas tx
+func FilterCoinBaseTxOrGasTx(block *commonPb.Block) []*commonPb.Transaction {
+	blockTxs := block.Txs
+
+	// 空块场景避免切片溢出
+	if len(blockTxs) == 0 {
+		return blockTxs
+	}
+
+	// 判断最后一笔交易是不是coinbase交易
+	lastTx := blockTxs[len(blockTxs)-1]
+	if !IsCoinBaseTx(lastTx) && !IsGasTx(lastTx) {
+		// 非coinbase交易或gas交易的情况下直接返回
+		return blockTxs
+	}
+	// 是coinbase交易或gas交易的情况下将其删除
+	newBlockTxs := blockTxs[:len(blockTxs)-1]
+	return newBlockTxs
 }
