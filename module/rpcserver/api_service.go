@@ -121,6 +121,32 @@ func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (
 	return resp, nil
 }
 
+// SendRequestSync - deal received TxRequest, sync tx result and send response
+func (s *ApiService) SendRequestSync(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("SendRequestSync[%s],payload:%#v,\n----signer:%v\n----endorsers:%+v",
+			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
+	})
+
+	startTime := time.Now()
+	resp := s.invoke(ctx, &commonPb.Transaction{
+		Payload:   req.Payload,
+		Sender:    req.Sender,
+		Endorsers: req.Endorsers,
+		Result:    nil,
+		Payer:     req.Payer,
+	}, protocol.RPC, true)
+	elapsed := time.Since(startTime)
+
+	// audit log format: ip:port|orgId|chainId|TxType|TxId|Timestamp|ContractName|Method|retCode|retCodeMsg|retMsg
+	// |invokeElapsed
+	s.logBrief.Infof("|%s|%s|%s|%s|%s|%d|%s|%s|%d|%s|%s|%d", GetClientAddr(ctx), req.Sender.Signer.OrgId,
+		req.Payload.ChainId, req.Payload.TxType, req.Payload.TxId, req.Payload.Timestamp, req.Payload.ContractName,
+		req.Payload.Method, resp.Code, resp.Code, resp.Message, elapsed.Milliseconds())
+
+	return resp, nil
+}
+
 // validate tx
 func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCode, errMsg string) {
 	var (
@@ -479,19 +505,20 @@ func (s *ApiService) dealTransact(ctx context.Context, tx *commonPb.Transaction,
 	var (
 		err       error
 		resp      = &commonPb.TxResponse{TxId: tx.Payload.TxId}
-		txResultC <-chan *txResultExt
+		txResultC <-chan *TxResultExt
 	)
 
 	// if sync result, register tx first
 	if syncResult {
-		txResultC, err = dispatcher.register(tx.Payload.ChainId, tx.Payload.TxId)
+		txResultC, err = dispatcher.Register(tx.Payload.ChainId, tx.Payload.TxId)
 		if err != nil {
-			s.log.Error(err)
+			s.log.Errorf("Register tx failed, %s, chainId:%s, txId:%s", err.Error(),
+				tx.Payload.ChainId, tx.Payload.TxId)
 			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 			resp.Message = err.Error()
 			return resp
 		}
-		defer dispatcher.unregister(tx.Payload.ChainId, tx.Payload.TxId)
+		defer dispatcher.Unregister(tx.Payload.ChainId, tx.Payload.TxId)
 	}
 
 	err = s.chainMakerServer.AddTx(tx.Payload.ChainId, tx, source)
@@ -597,10 +624,6 @@ func (s *ApiService) CheckNewBlockChainConfig(context.Context, *configPb.CheckNe
 			Code:    int32(1),
 			Message: err.Error(),
 		}, nil
-	}
-
-	if dispatcher != nil {
-		dispatcher.evacuateChilds()
 	}
 
 	return &configPb.CheckNewBlockChainConfigResponse{
