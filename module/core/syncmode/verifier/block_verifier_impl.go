@@ -10,6 +10,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker/protocol/v2"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
@@ -231,7 +233,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
 	}
 
 	if protocol.CONSENSUS_VERIFY == mode {
@@ -332,7 +334,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
 	}
 
 	//if protocol.CONSENSUS_VERIFY == mode {
