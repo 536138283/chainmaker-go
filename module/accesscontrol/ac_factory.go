@@ -78,8 +78,7 @@ func (af *AcFactory) NewACProvider(chainConf protocol.ChainConf, localOrgId stri
 		}
 	case protocol.Public:
 		if chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_RAFT ||
-			chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MBFT ||
-			chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MAXBFT {
+			chainConf.ChainConfig().Consensus.Type == consensus.ConsensusType_MBFT {
 			return nil,
 				fmt.Errorf("new ac provid" +
 					"er failed, the consensus type does not match the authentication type")
