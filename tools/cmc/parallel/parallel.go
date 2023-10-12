@@ -190,10 +190,11 @@ func ParallelCMD() *cobra.Command {
 					panic(err)
 				}
 				pairsString = string(bytes)
-				globalPairs, err = getPairInfos()
-				if err != nil {
-					panic(err)
-				}
+			}
+			var err error
+			globalPairs, err = getPairInfos()
+			if err != nil {
+				panic(err)
 			}
 			fmt.Println("tx content: ", pairsString)
 		},
