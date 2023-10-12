@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	commonErr "chainmaker.org/chainmaker/common/v3/errors"
 	"chainmaker.org/chainmaker/common/v3/json"
 	commonpb "chainmaker.org/chainmaker/pb-go/v3/common"
@@ -338,7 +340,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	var wg sync.WaitGroup
 	waitCount := len(verifyBatch)
 	wg.Add(waitCount)
-	txIds := utils.GetTxIds(block.Txs)
+	txIds := utils.GetTxIds(coinbasemgr.FilterCoinBaseTxOrGasTx(block.Txs))
 
 	poolStart := utils.CurrentTimeMillisSeconds()
 	txsRet := make(map[string]*commonpb.Transaction)
@@ -609,15 +611,25 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			}
 			// check rw set
 			if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
-				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s",
+					vt.block.Header.BlockHeight, err)
+
+				// coinbase or gas tx needn't delete from txPool
+				if !coinbasemgr.IsCoinBaseTx(tx) && !coinbasemgr.IsGasTx(tx) {
+					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				}
+
 				continue
 			}
 			result.RwSetHash = rwsetHash
 			// verify if rwset hash is equal
 			if err = VerifyTxResult(tx, result); err != nil {
-				vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				vt.log.Warnf("verify tx result failed, block height:%d, err:%s",
+					vt.block.Header.BlockHeight, err)
+				// coinbase or gas tx needn't delete from txPool
+				if !coinbasemgr.IsCoinBaseTx(tx) && !coinbasemgr.IsGasTx(tx) {
+					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				}
 				continue
 			}
 			// calc tx hash with version
@@ -833,7 +845,7 @@ func RemoveInvalidTxsForFollower(txPool protocol.TxPool, invalidTxIds []string) 
 	for _, v := range txsRet {
 		txs = append(txs, v)
 	}
-	txPool.RemoveTxs(txs, protocol.EVIL)
+	txPool.RemoveTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(txs), protocol.EVIL)
 }
 
 // RemoveInvalidTxsForProposer remove invalid txs for proposer, use for OnReceiveRwSetVerifyFailTxs
@@ -856,6 +868,6 @@ func RemoveInvalidTxsForProposer(txPool protocol.TxPool,
 	}
 
 	// retry txs and remove txs in tx pool
-	txPool.RetryTxs(retryTxs)
-	txPool.RemoveTxs(removeTxs, protocol.EVIL)
+	txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(retryTxs))
+	txPool.RemoveTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs), protocol.EVIL)
 }

@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
@@ -290,7 +292,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 				bp.txPool.RemoveTxBatches(batchIds, protocol.OTHER)
 			} else {
-				bp.txPool.RemoveTxs(selfProposedBlock.Txs, protocol.OTHER)
+				bp.txPool.RemoveTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(selfProposedBlock.Txs), protocol.OTHER)
 			}
 		}
 	}
@@ -334,6 +336,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		// validate txFilter rules
 		filterValidateFirst := utils.CurrentTimeMillisSeconds()
 		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
+
+		// 剔除gas/coinbase交易
+		removeTxs = coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs)
+		remainTxs = coinbasemgr.FilterCoinBaseTxOrGasTx(remainTxs)
+
 		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
 		if len(removeTxs) > 0 {
 			batchIds, fetchBatch, fetchBatches = bp.removeAndRetryTx(height, batchIds, removeTxs, remainTxs, REMOVE)
@@ -362,9 +369,10 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		fetchBatch = fetchBatch[:txCapacity]
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryTxs(txRetry)
+			bp.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(txRetry))
 		} else {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds,
+				coinbasemgr.FilterCoinBaseTxOrGasTx(fetchBatch))
 			fetchBatch = getFetchBatch(fetchBatches)
 		}
 
@@ -387,7 +395,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		}
 
 		if common.TxPoolType != batch.TxPoolType {
-			bp.txPool.RetryTxs(fetchBatch) // put txs back to txpool
+			bp.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(fetchBatch)) // put txs back to txpool
 		} else {
 			bp.txPool.RetryTxBatches(batchIds)
 		}
@@ -857,12 +865,12 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 			}
 
 			removeTxs := make([]*commonpb.Transaction, 0)
-			retryTxs := make([]*commonpb.Transaction, 0)
+			sameTxs := make([]*commonpb.Transaction, 0)
 			keepTx := make([]*commonpb.Transaction, 0)
 			for _, tx := range proposedBlock.Txs {
 				txId := tx.Payload.TxId
 				if _, exit := txInSameBranch[txId]; exit {
-					retryTxs = append(retryTxs, tx)
+					sameTxs = append(sameTxs, tx)
 					continue
 				}
 
@@ -884,15 +892,18 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 				continue
 			}
 
-			fetchBatch := keepTx
+			// 剔除gas/coinbase交易
+			fetchBatch := coinbasemgr.FilterCoinBaseTxOrGasTx(keepTx)
+			removeTxs = coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs)
+
 			batchIds, _, err := common.GetBatchIds(proposedBlock)
 			if err != nil {
 				return nil, nil, err
 			}
 
-			if len(removeTxs) != 0 || len(retryTxs) != 0 {
+			if len(removeTxs) != 0 || len(sameTxs) != 0 {
 				newBatchIds, fetchBatch, _ = bp.removeAndRetryTx(proposedBlock.Header.BlockHeight, batchIds, removeTxs,
-					keepTx, RETRY)
+					fetchBatch, RETRY)
 				bp.log.Infof("remove the overtime transactions, total:%d, fetch:%d, remove:%d",
 					len(proposedBlock.Txs), len(fetchBatch), len(removeTxs))
 			} else {
@@ -918,13 +929,15 @@ func (bp *BlockProposerImpl) removeAndRetryTx(
 	if common.TxPoolType == batch.TxPoolType {
 		// remove and get new batchIds
 		if mode == RETRY {
-			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
+			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds,
+				fetchBatch)
 			newFetchBatch := getFetchBatch(fetchBatches)
 
 			return newBatchIds, newFetchBatch, fetchBatches
 		}
 
-		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs, protocol.EVIL)
+		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds,
+			removeTxs, protocol.EVIL)
 		newFetchBatch := getFetchBatch(fetchBatches)
 
 		return newBatchIds, newFetchBatch, fetchBatches
@@ -949,7 +962,8 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, p
 			}
 		}
 		if len(dupTxs) != 0 {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs, protocol.DOUBLE_SPEND)
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds,
+				coinbasemgr.FilterCoinBaseTxOrGasTx(dupTxs), protocol.DOUBLE_SPEND)
 			fetchBatch = getFetchBatch(fetchBatches)
 		}
 		return batchIds, fetchBatch, fetchBatches
