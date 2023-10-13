@@ -93,58 +93,10 @@ func (ts *TxScheduler) guardForExecuteTx300WithOptimizeChargeGas(
 		return true
 	}
 
-	ts.log.DebugDynamic(func() string {
-		return fmt.Sprintf("begin check [txid:%s]account balance", tx.Payload.TxId)
-	})
-
-	chainCfg := snapshot.GetLastChainConfig()
-
-	// get the public key from tx
-	pk, err := getPkFromTx(tx, snapshot)
-	if err != nil {
-		ts.log.Errorf("getPkFromTx failed: err = %v", err)
-		return false
-	}
-
-	// convert the public key to `ZX` or `CM` or `EVM` address
-	addr, err := publicKeyToAddress(pk, chainCfg)
-	if err != nil {
-		ts.log.Error("publicKeyToAddress failed: err = %v", err)
-		return false
-	}
-
-	value, _ := senderCollection.txsMap.Load(addr)
-	collection, ok := value.(*TxCollection)
-	if !ok {
-		ts.log.Error("get tx collection fail")
-		return false
-	}
-
-	collection.mu.Lock()
-	defer collection.mu.Unlock()
-
-	balance := collection.accountBalance
-	limit := int64(tx.Payload.Limit.GasLimit)
-
-	// 校验余额是否足够
-	if balance-limit < 0 {
-		pkStr, _ := collection.publicKey.String()
-		ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
-		setTxResultForGasBalanceNotEnough(txSimContext, addr)
-
-		if tx.Result == nil {
-			tx.Result = txSimContext.GetTxResult()
-		}
-
-		return false
-	}
-
-	collection.accountBalance = collection.accountBalance - limit
-	senderCollection.txsMap.Store(addr, collection)
-
 	return true
 }
 
+// nolint
 // setTxResultForGasBalanceNotEnough set tx result about gas balance not enough
 func setTxResultForGasBalanceNotEnough(txSimContext protocol.TxSimContext, addr string) {
 	errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)

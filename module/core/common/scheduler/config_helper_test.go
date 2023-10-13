@@ -132,6 +132,7 @@ func TestVerifyOptimizeChargeGasTx_OK(t *testing.T) {
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -189,6 +190,7 @@ func TestVerifyOptimizeChargeGasTx_NoChargeGasTx(t *testing.T) {
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -281,6 +283,7 @@ func TestVerifyOptimizeChargeGasTx_WithWrongAccountAddress(t *testing.T) {
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -369,6 +372,7 @@ func TestVerifyOptimizeChargeGasTx_WithLessAddress(t *testing.T) {
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -465,6 +469,7 @@ func TestVerifyOptimizeChargeGasTx_WithMoreAddress(t *testing.T) {
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -557,6 +562,7 @@ func TestVerifyOptimizeChargeGasTx_WithWrongGas(t *testing.T) {
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -651,6 +657,7 @@ func TestVerifyOptimizeChargeGasTx_WithNotExistAddress(t *testing.T) {
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)

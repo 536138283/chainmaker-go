@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strconv"
 
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/utils/v3"
+
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 
 	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
@@ -102,6 +105,20 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	}
 
 	return nil
+}
+
+// publicKeyToAddress: generate address from public key, according to chainconfig parameter
+func publicKeyToAddress(pk crypto.PublicKey, chainCfg *configPb.ChainConfig) (string, error) {
+
+	publicKeyString, err := utils.PkToAddrStr(pk, chainCfg.Vm.AddrType, crypto.HashAlgoMap[chainCfg.Crypto.Hash])
+	if err != nil {
+		return "", err
+	}
+
+	if chainCfg.Vm.AddrType == configPb.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+	return publicKeyString, nil
 }
 
 func getSenders(parameters []*commonPb.KeyValuePair) (map[string][]byte, error) {
