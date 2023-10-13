@@ -25,6 +25,7 @@ func updateBlockConfigCMD() *cobra.Command {
 	cmd.AddCommand(updateBlockIntervalCMD())
 	cmd.AddCommand(updateTxParameterSizeCMD())
 	cmd.AddCommand(updateBlockTimestampCMD())
+	cmd.AddCommand(universalUpdateBlockConfigCMD())
 
 	return cmd
 }
@@ -243,4 +244,92 @@ func updateBlockTimestamp() error {
 	}
 	fmt.Printf("response %+v\n", resp)
 	return nil
+}
+
+// universalUpdateBlockConfigCMD universal update block config sub command
+// @return *cobra.Command
+func universalUpdateBlockConfigCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "update",
+		Short: "update block config universal, update block config on demand",
+		Long: `update block config universal, update block config on demand based on flags were setted, 
+flags that not setted will use former value`,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+				userSignCrtFilePath, userSignKeyFilePath)
+			if err != nil {
+				return err
+			}
+			defer client.Stop()
+
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+			chainConfig, err := client.GetChainConfig()
+			if err != nil {
+				return fmt.Errorf("get chain config failed, %s", err.Error())
+			}
+
+			var (
+				aTxTimestampVerify    = chainConfig.Block.TxTimestampVerify
+				aTxTimeout            = chainConfig.Block.TxTimeout
+				aBlockTxCapacity      = chainConfig.Block.BlockTxCapacity
+				aBlockInterval        = chainConfig.Block.BlockInterval
+				aTxParameterSize      = chainConfig.Block.TxParameterSize
+				aBlockTimestampVerify = chainConfig.Block.BlockTimestampVerify
+				aBlockTimeout         = chainConfig.Block.BlockTimeout
+			)
+
+			if cmd.Flags().Lookup(flagTxTimestampVerify).Changed {
+				aTxTimestampVerify = txTimestampVerify
+			}
+			if cmd.Flags().Lookup(flagTxTimeout).Changed {
+				aTxTimeout = txTimeout
+			}
+			if cmd.Flags().Lookup(flagBlockTxCapacity).Changed {
+				aBlockTxCapacity = blockTxCapacity
+			}
+			if cmd.Flags().Lookup(flagBlockInterval).Changed {
+				aBlockInterval = blockInterval
+			}
+			if cmd.Flags().Lookup(flagTxParameterSize).Changed {
+				aTxParameterSize = txParameterSize
+			}
+			if cmd.Flags().Lookup(flagBlockTimestampVerify).Changed {
+				aBlockTimestampVerify = blockTimestampVerify
+			}
+			if cmd.Flags().Lookup(flagBlockTimeout).Changed {
+				aBlockTimeout = blockTimeout
+			}
+
+			payload, err := client.CreateChainConfigBlockUpdatePayload(aTxTimestampVerify, aBlockTimestampVerify,
+				aTxTimeout, aBlockTimeout, aBlockTxCapacity, chainConfig.Block.BlockSize, aBlockInterval,
+				aTxParameterSize)
+			if err != nil {
+				return fmt.Errorf("create chain config block update payload failed, %s", err.Error())
+			}
+
+			endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, true)
+			if err != nil {
+				return fmt.Errorf("send chain config update request failed, %s", err.Error())
+			}
+			util.PrintPrettyJson(resp)
+			return nil
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath, flagChainId,
+		flagSdkConfPath, flagOrgId, flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds,
+		flagTxTimestampVerify, flagTxTimeout, flagBlockTxCapacity, flagBlockInterval, flagTxParameterSize,
+		flagBlockTimestampVerify, flagBlockTimeout,
+	})
+
+	return cmd
 }
