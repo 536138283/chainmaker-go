@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -223,7 +225,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
 	}
 
 	if protocol.CONSENSUS_VERIFY == mode {
@@ -325,7 +327,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(newBlock.Txs, newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
 	}
 
 	if protocol.CONSENSUS_VERIFY == mode {

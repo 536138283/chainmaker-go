@@ -59,20 +59,25 @@ var (
 	userSignKeyFilePath string
 	userSignCrtFilePath string
 
+	extraConfigKey   string
+	extraConfigValue string
+
+	txTimestampVerify    bool
+	txTimeout            uint32
+	blockTxCapacity      uint32
 	blockInterval        uint32
-	extraConfigKey       string
-	extraConfigValue     string
 	txParameterSize      uint32
 	blockTimestampVerify bool
 	blockTimeout         uint32
-	nodeOrgId            string
-	nodeIdOld            string
-	nodeId               string
-	nodeIds              string
-	trustRootOrgId       string
-	trustRootPaths       []string
-	certFilePaths        string
-	certCrlPath          string
+
+	nodeOrgId      string
+	nodeIdOld      string
+	nodeId         string
+	nodeIds        string
+	trustRootOrgId string
+	trustRootPaths []string
+	certFilePaths  string
+	certCrlPath    string
 
 	address   string
 	amount    string
@@ -102,46 +107,51 @@ var (
 )
 
 const (
-	flagConcurrency                      = "concurrency"
-	flagTotalCountPerGoroutine           = "total-count-per-goroutine"
-	flagSdkConfPath                      = "sdk-conf-path"
-	flagAbiFilePath                      = "abi-file-path"
-	flagContractName                     = "contract-name"
-	flagContractAddress                  = "contract-address"
-	flagVersion                          = "version"
-	flagMethod                           = "method"
-	flagParams                           = "params"
-	flagOrgId                            = "org-id"
-	flagSyncResult                       = "sync-result"
-	flagEnableCertHash                   = "enable-cert-hash"
-	flagBlockHeight                      = "block-height"
-	flagWithRWSet                        = "with-rw-set"
-	flagTruncateModel                    = "truncate-model"
-	flagTruncateValueLen                 = "truncate-value-len"
-	flagTruncateValue                    = "truncate-value"
-	flagIsAgree                          = "is-agree"
-	flagTxId                             = "tx-id"
-	flagByteCodePath                     = "byte-code-path"
-	flagRuntimeType                      = "runtime-type"
-	flagChainId                          = "chain-id"
-	flagSendTimes                        = "send-times"
-	flagAdminKeyFilePaths                = "admin-key-file-paths"
-	flagAdminCrtFilePaths                = "admin-crt-file-paths"
-	flagAdminOrgIds                      = "admin-org-ids"
-	flagPayerKeyFilePath                 = "payer-key-file-path"
-	flagPayerCrtFilePath                 = "payer-crt-file-path"
-	flagPayerOrgId                       = "payer-org-id"
-	flagUserTlsKeyFilePath               = "user-tlskey-file-path"
-	flagUserTlsCrtFilePath               = "user-tlscrt-file-path"
-	flagUserSignKeyFilePath              = "user-signkey-file-path"
-	flagUserSignCrtFilePath              = "user-signcrt-file-path"
-	flagTimeout                          = "timeout"
-	flagBlockInterval                    = "block-interval"
-	flagExtraConfigKey                   = "extra-config-key"
-	flagExtraConfigValue                 = "extra-config-value"
-	flagTxParameterSize                  = "tx-parameter-size"
-	flagBlockTimestampVerify             = "block-timestamp-verify"
-	flagBlockTimeout                     = "block-timeout"
+	flagConcurrency            = "concurrency"
+	flagTotalCountPerGoroutine = "total-count-per-goroutine"
+	flagSdkConfPath            = "sdk-conf-path"
+	flagAbiFilePath            = "abi-file-path"
+	flagContractName           = "contract-name"
+	flagContractAddress        = "contract-address"
+	flagVersion                = "version"
+	flagMethod                 = "method"
+	flagParams                 = "params"
+	flagOrgId                  = "org-id"
+	flagSyncResult             = "sync-result"
+	flagEnableCertHash         = "enable-cert-hash"
+	flagBlockHeight            = "block-height"
+	flagWithRWSet              = "with-rw-set"
+	flagTruncateModel          = "truncate-model"
+	flagTruncateValueLen       = "truncate-value-len"
+	flagTruncateValue          = "truncate-value"
+	flagIsAgree                = "is-agree"
+	flagTxId                   = "tx-id"
+	flagByteCodePath           = "byte-code-path"
+	flagRuntimeType            = "runtime-type"
+	flagChainId                = "chain-id"
+	flagSendTimes              = "send-times"
+	flagAdminKeyFilePaths      = "admin-key-file-paths"
+	flagAdminCrtFilePaths      = "admin-crt-file-paths"
+	flagAdminOrgIds            = "admin-org-ids"
+	flagPayerKeyFilePath       = "payer-key-file-path"
+	flagPayerCrtFilePath       = "payer-crt-file-path"
+	flagPayerOrgId             = "payer-org-id"
+	flagUserTlsKeyFilePath     = "user-tlskey-file-path"
+	flagUserTlsCrtFilePath     = "user-tlscrt-file-path"
+	flagUserSignKeyFilePath    = "user-signkey-file-path"
+	flagUserSignCrtFilePath    = "user-signcrt-file-path"
+	flagTimeout                = "timeout"
+	flagExtraConfigKey         = "extra-config-key"
+	flagExtraConfigValue       = "extra-config-value"
+
+	flagTxTimestampVerify    = "tx-timestamp-verify"
+	flagTxTimeout            = "tx-timeout"
+	flagBlockTxCapacity      = "block-tx-capacity"
+	flagBlockInterval        = "block-interval"
+	flagTxParameterSize      = "tx-parameter-size"
+	flagBlockTimestampVerify = "block-timestamp-verify"
+	flagBlockTimeout         = "block-timeout"
+
 	flagNodeOrgId                        = "node-org-id"
 	flagNodeIdOld                        = "node-id-old"
 	flagNodeId                           = "node-id"
@@ -246,10 +256,19 @@ func init() {
 	flags.StringVar(&userSignCrtFilePath, flagUserSignCrtFilePath, "", "specify user sign cert file path to sign tx")
 
 	// 链配置
-	flags.Uint32Var(&blockInterval, flagBlockInterval, 2000, "block interval timeout in milliseconds, default 2000ms")
-	flags.Uint32Var(&txParameterSize, flagTxParameterSize, 10, "tx parameter size, default 10MB")
-	flags.BoolVar(&blockTimestampVerify, flagBlockTimestampVerify, false, "block timestamp verify, default false")
-	flags.Uint32Var(&blockTimeout, flagBlockTimeout, 30, "block timestamp timeout, default 10S")
+	flags.BoolVar(&txTimestampVerify, flagTxTimestampVerify, false,
+		"tx timestamp verify, use former value if flag not set")
+	flags.Uint32Var(&txTimeout, flagTxTimeout, 10, "tx timeout in seconds, use former value if flag not set")
+	flags.Uint32Var(&blockTxCapacity, flagBlockTxCapacity, 1000,
+		"max tx capacity for a block, use former value if flag not set")
+	flags.Uint32Var(&blockInterval, flagBlockInterval, 2000,
+		"block interval timeout in milliseconds, use former value if flag not set")
+	flags.Uint32Var(&txParameterSize, flagTxParameterSize, 10,
+		"tx parameter size, use former value if flag not set")
+	flags.BoolVar(&blockTimestampVerify, flagBlockTimestampVerify, false,
+		"block timestamp verify, use former value if flag not set")
+	flags.Uint32Var(&blockTimeout, flagBlockTimeout, 30,
+		"block timestamp timeout, use former value if flag not set")
 	flags.StringVar(&nodeOrgId, flagNodeOrgId, "", "specify node org id")
 	flags.StringVar(&nodeIdOld, flagNodeIdOld, "", "specify old node id")
 	flags.StringVar(&nodeId, flagNodeId, "", "specify node id(which will be added or update to")
