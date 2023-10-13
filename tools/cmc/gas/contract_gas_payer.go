@@ -85,11 +85,11 @@ func setContractMethodPayerCMD() *cobra.Command {
 
 			var params []*common.KeyValuePair
 			params = append(params, &common.KeyValuePair{
-				Key:   "PARAMETERS",
+				Key:   syscontract.SetContractMethodPayer_PARAMS.String(),
 				Value: []byte(message),
 			})
 			params = append(params, &common.KeyValuePair{
-				Key:   "ENDORSEMENT_ENTRY",
+				Key:   syscontract.SetContractMethodPayer_ENDORSEMENT.String(),
 				Value: endorsementBytes,
 			})
 
@@ -169,16 +169,16 @@ func unsetContractMethodPayerCMD() *cobra.Command {
 			var params []*common.KeyValuePair
 			if len(args) == 2 {
 				params = append(params, &common.KeyValuePair{
-					Key:   "CONTRACT_NAME",
+					Key:   syscontract.UnsetContractMethodPayer_CONTRACT_NAME.String(),
 					Value: []byte(args[0]),
 				})
 				params = append(params, &common.KeyValuePair{
-					Key:   "METHOD",
+					Key:   syscontract.UnsetContractMethodPayer_METHOD.String(),
 					Value: []byte(args[1]),
 				})
 			} else if len(args) == 1 {
 				params = append(params, &common.KeyValuePair{
-					Key:   "CONTRACT_NAME",
+					Key:   syscontract.UnsetContractMethodPayer_CONTRACT_NAME.String(),
 					Value: []byte(args[0]),
 				})
 			} else {
@@ -247,16 +247,16 @@ func queryContractMethodPayerCMD() *cobra.Command {
 			var params []*common.KeyValuePair
 			if len(args) == 1 {
 				params = append(params, &common.KeyValuePair{
-					Key:   "CONTRACT_NAME",
+					Key:   syscontract.GetContractMethodPayer_CONTRACT_NAME.String(),
 					Value: []byte(args[0]),
 				})
 			} else if len(args) == 2 {
 				params = append(params, &common.KeyValuePair{
-					Key:   "CONTRACT_NAME",
+					Key:   syscontract.GetContractMethodPayer_METHOD.String(),
 					Value: []byte(args[0]),
 				})
 				params = append(params, &common.KeyValuePair{
-					Key:   "METHOD",
+					Key:   syscontract.GetContractMethodPayer_CONTRACT_NAME.String(),
 					Value: []byte(args[1]),
 				})
 			} else {
@@ -314,7 +314,7 @@ func queryTxPayerCMD() *cobra.Command {
 			var params []*common.KeyValuePair
 			if len(args) == 1 {
 				params = append(params, &common.KeyValuePair{
-					Key:   "TX_ID",
+					Key:   syscontract.GetTxPayer_TX_ID.String(),
 					Value: []byte(args[0]),
 				})
 			} else {
