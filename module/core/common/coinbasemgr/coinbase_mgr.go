@@ -57,21 +57,20 @@ func IsGasTx(tx *commonPb.Transaction) bool {
 }
 
 // FilterCoinBaseTxOrGasTx filter coinbase tx or gas tx
-func FilterCoinBaseTxOrGasTx(block *commonPb.Block) []*commonPb.Transaction {
-	blockTxs := block.Txs
+func FilterCoinBaseTxOrGasTx(txs []*commonPb.Transaction) []*commonPb.Transaction {
 
 	// 空块场景避免切片溢出
-	if len(blockTxs) == 0 {
-		return blockTxs
+	if len(txs) == 0 {
+		return txs
 	}
 
 	// 判断最后一笔交易是不是gas交易
-	lastTx := blockTxs[len(blockTxs)-1]
+	lastTx := txs[len(txs)-1]
 	if !IsGasTx(lastTx) {
 		// 非coinbase交易或gas交易的情况下直接返回
-		return blockTxs
+		return txs
 	}
 	// 是coinbase交易或gas交易的情况下将其删除
-	newBlockTxs := blockTxs[:len(blockTxs)-1]
+	newBlockTxs := txs[:len(txs)-1]
 	return newBlockTxs
 }

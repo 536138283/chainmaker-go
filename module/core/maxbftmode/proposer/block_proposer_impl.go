@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/txfilter/filtercommon"
@@ -246,7 +248,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
 			} else {
-				common.RetryAndRemoveTxs(bp.txPool, nil, selfProposedBlock.Txs, bp.log)
+				common.RetryAndRemoveTxs(bp.txPool, nil, coinbasemgr.FilterCoinBaseTxOrGasTx(selfProposedBlock.Txs), bp.log)
 			}
 		}
 	}
@@ -281,7 +283,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 			fetchBatch, batchIds = bp.FetchTxFromOtherBlock(height, preHash)
 			// re_gen new txBatches by retry txs
 			if len(fetchBatch) != 0 && len(batchIds) != 0 {
-				batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
+				batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds,
+					coinbasemgr.FilterCoinBaseTxOrGasTx(fetchBatch))
 				fetchBatch = getFetchBatch(fetchBatches)
 			}
 			fetchFromOtherBlockLasts += utils.CurrentTimeMillisSeconds() - fetchFromOtherBlockStart
@@ -290,6 +293,11 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		// validate txFilter rules
 		filterValidateFirst := utils.CurrentTimeMillisSeconds()
 		removeTxs, remainTxs := common.ValidateTxRules(bp.txFilter, fetchBatch)
+
+		// 剔除gas/coinbase交易
+		removeTxs = coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs)
+		remainTxs = coinbasemgr.FilterCoinBaseTxOrGasTx(remainTxs)
+
 		filterValidateLasts += utils.CurrentTimeMillisSeconds() - filterValidateFirst
 		if len(removeTxs) > 0 {
 			batchIds, fetchBatch, fetchBatches = bp.removeAndRetryTx(height, batchIds, removeTxs, remainTxs, REMOVE)
@@ -317,7 +325,8 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 		if common.TxPoolType != batch.TxPoolType {
 			common.RetryAndRemoveTxs(bp.txPool, txRetry, nil, bp.log)
 		} else {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds,
+				coinbasemgr.FilterCoinBaseTxOrGasTx(fetchBatch))
 			fetchBatch = getFetchBatch(fetchBatches)
 		}
 
@@ -786,7 +795,10 @@ func (bp *BlockProposerImpl) fetchFromProposalCache(
 				continue
 			}
 
-			fetchBatch := keepTx
+			// 剔除gas/coinbase交易
+			fetchBatch := coinbasemgr.FilterCoinBaseTxOrGasTx(keepTx)
+			removeTxs = coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs)
+
 			batchIds, _, err := common.GetBatchIds(proposedBlock)
 			if err != nil {
 				return nil, nil, err
@@ -819,13 +831,15 @@ func (bp *BlockProposerImpl) removeAndRetryTx(
 	if common.TxPoolType == batch.TxPoolType {
 		// remove and get new batchIds
 		if mode == RETRY {
-			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds, fetchBatch)
+			newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds,
+				coinbasemgr.FilterCoinBaseTxOrGasTx(fetchBatch))
 			newFetchBatch := getFetchBatch(fetchBatches)
 
 			return newBatchIds, newFetchBatch, fetchBatches
 		}
 
-		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, removeTxs)
+		newBatchIds, fetchBatches := bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds,
+			coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs))
 		newFetchBatch := getFetchBatch(fetchBatches)
 
 		return newBatchIds, newFetchBatch, fetchBatches
@@ -847,7 +861,8 @@ func (bp *BlockProposerImpl) fetchBatchWithoutDupTxInSameBranch(height uint64, p
 			}
 		}
 		if len(dupTxs) != 0 {
-			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds, dupTxs)
+			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRemoveTxs(height, batchIds,
+				coinbasemgr.FilterCoinBaseTxOrGasTx(dupTxs))
 			fetchBatch = getFetchBatch(fetchBatches)
 		}
 		return batchIds, fetchBatch, fetchBatches

@@ -8,6 +8,7 @@ package helper
 
 import (
 	"chainmaker.org/chainmaker-go/module/core/common"
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -58,5 +59,5 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 		txs = append(txs, blk.Txs...)
 	}
 
-	common.RetryAndRemoveTxs(hp.txPool, txs, nil, hp.logger)
+	common.RetryAndRemoveTxs(hp.txPool, coinbasemgr.FilterCoinBaseTxOrGasTx(txs), nil, hp.logger)
 }
