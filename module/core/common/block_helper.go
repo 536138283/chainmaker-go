@@ -14,8 +14,6 @@ import (
 	"sync"
 	"sync/atomic"
 
-	systemPb "chainmaker.org/chainmaker/pb-go/v3/syscontract"
-
 	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -223,10 +221,10 @@ func (bb *BlockBuilder) GenerateNewBlock(
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
 			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds,
-				block.Txs)
+				coinbasemgr.FilterCoinBaseTxOrGasTx(block.Txs))
 		} else {
 			// retry txs timeout in tx pool
-			bb.txPool.RetryTxs(txsTimeout)
+			bb.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(txsTimeout))
 		}
 		block.Header.TxCount = uint32(len(block.Txs))
 	}
@@ -1233,8 +1231,8 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		chain.txPool.RemoveTxBatches(batchIds, protocol.NORMAL)
 	} else {
 		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
-		chain.txPool.RetryTxs(txRetry)
-		chain.txPool.RemoveTxs(lastProposed.Txs, protocol.NORMAL)
+		chain.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(txRetry))
+		chain.txPool.RemoveTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(lastProposed.Txs), protocol.NORMAL)
 	}
 
 	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick
@@ -1313,39 +1311,21 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 		}
 		for _, tx := range b.Txs {
 			if _, ok := keepTxs[tx.Payload.TxId]; !ok {
-				//filter coinbase/gas transactions
-				if isOptimizedChargingGasTx(tx) || isCoinbaseTx(tx) {
-					chain.log.Debugf("filter tx, id %d, contract name %s, method %s, tx type %s",
-						tx.Payload.TxId,
-						tx.Payload.ContractName,
-						tx.Payload.Method,
-						tx.Payload.TxType)
-					continue
-				}
+				////filter coinbase/gas transactions
+				//if isOptimizedChargingGasTx(tx) || isCoinbaseTx(tx) {
+				//	chain.log.Debugf("filter tx, id %d, contract name %s, method %s, tx type %s",
+				//		tx.Payload.TxId,
+				//		tx.Payload.ContractName,
+				//		tx.Payload.Method,
+				//		tx.Payload.TxType)
+				//	continue
+				//}
 				txRetry = append(txRetry, tx)
 			}
 		}
 	}
 
 	return txRetry, batchRetry, nil, nil
-}
-
-func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
-	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
-		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
-		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
-		return true
-	}
-	return false
-}
-
-func isCoinbaseTx(t *commonPb.Transaction) bool {
-	if t.Payload.ContractName == systemPb.SystemContract_COINBASE.String() &&
-		t.Payload.Method == systemPb.CoinbaseFunction_RUN_COINBASE.String() &&
-		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
-		return true
-	}
-	return false
 }
 
 // checkLastProposedBlock check last propose block nolint: ineffassign, staticcheck
@@ -1889,7 +1869,7 @@ func (chain *BlockCommitterImpl) removeInvalidChildBlock(height uint64, hashMap 
 		}
 
 		// 将交易放回交易池
-		chain.txPool.RetryTxs(childBlock.Txs)
+		chain.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(childBlock.Txs))
 
 		// 删除cache
 		chain.proposalCache.ClearTheBlock(childBlock)
