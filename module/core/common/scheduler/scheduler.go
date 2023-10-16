@@ -347,7 +347,7 @@ func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSe
 		ts.metricVMRunTime.WithLabelValues(tx.Payload.ChainId).Observe(elapsed.Seconds())
 	}
 	if enableSenderGroup {
-		hashKey, _ := getSenderHashKey(tx)
+		hashKey, _ := getPayerHashKey(tx)
 		senderGroup.doneTxKeyC <- hashKey
 	}
 }
@@ -880,7 +880,6 @@ func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimCon
 		_, publicKey, err := getPayerAddressAndPkFromTx(tx,
 			txSimContext.GetSnapshot(),
 			ac,
-			txSimContext.GetBlockVersion(),
 			txSimContext.GetLastChainConfig())
 		if err != nil {
 			ts.log.Error(err.Error())
@@ -993,17 +992,49 @@ func getPayerPkFromTx(
 	snapshot protocol.Snapshot) (crypto.PublicKey, error) {
 
 	var err error
-	var pk []byte
 	var publicKey crypto.PublicKey
-	signingMember := getTxPayerSigner(tx)
-	if signingMember == nil {
-		err = errors.New(" can not find sender from tx ")
-		return nil, err
+
+	// 首先，检查 tx payer
+	member := getTxPayerSigner(tx)
+	if member != nil {
+		publicKey, err = publicKeyFromMember(member, snapshot)
+		if err != nil {
+			return nil, err
+		}
+		return publicKey, nil
 	}
 
-	switch signingMember.MemberType {
+	// 其次，检查合约设置
+	publicKey, err = getPayerFromContract(tx, snapshot)
+	if err != nil {
+		return nil, fmt.Errorf("get contract method payer failed, err = %v", err)
+	}
+	if publicKey != nil {
+		return publicKey, nil
+	}
+
+	// 最后, 检查 sender
+	member = getTxSenderSigner(tx)
+	if member != nil {
+		publicKey, err = publicKeyFromMember(member, snapshot)
+		if err != nil {
+			return nil, err
+		}
+		return publicKey, nil
+	}
+
+	return publicKey, nil
+}
+
+func publicKeyFromMember(member *accesscontrol.Member, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+
+	var publicKey crypto.PublicKey
+	var pk []byte
+	var err error
+
+	switch member.MemberType {
 	case accesscontrol.MemberType_CERT:
-		pk, err = publicKeyFromCert(signingMember.MemberInfo)
+		pk, err = publicKeyFromCert(member.MemberInfo)
 		if err != nil {
 			return nil, err
 		}
@@ -1014,7 +1045,7 @@ func getPayerPkFromTx(
 
 	case accesscontrol.MemberType_CERT_HASH:
 		var certInfo *commonPb.CertInfo
-		infoHex := hex.EncodeToString(signingMember.MemberInfo)
+		infoHex := hex.EncodeToString(member.MemberInfo)
 		if certInfo, err = wholeCertInfoFromSnapshot(snapshot, infoHex); err != nil {
 			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
 		}
@@ -1030,59 +1061,58 @@ func getPayerPkFromTx(
 		}
 
 	case accesscontrol.MemberType_PUBLIC_KEY:
-		pk = signingMember.MemberInfo
+		pk = member.MemberInfo
 		publicKey, err = asym.PublicKeyFromPEM(pk)
 		if err != nil {
 			return nil, err
 		}
 
 	default:
-		err = fmt.Errorf("invalid member type: %s", signingMember.MemberType)
+		err = fmt.Errorf("invalid member type: %s", member.MemberType)
 		return nil, err
 	}
 
 	return publicKey, nil
 }
 
+func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+	contractName := tx.GetPayload().GetContractName()
+	method := tx.GetPayload().GetMethod()
+
+	var pkBytes []byte
+	var pk crypto.PublicKey
+	var err error
+
+	pkBytes, err = utils.GetContractMethodPayerPK(snapshot, contractName, method)
+	if err != nil {
+		return nil, fmt.Errorf("get contract method payer failed, error: %v", err)
+	}
+	// 未设置 payer public key
+	if pkBytes == nil {
+		return nil, nil
+	}
+
+	// 取到预先设置的 payer public key
+	pk, err = asym.PublicKeyFromPEM(pkBytes)
+	if err != nil {
+		return nil, fmt.Errorf("public key from pem failed, error: %v", err)
+	}
+	return pk, nil
+}
+
 func getPayerAddressAndPkFromTx(tx *commonPb.Transaction,
 	snapshot protocol.Snapshot,
 	ac protocol.AccessControlProvider,
-	blockVersion uint32,
 	chainConfig *configPb.ChainConfig) (string, crypto.PublicKey, error) {
 
 	var (
-		pk           crypto.PublicKey
-		pkBytes      []byte
-		senderMember protocol.Member
-		err          error
+		pk  crypto.PublicKey
+		err error
 	)
 
-	// 从预设的合约空间里获取 payer address
-	if blockVersion < blockVersion2330 {
-		// 从 tx 中获取 payer pk
-		pk, err = getPayerPkFromTx(tx, snapshot)
-		if err != nil {
-			return "", nil, fmt.Errorf("getPayerPkFromTx error: %v", err)
-		}
-	} else {
-		contractName := tx.GetPayload().GetContractName()
-		method := tx.GetPayload().GetMethod()
-		pkBytes, err = utils.GetContractMethodPayerPK(snapshot, contractName, method)
-		if err != nil {
-			return "", nil, fmt.Errorf("get contract method payer failed, error: %v", err)
-		}
-		if pkBytes != nil { // 取到预先设置的 payer public key
-			pk, err = asym.PublicKeyFromPEM(pkBytes)
-			if err != nil {
-				return "", nil, fmt.Errorf("public key from pem failed, error: %v", err)
-			}
-		} else { // 未取到 payer，使用 sender public key
-			senderMember, err = ac.NewMember(tx.GetSender().GetSigner())
-			if err != nil {
-				return "", nil, fmt.Errorf("get sender member failed, error: %v", err)
-			}
-			pk = senderMember.GetPk()
-		}
+	pk, err = getPayerPkFromTx(tx, snapshot)
+	if err != nil {
+		return "", nil, fmt.Errorf("getPayerPkFromTx error: %v", err)
 	}
 
 	addressStr, err := publicKeyToAddress(pk, chainConfig)
@@ -1433,14 +1463,14 @@ func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
 func getSenderTxsMap(txBatch []*commonPb.Transaction) map[[32]byte][]*commonPb.Transaction {
 	senderTxsMap := make(map[[32]byte][]*commonPb.Transaction, len(txBatch))
 	for _, tx := range txBatch {
-		hashKey, _ := getSenderHashKey(tx)
+		hashKey, _ := getPayerHashKey(tx)
 		senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
 	}
 	return senderTxsMap
 }
 
-func getSenderHashKey(tx *commonPb.Transaction) ([32]byte, error) {
-	sender := getTxSenderSigner(tx)
+func getPayerHashKey(tx *commonPb.Transaction) ([32]byte, error) {
+	sender := getTxPayerSigner(tx)
 	keyBytes, err := sender.Marshal()
 	if err != nil {
 		return [32]byte{}, err
@@ -1468,10 +1498,10 @@ func getTxSenderSigner(tx *commonPb.Transaction) *accesscontrol.Member {
 
 func getTxPayerSigner(tx *commonPb.Transaction) *accesscontrol.Member {
 	payer := tx.GetPayer()
-	// don't need version compatibility
 	if payer == nil {
-		payer = tx.GetSender()
+		return nil
 	}
+
 	return payer.GetSigner()
 }
 

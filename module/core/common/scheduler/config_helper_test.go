@@ -1,11 +1,9 @@
 package scheduler
 
 import (
-	"encoding/pem"
 	"fmt"
 	"testing"
 
-	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/protocol/v2"
 
 	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
@@ -48,26 +46,6 @@ func getMemberInfo(i int) (string, []byte) {
 	idx := i % len(memberInfoMapping)
 	orgName := fmt.Sprintf("org%d", idx+1)
 	return orgName, memberInfoMapping[orgName]
-}
-
-func getPubKeyFromCert(certPEM []byte) (crypto2.PublicKey, error) {
-
-	var cert *bcx509.Certificate
-	var err error
-	certBlock, rest := pem.Decode(certPEM)
-	if certBlock == nil {
-		cert, err = bcx509.ParseCertificate(rest)
-		if err != nil {
-			return nil, fmt.Errorf("new cert member failed, invalid certificate")
-		}
-	} else {
-		cert, err = bcx509.ParseCertificate(certBlock.Bytes)
-		if err != nil {
-			return nil, fmt.Errorf("new cert member failed, invalid certificate")
-		}
-	}
-
-	return cert.PublicKey, nil
 }
 
 func initAC(ctl *gomock.Controller) protocol.AccessControlProvider {
@@ -159,13 +137,13 @@ func TestVerifyOptimizeChargeGasTx_OK(t *testing.T) {
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
-	mockSnapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte("123456789"), nil).AnyTimes()
+	mockSnapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2312)
 	assert.Nil(t, err)
 
 	err = VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2330)
-	assert.NotNil(t, err)
+	assert.Nil(t, err)
 }
 
 func TestVerifyOptimizeChargeGasTx_NoChargeGasTx(t *testing.T) {
@@ -218,7 +196,7 @@ func TestVerifyOptimizeChargeGasTx_NoChargeGasTx(t *testing.T) {
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 	mockSnapshot.EXPECT().GetKey(-1,
-		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return([]byte(publicKey), nil).AnyTimes()
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2320)
 	assert.Equal(t, err, fmt.Errorf("charge gas tx is missing"))
@@ -312,13 +290,13 @@ func TestVerifyOptimizeChargeGasTx_WithWrongAccountAddress(t *testing.T) {
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 	mockSnapshot.EXPECT().GetKey(-1,
-		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return([]byte(publicKey), nil).AnyTimes()
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2320)
 	assert.Equal(t, fmt.Errorf("missing some account to charge gas => `%v`", Address_Client1_Org1_ZXL), err)
 
 	err = VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2330)
-	assert.Equal(t, fmt.Errorf("gas need to charging is not correct, expect 1 account, got 4 account"), err)
+	assert.Equal(t, fmt.Errorf("missing some account to charge gas => `%v`", Address_Client1_Org1_ZXL), err)
 }
 
 func TestVerifyOptimizeChargeGasTx_WithLessAddress(t *testing.T) {
@@ -397,18 +375,19 @@ func TestVerifyOptimizeChargeGasTx_WithLessAddress(t *testing.T) {
 			Hash: crypto2.CRYPTO_ALGO_SHA256,
 		},
 	}
+
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 	mockSnapshot.EXPECT().GetKey(-1,
-		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return([]byte(publicKey), nil).AnyTimes()
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2320)
-	assert.Equal(t, err, fmt.Errorf("gas need to charging is not correct, expect 4 account, got 3 account"))
+	assert.Equal(t, fmt.Errorf("gas need to charging is not correct, expect 4 account, got 3 account"), err)
 
 	err = VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2330)
-	assert.Equal(t, err, fmt.Errorf("gas need to charging is not correct, expect 1 account, got 3 account"))
+	assert.Equal(t, fmt.Errorf("gas need to charging is not correct, expect 4 account, got 3 account"), err)
 }
 
 func TestVerifyOptimizeChargeGasTx_WithMoreAddress(t *testing.T) {
@@ -500,13 +479,13 @@ func TestVerifyOptimizeChargeGasTx_WithMoreAddress(t *testing.T) {
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 	mockSnapshot.EXPECT().GetKey(-1,
-		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return([]byte(publicKey), nil).AnyTimes()
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2320)
 	assert.Equal(t, fmt.Errorf("gas need to charging is not correct, expect 4 account, got 5 account"), err)
 
 	err = VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2330)
-	assert.Equal(t, fmt.Errorf("gas need to charging is not correct, expect 1 account, got 5 account"), err)
+	assert.Equal(t, fmt.Errorf("gas need to charging is not correct, expect 4 account, got 5 account"), err)
 }
 
 func TestVerifyOptimizeChargeGasTx_WithWrongGas(t *testing.T) {
@@ -593,7 +572,7 @@ func TestVerifyOptimizeChargeGasTx_WithWrongGas(t *testing.T) {
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
-	mockSnapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte("123456789"), nil).AnyTimes()
+	mockSnapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2320)
 	assert.Equal(t, err,
@@ -685,9 +664,8 @@ func TestVerifyOptimizeChargeGasTx_WithNotExistAddress(t *testing.T) {
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
-	mockSnapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).Return([]byte("123456789"), nil).AnyTimes()
+	mockSnapshot.EXPECT().GetKey(gomock.Any(), gomock.Any(), gomock.Any()).Return(nil, nil).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot, ac, blockVersion2320)
-	assert.Equal(t, err,
-		fmt.Errorf("missing some account to charge gas => `%v`", Address_Client1_Org2_ZXL))
+	assert.Equal(t, fmt.Errorf("missing some account to charge gas => `%v`", Address_Client1_Org2_ZXL), err)
 }

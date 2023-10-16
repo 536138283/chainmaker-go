@@ -47,19 +47,23 @@ func setContractMethodPayerCMD() *cobra.Command {
 			}
 
 			// 构建参数
-			message := ""
+			params := syscontract.SetContractMethodPayerParams{}
 			if len(args) == 3 {
-				message += args[0]
-				message += ":" + args[1]
-				message += ":" + args[2]
+				params.ContractName = args[0]
+				params.Method = args[1]
+				params.PayerAddress = args[2]
 			} else if len(args) == 2 {
-				message += args[0]
-				message += ":"
-				message += ":" + args[1]
+				params.ContractName = args[0]
+				params.PayerAddress = args[1]
 			} else {
 				return errors.New("command syntax error")
 			}
-			message += ":" + uuid.GetUUID()
+			params.RequestId += uuid.GetUUID()
+			message, err := proto.Marshal(&params)
+			if err != nil {
+				return fmt.Errorf("marshal params failed, err = %v", err)
+			}
+
 			signature, err := sdkutils.SignPayloadBytesWithHashType(
 				privateKey,
 				client.GetHashType(),
@@ -83,12 +87,12 @@ func setContractMethodPayerCMD() *cobra.Command {
 				return err
 			}
 
-			var params []*common.KeyValuePair
-			params = append(params, &common.KeyValuePair{
+			var parameters []*common.KeyValuePair
+			parameters = append(parameters, &common.KeyValuePair{
 				Key:   syscontract.SetContractMethodPayer_PARAMS.String(),
 				Value: []byte(message),
 			})
-			params = append(params, &common.KeyValuePair{
+			parameters = append(parameters, &common.KeyValuePair{
 				Key:   syscontract.SetContractMethodPayer_ENDORSEMENT.String(),
 				Value: endorsementBytes,
 			})
@@ -96,11 +100,11 @@ func setContractMethodPayerCMD() *cobra.Command {
 			// 构建 payload
 			var payload *common.Payload
 			if multiSign {
-				params = append(params, &common.KeyValuePair{
+				parameters = append(parameters, &common.KeyValuePair{
 					Key:   "SYS_CONTRACT_NAME",
 					Value: []byte(syscontract.SystemContract_ACCOUNT_MANAGER.String()),
 				})
-				params = append(params, &common.KeyValuePair{
+				parameters = append(parameters, &common.KeyValuePair{
 					Key:   "SYS_METHOD",
 					Value: []byte(syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String()),
 				})
@@ -108,14 +112,14 @@ func setContractMethodPayerCMD() *cobra.Command {
 					"", common.TxType_INVOKE_CONTRACT,
 					syscontract.SystemContract_MULTI_SIGN.String(),
 					syscontract.MultiSignFunction_REQ.String(),
-					params,
+					parameters,
 					0, &common.Limit{GasLimit: gasLimit})
 			} else {
 				payload = client.CreatePayload(
 					"", common.TxType_INVOKE_CONTRACT,
 					syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 					syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(),
-					params,
+					parameters,
 					0, &common.Limit{GasLimit: gasLimit})
 			}
 
@@ -252,11 +256,11 @@ func queryContractMethodPayerCMD() *cobra.Command {
 				})
 			} else if len(args) == 2 {
 				params = append(params, &common.KeyValuePair{
-					Key:   syscontract.GetContractMethodPayer_METHOD.String(),
+					Key:   syscontract.GetContractMethodPayer_CONTRACT_NAME.String(),
 					Value: []byte(args[0]),
 				})
 				params = append(params, &common.KeyValuePair{
-					Key:   syscontract.GetContractMethodPayer_CONTRACT_NAME.String(),
+					Key:   syscontract.GetContractMethodPayer_METHOD.String(),
 					Value: []byte(args[1]),
 				})
 			} else {
