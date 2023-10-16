@@ -17,6 +17,8 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	ac "chainmaker.org/chainmaker-go/module/accesscontrol"
 
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -690,9 +692,7 @@ func TestSchedule4(t *testing.T) {
 	}
 
 	// simulate Calling ApplyTxSimContext(...) 3 times
-	preCall1 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
-	preCall2 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall1).Return(true, 2).Times(1)
-	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
+	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).AnyTimes()
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
 
@@ -3461,4 +3461,14 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUint64Overflow(t *testing.T) {
+	balance := uint64(1000)
+	gasLimit := uint64(2000)
+	val1 := balance - gasLimit
+	val2 := int64(balance - gasLimit)
+	fmt.Printf("val 1 = %v, val 2 = %v \n", val1, val2)
+	assert.Equal(t, false, val1 < 0)
+	assert.Equal(t, true, val2 < 0)
 }

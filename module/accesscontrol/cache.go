@@ -3,8 +3,8 @@ package accesscontrol
 import (
 	"encoding/hex"
 	"fmt"
-	"sync"
 
+	"chainmaker.org/chainmaker/common/v3/concurrentlru"
 	"chainmaker.org/chainmaker/common/v3/crypto"
 	"chainmaker.org/chainmaker/common/v3/crypto/asym"
 	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
@@ -16,18 +16,18 @@ import (
 	"chainmaker.org/chainmaker/utils/v3"
 )
 
-var memberInfo2AddressCache *sync.Map
-var memberInfo2PkCache *sync.Map
+var memberInfo2AddressCache *concurrentlru.Cache
+var memberInfo2PkCache *concurrentlru.Cache
 
 func init() {
-	memberInfo2AddressCache = &sync.Map{}
-	memberInfo2PkCache = &sync.Map{}
+	memberInfo2AddressCache = concurrentlru.New(10_000)
+	memberInfo2PkCache = concurrentlru.New(10_000)
 }
 
 // ClearCache remove all the data in cache
 func ClearCache() {
-	memberInfo2AddressCache = &sync.Map{}
-	memberInfo2PkCache = &sync.Map{}
+	memberInfo2AddressCache.Clear()
+	memberInfo2PkCache.Clear()
 }
 
 // GetMemberPkAndAddress return public key and address of member
@@ -42,11 +42,11 @@ func GetMemberPkAndAddress(
 	memberInfoStr := string(member.GetMemberInfo())
 
 	// load pk
-	pkValue, exist := memberInfo2PkCache.Load(memberInfoStr)
+	pkValue, exist := memberInfo2PkCache.Get(memberInfoStr)
 	if exist {
 		pk, ok = pkValue.(crypto.PublicKey)
 		if !ok {
-			memberInfo2PkCache.Delete(memberInfoStr)
+			memberInfo2PkCache.Remove(memberInfoStr)
 		}
 	}
 
@@ -60,15 +60,15 @@ func GetMemberPkAndAddress(
 		if err != nil {
 			return nil, "", fmt.Errorf("publicKeyFromPEM failed, err = %v", err)
 		}
-		memberInfo2PkCache.Store(memberInfoStr, pk)
+		memberInfo2PkCache.Add(memberInfoStr, pk)
 	}
 
 	// load address
-	addressValue, exist := memberInfo2AddressCache.Load(memberInfoStr)
+	addressValue, exist := memberInfo2AddressCache.Get(memberInfoStr)
 	if exist {
 		address, ok = addressValue.(string)
 		if !ok {
-			memberInfo2AddressCache.Delete(memberInfoStr)
+			memberInfo2AddressCache.Remove(memberInfoStr)
 		}
 	}
 
@@ -78,7 +78,7 @@ func GetMemberPkAndAddress(
 		if err != nil {
 			return nil, "", fmt.Errorf("publicKeyToAddress failed, err = %v", err)
 		}
-		memberInfo2AddressCache.Store(memberInfoStr, address)
+		memberInfo2AddressCache.Add(memberInfoStr, address)
 	}
 
 	return pk, address, nil

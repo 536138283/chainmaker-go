@@ -181,7 +181,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 				ts.log.Errorf("failed to transfer chainConfig from interface to struct")
 			}
 			//chainCfg := txSimContext.GetLastChainConfig()
-			addr, _ := publicKeyToAddress(pk, chainCfg)
+			addr, _ := pkToGasAddress(pk, chainCfg)
 			if tx.Result != nil {
 				txResult := &commonPb.Result{
 					ContractResult: &commonPb.ContractResult{
