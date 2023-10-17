@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	bn "chainmaker.org/chainmaker/common/v2/birdsnest"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -280,7 +282,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 	var wg sync.WaitGroup
 	waitCount := len(verifyBatch)
 	wg.Add(waitCount)
-	txIds := utils.GetTxIds(block.Txs)
+	txIds := utils.GetTxIds(coinbasemgr.FilterCoinBaseTxOrGasTx(block.Txs))
 
 	poolStart := utils.CurrentTimeMillisSeconds()
 	txsRet := make(map[string]*commonpb.Transaction)
@@ -377,7 +379,7 @@ func (vt *VerifierTx) verifierTxs(block *commonpb.Block, mode protocol.VerifyMod
 
 // VerifyTxs verify transactions in block
 // include if transaction is double spent, transaction signature
-func (vt *VerifierTx) verifierTxsWithRWSet(block *commonpb.Block, mode protocol.VerifyMode, verifyMode uint8) (
+func (vt *VerifierTx) verifierTxsWithRWSet(block *commonpb.Block) (
 	[][]byte, error) {
 
 	verifyBatch := utils.DispatchTxVerifyTask(block.Txs)
@@ -513,14 +515,22 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			}
 			if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
 				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+
+				// coinbase or gas tx needn't delete from txPool
+				if !coinbasemgr.IsGasTx(tx) {
+					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				}
+
 				continue
 			}
 			result.RwSetHash = rwsetHash
 			// verify if rwset hash is equal
 			if err = VerifyTxResult(tx, result); err != nil {
 				vt.log.Warnf("verify tx result failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
-				rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				if !coinbasemgr.IsGasTx(tx) {
+					rwSetVerifyFailTxIds = append(rwSetVerifyFailTxIds, tx.Payload.TxId)
+				}
+
 				continue
 			}
 			hash, err := utils.CalcTxHashWithVersion(

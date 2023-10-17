@@ -225,7 +225,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock.Txs), newBlock.Header.BlockHeight)
 	}
 
 	if protocol.CONSENSUS_VERIFY == mode {
@@ -327,7 +327,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock.Txs), newBlock.Header.BlockHeight)
 	}
 
 	if protocol.CONSENSUS_VERIFY == mode {

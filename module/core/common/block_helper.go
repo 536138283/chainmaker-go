@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	"chainmaker.org/chainmaker-go/module/subscriber"
@@ -187,7 +189,7 @@ func (bb *BlockBuilder) GenerateNewBlock(
 		if TxPoolType == batch.TxPoolType {
 			// retry the timeout 's tx and get the new batchIds
 			batchIds, fetchBatches = bb.txPool.ReGenTxBatchesWithRetryTxs(block.Header.BlockHeight, batchIds,
-				block.Txs)
+				coinbasemgr.FilterCoinBaseTxOrGasTx(block.Txs))
 		} else {
 			RetryAndRemoveTxs(bb.txPool, txsTimeout, nil, bb.log)
 		}
@@ -827,7 +829,7 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 		ProposalCache: vb.proposalCache,
 	}
 	verifiertx := NewVerifierTx(verifierTxConf)
-	txHashes, err := verifiertx.verifierTxsWithRWSet(block, mode, QuickSyncVerifyMode)
+	txHashes, err := verifiertx.verifierTxsWithRWSet(block)
 	vb.log.Infof("verifierTxs txHashCount:%d, txCount:%d, %x", len(txHashes), len(block.Txs),
 		block.Header.TxRoot)
 	txLasts := utils.CurrentTimeMillisSeconds() - startTxTick
@@ -1101,7 +1103,9 @@ func RetryAndRemoveTxs(
 	if len(txsRetry) > 0 {
 		txs = filterTxsForTxPool(txsRetry, log)
 	}
-	txPool.RetryAndRemoveTxs(txs, txsRem)
+	txPool.RetryAndRemoveTxs(
+		coinbasemgr.FilterCoinBaseTxOrGasTx(txs),
+		coinbasemgr.FilterCoinBaseTxOrGasTx(txsRem))
 }
 
 // filterTxsForTxPool filter charging gas tx out
