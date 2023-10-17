@@ -50,7 +50,7 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 			}
 		} else {
 			gasUsed := tx.Result.ContractResult.GasUsed
-			address, _, err2 := getPayerAddressAndPkFromTx(tx, snapshot, ac, chainCfg)
+			address, _, err2 := getPayerAddressAndPkFromTx(tx, snapshot, chainCfg)
 			if err2 != nil {
 				return err2
 			}

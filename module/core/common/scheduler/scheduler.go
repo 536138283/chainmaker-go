@@ -8,7 +8,6 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -130,7 +129,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
 		ts.log.Debugf("before prepare `SenderGroup` ")
-		senderGroup = NewSenderGroup(txBatch)
+		senderGroup = NewSenderGroup(txBatch, snapshot)
 		ts.log.Debugf("end prepare `SenderGroup` ")
 	}
 
@@ -180,7 +179,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				ts.log.Debugf("Schedule(...) timeout ...")
 				ts.scheduleFinishC <- true
 				if !enableOptimizeChargeGas && enableSenderGroup {
-					senderGroup.doneTxKeyC <- [32]byte{}
+					senderGroup.doneTxKeyC <- ""
 				}
 				ts.log.Warnf("block [%d] schedule reached time limit", block.Header.BlockHeight)
 				return
@@ -188,7 +187,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 				ts.log.Debugf("Schedule(...) finish ...")
 				ts.scheduleFinishC <- true
 				if !enableOptimizeChargeGas && enableSenderGroup {
-					senderGroup.doneTxKeyC <- [32]byte{}
+					senderGroup.doneTxKeyC <- ""
 				}
 				return
 			}
@@ -319,7 +318,7 @@ func (ts *TxScheduler) sendTxBySenderGroup(conflictsBitWindow *ConflictsBitWindo
 	// solve done tx channel
 	for {
 		k := <-senderGroup.doneTxKeyC
-		if k == [32]byte{} {
+		if len(k) == 0 {
 			return
 		}
 		senderGroup.txsMap[k] = senderGroup.txsMap[k][1:]
@@ -347,7 +346,8 @@ func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSe
 		ts.metricVMRunTime.WithLabelValues(tx.Payload.ChainId).Observe(elapsed.Seconds())
 	}
 	if enableSenderGroup {
-		hashKey, _ := getPayerHashKey(tx)
+		chainConfig := senderGroup.snapshot.GetLastChainConfig()
+		hashKey, _ := getPayerHashKey(tx, senderGroup.snapshot, chainConfig)
 		senderGroup.doneTxKeyC <- hashKey
 	}
 }
@@ -872,14 +872,8 @@ func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimCon
 			return nil, nil, err
 		}
 
-		ac, err := txSimContext.GetAccessControl()
-		if err != nil {
-			ts.log.Error(err.Error())
-			return nil, nil, err
-		}
 		_, publicKey, err := getPayerAddressAndPkFromTx(tx,
 			txSimContext.GetSnapshot(),
-			ac,
 			txSimContext.GetLastChainConfig())
 		if err != nil {
 			ts.log.Error(err.Error())
@@ -1102,7 +1096,6 @@ func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot) 
 
 func getPayerAddressAndPkFromTx(tx *commonPb.Transaction,
 	snapshot protocol.Snapshot,
-	ac protocol.AccessControlProvider,
 	chainConfig *configPb.ChainConfig) (string, crypto.PublicKey, error) {
 
 	var (
@@ -1449,33 +1442,41 @@ func wholeCertInfo(txSimContext protocol.TxSimContext, certHash string) (*common
 }
 
 type SenderGroup struct {
-	txsMap     map[[32]byte][]*commonPb.Transaction
-	doneTxKeyC chan [32]byte
+	txsMap     map[string][]*commonPb.Transaction
+	snapshot   protocol.Snapshot
+	doneTxKeyC chan string
 }
 
-func NewSenderGroup(txBatch []*commonPb.Transaction) *SenderGroup {
+func NewSenderGroup(txBatch []*commonPb.Transaction, snapshot protocol.Snapshot) *SenderGroup {
 	return &SenderGroup{
-		txsMap:     getSenderTxsMap(txBatch),
-		doneTxKeyC: make(chan [32]byte, len(txBatch)),
+		txsMap:     getSenderTxsMap(txBatch, snapshot),
+		snapshot:   snapshot,
+		doneTxKeyC: make(chan string, len(txBatch)),
 	}
 }
 
-func getSenderTxsMap(txBatch []*commonPb.Transaction) map[[32]byte][]*commonPb.Transaction {
-	senderTxsMap := make(map[[32]byte][]*commonPb.Transaction, len(txBatch))
+func getSenderTxsMap(txBatch []*commonPb.Transaction,
+	snapshot protocol.Snapshot) map[string][]*commonPb.Transaction {
+	senderTxsMap := make(map[string][]*commonPb.Transaction, len(txBatch))
+
+	chainConfig := snapshot.GetLastChainConfig()
 	for _, tx := range txBatch {
-		hashKey, _ := getPayerHashKey(tx)
+		hashKey, _ := getPayerHashKey(tx, snapshot, chainConfig)
 		senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
 	}
 	return senderTxsMap
 }
 
-func getPayerHashKey(tx *commonPb.Transaction) ([32]byte, error) {
-	sender := getTxPayerSigner(tx)
-	keyBytes, err := sender.Marshal()
+func getPayerHashKey(tx *commonPb.Transaction,
+	snapshot protocol.Snapshot,
+	chainConfig *configPb.ChainConfig) (string, error) {
+
+	address, _, err := getPayerAddressAndPkFromTx(tx, snapshot, chainConfig)
 	if err != nil {
-		return [32]byte{}, err
+		return "", err
 	}
-	return sha256.Sum256(keyBytes), nil
+
+	return address, nil
 }
 
 // publicKeyToAddress: generate address from public key, according to chainconfig parameter

@@ -69,7 +69,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  2) tx.Result should be set in `runVM()` later
 			//pk, _ := getPayerPkFromTx(tx, snapshot, ts.ac, blockVersion)
 			chainCfg := txSimContext.GetLastChainConfig()
-			addr, pk, _ := getPayerAddressAndPkFromTx(tx, snapshot, ts.ac, chainCfg)
+			addr, pk, _ := getPayerAddressAndPkFromTx(tx, snapshot, chainCfg)
 			if tx.Result != nil {
 				txResult := &commonPb.Result{
 					ContractResult: &commonPb.ContractResult{

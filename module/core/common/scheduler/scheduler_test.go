@@ -8,7 +8,6 @@ package scheduler
 
 import (
 	"crypto"
-	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -527,27 +526,9 @@ func TestSchedule2(t *testing.T) {
 			Value:        []byte("V"),
 		}},
 	}
-	//txRWSetTable[1] = &commonPb.TxRWSet{
-	//	TxId: tx1.Payload.TxId,
-	//	TxReads: []*commonPb.TxRead{
-	//		{
-	//			ContractName: contractId.Name,
-	//			Key:          []byte("K2"),
-	//			Value:        []byte("V"),
-	//		},
-	//		{
-	//			ContractName: contractId.Name,
-	//			Key:          []byte("K2"),
-	//			Value:        []byte("V"),
-	//		},
-	//	},
-	//	TxWrites: []*commonPb.TxWrite{{
-	//		ContractName: contractId.Name,
-	//		Key:          []byte("K3"),
-	//		Value:        []byte("V"),
-	//	}},
-	//}
 
+	snapshot.EXPECT().GetKey(-1, syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).
+		Return(nil, nil).AnyTimes()
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).AnyTimes()
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
@@ -590,27 +571,9 @@ func TestSchedule3(t *testing.T) {
 			Value:        []byte("V"),
 		}},
 	}
-	//txRWSetTable[1] = &commonPb.TxRWSet{
-	//	TxId: tx1.Payload.TxId,
-	//	TxReads: []*commonPb.TxRead{
-	//		{
-	//			ContractName: contractId.Name,
-	//			Key:          []byte("K2"),
-	//			Value:        []byte("V"),
-	//		},
-	//		{
-	//			ContractName: contractId.Name,
-	//			Key:          []byte("K2"),
-	//			Value:        []byte("V"),
-	//		},
-	//	},
-	//	TxWrites: []*commonPb.TxWrite{{
-	//		ContractName: contractId.Name,
-	//		Key:          []byte("K3"),
-	//		Value:        []byte("V"),
-	//	}},
-	//}
 
+	snapshot.EXPECT().GetKey(-1, syscontract.SystemContract_ACCOUNT_MANAGER.String(), gomock.Any()).
+		Return(nil, nil).AnyTimes()
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).AnyTimes()
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
@@ -2351,7 +2314,21 @@ func TestNewSenderGroup(t *testing.T) {
 		txBatch []*commonPb.Transaction
 	}
 
+	ctl := gomock.NewController(t)
+	chainConfig := &configpb.ChainConfig{
+		Crypto: &configpb.CryptoConfig{
+			Hash: "SHA256",
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
+		},
+	}
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
+	snapshot := mock.NewMockSnapshot(ctl)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+	snapshot.EXPECT().GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		gomock.Any()).Return(nil, nil).AnyTimes()
 
 	parameters := make(map[string]string, 8)
 
@@ -2369,8 +2346,8 @@ func TestNewSenderGroup(t *testing.T) {
 				txBatch: txBatch,
 			},
 			want: &SenderGroup{
-				txsMap:     getSenderTxsMap(txBatch),
-				doneTxKeyC: make(chan [32]byte, len(txBatch)),
+				txsMap:     getSenderTxsMap(txBatch, snapshot),
+				doneTxKeyC: make(chan string, len(txBatch)),
 			},
 		},
 		{
@@ -2385,14 +2362,14 @@ func TestNewSenderGroup(t *testing.T) {
 				txsMap: getSenderTxsMap([]*commonPb.Transaction{
 					newTx("a0000000000000000000000000000001", contractId, parameters),
 					newTx("a0000000000000000000000000000002", contractId, parameters),
-				}),
-				doneTxKeyC: make(chan [32]byte, 2),
+				}, snapshot),
+				doneTxKeyC: make(chan string, 2),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSenderGroup(tt.args.txBatch); !reflect.DeepEqual(got.txsMap, tt.want.txsMap) {
+			if got := NewSenderGroup(tt.args.txBatch, snapshot); !reflect.DeepEqual(got.txsMap, tt.want.txsMap) {
 				t.Errorf("NewSenderGroup() = %v, want %v", got, tt.want)
 			}
 		})
@@ -2404,13 +2381,28 @@ func Test_getSenderTxsMap(t *testing.T) {
 		txBatch []*commonPb.Transaction
 	}
 
+	ctl := gomock.NewController(t)
+	chainConfig := &configpb.ChainConfig{
+		Crypto: &configpb.CryptoConfig{
+			Hash: "SHA256",
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
+		},
+	}
+
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
+	snapshot := mock.NewMockSnapshot(ctl)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+	snapshot.EXPECT().GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		gomock.Any()).Return(nil, nil).AnyTimes()
 
 	parameters := make(map[string]string, 8)
 	tests := []struct {
 		name string
 		args args
-		want map[[32]byte][]*commonPb.Transaction
+		want map[string][]*commonPb.Transaction
 	}{
 		{
 			name: "test0",
@@ -2419,10 +2411,10 @@ func Test_getSenderTxsMap(t *testing.T) {
 					newTx("a0000000000000000000000000000001", contractId, parameters),
 				},
 			},
-			want: func() map[[32]byte][]*commonPb.Transaction {
-				senderTxsMap := make(map[[32]byte][]*commonPb.Transaction)
+			want: func() map[string][]*commonPb.Transaction {
+				senderTxsMap := make(map[string][]*commonPb.Transaction)
 				tx := newTx("a0000000000000000000000000000001", contractId, parameters)
-				hashKey, _ := getSenderHashKey(tx)
+				hashKey, _ := getPayerHashKey(tx, snapshot, chainConfig)
 				senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
 				return senderTxsMap
 			}(),
@@ -2435,13 +2427,13 @@ func Test_getSenderTxsMap(t *testing.T) {
 					newTx("a0000000000000000000000000000002", contractId, parameters),
 				},
 			},
-			want: func() map[[32]byte][]*commonPb.Transaction {
-				senderTxsMap := make(map[[32]byte][]*commonPb.Transaction)
+			want: func() map[string][]*commonPb.Transaction {
+				senderTxsMap := make(map[string][]*commonPb.Transaction)
 				tx1 := newTx("a0000000000000000000000000000001", contractId, parameters)
-				hashKey1, _ := getSenderHashKey(tx1)
+				hashKey1, _ := getPayerHashKey(tx1, snapshot, chainConfig)
 				senderTxsMap[hashKey1] = append(senderTxsMap[hashKey1], tx1)
 				tx2 := newTx("a0000000000000000000000000000002", contractId, parameters)
-				hashKey2, _ := getSenderHashKey(tx2)
+				hashKey2, _ := getPayerHashKey(tx2, snapshot, chainConfig)
 				senderTxsMap[hashKey2] = append(senderTxsMap[hashKey2], tx2)
 				return senderTxsMap
 			}(),
@@ -2449,25 +2441,39 @@ func Test_getSenderTxsMap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getSenderTxsMap(tt.args.txBatch); !reflect.DeepEqual(got, tt.want) {
+			if got := getSenderTxsMap(tt.args.txBatch, snapshot); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getSenderTxsMap() = %v, want %v", got, tt.want)
 			}
 		})
 	}
 }
 
-func Test_getSenderHashKey(t *testing.T) {
+func Test_getPayerHashKey(t *testing.T) {
 	type args struct {
 		tx *commonPb.Transaction
 	}
 
+	ctl := gomock.NewController(t)
+	chainConfig := &configpb.ChainConfig{
+		Crypto: &configpb.CryptoConfig{
+			Hash: "SHA256",
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
+		},
+	}
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
+	snapshot := mock.NewMockSnapshot(ctl)
+	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+	snapshot.EXPECT().GetKey(-1,
+		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		gomock.Any()).Return(nil, nil).AnyTimes()
 
 	parameters := make(map[string]string, 8)
 	tests := []struct {
 		name    string
 		args    args
-		want    [32]byte
+		want    string
 		wantErr bool
 	}{
 		{
@@ -2475,9 +2481,10 @@ func Test_getSenderHashKey(t *testing.T) {
 			args: args{
 				tx: newTx("a0000000000000000000000000000001", contractId, parameters),
 			},
-			want: func() [32]byte {
-				keyBytes, _ := newTx("a0000000000000000000000000000001", contractId, parameters).Sender.GetSigner().Marshal()
-				return sha256.Sum256(keyBytes)
+			want: func() string {
+				tx := newTx("a0000000000000000000000000000001", contractId, parameters)
+				addr, _, _ := getPayerAddressAndPkFromTx(tx, snapshot, chainConfig)
+				return addr
 			}(),
 			wantErr: false,
 		},
@@ -2485,7 +2492,7 @@ func Test_getSenderHashKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getSenderHashKey(tt.args.tx)
+			got, err := getPayerHashKey(tt.args.tx, snapshot, chainConfig)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getSenderHashKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
