@@ -177,7 +177,6 @@ func multiSignReq() error {
 				Value: []byte(pm.Value),
 			})
 		}
-
 	}
 
 	payload = client.CreateMultiSignReqPayloadWithGasLimit(pairs, gasLimit)

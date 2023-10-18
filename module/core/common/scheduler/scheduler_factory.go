@@ -26,16 +26,17 @@ type TxSchedulerFactory struct {
 
 // NewTxScheduler building a transaction scheduler
 func (sf TxSchedulerFactory) NewTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
-	storeHelper conf.StoreHelper, ledgerCache protocol.LedgerCache) protocol.TxScheduler {
+	storeHelper conf.StoreHelper, ledgerCache protocol.LedgerCache,
+	ac protocol.AccessControlProvider) protocol.TxScheduler {
 	if chainConf.ChainConfig().Scheduler != nil && chainConf.ChainConfig().Scheduler.EnableEvidence {
 		return newTxSchedulerEvidence(vmMgr, chainConf, storeHelper, ledgerCache)
 	}
-	return newTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache)
+	return newTxScheduler(vmMgr, chainConf, storeHelper, ledgerCache, ac)
 }
 
 // newTxScheduler building a regular transaction scheduler
 func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
-	storeHelper conf.StoreHelper, cache protocol.LedgerCache) *TxScheduler {
+	storeHelper conf.StoreHelper, cache protocol.LedgerCache, ac protocol.AccessControlProvider) *TxScheduler {
 	log := logger.GetLoggerByChain(logger.MODULE_CORE, chainConf.ChainConfig().ChainId)
 	log.Debugf("use the common TxScheduler.")
 	var txScheduler = &TxScheduler{
@@ -47,6 +48,7 @@ func newTxScheduler(vmMgr protocol.VmManager, chainConf protocol.ChainConf,
 		StoreHelper:     storeHelper,
 		ledgerCache:     cache,
 		contractCache:   &sync.Map{},
+		ac:              ac,
 	}
 	var err error
 	txScheduler.keyReg, err = regexp.Compile(protocol.DefaultStateRegex)

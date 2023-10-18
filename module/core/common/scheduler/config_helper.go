@@ -24,7 +24,8 @@ func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
 	return enableGas && enableOptimizeChargeGas
 }
 
-func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot) error {
+func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider, blockVersion uint32) error {
 	// gas to charge from validator
 	gasCalc := make(map[string]uint64, 24)
 	// gas to charge from proposer
@@ -49,16 +50,11 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 			}
 		} else {
 			gasUsed := tx.Result.ContractResult.GasUsed
-			pk, err2 := getPayerPkFromTx(tx, snapshot)
+			address, _, err2 := getPayerAddressAndPkFromTx(tx, snapshot, chainCfg)
 			if err2 != nil {
-				return fmt.Errorf("getPayerPkFromTx error: %v", err2)
+				return err2
 			}
 
-			// convert the public key to `ZX` or `CM` or `EVM` address
-			address, err2 := publicKeyToAddress(pk, chainCfg)
-			if err2 != nil {
-				return fmt.Errorf("publicKeyToAddress failed: err = %v", err)
-			}
 			if totalGas, exists := gasCalc[address]; exists {
 				gasCalc[address] = totalGas + gasUsed
 			} else {

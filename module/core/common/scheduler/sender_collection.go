@@ -39,9 +39,11 @@ func (g *TxCollection) String() string {
 func NewSenderCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider,
+	blockVersion uint32,
 	log protocol.Logger) *SenderCollection {
 	return &SenderCollection{
-		txsMap: getSenderTxCollection(txBatch, snapshot, log),
+		txsMap: getSenderTxCollection(txBatch, snapshot, ac, blockVersion, log),
 	}
 }
 
@@ -49,24 +51,16 @@ func NewSenderCollection(
 func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider,
+	blockVersion uint32,
 	log protocol.Logger) map[string]*TxCollection {
 	txCollectionMap := make(map[string]*TxCollection, len(txBatch))
 
-	var err error
 	chainCfg := snapshot.GetLastChainConfig()
 
 	for _, tx := range txBatch {
-		// get the public key from tx
-		pk, err2 := getPayerPkFromTx(tx, snapshot)
-		if err2 != nil {
-			log.Errorf("getPayerPkFromTx failed: err = %v", err)
-			continue
-		}
-
-		// convert the public key to `ZX` or `CM` or `EVM` address
-		address, err2 := publicKeyToAddress(pk, chainCfg)
-		if err2 != nil {
-			log.Error("publicKeyToAddress failed: err = %v", err)
+		address, pk, err := getPayerAddressAndPkFromTx(tx, snapshot, chainCfg)
+		if err != nil {
 			continue
 		}
 
