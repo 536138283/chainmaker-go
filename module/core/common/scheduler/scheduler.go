@@ -243,6 +243,10 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 	blockVersion uint32, block *commonPb.Block, snapshot protocol.Snapshot,
 	addressCache map[string]string, enableOptimizeChargeGas bool) {
 
+	if snapshot.GetSnapshotSize() <= 0 {
+		return
+	}
+
 	// 软分叉处理，240版本后gas交易变更为coinbase交易
 	if blockVersion >= blockVersion3000000 {
 		//dpos或开启gas时，启用coinbase
@@ -258,7 +262,7 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 		return
 	}
 
-	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+	if enableOptimizeChargeGas {
 		ts.log.DebugDynamic(func() string {
 			return "append charge gas tx to block ..."
 		})

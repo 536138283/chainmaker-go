@@ -69,5 +69,8 @@ func (hp *maxBftHelper) DiscardBlocks(baseHeight uint64) {
 		txs = append(txs, blk.Txs...)
 	}
 
-	hp.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(txs))
+	retryTxs := coinbasemgr.FilterCoinBaseTxOrGasTx(txs)
+	hp.logger.Infof("discard blocks(height: %d) and retry txs(%d)", baseHeight, len(retryTxs))
+
+	hp.txPool.RetryTxs(retryTxs)
 }
