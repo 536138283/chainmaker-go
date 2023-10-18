@@ -133,6 +133,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
 		senderCollection = ts.NewSenderCollection(txBatch, snapshot)
+		ts.log.Infof("SenderCollection has %d special txs.", len(senderCollection.specialTxTable))
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
 		ts.log.Debugf("before prepare `SenderGroup` ")
@@ -269,6 +270,10 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 	blockVersion uint32, block *commonPb.Block, snapshot protocol.Snapshot,
 	addressCache map[string]string, enableOptimizeChargeGas bool) {
 
+	if snapshot.GetSnapshotSize() <= 0 {
+		return
+	}
+
 	// 软分叉处理，240版本后gas交易变更为coinbase交易
 	if blockVersion >= blockVersion3000000 {
 		//dpos或开启gas时，启用coinbase
@@ -284,7 +289,7 @@ func (ts *TxScheduler) addChargeGasTxOrCoinbaseTx(
 		return
 	}
 
-	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
+	if enableOptimizeChargeGas {
 		ts.log.DebugDynamic(func() string {
 			return "append charge gas tx to block ..."
 		})
@@ -743,27 +748,28 @@ func (ts *TxScheduler) executeTx(
 	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 	blockVersion := block.GetHeader().BlockVersion
 
-	if enableOptimizeChargeGas {
-		if err2 := collection.checkBalanceInSenderCollection(tx); err2 != nil {
-			runVmSuccess = false
-			txResult = &commonPb.Result{
-				Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
-				Message: err2.Error(),
-				ContractResult: &commonPb.ContractResult{
-					Code:    1,
-					Message: err2.Error(),
-					GasUsed: uint64(0),
-				},
-			}
-			ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ",
-				tx.Payload.TxId, runVmSuccess, txResult)
-			txSimContext.SetTxResult(txResult)
-			return txSimContext, protocol.ExecOrderTxTypeNormal, runVmSuccess
-		}
-	}
-
 	// 300后，修复原gas余额不足的错误处理
 	if blockVersion >= blockVersion3000000 {
+		// checking for balance is not enough
+		if enableOptimizeChargeGas {
+			if err := collection.checkBalanceInSenderCollection(tx); err != nil {
+				runVmSuccess = false
+				txResult = &commonPb.Result{
+					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
+					Message: err.Error(),
+					ContractResult: &commonPb.ContractResult{
+						Code:    1,
+						Message: err.Error(),
+						GasUsed: uint64(0),
+					},
+				}
+				ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ",
+					tx.Payload.TxId, runVmSuccess, txResult)
+				txSimContext.SetTxResult(txResult)
+				return txSimContext, protocol.ExecOrderTxTypeNormal, runVmSuccess
+			}
+		}
+
 		if !ts.guardForExecuteTx300(tx, txSimContext, enableGas, enableOptimizeChargeGas, snapshot, collection) {
 			return txSimContext, protocol.ExecOrderTxTypeNormal, false
 		}
@@ -775,7 +781,13 @@ func (ts *TxScheduler) executeTx(
 				tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
 		}
 		if enableOptimizeChargeGas {
-			if gasCharged, err2 := collection.chargeGasInSenderCollection(tx, txResult); err != nil {
+			txNeedChargingGas := ts.checkNativeFilter(
+				txSimContext.GetBlockVersion(),
+				tx.Payload.ContractName,
+				tx.Payload.Method,
+				tx,
+				txSimContext.GetSnapshot()) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT
+			if gasCharged, err2 := collection.chargeGasInSenderCollection(tx, txResult, txNeedChargingGas); err != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
@@ -1230,6 +1242,7 @@ func (ts *TxScheduler) dispatchTxs(
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before `SenderCollection` dispatch => ")
 		ts.dispatchTxsInSenderCollection(block, senderCollection, runningTxC, snapshot)
+		ts.log.Infof("SenderCollection has %d special txs", len(senderCollection.specialTxTable))
 		ts.log.Debugf("end `SenderCollection` dispatch => ")
 		return len(txBatch) - len(senderCollection.specialTxTable)
 
@@ -1267,8 +1280,6 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 	})
 	for addr, txCollection := range senderCollection.txsMap {
 
-		balance := txCollection.accountBalance
-
 		ts.log.DebugDynamic(func() string {
 			return fmt.Sprintf("%v => {balance: %v, tx size: %v}",
 				addr, txCollection.accountBalance, len(txCollection.txs))
@@ -1278,8 +1289,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			ts.log.DebugDynamic(func() string {
 				return fmt.Sprintf("dispatch sender collection tx => %s", tx.Payload)
 			})
-			var gasLimit uint64
-			limit := tx.Payload.Limit
+
 			txNeedChargeGas := ts.checkNativeFilter(
 				block.GetHeader().GetBlockVersion(),
 				tx.GetPayload().ContractName,
@@ -1288,32 +1298,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			ts.log.DebugDynamic(func() string {
 				return fmt.Sprintf("tx need charge gas => %v", txNeedChargeGas)
 			})
-			if limit == nil && txNeedChargeGas {
-				// tx需要扣费，但是limit没有设置,此处不设置交易结果，在executeTx时赋值
-				runningTxC <- tx
-				continue
 
-			} else if txNeedChargeGas && tx.Result != nil {
-				runningTxC <- tx
-				continue
-
-			} else if !txNeedChargeGas {
-				// tx 不需要扣费
-				gasLimit = uint64(0)
-			} else {
-				// tx 需要扣费，limit 正常设置
-				gasLimit = limit.GasLimit
-			}
-
-			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
-			if int64(balance-gasLimit) < 0 {
-				// [balance < gasLimit], don't dispatch, move tx into specialTx table,
-				// and executing tx serially after `iterator tx`
-				senderCollection.specialTxTable = append(senderCollection.specialTxTable, tx)
-				continue
-			}
-
-			balance = balance - gasLimit
 			runningTxC <- tx
 		}
 	}

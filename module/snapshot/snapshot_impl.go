@@ -375,11 +375,11 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	// When scheduling, the applySpecialTx is false, it should return
 	// len(s.txTable) + len(s.specialTxTable) for all tx, because maybe normal tx after a specialTx.
 	if !applySpecialTx {
-		s.log.Debugf("apply normal tx, id = %v", tx.Payload.TxId)
+		//s.log.Debugf("apply normal tx, id = %v", tx.Payload.TxId)
 		return s.applyNormalTxForSchedule(txSimContext, specialTxType, runVmSuccess)
 	}
 	// When simulate with dag or schedule special tx, it only returns len(s.txTable)
-	s.log.Debugf("apply special tx, id = %v", tx.Payload.TxId)
+	//s.log.Debugf("apply special tx, id = %v", tx.Payload.TxId)
 	return s.applyAllTxForSimulate(txSimContext, specialTxType, runVmSuccess)
 }
 

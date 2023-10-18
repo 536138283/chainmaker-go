@@ -102,21 +102,28 @@ func (ts *TxScheduler) getSenderTxCollection(
 			txCollectionMap[address] = txCollection
 		}
 
-		if tx.Payload.Limit != nil {
-			if err := txCollection.addTxGas(tx.Payload.Limit.GasLimit); err != nil {
-				continue
-			}
-		}
-
+		// 判断是否需要扣费
 		txNeedChargeGas := ts.checkNativeFilter(
 			blockVersion,
 			tx.GetPayload().ContractName,
 			tx.GetPayload().Method,
 			tx, snapshot)
 
-		if txCollection.totalGasUsed > txCollection.accountBalance && txNeedChargeGas {
-			specialTxList = append(specialTxList, tx)
+		if txNeedChargeGas {
+			if tx.Payload.Limit != nil {
+				if err := txCollection.addTxGas(tx.Payload.Limit.GasLimit); err != nil {
+					continue
+				}
+			}
+			if txCollection.totalGasUsed > txCollection.accountBalance {
+				// 余额不够，加入 special 队列
+				specialTxList = append(specialTxList, tx)
+			} else {
+				// 余额够，加入并行队列
+				txCollection.txs = append(txCollection.txs, tx)
+			}
 		} else {
+			// 不需要扣费，加入并行队列
 			txCollection.txs = append(txCollection.txs, tx)
 		}
 	}
@@ -159,11 +166,16 @@ func (s *SenderCollection) getParallelTxsNum() int {
 }
 
 func (s *SenderCollection) chargeGasInSenderCollection(
-	tx *commonPb.Transaction, txResult *commonPb.Result) (uint64, error) {
+	tx *commonPb.Transaction, txResult *commonPb.Result, txNeedChargeGas bool) (uint64, error) {
 
 	// 处理不需要扣费的交易
-	if tx.Payload.Limit == nil {
+	if !txNeedChargeGas {
 		return 0, nil
+	}
+
+	// 处理需要扣费，但没有设置 gas_limit 的交易
+	if tx.Payload.Limit == nil {
+		return 0, errors.New("tx need charge gas, but not gas limit was supplied")
 	}
 
 	address, exist := s.txAddressCache[tx.Payload.TxId]
@@ -185,33 +197,49 @@ func (s *SenderCollection) chargeGasInSenderCollection(
 		err := senderTxs.addTxGas(tx.Payload.Limit.GasLimit)
 		if err != nil {
 			return gasCharged, fmt.Errorf(
-				"totalGasUsed is overflow after add gas limit of tx `%v`", tx.Payload.TxId)
+				"totalGasUsed is overflow after add gas_limit of tx `%v`", tx.Payload.TxId)
 		}
 		return gasCharged, fmt.Errorf("gasUsed(%v) is greater than gasLimit(%v) for tx `%v`",
 			txResult.ContractResult.GasUsed, tx.Payload.Limit.GasLimit, tx.Payload.TxId)
 	}
 
 	// overflow checking
-	totalGasUsed := senderTxs.totalGasUsed + gasUsed
-	if totalGasUsed < senderTxs.totalGasUsed {
+	totalGasUsed, overflow := uint64SafeAdd(senderTxs.totalGasUsed, gasUsed)
+	if overflow {
 		return gasUsed, fmt.Errorf(
-			"totalGasUsed is overflow after add gas used of tx `%v`", tx.Payload.TxId)
+			"totalGasUsed is overflow after add gas_used of tx `%v`", tx.Payload.TxId)
 	}
 
 	if totalGasUsed > senderTxs.accountBalance {
-		if gasUsed > 0 {
-			gasAvailable := senderTxs.accountBalance - senderTxs.totalGasUsed
-			if gasAvailable < 0 {
-				gasAvailable = 0
-			}
-			senderTxs.totalGasUsed = senderTxs.accountBalance
-			return gasAvailable, fmt.Errorf("account balance remains %v, is not enough for tx: %v",
-				gasAvailable, tx.Payload.TxId)
+		gasAvailable, overflow2 := uint64SafeSub(senderTxs.accountBalance, senderTxs.totalGasUsed)
+		if overflow2 {
+			// will not execute here, because checking is exec at beginning of executeTx(...)
+			gasAvailable = 0
 		}
+		senderTxs.totalGasUsed = senderTxs.accountBalance
+		return gasAvailable, fmt.Errorf("account balance remains %v, is not enough for tx: %v",
+			gasAvailable, tx.Payload.TxId)
+
 	}
 
-	senderTxs.totalGasUsed += totalGasUsed
+	senderTxs.totalGasUsed = totalGasUsed
 	return gasUsed, nil
+}
+
+func uint64SafeAdd(num1 uint64, num2 uint64) (uint64, bool) {
+	result := num1 + num2
+	if result < num1 {
+		return 0, true
+	}
+	return result, false
+}
+
+func uint64SafeSub(num1 uint64, num2 uint64) (uint64, bool) {
+	result := num1 - num2
+	if int64(result) >= 0 {
+		return result, false
+	}
+	return 0, true
 }
 
 func (s *SenderCollection) checkBalanceInSenderCollection(
@@ -235,15 +263,13 @@ func (s *SenderCollection) checkBalanceInSenderCollection(
 		return fmt.Errorf("account balance is not enough for tx `%v`", tx.Payload.TxId)
 	}
 
-	if tx.Payload.Limit != nil {
-		// overflow checking
-		totalGasUsed := senderTxs.totalGasUsed + tx.Payload.Limit.GasLimit
-		if totalGasUsed < senderTxs.totalGasUsed {
-			return fmt.Errorf("totalGasUsed is overflow after add tx `%v`", tx.Payload.TxId)
-		}
-		if totalGasUsed > senderTxs.accountBalance {
-			return fmt.Errorf("account balance is not enough for tx `%v` gas limit", tx.Payload.TxId)
-		}
+	// overflow checking
+	totalGasUsed, overflow := uint64SafeAdd(senderTxs.totalGasUsed, tx.Payload.Limit.GasLimit)
+	if overflow {
+		return fmt.Errorf("totalGasUsed is overflow after add tx `%v` gas_limit", tx.Payload.TxId)
+	}
+	if totalGasUsed > senderTxs.accountBalance {
+		return fmt.Errorf("account balance is not enough for tx `%v` gas_limit", tx.Payload.TxId)
 	}
 
 	return nil

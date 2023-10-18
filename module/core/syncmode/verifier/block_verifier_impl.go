@@ -285,7 +285,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock.Txs), newBlock.Header.BlockHeight)
 	}
 
 	// if mode equal consensus verify, publish to consensus verify result signal
@@ -394,7 +394,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 	if common.TxPoolType == batch.TxPoolType {
 		v.txPool.AddTxBatchesToPendingCache(batchIds, newBlock.Header.BlockHeight)
 	} else {
-		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock), newBlock.Header.BlockHeight)
+		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock.Txs), newBlock.Header.BlockHeight)
 	}
 
 	//if protocol.CONSENSUS_VERIFY == mode {
@@ -601,7 +601,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 	}
 	// if cut txs not nil, retry txs to tx pool
 	if len(cutTxs) > 0 {
-		v.txPool.RetryTxs(cutTxs)
+		v.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(cutTxs))
 	}
 }
 

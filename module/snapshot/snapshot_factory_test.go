@@ -85,7 +85,7 @@ func prepareTx(txId string, contractId *commonPb.Contract, method string,
 			Parameters:     parameters,
 			Timestamp:      0,
 			ExpirationTime: 0,
-			Limit:          &commonPb.Limit{GasLimit: 10},
+			Limit:          &commonPb.Limit{GasLimit: 11},
 		},
 		Sender: &commonPb.EndorsementEntry{
 			//Signer: &acPb.Member{
@@ -299,7 +299,14 @@ func Test_TxSchedule_BuildDAG(t *testing.T) {
 	assert.NotNil(t, txEvents)
 
 	//fmt.Printf("block dag = %v \n", block.Dag)
-	//for _, tx := range block.Txs {
-	//	fmt.Printf("block tx => id = %v, result = %v \n", tx.Payload.TxId, tx.Result.ContractResult.Message)
-	//}
+	successNum := 0
+	for i, tx := range block.Txs {
+		if i >= 8998 && i <= 9000 {
+			fmt.Printf("block tx => id = %v, result = %v \n", tx.Payload.TxId, tx.Result.ContractResult.Message)
+		}
+		if tx.Result.Code == commonPb.TxStatusCode_SUCCESS {
+			successNum += 1
+		}
+	}
+	assert.Equal(t, 9000, successNum)
 }

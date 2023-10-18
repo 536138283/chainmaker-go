@@ -18,6 +18,12 @@ import (
 // @param snapshot
 // @return error
 func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot) error {
+
+	// maxbft would have empty block
+	if len(block.Txs) == 0 {
+		return nil
+	}
+
 	// gas to charge from validator
 	gasCalc := make(map[string]uint64, 24)
 	// gas to charge from proposer
@@ -28,15 +34,8 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	}
 
 	// 软分叉处理，v240之后使用coinbase实现，不再有GasTx
-	var contractName, methodName string
-	blockVersion := block.GetHeader().BlockVersion
-	if blockVersion >= blockVersion3000000 {
-		contractName = syscontract.SystemContract_COINBASE.String()
-		methodName = syscontract.CoinbaseFunction_RUN_COINBASE.String()
-	} else {
-		contractName = syscontract.SystemContract_ACCOUNT_MANAGER.String()
-		methodName = syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
-	}
+	blockVersion := block.Header.BlockVersion
+	contractName, methodName := getGasOrCoinbaseByVersion(blockVersion)
 
 	found := false
 	for _, tx := range block.Txs {
@@ -128,4 +127,14 @@ func getMultiSignEnableManualRun(chainConfig *configPb.ChainConfig) bool {
 	}
 
 	return chainConfig.Vm.Native.Multisign.EnableManualRun
+}
+
+func getGasOrCoinbaseByVersion(blockVersion uint32) (string, string) {
+	if blockVersion >= blockVersion3000000 {
+		return syscontract.SystemContract_COINBASE.String(),
+			syscontract.CoinbaseFunction_RUN_COINBASE.String()
+	}
+
+	return syscontract.SystemContract_ACCOUNT_MANAGER.String(),
+		syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
 }
