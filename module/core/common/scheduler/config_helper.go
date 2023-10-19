@@ -70,9 +70,9 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 			}
 
 			// convert the public key to `ZX` or `CM` or `EVM` address
-			address, err2 := publicKeyToAddress(pk, chainCfg)
+			address, err2 := pkToGasAddress(pk, chainCfg)
 			if err2 != nil {
-				return fmt.Errorf("publicKeyToAddress failed: err = %v", err)
+				return fmt.Errorf("pkToGasAddress failed: err = %v", err2)
 			}
 			if totalGas, exists := gasCalc[address]; exists {
 				gasCalc[address] = totalGas + gasUsed

@@ -1,0 +1,7 @@
+auth_type: "public"                                                        # permissionedWithCert / permissionedWithKey / public
+
+node:
+  org_id:            wx-org1.chainmaker.org
+  priv_key_file:     ./testdata/config-pk/public/node/node1/consensus1.sign.key
+  cert_file:         ./testdata/config-pk/public/node/node1/consensus1.sign.crt
+  cert_cache_size:   1000

@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"testing"
 
-	crypto2 "chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	"chainmaker.org/chainmaker/common/v3/crypto/asym"
+	"chainmaker.org/chainmaker/utils/v3"
+
 	acPb "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
@@ -126,12 +129,13 @@ func TestVerifyOptimizeChargeGasTx_OK(t *testing.T) {
 			AddrType: configPb.AddrType_ZXL,
 		},
 		Crypto: &configPb.CryptoConfig{
-			Hash: crypto2.CRYPTO_ALGO_SHA256,
+			Hash: crypto.CRYPTO_ALGO_SHA256,
 		},
 	}
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -183,12 +187,13 @@ func TestVerifyOptimizeChargeGasTx_NoChargeGasTx(t *testing.T) {
 			AddrType: configPb.AddrType_ZXL,
 		},
 		Crypto: &configPb.CryptoConfig{
-			Hash: crypto2.CRYPTO_ALGO_SHA256,
+			Hash: crypto.CRYPTO_ALGO_SHA256,
 		},
 	}
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -275,12 +280,13 @@ func TestVerifyOptimizeChargeGasTx_WithWrongAccountAddress(t *testing.T) {
 			AddrType: configPb.AddrType_ZXL,
 		},
 		Crypto: &configPb.CryptoConfig{
-			Hash: crypto2.CRYPTO_ALGO_SHA256,
+			Hash: crypto.CRYPTO_ALGO_SHA256,
 		},
 	}
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -363,12 +369,13 @@ func TestVerifyOptimizeChargeGasTx_WithLessAddress(t *testing.T) {
 			AddrType: configPb.AddrType_ZXL,
 		},
 		Crypto: &configPb.CryptoConfig{
-			Hash: crypto2.CRYPTO_ALGO_SHA256,
+			Hash: crypto.CRYPTO_ALGO_SHA256,
 		},
 	}
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -459,12 +466,13 @@ func TestVerifyOptimizeChargeGasTx_WithMoreAddress(t *testing.T) {
 			AddrType: configPb.AddrType_ZXL,
 		},
 		Crypto: &configPb.CryptoConfig{
-			Hash: crypto2.CRYPTO_ALGO_SHA256,
+			Hash: crypto.CRYPTO_ALGO_SHA256,
 		},
 	}
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -551,12 +559,13 @@ func TestVerifyOptimizeChargeGasTx_WithWrongGas(t *testing.T) {
 			AddrType: configPb.AddrType_ZXL,
 		},
 		Crypto: &configPb.CryptoConfig{
-			Hash: crypto2.CRYPTO_ALGO_SHA256,
+			Hash: crypto.CRYPTO_ALGO_SHA256,
 		},
 	}
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
@@ -645,15 +654,36 @@ func TestVerifyOptimizeChargeGasTx_WithNotExistAddress(t *testing.T) {
 			AddrType: configPb.AddrType_ZXL,
 		},
 		Crypto: &configPb.CryptoConfig{
-			Hash: crypto2.CRYPTO_ALGO_SHA256,
+			Hash: crypto.CRYPTO_ALGO_SHA256,
 		},
 	}
 	mockBlockchainStore := mock2.NewMockBlockchainStore(ctl)
 	mockBlockchainStore.EXPECT().GetLastChainConfig().Return(mockChainConfig, nil).AnyTimes()
 	mockSnapshot := mock2.NewMockSnapshot(ctl)
+	mockSnapshot.EXPECT().GetLastChainConfig().Return(mockChainConfig).AnyTimes()
 	mockSnapshot.EXPECT().GetBlockchainStore().Return(mockBlockchainStore).AnyTimes()
 
 	err := VerifyOptimizeChargeGasTx(block, mockSnapshot)
 	assert.Equal(t, err,
 		fmt.Errorf("missing some account to charge gas => `%v`", Address_Client1_Org2_ZXL))
+}
+
+func TestPublicKeyToAddress(t *testing.T) {
+	pkPem, err := publicKeyFromCert([]byte(MemberInfo_Client1_Org1))
+	assert.Nil(t, nil, err)
+
+	publicKey, err := asym.PublicKeyFromPEM(pkPem)
+	assert.Nil(t, nil, err)
+
+	zxlAddr, err := utils.PkToAddrStr(publicKey, configPb.AddrType_ZXL, crypto.HashAlgoMap["SHA256"])
+	assert.Nil(t, nil, err)
+	fmt.Printf("zxl address = ZX%v \n", zxlAddr)
+
+	cmAddr, err := utils.PkToAddrStr(publicKey, configPb.AddrType_CHAINMAKER, crypto.HashAlgoMap["SHA256"])
+	assert.Nil(t, nil, err)
+	fmt.Printf("chainmaker address = %v \n", cmAddr)
+
+	ethAddr, err := utils.PkToAddrStr(publicKey, configPb.AddrType_ETHEREUM, crypto.HashAlgoMap["SHA256"])
+	assert.Nil(t, nil, err)
+	fmt.Printf("ethereum address = %v \n", ethAddr)
 }

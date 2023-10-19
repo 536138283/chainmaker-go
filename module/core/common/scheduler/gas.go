@@ -3,6 +3,9 @@ package scheduler
 import (
 	"strings"
 
+	"chainmaker.org/chainmaker/common/v3/crypto"
+	configPb "chainmaker.org/chainmaker/pb-go/v3/config"
+
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"chainmaker.org/chainmaker/protocol/v3"
@@ -220,4 +223,18 @@ func calcTxEventGasUsed(
 	}
 
 	return gasEvents, nil
+}
+
+// pkToGasAddress: generate address from public key, according to chainconfig parameter
+func pkToGasAddress(pk crypto.PublicKey, chainCfg *configPb.ChainConfig) (string, error) {
+
+	publicKeyString, err := utils.PkToAddrStr(pk, chainCfg.Vm.AddrType, crypto.HashAlgoMap[chainCfg.Crypto.Hash])
+	if err != nil {
+		return "", err
+	}
+
+	if chainCfg.Vm.AddrType == configPb.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+	return publicKeyString, nil
 }
