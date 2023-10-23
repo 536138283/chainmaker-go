@@ -5,23 +5,23 @@ go 1.16
 require (
 	chainmaker.org/chainmaker/chainconf/v3 v3.0.1-0.20230921091526-8a67763cacb7
 	chainmaker.org/chainmaker/common/v3 v3.0.1-0.20230907050526-544af92bced3
-	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20230314074553-134b54d23351
-	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20230407102347-455cf7024e05
-	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20231011070625-2478e7dcd6a3
-	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20231018095013-8a7fa23e2db8
-	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20230314074753-015c3abcec07
-	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20231012025238-358b751f6d7c
+	chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20231023025203-838d5cc76f01
+	chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20231023025336-2b23d5da83a0
+	chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20231023025227-e8a5429140e4
+	chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20231023025357-57e4fbee322f
+	chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20231023025252-e83a19c3ebc7
+	chainmaker.org/chainmaker/consensus-tbft/v3 v3.0.1-0.20231023025316-9e0efd3183a4
 	chainmaker.org/chainmaker/consensus-utils/v3 v3.0.1-0.20230221100751-02e92d01a8d6
 	chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230919024658-01cb3e69a409
 	chainmaker.org/chainmaker/logger/v3 v3.0.0
 	chainmaker.org/chainmaker/net-common v1.3.1-0.20230728092037-e374a414e360
 	chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230728092025-dfbeab83c976
 	chainmaker.org/chainmaker/net-liquid v1.3.1-0.20230926104037-11bcf2f70054
-	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20230921091631-586c2f3d4a3a
-	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20231013072238-ed91d4b36d33
+	chainmaker.org/chainmaker/pb-go/v3 v3.0.1-0.20231023025038-6a934a754773
+	chainmaker.org/chainmaker/protocol/v3 v3.0.1-0.20231023061629-d930908bf6b9
 	chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230922092431-fa9142b6a174
 	chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527
-	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230726073456-c2221a8d7e93
+	chainmaker.org/chainmaker/store/v3 v3.0.1-0.20231018091919-92d36f5bf3e1
 	chainmaker.org/chainmaker/txpool-batch/v3 v3.0.1-0.20230905081250-d34500bd4d2a
 	chainmaker.org/chainmaker/txpool-normal/v3 v3.0.1-0.20230905081303-0f31f901ca1b
 	chainmaker.org/chainmaker/txpool-single/v3 v3.0.1-0.20230905081316-6d2c287834ad
@@ -30,7 +30,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230928021705-54ad75a5306d
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230918113958-8cfc1a246be5
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20231018095041-8d9c3acc7240
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20231023025138-6d0d2b4bc91a
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230726065243-a0dd6f3544e3
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.1-0.20230221095707-a6ef1151257e
 	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230825080950-ca4d080d4328
@@ -95,4 +95,5 @@ replace (
 	github.com/oleiade/reflections => github.com/oleiade/reflections v1.0.1
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.1.0
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v1.0.0
+	hainmaker.org/chainmaker/consensus-raft/v3 => /data/go/src/chainmaker.org/consensus-raft
 )

@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package consensus
 
-import "chainmaker.org/chainmaker/protocol/v3"
+import (
+	consensusPb "chainmaker.org/chainmaker/pb-go/v3/consensus"
+	"chainmaker.org/chainmaker/protocol/v3"
+)
 
 // ConsensusStateBundle a bundle with consensus state instance
 type ConsensusStateBundle struct {
@@ -31,7 +34,7 @@ func (c *ConsensusStateBundle) IsValid() bool {
 
 // GetAllNodeInfos get state information of all consensus nodes
 // if consensus state instance is not in it return nil
-func (c *ConsensusStateBundle) GetAllNodeInfos() []protocol.ConsensusNodeInfo {
+func (c *ConsensusStateBundle) GetAllNodeInfos() []consensusPb.ConsensusNodeInfo {
 	if !c.IsValid() {
 		return nil
 	}
