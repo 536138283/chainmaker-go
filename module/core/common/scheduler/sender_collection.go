@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"sync"
@@ -17,7 +18,9 @@ import (
 // key: address
 // value: tx collection will address's other data
 type SenderCollection struct {
-	txsMap *sync.Map
+	txsMap         map[string]*TxCollection
+	txAddressCache map[string]string
+	specialTxTable []*commonPb.Transaction
 }
 
 // TxCollection tx collection struct
@@ -25,13 +28,23 @@ type TxCollection struct {
 	// public key to generate address
 	publicKey crypto.PublicKey
 	// balance of the address saved at SenderCollection
-	accountBalance int64
+	accountBalance uint64
 	// total gas added each tx
-	totalGasUsed int64
+	totalGasUsed uint64
 	txs          []*commonPb.Transaction
 
 	// Mutex for synchronizing concurrent access to accountBalance
 	mu sync.Mutex
+}
+
+func (g *TxCollection) addTxGas(gas uint64) error {
+	totalGasUsed := g.totalGasUsed + gas
+	if totalGasUsed < g.totalGasUsed {
+		return errors.New("add tx gas in TxCollection overflow")
+	}
+
+	g.totalGasUsed = totalGasUsed
+	return nil
 }
 
 func (g *TxCollection) String() string {
@@ -42,118 +55,224 @@ func (g *TxCollection) String() string {
 }
 
 // NewSenderCollection new sender collection
-func NewSenderCollection(
+func (ts *TxScheduler) NewSenderCollection(
 	txBatch []*commonPb.Transaction,
-	snapshot protocol.Snapshot,
-	txAddressMap map[string]string,
-	log protocol.Logger) *SenderCollection {
+	snapshot protocol.Snapshot) *SenderCollection {
+
+	blockVersion := snapshot.GetLastChainConfig().GetBlockVersion()
+	txAddressMap := make(map[string]string, len(txBatch))
+	txCollectionMap, specialTxTable := ts.getSenderTxCollection(txBatch, snapshot, txAddressMap, blockVersion)
 	return &SenderCollection{
-		txsMap: getSenderTxCollection(txBatch, snapshot, txAddressMap, log),
+		txsMap:         txCollectionMap,
+		txAddressCache: txAddressMap,
+		specialTxTable: specialTxTable,
 	}
 }
 
 // getSenderTxCollection split txs in txBatch by sender account
-func getSenderTxCollection(
+func (ts *TxScheduler) getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot,
-	txAddressMap map[string]string,
-	log protocol.Logger) *sync.Map {
-	txCollectionMap := new(sync.Map)
+	txAddressCache map[string]string,
+	blockVersion uint32) (map[string]*TxCollection, []*commonPb.Transaction) {
 
-	var err error
-	chainCfg := snapshot.GetLastChainConfig()
+	txCollectionMap := make(map[string]*TxCollection)
+	var specialTxList []*commonPb.Transaction
 
 	for _, tx := range txBatch {
-		// get the public key from tx
-		pk, err2 := getPkFromTx(tx, snapshot)
-		if err2 != nil {
-			log.Errorf("getPkFromTx failed: err = %v", err)
+		pk, address, err := ts.getTxPayerPkAndAddress(txAddressCache, tx, snapshot)
+		if err != nil {
+			ts.log.Errorf("Scheduler getTxPayerAddress failed, err = %v", err)
 			continue
 		}
 
-		// convert the public key to `ZX` or `CM` or `EVM` address
-		address, err2 := publicKeyToAddress(pk, chainCfg)
-		if err2 != nil {
-			log.Error("publicKeyToAddress failed: err = %v", err)
-			continue
+		txCollection, exists := txCollectionMap[address]
+		if !exists {
+			balance, err := getAccountBalanceFromSnapshot(address, snapshot, ts.log)
+			if err != nil {
+				ts.log.Error("get balance failed, err = %v", err)
+				continue
+			}
+			txCollection = &TxCollection{
+				publicKey:      pk,
+				accountBalance: uint64(balance),
+				totalGasUsed:   0,
+				txs:            make([]*commonPb.Transaction, 0),
+			}
+			txCollectionMap[address] = txCollection
 		}
 
-		txAddressMap[tx.Payload.TxId] = address
-		txCollection, loaded := txCollectionMap.LoadOrStore(address, &TxCollection{
-			publicKey:      pk,
-			accountBalance: int64(0),
-			totalGasUsed:   int64(0),
-			txs:            make([]*commonPb.Transaction, 0),
-		})
+		// 判断是否需要扣费
+		txNeedChargeGas := ts.checkNativeFilter(
+			blockVersion,
+			tx.GetPayload().ContractName,
+			tx.GetPayload().Method,
+			tx, snapshot)
 
-		collection, ok := txCollection.(*TxCollection)
-		if !ok {
-			log.Error("get collection failed")
-			continue
-		}
-
-		collection.txs = append(collection.txs, tx)
-
-		if !loaded {
-			txCollectionMap.Store(address, collection)
+		if txNeedChargeGas {
+			if tx.Payload.Limit != nil {
+				if err := txCollection.addTxGas(tx.Payload.Limit.GasLimit); err != nil {
+					continue
+				}
+			}
+			if txCollection.totalGasUsed > txCollection.accountBalance {
+				// 余额不够，加入 special 队列
+				specialTxList = append(specialTxList, tx)
+			} else {
+				// 余额够，加入并行队列
+				txCollection.txs = append(txCollection.txs, tx)
+			}
+		} else {
+			// 不需要扣费，加入并行队列
+			txCollection.txs = append(txCollection.txs, tx)
 		}
 	}
 
-	txCollectionMap.Range(func(key, value interface{}) bool {
-		senderAddress, ok := key.(string)
-		if !ok {
-			log.Warnf("get sender address fail")
-		}
+	return txCollectionMap, specialTxList
+}
 
-		txCollection, ok := value.(*TxCollection)
-		if !ok {
-			log.Warnf("get tx collection fail")
-		}
+func (ts *TxScheduler) getTxPayerPkAndAddress(
+	txAddressCache map[string]string,
+	tx *commonPb.Transaction,
+	snapshot protocol.Snapshot) (crypto.PublicKey, string, error) {
 
-		// get the account balance from snapshot
-		txCollection.accountBalance, err = getAccountBalanceFromSnapshot(senderAddress, snapshot, log)
-		if err != nil {
-			errMsg := fmt.Sprintf("get account balance failed: err = %v", err)
-			log.Error(errMsg)
-			for _, tx := range txCollection.txs {
-				tx.Result = &commonPb.Result{
-					Code: commonPb.TxStatusCode_CONTRACT_FAIL,
-					ContractResult: &commonPb.ContractResult{
-						Code:    uint32(1),
-						Result:  nil,
-						Message: errMsg,
-						GasUsed: uint64(0),
-					},
-					RwSetHash: nil,
-					Message:   errMsg,
-				}
-			}
-		}
-		return true
-	})
+	pk, address, err := ts.getSenderPkAndAddress(tx, snapshot)
+	if err != nil {
+		return nil, "", fmt.Errorf("get sender pk failed: err = %v", err)
+	}
 
-	return txCollectionMap
+	txAddressCache[tx.Payload.TxId] = address
+	return pk, address, nil
 }
 
 // Clear clear addr in txs map
 func (s *SenderCollection) Clear() {
-	s.txsMap.Range(func(key, value interface{}) bool {
-		s.txsMap.Delete(key)
-		return true
-	})
+	s.txsMap = make(map[string]*TxCollection)
 }
 
-func getAddressFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (string, error) {
-	chainConfig := snapshot.GetLastChainConfig()
-	pk, err := getPkFromTx(tx, snapshot)
-	if err != nil {
-		return "", err
+func (s *SenderCollection) resetTotalGasUsed() {
+	for _, txCollection := range s.txsMap {
+		txCollection.totalGasUsed = 0
 	}
-	address, err := publicKeyToAddress(pk, chainConfig)
-	if err != nil {
-		return "", err
+}
+
+func (s *SenderCollection) getParallelTxsNum() int {
+	num := 0
+	for _, txCollection := range s.txsMap {
+		num += len(txCollection.txs)
 	}
-	return address, nil
+
+	return num
+}
+
+func (s *SenderCollection) chargeGasInSenderCollection(
+	tx *commonPb.Transaction, txResult *commonPb.Result, txNeedChargeGas bool) (uint64, error) {
+
+	// 处理不需要扣费的交易
+	if !txNeedChargeGas {
+		return 0, nil
+	}
+
+	// 处理需要扣费，但没有设置 gas_limit 的交易
+	if tx.Payload.Limit == nil {
+		return 0, errors.New("tx need charge gas, but not gas limit was supplied")
+	}
+
+	address, exist := s.txAddressCache[tx.Payload.TxId]
+	if !exist {
+		return 0, fmt.Errorf("cannot find account balance for %v", tx.Payload.TxId)
+	}
+	senderTxs, exist := s.txsMap[address]
+	if !exist {
+		return 0, fmt.Errorf("cannot find payer address for %v", tx.Payload.TxId)
+	}
+
+	senderTxs.mu.Lock()
+	defer senderTxs.mu.Unlock()
+	gasUsed := txResult.ContractResult.GasUsed
+
+	// gasUsed 超过 gasLimit
+	if gasUsed > tx.Payload.Limit.GasLimit {
+		gasCharged := tx.Payload.Limit.GasLimit
+		err := senderTxs.addTxGas(tx.Payload.Limit.GasLimit)
+		if err != nil {
+			return gasCharged, fmt.Errorf(
+				"totalGasUsed is overflow after add gas_limit of tx `%v`", tx.Payload.TxId)
+		}
+		return gasCharged, fmt.Errorf("gasUsed(%v) is greater than gasLimit(%v) for tx `%v`",
+			txResult.ContractResult.GasUsed, tx.Payload.Limit.GasLimit, tx.Payload.TxId)
+	}
+
+	// overflow checking
+	totalGasUsed, overflow := uint64SafeAdd(senderTxs.totalGasUsed, gasUsed)
+	if overflow {
+		return gasUsed, fmt.Errorf(
+			"totalGasUsed is overflow after add gas_used of tx `%v`", tx.Payload.TxId)
+	}
+
+	if totalGasUsed > senderTxs.accountBalance {
+		gasAvailable, overflow2 := uint64SafeSub(senderTxs.accountBalance, senderTxs.totalGasUsed)
+		if overflow2 {
+			// will not execute here, because checking is exec at beginning of executeTx(...)
+			gasAvailable = 0
+		}
+		senderTxs.totalGasUsed = senderTxs.accountBalance
+		return gasAvailable, fmt.Errorf("account balance remains %v, is not enough for tx: %v",
+			gasAvailable, tx.Payload.TxId)
+
+	}
+
+	senderTxs.totalGasUsed = totalGasUsed
+	return gasUsed, nil
+}
+
+func uint64SafeAdd(num1 uint64, num2 uint64) (uint64, bool) {
+	result := num1 + num2
+	if result < num1 {
+		return 0, true
+	}
+	return result, false
+}
+
+func uint64SafeSub(num1 uint64, num2 uint64) (uint64, bool) {
+	result := num1 - num2
+	if int64(result) >= 0 {
+		return result, false
+	}
+	return 0, true
+}
+
+func (s *SenderCollection) checkBalanceInSenderCollection(
+	tx *commonPb.Transaction) error {
+
+	// 处理不需要扣费的交易
+	if tx.Payload.Limit == nil {
+		return nil
+	}
+
+	address, exist := s.txAddressCache[tx.Payload.TxId]
+	if !exist {
+		return fmt.Errorf("cannot find account balance for %v", tx.Payload.TxId)
+	}
+	senderTxs, exist := s.txsMap[address]
+	if !exist {
+		return fmt.Errorf("cannot find account balance for %v", tx.Payload.TxId)
+	}
+
+	if senderTxs.totalGasUsed >= senderTxs.accountBalance {
+		return fmt.Errorf("account balance is not enough for tx `%v`", tx.Payload.TxId)
+	}
+
+	// overflow checking
+	totalGasUsed, overflow := uint64SafeAdd(senderTxs.totalGasUsed, tx.Payload.Limit.GasLimit)
+	if overflow {
+		return fmt.Errorf("totalGasUsed is overflow after add tx `%v` gas_limit", tx.Payload.TxId)
+	}
+	if totalGasUsed > senderTxs.accountBalance {
+		return fmt.Errorf("account balance is not enough for tx `%v` gas_limit", tx.Payload.TxId)
+	}
+
+	return nil
 }
 
 // getAccountBalanceFromSnapshot get account balance from snapshot

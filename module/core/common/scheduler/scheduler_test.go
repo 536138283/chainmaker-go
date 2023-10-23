@@ -17,6 +17,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
+	ac "chainmaker.org/chainmaker-go/module/accesscontrol"
+
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	crypto2 "chainmaker.org/chainmaker/common/v3/crypto"
 	"chainmaker.org/chainmaker/localconf/v3"
@@ -688,9 +692,7 @@ func TestSchedule4(t *testing.T) {
 	}
 
 	// simulate Calling ApplyTxSimContext(...) 3 times
-	preCall1 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
-	preCall2 := snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall1).Return(true, 2).Times(1)
-	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
+	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).AnyTimes()
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
 
@@ -1058,6 +1060,24 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 		uint64, commonPb.TxType) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 		return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
 	}
+
+	chainConfig := &configpb.ChainConfig{
+		Crypto: &configpb.CryptoConfig{
+			Hash: "SHA256",
+		},
+		AuthType: protocol.Identity,
+		Core: &configpb.CoreConfig{
+			EnableOptimizeChargeGas: true,
+		},
+		AccountConfig: &configpb.GasAccountConfig{
+			EnableGas: true,
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
+		},
+		Consensus: &configpb.ConsensusConfig{Type: consensus.ConsensusType_TBFT},
+	}
+
 	tests := []struct {
 		name              string
 		dag               *commonPb.DAG
@@ -1108,6 +1128,7 @@ func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
 			snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 			snapshot.EXPECT().Seal().Return().Times(tt.sealTimes)
 			snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).AnyTimes().DoAndReturn(tt.applyTxSimContext)
+			snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
 			txResults := make(map[string]*commonPb.Result, len(block.Txs))
 			snapshot.EXPECT().GetTxResultMap().AnyTimes().Return(txResults)
 			dagCopy := &commonPb.DAG{
@@ -1909,6 +1930,12 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 						AccountConfig: &configpb.GasAccountConfig{
 							EnableGas: true,
 						},
+						Crypto: &configpb.CryptoConfig{
+							Hash: "SHA256",
+						},
+						Vm: &configpb.Vm{
+							AddrType: configpb.AddrType_ZXL,
+						},
 					}
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
@@ -1931,18 +1958,28 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 					},
 				},
 				txSimContext: func() protocol.TxSimContext {
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+						Crypto: &configpb.CryptoConfig{
+							Hash: "SHA256",
+						},
+						Vm: &configpb.Vm{
+							AddrType: configpb.AddrType_ZXL,
+						},
+					}
+
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+
 					txSimContext := mock.NewMockTxSimContext(ctrl)
 					txSimContext.EXPECT().GetBlockVersion().Return(uint32(2030102)).AnyTimes()
-					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
 					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
-					//txSimContext.EXPECT().GetSender().Return(&acPb.Member{
-					//	OrgId:      "org1",
-					//	MemberType: acPb.MemberType_CERT,
-					//	MemberInfo: []byte(cert),
-					//})
 					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).Return(&commonPb.Contract{
 						Name: syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-					}, nil)
+					}, nil).AnyTimes()
 
 					return txSimContext
 				}(),
@@ -1974,6 +2011,12 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 						AccountConfig: &configpb.GasAccountConfig{
 							EnableGas: true,
 						},
+						Crypto: &configpb.CryptoConfig{
+							Hash: "SHA256",
+						},
+						Vm: &configpb.Vm{
+							AddrType: configpb.AddrType_ZXL,
+						},
 					}
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
@@ -1989,11 +2032,27 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 					},
 				},
 				txSimContext: func() protocol.TxSimContext {
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: true,
+						},
+						Crypto: &configpb.CryptoConfig{
+							Hash: "SHA256",
+						},
+						Vm: &configpb.Vm{
+							AddrType: configpb.AddrType_ZXL,
+						},
+					}
+
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+
 					txSimContext := mock.NewMockTxSimContext(ctrl)
 					txSimContext.EXPECT().GetBlockVersion().Return(uint32(2030102)).AnyTimes()
-					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
 					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
-					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).Return(nil, errors.New("txSimContext GetContractByName data is nil"))
+					txSimContext.EXPECT().GetContractByName(syscontract.SystemContract_ACCOUNT_MANAGER.String()).
+						Return(nil, errors.New("txSimContext GetContractByName data is nil")).AnyTimes()
 					return txSimContext
 				}(),
 			},
@@ -2014,7 +2073,14 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 						AccountConfig: &configpb.GasAccountConfig{
 							EnableGas: false,
 						},
+						Crypto: &configpb.CryptoConfig{
+							Hash: "SHA256",
+						},
+						Vm: &configpb.Vm{
+							AddrType: configpb.AddrType_ZXL,
+						},
 					}
+
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
 				}(),
@@ -2029,10 +2095,26 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 					},
 				},
 				txSimContext: func() protocol.TxSimContext {
+					chainConfig := &configpb.ChainConfig{
+						AccountConfig: &configpb.GasAccountConfig{
+							EnableGas: false,
+						},
+						Crypto: &configpb.CryptoConfig{
+							Hash: "SHA256",
+						},
+						Vm: &configpb.Vm{
+							AddrType: configpb.AddrType_ZXL,
+						},
+					}
+
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-					txSimContext.EXPECT().GetSnapshot().Return(mock.NewMockSnapshot(ctrl)).AnyTimes()
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
 					txSimContext.EXPECT().GetBlockchainStore().Return(mock.NewMockBlockchainStore(ctrl)).AnyTimes()
-					txSimContext.EXPECT().GetContractByName(gomock.Any()).AnyTimes()
+					txSimContext.EXPECT().GetContractByName(gomock.Any()).Return(
+						nil, errors.New("txSimContext GetContractByName data is nil")).AnyTimes()
 					//txSimContext.EXPECT().GetSender().AnyTimes()
 					return txSimContext
 				}(),
@@ -2051,8 +2133,8 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 			ts := &TxScheduler{
 				VmManager:       tt.fields.VmManager,
 				scheduleFinishC: tt.fields.scheduleFinishC,
-				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
+				log:             tt.fields.log,
 				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
@@ -3129,6 +3211,15 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 		tx           *commonPb.Transaction
 	}
 
+	chainConfig := &configpb.ChainConfig{
+		Crypto: &configpb.CryptoConfig{
+			Hash: "SHA256",
+		},
+		Vm: &configpb.Vm{
+			AddrType: configpb.AddrType_ZXL,
+		},
+	}
+
 	ctrl := gomock.NewController(t)
 	vmM := mock.NewMockVmManager(ctrl)
 	chainConf := mock.NewMockChainConf(ctrl)
@@ -3156,12 +3247,11 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			},
 			args: args{
 				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-					//txSimContext.EXPECT().GetSender().Return(&acPb.Member{
-					//	OrgId:      "org1",
-					//	MemberType: acPb.MemberType_CERT,
-					//	MemberInfo: []byte(cert),
-					//})
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
 					return txSimContext
 				}(ctrl),
 				tx: &commonPb.Transaction{
@@ -3200,14 +3290,15 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			},
 			args: args{
 				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
-					txSimContext := mock.NewMockTxSimContext(ctrl)
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+					snapshot.EXPECT().GetKey(-1,
+						syscontract.SystemContract_CERT_MANAGE.String(),
+						[]byte("2d2d2d2d2d424547494e2043455254494649434154452d2d2d2d2d0a4d4949436e544343416b53674177494241674944424d58784d416f4743437147534d343942414d434d49474b4d517377435159445651514745774a44546a45510a4d4134474131554543424d48516d5670616d6c755a7a45514d4134474131554542784d48516d5670616d6c755a7a45664d4230474131554543684d57643367740a62334a6e4d53356a61474670626d3168613256794c6d39795a7a45534d4241474131554543784d4a636d39766443316a5a584a304d53497749415944565151440a45786c6a5953353365433176636d63784c6d4e6f59576c75625746725a58497562334a6e4d423458445449794d444d774d5445794d4449794e6c6f5844544d790a4d4449794e7a45794d4449794e6c6f7767596f78437a414a42674e5642415954416b4e4f4d5241774467594456515149457764435a576c716157356e4d5241770a4467594456515148457764435a576c716157356e4d523877485159445651514b45785a3365433176636d63784c6d4e6f59576c75625746725a58497562334a6e0a4d524977454159445651514c45776c79623239304c574e6c636e5178496a416742674e5642414d5447574e684c6e64344c5739795a7a457559326868615735740a5957746c63693576636d63775754415442676371686b6a4f5051494242676771686b6a4f50514d4242774e434141526347456e544441635666316475495477490a53493253355a43306a64514f7968554435694132567631586e47304749455a4e744a4d7a4c4a59756e5a4348673071774646394856445474675557777a6458380a633856426f3447574d4947544d41344741315564447745422f77514541774942426a415042674e5648524d4241663845425441444151482f4d436b47413155640a446751694243427a7958766f326f50683168304b49426570666f7071322f526864396238663545684b654a6255556e734c7a424642674e5648524545506a41380a6767356a61474670626d3168613256794c6d39795a34494a6247396a5957786f62334e3067686c6a5953353365433176636d63784c6d4e6f59576c75625746720a5a58497562334a6e6877522f414141424d416f4743437147534d343942414d43413063414d455143494346764749767868647a6b754d736a6b6756524e504d350a6679344b484c473870444c7a6a38626e32644771416942305a424131642f754242504e4a4166337331667942345233502f67644b4269754441765a39347a6e330a5a673d3d0a2d2d2d2d2d454e442043455254494649434154452d2d2d2d2d0a"),
+					).Return([]byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"), nil)
 
-					txSimContext.EXPECT().Get(syscontract.SystemContract_CERT_MANAGE.String(), []byte("2d2d2d2d2d424547494e2043455254494649434154452d2d2d2d2d0a4d4949436e544343416b53674177494241674944424d58784d416f4743437147534d343942414d434d49474b4d517377435159445651514745774a44546a45510a4d4134474131554543424d48516d5670616d6c755a7a45514d4134474131554542784d48516d5670616d6c755a7a45664d4230474131554543684d57643367740a62334a6e4d53356a61474670626d3168613256794c6d39795a7a45534d4241474131554543784d4a636d39766443316a5a584a304d53497749415944565151440a45786c6a5953353365433176636d63784c6d4e6f59576c75625746725a58497562334a6e4d423458445449794d444d774d5445794d4449794e6c6f5844544d790a4d4449794e7a45794d4449794e6c6f7767596f78437a414a42674e5642415954416b4e4f4d5241774467594456515149457764435a576c716157356e4d5241770a4467594456515148457764435a576c716157356e4d523877485159445651514b45785a3365433176636d63784c6d4e6f59576c75625746725a58497562334a6e0a4d524977454159445651514c45776c79623239304c574e6c636e5178496a416742674e5642414d5447574e684c6e64344c5739795a7a457559326868615735740a5957746c63693576636d63775754415442676371686b6a4f5051494242676771686b6a4f50514d4242774e434141526347456e544441635666316475495477490a53493253355a43306a64514f7968554435694132567631586e47304749455a4e744a4d7a4c4a59756e5a4348673071774646394856445474675557777a6458380a633856426f3447574d4947544d41344741315564447745422f77514541774942426a415042674e5648524d4241663845425441444151482f4d436b47413155640a446751694243427a7958766f326f50683168304b49426570666f7071322f526864396238663545684b654a6255556e734c7a424642674e5648524545506a41380a6767356a61474670626d3168613256794c6d39795a34494a6247396a5957786f62334e3067686c6a5953353365433176636d63784c6d4e6f59576c75625746720a5a58497562334a6e6877522f414141424d416f4743437147534d343942414d43413063414d455143494346764749767868647a6b754d736a6b6756524e504d350a6679344b484c473870444c7a6a38626e32644771416942305a424131642f754242504e4a4166337331667942345233502f67644b4269754441765a39347a6e330a5a673d3d0a2d2d2d2d2d454e442043455254494649434154452d2d2d2d2d0a")).Return([]byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"), nil)
-					//txSimContext.EXPECT().GetSender().Return(&acPb.Member{
-					//	OrgId:      "org1",
-					//	MemberType: acPb.MemberType_CERT_HASH,
-					//	MemberInfo: []byte(cert),
-					//})
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
 					return txSimContext
 				}(ctrl),
 				tx: &commonPb.Transaction{
@@ -3250,18 +3341,16 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			},
 			args: args{
 				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
-					txSimContext := mock.NewMockTxSimContext(ctrl)
-
-					txSimContext.EXPECT().Get(
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+					snapshot.EXPECT().GetKey(-1,
 						syscontract.SystemContract_CERT_MANAGE.String(),
 						[]byte("2d2d2d2d2d424547494e2043455254494649434154452d2d2d2d2d0a4d4949436e544343416b53674177494241674944424d58784d416f4743437147534d343942414d434d49474b4d517377435159445651514745774a44546a45510a4d4134474131554543424d48516d5670616d6c755a7a45514d4134474131554542784d48516d5670616d6c755a7a45664d4230474131554543684d57643367740a62334a6e4d53356a61474670626d3168613256794c6d39795a7a45534d4241474131554543784d4a636d39766443316a5a584a304d53497749415944565151440a45786c6a5953353365433176636d63784c6d4e6f59576c75625746725a58497562334a6e4d423458445449794d444d774d5445794d4449794e6c6f5844544d790a4d4449794e7a45794d4449794e6c6f7767596f78437a414a42674e5642415954416b4e4f4d5241774467594456515149457764435a576c716157356e4d5241770a4467594456515148457764435a576c716157356e4d523877485159445651514b45785a3365433176636d63784c6d4e6f59576c75625746725a58497562334a6e0a4d524977454159445651514c45776c79623239304c574e6c636e5178496a416742674e5642414d5447574e684c6e64344c5739795a7a457559326868615735740a5957746c63693576636d63775754415442676371686b6a4f5051494242676771686b6a4f50514d4242774e434141526347456e544441635666316475495477490a53493253355a43306a64514f7968554435694132567631586e47304749455a4e744a4d7a4c4a59756e5a4348673071774646394856445474675557777a6458380a633856426f3447574d4947544d41344741315564447745422f77514541774942426a415042674e5648524d4241663845425441444151482f4d436b47413155640a446751694243427a7958766f326f50683168304b49426570666f7071322f526864396238663545684b654a6255556e734c7a424642674e5648524545506a41380a6767356a61474670626d3168613256794c6d39795a34494a6247396a5957786f62334e3067686c6a5953353365433176636d63784c6d4e6f59576c75625746720a5a58497562334a6e6877522f414141424d416f4743437147534d343942414d43413063414d455143494346764749767868647a6b754d736a6b6756524e504d350a6679344b484c473870444c7a6a38626e32644771416942305a424131642f754242504e4a4166337331667942345233502f67644b4269754441765a39347a6e330a5a673d3d0a2d2d2d2d2d454e442043455254494649434154452d2d2d2d2d0a")).
-						Return([]byte("123456"), nil)
+						Return([]byte("123456"), nil).AnyTimes()
 
-					//txSimContext.EXPECT().GetSender().Return(&acPb.Member{
-					//	OrgId:      "org1",
-					//	MemberType: acPb.MemberType_CERT_HASH,
-					//	MemberInfo: []byte(cert),
-					//})
+					txSimContext := mock.NewMockTxSimContext(ctrl)
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
+
 					return txSimContext
 				}(ctrl),
 				tx: &commonPb.Transaction{
@@ -3292,12 +3381,11 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			},
 			args: args{
 				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-					//txSimContext.EXPECT().GetSender().Return(&acPb.Member{
-					//	OrgId:      "org1",
-					//	MemberType: acPb.MemberType_PUBLIC_KEY,
-					//	MemberInfo: []byte(cert),
-					//})
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
 					return txSimContext
 				}(ctrl),
 				tx: &commonPb.Transaction{
@@ -3310,8 +3398,8 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 					},
 				},
 			},
-			want:    []byte(cert),
-			wantErr: false,
+			want:    nil,
+			wantErr: true,
 		},
 		{
 			name: "test4",
@@ -3326,12 +3414,11 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			},
 			args: args{
 				txSimContext: func(ctrl *gomock.Controller) protocol.TxSimContext {
+					snapshot := mock.NewMockSnapshot(ctrl)
+					snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
+
 					txSimContext := mock.NewMockTxSimContext(ctrl)
-					//txSimContext.EXPECT().GetSender().Return(&acPb.Member{
-					//	OrgId:      "org1",
-					//	MemberType: acPb.MemberType_DID,
-					//	MemberInfo: []byte("-----BEGIN CERTIFICATE-----\nMIICnTCCAkSgAwIBAgIDBMXxMAoGCCqGSM49BAMCMIGKMQswCQYDVQQGEwJDTjEQ\nMA4GA1UECBMHQmVpamluZzEQMA4GA1UEBxMHQmVpamluZzEfMB0GA1UEChMWd3gt\nb3JnMS5jaGFpbm1ha2VyLm9yZzESMBAGA1UECxMJcm9vdC1jZXJ0MSIwIAYDVQQD\nExljYS53eC1vcmcxLmNoYWlubWFrZXIub3JnMB4XDTIyMDMwMTEyMDIyNloXDTMy\nMDIyNzEyMDIyNlowgYoxCzAJBgNVBAYTAkNOMRAwDgYDVQQIEwdCZWlqaW5nMRAw\nDgYDVQQHEwdCZWlqaW5nMR8wHQYDVQQKExZ3eC1vcmcxLmNoYWlubWFrZXIub3Jn\nMRIwEAYDVQQLEwlyb290LWNlcnQxIjAgBgNVBAMTGWNhLnd4LW9yZzEuY2hhaW5t\nYWtlci5vcmcwWTATBgcqhkjOPQIBBggqhkjOPQMBBwNCAARcGEnTDAcVf1duITwI\nSI2S5ZC0jdQOyhUD5iA2Vv1XnG0GIEZNtJMzLJYunZCHg0qwFF9HVDTtgUWwzdX8\nc8VBo4GWMIGTMA4GA1UdDwEB/wQEAwIBBjAPBgNVHRMBAf8EBTADAQH/MCkGA1Ud\nDgQiBCBzyXvo2oPh1h0KIBepfopq2/Rhd9b8f5EhKeJbUUnsLzBFBgNVHREEPjA8\ngg5jaGFpbm1ha2VyLm9yZ4IJbG9jYWxob3N0ghljYS53eC1vcmcxLmNoYWlubWFr\nZXIub3JnhwR/AAABMAoGCCqGSM49BAMCA0cAMEQCICFvGIvxhdzkuMsjkgVRNPM5\nfy4KHLG8pDLzj8bn2dGqAiB0ZBA1d/uBBPNJAf3s1fyB4R3P/gdKBiuDAvZ94zn3\nZg==\n-----END CERTIFICATE-----\n"),
-					//})
+					txSimContext.EXPECT().GetSnapshot().Return(snapshot).AnyTimes()
 					return txSimContext
 				}(ctrl),
 				tx: &commonPb.Transaction{
@@ -3364,6 +3451,7 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			}
 
 			got, err := ts.getPayerPk(tt.args.txSimContext, tt.args.tx)
+			ac.ClearCache()
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getPayerPk() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -3373,4 +3461,14 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestUint64Overflow(t *testing.T) {
+	balance := uint64(1000)
+	gasLimit := uint64(2000)
+	val1 := balance - gasLimit
+	val2 := int64(balance - gasLimit)
+	fmt.Printf("val 1 = %v, val 2 = %v \n", val1, val2)
+	assert.Equal(t, false, val1 < 0)
+	assert.Equal(t, true, val2 < 0)
 }
