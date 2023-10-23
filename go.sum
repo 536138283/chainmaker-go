@@ -80,6 +80,8 @@ chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae/go.mod h1:wgNdfjtDf1eMEyPFjlLB2Og4a/7/eefLp4VWOtEjOMQ=
 chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527 h1:+AOnYmGnc0LSwN3uVBD36VRT45NBkzYXnPxilwAeCK0=
 chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527/go.mod h1:VI8IDxJeKy4tmz7Nw+NJDcminC6+9bvsx2+5On/mK80=
+chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231023074831-771f0772945a h1:N3C4RPCAiMCasuhI3yEzO4OnPEK23jCQNv2ku6r4LSw=
+chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231023074831-771f0772945a/go.mod h1:VI8IDxJeKy4tmz7Nw+NJDcminC6+9bvsx2+5On/mK80=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.0/go.mod h1:2OW5KbW3XXdbva9WgwifgE0flRi86DeI+sKcW/k4fF4=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.1-0.20230724080727-9b682dda16df h1:RiJSZ3UIwBEzZXWJSotL74jdoM8hLlXpKkHpEiougpA=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.1-0.20230724080727-9b682dda16df/go.mod h1:dXFn3HL6STR6AqWezuhXKWS7/eTCoih52cxFXwjoyb0=
