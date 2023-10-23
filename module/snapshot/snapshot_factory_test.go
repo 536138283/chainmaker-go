@@ -305,7 +305,7 @@ func Test_TxSchedule_BuildDAG(t *testing.T) {
 			fmt.Printf("block tx => id = %v, result = %v \n", tx.Payload.TxId, tx.Result.ContractResult.Message)
 		}
 		if tx.Result.Code == commonPb.TxStatusCode_SUCCESS {
-			successNum += 1
+			successNum++
 		}
 	}
 	assert.Equal(t, 9000, successNum)
