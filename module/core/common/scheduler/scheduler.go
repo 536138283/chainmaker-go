@@ -92,7 +92,7 @@ type TxIdAndExecOrderType struct {
 
 // Schedule according to a batch of transactions,
 // and generating DAG according to the conflict relationship
-//nolint: gocyclo
+// nolint: gocyclo
 func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot) (map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, error) {
 
@@ -752,14 +752,14 @@ func (ts *TxScheduler) executeTx(
 	if blockVersion >= blockVersion3000000 {
 		// checking for balance is not enough
 		if enableOptimizeChargeGas {
-			if err := collection.checkBalanceInSenderCollection(tx); err != nil {
+			if err1 := collection.checkBalanceInSenderCollection(tx); err1 != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
-					Message: err.Error(),
+					Message: err1.Error(),
 					ContractResult: &commonPb.ContractResult{
 						Code:    1,
-						Message: err.Error(),
+						Message: err1.Error(),
 						GasUsed: uint64(0),
 					},
 				}
