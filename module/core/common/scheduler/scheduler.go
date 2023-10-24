@@ -178,45 +178,48 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		parallelTxsNum = senderCollection.getParallelTxsNum()
 		senderCollection.resetTotalGasUsed()
 	}
-	go func() {
-		counter := 0
-		for {
-			select {
-			case tx := <-runningTxC:
-				ts.log.Debugf("prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
-				err = goRoutinePool.Submit(func() {
-					handleTx(block, snapshot, ts, tx, runningTxC, finishC, goRoutinePool,
-						parallelTxsNum, enableConflictsBitWindow, conflictsBitWindow,
-						enableSenderGroup, senderGroup, senderCollection)
-				})
-				if err != nil {
-					ts.log.Warnf("failed to submit running task, tx id:%s during schedule, %+v",
-						tx.Payload.GetTxId(), err)
-				}
+	if parallelTxsNum > 0 {
+		go func() {
+			counter := 0
+			for {
+				select {
+				case tx := <-runningTxC:
+					ts.log.Debugf("prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
+					err = goRoutinePool.Submit(func() {
+						handleTx(block, snapshot, ts, tx, runningTxC, finishC, goRoutinePool,
+							parallelTxsNum, enableConflictsBitWindow, conflictsBitWindow,
+							enableSenderGroup, senderGroup, senderCollection)
+					})
+					if err != nil {
+						ts.log.Warnf("failed to submit running task, tx id:%s during schedule, %+v",
+							tx.Payload.GetTxId(), err)
+					}
 
-			case <-timeoutC:
-				ts.log.Debugf("Schedule(...) timeout ...")
-				ts.scheduleFinishC <- true
-				if !enableOptimizeChargeGas && enableSenderGroup {
-					senderGroup.doneTxKeyC <- [32]byte{}
+				case <-timeoutC:
+					ts.log.Debugf("Schedule(...) timeout ...")
+					ts.scheduleFinishC <- true
+					if !enableOptimizeChargeGas && enableSenderGroup {
+						senderGroup.doneTxKeyC <- [32]byte{}
+					}
+					ts.log.Warnf("block [%d] schedule reached time limit", block.Header.BlockHeight)
+					return
+				case <-finishC:
+					ts.log.Debugf("Schedule(...) finish ...")
+					ts.scheduleFinishC <- true
+					if !enableOptimizeChargeGas && enableSenderGroup {
+						senderGroup.doneTxKeyC <- [32]byte{}
+					}
+					return
 				}
-				ts.log.Warnf("block [%d] schedule reached time limit", block.Header.BlockHeight)
-				return
-			case <-finishC:
-				ts.log.Debugf("Schedule(...) finish ...")
-				ts.scheduleFinishC <- true
-				if !enableOptimizeChargeGas && enableSenderGroup {
-					senderGroup.doneTxKeyC <- [32]byte{}
-				}
-				return
+				counter++
+				ts.log.Debugf("schedule tx run %d times ... ", counter)
 			}
-			counter++
-			ts.log.Debugf("schedule tx run %d times ... ", counter)
-		}
-	}()
+		}()
 
-	// Wait for schedule finish signal
-	<-ts.scheduleFinishC
+		// Wait for schedule finish signal
+		<-ts.scheduleFinishC
+	}
+
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA1 := time.Since(startTime)
