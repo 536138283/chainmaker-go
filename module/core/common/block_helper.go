@@ -1205,6 +1205,19 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		// recover the block for proposer when enable the conensus message turbo function.
 		lastProposed.Header = block.Header
 	}
+
+	// This code is primarily used to iterate through the 'additionalData' and populate
+	// it into the 'lastProposed' object.
+	// This helps prevent potential concurrent read-write issues when putting a block.
+	// These issues may arise due to changes made by the consensus module
+	// in the values contained within the 'additionalData' of the sync module.
+	// Such issues can further lead to runtime panic.
+	for k, v := range lastProposed.AdditionalData.ExtraData {
+		if _, ok := block.AdditionalData.ExtraData[k]; !ok {
+			block.AdditionalData.ExtraData[k] = v
+		}
+	}
+
 	// put consensus qc into block
 	lastProposed.AdditionalData = block.AdditionalData
 	// shallow copy, create a new block to prevent panic during storage in marshal
