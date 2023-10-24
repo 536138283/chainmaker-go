@@ -243,10 +243,10 @@ func uint64SafeSub(num1 uint64, num2 uint64) (uint64, bool) {
 }
 
 func (s *SenderCollection) checkBalanceInSenderCollection(
-	tx *commonPb.Transaction) error {
+	tx *commonPb.Transaction, txNeedChargeGas bool) error {
 
 	// 处理不需要扣费的交易
-	if tx.Payload.Limit == nil {
+	if !txNeedChargeGas {
 		return nil
 	}
 

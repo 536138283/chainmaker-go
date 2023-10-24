@@ -35,13 +35,8 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 
 // guardForExecuteTx300 guard for execute tx after 300 version
 func (ts *TxScheduler) guardForExecuteTx300(
-	tx *commonPb.Transaction, txSimContext protocol.TxSimContext, enableGas bool,
+	tx *commonPb.Transaction, txSimContext protocol.TxSimContext, txNeedChargeGas bool, enableGas bool,
 	enableOptimizeChargeGas bool, snapshot protocol.Snapshot, collection *SenderCollection) (txIsAllow bool) {
-	txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
-		tx.Payload.ContractName,
-		tx.Payload.Method,
-		tx,
-		txSimContext.GetSnapshot())
 
 	switch {
 	case enableOptimizeChargeGas:

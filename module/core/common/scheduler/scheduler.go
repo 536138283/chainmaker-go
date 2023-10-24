@@ -750,16 +750,22 @@ func (ts *TxScheduler) executeTx(
 
 	// 300后，修复原gas余额不足的错误处理
 	if blockVersion >= blockVersion3000000 {
+		txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
+			tx.Payload.ContractName,
+			tx.Payload.Method,
+			tx,
+			txSimContext.GetSnapshot())
+
 		// checking for balance is not enough
 		if enableOptimizeChargeGas {
-			if err := collection.checkBalanceInSenderCollection(tx); err != nil {
+			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas); err2 != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
-					Message: err.Error(),
+					Message: err2.Error(),
 					ContractResult: &commonPb.ContractResult{
 						Code:    1,
-						Message: err.Error(),
+						Message: err2.Error(),
 						GasUsed: uint64(0),
 					},
 				}
@@ -770,7 +776,8 @@ func (ts *TxScheduler) executeTx(
 			}
 		}
 
-		if !ts.guardForExecuteTx300(tx, txSimContext, enableGas, enableOptimizeChargeGas, snapshot, collection) {
+		if !ts.guardForExecuteTx300(
+			tx, txSimContext, txNeedChargeGas, enableGas, enableOptimizeChargeGas, snapshot, collection) {
 			return txSimContext, protocol.ExecOrderTxTypeNormal, false
 		}
 
