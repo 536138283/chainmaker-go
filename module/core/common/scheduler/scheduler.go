@@ -178,45 +178,48 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		parallelTxsNum = senderCollection.getParallelTxsNum()
 		senderCollection.resetTotalGasUsed()
 	}
-	go func() {
-		counter := 0
-		for {
-			select {
-			case tx := <-runningTxC:
-				ts.log.Debugf("prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
-				err = goRoutinePool.Submit(func() {
-					handleTx(block, snapshot, ts, tx, runningTxC, finishC, goRoutinePool,
-						parallelTxsNum, enableConflictsBitWindow, conflictsBitWindow,
-						enableSenderGroup, senderGroup, senderCollection)
-				})
-				if err != nil {
-					ts.log.Warnf("failed to submit running task, tx id:%s during schedule, %+v",
-						tx.Payload.GetTxId(), err)
-				}
+	if parallelTxsNum > 0 {
+		go func() {
+			counter := 0
+			for {
+				select {
+				case tx := <-runningTxC:
+					ts.log.Debugf("prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
+					err = goRoutinePool.Submit(func() {
+						handleTx(block, snapshot, ts, tx, runningTxC, finishC, goRoutinePool,
+							parallelTxsNum, enableConflictsBitWindow, conflictsBitWindow,
+							enableSenderGroup, senderGroup, senderCollection)
+					})
+					if err != nil {
+						ts.log.Warnf("failed to submit running task, tx id:%s during schedule, %+v",
+							tx.Payload.GetTxId(), err)
+					}
 
-			case <-timeoutC:
-				ts.log.Debugf("Schedule(...) timeout ...")
-				ts.scheduleFinishC <- true
-				if !enableOptimizeChargeGas && enableSenderGroup {
-					senderGroup.doneTxKeyC <- [32]byte{}
+				case <-timeoutC:
+					ts.log.Debugf("Schedule(...) timeout ...")
+					ts.scheduleFinishC <- true
+					if !enableOptimizeChargeGas && enableSenderGroup {
+						senderGroup.doneTxKeyC <- [32]byte{}
+					}
+					ts.log.Warnf("block [%d] schedule reached time limit", block.Header.BlockHeight)
+					return
+				case <-finishC:
+					ts.log.Debugf("Schedule(...) finish ...")
+					ts.scheduleFinishC <- true
+					if !enableOptimizeChargeGas && enableSenderGroup {
+						senderGroup.doneTxKeyC <- [32]byte{}
+					}
+					return
 				}
-				ts.log.Warnf("block [%d] schedule reached time limit", block.Header.BlockHeight)
-				return
-			case <-finishC:
-				ts.log.Debugf("Schedule(...) finish ...")
-				ts.scheduleFinishC <- true
-				if !enableOptimizeChargeGas && enableSenderGroup {
-					senderGroup.doneTxKeyC <- [32]byte{}
-				}
-				return
+				counter++
+				ts.log.Debugf("schedule tx run %d times ... ", counter)
 			}
-			counter++
-			ts.log.Debugf("schedule tx run %d times ... ", counter)
-		}
-	}()
+		}()
 
-	// Wait for schedule finish signal
-	<-ts.scheduleFinishC
+		// Wait for schedule finish signal
+		<-ts.scheduleFinishC
+	}
+
 	// Build DAG from read-write table
 	snapshot.Seal()
 	timeCostA1 := time.Since(startTime)
@@ -750,16 +753,22 @@ func (ts *TxScheduler) executeTx(
 
 	// 300后，修复原gas余额不足的错误处理
 	if blockVersion >= blockVersion3000000 {
+		txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
+			tx.Payload.ContractName,
+			tx.Payload.Method,
+			tx,
+			txSimContext.GetSnapshot())
+
 		// checking for balance is not enough
 		if enableOptimizeChargeGas {
-			if err1 := collection.checkBalanceInSenderCollection(tx); err1 != nil {
+			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas); err2 != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
-					Message: err1.Error(),
+					Message: err2.Error(),
 					ContractResult: &commonPb.ContractResult{
 						Code:    1,
-						Message: err1.Error(),
+						Message: err2.Error(),
 						GasUsed: uint64(0),
 					},
 				}
@@ -770,7 +779,8 @@ func (ts *TxScheduler) executeTx(
 			}
 		}
 
-		if !ts.guardForExecuteTx300(tx, txSimContext, enableGas, enableOptimizeChargeGas, snapshot, collection) {
+		if !ts.guardForExecuteTx300(
+			tx, txSimContext, txNeedChargeGas, enableGas, enableOptimizeChargeGas, snapshot, collection) {
 			return txSimContext, protocol.ExecOrderTxTypeNormal, false
 		}
 
@@ -787,7 +797,8 @@ func (ts *TxScheduler) executeTx(
 				tx.Payload.Method,
 				tx,
 				txSimContext.GetSnapshot()) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT
-			if gasCharged, err2 := collection.chargeGasInSenderCollection(tx, txResult, txNeedChargingGas); err != nil {
+			ts.log.Debugf("txNeedChargingGas = %v", txNeedChargingGas)
+			if gasCharged, err2 := collection.chargeGasInSenderCollection(tx, txResult, txNeedChargingGas); err2 != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
