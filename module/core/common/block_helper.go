@@ -1206,20 +1206,24 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		lastProposed.Header = block.Header
 	}
 
+	if lastProposed.AdditionalData == nil || lastProposed.AdditionalData.ExtraData == nil {
+		lastProposed.AdditionalData = &commonPb.AdditionalData{
+			ExtraData: make(map[string][]byte),
+		}
+	}
+
 	// This code is primarily used to iterate through the 'additionalData' and populate
 	// it into the 'lastProposed' object.
 	// This helps prevent potential concurrent read-write issues when putting a block.
 	// These issues may arise due to changes made by the consensus module
 	// in the values contained within the 'additionalData' of the sync module.
 	// Such issues can further lead to runtime panic.
-	for k, v := range lastProposed.AdditionalData.ExtraData {
-		if _, ok := block.AdditionalData.ExtraData[k]; !ok {
-			block.AdditionalData.ExtraData[k] = v
+	for k, v := range block.AdditionalData.ExtraData {
+		if _, ok := lastProposed.AdditionalData.ExtraData[k]; !ok {
+			lastProposed.AdditionalData.ExtraData[k] = v
 		}
 	}
 
-	// put consensus qc into block
-	lastProposed.AdditionalData = block.AdditionalData
 	// shallow copy, create a new block to prevent panic during storage in marshal
 	commitBlock := CopyBlock(lastProposed)
 
