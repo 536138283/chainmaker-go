@@ -14,8 +14,8 @@ chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20231023025203-838d5cc76f01
 chainmaker.org/chainmaker/consensus-abft/v3 v3.0.1-0.20231023025203-838d5cc76f01/go.mod h1:GPRHZR0aYRs3eOXWM2Xq157wxt77mZKeSoCkK3CUkjE=
 chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20231023025336-2b23d5da83a0 h1:s7/46CdVo0zSSbq92Etl02RGBKwILkXsL8EssXWtgsA=
 chainmaker.org/chainmaker/consensus-dpos/v3 v3.0.1-0.20231023025336-2b23d5da83a0/go.mod h1:cLooSw+zbAlZqIre8MnlYpZCxuHjoVfacSuTAla1sOY=
-chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20231023025227-e8a5429140e4 h1:Pb0O7ChJtqzvFR2N2i2dsikuRCpAfAo/gIKH52294bQ=
-chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20231023025227-e8a5429140e4/go.mod h1:6sJj2YuWVBRNGZaKuhOqOLiDTyosE2pdXl58iPN2IDw=
+chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20231026062330-596fa95eff70 h1:lJJl1U3AjykTVdAbwbBlDO4PB8RxXu/HbTi91EadQuM=
+chainmaker.org/chainmaker/consensus-maxbft/v3 v3.0.1-0.20231026062330-596fa95eff70/go.mod h1:6sJj2YuWVBRNGZaKuhOqOLiDTyosE2pdXl58iPN2IDw=
 chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20231023025357-57e4fbee322f h1:JDLYt+TesKOidVXDu+w5LnGOuLT3Beio+9tphIrETks=
 chainmaker.org/chainmaker/consensus-raft/v3 v3.0.1-0.20231023025357-57e4fbee322f/go.mod h1:WWQJUN9fKlTnTT4ZNYR0nNdwH5xNEPuBp0XGC3rXe3o=
 chainmaker.org/chainmaker/consensus-solo/v3 v3.0.1-0.20231023025252-e83a19c3ebc7 h1:I0BOkSeOcCYwz9YtE10kI9Xa3Xt2ehFimgx34v5RRno=
@@ -78,8 +78,8 @@ chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230922092431-fa9142b6a174/go.mod 
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.0/go.mod h1:o8WRrGnldefpMcw1H73l8zsyJVcj0+zXi03a80YWwSw=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae h1:y9/Ox0sdIev7r/hNU0X9mswksvSzU2PMovwgOjgIM/k=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae/go.mod h1:wgNdfjtDf1eMEyPFjlLB2Og4a/7/eefLp4VWOtEjOMQ=
-chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527 h1:+AOnYmGnc0LSwN3uVBD36VRT45NBkzYXnPxilwAeCK0=
-chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20230724101603-b4b3d6f0b527/go.mod h1:VI8IDxJeKy4tmz7Nw+NJDcminC6+9bvsx2+5On/mK80=
+chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231023074831-771f0772945a h1:N3C4RPCAiMCasuhI3yEzO4OnPEK23jCQNv2ku6r4LSw=
+chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231023074831-771f0772945a/go.mod h1:VI8IDxJeKy4tmz7Nw+NJDcminC6+9bvsx2+5On/mK80=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.0/go.mod h1:2OW5KbW3XXdbva9WgwifgE0flRi86DeI+sKcW/k4fF4=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.1-0.20230724080727-9b682dda16df h1:RiJSZ3UIwBEzZXWJSotL74jdoM8hLlXpKkHpEiougpA=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.1-0.20230724080727-9b682dda16df/go.mod h1:dXFn3HL6STR6AqWezuhXKWS7/eTCoih52cxFXwjoyb0=
@@ -113,8 +113,8 @@ chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1 h
 chainmaker.org/chainmaker/vm-docker-go/v3 v3.0.1-0.20230221095955-3188d613b0c1/go.mod h1:eCBqHOtKBfP9/jw6jf/0Aj8Iee6s8hsJaEV6Rs977Po=
 chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230928021705-54ad75a5306d h1:4Eak7OQRcLct+XI3EieP7kvKR6rBALNdpYDLekJVJMk=
 chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230928021705-54ad75a5306d/go.mod h1:RtHbeieziMB9zMfvZqGceqTVfWfyQHW72jLq0MiwHgM=
-chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230918113958-8cfc1a246be5 h1:1udP4ibHrSNyLKiZY+3uk+icp4/AC8QijsC9qcEXCMs=
-chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20230918113958-8cfc1a246be5/go.mod h1:oTHsmAxM3dF7Nld1a7Jy+TKIfFetHz3ZtpKWZXsw7M0=
+chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20231025112245-88b1a31b16e6 h1:GaZVYaeIn1UrL/0WJuDb5fgM5KT7gdmp2yuhR8uw1gk=
+chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20231025112245-88b1a31b16e6/go.mod h1:PFMe7NKWEPUqTjy4OgkgPGzcA/XKXYMgmxEy5hZq2lk=
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca h1:acPQFBeDvqs+W9j9CAAXkDDVyS7RedUvBKqMxycReQU=
 chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca/go.mod h1:0EcvWXdRQRG7s+mQdbMLCV2GXcQc9dN8lpYHZAGKPxA=
 chainmaker.org/chainmaker/vm-native/v3 v3.0.0/go.mod h1:ZiG6aLOy/kuOWihp9BJurvSpCZ2fZ3qwdatiqy+qSQA=
