@@ -95,5 +95,4 @@ replace (
 	github.com/oleiade/reflections => github.com/oleiade/reflections v1.0.1
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.1.0
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v1.0.0
-	hainmaker.org/chainmaker/consensus-raft/v3 => /data/go/src/chainmaker.org/consensus-raft
 )
