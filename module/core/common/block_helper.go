@@ -14,6 +14,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/localconf/v3"
+	"chainmaker.org/chainmaker/protocol/v3"
+	"chainmaker.org/chainmaker/utils/v3"
+
 	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
@@ -23,13 +27,10 @@ import (
 	commonErrors "chainmaker.org/chainmaker/common/v3/errors"
 	"chainmaker.org/chainmaker/common/v3/monitor"
 	"chainmaker.org/chainmaker/common/v3/msgbus"
-	"chainmaker.org/chainmaker/localconf/v3"
 	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"chainmaker.org/chainmaker/pb-go/v3/consensus"
-	"chainmaker.org/chainmaker/protocol/v3"
 	batch "chainmaker.org/chainmaker/txpool-batch/v3"
-	"chainmaker.org/chainmaker/utils/v3"
 	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -1540,8 +1541,13 @@ func recoverBlockByBatch(
 			newTxs = append(newTxs, tx...)
 		}
 
-		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIdsLen:%v, num:%d",
-			block.Header.BlockHeight, len(batchIds), len(newTxs)))
+		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIdsLen:%v, want:%d, got:%d",
+			block.Header.BlockHeight, len(batchIds), len(indexes), len(newTxs)))
+
+		if len(newTxs) != len(indexes) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, want: %d, got:%d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes), len(newTxs))
+		}
 
 		for i, v := range indexes {
 			newBlock.Txs[i] = newTxs[int(v)]
