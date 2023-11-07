@@ -78,8 +78,6 @@ chainmaker.org/chainmaker/sdk-go/v3 v3.0.1-0.20230922092431-fa9142b6a174/go.mod 
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.0/go.mod h1:o8WRrGnldefpMcw1H73l8zsyJVcj0+zXi03a80YWwSw=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae h1:y9/Ox0sdIev7r/hNU0X9mswksvSzU2PMovwgOjgIM/k=
 chainmaker.org/chainmaker/store-badgerdb/v3 v3.0.1-0.20230724082957-5bcf7e15b3ae/go.mod h1:wgNdfjtDf1eMEyPFjlLB2Og4a/7/eefLp4VWOtEjOMQ=
-chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231023074831-771f0772945a h1:N3C4RPCAiMCasuhI3yEzO4OnPEK23jCQNv2ku6r4LSw=
-chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231023074831-771f0772945a/go.mod h1:VI8IDxJeKy4tmz7Nw+NJDcminC6+9bvsx2+5On/mK80=
 chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231031101438-8aeb98088488 h1:qnCp6hnP70gZsU5y3wv6gocOVXxqp+DgxzTRevjgSWw=
 chainmaker.org/chainmaker/store-huge/v3 v3.0.1-0.20231031101438-8aeb98088488/go.mod h1:VI8IDxJeKy4tmz7Nw+NJDcminC6+9bvsx2+5On/mK80=
 chainmaker.org/chainmaker/store-leveldb/v3 v3.0.0/go.mod h1:2OW5KbW3XXdbva9WgwifgE0flRi86DeI+sKcW/k4fF4=
@@ -94,8 +92,6 @@ chainmaker.org/chainmaker/store-tikv/v3 v3.0.1-0.20230724082926-10bf5366ecd2 h1:
 chainmaker.org/chainmaker/store-tikv/v3 v3.0.1-0.20230724082926-10bf5366ecd2/go.mod h1:ewO5VncMloCH0gHqy6yAo8JbG0w0DNfPZOWA+6nr/K8=
 chainmaker.org/chainmaker/store/v3 v3.0.0/go.mod h1:2Vlyku/49MSzbj5gHeyLCEVAIpnp+KmcOfnZM/Ldhmk=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20230616023049-a7f967a898d5/go.mod h1:/BYbeKVjWM9D+txh6m5BKcIzac8eKIKKk+pj7OMHA8g=
-chainmaker.org/chainmaker/store/v3 v3.0.1-0.20231018091919-92d36f5bf3e1 h1:dA6AAB/G2+JmoyfFbqKMKgeHz+s6roFJnPG+J+iOWwY=
-chainmaker.org/chainmaker/store/v3 v3.0.1-0.20231018091919-92d36f5bf3e1/go.mod h1:o/y3ndcnY79Qpgbr/29vvypeVzNmrjHe3+ARkCycFo4=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20231031034922-8d9c4dbec235 h1:jY44MBhb2vL6kUlUIKnh8Wos4EAXqlFVSXfMBn6X52U=
 chainmaker.org/chainmaker/store/v3 v3.0.1-0.20231031034922-8d9c4dbec235/go.mod h1:o/y3ndcnY79Qpgbr/29vvypeVzNmrjHe3+ARkCycFo4=
 chainmaker.org/chainmaker/tbft-engine v1.0.2-0.20231030025550-91e2f593b5cb h1:PIsUOmiyufhBhzYabygxnljGQJNizjpkpyKtj6LGkWs=
