@@ -29,6 +29,8 @@ chainmaker.org/chainmaker/libp2p-core v1.0.0 h1:0wUc81wt6VwbmhcEswcwZ96f6NWo6Dtb
 chainmaker.org/chainmaker/libp2p-core v1.0.0/go.mod h1:o5hZnNkN7gMbfe34vRKlgAtndDw2OtLUAS9+bUSz4SU=
 chainmaker.org/chainmaker/libp2p-pubsub v1.3.0 h1:ZJtsCxCsYk+VrYjbWZpnOMz2aGBK316z4CEd2FcLS2U=
 chainmaker.org/chainmaker/libp2p-pubsub v1.3.0/go.mod h1:tapj0SEC7O2wUXw/P0V2LXT+Ktl6ESYhgYDmdbwXGU4=
+chainmaker.org/chainmaker/libp2p-pubsub v1.3.1-0.20231107023118-ac1c5c19ee3a h1:+JyoDrASX7MOuWzL8lsHcPrEncAl30oF/VzmeiSZnJ0=
+chainmaker.org/chainmaker/libp2p-pubsub v1.3.1-0.20231107023118-ac1c5c19ee3a/go.mod h1:tapj0SEC7O2wUXw/P0V2LXT+Ktl6ESYhgYDmdbwXGU4=
 chainmaker.org/chainmaker/localconf/v3 v3.0.0/go.mod h1:8ErKX7zQA407XKkRtCNkFCRGg6A15Gxba2r05hmVUmU=
 chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230720141317-c3b4502e2792/go.mod h1:8ErKX7zQA407XKkRtCNkFCRGg6A15Gxba2r05hmVUmU=
 chainmaker.org/chainmaker/localconf/v3 v3.0.1-0.20230919024658-01cb3e69a409 h1:PAx4iozqdJmbMxpBVFZM9RXMuLkh3cpdo/AmiHFYlHk=
@@ -47,6 +49,8 @@ chainmaker.org/chainmaker/net-common v1.3.1-0.20230728092037-e374a414e360/go.mod
 chainmaker.org/chainmaker/net-libp2p v1.3.0/go.mod h1:ghr047fYkskn6AzZDJCk4QDqQo3MOzzuIGDMIqrCPIQ=
 chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230728092025-dfbeab83c976 h1:uwml0Oa0DMmsc7zU6fWjIOpW7c3ChEvvLtQh/Hcy5JI=
 chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20230728092025-dfbeab83c976/go.mod h1:k6Sqekksf3+hvP9YhDHK6v4GIlNMhn//gZD/uO8adQI=
+chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20231107030241-e07cd7820f79 h1:oHIL9ahSx4ASW9nDzD2FZXev1FVAhpi0hTBPHIIIuu8=
+chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20231107030241-e07cd7820f79/go.mod h1:Mj74mGnKVzcn0Pbrdh4G2W9NsBdzLhklqcYI4B4obms=
 chainmaker.org/chainmaker/net-liquid v1.3.0/go.mod h1:UxmWusKI1YD9LLeBTvJioXNfcA7QRN8uJfh2K3CNx2g=
 chainmaker.org/chainmaker/net-liquid v1.3.1-0.20231026085059-8414aaf8efcf h1:BcUYroyb/ZiGrQRF7SzAa+e5BK47OOlYImjmoocng6c=
 chainmaker.org/chainmaker/net-liquid v1.3.1-0.20231026085059-8414aaf8efcf/go.mod h1:q+KNUEErJmCiNtHfx99Hi5UhC8a/OJPeECP4Q2hACl0=
