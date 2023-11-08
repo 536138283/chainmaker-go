@@ -761,7 +761,7 @@ func (ts *TxScheduler) executeTx(
 
 		// checking for balance is not enough
 		if enableOptimizeChargeGas {
-			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas); err2 != nil {
+			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas, ts.log); err2 != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,

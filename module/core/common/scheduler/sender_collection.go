@@ -243,7 +243,7 @@ func uint64SafeSub(num1 uint64, num2 uint64) (uint64, bool) {
 }
 
 func (s *SenderCollection) checkBalanceInSenderCollection(
-	tx *commonPb.Transaction, txNeedChargeGas bool) error {
+	tx *commonPb.Transaction, txNeedChargeGas bool, log protocol.Logger) error {
 
 	// 处理不需要扣费的交易
 	if !txNeedChargeGas {
@@ -259,6 +259,8 @@ func (s *SenderCollection) checkBalanceInSenderCollection(
 		return fmt.Errorf("cannot find account balance for %v", tx.Payload.TxId)
 	}
 
+	log.Infof("[%v]: account address = %s, account balance = %v, block totalGasUsed = %v, tx gas_limit = %v",
+		tx.Payload.TxId, address, senderTxs.accountBalance, senderTxs.totalGasUsed, tx.Payload.Limit.GasLimit)
 	if senderTxs.totalGasUsed >= senderTxs.accountBalance {
 		return fmt.Errorf("account balance is not enough for tx `%v`", tx.Payload.TxId)
 	}
