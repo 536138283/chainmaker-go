@@ -428,6 +428,7 @@ function generate_config() {
                TOTAL=$(($NODE_CNT*2500000))
                xsed "s%{erc20_total}%$TOTAL%g" node$i/chainconfig/bc$j.yml
                xsed "s%{epochValidatorNum}%$NODE_CNT%g" node$i/chainconfig/bc$j.yml
+               xsed "s%{epochBlockNum}%$(($NODE_CNT*3))%g" node$i/chainconfig/bc$j.yml
             fi
 
             if [ $NODE_CNT -eq 4 ] || [ $NODE_CNT -eq 7 ]; then
