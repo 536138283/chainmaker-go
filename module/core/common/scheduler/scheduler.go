@@ -551,6 +551,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
 		senderCollection = ts.NewSenderCollection(block.Txs, snapshot)
+		// reset totalGasUsed for recalculating txs in block
+		senderCollection.resetTotalGasUsed()
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	}
 
@@ -2007,6 +2009,8 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if !equal {
 		ts.log.Warnf("compare block dag (vertex:%d) with simulate dag (vertex:%d)",
 			len(block.Dag.Vertexes), len(dag.Vertexes))
+		ts.log.Warnf("producer.Dag = {}", block.Dag)
+		ts.log.Warnf("verifier.Dag = {}", dag)
 		return fmt.Errorf("simulate dag not equal to block dag")
 	}
 	timeUsed := time.Since(startTime)
