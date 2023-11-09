@@ -579,10 +579,6 @@ vm:
     log_in_console: false
 
     # Log level of docker vm go
-    log_level: {vm_go_log_level}
-
-    # Log level of docker vm go
-
     log_level: {docker_go_log_level}
 
     # max process num for execute original txs
