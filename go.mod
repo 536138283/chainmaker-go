@@ -30,14 +30,14 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v3 v3.0.1-0.20230928021705-54ad75a5306d
 	chainmaker.org/chainmaker/vm-evm/v3 v3.0.1-0.20231027065457-b1609b617cda
 	chainmaker.org/chainmaker/vm-gasm/v3 v3.0.1-0.20230221095629-aa99ef9de0ca
-	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20231023025138-6d0d2b4bc91a
+	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20231110071728-412a095550df
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230726065243-a0dd6f3544e3
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.1-0.20230221095707-a6ef1151257e
 	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230825080950-ca4d080d4328
 )
 
 require (
-	chainmaker.org/chainmaker/libp2p-pubsub v1.3.1-0.20231107023118-ac1c5c19ee3a  // indirect
+	chainmaker.org/chainmaker/libp2p-pubsub v1.3.1-0.20231107023118-ac1c5c19ee3a // indirect
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
