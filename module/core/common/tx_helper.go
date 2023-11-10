@@ -603,8 +603,8 @@ func ValidateTxRules(filter protocol.TxFilter, txs []*commonpb.Transaction) (
 	if len(errorIdIndexes) == len(txs) {
 		return txs, []*commonpb.Transaction{}
 	}
-	remainTxs = make([]*commonpb.Transaction, 0, len(errorIdIndexes))
-	removeTxs = make([]*commonpb.Transaction, 0, len(txs)-len(errorIdIndexes))
+	remainTxs = make([]*commonpb.Transaction, 0, len(txs)-len(errorIdIndexes))
+	removeTxs = make([]*commonpb.Transaction, 0, len(errorIdIndexes))
 	for i, tx := range txs {
 		if IntegersContains(errorIdIndexes, i) {
 			removeTxs = append(removeTxs, tx)
