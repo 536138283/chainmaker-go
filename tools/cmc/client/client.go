@@ -257,6 +257,7 @@ func EthCMD() *cobra.Command {
 	clientCmd.AddCommand(sendRawTransactionCMD())
 	clientCmd.AddCommand(estimateGasCMD())
 	clientCmd.AddCommand(callCMD())
+	clientCmd.AddCommand(abiPackCMD())
 
 	return clientCmd
 }

@@ -198,3 +198,50 @@ func call(from string, to string, gas uint64, price uint64, value uint64, data [
 	fmt.Println(string(output))
 	return nil
 }
+
+// abiPackCMD - abi pack
+func abiPackCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "abi-pack",
+		Short: "abi pack",
+		Long:  "abi pack",
+		RunE: func(_ *cobra.Command, args []string) error {
+			return abiPack()
+		},
+		Args: cobra.ExactArgs(0),
+	}
+
+	attachFlags(cmd, []string{
+		flagMethod, flagAbiFilePath, flagParams,
+	})
+
+	cmd.MarkFlagRequired(flagAbiFilePath)
+	cmd.MarkFlagRequired(flagMethod)
+	cmd.MarkFlagRequired(flagParams)
+
+	return cmd
+}
+
+func abiPack() error {
+	var contractAbi *abi.ABI
+
+	abiBytes, err := ioutil.ReadFile(abiFilePath)
+	if err != nil {
+		return err
+	}
+
+	contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+	if err != nil {
+		return err
+	}
+
+	inputData, err := util.Pack(contractAbi, method, params)
+	if err != nil {
+		return err
+	}
+
+	inputDataHexStr := hex.EncodeToString(inputData)
+
+	fmt.Println(inputDataHexStr)
+	return nil
+}

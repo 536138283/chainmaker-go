@@ -51,4 +51,4 @@ echo "查询ACCOUNT的Nonce"
 
 echo "查询ACCOUNT List"
 
-./cmc client contract user get --contract-name=ETHEREUM --method=GetACCOUNTList --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{}'
+./cmc client contract user get --contract-name=ETHEREUM --method=GetAccountList --sdk-conf-path=../config/sdk_config.yml --result-to-string=true --params='{}'
