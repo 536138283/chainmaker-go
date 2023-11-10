@@ -229,8 +229,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	timeCostDag := time.Since(startTime)
 
 	// Execute special tx sequentially, and add to dag
-	var serialTxs []*commonPb.Transaction
-	serialTxsNum := parallelTxsNum - len(snapshot.GetSpecialTxTable())
+	noBalanceTxsNum := 0
+	if enableOptimizeChargeGas && senderCollection != nil {
+		noBalanceTxsNum = len(senderCollection.specialTxTable)
+	}
+	serialTxs := make([]*commonPb.Transaction, 0, len(snapshot.GetSpecialTxTable())+noBalanceTxsNum)
+	serialTxsNum := snapshot.GetSnapshotSize()
 	iterTxsNum := len(snapshot.GetSpecialTxTable())
 	if iterTxsNum > 0 {
 		ts.log.Infof("append txs[iter] into dag, size = %v", iterTxsNum)
@@ -238,7 +242,6 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		serialTxsNum += iterTxsNum
 	}
 	if enableOptimizeChargeGas && senderCollection != nil {
-		noBalanceTxsNum := len(senderCollection.specialTxTable)
 		if noBalanceTxsNum > 0 {
 			ts.log.Infof("append txs[no balance] into dag, size = %v", noBalanceTxsNum)
 			serialTxs = append(serialTxs, senderCollection.specialTxTable...)

@@ -81,7 +81,7 @@ func init() {
 				localconf.ChainMakerConfig.VMConfig.Common,
 				localconf.ChainMakerConfig.VMConfig.Go,
 				commonPb.RuntimeType_GO,
-			), nil
+			)
 		})
 
 	// chainId string, logger protocol.Logger, vmConfig map[string]interface{}
@@ -94,7 +94,7 @@ func init() {
 				localconf.ChainMakerConfig.VMConfig.Common,
 				localconf.ChainMakerConfig.VMConfig.Java,
 				commonPb.RuntimeType_DOCKER_JAVA,
-			), nil
+			)
 		})
 
 	// consensus
