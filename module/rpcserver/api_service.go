@@ -149,7 +149,7 @@ func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*co
 // @return error
 func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
 	if req.Payload.TxType == commonPb.TxType_ETH_TX {
-		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("rawtx"))
+		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("RAWTX"))
 	}
 
 	s.log.DebugDynamic(func() string {

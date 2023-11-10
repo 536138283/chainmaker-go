@@ -10,7 +10,6 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v3/ethbase"
 	"chainmaker.org/chainmaker/common/v3/evmutils/abi"
-	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
@@ -45,13 +44,7 @@ func sendRawTransaction(rawTxHex string) error {
 	if err != nil {
 		return err
 	}
-	req := &commonPb.TxRequest{Payload: &commonPb.Payload{TxType: commonPb.TxType_ETH_TX}}
-	req.Payload.Parameters = []*commonPb.KeyValuePair{{
-		Key:   "rawtx",
-		Value: rawTx,
-	}}
-	req.Payload.TxId = hex.EncodeToString(ethbase.Keccak256(rawTx))
-	resp, err := client.SendTxRequest(req, timeout, syncResult)
+	resp, err := client.EthSendRawTx(rawTx, timeout, syncResult)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 		return err
@@ -104,7 +97,7 @@ func estimateGasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "estimate-gas",
 		Short: "Estimate Gas",
-		Long:  "Estimate Gas",
+		Long:  "Estimate Gas for ethereum contract",
 		RunE: func(_ *cobra.Command, args []string) error {
 			data, _ := hex.DecodeString(ethData)
 			return estimateGas(ethFrom, ethTo, ethGas, ethGasPrice, ethValue, data)
@@ -155,8 +148,8 @@ func estimateGas(from, to string, gas uint64, gasPrice uint64, value uint64, dat
 func callCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "call",
-		Short: "Call",
-		Long:  "Call",
+		Short: "Call ethereum contract",
+		Long:  "Call query ethereum contract",
 		RunE: func(_ *cobra.Command, args []string) error {
 			data, _ := hex.DecodeString(ethData)
 			return call(ethFrom, ethTo, ethGas, ethGasPrice, ethValue, data)

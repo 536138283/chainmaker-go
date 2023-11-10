@@ -48,6 +48,7 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(key.KeyCMD())
 	mainCmd.AddCommand(cert.CertCMD())
 	mainCmd.AddCommand(client.ClientCMD())
+	mainCmd.AddCommand(client.EthCMD())
 	mainCmd.AddCommand(hibe.HibeCMD())
 	mainCmd.AddCommand(paillier.PaillierCMD())
 	mainCmd.AddCommand(archive.NewArchiveCMD())

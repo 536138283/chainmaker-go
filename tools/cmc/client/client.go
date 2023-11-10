@@ -242,6 +242,18 @@ func ClientCMD() *cobra.Command {
 	clientCmd.AddCommand(blockChainsCMD())
 	clientCmd.AddCommand(enableOrDisableGasCMD())
 	clientCmd.AddCommand(certAliasCMD())
+
+	return clientCmd
+}
+
+// EthCMD new eth series command
+func EthCMD() *cobra.Command {
+	clientCmd := &cobra.Command{
+		Use:   "eth",
+		Short: "ethereum command",
+		Long:  "ethereum command",
+	}
+
 	clientCmd.AddCommand(sendRawTransactionCMD())
 	clientCmd.AddCommand(estimateGasCMD())
 	clientCmd.AddCommand(callCMD())
@@ -251,7 +263,7 @@ func ClientCMD() *cobra.Command {
 
 var flags *pflag.FlagSet
 
-//nolint: revive
+// nolint: revive
 func init() {
 	flags = &pflag.FlagSet{}
 
