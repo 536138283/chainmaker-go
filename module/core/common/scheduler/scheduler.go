@@ -92,7 +92,7 @@ type TxIdAndExecOrderType struct {
 
 // Schedule according to a batch of transactions,
 // and generating DAG according to the conflict relationship
-// nolint: gocyclo
+// nolint: gocyclo, revive
 func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot) (map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, error) {
 
@@ -228,24 +228,30 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, nil)
 	timeCostDag := time.Since(startTime)
 
-	// fill up dag about account balance not enough
-	fillGasBalanceErrDag(block, snapshot, blockVersion)
-
 	// Execute special tx sequentially, and add to dag
-	if len(snapshot.GetSpecialTxTable()) > 0 {
-		ts.simulateSpecialTxs(
-			snapshot.GetSpecialTxTable(),
-			block.Dag, snapshot, block, parallelTxsNum, senderCollection)
+	noBalanceTxsNum := 0
+	if enableOptimizeChargeGas && senderCollection != nil {
+		noBalanceTxsNum = len(senderCollection.specialTxTable)
 	}
-	if senderCollection != nil && len(senderCollection.specialTxTable) > 0 {
-		txsNum := txBatchSize
-		if enableOptimizeChargeGas {
-			txsNum = parallelTxsNum + len(senderCollection.specialTxTable)
+	serialTxs := make([]*commonPb.Transaction, 0, len(snapshot.GetSpecialTxTable())+noBalanceTxsNum)
+	serialTxsNum := snapshot.GetSnapshotSize()
+	iterTxsNum := len(snapshot.GetSpecialTxTable())
+	if iterTxsNum > 0 {
+		ts.log.Infof("append txs[iter] into dag, size = %v", iterTxsNum)
+		serialTxs = append(serialTxs, snapshot.GetSpecialTxTable()...)
+		serialTxsNum += iterTxsNum
+	}
+	if enableOptimizeChargeGas && senderCollection != nil {
+		if noBalanceTxsNum > 0 {
+			ts.log.Infof("append txs[no balance] into dag, size = %v", noBalanceTxsNum)
+			serialTxs = append(serialTxs, senderCollection.specialTxTable...)
+			serialTxsNum += noBalanceTxsNum
 		}
-		ts.simulateSpecialTxs(
-			senderCollection.specialTxTable,
-			block.Dag, snapshot, block, txsNum, senderCollection)
 	}
+	ts.simulateSpecialTxs(
+		serialTxs,
+		block.Dag, snapshot, block, serialTxsNum, senderCollection)
+
 	timeCostA2 := time.Since(startTime)
 	ts.log.Infof("serial scheduling end, time cost = %v", timeCostA2)
 
@@ -379,6 +385,18 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ts.log.DebugDynamic(func() string {
 		return fmt.Sprintf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 	})
+	if specialTxType == protocol.ExecOrderTxTypeIterator {
+		txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
+			tx.Payload.ContractName,
+			tx.Payload.Method,
+			tx,
+			txSimContext.GetSnapshot())
+		if err := collection.refundGasInSenderCollection(tx, tx.Result, txNeedChargeGas); err != nil {
+			ts.log.DebugDynamic(func() string {
+				return fmt.Sprintf("refundGasInSenderCollection failed, err = %v", err)
+			})
+		}
+	}
 
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
@@ -551,6 +569,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
 		senderCollection = ts.NewSenderCollection(block.Txs, snapshot)
+		// reset totalGasUsed for recalculating txs in block
+		senderCollection.resetTotalGasUsed()
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	}
 
@@ -761,7 +781,7 @@ func (ts *TxScheduler) executeTx(
 
 		// checking for balance is not enough
 		if enableOptimizeChargeGas {
-			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas); err2 != nil {
+			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas, ts.log); err2 != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
@@ -2007,6 +2027,8 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if !equal {
 		ts.log.Warnf("compare block dag (vertex:%d) with simulate dag (vertex:%d)",
 			len(block.Dag.Vertexes), len(dag.Vertexes))
+		ts.log.Warnf("producer.Dag = {}", block.Dag)
+		ts.log.Warnf("verifier.Dag = {}", dag)
 		return fmt.Errorf("simulate dag not equal to block dag")
 	}
 	timeUsed := time.Since(startTime)
