@@ -234,7 +234,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		noBalanceTxsNum = len(senderCollection.specialTxTable)
 	}
 	serialTxs := make([]*commonPb.Transaction, 0, len(snapshot.GetSpecialTxTable())+noBalanceTxsNum)
-	serialTxsNum := snapshot.GetSnapshotSize()
+	serialTxsNum := len(snapshot.GetTxTable())
+	ts.log.Debugf("1) serialTxsNum = %v, noBalanceTxsNum = %v", serialTxsNum, noBalanceTxsNum)
 	iterTxsNum := len(snapshot.GetSpecialTxTable())
 	if iterTxsNum > 0 {
 		ts.log.Infof("append txs[iter] into dag, size = %v", iterTxsNum)
@@ -248,9 +249,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 			serialTxsNum += noBalanceTxsNum
 		}
 	}
-	ts.simulateSpecialTxs(
-		serialTxs,
-		block.Dag, snapshot, block, serialTxsNum, senderCollection)
+	ts.log.Debugf("2) serialTxsNum = %v", serialTxsNum)
+	if len(serialTxs) > 0 {
+		ts.simulateSpecialTxs(
+			serialTxs,
+			block.Dag, snapshot, block, serialTxsNum, senderCollection)
+	}
 
 	timeCostA2 := time.Since(startTime)
 	ts.log.Infof("serial scheduling end, time cost = %v", timeCostA2)
