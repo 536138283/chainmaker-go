@@ -84,11 +84,11 @@ type TxScheduler struct {
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]struct{}
 
-// TxIdAndExecOrderType txid and ExecOrderTxType
-type TxIdAndExecOrderType struct {
-	string
-	protocol.ExecOrderTxType
-}
+//// TxIdAndExecOrderType txid and ExecOrderTxType
+//type TxIdAndExecOrderType struct {
+//	string
+//	protocol.ExecOrderTxType
+//}
 
 // Schedule according to a batch of transactions,
 // and generating DAG according to the conflict relationship
@@ -234,7 +234,8 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		noBalanceTxsNum = len(senderCollection.specialTxTable)
 	}
 	serialTxs := make([]*commonPb.Transaction, 0, len(snapshot.GetSpecialTxTable())+noBalanceTxsNum)
-	serialTxsNum := snapshot.GetSnapshotSize()
+	serialTxsNum := len(snapshot.GetTxTable())
+	ts.log.Debugf("1) serialTxsNum = %v, noBalanceTxsNum = %v", serialTxsNum, noBalanceTxsNum)
 	iterTxsNum := len(snapshot.GetSpecialTxTable())
 	if iterTxsNum > 0 {
 		ts.log.Infof("append txs[iter] into dag, size = %v", iterTxsNum)
@@ -248,9 +249,12 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 			serialTxsNum += noBalanceTxsNum
 		}
 	}
-	ts.simulateSpecialTxs(
-		serialTxs,
-		block.Dag, snapshot, block, serialTxsNum, senderCollection)
+	ts.log.Debugf("2) serialTxsNum = %v", serialTxsNum)
+	if len(serialTxs) > 0 {
+		ts.simulateSpecialTxs(
+			serialTxs,
+			block.Dag, snapshot, block, serialTxsNum, senderCollection)
+	}
 
 	timeCostA2 := time.Since(startTime)
 	ts.log.Infof("serial scheduling end, time cost = %v", timeCostA2)
@@ -581,8 +585,6 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	timeoutC := time.After(ScheduleWithDagTimeout * time.Second)
 	finishC := make(chan bool)
 
-	txExecOrderTypeC := make(chan TxIdAndExecOrderType, txBatchSize)
-
 	var goRoutinePool *ants.Pool
 	if goRoutinePool, err = ants.NewPool(len(block.Txs), ants.WithPreAlloc(true)); err != nil {
 		return nil, nil, err
@@ -611,7 +613,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 				ts.log.Debugf("simulate with dag, prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
 				err = goRoutinePool.Submit(func() {
 					handleTxInSimulateWithDag(block, snapshot, ts, tx, txIndex,
-						doneTxC, finishC, txExecOrderTypeC, txBatchSize, senderCollection)
+						doneTxC, finishC, txBatchSize, senderCollection)
 				})
 				if err != nil {
 					ts.log.Warnf("failed to submit tx id %s during simulate with dag, %+v",
@@ -647,18 +649,6 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		if txRWSet != nil {
 			txRWSetMap[txRWSet.TxId] = txRWSet
 		}
-	}
-	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType, len(block.Txs))
-	// we only receive fixed number of elements from this channel since we process unreceived things
-	// and return error in later parts
-	length := len(txExecOrderTypeC)
-	for i := 0; i < length; i++ {
-		t := <-txExecOrderTypeC
-		txExecOrderTypeMap[t.string] = t.ExecOrderTxType
-	}
-	err = ts.compareDag(block, snapshot, txRWSetMap, txExecOrderTypeMap)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	writeRWSetLog(txRWSetMap, block.Dag, ts.log)
@@ -712,13 +702,10 @@ func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 func handleTxInSimulateWithDag(
 	block *commonPb.Block, snapshot protocol.Snapshot,
 	ts *TxScheduler, tx *commonPb.Transaction, txIndex int,
-	doneTxC chan int, finishC chan bool,
-	txExecOrderTypeC chan TxIdAndExecOrderType, txBatchSize int,
+	doneTxC chan int, finishC chan bool, txBatchSize int,
 	collection *SenderCollection) {
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block, collection)
-	// send specialTxType BEFORE snapshot.ApplyTxSimContext which has a lock, ensuring that all txs have it
-	// and eliminating race condition
-	txExecOrderTypeC <- TxIdAndExecOrderType{tx.Payload.GetTxId(), specialTxType}
+
 	// if apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
 	if !applyResult {
@@ -1975,6 +1962,7 @@ func (ts *TxScheduler) getTypeShouldBeByBlockVersion(blockVersion uint32, i int,
 	return typeShouldBe
 }
 
+// compareDag compare dag. (Currently deprecated)
 func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snapshot,
 	txRWSetMap map[string]*commonPb.TxRWSet, txExecOrderTypeMap map[string]protocol.ExecOrderTxType) error {
 	if block.Header.BlockVersion < blockVersion2300 {
