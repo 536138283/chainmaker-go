@@ -226,6 +226,43 @@ func (s *SenderCollection) chargeGasInSenderCollection(
 	return gasUsed, nil
 }
 
+func (s *SenderCollection) refundGasInSenderCollection(
+	tx *commonPb.Transaction, txResult *commonPb.Result, txNeedChargeGas bool) error {
+
+	// 处理不需要扣费的交易
+	if !txNeedChargeGas {
+		return nil
+	}
+
+	// 处理需要扣费，但没有设置 gas_limit 的交易
+	if tx.Payload.Limit == nil {
+		return errors.New("tx need charge gas, but not gas limit was supplied")
+	}
+
+	address, exist := s.txAddressCache[tx.Payload.TxId]
+	if !exist {
+		return fmt.Errorf("cannot find account balance for %v", tx.Payload.TxId)
+	}
+	senderTxs, exist := s.txsMap[address]
+	if !exist {
+		return fmt.Errorf("cannot find payer address for %v", tx.Payload.TxId)
+	}
+
+	senderTxs.mu.Lock()
+	defer senderTxs.mu.Unlock()
+	gasUsed := txResult.ContractResult.GasUsed
+
+	// overflow checking
+	totalGasUsed, overflow := uint64SafeSub(senderTxs.totalGasUsed, gasUsed)
+	if overflow {
+		return fmt.Errorf(
+			"totalGasUsed is overflow after add gas_used of tx `%v`", tx.Payload.TxId)
+	}
+
+	senderTxs.totalGasUsed = totalGasUsed
+	return nil
+}
+
 func uint64SafeAdd(num1 uint64, num2 uint64) (uint64, bool) {
 	result := num1 + num2
 	if result < num1 {
@@ -243,7 +280,7 @@ func uint64SafeSub(num1 uint64, num2 uint64) (uint64, bool) {
 }
 
 func (s *SenderCollection) checkBalanceInSenderCollection(
-	tx *commonPb.Transaction, txNeedChargeGas bool) error {
+	tx *commonPb.Transaction, txNeedChargeGas bool, log protocol.Logger) error {
 
 	// 处理不需要扣费的交易
 	if !txNeedChargeGas {
@@ -259,6 +296,8 @@ func (s *SenderCollection) checkBalanceInSenderCollection(
 		return fmt.Errorf("cannot find account balance for %v", tx.Payload.TxId)
 	}
 
+	log.Debugf("[%v]: account address = %s, account balance = %v, block totalGasUsed = %v, tx gas_limit = %v",
+		tx.Payload.TxId, address, senderTxs.accountBalance, senderTxs.totalGasUsed, tx.Payload.Limit.GasLimit)
 	if senderTxs.totalGasUsed >= senderTxs.accountBalance {
 		return fmt.Errorf("account balance is not enough for tx `%v`", tx.Payload.TxId)
 	}

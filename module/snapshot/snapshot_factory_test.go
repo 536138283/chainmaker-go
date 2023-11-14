@@ -85,7 +85,7 @@ func prepareTx(txId string, contractId *commonPb.Contract, method string,
 			Parameters:     parameters,
 			Timestamp:      0,
 			ExpirationTime: 0,
-			Limit:          &commonPb.Limit{GasLimit: 11},
+			Limit:          &commonPb.Limit{GasLimit: 100},
 		},
 		Sender: &commonPb.EndorsementEntry{
 			//Signer: &acPb.Member{
@@ -141,33 +141,68 @@ func prepareTxScheduler(ctl *gomock.Controller, chainConfig *configpb.ChainConfi
 			parameters map[string][]byte, txSimContext protocol.TxSimContext, gasUsed uint64, refTxType common.TxType,
 		) (*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
 
+			fmt.Printf("run contract => %v, %v \n", contract.Name, method)
+			if len(txSimContext.GetTx().Payload.TxId) == 64 {
+				return &commonPb.ContractResult{
+					Code:    0,
+					Message: "OK",
+				}, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+			}
+
+			txType := protocol.ExecOrderTxTypeNormal
 			if strings.Contains(method, "method-0") {
-				txSimContext.Put(contract.Name, []byte("Key 1"), []byte("Value 0"))
+				txType = protocol.ExecOrderTxTypeIterator
+				gasUsed += uint64(90)
+				txSimContext.Put(contract.Name, []byte("Key 0"), []byte("Value 0"))
+
 			} else if strings.Contains(method, "method-1") {
+				gasUsed += uint64(90)
 				txSimContext.Put(contract.Name, []byte("Key 1"), []byte("Value 1"))
+
 			} else if strings.Contains(method, "method-2") {
-				txSimContext.Put(contract.Name, []byte("Key 1"), []byte("Value 2"))
+				gasUsed += uint64(90)
+				txType = protocol.ExecOrderTxTypeIterator
+				txSimContext.Put(contract.Name, []byte("Key 2"), []byte("Value 2"))
+
 			} else if strings.Contains(method, "method-3") {
+				gasUsed += uint64(90)
 				txSimContext.Put(contract.Name, []byte("Key 3"), []byte("Value 3"))
+
 			} else if strings.Contains(method, "method-4") {
+				gasUsed += uint64(90)
 				txSimContext.Put(contract.Name, []byte("Key 4"), []byte("Value 4"))
+
 			} else if strings.Contains(method, "method-5") {
+				gasUsed += uint64(90)
 				txSimContext.Put(contract.Name, []byte("Key 5"), []byte("Value 5"))
+
 			} else if strings.Contains(method, "method-6") {
+				gasUsed += uint64(110)
 				txSimContext.Put(contract.Name, []byte("Key 6"), []byte("Value 6"))
+				return &commonPb.ContractResult{
+					Code:    1,
+					Message: "gasUsed(110) < gasLimit(100)",
+					GasUsed: gasUsed,
+				}, txType, commonPb.TxStatusCode_CONTRACT_FAIL
+
 			} else if strings.Contains(method, "method-7") {
+				gasUsed += uint64(90)
 				txSimContext.Put(contract.Name, []byte("Key 7"), []byte("Value 7"))
+
 			} else if strings.Contains(method, "method-8") {
+				gasUsed += uint64(90)
 				txSimContext.Put(contract.Name, []byte("Key 8"), []byte("Value 8"))
+
 			} else if strings.Contains(method, "method-9") {
+				gasUsed += uint64(90)
 				txSimContext.Put(contract.Name, []byte("Key 9"), []byte("Value 9"))
 			}
 
 			return &commonPb.ContractResult{
 				Code:    0,
 				Message: "OK",
-				GasUsed: uint64(10),
-			}, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+				GasUsed: gasUsed,
+			}, txType, commonPb.TxStatusCode_SUCCESS
 		}).AnyTimes()
 
 	chainConf := mock.NewMockChainConf(ctl)
@@ -196,9 +231,9 @@ func prepareTxBatch(size int) (*commonPb.Contract, []*commonPb.Transaction) {
 
 	for i := 0; i < size; i++ {
 		tx := prepareTx(
-			fmt.Sprintf("a%04d", i),
+			fmt.Sprintf("a%d", i),
 			&contract,
-			fmt.Sprintf("method-%04d", i),
+			fmt.Sprintf("method-%d", i),
 			map[string]string{},
 		)
 		txBatch = append(txBatch, tx)
@@ -217,7 +252,7 @@ func prepareSnapshot(ctl *gomock.Controller, chainConfig *configpb.ChainConfig,
 	blockStore.EXPECT().GetContractBytecode(gomock.Any()).Return([]byte("Dummy Contract code !!!"), nil).AnyTimes()
 	blockStore.EXPECT().ReadObject(
 		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
-		gomock.Any()).Return([]byte("90000"), nil).AnyTimes()
+		gomock.Any()).Return([]byte("640"), nil).AnyTimes()
 
 	var snapshotFactory Factory
 	snapshotManager := snapshotFactory.NewSnapshotManager(blockStore, logger.GetLogger("TestUnit"))
@@ -288,10 +323,10 @@ func Test_TxSchedule_BuildDAG(t *testing.T) {
 	scheduler := prepareTxScheduler(ctl, chainConfig, block)
 
 	// 构造 txBatch
-	contract, txBatch := prepareTxBatch(10000)
+	contract, txBatch := prepareTxBatch(10)
 
 	// 构造 snapshot
-	snapshot := prepareSnapshot(ctl, chainConfig, contract, block, 10000)
+	snapshot := prepareSnapshot(ctl, chainConfig, contract, block, 10)
 
 	txRWSets, txEvents, err := scheduler.Schedule(block, txBatch, snapshot)
 	assert.Nil(t, err)
@@ -301,12 +336,13 @@ func Test_TxSchedule_BuildDAG(t *testing.T) {
 	//fmt.Printf("block dag = %v \n", block.Dag)
 	successNum := 0
 	for i, tx := range block.Txs {
-		if i >= 8998 && i <= 9000 {
-			fmt.Printf("block tx => id = %v, result = %v \n", tx.Payload.TxId, tx.Result.ContractResult.Message)
-		}
+		fmt.Printf("%v) block tx => id = %v, result = %v \n",
+			i, tx.Payload.TxId, tx.Result.ContractResult)
+
 		if tx.Result.Code == commonPb.TxStatusCode_SUCCESS {
 			successNum++
 		}
 	}
-	assert.Equal(t, 9000, successNum)
+	assert.Equal(t, 7, successNum)
+	fmt.Printf("block.Dag = %v \n", block.Dag)
 }
