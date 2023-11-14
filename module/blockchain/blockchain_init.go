@@ -59,8 +59,8 @@ func (bc *Blockchain) Init() (err error) {
 		return err
 	}
 	if bc.chainId != chainConfig.ChainId {
-		return errors.New(fmt.Sprintf("the name of the chain id(%s) configured in the genesis block "+
-			"does not match the chain configuration name(%s)", bc.chainId, chainConfig.ChainId))
+		return fmt.Errorf("the name of the chain id(%s) configured in the genesis block "+
+			"does not match the chain configuration name(%s)", bc.chainId, chainConfig.ChainId)
 	}
 	baseModules := []map[string]func() error{
 		// init Subscriber
