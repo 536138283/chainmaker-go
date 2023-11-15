@@ -709,9 +709,15 @@ func (bc *Blockchain) initVM() (err error) {
 
 		// 从 genesis 读 support list  添加到 VmManager的
 		for _, vmType := range chainConfig.Vm.SupportList {
-			bc.addVmManager(vmType, supportedVmManagerList)
+			err = bc.addVmManager(vmType, supportedVmManagerList)
+			if err != nil {
+				return err
+			}
 			if protocol.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(protocol.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				err = bc.addVmManager(protocol.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		consensusStateWrapper := consensus.NewConsensusStateWrapper()
@@ -761,9 +767,15 @@ func (bc *Blockchain) initVM() (err error) {
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
 		for _, vmType := range chainConfig.Vm.SupportList {
-			bc.addVmManager(vmType, supportedVmManagerList)
+			err = bc.addVmManager(vmType, supportedVmManagerList)
+			if err != nil {
+				return err
+			}
 			if protocol.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(protocol.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				err = bc.addVmManager(protocol.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				if err != nil {
+					return err
+				}
 			}
 		}
 		consensusStateWrapper := consensus.NewConsensusStateWrapper()
@@ -797,19 +809,21 @@ func (bc *Blockchain) initVMNative() {
 }
 
 func (bc *Blockchain) addVmManager(vmType string,
-	supportedVmManagerList map[common.RuntimeType]protocol.VmInstancesManager) {
+	supportedVmManagerList map[common.RuntimeType]protocol.VmInstancesManager) error {
 	vmInstancesManagerProvider := vm.GetVmProvider(vmType)
 	// 初始化 vmInstancesManager
 	vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
 	if err != nil {
-		bc.log.Errorf("create instance manager failed, %v", err)
+		bc.log.Errorf("create [%s] instance manager failed, %v", vmType, err)
+		return err
 	}
 	if vmInstancesManager == nil {
 		bc.log.Debugf("vm instances manager of %s is nil", vmType)
-		return
+		return nil
 	}
 	runtime := protocol.VmTypeToRunTimeType[strings.ToUpper(vmType)]
 	supportedVmManagerList[runtime] = vmInstancesManager
+	return nil
 }
 
 type soloChainNodesInfoProvider struct{}

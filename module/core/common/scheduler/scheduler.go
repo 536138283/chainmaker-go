@@ -84,15 +84,15 @@ type TxScheduler struct {
 // Transaction dependency in adjacency table representation
 type dagNeighbors map[int]struct{}
 
-// TxIdAndExecOrderType txid and ExecOrderTxType
-type TxIdAndExecOrderType struct {
-	string
-	protocol.ExecOrderTxType
-}
+//// TxIdAndExecOrderType txid and ExecOrderTxType
+//type TxIdAndExecOrderType struct {
+//	string
+//	protocol.ExecOrderTxType
+//}
 
 // Schedule according to a batch of transactions,
 // and generating DAG according to the conflict relationship
-// nolint: gocyclo
+// nolint: gocyclo, revive
 func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Transaction,
 	snapshot protocol.Snapshot) (map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, error) {
 
@@ -228,24 +228,34 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, nil)
 	timeCostDag := time.Since(startTime)
 
-	// fill up dag about account balance not enough
-	fillGasBalanceErrDag(block, snapshot, blockVersion)
-
 	// Execute special tx sequentially, and add to dag
-	if len(snapshot.GetSpecialTxTable()) > 0 {
-		ts.simulateSpecialTxs(
-			snapshot.GetSpecialTxTable(),
-			block.Dag, snapshot, block, parallelTxsNum, senderCollection)
+	noBalanceTxsNum := 0
+	if enableOptimizeChargeGas && senderCollection != nil {
+		noBalanceTxsNum = len(senderCollection.specialTxTable)
 	}
-	if senderCollection != nil && len(senderCollection.specialTxTable) > 0 {
-		txsNum := txBatchSize
-		if enableOptimizeChargeGas {
-			txsNum = parallelTxsNum + len(senderCollection.specialTxTable)
+	serialTxs := make([]*commonPb.Transaction, 0, len(snapshot.GetSpecialTxTable())+noBalanceTxsNum)
+	serialTxsNum := len(snapshot.GetTxTable())
+	ts.log.Debugf("1) serialTxsNum = %v, noBalanceTxsNum = %v", serialTxsNum, noBalanceTxsNum)
+	iterTxsNum := len(snapshot.GetSpecialTxTable())
+	if iterTxsNum > 0 {
+		ts.log.Infof("append txs[iter] into dag, size = %v", iterTxsNum)
+		serialTxs = append(serialTxs, snapshot.GetSpecialTxTable()...)
+		serialTxsNum += iterTxsNum
+	}
+	if enableOptimizeChargeGas && senderCollection != nil {
+		if noBalanceTxsNum > 0 {
+			ts.log.Infof("append txs[no balance] into dag, size = %v", noBalanceTxsNum)
+			serialTxs = append(serialTxs, senderCollection.specialTxTable...)
+			serialTxsNum += noBalanceTxsNum
 		}
-		ts.simulateSpecialTxs(
-			senderCollection.specialTxTable,
-			block.Dag, snapshot, block, txsNum, senderCollection)
 	}
+	ts.log.Debugf("2) serialTxsNum = %v", serialTxsNum)
+	if len(serialTxs) > 0 {
+		ts.simulateSpecialTxs(
+			serialTxs,
+			block.Dag, snapshot, block, serialTxsNum, senderCollection)
+	}
+
 	timeCostA2 := time.Since(startTime)
 	ts.log.Infof("serial scheduling end, time cost = %v", timeCostA2)
 
@@ -379,6 +389,18 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ts.log.DebugDynamic(func() string {
 		return fmt.Sprintf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 	})
+	if specialTxType == protocol.ExecOrderTxTypeIterator {
+		txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
+			tx.Payload.ContractName,
+			tx.Payload.Method,
+			tx,
+			txSimContext.GetSnapshot())
+		if err := collection.refundGasInSenderCollection(tx, tx.Result, txNeedChargeGas); err != nil {
+			ts.log.DebugDynamic(func() string {
+				return fmt.Sprintf("refundGasInSenderCollection failed, err = %v", err)
+			})
+		}
+	}
 
 	// Apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType,
@@ -551,6 +573,8 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
 		senderCollection = ts.NewSenderCollection(block.Txs, snapshot)
+		// reset totalGasUsed for recalculating txs in block
+		senderCollection.resetTotalGasUsed()
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	}
 
@@ -560,8 +584,6 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	timeoutC := time.After(ScheduleWithDagTimeout * time.Second)
 	finishC := make(chan bool)
-
-	txExecOrderTypeC := make(chan TxIdAndExecOrderType, txBatchSize)
 
 	var goRoutinePool *ants.Pool
 	if goRoutinePool, err = ants.NewPool(len(block.Txs), ants.WithPreAlloc(true)); err != nil {
@@ -591,7 +613,7 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 				ts.log.Debugf("simulate with dag, prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
 				err = goRoutinePool.Submit(func() {
 					handleTxInSimulateWithDag(block, snapshot, ts, tx, txIndex,
-						doneTxC, finishC, txExecOrderTypeC, txBatchSize, senderCollection)
+						doneTxC, finishC, txBatchSize, senderCollection)
 				})
 				if err != nil {
 					ts.log.Warnf("failed to submit tx id %s during simulate with dag, %+v",
@@ -627,18 +649,6 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		if txRWSet != nil {
 			txRWSetMap[txRWSet.TxId] = txRWSet
 		}
-	}
-	txExecOrderTypeMap := make(map[string]protocol.ExecOrderTxType, len(block.Txs))
-	// we only receive fixed number of elements from this channel since we process unreceived things
-	// and return error in later parts
-	length := len(txExecOrderTypeC)
-	for i := 0; i < length; i++ {
-		t := <-txExecOrderTypeC
-		txExecOrderTypeMap[t.string] = t.ExecOrderTxType
-	}
-	err = ts.compareDag(block, snapshot, txRWSetMap, txExecOrderTypeMap)
-	if err != nil {
-		return nil, nil, err
 	}
 
 	writeRWSetLog(txRWSetMap, block.Dag, ts.log)
@@ -692,13 +702,10 @@ func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 func handleTxInSimulateWithDag(
 	block *commonPb.Block, snapshot protocol.Snapshot,
 	ts *TxScheduler, tx *commonPb.Transaction, txIndex int,
-	doneTxC chan int, finishC chan bool,
-	txExecOrderTypeC chan TxIdAndExecOrderType, txBatchSize int,
+	doneTxC chan int, finishC chan bool, txBatchSize int,
 	collection *SenderCollection) {
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block, collection)
-	// send specialTxType BEFORE snapshot.ApplyTxSimContext which has a lock, ensuring that all txs have it
-	// and eliminating race condition
-	txExecOrderTypeC <- TxIdAndExecOrderType{tx.Payload.GetTxId(), specialTxType}
+
 	// if apply failed means this tx's read set conflict with other txs' write set
 	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
 	if !applyResult {
@@ -761,7 +768,7 @@ func (ts *TxScheduler) executeTx(
 
 		// checking for balance is not enough
 		if enableOptimizeChargeGas {
-			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas); err2 != nil {
+			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas, ts.log); err2 != nil {
 				runVmSuccess = false
 				txResult = &commonPb.Result{
 					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
@@ -1955,6 +1962,7 @@ func (ts *TxScheduler) getTypeShouldBeByBlockVersion(blockVersion uint32, i int,
 	return typeShouldBe
 }
 
+// compareDag compare dag. (Currently deprecated)
 func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snapshot,
 	txRWSetMap map[string]*commonPb.TxRWSet, txExecOrderTypeMap map[string]protocol.ExecOrderTxType) error {
 	if block.Header.BlockVersion < blockVersion2300 {
@@ -2007,6 +2015,8 @@ func (ts *TxScheduler) compareDag(block *commonPb.Block, snapshot protocol.Snaps
 	if !equal {
 		ts.log.Warnf("compare block dag (vertex:%d) with simulate dag (vertex:%d)",
 			len(block.Dag.Vertexes), len(dag.Vertexes))
+		ts.log.Warnf("producer.Dag = {}", block.Dag)
+		ts.log.Warnf("verifier.Dag = {}", dag)
 		return fmt.Errorf("simulate dag not equal to block dag")
 	}
 	timeUsed := time.Since(startTime)
