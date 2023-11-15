@@ -31,6 +31,7 @@ import (
 	tbf "chainmaker.org/chainmaker/store/v3/types/blockfile"
 	"chainmaker.org/chainmaker/utils/v3"
 	"chainmaker.org/chainmaker/vm/v3"
+	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"golang.org/x/time/rate"
 	"google.golang.org/protobuf/types/known/wrapperspb"
@@ -123,12 +124,13 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 // @param []byte
 // @return *commonPb.TxResponse
 // @return error
-func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*commonPb.TxResponse, error) {
+func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte, syncResult bool) (
+	*commonPb.TxResponse, error) {
 	req, err := utils.UnmarshalEthRlpBytes(raw)
 	if err != nil {
 		return nil, err
 	}
-	resp := s.invoke(ctx, req, protocol.RPC, false)
+	resp := s.invoke(ctx, req, protocol.RPC, syncResult)
 
 	from := ethbase.BytesToAddress(req.Sender.Signer.MemberInfo)
 	valueBytes := req.Payload.GetParameter(commonPb.EthTxParameterKey_VALUE.String())
@@ -149,7 +151,7 @@ func (s *ApiService) sendRawEthTransaction(ctx context.Context, raw []byte) (*co
 // @return error
 func (s *ApiService) SendRequest(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
 	if req.Payload.TxType == commonPb.TxType_ETH_TX {
-		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("rawtx"))
+		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("RAWTX"), false)
 	}
 
 	s.log.DebugDynamic(func() string {
@@ -189,6 +191,7 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 	_, err = s.chainMakerServer.GetChainConf(tx.Payload.ChainId)
 	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_CHAIN_CONF
+		err = errors.WithMessage(err, "chainId:"+tx.Payload.ChainId)
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
 		return

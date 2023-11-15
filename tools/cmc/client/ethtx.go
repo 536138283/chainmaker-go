@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v3/ethbase"
 	"chainmaker.org/chainmaker/common/v3/evmutils/abi"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
-	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
 
@@ -45,13 +44,7 @@ func sendRawTransaction(rawTxHex string) error {
 	if err != nil {
 		return err
 	}
-	req := &commonPb.TxRequest{Payload: &commonPb.Payload{TxType: commonPb.TxType_ETH_TX}}
-	req.Payload.Parameters = []*commonPb.KeyValuePair{{
-		Key:   "rawtx",
-		Value: rawTx,
-	}}
-	req.Payload.TxId = hex.EncodeToString(ethbase.Keccak256(rawTx))
-	resp, err := client.SendTxRequest(req, timeout, syncResult)
+	resp, err := client.EthSendRawTx(rawTx, timeout, syncResult)
 	if err != nil {
 		fmt.Printf("[ERROR] invoke contract failed, %s", err.Error())
 		return err
@@ -64,7 +57,7 @@ func sendRawTransaction(rawTxHex string) error {
 	var contractAbi *abi.ABI
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
-		abiBytes, err := ioutil.ReadFile(abiFilePath)
+		abiBytes, err := os.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
@@ -104,7 +97,7 @@ func estimateGasCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "estimate-gas",
 		Short: "Estimate Gas",
-		Long:  "Estimate Gas",
+		Long:  "Estimate Gas for ethereum contract",
 		RunE: func(_ *cobra.Command, args []string) error {
 			data, _ := hex.DecodeString(ethData)
 			return estimateGas(ethFrom, ethTo, ethGas, ethGasPrice, ethValue, data)
@@ -113,7 +106,8 @@ func estimateGasCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagSdkConfPath, flagSyncResult, flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
+		flagSdkConfPath, flagSyncResult,
+		flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -155,8 +149,8 @@ func estimateGas(from, to string, gas uint64, gasPrice uint64, value uint64, dat
 func callCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "call",
-		Short: "Call",
-		Long:  "Call",
+		Short: "Call ethereum contract",
+		Long:  "Call query ethereum contract",
 		RunE: func(_ *cobra.Command, args []string) error {
 			data, _ := hex.DecodeString(ethData)
 			return call(ethFrom, ethTo, ethGas, ethGasPrice, ethValue, data)
@@ -165,7 +159,8 @@ func callCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagSdkConfPath, flagSyncResult, flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
+		flagSdkConfPath, flagAbiFilePath, flagMethod,
+		flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -198,10 +193,90 @@ func call(from string, to string, gas uint64, price uint64, value uint64, data [
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}
-	output, err := prettyjson.Marshal(resp)
+	if resp.Code != commonPb.TxStatusCode_SUCCESS {
+		util.PrintPrettyJson(resp)
+		return nil
+	}
+	var contractAbi *abi.ABI
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := os.ReadFile(abiFilePath)
+		if err != nil {
+			return nil
+		}
+
+		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return nil
+		}
+	}
+	var output interface{}
+	if contractAbi != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		unpackedData, err := contractAbi.Unpack(method, resp.ContractResult.Result)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		output = types.EvmTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.EvmContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         fmt.Sprintf("%v", unpackedData),
+			},
+		}
+	} else {
+		if respResultToString {
+			output = util.RespResultToString(resp)
+		} else {
+			output = resp
+		}
+	}
+	util.PrintPrettyJson(output)
+	return nil
+}
+
+// abiPackCMD - abi pack
+func abiPackCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "abi-pack",
+		Short: "abi pack",
+		Long:  "abi pack",
+		RunE: func(_ *cobra.Command, args []string) error {
+			return abiPack()
+		},
+		Args: cobra.ExactArgs(0),
+	}
+
+	attachFlags(cmd, []string{
+		flagMethod, flagAbiFilePath, flagParams,
+	})
+
+	cmd.MarkFlagRequired(flagAbiFilePath)
+	cmd.MarkFlagRequired(flagMethod)
+	cmd.MarkFlagRequired(flagParams)
+
+	return cmd
+}
+
+func abiPack() error {
+	var contractAbi *abi.ABI
+
+	abiBytes, err := os.ReadFile(abiFilePath)
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(output))
+
+	contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+	if err != nil {
+		return err
+	}
+
+	inputData, err := util.Pack(contractAbi, method, params)
+	if err != nil {
+		return err
+	}
+
+	inputDataHexStr := hex.EncodeToString(inputData)
+
+	fmt.Println(inputDataHexStr)
 	return nil
 }

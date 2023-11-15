@@ -41,6 +41,10 @@ type transactionExt struct {
 
 // SendRequestSync - deal received TxRequest, sync tx result and send response
 func (s *ApiService) SendRequestSync(ctx context.Context, req *commonPb.TxRequest) (*commonPb.TxResponse, error) {
+	if req.Payload.TxType == commonPb.TxType_ETH_TX {
+		return s.sendRawEthTransaction(ctx, req.Payload.GetParameter("RAWTX"), true)
+	}
+
 	s.log.DebugDynamic(func() string {
 		return fmt.Sprintf("SendRequestSync[%s],payload:%#v,\n----signer:%v\n----endorsers:%+v",
 			req.Payload.TxId, req.Payload, req.Sender, req.Endorsers)
@@ -156,10 +160,10 @@ func (d *txResultDispatcher) trySendTxResult(txExt *transactionExt) {
 
 // register for transaction result events.
 // Note that unregister must be called when the registration is no longer needed.
-// - chainId is the chain ID for which events are to be received
-// - txId is the transaction ID for which events are to be received
-// - Returns the channel that is used to receive result. The channel
-//   is closed when unregister is called.
+//   - chainId is the chain ID for which events are to be received
+//   - txId is the transaction ID for which events are to be received
+//   - Returns the channel that is used to receive result. The channel
+//     is closed when unregister is called.
 func (d *txResultDispatcher) register(chainId, txId string) (chan *txResultExt, error) {
 	d.mux.Lock()
 	defer d.mux.Unlock()
