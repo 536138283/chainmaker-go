@@ -101,7 +101,6 @@ P+IsGApSyuHAp0ZEvZP3P2hbjXcRP0J+yw==
 }
 
 func TestCertChainFunction(t *testing.T) {
-	t.Skip()
 	{
 		fmt.Printf("sans is unused: [sans: %s]\n", sans)
 	}
@@ -122,7 +121,7 @@ func TestCertChainFunction(t *testing.T) {
 		DNSName:                   "",
 		Intermediates:             bcx509.NewCertPool(),
 		Roots:                     rootCertPool,
-		CurrentTime:               time.Time{},
+		CurrentTime:               time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local),
 		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		MaxConstraintComparisions: 0,
 	})
@@ -132,7 +131,7 @@ func TestCertChainFunction(t *testing.T) {
 		DNSName:                   "",
 		Intermediates:             intermediateCertPool,
 		Roots:                     rootCertPool,
-		CurrentTime:               time.Time{},
+		CurrentTime:               time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local),
 		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		MaxConstraintComparisions: 0,
 	})
@@ -142,7 +141,7 @@ func TestCertChainFunction(t *testing.T) {
 		DNSName:                   "",
 		Intermediates:             bcx509.NewCertPool(),
 		Roots:                     intermediateCertPool,
-		CurrentTime:               time.Time{},
+		CurrentTime:               time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local),
 		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		MaxConstraintComparisions: 0,
 	})
@@ -156,7 +155,7 @@ func TestCertChainFunction(t *testing.T) {
 		DNSName:                   "",
 		Intermediates:             allPool,
 		Roots:                     rootCertPool,
-		CurrentTime:               time.Time{},
+		CurrentTime:               time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local),
 		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		MaxConstraintComparisions: 0,
 	})
@@ -167,7 +166,7 @@ func TestCertChainFunction(t *testing.T) {
 		DNSName:                   "",
 		Intermediates:             allPool,
 		Roots:                     rootCertPool,
-		CurrentTime:               time.Time{},
+		CurrentTime:               time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local),
 		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		MaxConstraintComparisions: 0,
 	})
@@ -178,7 +177,7 @@ func TestCertChainFunction(t *testing.T) {
 		DNSName:                   "",
 		Intermediates:             allPool,
 		Roots:                     rootCertPool,
-		CurrentTime:               time.Time{},
+		CurrentTime:               time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local),
 		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		MaxConstraintComparisions: 0,
 	})
@@ -192,13 +191,14 @@ func TestCertChainFunction(t *testing.T) {
 		DNSName:                   "",
 		Intermediates:             allPool,
 		Roots:                     rootCertAllPool,
-		CurrentTime:               time.Time{},
+		CurrentTime:               time.Date(2022, time.January, 1, 12, 0, 0, 0, time.Local),
 		KeyUsages:                 []x509.ExtKeyUsage{x509.ExtKeyUsageAny},
 		MaxConstraintComparisions: 0,
 	})
 	require.Nil(t, err)
 	require.NotNil(t, chains)
 	fmt.Printf("%v\n", chains)
+	t.Skip()
 	rawChain := []*bcx509.Certificate{certIntermediate, certRootCA, certLeaf}
 	sortedChain := bcx509.BuildCertificateChain(rawChain)
 	require.NotNil(t, sortedChain)
