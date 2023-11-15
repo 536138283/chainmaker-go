@@ -8,7 +8,7 @@ require (
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.2
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.4-0.20230822095253-b5e761d70bf5
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.4-0.20231113071106-f64fd6e643f5
 	chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20230915124130-a7c865e89eee
 	chainmaker.org/chainmaker/logger/v2 v2.3.0
 	chainmaker.org/chainmaker/net-common v1.2.3
