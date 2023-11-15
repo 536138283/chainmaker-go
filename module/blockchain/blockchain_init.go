@@ -53,6 +53,15 @@ const (
 
 // Init all the modules.
 func (bc *Blockchain) Init() (err error) {
+	chainConfig, err := chainconf.Genesis(bc.genesis)
+	if err != nil {
+		bc.log.Errorf("invoke chain config genesis failed, %s", err)
+		return err
+	}
+	if bc.chainId != chainConfig.ChainId {
+		return fmt.Errorf("the name of the chain id(%s) configured in the genesis block "+
+			"does not match the chain configuration name(%s)", bc.chainId, chainConfig.ChainId)
+	}
 	baseModules := []map[string]func() error{
 		// init Subscriber
 		{moduleNameSubscriber: bc.initSubscriber},
