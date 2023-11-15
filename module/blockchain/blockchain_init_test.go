@@ -716,7 +716,7 @@ func TestBlockchain_Init(t *testing.T) {
 				},
 				startModules: nil,
 			},
-			wantErr: false,
+			wantErr: true,
 		},
 	}
 
