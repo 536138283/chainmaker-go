@@ -686,7 +686,7 @@ func TestBlockchain_Init(t *testing.T) {
 			name: "test0",
 			fields: fields{
 				log:     log,
-				genesis: "chain1",
+				genesis: "./testdata/bc1.yml",
 				chainId: "chain1",
 				msgBus: func() msgbus.MessageBus {
 					msgbus := newMockMessageBus(t)
@@ -716,7 +716,7 @@ func TestBlockchain_Init(t *testing.T) {
 				},
 				startModules: nil,
 			},
-			wantErr: true,
+			wantErr: false,
 		},
 	}
 
