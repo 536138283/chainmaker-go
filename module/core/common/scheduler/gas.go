@@ -21,12 +21,15 @@ func calcTxGasUsed(txSimContext protocol.TxSimContext, log protocol.Logger) (uin
 	if blockVersion < blockVersion2312 {
 		return gasUsed, nil
 	} // for block version < 2030102
+	tx := txSimContext.GetTx()
+	if tx.Payload.TxType == commonPb.TxType_ETH_TX {
+		return 0, nil
+	}
 	gasConfig := gasutils.NewGasConfig(txSimContext.GetLastChainConfig().AccountConfig)
 	if gasConfig == nil {
 		return gasUsed, nil
 	} // for enable_gas == false
 
-	tx := txSimContext.GetTx()
 	contractName := tx.Payload.ContractName
 	method := tx.Payload.Method
 	parameters := tx.Payload.Parameters

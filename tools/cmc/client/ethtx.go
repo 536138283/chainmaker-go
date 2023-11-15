@@ -4,13 +4,13 @@ import (
 	"bytes"
 	"encoding/hex"
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v3/ethbase"
 	"chainmaker.org/chainmaker/common/v3/evmutils/abi"
-	"github.com/hokaccha/go-prettyjson"
+	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
 	"github.com/spf13/cobra"
 )
 
@@ -57,7 +57,7 @@ func sendRawTransaction(rawTxHex string) error {
 	var contractAbi *abi.ABI
 
 	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
-		abiBytes, err := ioutil.ReadFile(abiFilePath)
+		abiBytes, err := os.ReadFile(abiFilePath)
 		if err != nil {
 			return err
 		}
@@ -106,7 +106,8 @@ func estimateGasCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagSdkConfPath, flagSyncResult, flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
+		flagSdkConfPath, flagSyncResult,
+		flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -158,7 +159,8 @@ func callCMD() *cobra.Command {
 	}
 
 	attachFlags(cmd, []string{
-		flagSdkConfPath, flagSyncResult, flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
+		flagSdkConfPath, flagAbiFilePath, flagMethod,
+		flagEthFrom, flagEthTo, flagEthGas, flagEthGasPrice, flagEthValue, flagEthData,
 	})
 
 	cmd.MarkFlagRequired(flagSdkConfPath)
@@ -191,11 +193,44 @@ func call(from string, to string, gas uint64, price uint64, value uint64, data [
 	if err != nil {
 		return fmt.Errorf("query contract failed, %s", err.Error())
 	}
-	output, err := prettyjson.Marshal(resp)
-	if err != nil {
-		return err
+	if resp.Code != commonPb.TxStatusCode_SUCCESS {
+		util.PrintPrettyJson(resp)
+		return nil
 	}
-	fmt.Println(string(output))
+	var contractAbi *abi.ABI
+	if abiFilePath != "" { // abi file path 非空 意味着调用的是EVM合约
+		abiBytes, err := os.ReadFile(abiFilePath)
+		if err != nil {
+			return nil
+		}
+
+		contractAbi, err = abi.JSON(bytes.NewReader(abiBytes))
+		if err != nil {
+			return nil
+		}
+	}
+	var output interface{}
+	if contractAbi != nil && resp.ContractResult != nil && resp.ContractResult.Result != nil {
+		unpackedData, err := contractAbi.Unpack(method, resp.ContractResult.Result)
+		if err != nil {
+			fmt.Println(err)
+			return nil
+		}
+		output = types.EvmTxResponse{
+			TxResponse: resp,
+			ContractResult: &types.EvmContractResult{
+				ContractResult: resp.ContractResult,
+				Result:         fmt.Sprintf("%v", unpackedData),
+			},
+		}
+	} else {
+		if respResultToString {
+			output = util.RespResultToString(resp)
+		} else {
+			output = resp
+		}
+	}
+	util.PrintPrettyJson(output)
 	return nil
 }
 
@@ -225,7 +260,7 @@ func abiPackCMD() *cobra.Command {
 func abiPack() error {
 	var contractAbi *abi.ABI
 
-	abiBytes, err := ioutil.ReadFile(abiFilePath)
+	abiBytes, err := os.ReadFile(abiFilePath)
 	if err != nil {
 		return err
 	}
