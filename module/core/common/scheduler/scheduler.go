@@ -389,7 +389,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ts.log.DebugDynamic(func() string {
 		return fmt.Sprintf("handleTx(`%v`) => executeTx(...) => runVmSuccess = %v", tx.GetPayload().TxId, runVmSuccess)
 	})
-	if specialTxType == protocol.ExecOrderTxTypeIterator {
+	if specialTxType == protocol.ExecOrderTxTypeIterator && collection != nil {
 		txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
 			tx.Payload.ContractName,
 			tx.Payload.Method,
