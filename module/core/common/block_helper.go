@@ -1197,36 +1197,38 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		chain.log.Errorf("block illegal [%d](hash:%x), %s", height, block.Header.BlockHash, err)
 		return err
 	}
+
+	// get the last proposed block from proposal cache
 	lastProposed, rwSetMap, conEventMap := chain.proposalCache.GetProposedBlock(block)
 	if lastProposed == nil {
 		if lastProposed, rwSetMap, conEventMap, err = chain.checkLastProposedBlock(block); err != nil {
 			return err
 		}
-	} else if IfOpenConsensusMessageTurbo(chain.chainConf) {
-		// recover the block for proposer when enable the conensus message turbo function.
-		lastProposed.Header = block.Header
 	}
 
-	if lastProposed.AdditionalData == nil || lastProposed.AdditionalData.ExtraData == nil {
-		lastProposed.AdditionalData = &commonPb.AdditionalData{
-			ExtraData: make(map[string][]byte),
-		}
+	// shallow copy, create a new block to prevent panic during storage in marshal.
+	commitBlock := CopyBlock(lastProposed)
+
+	if IfOpenConsensusMessageTurbo(chain.chainConf) {
+		// recover the block for proposer when enable the conensus message turbo function.
+		commitBlock.Header = block.Header
+	}
+
+	// Reconstructs additionalData for the newly built commit block object
+	// to prevent sharing pointers with other modules.
+	commitBlock.AdditionalData = &commonPb.AdditionalData{
+		ExtraData: make(map[string][]byte),
 	}
 
 	// This code is primarily used to iterate through the 'additionalData' and populate
-	// it into the 'lastProposed' object.
+	// it into the 'commitBlock' object.
 	// This helps prevent potential concurrent read-write issues when putting a block.
 	// These issues may arise due to changes made by the consensus module
 	// in the values contained within the 'additionalData' of the sync module.
 	// Such issues can further lead to runtime panic.
 	for k, v := range block.AdditionalData.ExtraData {
-		if _, ok := lastProposed.AdditionalData.ExtraData[k]; !ok {
-			lastProposed.AdditionalData.ExtraData[k] = v
-		}
+		commitBlock.AdditionalData.ExtraData[k] = v
 	}
-
-	// shallow copy, create a new block to prevent panic during storage in marshal
-	commitBlock := CopyBlock(lastProposed)
 
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
@@ -1238,7 +1240,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 
 	// Remove txs from txpool. Remove will invoke proposeSignal from txpool if pool size > txcount
 	startPoolTick := utils.CurrentTimeMillisSeconds()
-	txRetry, batchRetry, batchIds, err := chain.syncWithTxPool(lastProposed, height)
+	txRetry, batchRetry, batchIds, err := chain.syncWithTxPool(commitBlock, height)
 	if err != nil {
 		return err
 	}
@@ -1248,9 +1250,9 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		chain.txPool.RetryTxBatches(batchRetry)
 		chain.txPool.RemoveTxBatches(batchIds, protocol.NORMAL)
 	} else {
-		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(lastProposed.Txs), len(txRetry))
+		chain.log.Infof("remove txs[%d] and retry txs[%d] in add block", len(commitBlock.Txs), len(txRetry))
 		chain.txPool.RetryTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(txRetry))
-		chain.txPool.RemoveTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(lastProposed.Txs), protocol.NORMAL)
+		chain.txPool.RemoveTxs(coinbasemgr.FilterCoinBaseTxOrGasTx(commitBlock.Txs), protocol.NORMAL)
 	}
 
 	poolLasts := utils.CurrentTimeMillisSeconds() - startPoolTick
@@ -1274,7 +1276,7 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 	chain.log.Infof(
 		"commit block [%d](count:%d,hash:%x)"+
 			"time used(check:%d,db:%d,ss:%d,conf:%d,pool:%d,pubConEvent:%d,filter:%d,other:%d,total:%d,interval:%d)",
-		height, lastProposed.Header.TxCount, lastProposed.Header.BlockHash,
+		height, commitBlock.Header.TxCount, commitBlock.Header.BlockHash,
 		checkLasts, dbLasts, snapshotLasts, confLasts, poolLasts, pubEvent, filterLasts, otherLasts, elapsed, interval)
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		blockInfoTmp := *blockInfo
