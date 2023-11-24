@@ -287,6 +287,11 @@ func (s *SenderCollection) checkBalanceInSenderCollection(
 		return nil
 	}
 
+	// 处理需要扣费，但没有设置 gas_limit 的交易
+	if tx.Payload.Limit == nil {
+		return errors.New("tx need charge gas, but not gas limit was supplied")
+	}
+
 	address, exist := s.txAddressCache[tx.Payload.TxId]
 	if !exist {
 		return fmt.Errorf("cannot find account balance for %v", tx.Payload.TxId)
