@@ -79,6 +79,7 @@ require (
 )
 
 replace (
+	chainmaker.org/chainmaker/lws => chainmaker.org/chainmaker/lws v1.2.1-0.20230918025726-ea744645e727
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.2

@@ -35,8 +35,8 @@ chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20230915124130-a7c865e89eee h1:h
 chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20230915124130-a7c865e89eee/go.mod h1:Tnxd8Ed8I0GJxhEHSBUtO8vArDGgiWoQO1i1uWa6Nfc=
 chainmaker.org/chainmaker/logger/v2 v2.3.0 h1:SuBA48m+OQ5HChX34j6eXk4o0uhXHi8Jfkrjf90U7rQ=
 chainmaker.org/chainmaker/logger/v2 v2.3.0/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
-chainmaker.org/chainmaker/lws v1.1.0 h1:i8J4KTlDAOtZjBtzwS0MpFXCQdGyHdyOJVsXqjxY1bQ=
-chainmaker.org/chainmaker/lws v1.1.0/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
+chainmaker.org/chainmaker/lws v1.2.1-0.20230918025726-ea744645e727 h1:8WYABo6YcMkt/G779/SJH/jxtGgpoS1VeqVALzq0f3I=
+chainmaker.org/chainmaker/lws v1.2.1-0.20230918025726-ea744645e727/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
 chainmaker.org/chainmaker/net-common v1.2.0/go.mod h1:o+uQGFfylEb/qgFx03j7zSymRLt/3FmKQg8eN2k6m34=
 chainmaker.org/chainmaker/net-common v1.2.2/go.mod h1:pfTTIYzQ9RxVKsfn7eI8ztlU4hiIT57G8KVTOsSd75A=
 chainmaker.org/chainmaker/net-common v1.2.3 h1:fdpFZWNgiQHb2jfIZI6aKGGSRSy1LDDOYH6gRMvvzHo=
