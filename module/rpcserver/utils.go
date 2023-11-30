@@ -11,6 +11,9 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	"chainmaker.org/chainmaker/logger/v3"
+	"github.com/pkg/errors"
+
 	cmx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
 	"chainmaker.org/chainmaker/localconf/v3"
 	pbac "chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
@@ -45,6 +48,26 @@ func createGMVerifyPeerCertificateFunc(
 		}
 
 		if revoked {
+			return fmt.Errorf("certificate revoked")
+		}
+
+		return nil
+	}
+}
+
+func createMixVerifyPeerCertificateFunc(
+	accessControls []protocol.AccessControlProvider,
+	log *logger.CMLogger,
+) func(rawCerts [][]byte, verifiedChains [][]*cmx509.Certificate) error {
+	return func(rawCerts [][]byte, verifiedChains [][]*cmx509.Certificate) error {
+		revoked, err := isGMRevoked(accessControls, rawCerts, verifiedChains)
+		if err != nil {
+			log.Info(err)
+			return err
+		}
+
+		if revoked {
+			log.Info("certificate revoked")
 			return fmt.Errorf("certificate revoked")
 		}
 
@@ -137,7 +160,7 @@ func checkMemberStatusIsRevoked(accessControls []protocol.AccessControlProvider,
 			}
 
 			if s == pbac.MemberStatus_INVALID || s == pbac.MemberStatus_FROZEN || s == pbac.MemberStatus_REVOKED {
-				return true, nil
+				return true, errors.New("cert status is " + s.String())
 			}
 		}
 	}
