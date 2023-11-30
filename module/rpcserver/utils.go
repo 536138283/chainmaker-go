@@ -7,10 +7,11 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
-	"chainmaker.org/chainmaker/logger/v3"
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+
+	"chainmaker.org/chainmaker/logger/v3"
 	"github.com/pkg/errors"
 
 	cmx509 "chainmaker.org/chainmaker/common/v3/crypto/x509"
