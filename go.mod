@@ -33,7 +33,7 @@ require (
 	chainmaker.org/chainmaker/vm-native/v3 v3.0.1-0.20231115030739-7eab895d3900
 	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1-0.20230726065243-a0dd6f3544e3
 	chainmaker.org/chainmaker/vm-wxvm/v3 v3.0.1-0.20230221095707-a6ef1151257e
-	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20230825080950-ca4d080d4328
+	chainmaker.org/chainmaker/vm/v3 v3.0.1-0.20231205233523-7f0e6b8f94ef
 )
 
 require (
