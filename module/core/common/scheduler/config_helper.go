@@ -64,9 +64,9 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 			}
 		} else {
 			gasUsed := tx.Result.ContractResult.GasUsed
-			pk, err2 := getPayerPkFromTx(tx, snapshot)
+			pk, _, err2 := getPayerPkAndAddress(tx, snapshot)
 			if err2 != nil {
-				return fmt.Errorf("getPayerPkFromTx error: %v", err2)
+				return fmt.Errorf("getPayerPkAndAddress error: %v", err2)
 			}
 
 			// convert the public key to `ZX` or `CM` or `EVM` address
