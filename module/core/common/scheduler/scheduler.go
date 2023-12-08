@@ -1195,22 +1195,16 @@ func (ts *TxScheduler) checkMultiSignFilter2312(
 }
 
 // todo: merge with getPayerPk
-func getPayerPkFromTx(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
-
+func getPayerPkAndAddress(tx *commonPb.Transaction, snapshot protocol.Snapshot) (
+	crypto.PublicKey, string, error) {
 	var err error
-	var publicKey crypto.PublicKey
 	signingMember := getTxPayerSigner(tx)
 	if signingMember == nil {
-		err = errors.New(" can not find sender from tx ")
-		return nil, err
+		err = errors.New(" can not find payer from tx ")
+		return nil, "", err
 	}
 
-	publicKey, _, err = ac.GetMemberPkAndAddress(signingMember, snapshot)
-	if err != nil {
-		return nil, fmt.Errorf("get member public and address failed, err = %v", err)
-	}
-
-	return publicKey, nil
+	return ac.GetMemberPkAndAddress(signingMember, snapshot)
 }
 
 func (ts *TxScheduler) getPayerPk(txSimContext protocol.TxSimContext, tx *commonPb.Transaction) ([]byte, error) {
@@ -1401,9 +1395,9 @@ func (ts *TxScheduler) createChargeGasTx(addressCache map[string]string,
 		address, ok := addressCache[tx.Payload.TxId]
 		if !ok {
 			ts.log.Warnf("load address from cache failed for unknown reason")
-			_, address, err = ts.getSenderPkAndAddress(tx, snapshot)
+			_, address, err = getPayerPkAndAddress(tx, snapshot)
 			if err != nil {
-				ts.log.Errorf("getSenderAddressFromTx failed: err = %v", err)
+				ts.log.Errorf("getPayerPkAndAddress failed: err = %v", err)
 				continue
 			}
 		}
@@ -1496,9 +1490,9 @@ func (ts *TxScheduler) createCoinbaseTx(addressCache map[string]string,
 		address, ok := addressCache[tx.Payload.TxId]
 		if !ok {
 			ts.log.Warnf("load address from cache failed for unknown reason")
-			_, address, err = ts.getSenderPkAndAddress(tx, snapshot)
+			_, address, err = getPayerPkAndAddress(tx, snapshot)
 			if err != nil {
-				ts.log.Errorf("getSenderAddressFromTx failed, err = %v", err)
+				ts.log.Errorf("getPayerPkAndAddress failed, err = %v", err)
 				continue
 			}
 		}
@@ -1842,17 +1836,6 @@ func getTxPayerSigner(tx *commonPb.Transaction) *accesscontrol.Member {
 //	ts.pem2PkCache.Store(string(pkPem), pk)
 //	return pk, nil
 //}
-
-func (ts *TxScheduler) getSenderPkAndAddress(
-	tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, string, error) {
-
-	signingMember := tx.GetSender().GetSigner()
-	if signingMember == nil {
-		return nil, "", errors.New(" can not find sender from tx ")
-	}
-
-	return ac.GetMemberPkAndAddress(signingMember, snapshot)
-}
 
 // nolint: unused
 func (ts *TxScheduler) appendCoinbaseToDAG(

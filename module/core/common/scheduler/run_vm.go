@@ -162,7 +162,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			// in `verify node`:
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
-			pk, _ := getPayerPkFromTx(tx, snapshot)
+			pk, _, _ := getPayerPkAndAddress(tx, snapshot)
 			val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
 				chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
 				return chainCfg, err

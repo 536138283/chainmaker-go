@@ -80,11 +80,12 @@ func (ts *TxScheduler) getSenderTxCollection(
 	var specialTxList []*commonPb.Transaction
 
 	for _, tx := range txBatch {
-		pk, address, err := ts.getTxPayerPkAndAddress(txAddressCache, tx, snapshot)
+		pk, address, err := getPayerPkAndAddress(tx, snapshot)
 		if err != nil {
-			ts.log.Errorf("Scheduler getTxPayerAddress failed, err = %v", err)
+			ts.log.Errorf("Scheduler getPayerPkAndAddress failed, err = %v", err)
 			continue
 		}
+		txAddressCache[tx.Payload.TxId] = address
 
 		txCollection, exists := txCollectionMap[address]
 		if !exists {
@@ -129,20 +130,6 @@ func (ts *TxScheduler) getSenderTxCollection(
 	}
 
 	return txCollectionMap, specialTxList
-}
-
-func (ts *TxScheduler) getTxPayerPkAndAddress(
-	txAddressCache map[string]string,
-	tx *commonPb.Transaction,
-	snapshot protocol.Snapshot) (crypto.PublicKey, string, error) {
-
-	pk, address, err := ts.getSenderPkAndAddress(tx, snapshot)
-	if err != nil {
-		return nil, "", fmt.Errorf("get sender pk failed: err = %v", err)
-	}
-
-	txAddressCache[tx.Payload.TxId] = address
-	return pk, address, nil
 }
 
 // Clear clear addr in txs map
