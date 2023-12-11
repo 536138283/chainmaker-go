@@ -24,6 +24,7 @@ import (
 	"chainmaker.org/chainmaker/localconf/v3"
 	"chainmaker.org/chainmaker/pb-go/v3/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v3/common"
+	"chainmaker.org/chainmaker/pb-go/v3/config"
 	"chainmaker.org/chainmaker/pb-go/v3/consensus"
 	"chainmaker.org/chainmaker/pb-go/v3/syscontract"
 	"chainmaker.org/chainmaker/protocol/v3"
@@ -743,7 +744,6 @@ func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *Confl
 func (ts *TxScheduler) executeTx(
 	tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block, collection *SenderCollection) (
 	protocol.TxSimContext, protocol.ExecOrderTxType, bool) {
-
 	txSimContext := vm.NewTxSimContext(ts.VmManager, snapshot, tx, block.Header.BlockVersion, ts.log)
 	ts.log.DebugDynamic(func() string {
 		return fmt.Sprintf("NewTxSimContext finished for tx id:%s", tx.Payload.GetTxId())
@@ -758,70 +758,23 @@ func (ts *TxScheduler) executeTx(
 	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
 	blockVersion := block.GetHeader().BlockVersion
 
+	txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
+		tx.Payload.ContractName,
+		tx.Payload.Method,
+		tx,
+		txSimContext.GetSnapshot()) && (enableOptimizeChargeGas || enableGas)
 	// 300后，修复原gas余额不足的错误处理
 	if blockVersion >= blockVersion3000000 {
-		txNeedChargeGas := ts.checkNativeFilter(txSimContext.GetBlockVersion(),
-			tx.Payload.ContractName,
-			tx.Payload.Method,
-			tx,
-			txSimContext.GetSnapshot())
-
-		// checking for balance is not enough
-		if enableOptimizeChargeGas {
-			if err2 := collection.checkBalanceInSenderCollection(tx, txNeedChargeGas, ts.log); err2 != nil {
-				runVmSuccess = false
-				txResult = &commonPb.Result{
-					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
-					Message: err2.Error(),
-					ContractResult: &commonPb.ContractResult{
-						Code:    1,
-						Message: err2.Error(),
-						GasUsed: uint64(0),
-					},
-				}
-				ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ",
-					tx.Payload.TxId, runVmSuccess, txResult)
-				txSimContext.SetTxResult(txResult)
-				return txSimContext, protocol.ExecOrderTxTypeNormal, runVmSuccess
-			}
-		}
-
-		if !ts.guardForExecuteTx300(
-			tx, txSimContext, txNeedChargeGas, enableGas, enableOptimizeChargeGas, snapshot, collection) {
-			return txSimContext, protocol.ExecOrderTxTypeNormal, false
-		}
-
-		ts.log.Debugf("run vm start for tx:%s", tx.Payload.GetTxId())
-		if txResult, specialTxType, err = ts.runVM2300(tx, txSimContext, enableOptimizeChargeGas); err != nil {
-			runVmSuccess = false
-			ts.log.Errorf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
-				tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
-		}
-		if enableOptimizeChargeGas {
-			txNeedChargingGas := ts.checkNativeFilter(
-				txSimContext.GetBlockVersion(),
-				tx.Payload.ContractName,
-				tx.Payload.Method,
-				tx,
-				txSimContext.GetSnapshot()) && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT
-			ts.log.Debugf("txNeedChargingGas = %v", txNeedChargingGas)
-			if gasCharged, err2 := collection.chargeGasInSenderCollection(tx, txResult, txNeedChargingGas); err2 != nil {
-				runVmSuccess = false
-				txResult = &commonPb.Result{
-					Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
-					Message: err2.Error(),
-					ContractResult: &commonPb.ContractResult{
-						Code:    1,
-						GasUsed: gasCharged,
-						Message: err2.Error(),
-					},
-				}
-			}
-		}
-
+		specialTxType, runVmSuccess = ts.executeTx3000(
+			tx, snapshot, block, collection, enableOptimizeChargeGas, txNeedChargeGas, txSimContext)
+		return txSimContext, specialTxType, runVmSuccess
 	} else if blockVersion >= 2300 {
-		if !ts.guardForExecuteTx2300(tx, txSimContext, enableGas, enableOptimizeChargeGas, snapshot) {
-			return txSimContext, protocol.ExecOrderTxTypeNormal, false
+		if txNeedChargeGas {
+			addr := ts.getGasAddress(tx, txSimContext, snapshot)
+			if !ts.guardForExecuteTx2300(
+				tx, txSimContext, enableOptimizeChargeGas, addr, commonPb.TxStatusCode_SUCCESS, false) {
+				return txSimContext, protocol.ExecOrderTxTypeNormal, false
+			}
 		}
 
 		ts.log.Debugf("run vm start for tx:%s", tx.Payload.GetTxId())
@@ -854,6 +807,108 @@ func (ts *TxScheduler) executeTx(
 	ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ", tx.Payload.TxId, runVmSuccess, txResult)
 	txSimContext.SetTxResult(txResult)
 	return txSimContext, specialTxType, runVmSuccess
+}
+
+func (ts *TxScheduler) executeTx3000(tx *commonPb.Transaction, snapshot protocol.Snapshot, block *commonPb.Block,
+	collection *SenderCollection, enableOptimizeChargeGas, txNeedChargeGas bool, txSimContext protocol.TxSimContext) (
+	protocol.ExecOrderTxType, bool) {
+	var (
+		runVmSuccess    = true
+		txResult        *commonPb.Result
+		specialTxType   protocol.ExecOrderTxType
+		err             error
+		accountStatus   commonPb.TxStatusCode
+		accountAbnormal bool
+		addr            string
+		exist           bool
+	)
+	if txNeedChargeGas {
+		addr, exist = collection.txAddressCache[tx.Payload.TxId]
+		if !exist {
+			ts.log.Warnf("cannot find account balance for %v", tx.Payload.TxId)
+			return protocol.ExecOrderTxTypeNormal, false
+		}
+		col, exi := collection.txsMap[addr]
+		if !exi {
+			ts.log.Warnf("cannot find txCollect for tx %v", tx.Payload.TxId)
+			return protocol.ExecOrderTxTypeNormal, false
+		}
+		if col.accountStatus != commonPb.TxStatusCode_SUCCESS {
+			accountStatus = col.accountStatus
+			accountAbnormal = true
+		}
+	}
+	// checking for balance is not enough
+	if enableOptimizeChargeGas && txNeedChargeGas && !accountAbnormal {
+		if err2 := collection.checkBalanceInSenderCollection(tx, ts.log); err2 != nil {
+			runVmSuccess = false
+			txResult = &commonPb.Result{
+				Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
+				Message: err2.Error(),
+				ContractResult: &commonPb.ContractResult{
+					Code:    1,
+					Message: err2.Error(),
+					GasUsed: uint64(0),
+				},
+			}
+			ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ",
+				tx.Payload.TxId, runVmSuccess, txResult)
+			txSimContext.SetTxResult(txResult)
+			return protocol.ExecOrderTxTypeNormal, false
+		}
+	}
+
+	if txNeedChargeGas && !ts.guardForExecuteTx2300(tx, txSimContext, enableOptimizeChargeGas, addr, accountStatus, true) {
+		return protocol.ExecOrderTxTypeNormal, false
+	}
+
+	ts.log.Debugf("run vm start for tx:%s", tx.Payload.GetTxId())
+	if txResult, specialTxType, err = ts.runVM2300(tx, txSimContext, enableOptimizeChargeGas); err != nil {
+		runVmSuccess = false
+		ts.log.Errorf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
+			tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
+		txSimContext.SetTxResult(txResult)
+	}
+	if enableOptimizeChargeGas {
+		txNeedChargingGas := txNeedChargeGas && tx.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT
+		ts.log.Debugf("txNeedChargingGas = %v", txNeedChargingGas)
+		if gasCharged, err2 := collection.chargeGasInSenderCollection(tx, txResult, txNeedChargingGas); err2 != nil {
+			runVmSuccess = false
+			txResult = &commonPb.Result{
+				Code:    commonPb.TxStatusCode_CONTRACT_FAIL,
+				Message: err2.Error(),
+				ContractResult: &commonPb.ContractResult{
+					Code:    1,
+					GasUsed: gasCharged,
+					Message: err2.Error(),
+				},
+			}
+		}
+		ts.log.Debugf("run vm finished for tx:%s, runVmSuccess:%v, txResult = %v ", tx.Payload.TxId, runVmSuccess, txResult)
+	}
+	txSimContext.SetTxResult(txResult)
+	return specialTxType, runVmSuccess
+}
+
+func (ts *TxScheduler) getGasAddress(tx *commonPb.Transaction,
+	txSimContext protocol.TxSimContext, snapshot protocol.Snapshot) string {
+	pk, _, _ := getPayerPkAndAddress(tx, snapshot)
+	val, err, _ := sf.Do(txSimContext.GetBlockFingerprint(), func() (interface{}, error) {
+		chainCfg, err := txSimContext.GetBlockchainStore().GetLastChainConfig()
+		return chainCfg, err
+	})
+	if err != nil {
+		ts.log.Errorf("get LastChainConfig error: %v", err)
+		return ""
+	}
+	chainCfg, ok := val.(*config.ChainConfig)
+	if !ok {
+		ts.log.Errorf("failed to transfer chainConfig from interface to struct")
+		return ""
+	}
+	//chainCfg := txSimContext.GetLastChainConfig()
+	addr, _ := pkToGasAddress(pk, chainCfg)
+	return addr
 }
 
 func (ts *TxScheduler) simulateSpecialTxs(specialTxs []*commonPb.Transaction,
@@ -1203,7 +1258,6 @@ func getPayerPkAndAddress(tx *commonPb.Transaction, snapshot protocol.Snapshot) 
 		err = errors.New(" can not find payer from tx ")
 		return nil, "", err
 	}
-
 	return ac.GetMemberPkAndAddress(signingMember, snapshot)
 }
 

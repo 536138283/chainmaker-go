@@ -50,8 +50,6 @@ chainmaker.org/chainmaker/net-libp2p v1.3.0/go.mod h1:ghr047fYkskn6AzZDJCk4QDqQo
 chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20231108132524-8cf8422b4bbf h1:pzuZAb4u4Y4nxqEeLP9GxcUXOnCHCu0Kby1nEqwHBuk=
 chainmaker.org/chainmaker/net-libp2p v1.3.1-0.20231108132524-8cf8422b4bbf/go.mod h1:Mj74mGnKVzcn0Pbrdh4G2W9NsBdzLhklqcYI4B4obms=
 chainmaker.org/chainmaker/net-liquid v1.3.0/go.mod h1:UxmWusKI1YD9LLeBTvJioXNfcA7QRN8uJfh2K3CNx2g=
-chainmaker.org/chainmaker/net-liquid v1.3.1-0.20231026085059-8414aaf8efcf h1:BcUYroyb/ZiGrQRF7SzAa+e5BK47OOlYImjmoocng6c=
-chainmaker.org/chainmaker/net-liquid v1.3.1-0.20231026085059-8414aaf8efcf/go.mod h1:q+KNUEErJmCiNtHfx99Hi5UhC8a/OJPeECP4Q2hACl0=
 chainmaker.org/chainmaker/net-liquid v1.3.1-0.20231211102842-f5fb02b82655 h1:dAvUBPCAeIGAeIctUIahtagH8yd6H5TVKq67x5Ot+Zw=
 chainmaker.org/chainmaker/net-liquid v1.3.1-0.20231211102842-f5fb02b82655/go.mod h1:q+KNUEErJmCiNtHfx99Hi5UhC8a/OJPeECP4Q2hACl0=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.3/go.mod h1:iFPBDm4j5qxctV2GJ+41KrZXEAvsJouoGUCOAbueG/Q=
