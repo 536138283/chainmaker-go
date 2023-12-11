@@ -4,6 +4,7 @@ Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
 
 SPDX-License-Identifier: Apache-2.0
 */
+
 package rpcserver
 
 import (
@@ -61,7 +62,7 @@ func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 		}
 	}
 
-	if err = s.checkSubscribeContractEventPayload(startBlock, endBlock, contractName); err != nil {
+	if err = s.checkSubscribeContractEventPayload(startBlock, endBlock); err != nil {
 		errCode = commonErr.ERR_CODE_CHECK_PAYLOAD_PARAM_SUBSCRIBE_CONTRACT_EVENT
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
@@ -82,17 +83,12 @@ func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 	return s.doSendContractEvent(tx, db, server, startBlock, endBlock, contractName, topic)
 }
 
-func (s *ApiService) checkSubscribeContractEventPayload(startBlockHeight, endBlockHeight int64,
-	contractName string) error {
+func (s *ApiService) checkSubscribeContractEventPayload(startBlockHeight, endBlockHeight int64) error {
 
 	if startBlockHeight < -1 || endBlockHeight < -1 ||
 		(endBlockHeight != -1 && startBlockHeight > endBlockHeight) {
 
 		return errors.New("invalid start block height or end block height")
-	}
-
-	if contractName == "" {
-		return errors.New("contractName can't be empty")
 	}
 
 	return nil
@@ -243,31 +239,29 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 	)
 
 	for _, tx := range block.Txs {
-		var eventInfos commonPb.ContractEventInfoList
+		var contractEvents []*commonPb.ContractEventInfo
 		for idx, event := range tx.Result.ContractResult.ContractEvent {
-			if topic == "" || topic == event.Topic {
-				if contractName != event.ContractName {
-					continue
-				}
+			if contractName == "" || contractName == event.ContractName {
+				if topic == "" || topic == event.Topic {
+					eventInfo := commonPb.ContractEventInfo{
+						BlockHeight:     block.Header.BlockHeight,
+						ChainId:         block.Header.ChainId,
+						Topic:           event.Topic,
+						TxId:            tx.Payload.TxId,
+						EventIndex:      uint32(idx),
+						ContractName:    event.ContractName,
+						ContractVersion: event.ContractVersion,
+						EventData:       event.EventData,
+					}
 
-				eventInfo := commonPb.ContractEventInfo{
-					BlockHeight:     block.Header.BlockHeight,
-					ChainId:         block.Header.ChainId,
-					Topic:           event.Topic,
-					TxId:            tx.Payload.TxId,
-					EventIndex:      uint32(idx),
-					ContractName:    event.ContractName,
-					ContractVersion: event.ContractVersion,
-					EventData:       event.EventData,
-				}
-
-				if eventInfo.BlockHeight != 0 {
-					eventInfos.ContractEvents = append(eventInfos.ContractEvents, &eventInfo)
+					if eventInfo.BlockHeight != 0 {
+						contractEvents = append(contractEvents, &eventInfo)
+					}
 				}
 			}
 		}
 
-		if err = s.doSendSubscribeContractEvent(server, eventInfos.ContractEvents, contractName, topic); err != nil {
+		if err = s.doSendSubscribeContractEvent(server, contractEvents); err != nil {
 			return err
 		}
 	}
@@ -276,7 +270,7 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 }
 
 func (s *ApiService) doSendSubscribeContractEvent(server apiPb.RpcNode_SubscribeServer,
-	contractEvents []*commonPb.ContractEventInfo, contractName, topic string) error {
+	contractEvents []*commonPb.ContractEventInfo) error {
 
 	var (
 		err    error
@@ -284,19 +278,11 @@ func (s *ApiService) doSendSubscribeContractEvent(server apiPb.RpcNode_Subscribe
 		result *commonPb.SubscribeResult
 	)
 
-	sendContractEvents := []*commonPb.ContractEventInfo{}
-	for _, EventInfo := range contractEvents {
-		if EventInfo.ContractName != contractName || (topic != "" && EventInfo.Topic != topic) {
-			continue
-		}
-		sendContractEvents = append(sendContractEvents, EventInfo)
-	}
-
-	if len(sendContractEvents) == 0 {
+	if len(contractEvents) == 0 {
 		return nil
 	}
 
-	if result, err = s.getContractEventSubscribeResult(sendContractEvents); err != nil {
+	if result, err = s.getContractEventSubscribeResult(contractEvents); err != nil {
 		errMsg = fmt.Sprintf("get contract event subscribe result failed, %s", err)
 		s.log.Error(errMsg)
 		return errors.New(errMsg)
