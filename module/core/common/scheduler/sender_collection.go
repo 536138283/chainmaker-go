@@ -32,7 +32,8 @@ type TxCollection struct {
 	// total gas added each tx
 	totalGasUsed uint64
 	txs          []*commonPb.Transaction
-
+	// the account is normal or not
+	accountStatus commonPb.TxStatusCode
 	// Mutex for synchronizing concurrent access to accountBalance
 	mu sync.Mutex
 }
@@ -89,16 +90,29 @@ func (ts *TxScheduler) getSenderTxCollection(
 
 		txCollection, exists := txCollectionMap[address]
 		if !exists {
-			balance, err := getAccountBalanceFromSnapshot(address, snapshot, ts.log)
-			if err != nil {
-				ts.log.Error("get balance failed, err = %v", err)
-				continue
+			ts.log.Debugf("address = %v, blockVersion = %v", address, blockVersion)
+			var (
+				balance    int64
+				err        error
+				statusCode commonPb.TxStatusCode
+			)
+			if blockVersion < blockVersion2310 {
+				balance, err = getAccountBalanceFromSnapshot2300(address, snapshot, ts.log)
+				if err != nil {
+					ts.log.Warnf("get balance failed, err = %+v", err)
+				}
+			} else {
+				balance, statusCode = getAccountBalanceFromSnapshot2310(address, snapshot, ts.log)
+				if statusCode != commonPb.TxStatusCode_SUCCESS {
+					ts.log.Warnf("get balance failed, err = %s", statusCode.String())
+				}
 			}
 			txCollection = &TxCollection{
 				publicKey:      pk,
 				accountBalance: uint64(balance),
 				totalGasUsed:   0,
 				txs:            make([]*commonPb.Transaction, 0),
+				accountStatus:  statusCode,
 			}
 			txCollectionMap[address] = txCollection
 		}
@@ -111,6 +125,11 @@ func (ts *TxScheduler) getSenderTxCollection(
 			tx, snapshot)
 
 		if txNeedChargeGas {
+			// account status abnormal
+			if txCollection.accountStatus != commonPb.TxStatusCode_SUCCESS {
+				txCollection.txs = append(txCollection.txs, tx)
+				continue
+			}
 			if tx.Payload.Limit != nil {
 				if err := txCollection.addTxGas(tx.Payload.Limit.GasLimit); err != nil {
 					continue
@@ -266,13 +285,7 @@ func uint64SafeSub(num1 uint64, num2 uint64) (uint64, bool) {
 	return 0, true
 }
 
-func (s *SenderCollection) checkBalanceInSenderCollection(
-	tx *commonPb.Transaction, txNeedChargeGas bool, log protocol.Logger) error {
-
-	// 处理不需要扣费的交易
-	if !txNeedChargeGas {
-		return nil
-	}
+func (s *SenderCollection) checkBalanceInSenderCollection(tx *commonPb.Transaction, log protocol.Logger) error {
 
 	// 处理需要扣费，但没有设置 gas_limit 的交易
 	if tx.Payload.Limit == nil {
@@ -306,20 +319,6 @@ func (s *SenderCollection) checkBalanceInSenderCollection(
 	return nil
 }
 
-// getAccountBalanceFromSnapshot get account balance from snapshot
-func getAccountBalanceFromSnapshot(
-	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
-	chainConfig := snapshot.GetLastChainConfig()
-	blockVersion := chainConfig.GetBlockVersion()
-	log.Debugf("address = %v, blockVersion = %v", address, blockVersion)
-
-	if blockVersion < blockVersion2310 {
-		return getAccountBalanceFromSnapshot2300(address, snapshot, log)
-	}
-
-	return getAccountBalanceFromSnapshot2310(address, snapshot, log)
-}
-
 // getAccountBalanceFromSnapshot2300 get account balance from snapshot for 2300 version
 func getAccountBalanceFromSnapshot2300(
 	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
@@ -347,7 +346,7 @@ func getAccountBalanceFromSnapshot2300(
 
 // getAccountBalanceFromSnapshot2310 get account balance from snapshot for 2310 version
 func getAccountBalanceFromSnapshot2310(
-	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, error) {
+	address string, snapshot protocol.Snapshot, log protocol.Logger) (int64, commonPb.TxStatusCode) {
 	var err error
 	var balance int64
 	var frozen bool
@@ -357,7 +356,7 @@ func getAccountBalanceFromSnapshot2310(
 		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 		[]byte(accountmgr.AccountPrefix+address))
 	if err != nil {
-		return -1, err
+		return -1, commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
 	}
 
 	if len(balanceData) == 0 {
@@ -365,7 +364,7 @@ func getAccountBalanceFromSnapshot2310(
 	} else {
 		balance, err = strconv.ParseInt(string(balanceData), 10, 64)
 		if err != nil {
-			return 0, err
+			return 0, commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
 		}
 	}
 
@@ -374,7 +373,7 @@ func getAccountBalanceFromSnapshot2310(
 		syscontract.SystemContract_ACCOUNT_MANAGER.String(),
 		[]byte(accountmgr.FrozenPrefix+address))
 	if err != nil {
-		return -1, err
+		return -1, commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED
 	}
 
 	if len(frozenData) == 0 {
@@ -389,8 +388,8 @@ func getAccountBalanceFromSnapshot2310(
 	log.Debugf("balance = %v, freeze = %v", balance, frozen)
 
 	if frozen {
-		return 0, fmt.Errorf("account `%s` has been locked", address)
+		return 0, commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN
 	}
 
-	return balance, nil
+	return balance, commonPb.TxStatusCode_SUCCESS
 }
