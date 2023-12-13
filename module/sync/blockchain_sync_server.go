@@ -28,7 +28,7 @@ import (
 
 var _ protocol.SyncService = (*BlockChainSyncServer)(nil)
 
-//BlockChainSyncServer Service for synchronizing blocks
+// BlockChainSyncServer Service for synchronizing blocks
 type BlockChainSyncServer struct {
 	chainId string
 	// receive/broadcast messages from net module
@@ -63,7 +63,7 @@ type BlockChainSyncServer struct {
 	commitBlockC chan struct{}
 }
 
-//NewBlockChainSyncServer Create a new BlockChainSyncServer instance
+// NewBlockChainSyncServer Create a new BlockChainSyncServer instance
 func NewBlockChainSyncServer(
 	chainId string,
 	net protocol.NetService,
@@ -91,8 +91,8 @@ func NewBlockChainSyncServer(
 	return syncServer
 }
 
-//Start BlockChainSyncServer preparing the required dependencies for the server to run properly
-//if an error is encountered, the startup failed, please check it.
+// Start BlockChainSyncServer preparing the required dependencies for the server to run properly
+// if an error is encountered, the startup failed, please check it.
 func (sync *BlockChainSyncServer) Start() error {
 	if !atomic.CompareAndSwapInt32(&sync.start, 0, 1) {
 		return commonErrors.ErrSyncServiceHasStarted
@@ -135,7 +135,7 @@ func (sync *BlockChainSyncServer) Start() error {
 	return nil
 }
 
-//init sync server config
+// init sync server config
 func (sync *BlockChainSyncServer) initSyncConfIfRequire() {
 	defer func() {
 		sync.log.Infof(sync.conf.print())
@@ -176,8 +176,8 @@ func (sync *BlockChainSyncServer) initSyncConfIfRequire() {
 	}
 }
 
-//handle messages received from the network that care about
-//do the corresponding processing according to the type of the message
+// handle messages received from the network that care about
+// do the corresponding processing according to the type of the message
 func (sync *BlockChainSyncServer) blockSyncMsgHandler(from string, msg []byte, msgType netPb.NetMsg_MsgType) error {
 	if atomic.LoadInt32(&sync.start) != 1 {
 		return commonErrors.ErrSyncServiceHasStoped
@@ -213,7 +213,7 @@ func (sync *BlockChainSyncServer) blockSyncMsgHandler(from string, msg []byte, m
 	return fmt.Errorf("not support the syncPb.SyncMsg.Type as %d", syncMsg.Type)
 }
 
-//handleNodeStatusReq get own block state information and send it to where the request is from
+// handleNodeStatusReq get own block state information and send it to where the request is from
 func (sync *BlockChainSyncServer) handleNodeStatusReq(from string) error {
 	var (
 		height uint64
@@ -231,7 +231,7 @@ func (sync *BlockChainSyncServer) handleNodeStatusReq(from string) error {
 	return sync.sendMsg(syncPb.SyncMsg_NODE_STATUS_RESP, bz, from)
 }
 
-//handleNodeStatusResp notify the peer's state information send by 'from' to scheduler
+// handleNodeStatusResp notify the peer's state information send by 'from' to scheduler
 func (sync *BlockChainSyncServer) handleNodeStatusResp(syncMsg *syncPb.SyncMsg, from string) error {
 	msg := syncPb.BlockHeightBCM{}
 	if err := proto.Unmarshal(syncMsg.Payload, &msg); err != nil {
@@ -242,11 +242,11 @@ func (sync *BlockChainSyncServer) handleNodeStatusResp(syncMsg *syncPb.SyncMsg, 
 	return sync.scheduler.addTask(&NodeStatusMsg{msg: msg, from: from})
 }
 
-//handleBlockReq to avoid repeated requests for the same block data in a short period of time
-//cache requests using 'requestCache', key consists of the request source and block height
-//value is current time
-//firstly check if the request already exists in the cache，if yes, reject
-//otherwise, get the corresponding block data from the local ledger and send it back
+// handleBlockReq to avoid repeated requests for the same block data in a short period of time
+// cache requests using 'requestCache', key consists of the request source and block height
+// value is current time
+// firstly check if the request already exists in the cache，if yes, reject
+// otherwise, get the corresponding block data from the local ledger and send it back
 func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from string) error {
 	var (
 		err error
@@ -271,17 +271,17 @@ func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from s
 	return sync.sendInfos(&req, from)
 }
 
-//sendInfos send block data to 'from'.
-//`req
+// sendInfos send block data to 'from'.
+// `req
 // BlockHeight: get block data starting from the this height
 // BatchSize: the number of blocks to be acquired at one time
 // WithRwset: the block data has a read-write set or not
-//`
-//we should get block data whose height is in [req.BlockHeight, req.BlockHeight+req.BatchSize)
-//the request height may exceed the block height in the local ledger
-//if so, blockChainStore will return a nil block without a error, need to skip it instead of sending it
-//since a block data will be large, we send it one by one instead of all at once
-//to reduce errors during network transmission.
+// `
+// we should get block data whose height is in [req.BlockHeight, req.BlockHeight+req.BatchSize)
+// the request height may exceed the block height in the local ledger
+// if so, blockChainStore will return a nil block without a error, need to skip it instead of sending it
+// since a block data will be large, we send it one by one instead of all at once
+// to reduce errors during network transmission.
 func (sync *BlockChainSyncServer) sendInfos(req *syncPb.BlockSyncReq, from string) error {
 	var (
 		bz        []byte
@@ -345,7 +345,7 @@ func (sync *BlockChainSyncServer) sendMsg(msgType syncPb.SyncMsg_MsgType, msg []
 	return nil
 }
 
-//broadcastMsg broadcast messages to other nodes
+// broadcastMsg broadcast messages to other nodes
 func (sync *BlockChainSyncServer) broadcastMsg(msgType syncPb.SyncMsg_MsgType, msg []byte) error {
 	var (
 		bs  []byte
@@ -365,10 +365,10 @@ func (sync *BlockChainSyncServer) broadcastMsg(msgType syncPb.SyncMsg_MsgType, m
 	return nil
 }
 
-//synchronization service advance workflow in an event-driven way
-//some events are driven by timers
-//some events are emitted from worker modules
-//loop waiting for an event to happen and do the corresponding processing
+// synchronization service advance workflow in an event-driven way
+// some events are driven by timers
+// some events are emitted from worker modules
+// loop waiting for an event to happen and do the corresponding processing
 func (sync *BlockChainSyncServer) loop() {
 	var (
 		// task: trigger the flow of the block process
@@ -444,8 +444,8 @@ func (sync *BlockChainSyncServer) loop() {
 }
 
 // auto check block request from other node
-//regularly check whether the cached request information has expired
-//if it expires, remove it from the cache
+// regularly check whether the cached request information has expired
+// if it expires, remove it from the cache
 func (sync *BlockChainSyncServer) blockRequestEntrance() {
 	ticker := time.NewTicker(sync.conf.blockRequestTime)
 	dealFunc := func(key, value interface{}) bool {
@@ -476,11 +476,11 @@ func (sync *BlockChainSyncServer) ListenSyncToIdealHeight() <-chan struct{} {
 	return sync.minLagReachC
 }
 
-//verify and submit the block data does not carry the read-write set
-//different types of status are returned depending on the stage in which the error occurred
-//verify failed then return validateFailed status
-//commit failed if block has been committed return hasProcessed, if not return addErr
-//all succeeded return ok
+// verify and submit the block data does not carry the read-write set
+// different types of status are returned depending on the stage in which the error occurred
+// verify failed then return validateFailed status
+// commit failed if block has been committed return hasProcessed, if not return addErr
+// all succeeded return ok
 func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) processedBlockStatus {
 	if blk := sync.ledgerCache.GetLastCommittedBlock(); blk != nil && blk.Header.BlockHeight >= block.Header.BlockHeight {
 		sync.log.Infof("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
@@ -509,11 +509,11 @@ func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) 
 	return ok
 }
 
-//verify and submit the block data carries the read-write set
-//different types of status are returned depending on the stage in which the error occurred
-//verify failed then return validateFailed status
-//commit failed if block has been committed return hasProcessed, if not return addErr
-//all succeeded return ok
+// verify and submit the block data carries the read-write set
+// different types of status are returned depending on the stage in which the error occurred
+// verify failed then return validateFailed status
+// commit failed if block has been committed return hasProcessed, if not return addErr
+// all succeeded return ok
 func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *commonPb.Block,
 	rwsets []*commonPb.TxRWSet) processedBlockStatus {
 	//if the height of the local ledger is not lower than this block height
@@ -548,18 +548,18 @@ func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *common
 	return ok
 }
 
-//StopBlockSync make sync service stop sending sync block requests to other peer nodes
+// StopBlockSync make sync service stop sending sync block requests to other peer nodes
 func (sync *BlockChainSyncServer) StopBlockSync() {
 	_ = sync.scheduler.addTask(&StopSyncMsg{})
 	_ = sync.processor.addTask(&StopSyncMsg{})
 }
 
-//StartBlockSync make sync service resume sending sync block requests to other peer nodes
+// StartBlockSync make sync service resume sending sync block requests to other peer nodes
 func (sync *BlockChainSyncServer) StartBlockSync() {
 	_ = sync.scheduler.addTask(&StartSyncMsg{})
 }
 
-//Stop stop sync service all work
+// Stop stop sync service all work
 func (sync *BlockChainSyncServer) Stop() {
 	if !atomic.CompareAndSwapInt32(&sync.start, 1, 0) {
 		return
@@ -567,13 +567,13 @@ func (sync *BlockChainSyncServer) Stop() {
 	sync.scheduler.end()
 	sync.processor.end()
 	close(sync.close)
-	sync.net.CancelSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG)
-	sync.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
+	_ = sync.net.CancelSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG)
+	_ = sync.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
 }
 
-//OnMessage msgbus Subscriber interface implementation
-//used to receive block notifications from msgbus, if the height of the newly received block is divisible by 3,
-//then broadcast own block height to other peers
+// OnMessage msgbus Subscriber interface implementation
+// used to receive block notifications from msgbus, if the height of the newly received block is divisible by 3,
+// then broadcast own block height to other peers
 func (sync *BlockChainSyncServer) OnMessage(message *msgbus.Message) {
 	if message == nil || message.Payload == nil {
 		sync.log.Errorf("receive the empty message")
@@ -606,7 +606,7 @@ func (sync *BlockChainSyncServer) OnMessage(message *msgbus.Message) {
 	}
 }
 
-//OnQuit msgbus Subscriber interface implementation
+// OnQuit msgbus Subscriber interface implementation
 func (sync *BlockChainSyncServer) OnQuit() {
 	sync.log.Infof("stop to listen the msgbus.BlockInfo")
 }

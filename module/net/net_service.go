@@ -855,6 +855,7 @@ func (ns *NetService) cleanAllMsgHandler() error {
 		msgBusTopicPrefix,
 		netPb.NetMsg_SYNC_BLOCK_MSG,
 	)); err != nil {
+		ns.logger.Errorf("cancelSubscribeTopicForMsgBus err,", err)
 		return err
 	}
 
