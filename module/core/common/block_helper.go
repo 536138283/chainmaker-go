@@ -1280,8 +1280,10 @@ func getCommittedBlock(lastProposed, block *commonPb.Block, chainConf protocol.C
 		ExtraData: make(map[string][]byte),
 	}
 
-	commitBlock.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] =
-		lastProposed.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
+	if _, ok := lastProposed.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]; ok {
+		commitBlock.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] =
+			lastProposed.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
+	}
 
 	// This code is primarily used to iterate through the 'additionalData' and populate
 	// it into the 'commitBlock' object.
