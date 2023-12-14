@@ -822,7 +822,7 @@ func (ts *TxScheduler) executeTx3000(tx *commonPb.Transaction, snapshot protocol
 		addr            string
 		exist           bool
 	)
-	if txNeedChargeGas {
+	if txNeedChargeGas && enableOptimizeChargeGas {
 		addr, exist = collection.txAddressCache[tx.Payload.TxId]
 		if !exist {
 			ts.log.Warnf("cannot find account balance for %v", tx.Payload.TxId)
