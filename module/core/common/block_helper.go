@@ -1206,29 +1206,8 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		}
 	}
 
-	// shallow copy, create a new block to prevent panic during storage in marshal.
-	commitBlock := CopyBlock(lastProposed)
-
-	if IfOpenConsensusMessageTurbo(chain.chainConf) {
-		// recover the block for proposer when enable the conensus message turbo function.
-		commitBlock.Header = block.Header
-	}
-
-	// Reconstructs additionalData for the newly built commit block object
-	// to prevent sharing pointers with other modules.
-	commitBlock.AdditionalData = &commonPb.AdditionalData{
-		ExtraData: make(map[string][]byte),
-	}
-
-	// This code is primarily used to iterate through the 'additionalData' and populate
-	// it into the 'commitBlock' object.
-	// This helps prevent potential concurrent read-write issues when putting a block.
-	// These issues may arise due to changes made by the consensus module
-	// in the values contained within the 'additionalData' of the sync module.
-	// Such issues can further lead to runtime panic.
-	for k, v := range block.AdditionalData.ExtraData {
-		commitBlock.AdditionalData.ExtraData[k] = v
-	}
+	// get commit block from consensus
+	commitBlock := getCommittedBlock(lastProposed, block, chain.chainConf)
 
 	checkLasts := utils.CurrentTimeMillisSeconds() - startTick
 	dbLasts, snapshotLasts, confLasts, otherLasts, pubEvent, filterLasts, blockInfo, err :=
@@ -1283,6 +1262,38 @@ func (chain *BlockCommitterImpl) AddBlock(block *commonPb.Block) (err error) {
 		go chain.updateMetrics(&blockInfoTmp, elapsed, interval)
 	}
 	return nil
+}
+
+// getCommittedBlock get commit block to commit
+func getCommittedBlock(lastProposed, block *commonPb.Block, chainConf protocol.ChainConf) *commonPb.Block {
+	// shallow copy, create a new block to prevent panic during storage in marshal.
+	commitBlock := CopyBlock(lastProposed)
+
+	if IfOpenConsensusMessageTurbo(chainConf) {
+		// recover the block for proposer when enable the conensus message turbo function.
+		commitBlock.Header = block.Header
+	}
+
+	// Reconstructs additionalData for the newly built commit block object
+	// to prevent sharing pointers with other modules.
+	commitBlock.AdditionalData = &commonPb.AdditionalData{
+		ExtraData: make(map[string][]byte),
+	}
+
+	commitBlock.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey] =
+		lastProposed.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]
+
+	// This code is primarily used to iterate through the 'additionalData' and populate
+	// it into the 'commitBlock' object.
+	// This helps prevent potential concurrent read-write issues when putting a block.
+	// These issues may arise due to changes made by the consensus module
+	// in the values contained within the 'additionalData' of the sync module.
+	// Such issues can further lead to runtime panic.
+	for k, v := range block.AdditionalData.ExtraData {
+		commitBlock.AdditionalData.ExtraData[k] = v
+	}
+
+	return commitBlock
 }
 
 // syncWithTxPool sync with tx pool
