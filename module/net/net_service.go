@@ -213,8 +213,12 @@ func (ns *NetService) receiveMsg(handler protocol.MsgHandler, flag string, msgTy
 }
 
 func (ns *NetService) cancelReceiveMsg(flag string) error {
-
 	return ns.localNet.CancelDirectMsgHandle(ns.chainId, flag)
+}
+
+func (ns *NetService) CancelReceiveMsg(msgType netPb.NetMsg_MsgType) error {
+	msgFlag := msgType.String()
+	return ns.cancelReceiveMsg(msgFlag)
 }
 
 // MsgForMsgBusHandler is a handler function that receive the msg from net than publish to msg-bus.
@@ -242,6 +246,10 @@ func (ns *NetService) subscribeTopicForMsgBus(handler MsgForMsgBusHandler, topic
 	}
 
 	return ns.localNet.SubscribeWithChainId(ns.chainId, topic, h)
+}
+
+func (ns *NetService) cancelSubscribeTopicForMsgBus(flag string) error {
+	return ns.localNet.CancelSubscribeWithChainId(ns.chainId, flag)
 }
 
 // GetNodeUidByCertId return the id of the node connected to us which mapped to tls cert id given.
@@ -290,6 +298,21 @@ func (ns *NetService) Start() error {
 
 // Stop the net-service.
 func (ns *NetService) Stop() error {
+	if !ns.localNet.IsRunning() {
+		ns.logger.Errorf("[NetService] the whole net has been stopped.")
+		return ErrorNetNotRunning
+	}
+
+	// add access control
+	ns.localNet.DeleteAC(ns.chainId)
+	ns.localNet.ReVerifyPeers(ns.chainId)
+	err := ns.cleanAllMsgHandler()
+	if err != nil {
+		ns.logger.Errorf("[NetService] clean the msg handler failed, err[%s], chainId[%s]", err.Error(), ns.chainId)
+		return err
+	}
+	ns.localNet.StopPubSub(ns.chainId)
+	ns.logger.Info("[NetService] the net service service has been stopped.")
 	return nil
 }
 
@@ -770,6 +793,72 @@ func (ns *NetService) initBindMsgBus() error {
 	}
 	ns.msgBus.Register(msgbus.SendSyncBlockMsg, sbmSubscriber)
 	ns.logger.Infof("[NetService] init bind msg-bus ok")
+	return nil
+}
+
+func (ns *NetService) cleanAllMsgHandler() error {
+	if err := ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(
+		msgBusMsgFlagPrefix,
+		netPb.NetMsg_CONSENSUS_MSG,
+	)); err != nil {
+		return err
+	}
+	if err := ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(
+		msgBusConsensusTopicPrefix,
+		netPb.NetMsg_CONSENSUS_MSG,
+	)); err != nil {
+		return err
+	}
+
+	if err := ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(
+		msgBusMsgFlagPrefix,
+		netPb.NetMsg_CONSISTENT_MSG,
+	)); err != nil {
+		return err
+	}
+
+	if err := ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(
+		msgBusConsensusTopicPrefix,
+		netPb.NetMsg_CONSISTENT_MSG,
+	)); err != nil {
+		return err
+	}
+
+	if err := ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(
+		msgBusMsgFlagPrefix,
+		netPb.NetMsg_TX,
+	)); err != nil {
+		return err
+	}
+	if err := ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(
+		msgBusConsensusTopicPrefix,
+		netPb.NetMsg_TX,
+	)); err != nil {
+		return err
+	}
+
+	if err := ns.cancelReceiveMsg(CreateFlagWithPrefixAndMsgType(
+		msgBusMsgFlagPrefix,
+		netPb.NetMsg_SYNC_BLOCK_MSG,
+	)); err != nil {
+		return err
+	}
+
+	if err := ns.cancelSubscribeTopicForMsgBus(CreateFlagWithPrefixAndMsgType(
+		topicNamePrefix,
+		netPb.NetMsg_TX,
+	)); err != nil {
+		return err
+	}
+
+	if err := ns.cancelSubscribeTopicForMsgBus(CreateFlagWithPrefixAndMsgType(
+		msgBusTopicPrefix,
+		netPb.NetMsg_SYNC_BLOCK_MSG,
+	)); err != nil {
+		ns.logger.Errorf("cancelSubscribeTopicForMsgBus err,", err)
+		return err
+	}
+
 	return nil
 }
 
