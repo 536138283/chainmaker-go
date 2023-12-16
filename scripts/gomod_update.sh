@@ -19,7 +19,7 @@ go get chainmaker.org/chainmaker/lws@v1.2.0
 go get chainmaker.org/chainmaker/pb-go/v3@${BRANCH}
 go get chainmaker.org/chainmaker/common/v3@${BRANCH}
 go get chainmaker.org/chainmaker/protocol/v3@${BRANCH}
-go get chainmaker.org/chainmaker/logger/v3@${BRANCH}
+go get chainmaker.org/chainmaker/logger/v3@v3.0.0
 go get chainmaker.org/chainmaker/utils/v3@${BRANCH}
 go get chainmaker.org/chainmaker/localconf/v3@${BRANCH}
 go get chainmaker.org/chainmaker/chainconf/v3@${BRANCH}
@@ -28,8 +28,8 @@ go get chainmaker.org/chainmaker/txpool-single/v3@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-batch/v3@${BRANCH}
 go get chainmaker.org/chainmaker/store/v3@${BRANCH}
 go get chainmaker.org/chainmaker/store-huge/v3@${BRANCH}
-go get chainmaker.org/chainmaker/vm-native/v3@${BRANCH}
 go get chainmaker.org/chainmaker/vm/v3@${BRANCH}
+go get chainmaker.org/chainmaker/vm-native/v3@${BRANCH}
 go get chainmaker.org/chainmaker/vm-docker-go/v3@${BRANCH}
 go get chainmaker.org/chainmaker/vm-engine/v3@${BRANCH}
 go get chainmaker.org/chainmaker/vm-evm/v3@${BRANCH}
