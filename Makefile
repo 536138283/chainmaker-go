@@ -71,6 +71,10 @@ docker-build-dev: chainmaker cmc
 	docker build -t chainmaker -f ./DOCKER/dev.Dockerfile .
 	docker tag chainmaker chainmaker:${VERSION}
 
+docker-build-dev-arm: chainmaker cmc
+	docker build -t chainmaker -f ./DOCKER/dev.ARM.Dockerfile .
+	docker tag chainmaker chainmaker-arm:${VERSION}
+
 docker-compose-start: docker-compose-stop
 	docker-compose up -d
 
