@@ -28,8 +28,8 @@ if [ -n "$1" ] ;then
   echo "check lint and comment cover: $1."
   lint_check "$1" 15
 else
-   lint_check "module/accesscontrol" 15
-   lint_check "module/blockchain" 15
+  lint_check "module/accesscontrol" 15
+  lint_check "module/blockchain" 15
   lint_check "module/consensus" 15
   lint_check "module/core" 13
   lint_check "module/net" 12
