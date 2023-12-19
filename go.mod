@@ -6,7 +6,7 @@ require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.3-0.20230816083956-847f1567baaa
 	chainmaker.org/chainmaker/common/v2 v2.3.3-0.20230802100303-5b967c9b41cb
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.2
+	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.3-0.20231219093913-447efa0cd327
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.4-0.20231113071106-f64fd6e643f5
 	chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20230915124130-a7c865e89eee
@@ -61,8 +61,8 @@ require (
 )
 
 require (
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.3-0.20230918072057-b03e6f2e2f8b
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.4-0.20231113022618-4d98cb0fac83
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.3-0.20231219093759-83566a1cac20
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.4-0.20231219093835-0a7a2ae5a1af
 	chainmaker.org/chainmaker/libp2p-pubsub v1.1.4-0.20231107023105-c3342b56abd5 // indirect
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3-0.20230818060822-8430534a5ba3
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3-0.20230818060620-73b2e32dd66e
