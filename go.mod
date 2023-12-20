@@ -64,9 +64,9 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.3-0.20230918072057-b03e6f2e2f8b
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.4-0.20231113022618-4d98cb0fac83
 	chainmaker.org/chainmaker/libp2p-pubsub v1.1.4-0.20231107023105-c3342b56abd5 // indirect
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3-0.20230818060822-8430534a5ba3
-	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3-0.20230818060620-73b2e32dd66e
-	chainmaker.org/chainmaker/txpool-single/v2 v2.3.3-0.20230818060952-0c539ecd96e6
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3-0.20231220040820-8a2d93213247
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3-0.20231220040805-fd18d1bd9341
+	chainmaker.org/chainmaker/txpool-single/v2 v2.3.3-0.20231220040748-88560918ef14
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
