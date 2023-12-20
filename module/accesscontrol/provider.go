@@ -209,6 +209,7 @@ func verifyMsgTypePrincipal(p acProvider,
 		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 	}
 
+	fmt.Println("wcx debug:2=len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
@@ -246,6 +247,7 @@ func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
 		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 	}
 
+	fmt.Println("wcx debug:0=len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
@@ -286,6 +288,7 @@ func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byt
 		return true, nil
 	}
 
+	fmt.Println("wcx debug:1=len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
@@ -393,7 +396,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	// check tx_type
 	allow, err = verifyTxTypePrincipal(p, tx, txBytes, blockVersion, crossCall)
 	if err != nil {
-		return false, fmt.Errorf("authentication error: %s", err)
+		return false, fmt.Errorf("[verifyTxTypePrincipal]authentication error: %s", err)
 	}
 	if !allow {
 		return false, fmt.Errorf("authentication failed")
@@ -406,7 +409,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	// check sender: because sender has been verified by tx_type checking
 	allow, err = verifySenderPrincipal(p, tx, txBytes, blockVersion, true)
 	if err != nil {
-		return false, fmt.Errorf("authentication error: %s", err)
+		return false, fmt.Errorf("[verifySenderPrincipal]authentication error: %s", err)
 	}
 	if !allow {
 		return false, fmt.Errorf("authentication failed")
@@ -415,7 +418,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	// check endorsements
 	allow, err = verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, crossCall)
 	if err != nil {
-		return false, fmt.Errorf("authentication error for %s: %s", resourceId, err)
+		return false, fmt.Errorf("[verifyEndorsementsPrincipal]authentication error for %s: %s", resourceId, err)
 	}
 	if !allow {
 		return false, fmt.Errorf("authentication failed for %s", resourceId)

@@ -585,6 +585,7 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 func (acs *accessControlService) verifyPrincipalPolicy(principal, refinedPrincipal protocol.Principal, p *policy) (
 	bool, error) {
 	endorsements := refinedPrincipal.GetEndorsement()
+	fmt.Println("wcx debug:1-len(endorsements)=", len(endorsements))
 	rule := p.GetRule()
 
 	switch rule {
