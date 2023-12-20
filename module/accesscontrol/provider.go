@@ -327,6 +327,7 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
 	}
 
+	fmt.Println("wcx debug:0-len(endorsements)=", len(endorsements))
 	var principal protocol.Principal
 	if pol.rule == protocol.RuleSelf {
 		var targetOrg string
