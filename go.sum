@@ -136,8 +136,8 @@ chainmaker.org/third_party/qtls-go1-18 v1.1.0 h1:RzA8VbtaDtoZn/3dCik+4ZjGTSiiMco
 chainmaker.org/third_party/qtls-go1-18 v1.1.0/go.mod h1:3x7EKTiLrtaBegu5oBePXPQmqVwkLdX+YSPznIdzwEA=
 chainmaker.org/third_party/qtls-go1-19 v1.0.0 h1:BEUYhPQeadHDBvH5q1IlJib+EevdvX/QvYMnA0McmC4=
 chainmaker.org/third_party/qtls-go1-19 v1.0.0/go.mod h1:fFvgRPs+Encqs9ZaboWHAGbaWTlMdaF9tNuMLoZFEdw=
-chainmaker.org/third_party/quic-go v1.1.0 h1:WeOR0FCd8AiqrSWLU0+rWWg3h3fn14/BJrPYHRzwZBs=
-chainmaker.org/third_party/quic-go v1.1.0/go.mod h1:QuazVXiJnJoQr7sdd2GJ23nfA5VUtYrzu+aIToxLegs=
+chainmaker.org/third_party/quic-go v1.2.1-0.20230821024043-27eaf3d844cd h1:By2G5ahtDkB77SqeLUrlZwCIgu3TQSysQg4PEgsUdlI=
+chainmaker.org/third_party/quic-go v1.2.1-0.20230821024043-27eaf3d844cd/go.mod h1:QkyI7QPu8cTEJtKBprPD+YHy8A+hJ3DK4mUSbR8ZjEw=
 chainmaker.org/third_party/redisbloom-go v1.0.0 h1:R5I2K9zYfOoAMJP4Qn3Rk6OVpt+1s84KHHFiZWCX+q4=
 chainmaker.org/third_party/redisbloom-go v1.0.0/go.mod h1:l3Qe0jvaVir3n3IsuB2RfAtSKg7Zb/FxeV4XB1dyWjU=
 chainmaker.org/third_party/tikv-client-go v1.0.0 h1:3EtxVgVbqvC473GsdvzwfSit/C4fjRx7mmJ6erLQors=
