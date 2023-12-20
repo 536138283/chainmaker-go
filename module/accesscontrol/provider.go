@@ -363,7 +363,11 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
 		return true, nil
 	}
-
+	fmt.Println("wcx debug:len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
+	fmt.Println("wcx debug:refinedPrincipal.GetEndorsement()[0].Signer=", refinedPrincipal.GetEndorsement()[0].Signer)
+	fmt.Println("wcx debug:refinedPrincipal.GetEndorsement()[0].String()=", refinedPrincipal.GetEndorsement()[0].String())
+	fmt.Println("wcx debug:refinedPrincipal.GetResourceName()=", refinedPrincipal.GetResourceName())
+	fmt.Println("wcx debug:refinedPrincipal.GetMessage()=", refinedPrincipal.GetMessage())
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 
 }
