@@ -351,8 +351,12 @@ func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.End
 				string(endorsement.Signer.MemberInfo))
 			continue
 		}
-
-		if _, ok := roleList[member.GetRole()]; ok {
+		//In PK mode, the client obtains an empty string through getrole()
+		role := member.GetRole()
+		if role == "" {
+			role = protocol.RoleClient
+		}
+		if _, ok := roleList[role]; ok {
 			return true, nil
 		}
 		p.log.Infof("authentication warning, the member role is not in roleList, role: [%s]",
