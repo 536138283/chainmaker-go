@@ -181,7 +181,6 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 
 	blockVersion := chainConfig.ChainConfig().GetBlockVersion()
 	if err = utils.VerifyTxWithoutPayload(tx, tx.Payload.ChainId, bc.GetAccessControl(), blockVersion); err != nil {
-		s.log.Infof("wcx debug:a-len(tx.Endorsers)=", len(tx.Endorsers))
 		errCode = commonErr.ERR_CODE_TX_VERIFY_FAILED
 		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s, endorsers-len:%d endorsers:", errCode.String(), err.Error(), tx.Payload.TxId,
 			tx.Sender.Signer.MemberInfo, len(tx.Endorsers))

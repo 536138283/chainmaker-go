@@ -85,7 +85,6 @@ func (pp *permissionedPkACProvider) CreatePrincipal(resourceName string, endorse
 func (pk *pkACProvider) verifyPrincipalPolicy(principal,
 	refinedPrincipal protocol.Principal, pol *policy) (bool, error) {
 	endorsements := refinedPrincipal.GetEndorsement()
-	fmt.Println("wcx debug:len(endorsements)=", len(endorsements))
 	rule := pol.GetRule()
 	switch rule {
 	case protocol.RuleForbidden:

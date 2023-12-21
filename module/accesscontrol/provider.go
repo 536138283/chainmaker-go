@@ -209,7 +209,6 @@ func verifyMsgTypePrincipal(p acProvider,
 		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 	}
 
-	fmt.Println("wcx debug:2=len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
@@ -247,7 +246,6 @@ func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
 		return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 	}
 
-	fmt.Println("wcx debug:0=len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
@@ -288,7 +286,6 @@ func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byt
 		return true, nil
 	}
 
-	fmt.Println("wcx debug:1=len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
@@ -330,7 +327,6 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
 	}
 
-	fmt.Println("wcx debug:0-len(endorsements)=", len(endorsements))
 	var principal protocol.Principal
 	if pol.rule == protocol.RuleSelf {
 		var targetOrg string
@@ -367,11 +363,6 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
 		return true, nil
 	}
-	fmt.Println("wcx debug:len(refinedPrincipal.GetEndorsement())=", len(refinedPrincipal.GetEndorsement()))
-	fmt.Println("wcx debug:refinedPrincipal.GetEndorsement()[0].Signer=", refinedPrincipal.GetEndorsement()[0].Signer)
-	fmt.Println("wcx debug:refinedPrincipal.GetEndorsement()[0].String()=", refinedPrincipal.GetEndorsement()[0].String())
-	fmt.Println("wcx debug:refinedPrincipal.GetResourceName()=", refinedPrincipal.GetResourceName())
-	fmt.Println("wcx debug:refinedPrincipal.GetMessage()=", refinedPrincipal.GetMessage())
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 
 }
