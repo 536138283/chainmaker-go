@@ -182,7 +182,8 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 	blockVersion := chainConfig.ChainConfig().GetBlockVersion()
 	if err = utils.VerifyTxWithoutPayload(tx, tx.Payload.ChainId, bc.GetAccessControl(), blockVersion); err != nil {
 		errCode = commonErr.ERR_CODE_TX_VERIFY_FAILED
-		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s, endorsers-len:%d endorsers:", errCode.String(), err.Error(), tx.Payload.TxId,
+		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s, endorsers-len:%d,\nendorsers:\n",
+			errCode.String(), err.Error(), tx.Payload.TxId,
 			tx.Sender.Signer.MemberInfo, len(tx.Endorsers))
 		for _, endorser := range tx.Endorsers {
 			errMsg += fmt.Sprintf("%s ", endorser.Signer.MemberInfo)
