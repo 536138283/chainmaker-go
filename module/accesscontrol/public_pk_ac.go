@@ -362,6 +362,7 @@ func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.End
 		p.log.Infof("authentication warning, the member role is not in roleList, role: [%s]",
 			member.GetRole())
 	}
+
 	err := fmt.Errorf("authentication fail for any rule, policy: rule: [%v],roleList: [%v]",
 		pol.rule, pol.roleList)
 	return false, err
