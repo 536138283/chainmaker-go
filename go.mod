@@ -4,17 +4,17 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.3-0.20230816083956-847f1567baaa
-	chainmaker.org/chainmaker/common/v2 v2.3.3-0.20230802100303-5b967c9b41cb
+	chainmaker.org/chainmaker/common/v2 v2.3.3-0.20231019022655-8675e0530915
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.3-0.20231219093913-447efa0cd327
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
-	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.4-0.20231113071106-f64fd6e643f5
+	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.4-0.20231115095741-2b342780d5f5
 	chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20230915124130-a7c865e89eee
 	chainmaker.org/chainmaker/logger/v2 v2.3.0
 	chainmaker.org/chainmaker/net-common v1.2.4-0.20231213082602-c9a5f77403d1
 	chainmaker.org/chainmaker/net-libp2p v1.2.4-0.20231213100056-e71405b638e9
 	chainmaker.org/chainmaker/net-liquid v1.1.2-0.20231214034940-1c4f12276cf0
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.4-0.20231016062737-920ac82a4146
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.4-0.20231017064938-42b85038dc6b
 	chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20231204094400-869a4cb2b3e1
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20230920063444-01f39c4830c1
 	chainmaker.org/chainmaker/store/v2 v2.3.5-0.20231214022652-fff379fc984d
@@ -23,7 +23,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20231220015924-acc5d731790b
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.4-0.20230920075210-f222c32fd983
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20231016085306-7192ef30c493
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20231017071518-396de85fa139
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2
 	chainmaker.org/chainmaker/vm/v2 v2.3.4-0.20230913112945-35811a2653bb
@@ -79,7 +79,7 @@ require (
 )
 
 replace (
-	chainmaker.org/chainmaker/lws => chainmaker.org/chainmaker/lws v1.2.1-0.20230918025726-ea744645e727
+	//chainmaker.org/chainmaker/lws => chainmaker.org/chainmaker/lws v1.2.1-0.20230918025726-ea744645e727
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.2
