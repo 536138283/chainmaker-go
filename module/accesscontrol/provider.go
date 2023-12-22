@@ -363,7 +363,6 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
 		return true, nil
 	}
-
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 
 }
@@ -388,7 +387,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	// check tx_type
 	allow, err = verifyTxTypePrincipal(p, tx, txBytes, blockVersion, crossCall)
 	if err != nil {
-		return false, fmt.Errorf("authentication error: %s", err)
+		return false, fmt.Errorf("[verifyTxTypePrincipal]authentication error: %s", err)
 	}
 	if !allow {
 		return false, fmt.Errorf("authentication failed")
@@ -401,7 +400,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	// check sender: because sender has been verified by tx_type checking
 	allow, err = verifySenderPrincipal(p, tx, txBytes, blockVersion, true)
 	if err != nil {
-		return false, fmt.Errorf("authentication error: %s", err)
+		return false, fmt.Errorf("[verifySenderPrincipal]authentication error: %s", err)
 	}
 	if !allow {
 		return false, fmt.Errorf("authentication failed")
@@ -410,7 +409,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	// check endorsements
 	allow, err = verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, crossCall)
 	if err != nil {
-		return false, fmt.Errorf("authentication error for %s: %s", resourceId, err)
+		return false, fmt.Errorf("[verifyEndorsementsPrincipal]authentication error for %s: %s", resourceId, err)
 	}
 	if !allow {
 		return false, fmt.Errorf("authentication failed for %s", resourceId)

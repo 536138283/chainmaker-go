@@ -20,7 +20,7 @@ require (
 	chainmaker.org/chainmaker/store/v2 v2.3.5-0.20231214022652-fff379fc984d
 	chainmaker.org/chainmaker/utils/v2 v2.3.4-0.20230927084903-acd55dcc1634
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20230920021234-503e3a716abf
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20231220015924-acc5d731790b
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.4-0.20230920075210-f222c32fd983
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20231016085306-7192ef30c493
@@ -64,9 +64,9 @@ require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.3-0.20231219093759-83566a1cac20
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.4-0.20231219093835-0a7a2ae5a1af
 	chainmaker.org/chainmaker/libp2p-pubsub v1.1.4-0.20231107023105-c3342b56abd5 // indirect
-	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3-0.20230818060822-8430534a5ba3
-	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3-0.20230818060620-73b2e32dd66e
-	chainmaker.org/chainmaker/txpool-single/v2 v2.3.3-0.20230818060952-0c539ecd96e6
+	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3-0.20231220040820-8a2d93213247
+	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3-0.20231220040805-fd18d1bd9341
+	chainmaker.org/chainmaker/txpool-single/v2 v2.3.3-0.20231220040748-88560918ef14
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
@@ -85,7 +85,7 @@ replace (
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.2
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.0
 	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v1.0.0
-	github.com/lucas-clemente/quic-go v0.26.0 => chainmaker.org/third_party/quic-go v1.1.0
+	github.com/lucas-clemente/quic-go v0.26.0 => chainmaker.org/third_party/quic-go v1.2.1-0.20230821024043-27eaf3d844cd
 	github.com/marten-seemann/qtls-go1-16 => chainmaker.org/third_party/qtls-go1-16 v1.1.0
 	github.com/marten-seemann/qtls-go1-17 => chainmaker.org/third_party/qtls-go1-17 v1.1.0
 	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.1.0
