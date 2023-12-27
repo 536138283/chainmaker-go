@@ -24,10 +24,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 	// sender & endorsements policy map
 	{
 		// gas management
-		acs.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-		acs.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
@@ -192,10 +188,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	// sender policies
 	{
 		// gas management
-		acs.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-		acs.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
@@ -364,10 +356,6 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 	// sender & endorsements policy map
 	{
 		// gas management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
@@ -540,10 +528,6 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 	// sender & endorsements policy map
 	{
 		// gas management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
