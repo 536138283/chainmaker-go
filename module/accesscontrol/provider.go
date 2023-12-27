@@ -488,7 +488,8 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	resourceName := mInfo.ContractName + "-" + mInfo.Method
 	var agreeEndorsements []*commonPb.EndorsementEntry
 	var rejectEndorsements []*commonPb.EndorsementEntry
-
+	log.Debugf("wcx debug:resourceName=%s", resourceName)
+	log.Debugf("wcx debug:len(mInfo.VoteInfos)=%d", len(mInfo.VoteInfos))
 	for _, voteInfo := range mInfo.VoteInfos {
 		if voteInfo.Vote == syscontract.VoteStatus_AGREE {
 			agreeEndorsements = append(agreeEndorsements, voteInfo.Endorsement)
