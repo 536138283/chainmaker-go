@@ -19,7 +19,7 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.3
 	chainmaker.org/chainmaker/protocol/v2 v2.3.3
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.3
-	chainmaker.org/chainmaker/store/v2 v2.3.4
+	chainmaker.org/chainmaker/store/v2 v2.3.5-0.20231229025750-724e37dd7fc8
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.2
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.2
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.2
