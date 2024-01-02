@@ -238,7 +238,6 @@ func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
 	}
-
 	//cert-hash 、alias 模式时，重制sender
 	if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
 		tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
