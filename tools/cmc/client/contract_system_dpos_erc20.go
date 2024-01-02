@@ -32,7 +32,7 @@ func erc20Mint() *cobra.Command {
 				err error
 			)
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -83,7 +83,7 @@ func erc20Transfer() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -132,7 +132,7 @@ func erc20BalanceOf() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -180,7 +180,7 @@ func erc20Owner() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -225,7 +225,7 @@ func erc20Decimals() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -270,7 +270,7 @@ func erc20Total() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}

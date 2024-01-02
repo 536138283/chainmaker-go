@@ -114,7 +114,7 @@ func createConfigUpdatePayload() error {
 }
 
 func createContractMgmtPayload() error {
-	cc, err := util.CreateChainClient(sdkConfPath, chainId, "", "", "", "", "")
+	cc, err := util.CreateChainClient(sdkConfPath, chainId, "", "", "", "", "", true)
 	if err != nil {
 		return err
 	}

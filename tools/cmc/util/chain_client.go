@@ -18,7 +18,7 @@ import (
 // will overwrite sdk config generated from sdkConfPath if they are not empty string,
 // otherwise sdk config will not be overwritten.
 func CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtPath, userTlsKeyPath,
-	userSignCrtPath, userSignKeyPath string) (*sdk.ChainClient, error) {
+	userSignCrtPath, userSignKeyPath string, enableCertHash bool) (*sdk.ChainClient, error) {
 	cc, err := sdk.NewChainClient(
 		sdk.WithConfPath(sdkConfPath),
 		sdk.WithChainClientChainId(chainId),
@@ -32,7 +32,7 @@ func CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtPath, userTlsKeyPa
 		return nil, err
 	}
 
-	return cc, DealChainClientCertHash(cc, true)
+	return cc, DealChainClientCertHash(cc, enableCertHash)
 }
 
 // CreateChainClientWithConfPath create chain client with sdk config file path & whether enable cert hash
