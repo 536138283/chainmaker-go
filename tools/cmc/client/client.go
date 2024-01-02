@@ -369,7 +369,7 @@ func getChainMakerServerVersionCMD() *cobra.Command {
 // @return error
 func getChainMakerServerVersion() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}

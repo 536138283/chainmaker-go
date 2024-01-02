@@ -55,7 +55,7 @@ func updateBlockIntervalCMD() *cobra.Command {
 func updateBlockInterval() error {
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func updateTxParameterSizeCMD() *cobra.Command {
 func updateTxParameterSize() error {
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}
@@ -202,7 +202,7 @@ func updateBlockTimestampCMD() *cobra.Command {
 
 func updateBlockTimestamp() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func universalUpdateBlockConfigCMD() *cobra.Command {
 flags that not setted will use former value`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}

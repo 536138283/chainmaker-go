@@ -45,7 +45,7 @@ func newArchiveCMD() *cobra.Command {
 func runArchiveCMD(cleanHeight uint64) error {
 	// create chain client
 	cc, err := util.CreateChainClient(sdkConfPath, "",
-		"", "", "", "", "")
+		"", "", "", "", "", true)
 	if err != nil {
 		return err
 	}

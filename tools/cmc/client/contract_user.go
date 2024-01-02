@@ -326,7 +326,7 @@ const (
 // nolint
 func createUpgradeUserContract(op createUpgradeContractOp) error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}
@@ -546,7 +546,7 @@ func invokeUserContract() error {
 
 func invokeContractTimes() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}
@@ -616,7 +616,7 @@ func invokeContractTimes() error {
 
 func getUserContract() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}
@@ -739,7 +739,7 @@ func generateKVs() (kvs []*common.KeyValuePair, contractAbi *abi.ABI, err error)
 
 func freezeOrUnfreezeOrRevokeUserContract(which int) error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}

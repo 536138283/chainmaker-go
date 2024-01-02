@@ -49,7 +49,7 @@ func newQueryTxOffChainCMD() *cobra.Command {
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			chainClient, chainClientErr := util.CreateChainClient(sdkConfPath, "",
-				"", "", "", "", "")
+				"", "", "", "", "", true)
 			if chainClientErr != nil {
 				return chainClientErr
 			}
@@ -86,7 +86,7 @@ func newQueryBlockByHeightCMD() *cobra.Command {
 				return fmt.Errorf("height must be positive integer , but got %s", args[0])
 			}
 			chainClient, chainClientErr := util.CreateChainClient(sdkConfPath, "",
-				"", "", "", "", "")
+				"", "", "", "", "", true)
 			if chainClientErr != nil {
 				return chainClientErr
 			}
@@ -124,7 +124,7 @@ func newQueryBlockByHashCMD() *cobra.Command {
 					args[0], hashErr.Error())
 			}
 			chainClient, chainClientErr := util.CreateChainClient(sdkConfPath, "",
-				"", "", "", "", "")
+				"", "", "", "", "", true)
 			if chainClientErr != nil {
 				return chainClientErr
 			}
@@ -170,7 +170,7 @@ func newQueryBlockByTxIdCMD() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			chainClient, chainClientErr := util.CreateChainClient(sdkConfPath, "",
-				"", "", "", "", "")
+				"", "", "", "", "", true)
 			if chainClientErr != nil {
 				return chainClientErr
 			}
@@ -216,7 +216,7 @@ func newQueryArchiveStatus() *cobra.Command {
 		Args:  cobra.ExactArgs(0),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			chainClient, chainClientErr := util.CreateChainClient(sdkConfPath, "",
-				"", "", "", "", "")
+				"", "", "", "", "", true)
 			if chainClientErr != nil {
 				return chainClientErr
 			}
@@ -249,7 +249,7 @@ func newQueryArchiveStatusOnChain() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 
 			chainClient, chainClientErr := util.CreateChainClient(sdkConfPath, "",
-				"", "", "", "", "")
+				"", "", "", "", "", true)
 			if chainClientErr != nil {
 				return chainClientErr
 			}

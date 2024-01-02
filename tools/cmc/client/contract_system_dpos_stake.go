@@ -34,7 +34,7 @@ func stakeGetAllCandidates() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -79,7 +79,7 @@ func stakeGetValidatorByAddress() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -127,7 +127,7 @@ func stakeDelegate() *cobra.Command {
 		Short: "delegate feature of the stake",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -184,7 +184,7 @@ func stakeGetDelegationsByAddress() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -236,7 +236,7 @@ func stakeGetUserDelegationByValidator() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -288,7 +288,7 @@ func stakeUnDelegate() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -347,7 +347,7 @@ func stakeReadEpochByID() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -399,7 +399,7 @@ func stakeReadLatestEpoch() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -448,7 +448,7 @@ func stakeSetNodeID() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -498,7 +498,7 @@ func stakeGetNodeID() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -546,7 +546,7 @@ func stakeReadMinSelfDelegation() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -591,7 +591,7 @@ func stakeReadEpochValidatorNumber() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -636,7 +636,7 @@ func stakeReadEpochBlockNumber() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -681,7 +681,7 @@ func stakeReadSystemContractAddr() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
@@ -726,7 +726,7 @@ func stakeReadCompleteUnBoundingEpochNumber() *cobra.Command {
 			)
 
 			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-				userSignCrtFilePath, userSignKeyFilePath)
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 			if err != nil {
 				return err
 			}
