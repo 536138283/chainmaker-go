@@ -1,10 +1,11 @@
 package accesscontrol
 
 import (
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"errors"
 	"fmt"
 	"sync/atomic"
+
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
