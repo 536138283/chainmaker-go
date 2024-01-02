@@ -168,6 +168,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 		acs.senderPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), policyForbidden)
 
+		// relay cross
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
+
 	}
 }
 func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId string) {
