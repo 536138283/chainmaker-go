@@ -341,6 +341,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 			syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), policySelfConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), policySelfConfig)
+
+		// relay cross
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
 	}
 }
 
@@ -513,6 +519,12 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 			syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), pubPolicyForbidden)
+
+		// relay cross
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
 	}
 }
 
@@ -691,6 +703,12 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 			syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), pubPolicyForbidden)
+
+		// relay cross
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
 
 	}
 }
