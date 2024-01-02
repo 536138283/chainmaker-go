@@ -170,9 +170,9 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 
 		// relay cross
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyRelayCross)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
 
 	}
 }
@@ -344,9 +344,9 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 		// relay cross
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyRelayCross)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
 	}
 }
 
@@ -522,9 +522,9 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 
 		// relay cross
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyRelayCross)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
 	}
 }
 
@@ -706,9 +706,9 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 
 		// relay cross
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyRelayCross)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
-			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyAdmin)
+			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
 
 	}
 }
