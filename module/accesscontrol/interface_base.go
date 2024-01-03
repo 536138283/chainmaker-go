@@ -86,16 +86,19 @@ func (pk *pkACProvider) verifyPrincipalPolicy(principal,
 	refinedPrincipal protocol.Principal, pol *policy) (bool, error) {
 	endorsements := refinedPrincipal.GetEndorsement()
 	rule := pol.GetRule()
+	fmt.Printf("wcx debug:rule=%s\n", rule)
 	switch rule {
 	case protocol.RuleForbidden:
 		return false, fmt.Errorf("public authentication fail: [%s] is forbidden to access",
 			refinedPrincipal.GetResourceName())
 	case protocol.RuleAny:
 		return pk.verifyRuleAnyCase(pol, endorsements)
+	case protocol.RuleAll:
+		return pk.verifyRuleAllCase(pol, endorsements)
 	case protocol.RuleMajority:
 		return pk.verifyRuleMajorityCase(pol, endorsements)
 	default:
-		return false, fmt.Errorf("public authentication fail: [%s] is not supported", rule)
+		return pk.verifyRuleDefaultCase(pol, endorsements)
 	}
 }
 

@@ -10,6 +10,7 @@ package accesscontrol
 import (
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -368,6 +369,20 @@ func (p *pkACProvider) verifyRuleAnyCase(pol *policy, endorsements []*common.End
 	return false, err
 }
 
+func (p *pkACProvider) verifyRuleAllCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
+	role := protocol.RoleAdmin
+	refinedEndorsements := p.getValidEndorsementsInner(
+		map[string]bool{}, map[protocol.Role]bool{role: true}, endorsements)
+	numOfValid := len(refinedEndorsements)
+	p.log.Debugf("verifyRuleMajorityAdminCase: numOfValid=[%d], p.adminNum=[%d]", numOfValid, p.adminNum)
+	if numOfValid >= int(p.adminNum) {
+		return true, nil
+	}
+	return false, fmt.Errorf("%s: %d valid endorsements required, %d valid endorsements received",
+		notEnoughParticipantsSupportError, p.adminNum, numOfValid)
+
+}
+
 func (p *pkACProvider) verifyRuleMajorityCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
 	role := protocol.RoleAdmin
 	refinedEndorsements := p.getValidEndorsementsInner(
@@ -379,6 +394,54 @@ func (p *pkACProvider) verifyRuleMajorityCase(pol *policy, endorsements []*commo
 	}
 	return false, fmt.Errorf("%s: %d valid endorsements required, %d valid endorsements received",
 		notEnoughParticipantsSupportError, int(float64(p.adminNum)/2.0+1), numOfValid)
+}
+
+func (p *pkACProvider) verifyRuleDefaultCase(pol *policy, endorsements []*common.EndorsementEntry) (bool, error) {
+	rule := pol.GetRule()
+	nums := strings.Split(string(rule), LIMIT_DELIMITER)
+
+	refinedEndorsements := p.getValidEndorsementsInner(
+		map[string]bool{}, map[protocol.Role]bool{protocol.RoleAdmin: true}, endorsements)
+	numOfValid := len(refinedEndorsements)
+
+	switch len(nums) {
+	case 1:
+		threshold, err := strconv.Atoi(nums[0])
+		if err != nil {
+			return false, fmt.Errorf("authentication fail: unrecognized rule, should be ANY, MAJORITY, ALL, " +
+				"SELF, ac threshold (integer), or ac portion (fraction)")
+		}
+
+		if numOfValid >= threshold {
+			return true, nil
+		}
+		return false, fmt.Errorf("%s: %d valid endorsements required, %d valid endorsements received",
+			notEnoughParticipantsSupportError, threshold, numOfValid)
+
+	case 2:
+		numerator, err := strconv.Atoi(nums[0])
+		denominator, err2 := strconv.Atoi(nums[1])
+		if err != nil || err2 != nil {
+			return false, fmt.Errorf("authentication fail: unrecognized rule, should be ANY, MAJORITY, ALL, " +
+				"SELF, an integer, or ac fraction")
+		}
+
+		if denominator <= 0 {
+			denominator = int(p.adminNum)
+		}
+
+		var numRequired float64
+		numRequired = float64(p.adminNum) * float64(numerator) / float64(denominator)
+
+		if float64(numOfValid) >= numRequired {
+			return true, nil
+		}
+		return false, fmt.Errorf("%s: %f valid endorsements required, %d valid endorsements received",
+			notEnoughParticipantsSupportError, numRequired, numOfValid)
+	default:
+		return false, fmt.Errorf("authentication fail: unrecognized principle type, should be ANY, MAJORITY, " +
+			"ALL, an integer (Threshold), or ac fraction (Portion)")
+	}
 }
 
 func (p *pkACProvider) buildRoleListForVerifyPrincipal(pol *policy) map[protocol.Role]bool {
