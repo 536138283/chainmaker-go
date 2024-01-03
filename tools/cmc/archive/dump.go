@@ -48,7 +48,7 @@ func newDumpCMD() *cobra.Command {
 func runDumpCMD(archiveHeight uint64) error {
 	// create chain client
 	cc, err := util.CreateChainClient(sdkConfPath, "",
-		"", "", "", "", "")
+		"", "", "", "", "", true)
 	if err != nil {
 		return err
 	}

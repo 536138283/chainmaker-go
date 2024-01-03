@@ -48,7 +48,7 @@ func newRestoreCMD() *cobra.Command {
 
 func runRestoreCMD(restoreEndHeight uint64) error {
 	chainClient, chainClientErr := util.CreateChainClient(sdkConfPath, "",
-		"", "", "", "", "")
+		"", "", "", "", "", true)
 	if chainClientErr != nil {
 		return chainClientErr
 	}

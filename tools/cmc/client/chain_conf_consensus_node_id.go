@@ -117,7 +117,7 @@ func updateConsensusNodeIdCMD() *cobra.Command {
 func configConsensusNodeId(op int) error {
 
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
-		userSignCrtFilePath, userSignKeyFilePath)
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return err
 	}
