@@ -43,6 +43,8 @@ func (p *pkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	chainConfig := &config.ChainConfig{}
 	_ = proto.Unmarshal(dataBytes, chainConfig)
 
+	p.initResourcePolicy(chainConfig.ResourcePolicies)
+
 	p.hashType = chainConfig.GetCrypto().GetHash()
 	err = p.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {

@@ -92,10 +92,12 @@ func (pk *pkACProvider) verifyPrincipalPolicy(principal,
 			refinedPrincipal.GetResourceName())
 	case protocol.RuleAny:
 		return pk.verifyRuleAnyCase(pol, endorsements)
+	case protocol.RuleAll:
+		return pk.verifyRuleAllCase(pol, endorsements)
 	case protocol.RuleMajority:
 		return pk.verifyRuleMajorityCase(pol, endorsements)
 	default:
-		return false, fmt.Errorf("public authentication fail: [%s] is not supported", rule)
+		return pk.verifyRuleDefaultCase(pol, endorsements)
 	}
 }
 

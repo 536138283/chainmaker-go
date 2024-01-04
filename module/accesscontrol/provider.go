@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
@@ -235,6 +237,13 @@ func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
+	}
+	//cert-hash 、alias 模式时，重制sender
+	if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+		tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
+
+		tx.Sender.Signer.MemberType = pbac.MemberType_CERT
+		tx.Sender.Signer.MemberInfo = refinedPrincipal.GetEndorsement()[0].Signer.MemberInfo
 	}
 
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
