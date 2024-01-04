@@ -73,6 +73,11 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), policyConfig)
 
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_ENABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_DISABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
+
 		// enable 3 phrase multi-sign flag
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
@@ -247,6 +252,11 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), policyConfig)
 
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_ENABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_DISABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
+
 		// enable 3 phrase multi-sign flag
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_MULTI_SIGN_ENABLE_MANUAL_RUN.String(), policyConfig)
@@ -326,8 +336,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 			syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), policyConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig)
-
-		// multi-sign management, use default policy
 
 		// private-compute management
 		acs.resourceNamePolicyMap.Store(protocol.ResourceNamePrivateCompute, policyWrite)
@@ -422,6 +430,11 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 		// enable gas flag management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyMajorityAdmin)
+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_ENABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_DISABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
 
 		// enable 3 phrase multi-sign flag
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
@@ -600,6 +613,11 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 		// enable gas flag management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyForbidden)
+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_ENABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_DISABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
 
 		// enable 3 phrase multi-sign flag
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
