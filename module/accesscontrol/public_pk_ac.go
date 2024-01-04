@@ -181,6 +181,17 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 	return pkAcProvider, nil
 }
 
+func (p *pkACProvider) initResourcePolicy(resourcePolicies []*config.ResourcePolicy) {
+	lastestPolicyMap := &sync.Map{}
+	for _, resourcePolicy := range resourcePolicies {
+		if p.ValidateResourcePolicy(resourcePolicy) {
+			policy := newPolicyFromPb(resourcePolicy.Policy)
+			lastestPolicyMap.Store(resourcePolicy.ResourceName, policy)
+		}
+	}
+	p.latestPolicyMap = lastestPolicyMap
+}
+
 func (p *pkACProvider) initAdminMembers(trustRootList []*config.TrustRootConfig) error {
 	var (
 		tempSyncMap sync.Map

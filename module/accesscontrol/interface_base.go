@@ -86,7 +86,6 @@ func (pk *pkACProvider) verifyPrincipalPolicy(principal,
 	refinedPrincipal protocol.Principal, pol *policy) (bool, error) {
 	endorsements := refinedPrincipal.GetEndorsement()
 	rule := pol.GetRule()
-	fmt.Printf("wcx debug:rule=%s\n", rule)
 	switch rule {
 	case protocol.RuleForbidden:
 		return false, fmt.Errorf("public authentication fail: [%s] is forbidden to access",
