@@ -337,8 +337,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig)
 
-		// multi-sign management, use default policy
-
 		// private-compute management
 		acs.resourceNamePolicyMap.Store(protocol.ResourceNamePrivateCompute, policyWrite)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PRIVATE_COMPUTE.String()+"-"+
