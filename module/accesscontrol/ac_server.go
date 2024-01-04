@@ -194,6 +194,14 @@ var (
 			protocol.RoleAdmin,
 		},
 	)
+
+	policyRelayCross = newPolicy(
+		protocol.RuleAny,
+		nil,
+		[]protocol.Role{
+			protocol.RoleAdmin,
+		},
+	)
 )
 
 type accessControlService struct {
