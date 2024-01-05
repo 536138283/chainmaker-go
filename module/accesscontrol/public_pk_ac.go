@@ -55,6 +55,29 @@ var restrainedResourceListPK = map[string]bool{
 	common.TxType_INVOKE_CONTRACT.String(): true,
 	common.TxType_SUBSCRIBE.String():       true,
 	common.TxType_ARCHIVE.String():         true,
+
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERT_ALIAS_ADD.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_ALIAS_QUERY.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_QUERY.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERT_ADD.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_FREEZE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_UNFREEZE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_DELETE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_REVOKE.String(): true,
+	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
+		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(): true,
 }
 
 var (
