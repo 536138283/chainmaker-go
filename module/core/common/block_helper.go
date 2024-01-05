@@ -1131,26 +1131,10 @@ func RetryAndRemoveTxs(
 	txsRetry []*commonPb.Transaction,
 	txsRem []*commonPb.Transaction,
 	log protocol.Logger) {
-	var txs []*commonPb.Transaction
-	if len(txsRetry) > 0 {
-		txs = filterTxsForTxPool(txsRetry, log)
-	}
-	txPool.RetryAndRemoveTxs(
-		coinbasemgr.FilterCoinBaseTxOrGasTx(txs),
-		coinbasemgr.FilterCoinBaseTxOrGasTx(txsRem))
-}
 
-// filterTxsForTxPool filter charging gas tx out
-func filterTxsForTxPool(txs []*commonPb.Transaction, log protocol.Logger) []*commonPb.Transaction {
-	filteredTxs := make([]*commonPb.Transaction, 0, len(txs))
-	for _, tx := range txs {
-		if !isOptimizedChargingGasTx(tx) {
-			filteredTxs = append(filteredTxs, tx)
-		} else {
-			log.Debugf("discard charging gas tx, id = %v", tx.Payload.TxId)
-		}
-	}
-	return filteredTxs
+	txPool.RetryAndRemoveTxs(
+		coinbasemgr.FilterCoinBaseTxOrGasTx(txsRetry),
+		coinbasemgr.FilterCoinBaseTxOrGasTx(txsRem))
 }
 
 func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height uint64) (
@@ -1204,15 +1188,6 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	}
 
 	return txRetry, batchRetry, nil, nil
-}
-
-func isOptimizedChargingGasTx(t *commonPb.Transaction) bool {
-	if t.Payload.ContractName == systemPb.SystemContract_ACCOUNT_MANAGER.String() &&
-		t.Payload.Method == systemPb.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String() &&
-		t.Payload.TxType == commonPb.TxType_INVOKE_CONTRACT {
-		return true
-	}
-	return false
 }
 
 //nolint: ineffassign, staticcheck
