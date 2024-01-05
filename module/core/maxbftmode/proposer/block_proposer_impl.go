@@ -248,7 +248,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) (*consensu
 
 				bp.txPool.RetryAndRemoveTxBatches(nil, batchIds)
 			} else {
-				common.RetryAndRemoveTxs(bp.txPool, nil, coinbasemgr.FilterCoinBaseTxOrGasTx(selfProposedBlock.Txs), bp.log)
+				common.RetryAndRemoveTxs(bp.txPool, nil, selfProposedBlock.Txs, bp.log)
 			}
 		}
 	}

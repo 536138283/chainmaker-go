@@ -494,7 +494,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 		}
 	}
 	if len(cutTxs) > 0 {
-		common.RetryAndRemoveTxs(v.txPool, coinbasemgr.FilterCoinBaseTxOrGasTx(cutTxs), nil, v.log)
+		common.RetryAndRemoveTxs(v.txPool, cutTxs, nil, v.log)
 	}
 }
 
