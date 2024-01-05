@@ -583,8 +583,6 @@ func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePol
 	}
 
 	return p.checkResourcePolicyRule(resourcePolicy)
-
-	return true
 }
 
 func (p *pkACProvider) checkResourcePolicyOrgList(policy *pbac.Policy) bool {
