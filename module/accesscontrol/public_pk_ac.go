@@ -45,6 +45,41 @@ const (
 	PermissionConsensusOrgId = "public"
 )
 
+// List of access principals which should not be customized
+var restrainedResourceListPK = map[string]bool{
+	protocol.ResourceNameAllTest:       true,
+	protocol.ResourceNameP2p:           true,
+	protocol.ResourceNameConsensusNode: true,
+
+	common.TxType_QUERY_CONTRACT.String():  true,
+	common.TxType_INVOKE_CONTRACT.String(): true,
+	common.TxType_SUBSCRIBE.String():       true,
+	common.TxType_ARCHIVE.String():         true,
+
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERT_ALIAS_ADD.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_ALIAS_QUERY.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_QUERY.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERT_ADD.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_FREEZE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_UNFREEZE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_DELETE.String(): true,
+	syscontract.SystemContract_CERT_MANAGE.String() + "-" +
+		syscontract.CertManageFunction_CERTS_REVOKE.String(): true,
+	syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
+		syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(): true,
+}
+
 var (
 	pubPolicyConsensus = newPolicy(
 		protocol.RuleAny,
@@ -555,7 +590,106 @@ func (p *pkACProvider) GetHashAlg() string {
 
 // ValidateResourcePolicy checks whether the given resource principal is valid
 func (p *pkACProvider) ValidateResourcePolicy(resourcePolicy *config.ResourcePolicy) bool {
-	return true
+	if _, ok := restrainedResourceListPK[resourcePolicy.ResourceName]; ok {
+		p.log.Errorf("bad configuration: should not modify the access policy of the resource: %s",
+			resourcePolicy.ResourceName)
+		return false
+	}
+
+	if resourcePolicy.Policy == nil {
+		p.log.Errorf("bad configuration: access principle should not be nil when modifying access control configurations")
+		return false
+	}
+
+	if !p.checkResourcePolicyOrgList(resourcePolicy.Policy) {
+		return false
+	}
+
+	return p.checkResourcePolicyRule(resourcePolicy)
+}
+
+func (p *pkACProvider) checkResourcePolicyOrgList(policy *pbac.Policy) bool {
+	if policy.OrgList == nil {
+		return true
+	}
+
+	if len(policy.OrgList) == 0 {
+		return true
+	}
+
+	if len(policy.OrgList) == 1 && policy.OrgList[0] != "public" {
+		return true
+	}
+
+	p.log.Errorf("bad configuration: error [%s] in organization list", policy.OrgList)
+
+	return false
+}
+
+func (p *pkACProvider) checkResourcePolicyRule(resourcePolicy *config.ResourcePolicy) bool {
+	switch resourcePolicy.Policy.Rule {
+	case string(protocol.RuleAny), string(protocol.RuleAll), string(protocol.RuleForbidden):
+		return true
+	case string(protocol.RuleMajority):
+		return p.checkResourcePolicyRuleMajorityCase(resourcePolicy.Policy)
+	case string(protocol.RuleDelete):
+		p.log.Debugf("delete policy configuration of %s", resourcePolicy.ResourceName)
+		return true
+	default:
+		return p.checkResourcePolicyRuleDefaultCase(resourcePolicy.Policy)
+	}
+}
+
+func (p *pkACProvider) checkResourcePolicyRuleMajorityCase(policy *pbac.Policy) bool {
+
+	switch len(policy.RoleList) {
+	case 0:
+		p.log.Warnf("role allowed in [%s] is [%s]", protocol.RuleMajority, protocol.RoleAdmin)
+		return true
+	case 1:
+		if policy.RoleList[0] != string(protocol.RoleAdmin) {
+			p.log.Errorf("role allowed in [%s] is only [%s], [%s] will be overridden", protocol.RuleMajority,
+				protocol.RoleAdmin, policy.RoleList[0])
+			return false
+		}
+		return true
+	default:
+		p.log.Warnf("role allowed in [%s] is only [%s], the other roles in the list will be ignored",
+			protocol.RuleMajority, protocol.RoleAdmin)
+		return true
+	}
+}
+
+func (p *pkACProvider) checkResourcePolicyRuleDefaultCase(policy *pbac.Policy) bool {
+	nums := strings.Split(policy.Rule, LIMIT_DELIMITER)
+	switch len(nums) {
+	case 1:
+		_, err := strconv.Atoi(nums[0])
+		if err != nil {
+			p.log.Errorf(unsupportedRuleErrorTemplate, policy.Rule)
+			return false
+		}
+		return true
+	case 2:
+		numerator, err := strconv.Atoi(nums[0])
+		if err != nil {
+			p.log.Errorf(unsupportedRuleErrorTemplate, policy.Rule)
+			return false
+		}
+		denominator, err := strconv.Atoi(nums[1])
+		if err != nil {
+			p.log.Errorf(unsupportedRuleErrorTemplate, policy.Rule)
+			return false
+		}
+		if numerator <= 0 || denominator <= 0 {
+			p.log.Errorf(unsupportedRuleErrorTemplate, policy.Rule)
+			return false
+		}
+		return true
+	default:
+		p.log.Errorf(unsupportedRuleErrorTemplate, policy.Rule)
+		return false
+	}
 }
 
 // LookUpPolicy returns corresponding policy configured for the given resource name
