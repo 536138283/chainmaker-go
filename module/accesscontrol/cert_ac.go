@@ -658,6 +658,22 @@ func (cp *certACProvider) refinePrincipal(principal protocol.Principal) (protoco
 	return refinedPrincipal, nil
 }
 
+func (cp *certACProvider) refinePrincipalForCertOptimization(principal protocol.Principal) (protocol.Principal, error) {
+	endorsements := principal.GetEndorsement()
+	msg := principal.GetMessage()
+	refinedEndorsement := cp.RefineEndorsementsForCertOptimization(endorsements, msg)
+	if len(refinedEndorsement) <= 0 {
+		return nil, fmt.Errorf("refine endorsements failed, all endorsers have failed verification")
+	}
+
+	refinedPrincipal, err := cp.CreatePrincipal(principal.GetResourceName(), refinedEndorsement, msg)
+	if err != nil {
+		return nil, fmt.Errorf("create principal failed: [%s]", err.Error())
+	}
+
+	return refinedPrincipal, nil
+}
+
 func (cp *certACProvider) RefineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
@@ -713,6 +729,46 @@ func (cp *certACProvider) RefineEndorsements(endorsements []*common.EndorsementE
 					endorsement, err.Error())
 				continue
 			}
+		}
+
+		if _, ok := refinedSigners[memInfo]; !ok {
+			refinedSigners[memInfo] = true
+			refinedEndorsement = append(refinedEndorsement, endorsement)
+		}
+	}
+	return refinedEndorsement
+}
+
+func (cp *certACProvider) RefineEndorsementsForCertOptimization(endorsements []*common.EndorsementEntry,
+	msg []byte) []*common.EndorsementEntry {
+
+	refinedSigners := map[string]bool{}
+	var refinedEndorsement []*common.EndorsementEntry
+	var memInfo string
+
+	for _, endorsementEntry := range endorsements {
+		endorsement := &common.EndorsementEntry{
+			Signer: &pbac.Member{
+				OrgId:      endorsementEntry.Signer.OrgId,
+				MemberInfo: endorsementEntry.Signer.MemberInfo,
+				MemberType: endorsementEntry.Signer.MemberType,
+			},
+			Signature: endorsementEntry.Signature,
+		}
+		if endorsement.Signer.MemberType == pbac.MemberType_CERT {
+			cp.acService.log.Debugf("target endorser uses full certificate")
+			memInfo = string(endorsement.Signer.MemberInfo)
+		}
+		if endorsement.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			endorsement.Signer.MemberType == pbac.MemberType_ALIAS {
+			cp.acService.log.Debugf("target endorser uses compressed certificate")
+			memInfoBytes, ok := cp.lookUpCertCache(endorsement.Signer.MemberInfo)
+			if !ok {
+				cp.acService.log.Warnf("authentication failed, unknown signer, the provided certificate ID is not registered")
+				continue
+			}
+			memInfo = string(memInfoBytes)
+			endorsement.Signer.MemberInfo = memInfoBytes
 		}
 
 		if _, ok := refinedSigners[memInfo]; !ok {

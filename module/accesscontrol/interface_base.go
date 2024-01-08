@@ -12,6 +12,7 @@ type acProviderBase interface {
 	getTotalVoterNum() int
 	verifyPrincipalPolicy(principal, refinedPrincipal protocol.Principal, pol *policy) (bool, error)
 	refinePrincipal(principal protocol.Principal) (protocol.Principal, error)
+	refinePrincipalForCertOptimization(principal protocol.Principal) (protocol.Principal, error)
 
 	CreatePrincipal(resourceName string,
 		endorsements []*commonPb.EndorsementEntry, message []byte) (protocol.Principal, error)

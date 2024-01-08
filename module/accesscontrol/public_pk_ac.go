@@ -516,6 +516,10 @@ func (p *pkACProvider) refinePrincipal(principal protocol.Principal) (protocol.P
 	return refinedPrincipal, nil
 }
 
+func (p *pkACProvider) refinePrincipalForCertOptimization(principal protocol.Principal) (protocol.Principal, error) {
+	return nil, fmt.Errorf("this method should not be called")
+}
+
 func (p *pkACProvider) RefineEndorsements(endorsements []*common.EndorsementEntry,
 	msg []byte) []*common.EndorsementEntry {
 
