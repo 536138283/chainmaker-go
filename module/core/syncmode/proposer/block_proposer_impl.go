@@ -337,7 +337,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		fetchBatch = fetchBatch[:txCapacity]
 
 		if common.TxPoolType != batch.TxPoolType {
-			common.RetryAndRemoveTxs(bp.txPool, coinbasemgr.FilterCoinBaseTxOrGasTx(txRetry), nil, bp.log)
+			common.RetryAndRemoveTxs(bp.txPool, txRetry, nil, bp.log)
 		} else {
 			batchIds, fetchBatches = bp.txPool.ReGenTxBatchesWithRetryTxs(height, batchIds,
 				coinbasemgr.FilterCoinBaseTxOrGasTx(fetchBatch))
@@ -361,7 +361,7 @@ func (bp *BlockProposerImpl) proposing(height uint64, preHash []byte) *commonpb.
 		}
 
 		if common.TxPoolType != batch.TxPoolType {
-			common.RetryAndRemoveTxs(bp.txPool, coinbasemgr.FilterCoinBaseTxOrGasTx(fetchBatch),
+			common.RetryAndRemoveTxs(bp.txPool, fetchBatch,
 				nil, bp.log) // put txs back to txpool
 		} else {
 			bp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
@@ -478,8 +478,8 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		}
 	}
 
-	common.RetryAndRemoveTxs(bp.txPool, coinbasemgr.FilterCoinBaseTxOrGasTx(retryTxs),
-		coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs), bp.log)
+	common.RetryAndRemoveTxs(bp.txPool, retryTxs,
+		removeTxs, bp.log)
 	bp.proposalCache.ClearProposedBlockAt(height)
 }
 
@@ -639,7 +639,7 @@ func (bp *BlockProposerImpl) removeTx(
 
 		return batchIds, fetchBatches, fetchBatch
 	}
-	common.RetryAndRemoveTxs(bp.txPool, nil, coinbasemgr.FilterCoinBaseTxOrGasTx(removeTxs), bp.log)
+	common.RetryAndRemoveTxs(bp.txPool, nil, removeTxs, bp.log)
 	return batchIds, fetchBatches, fetchBatch
 }
 
@@ -648,10 +648,11 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 
 	if bytes.Equal(selfProposedBlock.Header.PreBlockHash, preHash) {
 
+		currentTime := utils.CurrentTimeSeconds()
 		// when this block has some wrong tx and could not to reach an agreement.
 		// we need to clear the old proposal cache when the old block's tx timeout.
 		// we need to remove these txs from tx pool.
-		if utils.CurrentTimeSeconds()-selfProposedBlock.Header.BlockTimestamp >=
+		if currentTime-selfProposedBlock.Header.BlockTimestamp >=
 			int64(bp.chainConf.ChainConfig().Block.TxTimeout) {
 
 			bp.proposalCache.ClearTheBlock(selfProposedBlock)
@@ -668,6 +669,32 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 			common.RetryAndRemoveTxs(bp.txPool, nil,
 				coinbasemgr.FilterCoinBaseTxOrGasTx(selfProposedBlock.Txs), bp.log)
 			return true
+		}
+
+		// when this block has some wrong could not to reach an agreement.
+		// we want to verify block's timestamp.
+		// we need to clear the old proposal cache when the old block time out.
+		// we need to retry these txs into tx pool.
+		if bp.chainConf.ChainConfig().Block.BlockTimestampVerify {
+			if currentTime-selfProposedBlock.Header.BlockTimestamp >=
+				int64(bp.chainConf.ChainConfig().Block.BlockTimeout) {
+
+				bp.proposalCache.ClearTheBlock(selfProposedBlock)
+
+				if common.TxPoolType == batch.TxPoolType {
+					batchIds, _, err := common.GetBatchIds(selfProposedBlock)
+					if err != nil {
+						// no need to handle this err,propose a new block.
+						return true
+					}
+					bp.txPool.RetryAndRemoveTxBatches(batchIds, nil)
+					return true
+				}
+
+				common.RetryAndRemoveTxs(bp.txPool, selfProposedBlock.Txs,
+					nil, bp.log)
+				return true
+			}
 		}
 
 		blockFinger := utils.CalcBlockFingerPrint(selfProposedBlock)
@@ -721,7 +748,7 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 		return true
 	}
 
-	common.RetryAndRemoveTxs(bp.txPool, nil, coinbasemgr.FilterCoinBaseTxOrGasTx(selfProposedBlock.Txs), bp.log)
+	common.RetryAndRemoveTxs(bp.txPool, nil, selfProposedBlock.Txs, bp.log)
 
 	return true
 }
