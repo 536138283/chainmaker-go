@@ -171,7 +171,9 @@ func (pp *permissionedPkACProvider) refinePrincipal(principal protocol.Principal
 	return refinedPrincipal, nil
 }
 
-func (pp *permissionedPkACProvider) refinePrincipalForCertOptimization(principal protocol.Principal) (protocol.Principal, error) {
+func (pp *permissionedPkACProvider) refinePrincipalForCertOptimization(
+	principal protocol.Principal) (
+	protocol.Principal, error) {
 	return nil, fmt.Errorf("this method should not be called")
 }
 
