@@ -237,13 +237,16 @@ func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
-	}
-	//cert-hash 、alias 模式时，重制sender
-	if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
-		tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
+	} else {
+		//cert-hash 、alias 模式时，重置memInfo
+		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
 
-		tx.Sender.Signer.MemberType = pbac.MemberType_CERT
-		tx.Sender.Signer.MemberInfo = refinedPrincipal.GetEndorsement()[0].Signer.MemberInfo
+			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
+			if err != nil {
+				return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			}
+		}
 	}
 
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
@@ -280,6 +283,16 @@ func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byt
 		refinedPrincipal, err = p.refinePrincipal(principal)
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+		}
+	} else {
+		//cert-hash 、alias 模式时，重置memInfo
+		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
+
+			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
+			if err != nil {
+				return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			}
 		}
 	}
 
@@ -366,6 +379,16 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		refinedPrincipal, err = p.refinePrincipal(principal)
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+		}
+	} else {
+		//cert-hash 、alias 模式时，重置memInfo
+		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
+
+			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
+			if err != nil {
+				return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			}
 		}
 	}
 

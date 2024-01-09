@@ -515,8 +515,6 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 			syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-			syscontract.ContractQueryFunction_GET_DISABLED_CONTRACT_LIST.String(), pubPolicyForbidden)
 
 		// multi-sign management, use default policy
 
@@ -696,8 +694,6 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 			syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-			syscontract.ContractQueryFunction_GET_DISABLED_CONTRACT_LIST.String(), pubPolicyForbidden)
 
 		// multi-sign management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_MULTI_SIGN.String()+"-"+
