@@ -237,14 +237,15 @@ func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
-	}
-	//cert-hash 、alias 模式时，重置memInfo
-	if !bypassSignVerify && (tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
-		tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS) {
+	} else {
+		//cert-hash 、alias 模式时，重置memInfo
+		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
 
-		refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
-		if err != nil {
-			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
+			if err != nil {
+				return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			}
 		}
 	}
 
@@ -283,14 +284,15 @@ func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byt
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
-	}
-	//cert-hash 、alias 模式时，重置memInfo
-	if !bypassVerifySign && (tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
-		tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS) {
+	} else {
+		//cert-hash 、alias 模式时，重置memInfo
+		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
 
-		refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
-		if err != nil {
-			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
+			if err != nil {
+				return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			}
 		}
 	}
 
@@ -378,14 +380,15 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
-	}
-	//cert-hash 、alias 模式时，重置memInfo
-	if !bypassVerifySign && (tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
-		tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS) {
+	} else {
+		//cert-hash 、alias 模式时，重置memInfo
+		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
 
-		refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
-		if err != nil {
-			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
+			if err != nil {
+				return false, fmt.Errorf("authentication failed, [%s]", err.Error())
+			}
 		}
 	}
 
