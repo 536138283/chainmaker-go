@@ -140,6 +140,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 
+		// archive management
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ARCHIVE_MANAGE.String()+"-"+
+			syscontract.ArchiveFunction_ARCHIVE_BLOCK.String(), policySelfConfig)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+			syscontract.ArchiveFunction_RESTORE_BLOCK.String(), policySelfConfig)
+
 		// contract management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyAdmin)
@@ -319,6 +325,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 
+		// archive management
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ARCHIVE_MANAGE.String()+"-"+
+			syscontract.ArchiveFunction_ARCHIVE_BLOCK.String(), policySelfConfig)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+			syscontract.ArchiveFunction_RESTORE_BLOCK.String(), policySelfConfig)
+
 		// contract management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyAdmin)
@@ -497,6 +509,12 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 		// version management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyMajorityAdmin)
+
+		// archive management
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ARCHIVE_MANAGE.String()+"-"+
+			syscontract.ArchiveFunction_ARCHIVE_BLOCK.String(), policyAdmin)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+			syscontract.ArchiveFunction_RESTORE_BLOCK.String(), policyAdmin)
 
 		// contract management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
