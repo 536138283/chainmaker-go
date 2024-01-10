@@ -43,10 +43,12 @@ class Test(unittest.TestCase):
         print("UserC query:Tx".center(50, "="))
         queryCmd3 = ContractQuery(sdk_config="sdk_config3.yml")
         queryCmd3.query_by_tx(txId)
+
         print("UserD query:Block".center(50, "="))
         queryCmd4 = ContractQuery(sdk_config="sdk_config4.yml")
         queryCmd4.query_block_height(block_height)
 
+        print("UserD query:BlockInterval".center(50, "="))
         result= queryCmd4.query_chain_config()
         queryValue = json.loads(result).get("block").get("block_interval")
         self.assertEqual(20, queryValue, "success")

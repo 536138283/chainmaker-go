@@ -15,8 +15,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 
 	// for tx_type
 	{
-		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
-		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
+		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policySpecialRead)
+		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policySpecialRead)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 		acs.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
 	}
@@ -142,7 +142,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 
 		// contract management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-			syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
+			syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyAdmin)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(), policyConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
@@ -321,7 +321,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 		// contract management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
-			syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyConfig)
+			syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyAdmin)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(), policyConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
