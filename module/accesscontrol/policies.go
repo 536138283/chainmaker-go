@@ -181,6 +181,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 
 	}
 }
+
 func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId string) {
 	// for msg_type
 	{
