@@ -168,9 +168,9 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 			syscontract.PrivateComputeFunction_SAVE_ENCLAVE_REPORT.String(), policyConfig)
 
 		// public-key management
-		acs.senderPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), policyForbidden)
-		acs.senderPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), policyForbidden)
 
 		// relay cross
