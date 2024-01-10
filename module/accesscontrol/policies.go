@@ -15,8 +15,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 
 	// for tx_type
 	{
-		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
-		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
+		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policySpecialRead)
+		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policySpecialRead)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 		acs.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
 	}
@@ -168,9 +168,9 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 			syscontract.PrivateComputeFunction_SAVE_ENCLAVE_REPORT.String(), policyConfig)
 
 		// public-key management
-		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
+		acs.senderPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_ADD.String(), policyForbidden)
-		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
+		acs.senderPolicyMap.Store(syscontract.SystemContract_PUBKEY_MANAGE.String()+"-"+
 			syscontract.PubkeyManageFunction_PUBKEY_DELETE.String(), policyForbidden)
 
 		// relay cross
