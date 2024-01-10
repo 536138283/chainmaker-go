@@ -34,7 +34,7 @@ class Test(unittest.TestCase):
                            sdk_config="sdk_config.yml")
         txId=json.loads(result).get("tx_id")
         block_height=json.loads(result).get("tx_block_height")
-        # time.sleep(1)
+        time.sleep(1)
         print("UserB query:".center(50, "="))
         result= contractT.get("G","{{\"k\":\"{}\"}}".format(key),sdk_config="sdk_config2.yml" ,stringResult=True)
         queryValue = json.loads(result).get("contract_result").get("result")
