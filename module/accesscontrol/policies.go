@@ -140,7 +140,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 
-		// contract  management
+		// contract management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_INIT_CONTRACT.String(), policyAdmin)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
