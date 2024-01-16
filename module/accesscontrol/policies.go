@@ -28,6 +28,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 			syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyWrite)
 
 		// cert alias management
 		acs.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
@@ -209,6 +211,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 			syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyWrite)
 
 		// certs alias management
 		acs.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
