@@ -517,6 +517,7 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 		return mInfo.Status, fmt.Errorf("multi-sign status `%v` is not permitted to verify", mInfo.Status)
 	}
 
+	log.Errorf("wcx debug: 1")
 	resourceName := mInfo.ContractName + "-" + mInfo.Method
 	var agreeEndorsements []*commonPb.EndorsementEntry
 	var rejectEndorsements []*commonPb.EndorsementEntry
@@ -529,6 +530,7 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 			log.Warnf("unknown vote action, voteInfo.Vote = %v", voteInfo.Vote)
 		}
 	}
+	log.Errorf("wcx debug: 2")
 	log.Debugf("multiSignInfo => %v", mInfo)
 	log.Debugf("endorsers agreed num => %v", len(agreeEndorsements))
 	log.Debugf("endorsers rejected num => %v", len(rejectEndorsements))
@@ -540,7 +542,7 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	if policy == nil {
 		return mInfo.Status, nil
 	}
-
+	log.Errorf("wcx debug: 3")
 	// 根据 agree 的数量判断多签状态
 	if len(agreeEndorsements) > 0 {
 		tx := commonPb.Transaction{
@@ -557,7 +559,7 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 		}
 
 	}
-
+	log.Errorf("wcx debug: 4")
 	// 根据 agree 的数量判断多签状态
 	if len(rejectEndorsements) > 0 {
 		tx := commonPb.Transaction{
