@@ -333,7 +333,6 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
-
 	// 查找 resourceName 的策略
 	pol, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
@@ -342,13 +341,11 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if pol == nil {
 		return true, nil
 	}
-
 	// 构建 endorsements
 	endorsements := tx.Endorsers
 	if endorsements == nil {
 		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
 	}
-
 	var principal protocol.Principal
 	if pol.rule == protocol.RuleSelf {
 		var targetOrg string
@@ -373,7 +370,6 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		return false, fmt.Errorf("fail to construct authentication principal for %s: %s",
 			resourceName, err)
 	}
-
 	refinedPrincipal := principal
 	if !bypassVerifySign {
 		refinedPrincipal, err = p.refinePrincipal(principal)
@@ -382,8 +378,9 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		}
 	} else {
 		//cert-hash 、alias 模式时，重置memInfo
-		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
-			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
+		//多签场景中tx.Sender是nil
+		if tx.Sender != nil && (tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS) {
 
 			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
 			if err != nil {
@@ -540,7 +537,6 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	if policy == nil {
 		return mInfo.Status, nil
 	}
-
 	// 根据 agree 的数量判断多签状态
 	if len(agreeEndorsements) > 0 {
 		tx := commonPb.Transaction{
@@ -557,7 +553,6 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 		}
 
 	}
-
 	// 根据 agree 的数量判断多签状态
 	if len(rejectEndorsements) > 0 {
 		tx := commonPb.Transaction{
