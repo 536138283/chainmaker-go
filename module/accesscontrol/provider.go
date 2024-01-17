@@ -387,8 +387,8 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	} else {
 		fmt.Printf("wcx debug: i")
 		//cert-hash 、alias 模式时，重置memInfo
-		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
-			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
+		if tx.Sender != nil && (tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
+			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS) {
 
 			refinedPrincipal, err = p.refinePrincipalForCertOptimization(principal)
 			if err != nil {
