@@ -330,11 +330,9 @@ func verifyMultiSignEndorsementsPrincipal(p acProvider, tx *commonPb.Transaction
 func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, txBytes []byte, resourceName string,
 	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
 
-	fmt.Printf("wcx debug: a")
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
-	fmt.Printf("wcx debug: b")
 	// 查找 resourceName 的策略
 	pol, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
@@ -343,16 +341,13 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if pol == nil {
 		return true, nil
 	}
-	fmt.Printf("wcx debug: c")
 	// 构建 endorsements
 	endorsements := tx.Endorsers
 	if endorsements == nil {
 		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
 	}
-	fmt.Printf("wcx debug: d")
 	var principal protocol.Principal
 	if pol.rule == protocol.RuleSelf {
-		fmt.Printf("wcx debug: e")
 		var targetOrg string
 		parameterPairs := tx.Payload.Parameters
 		if parameterPairs != nil {
@@ -369,24 +364,21 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		}
 		principal, err = p.CreatePrincipalForTargetOrg(resourceName, endorsements, txBytes, targetOrg)
 	} else {
-		fmt.Printf("wcx debug: f")
 		principal, err = p.CreatePrincipal(resourceName, endorsements, txBytes)
 	}
 	if err != nil {
 		return false, fmt.Errorf("fail to construct authentication principal for %s: %s",
 			resourceName, err)
 	}
-	fmt.Printf("wcx debug: g")
 	refinedPrincipal := principal
 	if !bypassVerifySign {
-		fmt.Printf("wcx debug: h")
 		refinedPrincipal, err = p.refinePrincipal(principal)
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
 	} else {
-		fmt.Printf("wcx debug: i")
 		//cert-hash 、alias 模式时，重置memInfo
+		//多签场景中tx.Sender是nil
 		if tx.Sender != nil && (tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
 			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS) {
 
@@ -400,7 +392,6 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
 		return true, nil
 	}
-	fmt.Printf("wcx debug: j")
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 
 }
@@ -523,7 +514,6 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 		return mInfo.Status, fmt.Errorf("multi-sign status `%v` is not permitted to verify", mInfo.Status)
 	}
 
-	log.Errorf("wcx debug: 1")
 	resourceName := mInfo.ContractName + "-" + mInfo.Method
 	var agreeEndorsements []*commonPb.EndorsementEntry
 	var rejectEndorsements []*commonPb.EndorsementEntry
@@ -536,7 +526,6 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 			log.Warnf("unknown vote action, voteInfo.Vote = %v", voteInfo.Vote)
 		}
 	}
-	log.Errorf("wcx debug: 2")
 	log.Debugf("multiSignInfo => %v", mInfo)
 	log.Debugf("endorsers agreed num => %v", len(agreeEndorsements))
 	log.Debugf("endorsers rejected num => %v", len(rejectEndorsements))
@@ -548,7 +537,6 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 	if policy == nil {
 		return mInfo.Status, nil
 	}
-	log.Errorf("wcx debug: 3")
 	// 根据 agree 的数量判断多签状态
 	if len(agreeEndorsements) > 0 {
 		tx := commonPb.Transaction{
@@ -565,7 +553,6 @@ func verifyMultiSignTxPrincipal(p acProvider, mInfo *syscontract.MultiSignInfo,
 		}
 
 	}
-	log.Errorf("wcx debug: 4")
 	// 根据 agree 的数量判断多签状态
 	if len(rejectEndorsements) > 0 {
 		tx := commonPb.Transaction{
