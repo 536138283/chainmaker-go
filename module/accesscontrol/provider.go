@@ -330,10 +330,11 @@ func verifyMultiSignEndorsementsPrincipal(p acProvider, tx *commonPb.Transaction
 func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, txBytes []byte, resourceName string,
 	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
 
+	fmt.Printf("wcx debug: a")
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
-
+	fmt.Printf("wcx debug: b")
 	// 查找 resourceName 的策略
 	pol, err := p.findFromEndorsementsPolicies(resourceName, blockVersion)
 	if err != nil {
@@ -342,15 +343,16 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if pol == nil {
 		return true, nil
 	}
-
+	fmt.Printf("wcx debug: c")
 	// 构建 endorsements
 	endorsements := tx.Endorsers
 	if endorsements == nil {
 		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
 	}
-
+	fmt.Printf("wcx debug: d")
 	var principal protocol.Principal
 	if pol.rule == protocol.RuleSelf {
+		fmt.Printf("wcx debug: e")
 		var targetOrg string
 		parameterPairs := tx.Payload.Parameters
 		if parameterPairs != nil {
@@ -367,20 +369,23 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 		}
 		principal, err = p.CreatePrincipalForTargetOrg(resourceName, endorsements, txBytes, targetOrg)
 	} else {
+		fmt.Printf("wcx debug: f")
 		principal, err = p.CreatePrincipal(resourceName, endorsements, txBytes)
 	}
 	if err != nil {
 		return false, fmt.Errorf("fail to construct authentication principal for %s: %s",
 			resourceName, err)
 	}
-
+	fmt.Printf("wcx debug: g")
 	refinedPrincipal := principal
 	if !bypassVerifySign {
+		fmt.Printf("wcx debug: h")
 		refinedPrincipal, err = p.refinePrincipal(principal)
 		if err != nil {
 			return false, fmt.Errorf("authentication failed, [%s]", err.Error())
 		}
 	} else {
+		fmt.Printf("wcx debug: i")
 		//cert-hash 、alias 模式时，重置memInfo
 		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH ||
 			tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
@@ -395,6 +400,7 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if localconf.ChainMakerConfig.DebugConfig.IsSkipAccessControl {
 		return true, nil
 	}
+	fmt.Printf("wcx debug: j")
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 
 }
