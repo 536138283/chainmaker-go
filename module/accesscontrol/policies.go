@@ -615,7 +615,7 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 			syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyForbidden)
 
 		// block management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), pubPolicyManage)
 
 		// consensus ext management
