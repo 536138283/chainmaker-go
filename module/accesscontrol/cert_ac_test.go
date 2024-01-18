@@ -78,10 +78,70 @@ func TestCert_VerifyPolicyMajority(t *testing.T) {
 
 	testCert_VerifyPolicyMajority(blockVersion2320, t)
 
-	testCert_VerifyPolicyMajority(blockVersion2330, t)
+	testCert_VerifyPolicyMajority2330(blockVersion2330, t)
 }
 
 func testCert_VerifyPolicyMajority(blockVersion uint32, t *testing.T) {
+	// initialize
+	testCertOrgMember := testInitCertFunc(t)
+	orgMemberInfo1 := testCertOrgMember[testOrg1]
+	orgMemberInfo2 := testCertOrgMember[testOrg2]
+	orgMemberInfo3 := testCertOrgMember[testOrg3]
+	orgMemberInfo4 := testCertOrgMember[testOrg4]
+
+	var (
+		err error
+		ok  bool
+	)
+
+	//【valid】test case
+	majorityPolicyTx := testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo4.admin)
+	require.Nil(t, err)
+
+	resourceName := utils.GetTxResourceName(majorityPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(majorityPolicyTx, resourceName, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
+
+	//【invalid】no enough endorsers
+	majorityPolicyTx = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+
+	err = testAppendEndorsement2Tx(majorityPolicyTx, testPKHashType, orgMemberInfo4.client)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(majorityPolicyTx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(majorityPolicyTx, resourceName, blockVersion)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
+}
+
+func testCert_VerifyPolicyMajority2330(blockVersion uint32, t *testing.T) {
 	// initialize
 	testCertOrgMember := testInitCertFunc(t)
 	orgMemberInfo1 := testCertOrgMember[testOrg1]
