@@ -642,6 +642,8 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleSelfCase(targetOrg str
 	for _, entry := range endorsements {
 		if entry.Signer.OrgId != targetOrg {
 			continue
+		} else {
+			acs.log.Warnf("endorsement.Signer.OrgId=[%s]", entry.Signer.OrgId)
 		}
 
 		member := acs.getMemberFromCache(entry.Signer)
