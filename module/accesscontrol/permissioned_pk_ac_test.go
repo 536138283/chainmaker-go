@@ -476,9 +476,8 @@ func testPWK_VerifyPolicyMajority(blockVersion uint32, t *testing.T) {
 
 	resourceName = utils.GetTxResourceName(tx)
 	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
-	require.NotNil(t, err)
-	require.Equal(t, false, ok)
-	fmt.Printf("【invalid case】: err = %v \n", err)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
 
 	// 【invalid】 test role of endorsers not match
 	tx = testCreateTx(

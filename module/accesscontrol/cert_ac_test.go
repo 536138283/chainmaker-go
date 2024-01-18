@@ -74,9 +74,9 @@ func testCert_VerifyPolicyDefault(blockVersion uint32, t *testing.T) {
 }
 
 func TestCert_VerifyPolicyMajority(t *testing.T) {
-	//testCert_VerifyPolicyMajority(blockVersion220, t)
-	//
-	//testCert_VerifyPolicyMajority(blockVersion2320, t)
+	testCert_VerifyPolicyMajority(blockVersion220, t)
+
+	testCert_VerifyPolicyMajority(blockVersion2320, t)
 
 	testCert_VerifyPolicyMajority(blockVersion2330, t)
 }
