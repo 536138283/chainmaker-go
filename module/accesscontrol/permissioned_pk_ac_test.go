@@ -568,6 +568,6 @@ func testPWK_VerifyPolicyMajority2330(blockVersion uint32, t *testing.T) {
 
 	resourceName = utils.GetTxResourceName(tx)
 	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
-	require.Nil(t, err)
-	require.Equal(t, true, ok)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
 }
