@@ -641,9 +641,8 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleSelfCase(targetOrg str
 	}
 	for _, entry := range endorsements {
 		if entry.Signer.OrgId != targetOrg {
-			continue
-		} else {
 			acs.log.Warnf("endorsement.Signer.OrgId=[%s]", entry.Signer.OrgId)
+			continue
 		}
 
 		member := acs.getMemberFromCache(entry.Signer)
@@ -657,6 +656,8 @@ func (acs *accessControlService) verifyPrincipalPolicyRuleSelfCase(targetOrg str
 		if member.GetRole() == role {
 			return true, nil
 		}
+		acs.log.Warnf("member.role=[%s], role=[%s]", member.GetRole(), role)
+
 	}
 	return false, fmt.Errorf("authentication fail: target [%s] does not belong to the signer", targetOrg)
 }

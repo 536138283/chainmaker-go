@@ -198,8 +198,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 	// for tx_type
 	{
-		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
-		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
+		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policySpecialRead)
+		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policySpecialRead)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 		acs.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
 	}
