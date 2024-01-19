@@ -814,7 +814,7 @@ func TestPublicInitPolicyForCommon(t *testing.T) {
 		senderPolicyMap:       &sync.Map{},
 	}
 
-	ac.createDefaultResourcePolicyForCommon()
+	ac.createDefaultResourcePolicyForPK()
 
 	ac.resourceNamePolicyMap.Range(walkResourceName)
 
@@ -842,7 +842,7 @@ func TestPublicInitPolicyForDPoS(t *testing.T) {
 		senderPolicyMap:       &sync.Map{},
 	}
 
-	ac.createDefaultResourcePolicyForDPoS()
+	ac.createDefaultResourcePolicyForPKDPoS()
 
 	ac.resourceNamePolicyMap.Range(walkResourceName)
 
