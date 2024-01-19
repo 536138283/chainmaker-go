@@ -348,7 +348,9 @@ func verifyEndorsementsPrincipalCommon(p acProvider, tx *commonPb.Transaction, t
 	if endorsements == nil {
 		endorsements = []*commonPb.EndorsementEntry{tx.Sender}
 	} else {
-		endorsements = append(endorsements, tx.Sender)
+		if tx.Sender != nil {
+			endorsements = append(endorsements, tx.Sender)
+		}
 	}
 	var principal protocol.Principal
 	if pol.rule == protocol.RuleSelf {
