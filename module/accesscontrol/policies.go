@@ -206,14 +206,6 @@ func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId st
 
 	// sender policies
 	{
-		// gas management
-		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
-		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
-		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyWrite)
-
 		// certs alias management
 		acs.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 			syscontract.CertManageFunction_CERT_ALIAS_ADD.String(), policyForbidden)
@@ -241,6 +233,16 @@ func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId st
 		// address type management
 		acs.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), policyForbidden)
+	}
+	// for resource
+	{
+		// gas management
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_ADMIN.String(), policyConfig)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyWrite)
 
 		// block management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
