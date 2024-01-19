@@ -198,8 +198,8 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 
 	// for tx_type
 	{
-		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policyRead)
-		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
+		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policySpecialRead)
+		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policySpecialRead)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 		acs.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
 	}
@@ -615,7 +615,7 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 			syscontract.ChainConfigFunction_ALTER_ADDR_TYPE.String(), pubPolicyForbidden)
 
 		// block management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), pubPolicyManage)
 
 		// consensus ext management

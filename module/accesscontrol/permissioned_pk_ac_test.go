@@ -426,7 +426,7 @@ func TestPWK_VerifyPolicyMajority(t *testing.T) {
 
 	testPWK_VerifyPolicyMajority(blockVersion2320, t)
 
-	testPWK_VerifyPolicyMajority(blockVersion2330, t)
+	testPWK_VerifyPolicyMajority2330(blockVersion2330, t)
 }
 
 func testPWK_VerifyPolicyMajority(blockVersion uint32, t *testing.T) {
@@ -478,7 +478,6 @@ func testPWK_VerifyPolicyMajority(blockVersion uint32, t *testing.T) {
 	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
-	fmt.Printf("【invalid case】: err = %v \n", err)
 
 	// 【invalid】 test role of endorsers not match
 	tx = testCreateTx(
@@ -500,4 +499,75 @@ func testPWK_VerifyPolicyMajority(blockVersion uint32, t *testing.T) {
 	require.NotNil(t, err)
 	require.Equal(t, false, ok)
 	fmt.Printf("【invalid case】: err = %v \n\n", err)
+}
+
+func testPWK_VerifyPolicyMajority2330(blockVersion uint32, t *testing.T) {
+	var (
+		err error
+		ok  bool
+		tx  *common.Transaction
+	)
+	testPkOrgMember := testInitPermissionedPKFunc(t)
+	orgMemberInfo1 := testPkOrgMember[testOrg1]
+	orgMemberInfo2 := testPkOrgMember[testOrg2]
+	orgMemberInfo3 := testPkOrgMember[testOrg3]
+	orgMemberInfo4 := testPkOrgMember[testOrg4]
+
+	//【valid】test case
+	tx = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo4.admin)
+	require.Nil(t, err)
+
+	resourceName := utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo2.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
+
+	//【invalid】 test number of endorsers not enough
+	tx = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.admin)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
+	require.Nil(t, err)
+	require.Equal(t, true, ok)
+
+	// 【invalid】 test role of endorsers not match
+	tx = testCreateTx(
+		syscontract.SystemContract_CHAIN_CONFIG.String(),
+		syscontract.ChainConfigFunction_NODE_ORG_ADD.String(),
+		"test-txid-12345")
+
+	err = testAppendSender2Tx(tx, testPKHashType, orgMemberInfo1.client)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo1.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo2.admin)
+	require.Nil(t, err)
+	err = testAppendEndorsement2Tx(tx, testPKHashType, orgMemberInfo3.client)
+	require.Nil(t, err)
+
+	resourceName = utils.GetTxResourceName(tx)
+	ok, err = orgMemberInfo1.acProvider.VerifyTxPrincipal(tx, resourceName, blockVersion)
+	require.NotNil(t, err)
+	require.Equal(t, false, ok)
 }
