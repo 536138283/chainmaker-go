@@ -189,7 +189,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 
 	}
 }
-func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId string) {
+func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId string) {
 	// for msg_type
 	{
 		acs.msgTypePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
@@ -199,7 +199,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	// for tx_type
 	{
 		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policySpecialRead)
-		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policySpecialRead)
+		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 		acs.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
 	}
@@ -374,7 +374,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForPK(localOrgId str
 	}
 }
 
-func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
+func (pk *pkACProvider) createDefaultResourcePolicyForPK() {
 	// for msg_type policy
 	{
 		pk.msgTypePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
@@ -561,7 +561,7 @@ func (pk *pkACProvider) createDefaultResourcePolicyForCommon() {
 	}
 }
 
-func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
+func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 	// for msg_type policy
 	{
 		pk.msgTypePolicyMap.Store(protocol.ResourceNameConsensusNode, policyConsensus)
@@ -702,13 +702,15 @@ func (pk *pkACProvider) createDefaultResourcePolicyForDPoS() {
 			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyManage)
 
 		// contract management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+			syscontract.ContractManageFunction_INIT_CONTRACT.String(), pubPolicyManage)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_UPGRADE_CONTRACT.String(), pubPolicyManage)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_FREEZE_CONTRACT.String(), pubPolicyManage)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_UNFREEZE_CONTRACT.String(), pubPolicyManage)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_REVOKE_CONTRACT.String(), pubPolicyManage)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_GRANT_CONTRACT_ACCESS.String(), pubPolicyForbidden)

@@ -281,7 +281,7 @@ func (acs *accessControlService) createDefaultResourcePolicy(localOrgId string) 
 	case protocol.PermissionedWithKey:
 		acs.createDefaultResourcePolicyForPK_220()
 		acs.createDefaultResourcePolicyForPK_2320()
-		acs.createDefaultResourcePolicyForPK(localOrgId)
+		acs.createDefaultResourcePolicyForPWK(localOrgId)
 	}
 }
 
