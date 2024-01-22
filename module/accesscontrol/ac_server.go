@@ -784,6 +784,9 @@ func (acs *accessControlService) getValidEndorsements(orgList map[string]bool, r
 			continue
 		}
 
+		if endorsement.Signer == nil {
+			continue
+		}
 		member := acs.getMemberFromCache(endorsement.Signer)
 		if member == nil {
 			acs.log.Debugf(
