@@ -583,10 +583,10 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 		// gas management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyWrite)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), pubPolicyForbidden)
 
 		// certs alias management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
@@ -621,15 +621,15 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 			syscontract.ChainConfigFunction_BLOCK_UPDATE.String(), pubPolicyManage)
 
 		// consensus ext management
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_CONSENSUS_EXT_ADD.String(), pubPolicyForbidden)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_CONSENSUS_EXT_UPDATE.String(), pubPolicyForbidden)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_CONSENSUS_EXT_DELETE.String(), pubPolicyForbidden)
 
 		// core management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_CORE_UPDATE.String(), pubPolicyManage)
 
 		// enable gas flag management
@@ -700,7 +700,7 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 			syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyMajorityAdmin)
 
 		// version management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyManage)
 
 		// contract management
