@@ -32,8 +32,8 @@ chainmaker.org/chainmaker/libp2p-pubsub v1.1.4-0.20231107023105-c3342b56abd5/go.
 chainmaker.org/chainmaker/localconf/v2 v2.3.0/go.mod h1:FsrIi0ts5Ba9MmRhg+j+dLAB9oGyVTQsPgjSA39Ql+k=
 chainmaker.org/chainmaker/localconf/v2 v2.3.1/go.mod h1:j9FLoNFgeunr3VGmi/F7H1IJ7A0GH0R8Ao45fCPGyw0=
 chainmaker.org/chainmaker/localconf/v2 v2.3.2/go.mod h1:LXUeYUnswEFtcwV/CeNhMXiSUQMhGP+KtEnfoXjW7GU=
-chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20240123022657-7c7b6640b445 h1:haZUSP/vJWkQ2oNbcT9zCsfh410J2PnEF/LUpMTiuhQ=
-chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20240123022657-7c7b6640b445/go.mod h1:Tnxd8Ed8I0GJxhEHSBUtO8vArDGgiWoQO1i1uWa6Nfc=
+chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20240123093341-774633e94f0e h1:1qr4RLP4y/CD8QDpPH+zHC0asu0FGwV57qvADQUeNB0=
+chainmaker.org/chainmaker/localconf/v2 v2.3.3-0.20240123093341-774633e94f0e/go.mod h1:Tnxd8Ed8I0GJxhEHSBUtO8vArDGgiWoQO1i1uWa6Nfc=
 chainmaker.org/chainmaker/logger/v2 v2.3.0 h1:SuBA48m+OQ5HChX34j6eXk4o0uhXHi8Jfkrjf90U7rQ=
 chainmaker.org/chainmaker/logger/v2 v2.3.0/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
 chainmaker.org/chainmaker/lws v1.1.0/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
@@ -102,8 +102,8 @@ chainmaker.org/chainmaker/utils/v2 v2.3.4-0.20230927084903-acd55dcc1634 h1:yYrBu
 chainmaker.org/chainmaker/utils/v2 v2.3.4-0.20230927084903-acd55dcc1634/go.mod h1:Hnq1e+9xFcOhpiZwmdFvsyKsZLy/BRoLJK0YNZ4BPRo=
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2 h1:qH1TzakRHaB3CXVeSFQxITi7I+U5k0IkAIhE6K5uEzU=
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2/go.mod h1:m9GeGmGXfeErgdPs/1feGBMp3YHqb4YyngOoTAlEt0c=
-chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20231220015924-acc5d731790b h1:EAKkcJNfMnrspuUVScZmHDO5sxZ94ev3BNyaVjii7fc=
-chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20231220015924-acc5d731790b/go.mod h1:fruhLlS7rlh6NYOilK0oylmXeT3HwwAbt4AO90T1Vxs=
+chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20240112102133-b9343ff1a8a4 h1:qjhUf3GFPfTp7r2poBH2X5YFQMJwrR+omS3i65K4kWY=
+chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20240112102133-b9343ff1a8a4/go.mod h1:fruhLlS7rlh6NYOilK0oylmXeT3HwwAbt4AO90T1Vxs=
 chainmaker.org/chainmaker/vm-evm/v2 v2.3.4-0.20231226114227-875f62d34324 h1:th6o2b0BJAd5uuPR2Z2lwWOSnAovpfNkscCr6cCEHjA=
 chainmaker.org/chainmaker/vm-evm/v2 v2.3.4-0.20231226114227-875f62d34324/go.mod h1:zbBuC161h5Drtp3sxhMWb4Nff2kf3oVdY2Ev18Nrrjk=
 chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2 h1:xzaUoD8J77/etboXDwTW05aAbrlhp9PJXUDr3aXfYaU=
