@@ -21,6 +21,10 @@ func (bc *Blockchain) Stop() {
 	// 7、store
 
 	var stopModules = make([]map[string]func() error, 0)
+
+	if bc.isModuleStartUp(moduleNameStore) {
+		stopModules = append(stopModules, map[string]func() error{moduleNameStore: bc.stopStore})
+	}
 	if bc.isModuleStartUp(moduleNameNetService) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameNetService: bc.stopNetService})
 	}
@@ -38,9 +42,6 @@ func (bc *Blockchain) Stop() {
 	}
 	if bc.isModuleStartUp(moduleNameTxPool) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameTxPool: bc.stopTxPool})
-	}
-	if bc.isModuleStartUp(moduleNameStore) {
-		stopModules = append(stopModules, map[string]func() error{moduleNameStore: bc.stopStore})
 	}
 
 	total := len(stopModules)
