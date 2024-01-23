@@ -12,14 +12,19 @@ func (bc *Blockchain) Start() error {
 	// start all module
 
 	// start sequence：
-	// 1、net service
-	// 2、core engine
-	// 3、consensus module
-	// 4、tx pool
-	// 5、sync service
-	// 6、vm
+	// 1、store
+	// 2、net service
+	// 3、core engine
+	// 4、consensus module
+	// 5、tx pool
+	// 6、sync service
+	// 7、vm
 
 	var startModules = make([]map[string]func() error, 0)
+
+	if bc.isModuleInit(moduleNameStore) && !bc.isModuleStartUp(moduleNameStore) {
+		startModules = append(startModules, map[string]func() error{moduleNameStore: bc.startStore})
+	}
 	if bc.isModuleInit(moduleNameNetService) && !bc.isModuleStartUp(moduleNameNetService) {
 		startModules = append(startModules, map[string]func() error{moduleNameNetService: bc.startNetService})
 	}
@@ -37,9 +42,6 @@ func (bc *Blockchain) Start() error {
 	}
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
-	}
-	if bc.isModuleInit(moduleNameStore) && !bc.isModuleStartUp(moduleNameStore) {
-		startModules = append(startModules, map[string]func() error{moduleNameStore: bc.startStore})
 	}
 
 	total := len(startModules)
