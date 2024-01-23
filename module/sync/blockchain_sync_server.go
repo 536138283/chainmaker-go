@@ -104,7 +104,8 @@ func (sync *BlockChainSyncServer) Start() error {
 	scheduler := newScheduler(sync, sync.ledgerCache,
 		sync.conf.blockPoolSize, sync.conf.timeOut,
 		sync.conf.reqTimeThreshold, sync.conf.batchSizeFromOneNode,
-		sync.log, sync.minLagReachC, sync.conf.minLagThreshold, sync.conf.minLagThresholdTime)
+		sync.log, sync.minLagReachC, sync.conf.minLagThreshold,
+		sync.conf.minLagThresholdTime, sync.conf.preferenceNodes)
 	if scheduler == nil {
 		return fmt.Errorf("init scheduler failed")
 	}
@@ -112,7 +113,7 @@ func (sync *BlockChainSyncServer) Start() error {
 	sync.processor = NewRoutine("processor", processor.handler, processor.getServiceState, sync.log)
 
 	// 2. register msgs handler
-	if sync.msgBus != nil {
+	if sync.msgBus != nil && sync.conf.broadcastStatusPerBlocksCommitted > 0 {
 		sync.msgBus.Register(msgbus.BlockInfo, sync)
 	}
 	//3. register net subscribe handler
@@ -173,6 +174,13 @@ func (sync *BlockChainSyncServer) initSyncConfIfRequire() {
 	}
 	if localconf.ChainMakerConfig.SyncConfig.BlockRequestTime > 0 {
 		sync.conf.SetBlockRequestTime(localconf.ChainMakerConfig.SyncConfig.BlockRequestTime)
+	}
+	if len(localconf.ChainMakerConfig.SyncConfig.FromNodes) > 0 {
+		sync.conf.SetPreferenceNodesNodes(localconf.ChainMakerConfig.SyncConfig.FromNodes)
+	}
+	if localconf.ChainMakerConfig.SyncConfig.BroadcastStatusPerBlocksCommitted != 0 {
+		sync.conf.SetBroadcastStatusPerBlocksCommitted(
+			localconf.ChainMakerConfig.SyncConfig.BroadcastStatusPerBlocksCommitted)
 	}
 }
 
@@ -261,13 +269,13 @@ func (sync *BlockChainSyncServer) handleBlockReq(syncMsg *syncPb.SyncMsg, from s
 	// create a key-value pair when receive block request, ignore repeat request
 	processKey := fmt.Sprintf("%s_%d", from, req.BlockHeight)
 	if _, loaded := sync.requestCache.LoadOrStore(processKey, time.Now()); loaded {
-		sync.log.Warnf("received duplicate request to get block [height: %d, batch_size: %d] from "+
-			"node [%s]", req.BlockHeight, req.BatchSize, from)
+		sync.log.Warnf("received duplicate request to get block [height: %d, batch_size: %d] from node [%s]",
+			req.BlockHeight, req.BatchSize, from)
 		return nil
 	}
 
 	sync.log.Infof("receive request to get block [height: %d, batch_size: %d] from "+
-		"node [%s]"+"WithRwset [%v]", req.BlockHeight, req.BatchSize, from, req.WithRwset)
+		"node [%s] WithRwset [%v]", req.BlockHeight, req.BatchSize, from, req.WithRwset)
 	return sync.sendInfos(&req, from)
 }
 
@@ -583,6 +591,7 @@ func (sync *BlockChainSyncServer) OnMessage(message *msgbus.Message) {
 		sync.log.Errorf("receive the message from the topic as %d, but not msgbus.BlockInfo ", message.Topic)
 		return
 	}
+
 	switch blockInfo := message.Payload.(type) {
 	case *commonPb.BlockInfo:
 		if blockInfo == nil || blockInfo.Block == nil {
@@ -590,7 +599,7 @@ func (sync *BlockChainSyncServer) OnMessage(message *msgbus.Message) {
 			return
 		}
 		height := blockInfo.Block.Header.BlockHeight
-		if height%3 != 0 {
+		if height%uint64(sync.conf.broadcastStatusPerBlocksCommitted) != 0 {
 			return
 		}
 		bz, err := proto.Marshal(&syncPb.BlockHeightBCM{BlockHeight: height})

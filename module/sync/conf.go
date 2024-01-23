@@ -39,23 +39,28 @@ type BlockSyncServerConf struct {
 	minLagThreshold uint64
 	// the config to receive more node status
 	minLagThresholdTime time.Duration
+	// The preferenceNodes nodes for synchronizing blocks
+	preferenceNodes []string
+	// a node status broadcast is triggered every 'broadcastStatusPerBlocksCommitted' blocks committed
+	broadcastStatusPerBlocksCommitted int
 }
 
 // NewBlockSyncServerConf create a new BlockSyncServerConf instance with default values
 func NewBlockSyncServerConf() *BlockSyncServerConf {
 	return &BlockSyncServerConf{
-		timeOut:              30 * time.Second,
-		blockPoolSize:        bufferSize,
-		batchSizeFromOneNode: 1,
-		processBlockTick:     20 * time.Millisecond,
-		livenessTick:         1 * time.Second,
-		nodeStatusTick:       2 * time.Second,
-		schedulerTick:        20 * time.Millisecond,
-		dataDetectionTick:    time.Minute,
-		reqTimeThreshold:     1 * time.Second,
-		blockRequestTime:     5 * time.Second,
-		minLagThreshold:      5,
-		minLagThresholdTime:  3 * time.Second,
+		timeOut:                           30 * time.Second,
+		blockPoolSize:                     bufferSize,
+		batchSizeFromOneNode:              1,
+		processBlockTick:                  20 * time.Millisecond,
+		livenessTick:                      1 * time.Second,
+		nodeStatusTick:                    2 * time.Second,
+		schedulerTick:                     20 * time.Millisecond,
+		dataDetectionTick:                 time.Minute,
+		reqTimeThreshold:                  1 * time.Second,
+		blockRequestTime:                  5 * time.Second,
+		minLagThreshold:                   5,
+		minLagThresholdTime:               3 * time.Second,
+		broadcastStatusPerBlocksCommitted: 3,
 	}
 }
 
@@ -135,9 +140,23 @@ func (c *BlockSyncServerConf) SetMinLagThresholdTime(n float64) *BlockSyncServer
 	c.minLagThresholdTime = time.Duration(n * float64(time.Second))
 	return c
 }
+
+// SetPreferredNodes set preferred nodes
+func (c *BlockSyncServerConf) SetPreferenceNodesNodes(nodes []string) *BlockSyncServerConf {
+	c.preferenceNodes = nodes
+	return c
+}
+
+// SetBroadcastStatusPerBlocksCommitted sets the block interval of broadcast status
+func (c *BlockSyncServerConf) SetBroadcastStatusPerBlocksCommitted(n int) *BlockSyncServerConf {
+	c.broadcastStatusPerBlocksCommitted = n
+	return c
+}
+
 func (c *BlockSyncServerConf) print() string {
 	return fmt.Sprintf("blockPoolSize: %d, request timeout: %d, batchSizeFromOneNode: %d"+
-		", processBlockTick: %v, schedulerTick: %v, livenessTick: %v, nodeStatusTick: %v\n",
+		", processBlockTick: %v, schedulerTick: %v, livenessTick: %v, nodeStatusTick: %v,"+
+		"broadcastStatusPerBlocksCommitted: %d, preferenceNodes %+v\n",
 		c.blockPoolSize, c.timeOut, c.batchSizeFromOneNode, c.processBlockTick, c.schedulerTick, c.livenessTick,
-		c.nodeStatusTick)
+		c.nodeStatusTick, c.broadcastStatusPerBlocksCommitted, c.preferenceNodes)
 }

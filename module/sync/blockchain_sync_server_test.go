@@ -11,13 +11,16 @@ import (
 	"testing"
 	"time"
 
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/net"
 	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
-	"chainmaker.org/chainmaker/protocol/v2/test"
-
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/protocol/v2/mock"
+	"chainmaker.org/chainmaker/protocol/v2/test"
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -255,4 +258,109 @@ func TestStopSyncBlock(t *testing.T) {
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", bz, netPb.NetMsg_SYNC_BLOCK_MSG))
 	time.Sleep(1 * time.Second)
 	require.EqualValues(t, "pendingRecvHeight: 12, peers num: 1, blockStates num: 30, pendingBlocks num: 0, receivedBlocks num: 0", implSync.scheduler.getServiceState())
+}
+
+var broadcastCount int
+
+func newMockNet2(ctrl *gomock.Controller) protocol.NetService {
+	mockNet := mock.NewMockNetService(ctrl)
+	mockNet.EXPECT().BroadcastMsg(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(msg []byte, msgType netPb.NetMsg_MsgType) error {
+			if msgType == net.NetMsg_SYNC_BLOCK_MSG {
+				message := syncPb.SyncMsg{}
+				proto.Unmarshal(msg, &message)
+				if message.Type == syncPb.SyncMsg_NODE_STATUS_RESP {
+					broadcastCount++
+				}
+			}
+			return nil
+		}).AnyTimes()
+	mockNet.EXPECT().SendMsg(gomock.Any(), gomock.Any(), gomock.Any()).DoAndReturn(
+		func(msg []byte, msgType netPb.NetMsg_MsgType, to ...string) error {
+			return nil
+		}).AnyTimes()
+	mockNet.EXPECT().Subscribe(gomock.Any(), gomock.Any()).AnyTimes()
+	mockNet.EXPECT().ReceiveMsg(gomock.Any(), gomock.Any()).AnyTimes()
+	mockNet.EXPECT().CancelSubscribe(gomock.Any()).AnyTimes()
+	mockNet.EXPECT().CancelReceiveMsg(gomock.Any()).AnyTimes()
+	return mockNet
+}
+
+func initTestSync2(t *testing.T) (protocol.SyncService, func()) {
+	ctrl := gomock.NewController(t)
+	mockNet := newMockNet2(ctrl)
+	mockMsgBus := newMockMessageBus(ctrl)
+	mockVerify := newMockVerifier(ctrl)
+	mockStore := newMockBlockChainStore(ctrl)
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
+	mockCommit := newMockCommitter(ctrl, mockLedger)
+	log := &test.GoLogger{}
+	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
+	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
+	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, log)
+	require.NoError(t, service.Start())
+	return service, func() {
+		service.Stop()
+		ctrl.Finish()
+	}
+}
+
+func genBlockMessage(height uint64) *msgbus.Message {
+	return &msgbus.Message{
+		Topic: msgbus.BlockInfo,
+		Payload: &commonPb.BlockInfo{
+			Block: &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: height}},
+		},
+	}
+
+}
+
+func TestBlockChainSyncServer_OnMessage(t *testing.T) {
+	type args struct {
+		totalHeight int
+		perBlocks   int
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{
+			name: "test1",
+			args: args{
+				totalHeight: 10,
+				perBlocks:   0,
+			},
+			want: 3,
+		},
+		{
+			name: "test2",
+			args: args{
+				totalHeight: 10,
+				perBlocks:   2,
+			},
+			want: 5,
+		},
+		{
+			name: "test3",
+			args: args{
+				totalHeight: 10,
+				perBlocks:   -1,
+			},
+			want: 0,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			localconf.ChainMakerConfig.SyncConfig.BroadcastStatusPerBlocksCommitted = tt.args.perBlocks
+			svc, stop := initTestSync2(t)
+			sync := svc.(*BlockChainSyncServer)
+			broadcastCount = 0
+			for i := 1; i <= tt.args.totalHeight; i++ {
+				sync.OnMessage(genBlockMessage(uint64(i)))
+			}
+			stop()
+			require.Equal(t, tt.want, broadcastCount)
+		})
+	}
 }
