@@ -239,7 +239,7 @@ func TestPwkInitData(t *testing.T) {
 		resourceNamePolicyMap: &sync.Map{},
 		senderPolicyMap:       &sync.Map{},
 	}
-	ac.createDefaultResourcePolicyForPK("wx-org.chainmaker.org")
+	ac.createDefaultResourcePolicyForPWK("wx-org.chainmaker.org")
 
 	ac.resourceNamePolicyMap.Range(walkResourceName)
 

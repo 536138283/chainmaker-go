@@ -189,11 +189,11 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 
 		pkAcProvider.createDefaultResourcePolicyForDPoS_220()
 		pkAcProvider.createDefaultResourcePolicyForDPoS_2320()
-		pkAcProvider.createDefaultResourcePolicyForDPoS()
+		pkAcProvider.createDefaultResourcePolicyForPKDPoS()
 	} else {
 		pkAcProvider.createDefaultResourcePolicyForCommon_220()
 		pkAcProvider.createDefaultResourcePolicyForCommon_2320()
-		pkAcProvider.createDefaultResourcePolicyForCommon()
+		pkAcProvider.createDefaultResourcePolicyForPK()
 	}
 
 	lastestPolicyMap := &sync.Map{}
