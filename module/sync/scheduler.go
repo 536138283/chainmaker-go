@@ -471,7 +471,8 @@ func (sch *scheduler) handleSyncedBlockMsg(msg *SyncedBlockMsg) (queue.Item, err
 // 1. validateFailed，verification failed，mark block state as "newBlock" waiting to be re-requested later
 // at the same time, the node this block from needs to be removed from the locally cached peer data
 // because it maybe a bad guy.
-// 2. addErr, failed to submit block data to local ledger，mark block state as "newBlock" waiting to be re-requested later
+// 2. addErr, failed to submit block data to local ledger，mark block state as "newBlock"
+// waiting to be re-requested later
 func (sch *scheduler) handleProcessedBlockResp(msg *ProcessedBlockResp) (queue.Item, error) {
 	sch.log.Debugf("process block [height:%d] status[%d] from node"+
 		" [%s], pendingHeight: %d", msg.height, msg.status, msg.from, sch.pendingRecvHeight)
