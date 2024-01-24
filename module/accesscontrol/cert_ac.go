@@ -136,7 +136,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	}
 
 	certACProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
-		chainConfig.AuthType, store, log)
+		chainConfig.AuthType, chainConfig.Vm.AddrType, store, log)
 	certACProvider.acService.setVerifyOptionsFunc(certACProvider.getVerifyOptions)
 
 	err = certACProvider.initTrustRoots(chainConfig.TrustRoots, localOrgId)
@@ -720,7 +720,7 @@ func (cp *certACProvider) RefineEndorsements(endorsements []*common.EndorsementE
 				member:    remoteMember,
 				certChain: certChain,
 			}
-			cp.acService.addMemberToCache(memInfo, signerInfo)
+			cp.acService.addMemberToCache(endorsement.Signer, signerInfo)
 		} else {
 			flat, err := cp.verifyPrincipalSignerInCache(signerInfo, endorsement, msg, memInfo)
 			if !flat {
