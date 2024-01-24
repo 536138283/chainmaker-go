@@ -8,6 +8,12 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	"fmt"
+	"strconv"
+	"strings"
+	"sync"
+	"sync/atomic"
+
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
@@ -19,11 +25,6 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"fmt"
-	"strconv"
-	"strings"
-	"sync"
-	"sync/atomic"
 )
 
 // Special characters allowed to define customized access rules
