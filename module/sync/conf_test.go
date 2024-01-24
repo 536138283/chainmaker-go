@@ -36,4 +36,7 @@ func TestBlockSyncServerConf(t *testing.T) {
 	require.Equal(t, conf.reqTimeThreshold, 10*time.Second)
 	conf.SetBlockRequestTime(10)
 	require.Equal(t, conf.blockRequestTime, 10*time.Second)
+	conf.SetBroadcastStatusPerBlocksCommitted(10)
+	conf.SetPreferenceNodesNodes([]string{"node1", "node2"})
+	t.Log(conf.print())
 }

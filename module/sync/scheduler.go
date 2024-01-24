@@ -59,6 +59,8 @@ type scheduler struct {
 	thresholdBlocks uint64
 	// indicate stop syncing block function
 	stopSyncBlock bool
+	// the specified nodes which sync blocks from
+	preferenceNodes map[string]struct{}
 }
 
 func newScheduler(
@@ -66,11 +68,19 @@ func newScheduler(
 	ledger protocol.LedgerCache, maxNum uint64,
 	timeOut, reqTimeThreshold time.Duration,
 	batchesize uint64, log protocol.Logger,
-	reachC chan struct{}, minLagThreshold uint64, minLagThresholdTime time.Duration) *scheduler {
+	reachC chan struct{}, minLagThreshold uint64,
+	minLagThresholdTime time.Duration, preferenceNodes []string) *scheduler {
 
 	currHeight, err := ledger.CurrentHeight()
 	if err != nil {
 		return nil
+	}
+	var preferenceNodesMap map[string]struct{}
+	if len(preferenceNodes) > 0 {
+		preferenceNodesMap = make(map[string]struct{}, len(preferenceNodes))
+		for _, node := range preferenceNodes {
+			preferenceNodesMap[node] = struct{}{}
+		}
 	}
 	return &scheduler{
 		log:    log,
@@ -93,6 +103,7 @@ func newScheduler(
 		thresholdTime:   minLagThresholdTime,
 		thresholdBlocks: minLagThreshold,
 		minLagReachC:    reachC,
+		preferenceNodes: preferenceNodesMap,
 	}
 }
 
@@ -125,10 +136,15 @@ func (sch *scheduler) handler(event queue.Item) (queue.Item, error) {
 	return nil, nil
 }
 
-//update the node corresponding to the node id state information includes BlockHeight and ArchivedHeight
-//if peer's ArchivedHeight is gather than local block height,indicates that node cant sync block from this peer,
-//otherwise according to the own block height, mark the block that needs to be synchronized as "newblock"
+// update the node corresponding to the node id state information includes BlockHeight and ArchivedHeight
+// if peer's ArchivedHeight is gather than local block height,indicates that node cant sync block from this peer,
+// otherwise according to the own block height, mark the block that needs to be synchronized as "newblock"
 func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
+	if !sch.isPreferenceNode(msg.from) {
+		sch.log.Debugf("coming node[%s], status[height: %d],not preference node, will ignore it",
+			msg.from, msg.msg.BlockHeight)
+		return
+	}
 	localCurrBlk := sch.ledger.GetLastCommittedBlock()
 	if old, exist := sch.peers[msg.from]; exist {
 		if old > msg.msg.BlockHeight || sch.isPeerArchivedTooHeight(localCurrBlk.Header.BlockHeight,
@@ -147,6 +163,14 @@ func (sch *scheduler) handleNodeStatus(msg *NodeStatusMsg) {
 		msg.msg.ArchivedHeight)
 	sch.peers[msg.from] = msg.msg.BlockHeight
 	sch.addPendingBlocksAndUpdatePendingHeight(msg.msg.BlockHeight)
+}
+
+func (sch *scheduler) isPreferenceNode(id string) bool {
+	if sch.preferenceNodes == nil {
+		return true
+	}
+	_, exist := sch.preferenceNodes[id]
+	return exist
 }
 
 // receiveMajorityBlocks Check that most blocks are synchronized.
@@ -178,9 +202,9 @@ func (sch *scheduler) receiveMajorityBlocks() {
 	}
 }
 
-//addPendingBlocksAndUpdatePendingHeight check if the local block height is lower than this peerHeight,
-//if so, the state corresponding to the block height needs to be marked as newBlock
-//only the block height of the newBlock state will be synchronized
+// addPendingBlocksAndUpdatePendingHeight check if the local block height is lower than this peerHeight,
+// if so, the state corresponding to the block height needs to be marked as newBlock
+// only the block height of the newBlock state will be synchronized
 func (sch *scheduler) addPendingBlocksAndUpdatePendingHeight(peerHeight uint64) {
 	// 收集节点状态阶段 `handleNodeStatus` 添加 `blockStates` 长度检查和状态检查，保证最多发出 `bufferSize` 个区块数据请求
 	// change '>' to '>=' indicate full range check
@@ -204,7 +228,7 @@ func (sch *scheduler) addPendingBlocksAndUpdatePendingHeight(peerHeight uint64) 
 	}
 }
 
-//handleDataDetection eliminate invalid data from the maintained data list
+// handleDataDetection eliminate invalid data from the maintained data list
 func (sch *scheduler) handleDataDetection() {
 	blk := sch.ledger.GetLastCommittedBlock()
 	for height := range sch.blockStates {
@@ -224,7 +248,7 @@ func (sch *scheduler) handleDataDetection() {
 	}
 }
 
-//handleLivinessMsg reset the response timeout data
+// handleLivinessMsg reset the response timeout data
 func (sch *scheduler) handleLivinessMsg() {
 	reqTime, exist := sch.pendingTime[sch.pendingRecvHeight]
 	if exist && time.Since(reqTime) > sch.peerReqTimeout {
@@ -240,11 +264,11 @@ func (sch *scheduler) handleLivinessMsg() {
 	}
 }
 
-//handleScheduleMsg find the starting block height that needs to be synchronized an a appropriate peer
-//if ok, then send a sync request to peer to get the blocks data
-//with height in[pendingHeight, pendingHeight+sch.BatchesizeInEachReq)
-//localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable used to determine
-//whether the response data of the request needs to have a read-write set
+// handleScheduleMsg find the starting block height that needs to be synchronized an a appropriate peer
+// if ok, then send a sync request to peer to get the blocks data
+// with height in[pendingHeight, pendingHeight+sch.BatchesizeInEachReq)
+// localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable used to determine
+// whether the response data of the request needs to have a read-write set
 func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 	var (
 		err           error
@@ -295,7 +319,7 @@ func (sch *scheduler) handleScheduleMsg() (queue.Item, error) {
 	return nil, nil
 }
 
-//handleStopSyncMsg mark stop sync block and clean up records
+// handleStopSyncMsg mark stop sync block and clean up records
 func (sch *scheduler) handleStopSyncMsg() {
 	sch.stopSyncBlock = true
 	sch.blockStates = make(map[uint64]blockState)
@@ -313,8 +337,8 @@ func (sch *scheduler) handleStartSyncMsg() {
 	sch.stopSyncBlock = false
 }
 
-//find the minimum block height marked as newBlock in blockStates
-//return math.MaxUint64 to indicate that no block required to be requested for synchronizing
+// find the minimum block height marked as newBlock in blockStates
+// return math.MaxUint64 to indicate that no block required to be requested for synchronizing
 func (sch *scheduler) nextHeightToReq() uint64 {
 	var min uint64 = math.MaxUint64
 	for height, status := range sch.blockStates {
@@ -339,9 +363,9 @@ func (sch *scheduler) maxHeight() uint64 {
 	return max
 }
 
-//isNeedSync determine if synchronization is required
-//it required if stopSyncBlock is false and local block height lags behind other nodes
-//notes: if only one block behind, the time interval for synchronization needs to meet reqTimeThreshold
+// isNeedSync determine if synchronization is required
+// it required if stopSyncBlock is false and local block height lags behind other nodes
+// notes: if only one block behind, the time interval for synchronization needs to meet reqTimeThreshold
 func (sch *scheduler) isNeedSync() bool {
 	if sch.stopSyncBlock {
 		return false
@@ -356,7 +380,7 @@ func (sch *scheduler) isNeedSync() bool {
 	return currHeight+1 < max || (currHeight+1 == max && time.Since(sch.lastRequest) > sch.reqTimeThreshold)
 }
 
-//selectPeer from other peers select one that contains this height and is currently processing the fewest requests
+// selectPeer from other peers select one that contains this height and is currently processing the fewest requests
 func (sch *scheduler) selectPeer(pendingHeight uint64) string {
 	peers := sch.getHeight(pendingHeight)
 	if len(peers) == 0 {
@@ -379,7 +403,7 @@ func (sch *scheduler) selectPeer(pendingHeight uint64) string {
 	return peers[0]
 }
 
-//get all nodes containing this block height
+// get all nodes containing this block height
 func (sch *scheduler) getHeight(pendingHeight uint64) []string {
 	peers := make([]string, 0, len(sch.peers)/2)
 	for id, height := range sch.peers {
@@ -390,7 +414,7 @@ func (sch *scheduler) getHeight(pendingHeight uint64) []string {
 	return peers
 }
 
-//getPendingReqInPeer count all blocks being processed by the 'peer'
+// getPendingReqInPeer count all blocks being processed by the 'peer'
 func (sch *scheduler) getPendingReqInPeer(peer string) int {
 	num := 0
 	for _, id := range sch.pendingBlocks {
@@ -401,8 +425,8 @@ func (sch *scheduler) getPendingReqInPeer(peer string) int {
 	return num
 }
 
-//handleSyncedBlockMsg check if there is any block that needs to be processed in the data received this time
-//if so, hand over the data to the prosser for processing
+// handleSyncedBlockMsg check if there is any block that needs to be processed in the data received this time
+// if so, hand over the data to the prosser for processing
 func (sch *scheduler) handleSyncedBlockMsg(msg *SyncedBlockMsg) (queue.Item, error) {
 	// 针对 `SyncMsg_BLOCK_SYNC_RESP` 消息处理函数，添加接收区块数量检查，超过 `bufferSize` 的额外信息会被暂时丢弃，
 	//保证缓存的数据量可控
@@ -443,11 +467,12 @@ func (sch *scheduler) handleSyncedBlockMsg(msg *SyncedBlockMsg) (queue.Item, err
 	return nil, nil
 }
 
-//according to the result of block verification, the following processing is performed
-//1. validateFailed，verification failed，mark block state as "newBlock" waiting to be re-requested later
-//at the same time, the node this block from needs to be removed from the locally cached peer data
-//because it maybe a bad guy.
-//2. addErr, failed to submit block data to local ledger，mark block state as "newBlock" waiting to be re-requested later
+// according to the result of block verification, the following processing is performed
+// 1. validateFailed，verification failed，mark block state as "newBlock" waiting to be re-requested later
+// at the same time, the node this block from needs to be removed from the locally cached peer data
+// because it maybe a bad guy.
+// 2. addErr, failed to submit block data to local ledger，mark block state as "newBlock"
+// waiting to be re-requested later
 func (sch *scheduler) handleProcessedBlockResp(msg *ProcessedBlockResp) (queue.Item, error) {
 	sch.log.Debugf("process block [height:%d] status[%d] from node"+
 		" [%s], pendingHeight: %d", msg.height, msg.status, msg.from, sch.pendingRecvHeight)
@@ -486,9 +511,9 @@ func (sch *scheduler) isPeerArchivedTooHeight(localHeight, peerArchivedHeight ui
 	return peerArchivedHeight != 0 && localHeight <= peerArchivedHeight
 }
 
-//traverse the blocks that have been synchronized this time
-//if the state of corresponding height is not "receivedBlock", indicates the data need to be processed in the next step
-//set needToProcess to true moreover mark the state of corresponding height as "receivedBlock" in blockStates
+// traverse the blocks that have been synchronized this time
+// if the state of corresponding height is not "receivedBlock", indicates the data need to be processed in the next step
+// set needToProcess to true moreover mark the state of corresponding height as "receivedBlock" in blockStates
 func (sch *scheduler) updateSchedulerBySyncBlockBatch(msgFrom string, o interface{}, size int) bool {
 	var height uint64
 	var hash []byte

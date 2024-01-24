@@ -14,7 +14,6 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 	"chainmaker.org/chainmaker/protocol/v2/test"
-
 	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
@@ -25,7 +24,7 @@ func TestNodeStatusMsg(t *testing.T) {
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// 1. the peer status is old
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 90}})
@@ -70,7 +69,7 @@ func TestNextHeightToReq(t *testing.T) {
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// 1. add block status
 	for i := uint64(0); i < 5; i++ {
@@ -96,7 +95,7 @@ func TestIsNeedSync(t *testing.T) {
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// 1. add peer status
 	sch.peers["node1"] = 110
@@ -124,7 +123,7 @@ func TestSchedulerMsg(t *testing.T) {
 	mockSender := NewMockSender()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
 	sch := newScheduler(mockSender, mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// 1. add peer status
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 151}})
@@ -143,7 +142,7 @@ func TestSyncedBlockMsg(t *testing.T) {
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	msg := &syncPb.SyncBlockBatch{
 		Data: &syncPb.SyncBlockBatch_BlockinfoBatch{
@@ -174,7 +173,7 @@ func TestProcessedBlockResp(t *testing.T) {
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// 1. add ok process result and check result
 	_, err := sch.handler(&ProcessedBlockResp{height: 6, status: ok, from: "node1"})
@@ -200,7 +199,7 @@ func TestLivenessMsg(t *testing.T) {
 	defer ctrl.Finish()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 5}})
 	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// 1. no any status
 	_, _ = sch.handler(&LivenessMsg{})
@@ -226,7 +225,7 @@ func TestSchedulerFlow(t *testing.T) {
 	mockSender := NewMockSender()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
 	sch := newScheduler(mockSender, mockLedger, 100, time.Second, time.Second*3,
-		2, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// 1. add peers status
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 100}})
@@ -281,7 +280,7 @@ func TestAddPendingBlocksAndUpdatePendingHeight(t *testing.T) {
 	mockSender := NewMockSender()
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 0}})
 	sch := newScheduler(mockSender, mockLedger, 128, time.Second, time.Second*3,
-		1, &test.GoLogger{}, make(chan struct{}), 10, 10)
+		1, &test.GoLogger{}, make(chan struct{}), 10, 10, nil)
 
 	// init sch
 	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 256}})
@@ -305,4 +304,72 @@ func TestAddPendingBlocksAndUpdatePendingHeight(t *testing.T) {
 	// test >= length 128 pendingBlock
 	sch.addPendingBlocksAndUpdatePendingHeight(256)
 	require.EqualValues(t, 128, len(sch.blockStates))
+}
+
+func TestPreferenceNodes(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+	sch := newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
+		2, &test.GoLogger{}, make(chan struct{}), 10, 10, []string{"node1"})
+
+	_, _ = sch.handler(&NodeStatusMsg{from: "node1", msg: syncPb.BlockHeightBCM{BlockHeight: 150}})
+	require.EqualValues(t, 150, sch.peers["node1"])
+
+	_, _ = sch.handler(&NodeStatusMsg{from: "node2", msg: syncPb.BlockHeightBCM{BlockHeight: 120}})
+	_, exist := sch.peers["node2"]
+	require.False(t, exist)
+}
+
+func Test_scheduler_preferenceNode(t *testing.T) {
+	ctrl := gomock.NewController(t)
+	defer ctrl.Finish()
+	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}})
+
+	type args struct {
+		id string
+	}
+	tests := []struct {
+		name   string
+		fields *scheduler
+		args   args
+		want   bool
+	}{
+		{
+			name: "test1",
+			fields: newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
+				2, &test.GoLogger{}, make(chan struct{}), 10, 10, nil),
+			args: args{id: "node1"},
+			want: true,
+		},
+		{
+			name: "test2",
+			fields: newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
+				2, &test.GoLogger{}, make(chan struct{}), 10, 10, []string{"node1"}),
+			args: args{id: "node1"},
+			want: true,
+		},
+		{
+			name: "test3",
+			fields: newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
+				2, &test.GoLogger{}, make(chan struct{}), 10, 10, []string{"node1"}),
+			args: args{id: "node2"},
+			want: false,
+		},
+		{
+			name: "test3",
+			fields: newScheduler(NewMockSender(), mockLedger, 100, time.Second, time.Second*3,
+				2, &test.GoLogger{}, make(chan struct{}), 10, 10, []string{"node1", "node2"}),
+			args: args{id: "node2"},
+			want: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sch := tt.fields
+			if got := sch.isPreferenceNode(tt.args.id); got != tt.want {
+				t.Errorf("scheduler.isPreferenceNode() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
