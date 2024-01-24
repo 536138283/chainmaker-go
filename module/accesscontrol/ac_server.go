@@ -413,10 +413,6 @@ func (acs *accessControlService) lookUpMemberInCache(memberInfo string) (*member
 	return nil, false
 }
 
-func (acs *accessControlService) addMemberInfoToCache(memberInfo string, member *memberCached) {
-	acs.memberCache.Add(memberInfo, member)
-}
-
 // parseUserAddress
 func publicKeyFromCert(member []byte) ([]byte, error) {
 	certificate, err := utils.ParseCert(member)
