@@ -582,6 +582,11 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 	{
 		// gas management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
+
+		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), pubPolicyForbidden)
@@ -670,18 +675,18 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 			syscontract.ChainConfigFunction_PERMISSION_DELETE.String(), pubPolicyMajorityAdmin)
 
 		// account-manager management
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyForbidden)
 
 		// gas calculation management
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_SET_INSTALL_BASE_GAS.String(), pubPolicyMajorityAdmin)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_SET_INSTALL_GAS_PRICE.String(), pubPolicyMajorityAdmin)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), pubPolicyMajorityAdmin)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_SET_INVOKE_GAS_PRICE.String(), pubPolicyMajorityAdmin)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_SET_INSTALL_BASE_GAS.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_SET_INSTALL_GAS_PRICE.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_SET_INVOKE_BASE_GAS.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_SET_INVOKE_GAS_PRICE.String(), pubPolicyForbidden)
 
 		// trust-member management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
