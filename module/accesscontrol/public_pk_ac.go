@@ -19,7 +19,6 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -129,7 +128,7 @@ type pkACProvider struct {
 
 	consensusMember *sync.Map
 
-	memberCache *concurrentlru.Cache
+	memberCache *ShardCache
 
 	dataStore protocol.BlockchainStore
 
@@ -171,7 +170,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 		authType:                  chainConfig.AuthType,
 		adminMember:               &sync.Map{},
 		consensusMember:           &sync.Map{},
-		memberCache:               concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		memberCache:               NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		log:                       log,
 		dataStore:                 store,
 		txTypePolicyMap:           &sync.Map{},

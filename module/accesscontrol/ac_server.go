@@ -8,15 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	"chainmaker.org/chainmaker/localconf/v2"
 	"fmt"
 	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
@@ -221,7 +220,7 @@ type accessControlService struct {
 	exceptionalPolicyMap2320  *sync.Map
 
 	//local cache for member
-	memberCache *concurrentlru.Cache
+	memberCache *ShardCache
 
 	dataStore protocol.BlockchainStore
 
@@ -240,6 +239,7 @@ type accessControlService struct {
 type memberCached struct {
 	member    protocol.Member
 	certChain []*bcx509.Certificate
+	address   string
 }
 
 func initAccessControlService(hashType, authType string,
@@ -256,7 +256,7 @@ func initAccessControlService(hashType, authType string,
 		exceptionalPolicyMap220:   &sync.Map{},
 		resourceNamePolicyMap2320: &sync.Map{},
 		exceptionalPolicyMap2320:  &sync.Map{},
-		memberCache:               concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		memberCache:               NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		dataStore:                 store,
 		log:                       log,
 		hashType:                  hashType,

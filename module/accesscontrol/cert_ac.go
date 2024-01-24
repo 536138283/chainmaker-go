@@ -24,7 +24,6 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/common/v2/json"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -39,7 +38,7 @@ type certACProvider struct {
 	acService *accessControlService
 
 	// local cache for certificates (reduce the size of block)
-	certCache *concurrentlru.Cache
+	certCache *ShardCache
 
 	// local cache for certificate revocation list and frozen list
 	crl        sync.Map
@@ -102,7 +101,7 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger) (*certACProvider, error) {
 	certACProvider := &certACProvider{
-		certCache:  concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		certCache:  NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		crl:        sync.Map{},
 		frozenList: sync.Map{},
 		opts: bcx509.VerifyOptions{
