@@ -409,8 +409,13 @@ func (p *pkACProvider) addMemberToCache(member *pbac.Member, memberCached *membe
 
 	address, err := p.memberToAddress(member)
 	if err != nil {
-		memberCached.address = address
+		p.log.Errorf("add member to cache failed, err = %s", err.Error())
+		return
 	}
+
+	memberCached.address = address
+	memberCached.pk = memberCached.member.GetPk()
+
 	p.memberCache.Add(string(member.MemberInfo), memberCached)
 }
 

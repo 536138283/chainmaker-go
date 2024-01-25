@@ -464,9 +464,13 @@ func (acs *accessControlService) addMemberToCache(member *pbac.Member, memberCac
 
 	address, err := acs.memberToAddress(member)
 	if err != nil {
-		memberCached.address = address
-		memberCached.pk = memberCached.member.GetPk()
+		acs.log.Errorf("add member to cache failed, err = %s", err.Error())
+		return
 	}
+
+	memberCached.address = address
+	memberCached.pk = memberCached.member.GetPk()
+
 	acs.memberCache.Add(string(member.MemberInfo), memberCached)
 }
 
