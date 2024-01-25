@@ -342,7 +342,13 @@ func (acs *accessControlService) checkResourcePolicyRuleSelfCase(resourcePolicy 
 		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(),
 		syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 			syscontract.ChainConfigFunction_NODE_ID_UPDATE.String():
-		return true
+		//验证rolelist
+		if len(resourcePolicy.GetPolicy().RoleList) == 1 &&
+			resourcePolicy.GetPolicy().RoleList[0] == string(protocol.RoleAdmin) {
+			return true
+		}
+		acs.log.Errorf("bad configuration: the access rule.RoleList of [%s] should be [ADMIN]", resourcePolicy.ResourceName)
+		return false
 	default:
 		acs.log.Errorf("bad configuration: the access rule of [%s] should not be [%s]", resourcePolicy.ResourceName,
 			resourcePolicy.Policy.Rule)
