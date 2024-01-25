@@ -614,7 +614,7 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 	var tmpMember protocol.Member
 	var err error
 	var certChains [][]*bcx509.Certificate
-	if acs.authType == protocol.PermissionedWithCert {
+	if acs.authType == protocol.PermissionedWithCert || acs.authType == protocol.Identity {
 		tmpMember, err = acs.newCertMember(member)
 		certMember, ok := tmpMember.(*certificateMember)
 		if !ok {
