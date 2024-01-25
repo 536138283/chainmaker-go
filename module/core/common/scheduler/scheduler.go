@@ -18,8 +18,6 @@ import (
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -1453,20 +1451,6 @@ func getPayerHashKey(tx *commonPb.Transaction,
 	}
 
 	return address, nil
-}
-
-// publicKeyToAddress: generate address from public key, according to chainconfig parameter
-func publicKeyToAddress(pk crypto.PublicKey, chainCfg *configPb.ChainConfig) (string, error) {
-
-	publicKeyString, err := utils.PkToAddrStr(pk, chainCfg.Vm.AddrType, crypto.HashAlgoMap[chainCfg.Crypto.Hash])
-	if err != nil {
-		return "", err
-	}
-
-	if chainCfg.Vm.AddrType == configPb.AddrType_ZXL {
-		publicKeyString = "ZX" + publicKeyString
-	}
-	return publicKeyString, nil
 }
 
 func getTxSenderSigner(tx *commonPb.Transaction) *accesscontrol.Member {
