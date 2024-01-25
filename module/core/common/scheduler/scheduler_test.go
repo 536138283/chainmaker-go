@@ -1854,6 +1854,22 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Error(gomock.Any()).AnyTimes()
 	ac := mock.NewMockAccessControlProvider(ctrl)
+	ac.EXPECT().GetAddressFromCache(gomock.Any()).DoAndReturn(func(pkBytes []byte) (string, crypto2.PublicKey, error) {
+
+		pk, err := asym.PublicKeyFromPEM(pkBytes)
+		if err != nil {
+			return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+		}
+
+		publicKeyString, err := utils.PkToAddrStr(pk, configpb.AddrType_ZXL, crypto2.HASH_TYPE_SHA256)
+		if err != nil {
+			return "", nil, err
+		}
+
+		publicKeyString = "ZX" + publicKeyString
+		return publicKeyString, pk, nil
+
+	}).AnyTimes()
 	chainConfig := &configpb.ChainConfig{
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
@@ -2024,6 +2040,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				ac:              ac,
 			}
 			gotAccountMangerContract, gotPk, err := ts.getAccountMgrContractAndPk(tt.args.txSimContext, tt.args.tx, tt.args.contractName, tt.args.method)
 			if (err != nil) != tt.wantErr {
@@ -2470,8 +2487,23 @@ func Test_getPayerHashKey(t *testing.T) {
 	}
 
 	ac := mock.NewMockAccessControlProvider(ctl)
-	ac.EXPECT().GetAddressFromCache(gomock.Any()).Return().AnyTimes()
+	ac.EXPECT().GetAddressFromCache(gomock.Any()).DoAndReturn(func(pkBytes []byte) (string, crypto2.PublicKey, error) {
 
+		pk, err := asym.PublicKeyFromPEM(pkBytes)
+		if err != nil {
+			return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+		}
+
+		publicKeyString, err := utils.PkToAddrStr(pk, configpb.AddrType_ZXL, crypto2.HASH_TYPE_SHA256)
+		if err != nil {
+			return "", nil, err
+		}
+
+		publicKeyString = "ZX" + publicKeyString
+
+		return publicKeyString, pk, nil
+
+	}).AnyTimes()
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
 	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
@@ -3288,11 +3320,13 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			pkGot, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot)
+			pk, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getPayerPkFromTx() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
+			pkGot, _ := asym.PublicKeyFromPEM(pk)
 
 			if !reflect.DeepEqual(pkGot, tt.want) {
 				t.Errorf("getPayerPkFromTx() got = %v, want %v", pkGot, tt.want)
