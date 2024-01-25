@@ -298,8 +298,37 @@ func (cp *certACProvider) loadCRL() error {
 		return fmt.Errorf("fail to update CRL list: %v", err)
 	}
 
-	err = cp.storeCrls(crlAKIs)
+	err = cp.storeEffectiveCrls(crlAKIs)
 	return err
+}
+
+// storeEffectiveCrls 重启时，加载crl，跳过校验失败的子项（比如根证书已经从trustroot中删除）
+func (cp *certACProvider) storeEffectiveCrls(crlAKIs []string) error {
+	for _, crlAKI := range crlAKIs {
+		crlbytes, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(crlAKI))
+		if err != nil {
+			return fmt.Errorf("fail to load CRL [%s]: %v", hex.EncodeToString([]byte(crlAKI)), err)
+		}
+		if crlbytes == nil {
+			return fmt.Errorf("fail to load CRL [%s]: CRL is nil", hex.EncodeToString([]byte(crlAKI)))
+		}
+		crls, err := cp.ValidateCRL(crlbytes)
+		if err != nil {
+			continue
+		}
+		if crls == nil {
+			continue
+		}
+
+		for _, crl := range crls {
+			aki, _, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
+			if err != nil {
+				continue
+			}
+			cp.crl.Store(string(aki), crl)
+		}
+	}
+	return nil
 }
 
 func (cp *certACProvider) storeCrls(crlAKIs []string) error {
@@ -408,7 +437,7 @@ func (cp *certACProvider) checkCRLAgainstTrustedCerts(crl *pkix.CertificateList,
 		for _, cert := range targetCerts {
 			if bytes.Equal(aki, cert.SubjectKeyId) {
 				if err := cert.CheckCRLSignature(crl); err != nil {
-					return fmt.Errorf("CRL [AKI: %s] is not signed by CA it claims: %v", hex.EncodeToString(aki), err)
+					return fmt.Errorf("CRL [AKI: %s] is not signed by CA it claims: %v", string(aki), err)
 				}
 				return nil
 			}
@@ -597,7 +626,6 @@ func (cp *certACProvider) GetMemberStatus(pbMember *pbac.Member) (pbac.MemberSta
 }
 
 func (cp *certACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
-
 	if verifyType != pbac.VerifyType_CRL {
 		return false, fmt.Errorf("verify related material failed: only CRL allowed in permissionedWithCert mode")
 	}
