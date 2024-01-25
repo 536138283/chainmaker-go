@@ -754,17 +754,17 @@ func (p *pkACProvider) LookUpPolicy(resourceName string) (*pbac.Policy, error) {
 	return pbPolicy, nil
 }
 
-//GetMemberStatus get the status information of the member
+// GetMemberStatus get the status information of the member
 func (p *pkACProvider) GetMemberStatus(member *pbac.Member) (pbac.MemberStatus, error) {
 	return pbac.MemberStatus_NORMAL, nil
 }
 
-//VerifyRelatedMaterial verify the member's relevant identity material
+// VerifyRelatedMaterial verify the member's relevant identity material
 func (p *pkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 	return true, nil
 }
 
-//GetAllPolicy returns all default policies
+// GetAllPolicy returns all default policies
 func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.resourceNamePolicyMap.Range(func(key, value interface{}) bool {
@@ -795,7 +795,7 @@ func (pk *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, bloc
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
+// GetValidEndorsements filters all endorsement entries and returns all valid ones
 func (pk *pkACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
@@ -866,4 +866,41 @@ func (p *pkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVers
 	}
 
 	return isRuleSupportedByMultiSign(p, resourceName, blockVersion, p.log)
+}
+
+func (p *pkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
+
+	pkPem := string(pkBytes)
+	cached, ok := p.lookUpMemberInCache(pkPem)
+	if ok {
+		p.log.Debugf("member address found in local cache")
+		return cached.address, cached.pk, nil
+	}
+
+	// in case 缓存被清空，找不到原来保存的member信息
+	// 又因为 pk 没办法直接恢复成member信息，所以创建新的index key
+	indexKey := "pk_" + pkPem
+	cached, ok = p.lookUpMemberInCache(indexKey)
+	if ok {
+		p.log.Debugf("member address found in local cache")
+		return cached.address, cached.pk, nil
+	}
+
+	pk, err := asym.PublicKeyFromPEM(pkBytes)
+	if err != nil {
+		return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+	}
+
+	publicKeyString, err := utils.PkToAddrStr(pk, p.addressType, crypto.HashAlgoMap[p.hashType])
+	if err != nil {
+		return "", cached.pk, err
+	}
+
+	if p.addressType == config.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+
+	p.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
+
+	return publicKeyString, pk, nil
 }

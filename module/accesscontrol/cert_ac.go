@@ -18,7 +18,10 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus/maxbft"
+	"chainmaker.org/chainmaker/utils/v2"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
@@ -330,7 +333,7 @@ func (cp *certACProvider) storeCrls(crlAKIs []string) error {
 	return nil
 }
 
-//ValidateCRL validates whether the CRL is issued by a trusted CA
+// ValidateCRL validates whether the CRL is issued by a trusted CA
 func (cp *certACProvider) ValidateCRL(crlBytes []byte) ([]*pkix.CertificateList, error) {
 	crlPEM, rest := pem.Decode(crlBytes)
 	if crlPEM == nil {
@@ -390,7 +393,7 @@ func (cp *certACProvider) validateCrlVersion(crlPemBytes []byte, crl *pkix.Certi
 	return nil
 }
 
-//check CRL against trusted certs
+// check CRL against trusted certs
 func (cp *certACProvider) checkCRLAgainstTrustedCerts(crl *pkix.CertificateList,
 	orgList []*organization, isIntermediate bool) error {
 	aki, isASN1Encoded, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
@@ -1015,7 +1018,7 @@ func (cp *certACProvider) initTrustRootsForUpdatingChainConfig(chainConfig *conf
 	return nil
 }
 
-//GetAllPolicy returns all default policies
+// GetAllPolicy returns all default policies
 func (p *certACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.acService.resourceNamePolicyMap.Range(func(key, value interface{}) bool {
@@ -1045,7 +1048,7 @@ func (cp *certACProvider) VerifyPrincipalLT2330(principal protocol.Principal, bl
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
+// GetValidEndorsements filters all endorsement entries and returns all valid ones
 func (cp *certACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
@@ -1117,4 +1120,35 @@ func (cp *certACProvider) IsRuleSupportedByMultiSign(resourceName string, blockV
 	}
 
 	return isRuleSupportedByMultiSign(cp, resourceName, blockVersion, cp.acService.log)
+}
+
+func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
+	pkPem := string(pkBytes)
+	acs := cp.acService
+	// pk 一定恢复不成证书模式下的member
+	// 所以重新创建缓存的key
+	indexKey := "pk_" + pkPem
+	cached, ok := acs.lookUpMemberInCache(indexKey)
+	if ok {
+		acs.log.Debugf("member address found in local cache")
+		return cached.address, cached.pk, nil
+	}
+
+	pk, err := asym.PublicKeyFromPEM(pkBytes)
+	if err != nil {
+		return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+	}
+
+	publicKeyString, err := utils.PkToAddrStr(pk, acs.addressType, crypto.HashAlgoMap[acs.hashType])
+	if err != nil {
+		return "", nil, err
+	}
+
+	if acs.addressType == config.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+
+	acs.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
+
+	return publicKeyString, pk, nil
 }

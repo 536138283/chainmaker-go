@@ -26,7 +26,6 @@ import (
 	"chainmaker.org/chainmaker/vm/v2"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"github.com/gogo/protobuf/proto"
 
 	"github.com/hokaccha/go-prettyjson"
@@ -129,7 +128,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
 		ts.log.Debugf("before prepare `SenderGroup` ")
-		senderGroup = NewSenderGroup(txBatch, snapshot)
+		senderGroup = NewSenderGroup(txBatch, snapshot, ts.ac)
 		ts.log.Debugf("end prepare `SenderGroup` ")
 	}
 
@@ -346,8 +345,7 @@ func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSe
 		ts.metricVMRunTime.WithLabelValues(tx.Payload.ChainId).Observe(elapsed.Seconds())
 	}
 	if enableSenderGroup {
-		chainConfig := senderGroup.snapshot.GetLastChainConfig()
-		hashKey, _ := getPayerHashKey(tx, senderGroup.snapshot, chainConfig)
+		hashKey, _ := getPayerHashKey(tx, senderGroup.snapshot, ts.ac)
 		senderGroup.doneTxKeyC <- hashKey
 	}
 }
@@ -874,7 +872,7 @@ func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimCon
 
 		_, publicKey, err := getPayerAddressAndPkFromTx(tx,
 			txSimContext.GetSnapshot(),
-			txSimContext.GetLastChainConfig())
+			ts.ac)
 		if err != nil {
 			ts.log.Error(err.Error())
 			return accountMangerContract, nil, err
@@ -983,56 +981,51 @@ func (ts *TxScheduler) checkMultiSignFilter2312(
 // todo: merge with getPayerPk
 func getPayerPkFromTx(
 	tx *commonPb.Transaction,
-	snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+	snapshot protocol.Snapshot) ([]byte, error) {
 
 	var err error
-	var publicKey crypto.PublicKey
+	var publicKeyPEM []byte
 
 	// 首先，检查 tx payer
 	member := getTxPayerSigner(tx)
 	if member != nil {
-		publicKey, err = publicKeyFromMember(member, snapshot)
+		publicKeyPEM, err = publicKeyPEMFromMember(member, snapshot)
 		if err != nil {
 			return nil, err
 		}
-		return publicKey, nil
+		return publicKeyPEM, nil
 	}
 
 	// 其次，检查合约设置
-	publicKey, err = getPayerFromContract(tx, snapshot)
+	publicKeyPEM, err = getPayerFromContract(tx, snapshot)
 	if err != nil {
 		return nil, fmt.Errorf("get contract method payer failed, err = %v", err)
 	}
-	if publicKey != nil {
-		return publicKey, nil
+	if publicKeyPEM != nil {
+		return publicKeyPEM, nil
 	}
 
 	// 最后, 检查 sender
 	member = getTxSenderSigner(tx)
 	if member != nil {
-		publicKey, err = publicKeyFromMember(member, snapshot)
+		publicKeyPEM, err = publicKeyPEMFromMember(member, snapshot)
 		if err != nil {
 			return nil, err
 		}
-		return publicKey, nil
+		return publicKeyPEM, nil
 	}
 
-	return publicKey, nil
+	return publicKeyPEM, nil
 }
 
-func publicKeyFromMember(member *accesscontrol.Member, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+func publicKeyPEMFromMember(member *accesscontrol.Member, snapshot protocol.Snapshot) ([]byte, error) {
 
-	var publicKey crypto.PublicKey
 	var pk []byte
 	var err error
 
 	switch member.MemberType {
 	case accesscontrol.MemberType_CERT:
 		pk, err = publicKeyFromCert(member.MemberInfo)
-		if err != nil {
-			return nil, err
-		}
-		publicKey, err = asym.PublicKeyFromPEM(pk)
 		if err != nil {
 			return nil, err
 		}
@@ -1049,68 +1042,51 @@ func publicKeyFromMember(member *accesscontrol.Member, snapshot protocol.Snapsho
 			return nil, err
 		}
 
-		publicKey, err = asym.PublicKeyFromPEM(pk)
-		if err != nil {
-			return nil, err
-		}
-
 	case accesscontrol.MemberType_PUBLIC_KEY:
 		pk = member.MemberInfo
-		publicKey, err = asym.PublicKeyFromPEM(pk)
-		if err != nil {
-			return nil, err
-		}
 
 	default:
 		err = fmt.Errorf("invalid member type: %s", member.MemberType)
 		return nil, err
 	}
 
-	return publicKey, nil
+	return pk, nil
 }
 
-func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot) (crypto.PublicKey, error) {
+func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot) ([]byte, error) {
 	contractName := tx.GetPayload().GetContractName()
 	method := tx.GetPayload().GetMethod()
 
 	var pkBytes []byte
-	var pk crypto.PublicKey
 	var err error
 
 	pkBytes, err = utils.GetContractMethodPayerPK(snapshot, contractName, method)
 	if err != nil {
 		return nil, fmt.Errorf("get contract method payer failed, error: %v", err)
 	}
-	// 未设置 payer public key
-	if pkBytes == nil {
-		return nil, nil
-	}
 
-	// 取到预先设置的 payer public key
-	pk, err = asym.PublicKeyFromPEM(pkBytes)
-	if err != nil {
-		return nil, fmt.Errorf("public key from pem failed, error: %v", err)
-	}
-	return pk, nil
+	return pkBytes, nil
 }
 
 func getPayerAddressAndPkFromTx(tx *commonPb.Transaction,
 	snapshot protocol.Snapshot,
-	chainConfig *configPb.ChainConfig) (string, crypto.PublicKey, error) {
+	ac protocol.AccessControlProvider) (string, crypto.PublicKey, error) {
 
 	var (
-		pk  crypto.PublicKey
-		err error
+		pk         crypto.PublicKey
+		pkBytes    []byte
+		err        error
+		addressStr string
 	)
 
-	pk, err = getPayerPkFromTx(tx, snapshot)
+	pkBytes, err = getPayerPkFromTx(tx, snapshot)
 	if err != nil {
 		return "", nil, fmt.Errorf("getPayerPkFromTx error: %v", err)
 	}
 
-	addressStr, err := publicKeyToAddress(pk, chainConfig)
+	addressStr, pk, err = ac.GetAddressFromCache(pkBytes)
 	if err != nil {
-		return "", pk, fmt.Errorf("publicKeyToAddress failed: err = %v", err)
+		return "", pk, fmt.Errorf("GetAddressFromCache failed: err = %v", err)
 	}
 
 	return addressStr, pk, nil
@@ -1447,21 +1423,21 @@ type SenderGroup struct {
 	doneTxKeyC chan string
 }
 
-func NewSenderGroup(txBatch []*commonPb.Transaction, snapshot protocol.Snapshot) *SenderGroup {
+func NewSenderGroup(txBatch []*commonPb.Transaction, snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider) *SenderGroup {
 	return &SenderGroup{
-		txsMap:     getSenderTxsMap(txBatch, snapshot),
+		txsMap:     getSenderTxsMap(txBatch, snapshot, ac),
 		snapshot:   snapshot,
 		doneTxKeyC: make(chan string, len(txBatch)),
 	}
 }
 
 func getSenderTxsMap(txBatch []*commonPb.Transaction,
-	snapshot protocol.Snapshot) map[string][]*commonPb.Transaction {
+	snapshot protocol.Snapshot, ac protocol.AccessControlProvider) map[string][]*commonPb.Transaction {
 	senderTxsMap := make(map[string][]*commonPb.Transaction, len(txBatch))
 
-	chainConfig := snapshot.GetLastChainConfig()
 	for _, tx := range txBatch {
-		hashKey, _ := getPayerHashKey(tx, snapshot, chainConfig)
+		hashKey, _ := getPayerHashKey(tx, snapshot, ac)
 		senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
 	}
 	return senderTxsMap
@@ -1469,9 +1445,9 @@ func getSenderTxsMap(txBatch []*commonPb.Transaction,
 
 func getPayerHashKey(tx *commonPb.Transaction,
 	snapshot protocol.Snapshot,
-	chainConfig *configPb.ChainConfig) (string, error) {
+	ac protocol.AccessControlProvider) (string, error) {
 
-	address, _, err := getPayerAddressAndPkFromTx(tx, snapshot, chainConfig)
+	address, _, err := getPayerAddressAndPkFromTx(tx, snapshot, ac)
 	if err != nil {
 		return "", err
 	}
