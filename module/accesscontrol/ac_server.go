@@ -468,7 +468,7 @@ func (acs *accessControlService) memberToAddress(member *pbac.Member) (string, e
 func (acs *accessControlService) addMemberToCache(member *pbac.Member, memberCached *memberCached) {
 
 	address, err := acs.memberToAddress(member)
-	if err != nil {
+	if err == nil {
 		memberCached.address = address
 	}
 	acs.memberCache.Add(string(member.MemberInfo), memberCached)
