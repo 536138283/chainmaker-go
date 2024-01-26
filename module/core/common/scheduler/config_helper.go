@@ -30,10 +30,6 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 	gasCalc := make(map[string]uint64, 24)
 	// gas to charge from proposer
 	gasNeedToCharge := make(map[string]uint64, 24)
-	chainCfg, err := snapshot.GetBlockchainStore().GetLastChainConfig()
-	if err != nil {
-		return fmt.Errorf("GetLastChainConfig error: %v", err)
-	}
 
 	contractName := syscontract.SystemContract_ACCOUNT_MANAGER.String()
 	methodName := syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String()
@@ -50,7 +46,7 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 			}
 		} else {
 			gasUsed := tx.Result.ContractResult.GasUsed
-			address, _, err2 := getPayerAddressAndPkFromTx(tx, snapshot, chainCfg)
+			address, _, err2 := getPayerAddressAndPkFromTx(tx, snapshot, ac)
 			if err2 != nil {
 				return err2
 			}

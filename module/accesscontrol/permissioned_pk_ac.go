@@ -8,16 +8,16 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"sync"
 	"sync/atomic"
 
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/utils/v2"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-
-	"encoding/hex"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -243,7 +243,7 @@ func (pp *permissionedPkACProvider) ValidateResourcePolicy(resourcePolicy *confi
 	return pp.acService.validateResourcePolicy(resourcePolicy)
 }
 
-//GetMemberStatus get the status information of the member
+// GetMemberStatus get the status information of the member
 func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.MemberStatus, error) {
 	if _, err := pp.newNodeMember(member); err != nil {
 		pp.acService.log.Infof("get member status: %s", err.Error())
@@ -252,7 +252,7 @@ func (pp *permissionedPkACProvider) GetMemberStatus(member *pbac.Member) (pbac.M
 	return pbac.MemberStatus_NORMAL, nil
 }
 
-//VerifyRelatedMaterial verify the member's relevant identity material
+// VerifyRelatedMaterial verify the member's relevant identity material
 func (pp *permissionedPkACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
 	return true, nil
 }
@@ -261,7 +261,7 @@ func (pp *permissionedPkACProvider) newNodeMember(member *pbac.Member) (protocol
 	return pp.acService.newNodePkMember(member, pp.consensusMember)
 }
 
-//GetAllPolicy returns all default policies
+// GetAllPolicy returns all default policies
 func (p *permissionedPkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 	var policyMap = make(map[string]*pbac.Policy)
 	p.acService.resourceNamePolicyMap.Range(func(key, value interface{}) bool {
@@ -293,7 +293,7 @@ func (pp *permissionedPkACProvider) VerifyPrincipalLT2330(
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
-//GetValidEndorsements filters all endorsement entries and returns all valid ones
+// GetValidEndorsements filters all endorsement entries and returns all valid ones
 func (pp *permissionedPkACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
@@ -365,4 +365,41 @@ func (pp *permissionedPkACProvider) IsRuleSupportedByMultiSign(resourceName stri
 	}
 
 	return isRuleSupportedByMultiSign(pp, resourceName, blockVersion, pp.acService.log)
+}
+
+func (pp *permissionedPkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
+	pkPem := string(pkBytes)
+	acs := pp.acService
+	cached, ok := acs.lookUpMemberInCache(pkPem)
+	if ok {
+		acs.log.Debugf("member address found in local cache")
+		return cached.address, cached.pk, nil
+	}
+
+	// in case 缓存被清空，找不到原来保存的member信息
+	// 又因为 pk 没办法直接恢复成member信息，所以创建新的index key
+	indexKey := "pk_" + pkPem
+	cached, ok = acs.lookUpMemberInCache(indexKey)
+	if ok {
+		acs.log.Debugf("member address found in local cache")
+		return cached.address, cached.pk, nil
+	}
+
+	pk, err := asym.PublicKeyFromPEM(pkBytes)
+	if err != nil {
+		return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+	}
+
+	publicKeyString, err := utils.PkToAddrStr(pk, acs.addressType, crypto.HashAlgoMap[acs.hashType])
+	if err != nil {
+		return "", nil, err
+	}
+
+	if acs.addressType == config.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+
+	acs.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
+
+	return publicKeyString, pk, nil
 }

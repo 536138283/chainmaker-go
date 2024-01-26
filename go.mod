@@ -15,7 +15,7 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.2.4-0.20231213100056-e71405b638e9
 	chainmaker.org/chainmaker/net-liquid v1.1.2-0.20231214034940-1c4f12276cf0
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.4-0.20240102101646-c674e90f734b
-	chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20240108071814-a9a4d484901e
+	chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20240125115233-3d0284de5b17
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20231226040050-94c4d179dc80
 	chainmaker.org/chainmaker/store/v2 v2.3.5-0.20231214022652-fff379fc984d
 	chainmaker.org/chainmaker/utils/v2 v2.3.4-0.20230927084903-acd55dcc1634
@@ -23,7 +23,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20240112102133-b9343ff1a8a4
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.4-0.20231226114227-875f62d34324
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20240115071353-4a5d223f38b6
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20240125120120-240885405039
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2
 	chainmaker.org/chainmaker/vm/v2 v2.3.4-0.20240111044948-4b3858f68b6c
@@ -79,6 +79,7 @@ require (
 )
 
 replace (
+	//chainmaker.org/chainmaker/protocol/v2 => ../protocol
 	//chainmaker.org/chainmaker/lws => chainmaker.org/chainmaker/lws v1.2.1-0.20230918025726-ea744645e727
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0
