@@ -56,30 +56,29 @@ var (
 	TestCertFile    = "../../../../config/wx-org1/certs/node/consensus1/consensus1.sign.crt"
 )
 
-//func TestDag(t *testing.T) {
-//	for i := 0; i < 10; i++ {
+//	func TestDag(t *testing.T) {
+//		for i := 0; i < 10; i++ {
 //
-//		neb1 := &commonPb.DAG_Neighbor{
-//			Neighbors: []int32{1, 2, 3, 4},
+//			neb1 := &commonPb.DAG_Neighbor{
+//				Neighbors: []int32{1, 2, 3, 4},
+//			}
+//			neb2 := &commonPb.DAG_Neighbor{
+//				Neighbors: []int32{1, 2, 3, 4},
+//			}
+//			neb3 := &commonPb.DAG_Neighbor{
+//				Neighbors: []int32{1, 2, 3, 4},
+//			}
+//			vs := make([]*commonPb.DAG_Neighbor, 3)
+//			vs[0] = neb1
+//			vs[1] = neb2
+//			vs[2] = neb3
+//			dag := &commonPb.DAG{
+//				Vertexes: vs,
+//			}
+//			marshal, _ := proto.Marshal(dag)
+//			println("Dag", hex.EncodeToString(marshal))
 //		}
-//		neb2 := &commonPb.DAG_Neighbor{
-//			Neighbors: []int32{1, 2, 3, 4},
-//		}
-//		neb3 := &commonPb.DAG_Neighbor{
-//			Neighbors: []int32{1, 2, 3, 4},
-//		}
-//		vs := make([]*commonPb.DAG_Neighbor, 3)
-//		vs[0] = neb1
-//		vs[1] = neb2
-//		vs[2] = neb3
-//		dag := &commonPb.DAG{
-//			Vertexes: vs,
-//		}
-//		marshal, _ := proto.Marshal(dag)
-//		println("Dag", hex.EncodeToString(marshal))
 //	}
-//}
-//
 func newTx(txId string, contractId *commonPb.Contract, parameterMap map[string]string) *commonPb.Transaction {
 
 	var parameters []*commonPb.KeyValuePair
@@ -1855,6 +1854,22 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 	logger.EXPECT().Debugf(gomock.Any(), gomock.Any()).AnyTimes()
 	logger.EXPECT().Error(gomock.Any()).AnyTimes()
 	ac := mock.NewMockAccessControlProvider(ctrl)
+	ac.EXPECT().GetAddressFromCache(gomock.Any()).DoAndReturn(func(pkBytes []byte) (string, crypto2.PublicKey, error) {
+
+		pk, err := asym.PublicKeyFromPEM(pkBytes)
+		if err != nil {
+			return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+		}
+
+		publicKeyString, err := utils.PkToAddrStr(pk, configpb.AddrType_ZXL, crypto2.HASH_TYPE_SHA256)
+		if err != nil {
+			return "", nil, err
+		}
+
+		publicKeyString = "ZX" + publicKeyString
+		return publicKeyString, pk, nil
+
+	}).AnyTimes()
 	chainConfig := &configpb.ChainConfig{
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
@@ -2025,6 +2040,7 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
+				ac:              ac,
 			}
 			gotAccountMangerContract, gotPk, err := ts.getAccountMgrContractAndPk(tt.args.txSimContext, tt.args.tx, tt.args.contractName, tt.args.method)
 			if (err != nil) != tt.wantErr {
@@ -2323,6 +2339,10 @@ func TestNewSenderGroup(t *testing.T) {
 			AddrType: configpb.AddrType_ZXL,
 		},
 	}
+
+	ac := mock.NewMockAccessControlProvider(ctl)
+	ac.EXPECT().GetAddressFromCache(gomock.Any()).Return("sender1", nil, nil).AnyTimes()
+
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
 	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
@@ -2346,7 +2366,7 @@ func TestNewSenderGroup(t *testing.T) {
 				txBatch: txBatch,
 			},
 			want: &SenderGroup{
-				txsMap:     getSenderTxsMap(txBatch, snapshot),
+				txsMap:     getSenderTxsMap(txBatch, snapshot, ac),
 				doneTxKeyC: make(chan string, len(txBatch)),
 			},
 		},
@@ -2362,14 +2382,14 @@ func TestNewSenderGroup(t *testing.T) {
 				txsMap: getSenderTxsMap([]*commonPb.Transaction{
 					newTx("a0000000000000000000000000000001", contractId, parameters),
 					newTx("a0000000000000000000000000000002", contractId, parameters),
-				}, snapshot),
+				}, snapshot, ac),
 				doneTxKeyC: make(chan string, 2),
 			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := NewSenderGroup(tt.args.txBatch, snapshot); !reflect.DeepEqual(got.txsMap, tt.want.txsMap) {
+			if got := NewSenderGroup(tt.args.txBatch, snapshot, ac); !reflect.DeepEqual(got.txsMap, tt.want.txsMap) {
 				t.Errorf("NewSenderGroup() = %v, want %v", got, tt.want)
 			}
 		})
@@ -2390,6 +2410,9 @@ func Test_getSenderTxsMap(t *testing.T) {
 			AddrType: configpb.AddrType_ZXL,
 		},
 	}
+
+	ac := mock.NewMockAccessControlProvider(ctl)
+	ac.EXPECT().GetAddressFromCache(gomock.Any()).Return("sender1", nil, nil).AnyTimes()
 
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
@@ -2414,7 +2437,7 @@ func Test_getSenderTxsMap(t *testing.T) {
 			want: func() map[string][]*commonPb.Transaction {
 				senderTxsMap := make(map[string][]*commonPb.Transaction)
 				tx := newTx("a0000000000000000000000000000001", contractId, parameters)
-				hashKey, _ := getPayerHashKey(tx, snapshot, chainConfig)
+				hashKey, _ := getPayerHashKey(tx, snapshot, ac)
 				senderTxsMap[hashKey] = append(senderTxsMap[hashKey], tx)
 				return senderTxsMap
 			}(),
@@ -2430,10 +2453,10 @@ func Test_getSenderTxsMap(t *testing.T) {
 			want: func() map[string][]*commonPb.Transaction {
 				senderTxsMap := make(map[string][]*commonPb.Transaction)
 				tx1 := newTx("a0000000000000000000000000000001", contractId, parameters)
-				hashKey1, _ := getPayerHashKey(tx1, snapshot, chainConfig)
+				hashKey1, _ := getPayerHashKey(tx1, snapshot, ac)
 				senderTxsMap[hashKey1] = append(senderTxsMap[hashKey1], tx1)
 				tx2 := newTx("a0000000000000000000000000000002", contractId, parameters)
-				hashKey2, _ := getPayerHashKey(tx2, snapshot, chainConfig)
+				hashKey2, _ := getPayerHashKey(tx2, snapshot, ac)
 				senderTxsMap[hashKey2] = append(senderTxsMap[hashKey2], tx2)
 				return senderTxsMap
 			}(),
@@ -2441,7 +2464,7 @@ func Test_getSenderTxsMap(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := getSenderTxsMap(tt.args.txBatch, snapshot); !reflect.DeepEqual(got, tt.want) {
+			if got := getSenderTxsMap(tt.args.txBatch, snapshot, ac); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("getSenderTxsMap() = %v, want %v", got, tt.want)
 			}
 		})
@@ -2462,6 +2485,25 @@ func Test_getPayerHashKey(t *testing.T) {
 			AddrType: configpb.AddrType_ZXL,
 		},
 	}
+
+	ac := mock.NewMockAccessControlProvider(ctl)
+	ac.EXPECT().GetAddressFromCache(gomock.Any()).DoAndReturn(func(pkBytes []byte) (string, crypto2.PublicKey, error) {
+
+		pk, err := asym.PublicKeyFromPEM(pkBytes)
+		if err != nil {
+			return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+		}
+
+		publicKeyString, err := utils.PkToAddrStr(pk, configpb.AddrType_ZXL, crypto2.HASH_TYPE_SHA256)
+		if err != nil {
+			return "", nil, err
+		}
+
+		publicKeyString = "ZX" + publicKeyString
+
+		return publicKeyString, pk, nil
+
+	}).AnyTimes()
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
 	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
@@ -2483,7 +2525,7 @@ func Test_getPayerHashKey(t *testing.T) {
 			},
 			want: func() string {
 				tx := newTx("a0000000000000000000000000000001", contractId, parameters)
-				addr, _, _ := getPayerAddressAndPkFromTx(tx, snapshot, chainConfig)
+				addr, _, _ := getPayerAddressAndPkFromTx(tx, snapshot, ac)
 				return addr
 			}(),
 			wantErr: false,
@@ -2492,7 +2534,7 @@ func Test_getPayerHashKey(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := getPayerHashKey(tt.args.tx, snapshot, chainConfig)
+			got, err := getPayerHashKey(tt.args.tx, snapshot, ac)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getSenderHashKey() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -3278,11 +3320,13 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			pkGot, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot)
+			pk, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getPayerPkFromTx() error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
+
+			pkGot, _ := asym.PublicKeyFromPEM(pk)
 
 			if !reflect.DeepEqual(pkGot, tt.want) {
 				t.Errorf("getPayerPkFromTx() got = %v, want %v", pkGot, tt.want)

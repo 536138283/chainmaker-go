@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"testing"
 
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 
 	crypto2 "chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -50,6 +52,24 @@ func getMemberInfo(i int) (string, []byte) {
 
 func initAC(ctl *gomock.Controller) protocol.AccessControlProvider {
 	ac := mock2.NewMockAccessControlProvider(ctl)
+	ac.EXPECT().GetAddressFromCache(gomock.Any()).DoAndReturn(func(pkBytes []byte) (string, crypto2.PublicKey, error) {
+
+		pk, err := asym.PublicKeyFromPEM(pkBytes)
+		if err != nil {
+			return "", nil, fmt.Errorf("new public key member failed: parse the public key from PEM failed")
+		}
+
+		publicKeyString, err := utils.PkToAddrStr(pk, configPb.AddrType_ZXL, crypto2.HASH_TYPE_SHA256)
+		if err != nil {
+			return "", nil, err
+		}
+
+		publicKeyString = "ZX" + publicKeyString
+
+		return publicKeyString, pk, nil
+
+	}).AnyTimes()
+
 	return ac
 }
 

@@ -246,6 +246,7 @@ type memberCached struct {
 	member    protocol.Member
 	certChain []*bcx509.Certificate
 	address   string
+	pk        crypto.PublicKey
 }
 
 func initAccessControlService(hashType, authType string, addressType config.AddrType,
@@ -468,9 +469,15 @@ func (acs *accessControlService) memberToAddress(member *pbac.Member) (string, e
 func (acs *accessControlService) addMemberToCache(member *pbac.Member, memberCached *memberCached) {
 
 	address, err := acs.memberToAddress(member)
-	if err == nil {
-		memberCached.address = address
+	if err != nil {
+		acs.log.Errorf("add member to cache failed, err = %s", err.Error())
+		acs.memberCache.Add(string(member.MemberInfo), memberCached)
+		return
 	}
+
+	memberCached.address = address
+	memberCached.pk = memberCached.member.GetPk()
+
 	acs.memberCache.Add(string(member.MemberInfo), memberCached)
 }
 
@@ -614,7 +621,7 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 	var tmpMember protocol.Member
 	var err error
 	var certChains [][]*bcx509.Certificate
-	if acs.authType == protocol.PermissionedWithCert {
+	if acs.authType == protocol.PermissionedWithCert || acs.authType == protocol.Identity {
 		tmpMember, err = acs.newCertMember(member)
 		certMember, ok := tmpMember.(*certificateMember)
 		if !ok {

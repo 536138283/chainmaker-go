@@ -16,7 +16,8 @@ var sf singleflight.Group
 // guardForExecuteTx2220
 // filter out txs that need not go into runVM(...)
 // returns
-// 		willExit: bool
+//
+//	willExit: bool
 func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
 	enableGas bool, enableOptimizedChargeGas bool) (
 	txIsAllow bool) {
@@ -68,8 +69,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			//  1) tx.Result should be set in this place
 			//  2) tx.Result should be set in `runVM()` later
 			//pk, _ := getPayerPkFromTx(tx, snapshot, ts.ac, blockVersion)
-			chainCfg := txSimContext.GetLastChainConfig()
-			addr, pk, _ := getPayerAddressAndPkFromTx(tx, snapshot, chainCfg)
+			addr, pk, _ := getPayerAddressAndPkFromTx(tx, snapshot, ts.ac)
 			if tx.Result != nil {
 				txResult := &commonPb.Result{
 					ContractResult: &commonPb.ContractResult{

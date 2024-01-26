@@ -15,6 +15,7 @@ import (
 	"sync"
 	"testing"
 
+	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
@@ -151,6 +152,9 @@ func TestVerifyPrincipalPolicy(t *testing.T) {
 	logger := test.NewTestLogger(t)
 	acServices := initAccessControlService(testHashType, protocol.Identity, config.AddrType_CHAINMAKER, nil, logger)
 	acServices.initResourcePolicy(testChainConfig.ResourcePolicies, testOrg1)
+	acServices.setVerifyOptionsFunc(func() *bcx509.VerifyOptions {
+		return &bcx509.VerifyOptions{}
+	})
 	require.NotNil(t, acServices)
 
 	var orgMemberMap = make(map[string]*orgMember, len(orgMemberInfoMap))
