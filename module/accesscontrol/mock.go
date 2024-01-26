@@ -13,7 +13,6 @@ import (
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/protocol/v2"
@@ -31,10 +30,10 @@ func MockAccessControl() protocol.AccessControlProvider {
 			resourceNamePolicyMap: &sync.Map{},
 			hashType:              "",
 			dataStore:             nil,
-			memberCache:           concurrentlru.New(0),
+			memberCache:           NewShardCache(0),
 			log:                   mockAcLogger,
 		},
-		certCache:  concurrentlru.New(0),
+		certCache:  NewShardCache(0),
 		crl:        sync.Map{},
 		frozenList: sync.Map{},
 		opts: bcx509.VerifyOptions{
@@ -57,10 +56,10 @@ func MockAccessControlWithHash(hashAlg string) protocol.AccessControlProvider {
 			resourceNamePolicyMap: &sync.Map{},
 			hashType:              hashAlg,
 			dataStore:             nil,
-			memberCache:           concurrentlru.New(0),
+			memberCache:           NewShardCache(0),
 			log:                   mockAcLogger,
 		},
-		certCache:  concurrentlru.New(0),
+		certCache:  NewShardCache(0),
 		crl:        sync.Map{},
 		frozenList: sync.Map{},
 		opts: bcx509.VerifyOptions{

@@ -15,15 +15,16 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
-
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
 	"chainmaker.org/chainmaker/pb-go/v2/common"
@@ -121,6 +122,8 @@ type pkACProvider struct {
 
 	hashType string
 
+	addressType config.AddrType
+
 	adminNum int32
 
 	log protocol.Logger
@@ -129,7 +132,7 @@ type pkACProvider struct {
 
 	consensusMember *sync.Map
 
-	memberCache *concurrentlru.Cache
+	memberCache *ShardCache
 
 	dataStore protocol.BlockchainStore
 
@@ -171,7 +174,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 		authType:                  chainConfig.AuthType,
 		adminMember:               &sync.Map{},
 		consensusMember:           &sync.Map{},
-		memberCache:               concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		memberCache:               NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		log:                       log,
 		dataStore:                 store,
 		txTypePolicyMap:           &sync.Map{},
@@ -329,7 +332,7 @@ func (p *pkACProvider) getMemberFromCache(member *pbac.Member) protocol.Member {
 			p.log.Debugf("new member failed, authType = %s, err = %s", p.authType, err.Error())
 			return nil
 		}
-		p.memberCache.Add(string(member.MemberInfo), &memberCached{
+		p.addMemberToCache(member, &memberCached{
 			member:    tmpMember,
 			certChain: nil,
 		})
@@ -369,11 +372,46 @@ func (p *pkACProvider) NewMember(pbMember *pbac.Member) (protocol.Member, error)
 	if err != nil {
 		return nil, fmt.Errorf("new member failed: %s", err.Error())
 	}
-	p.memberCache.Add(string(pbMember.MemberInfo), &memberCached{
+	p.addMemberToCache(pbMember, &memberCached{
 		member:    member,
 		certChain: nil,
 	})
 	return member, nil
+}
+
+func (p *pkACProvider) memberToAddress(member *pbac.Member) (string, error) {
+	//计算地址
+	var err error
+	var pk []byte
+	var publicKey crypto.PublicKey
+	switch member.MemberType {
+	case pbac.MemberType_PUBLIC_KEY:
+		pk = member.MemberInfo
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return "", err
+		}
+	default:
+		return "", fmt.Errorf("error member.MemberType=%s", member.MemberType)
+	}
+	publicKeyString, err := utils.PkToAddrStr(publicKey, p.addressType, crypto.HashAlgoMap[p.hashType])
+	if err != nil {
+		return "", err
+	}
+
+	if p.addressType == configPb.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+	return publicKeyString, nil
+}
+
+func (p *pkACProvider) addMemberToCache(member *pbac.Member, memberCached *memberCached) {
+
+	address, err := p.memberToAddress(member)
+	if err != nil {
+		memberCached.address = address
+	}
+	p.memberCache.Add(string(member.MemberInfo), memberCached)
 }
 
 // NewMember creates a member from pb Member

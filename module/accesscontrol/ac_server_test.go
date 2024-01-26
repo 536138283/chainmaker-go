@@ -25,7 +25,7 @@ import (
 
 func TestInitAccessControlService(t *testing.T) {
 	logger := test.NewTestLogger(t)
-	acServices := initAccessControlService(testHashType, protocol.PermissionedWithCert, nil, logger)
+	acServices := initAccessControlService(testHashType, protocol.PermissionedWithCert, config.AddrType_CHAINMAKER, nil, logger)
 	acServices.initResourcePolicy(testChainConfig.ResourcePolicies, testOrg1)
 	require.NotNil(t, acServices)
 
@@ -76,7 +76,7 @@ func TestValidateResourcePolicy(t *testing.T) {
 	defer cleanFunc()
 
 	logger := test.NewTestLogger(t)
-	acServices := initAccessControlService(testHashType, protocol.Identity, nil, logger)
+	acServices := initAccessControlService(testHashType, protocol.Identity, config.AddrType_CHAINMAKER, nil, logger)
 	acServices.initResourcePolicy(testChainConfig.ResourcePolicies, testOrg1)
 	require.NotNil(t, acServices)
 
@@ -101,7 +101,7 @@ func TestCertMemberInfo(t *testing.T) {
 	defer cleanFunc()
 
 	logger := test.NewTestLogger(t)
-	acServices := initAccessControlService(testHashType, protocol.Identity, nil, logger)
+	acServices := initAccessControlService(testHashType, protocol.Identity, config.AddrType_CHAINMAKER, nil, logger)
 	acServices.initResourcePolicy(testChainConfig.ResourcePolicies, testOrg1)
 	require.NotNil(t, acServices)
 
@@ -137,7 +137,7 @@ func TestCertMemberInfo(t *testing.T) {
 	mem, err := member.GetMember()
 	require.Nil(t, err)
 	require.NotNil(t, mem)
-	acServices.addMemberToCache(string(mem.MemberInfo), cachedMember)
+	acServices.addMemberToCache(mem, cachedMember)
 	memCache, ok := acServices.lookUpMemberInCache(string(mem.MemberInfo))
 	require.Equal(t, true, ok)
 	require.Equal(t, cachedMember, memCache)
@@ -149,7 +149,7 @@ func TestVerifyPrincipalPolicy(t *testing.T) {
 	defer cleanFunc()
 	hashType := testHashType
 	logger := test.NewTestLogger(t)
-	acServices := initAccessControlService(testHashType, protocol.Identity, nil, logger)
+	acServices := initAccessControlService(testHashType, protocol.Identity, config.AddrType_CHAINMAKER, nil, logger)
 	acServices.initResourcePolicy(testChainConfig.ResourcePolicies, testOrg1)
 	require.NotNil(t, acServices)
 

@@ -14,14 +14,17 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
 // Special characters allowed to define customized access rules
@@ -221,7 +224,7 @@ type accessControlService struct {
 	exceptionalPolicyMap2320  *sync.Map
 
 	//local cache for member
-	memberCache *concurrentlru.Cache
+	memberCache *ShardCache
 
 	dataStore protocol.BlockchainStore
 
@@ -232,6 +235,8 @@ type accessControlService struct {
 
 	authType string
 
+	addressType config.AddrType
+
 	pwkNewMember func(member *pbac.Member) (protocol.Member, error)
 
 	getCertVerifyOptions func() *bcx509.VerifyOptions
@@ -240,9 +245,10 @@ type accessControlService struct {
 type memberCached struct {
 	member    protocol.Member
 	certChain []*bcx509.Certificate
+	address   string
 }
 
-func initAccessControlService(hashType, authType string,
+func initAccessControlService(hashType, authType string, addressType config.AddrType,
 	store protocol.BlockchainStore, log protocol.Logger) *accessControlService {
 	acService := &accessControlService{
 		orgNum:                    0,
@@ -256,11 +262,12 @@ func initAccessControlService(hashType, authType string,
 		exceptionalPolicyMap220:   &sync.Map{},
 		resourceNamePolicyMap2320: &sync.Map{},
 		exceptionalPolicyMap2320:  &sync.Map{},
-		memberCache:               concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		memberCache:               NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		dataStore:                 store,
 		log:                       log,
 		hashType:                  hashType,
 		authType:                  authType,
+		addressType:               addressType,
 	}
 	return acService
 }
@@ -335,7 +342,13 @@ func (acs *accessControlService) checkResourcePolicyRuleSelfCase(resourcePolicy 
 		syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(),
 		syscontract.SystemContract_CHAIN_CONFIG.String() + "-" +
 			syscontract.ChainConfigFunction_NODE_ID_UPDATE.String():
-		return true
+		//验证rolelist
+		if len(resourcePolicy.GetPolicy().RoleList) == 1 &&
+			resourcePolicy.GetPolicy().RoleList[0] == string(protocol.RoleAdmin) {
+			return true
+		}
+		acs.log.Errorf("bad configuration: the access rule.RoleList of [%s] should be [ADMIN]", resourcePolicy.ResourceName)
+		return false
 	default:
 		acs.log.Errorf("bad configuration: the access rule of [%s] should not be [%s]", resourcePolicy.ResourceName,
 			resourcePolicy.Policy.Rule)
@@ -406,8 +419,59 @@ func (acs *accessControlService) lookUpMemberInCache(memberInfo string) (*member
 	return nil, false
 }
 
-func (acs *accessControlService) addMemberToCache(memberInfo string, member *memberCached) {
-	acs.memberCache.Add(memberInfo, member)
+// parseUserAddress
+func publicKeyFromCert(member []byte) ([]byte, error) {
+	certificate, err := utils.ParseCert(member)
+	if err != nil {
+		return nil, err
+	}
+	pubKeyStr, err := certificate.PublicKey.String()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(pubKeyStr), nil
+}
+func (acs *accessControlService) memberToAddress(member *pbac.Member) (string, error) {
+	//计算地址
+	var err error
+	var pk []byte
+	var publicKey crypto.PublicKey
+	switch member.MemberType {
+	case pbac.MemberType_CERT, pbac.MemberType_CERT_HASH:
+		pk, err = publicKeyFromCert(member.MemberInfo)
+		if err != nil {
+			return "", err
+		}
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return "", err
+		}
+
+	case pbac.MemberType_PUBLIC_KEY:
+		pk = member.MemberInfo
+		publicKey, err = asym.PublicKeyFromPEM(pk)
+		if err != nil {
+			return "", err
+		}
+	}
+	publicKeyString, err := utils.PkToAddrStr(publicKey, acs.addressType, crypto.HashAlgoMap[acs.hashType])
+	if err != nil {
+		return "", err
+	}
+
+	if acs.addressType == configPb.AddrType_ZXL {
+		publicKeyString = "ZX" + publicKeyString
+	}
+	return publicKeyString, nil
+}
+
+func (acs *accessControlService) addMemberToCache(member *pbac.Member, memberCached *memberCached) {
+
+	address, err := acs.memberToAddress(member)
+	if err == nil {
+		memberCached.address = address
+	}
+	acs.memberCache.Add(string(member.MemberInfo), memberCached)
 }
 
 func (acs *accessControlService) addOrg(orgId string, orgInfo interface{}) {
@@ -505,7 +569,7 @@ func (acs *accessControlService) newPkMember(member *pbac.Member, adminList,
 		member:    pkMember,
 		certChain: nil,
 	}
-	acs.addMemberToCache(string(member.MemberInfo), cached)
+	acs.addMemberToCache(member, cached)
 	return pkMember, nil
 }
 
@@ -531,7 +595,7 @@ func (acs *accessControlService) newNodePkMember(member *pbac.Member,
 		member:    pkMember,
 		certChain: nil,
 	}
-	acs.addMemberToCache(string(member.MemberInfo), cached)
+	acs.addMemberToCache(member, cached)
 	return pkMember, nil
 }
 
@@ -585,7 +649,7 @@ func (acs *accessControlService) getMemberFromCache(member *pbac.Member) protoco
 			certChain: nil,
 		}
 	}
-	acs.addMemberToCache(string(member.MemberInfo), cached)
+	acs.addMemberToCache(member, cached)
 
 	return tmpMember
 }

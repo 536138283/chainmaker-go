@@ -24,7 +24,6 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 
-	"chainmaker.org/chainmaker/common/v2/concurrentlru"
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/common/v2/json"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -39,7 +38,7 @@ type certACProvider struct {
 	acService *accessControlService
 
 	// local cache for certificates (reduce the size of block)
-	certCache *concurrentlru.Cache
+	certCache *ShardCache
 
 	// local cache for certificate revocation list and frozen list
 	crl        sync.Map
@@ -102,7 +101,7 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger) (*certACProvider, error) {
 	certACProvider := &certACProvider{
-		certCache:  concurrentlru.New(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		certCache:  NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		crl:        sync.Map{},
 		frozenList: sync.Map{},
 		opts: bcx509.VerifyOptions{
@@ -137,7 +136,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	}
 
 	certACProvider.acService = initAccessControlService(chainConfig.GetCrypto().Hash,
-		chainConfig.AuthType, store, log)
+		chainConfig.AuthType, chainConfig.Vm.AddrType, store, log)
 	certACProvider.acService.setVerifyOptionsFunc(certACProvider.getVerifyOptions)
 
 	err = certACProvider.initTrustRoots(chainConfig.TrustRoots, localOrgId)
@@ -299,8 +298,37 @@ func (cp *certACProvider) loadCRL() error {
 		return fmt.Errorf("fail to update CRL list: %v", err)
 	}
 
-	err = cp.storeCrls(crlAKIs)
+	err = cp.storeEffectiveCrls(crlAKIs)
 	return err
+}
+
+// storeEffectiveCrls 重启时，加载crl，跳过校验失败的子项（比如根证书已经从trustroot中删除）
+func (cp *certACProvider) storeEffectiveCrls(crlAKIs []string) error {
+	for _, crlAKI := range crlAKIs {
+		crlbytes, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(crlAKI))
+		if err != nil {
+			return fmt.Errorf("fail to load CRL [%s]: %v", hex.EncodeToString([]byte(crlAKI)), err)
+		}
+		if crlbytes == nil {
+			return fmt.Errorf("fail to load CRL [%s]: CRL is nil", hex.EncodeToString([]byte(crlAKI)))
+		}
+		crls, err := cp.ValidateCRL(crlbytes)
+		if err != nil {
+			continue
+		}
+		if crls == nil {
+			continue
+		}
+
+		for _, crl := range crls {
+			aki, _, err := bcx509.GetAKIFromExtensions(crl.TBSCertList.Extensions)
+			if err != nil {
+				continue
+			}
+			cp.crl.Store(string(aki), crl)
+		}
+	}
+	return nil
 }
 
 func (cp *certACProvider) storeCrls(crlAKIs []string) error {
@@ -409,7 +437,7 @@ func (cp *certACProvider) checkCRLAgainstTrustedCerts(crl *pkix.CertificateList,
 		for _, cert := range targetCerts {
 			if bytes.Equal(aki, cert.SubjectKeyId) {
 				if err := cert.CheckCRLSignature(crl); err != nil {
-					return fmt.Errorf("CRL [AKI: %s] is not signed by CA it claims: %v", hex.EncodeToString(aki), err)
+					return fmt.Errorf("CRL [AKI: %s] is not signed by CA it claims: %v", string(aki), err)
 				}
 				return nil
 			}
@@ -598,7 +626,6 @@ func (cp *certACProvider) GetMemberStatus(pbMember *pbac.Member) (pbac.MemberSta
 }
 
 func (cp *certACProvider) VerifyRelatedMaterial(verifyType pbac.VerifyType, data []byte) (bool, error) {
-
 	if verifyType != pbac.VerifyType_CRL {
 		return false, fmt.Errorf("verify related material failed: only CRL allowed in permissionedWithCert mode")
 	}
@@ -721,7 +748,7 @@ func (cp *certACProvider) RefineEndorsements(endorsements []*common.EndorsementE
 				member:    remoteMember,
 				certChain: certChain,
 			}
-			cp.acService.addMemberToCache(memInfo, signerInfo)
+			cp.acService.addMemberToCache(endorsement.Signer, signerInfo)
 		} else {
 			flat, err := cp.verifyPrincipalSignerInCache(signerInfo, endorsement, msg, memInfo)
 			if !flat {

@@ -153,6 +153,7 @@ var testChainConfig = &config.ChainConfig{
 	},
 	Block: nil,
 	Core:  nil,
+	Vm:    &config.Vm{AddrType: config.AddrType_CHAINMAKER},
 	Consensus: &config.ConsensusConfig{
 		Type: 0,
 		Nodes: []*config.OrgConfig{{

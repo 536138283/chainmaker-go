@@ -706,7 +706,7 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 
 		// version management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyManage)
+			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyMajorityAdmin)
 
 		// contract management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
