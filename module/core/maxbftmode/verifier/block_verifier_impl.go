@@ -11,6 +11,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/gogo/protobuf/proto"
+
 	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
@@ -120,7 +122,46 @@ func NewBlockVerifier(config BlockVerifierConfig, log protocol.Logger) (protocol
 			"block verify time metric", []float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10}, "chainId")
 	}
 
+	// v220_compat Deprecated
+	config.ChainConf.AddWatch(v) //nolint: staticcheck
+	config.MsgBus.Register(msgbus.ChainConfig, v)
+
 	return v, nil
+}
+
+// OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
+func (v *BlockVerifierImpl) OnMessage(msg *msgbus.Message) {
+	switch msg.Topic {
+	case msgbus.ChainConfig:
+		dataStr, ok := msg.Payload.([]string)
+		if !ok {
+			return
+		}
+		dataBytes, err := hex.DecodeString(dataStr[0])
+		if err != nil {
+			v.log.Warn(err)
+			return
+		}
+		chainConfig := &chainConfConfig.ChainConfig{}
+		err = proto.Unmarshal(dataBytes, chainConfig)
+		if err != nil {
+			v.log.Warn(err)
+			return
+		}
+		v.chainConf.ChainConfig().Block = chainConfig.Block
+		protocol.ParametersValueMaxLength = chainConfig.Block.TxParameterSize * 1024 * 1024
+		if chainConfig.Block.TxParameterSize <= 0 {
+			protocol.ParametersValueMaxLength = protocol.DefaultParametersValueMaxSize * 1024 * 1024
+		}
+		v.log.Infof("[BlockVerifierImpl] receive msg, topic: %s, blockverify[%v]",
+			msg.Topic.String(), v.chainConf.ChainConfig().Block)
+	default:
+
+	}
+}
+
+func (v *BlockVerifierImpl) OnQuit() {
+	// nothing, implement Subscriber interface
 }
 
 // VerifyBlock to check if block is valid
