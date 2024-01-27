@@ -584,7 +584,11 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_RECHARGE_GAS.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_REFUND_GAS.String(), pubPolicyForbidden)
 
 		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
 			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
