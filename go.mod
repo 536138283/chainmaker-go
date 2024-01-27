@@ -15,15 +15,15 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.2.4-0.20231213100056-e71405b638e9
 	chainmaker.org/chainmaker/net-liquid v1.1.2-0.20231214034940-1c4f12276cf0
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.4-0.20240102101646-c674e90f734b
-	chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20240125115233-3d0284de5b17
+	chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20240126092909-f63b3da91c32
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20231226040050-94c4d179dc80
-	chainmaker.org/chainmaker/store/v2 v2.3.5-0.20231214022652-fff379fc984d
+	chainmaker.org/chainmaker/store/v2 v2.3.5-0.20240126102658-fcf6467a922a
 	chainmaker.org/chainmaker/utils/v2 v2.3.4-0.20230927084903-acd55dcc1634
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.5-0.20240112102133-b9343ff1a8a4
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.4-0.20231226114227-875f62d34324
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20240126094506-b3e1372dd4c7
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.4-0.20240126101415-ec5addf9a409
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.2
 	chainmaker.org/chainmaker/vm/v2 v2.3.4-0.20240111044948-4b3858f68b6c
@@ -50,7 +50,7 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.8.0
+	github.com/stretchr/testify v1.8.2
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
