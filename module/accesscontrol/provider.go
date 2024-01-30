@@ -425,7 +425,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 		return false, fmt.Errorf("[verifyTxTypePrincipal]authentication error: %s", err)
 	}
 	if !allow {
-		return false, fmt.Errorf("authentication failed")
+		return false, fmt.Errorf("[verifyEndorsementsPrincipal]authentication failed")
 	}
 
 	if txType != commonPb.TxType_INVOKE_CONTRACT {
@@ -438,7 +438,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 		return false, fmt.Errorf("[verifySenderPrincipal]authentication error: %s", err)
 	}
 	if !allow {
-		return false, fmt.Errorf("authentication failed")
+		return false, fmt.Errorf("[verifyEndorsementsPrincipal]authentication failed")
 	}
 
 	// check endorsements
@@ -447,7 +447,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 		return false, fmt.Errorf("[verifyEndorsementsPrincipal]authentication error for %s: %s", resourceId, err)
 	}
 	if !allow {
-		return false, fmt.Errorf("authentication failed for %s", resourceId)
+		return false, fmt.Errorf("[verifyEndorsementsPrincipal]authentication failed for %s", resourceId)
 	}
 
 	return true, nil
