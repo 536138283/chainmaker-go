@@ -46,6 +46,7 @@ func (p *pkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	p.initResourcePolicy(chainConfig.ResourcePolicies)
 
 	p.hashType = chainConfig.GetCrypto().GetHash()
+	p.addressType = chainConfig.Vm.AddrType
 	err = p.initAdminMembers(chainConfig.TrustRoots)
 	if err != nil {
 		err = fmt.Errorf("new public AC provider failed: %s", err.Error())
