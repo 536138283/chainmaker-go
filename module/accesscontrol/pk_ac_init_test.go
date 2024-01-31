@@ -699,6 +699,7 @@ var testPublicPKChainConfig = &config.ChainConfig{
 	},
 	Block: nil,
 	Core:  nil,
+	Vm:    &config.Vm{AddrType: config.AddrType_CHAINMAKER},
 	Consensus: &config.ConsensusConfig{
 		Type: 5,
 		Nodes: []*config.OrgConfig{
