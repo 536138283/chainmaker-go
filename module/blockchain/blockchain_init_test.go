@@ -1190,6 +1190,7 @@ func TestBlockchain_initAC(t *testing.T) {
 					chainConf := mock.NewMockChainConf(ctrl)
 					chainConfig = &configpb.ChainConfig{
 						AuthType: protocol.Identity,
+						Vm:       &configpb.Vm{AddrType: configpb.AddrType_CHAINMAKER},
 						Consensus: &configpb.ConsensusConfig{
 							Type: consensus.ConsensusType_DPOS,
 						},
@@ -1209,6 +1210,7 @@ func TestBlockchain_initAC(t *testing.T) {
 					chainConf := mock.NewMockChainConf(ctrl)
 					chainConfig = &configpb.ChainConfig{
 						AuthType: protocol.PermissionedWithKey,
+						Vm:       &configpb.Vm{AddrType: configpb.AddrType_CHAINMAKER},
 						Consensus: &configpb.ConsensusConfig{
 							Type: consensus.ConsensusType_DPOS,
 						},
@@ -1228,6 +1230,7 @@ func TestBlockchain_initAC(t *testing.T) {
 					chainConf := mock.NewMockChainConf(ctrl)
 					chainConfig = &configpb.ChainConfig{
 						AuthType: protocol.Public,
+						Vm:       &configpb.Vm{AddrType: configpb.AddrType_CHAINMAKER},
 						Consensus: &configpb.ConsensusConfig{
 							Type: consensus.ConsensusType_RAFT,
 						},
@@ -1247,6 +1250,7 @@ func TestBlockchain_initAC(t *testing.T) {
 					chainConf := mock.NewMockChainConf(ctrl)
 					chainConfig = &configpb.ChainConfig{
 						AuthType: protocol.Public,
+						Vm:       &configpb.Vm{AddrType: configpb.AddrType_CHAINMAKER},
 						Consensus: &configpb.ConsensusConfig{
 							Type: consensus.ConsensusType_TBFT,
 							Nodes: []*configpb.OrgConfig{
