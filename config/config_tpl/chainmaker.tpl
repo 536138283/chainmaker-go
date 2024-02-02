@@ -570,9 +570,9 @@ storage:
     #   dump_path: "../data/wx-org1.chainmaker.org/state/bloom" # bloom filter data dump to file in the path
     #   # bloom filter calculates the number of enabled hash functions and the number of bits used
     #   # based on the key capacity and false positive rate.
-    #   keys_capacity: 200000000
+    #   keys_capacity: 1000000000
     #   false_positive_rate: 0.01
-    #   dump_per_blocks_committed: 10 # do dump every n blocks added to bloom filter
+    #   dump_per_blocks_committed: 1000 # do dump every n blocks added to bloom filter
 
   # History db config, default enable history db
   disable_historydb: false
