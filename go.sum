@@ -73,8 +73,8 @@ chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20240126092909-f63b3da91c32 h1:YG
 chainmaker.org/chainmaker/protocol/v2 v2.3.4-0.20240126092909-f63b3da91c32/go.mod h1:+5k3UkMmYhT3I5UDQ4bMIAHRGuU47GmoiA2vlcFD5lY=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0 h1:8TNEw1XtWBZkjqoNgcc9qoD/0xFkSb0SDXyzM2rQxjo=
 chainmaker.org/chainmaker/raftwal/v2 v2.1.0/go.mod h1:19ulESU/EH/OxbMpo1PJMsRoJDM91BPrvXCyQhkHWpk=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20231226040050-94c4d179dc80 h1:vEZU6A8V7LsOOJiN9LiX7wdfrHmaGCo2DRpWi7ruON4=
-chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20231226040050-94c4d179dc80/go.mod h1:vy+Xj8++zPYNcJcaIqXpP18LSkeD0HTL60OqqE9b3mU=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20240202070406-84d3bd65aed5 h1:t9EQNe79IaaerODZriMdMK0erbEqMXcz+cf0D9NvdTA=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.4-0.20240202070406-84d3bd65aed5/go.mod h1:vy+Xj8++zPYNcJcaIqXpP18LSkeD0HTL60OqqE9b3mU=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0 h1:Q5tNXukq+B+9asB/PJxOd/d7HltJDyw2scVT008deBQ=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.0/go.mod h1:8uuLFeyjEs1jHK2jEvLJBRhfoV6KymFw49PowTduimY=
 chainmaker.org/chainmaker/store-leveldb/v2 v2.3.1 h1:rd6CDjhqaZfGXRTfA+M0cN8ijucphB0d51Ss+Ksc1Mc=
@@ -85,8 +85,8 @@ chainmaker.org/chainmaker/store-tikv/v2 v2.3.1/go.mod h1:rNYGUX2eaVlcVT3ZsYP6+yX
 chainmaker.org/chainmaker/store-tikv/v2 v2.3.2-0.20231213075835-e77d269a1d0e h1:F+nKcvZgkh1sPyPqCO1Fz4sBe2GlrvVJFZTojwuFSxk=
 chainmaker.org/chainmaker/store-tikv/v2 v2.3.2-0.20231213075835-e77d269a1d0e/go.mod h1:rNYGUX2eaVlcVT3ZsYP6+yX7Bejpa+9eRPTrlt3Fc3g=
 chainmaker.org/chainmaker/store/v2 v2.3.3/go.mod h1:wxAn8kEy+A+YPyjaEhJEmf7gV0Tp+zex3UT5wjH+TG8=
-chainmaker.org/chainmaker/store/v2 v2.3.5-0.20240130072004-28a73e82cd67 h1:TrdprWBXL7UQVM/1VDfqI9nYlxSSqkkau7IGD4onhQ0=
-chainmaker.org/chainmaker/store/v2 v2.3.5-0.20240130072004-28a73e82cd67/go.mod h1:GucaTz1sMfPUFSmQk7OEs+Be129wUTZ6jg719Bxmpm8=
+chainmaker.org/chainmaker/store/v2 v2.3.5-0.20240202092201-6377fb412e16 h1:FzHjC0scrWsgzxlwtUZz6U2whtc/yFFVouEWdmwgW3I=
+chainmaker.org/chainmaker/store/v2 v2.3.5-0.20240202092201-6377fb412e16/go.mod h1:REaddd9pLHgGLnRReq66gKiGib7KCnAbrVThixHzoNI=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3-0.20240124114601-c2f4fa039566 h1:Kvg+n47OMwhKXn8OCRt8Ts3JuzUeAminYuvgjh7CZ+8=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3-0.20240124114601-c2f4fa039566/go.mod h1:trMQ11g0QaGfkHbP/AaVvm6C92keHLguS3IPT7BEHI8=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3-0.20240124114611-fa41264d788b h1:wz+q3GzErA7oJjetbttGtEgmudQ7j2o31x/Uwf5fzjE=
