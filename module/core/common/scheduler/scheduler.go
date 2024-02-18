@@ -869,8 +869,7 @@ func (ts *TxScheduler) getAccountMgrContractAndPk(txSimContext protocol.TxSimCon
 		}
 
 		_, publicKey, err := getPayerAddressAndPkFromTx(tx,
-			txSimContext.GetSnapshot(),
-			ts.ac)
+			txSimContext.GetSnapshot(), ts.ac)
 		if err != nil {
 			ts.log.Error(err.Error())
 			return accountMangerContract, nil, err
@@ -979,7 +978,8 @@ func (ts *TxScheduler) checkMultiSignFilter2312(
 // todo: merge with getPayerPk
 func getPayerPkFromTx(
 	tx *commonPb.Transaction,
-	snapshot protocol.Snapshot) ([]byte, error) {
+	snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider) ([]byte, error) {
 
 	var err error
 	var publicKeyPEM []byte
@@ -995,7 +995,7 @@ func getPayerPkFromTx(
 	}
 
 	// 其次，检查合约设置
-	publicKeyPEM, err = getPayerFromContract(tx, snapshot)
+	publicKeyPEM, err = getPayerFromContract(tx, snapshot, ac)
 	if err != nil {
 		return nil, fmt.Errorf("get contract method payer failed, err = %v", err)
 	}
@@ -1051,19 +1051,36 @@ func publicKeyPEMFromMember(member *accesscontrol.Member, snapshot protocol.Snap
 	return pk, nil
 }
 
-func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot) ([]byte, error) {
+func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot,
+	ac protocol.AccessControlProvider) ([]byte, error) {
 	contractName := tx.GetPayload().GetContractName()
 	method := tx.GetPayload().GetMethod()
 
 	var pkBytes []byte
 	var err error
 
-	pkBytes, err = utils.GetContractMethodPayerPK(snapshot, contractName, method)
+	// 先从缓存查
+	fmt.Println("wcx debug:get from cache")
+	_, pkBytes, err = utils.GetContractMethodPayerPKFromAC(ac, contractName, method)
 	if err != nil {
 		return nil, fmt.Errorf("get contract method payer failed, error: %v", err)
 	}
+	if pkBytes != nil {
+		fmt.Println("wcx debug:get from cache, found ", pkBytes)
+		return pkBytes, nil
+	}
+	fmt.Println("wcx debug:get from cache, not found")
 
-	return pkBytes, nil
+	// 缓存查不到从snapshot查
+	key, value, err := utils.GetContractMethodPayerPK(snapshot, contractName, method)
+	if err != nil {
+		return nil, fmt.Errorf("get contract method payer failed, error: %v", err)
+	}
+	fmt.Println("wcx debug:get from snapshot, key = ", key, " value = ", value)
+	// 加入缓存
+	ac.SetPayerToCache(key, value)
+	fmt.Println("wcx debug:set key and value")
+	return value, nil
 }
 
 func getPayerAddressAndPkFromTx(tx *commonPb.Transaction,
@@ -1077,7 +1094,7 @@ func getPayerAddressAndPkFromTx(tx *commonPb.Transaction,
 		addressStr string
 	)
 
-	pkBytes, err = getPayerPkFromTx(tx, snapshot)
+	pkBytes, err = getPayerPkFromTx(tx, snapshot, ac)
 	if err != nil {
 		return "", nil, fmt.Errorf("getPayerPkFromTx error: %v", err)
 	}

@@ -43,6 +43,9 @@ type permissionedPkACProvider struct {
 
 	// consensus list in permissioned public key mode
 	consensusMember *sync.Map
+
+	// used to cache the deduction account address to avoid reading the database every time
+	payerList *sync.Map
 }
 
 type adminMemberModel struct {
@@ -65,6 +68,7 @@ func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, 
 	}
 	msgBus.Register(msgbus.ChainConfig, pPkACProvider)
 	msgBus.Register(msgbus.PubkeyManageDelete, pPkACProvider)
+	msgBus.Register(msgbus.PayerConfig, pPkACProvider)
 	// v220_compat Deprecated
 	{
 		chainConf.AddWatch(pPkACProvider)   //nolint: staticcheck
@@ -402,4 +406,23 @@ func (pp *permissionedPkACProvider) GetAddressFromCache(pkBytes []byte) (string,
 	acs.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
 
 	return publicKeyString, pk, nil
+}
+
+// GetPayerFromCache get payer from cache
+func (pp *permissionedPkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
+	value, ok := pp.payerList.Load(key)
+	if !ok {
+		return nil, fmt.Errorf("not found %s", key)
+	}
+	byteValue, ok := value.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("value is not a []byte]: %v", value)
+	}
+	return byteValue, nil
+}
+
+// SetPayerToCache set payer to cache
+func (pp *permissionedPkACProvider) SetPayerToCache(key []byte, value []byte) error {
+	pp.payerList.Store(key, value)
+	return nil
 }

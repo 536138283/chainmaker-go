@@ -132,6 +132,9 @@ type pkACProvider struct {
 
 	consensusMember *sync.Map
 
+	// used to cache the deduction account address to avoid reading the database every time
+	payerList *sync.Map
+
 	memberCache *ShardCache
 
 	dataStore protocol.BlockchainStore
@@ -161,6 +164,7 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	}
 
 	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
+	msgBus.Register(msgbus.PayerConfig, pkAcProvider)
 	//v220_compat Deprecated
 	chainConf.AddWatch(pkAcProvider) //nolint: staticcheck
 	return pkAcProvider, nil
@@ -909,4 +913,23 @@ func (p *pkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Publi
 	p.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
 
 	return publicKeyString, pk, nil
+}
+
+// GetPayerFromCache get payer from cache
+func (p *pkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
+	value, ok := p.payerList.Load(key)
+	if !ok {
+		return nil, fmt.Errorf("not found %s", key)
+	}
+	byteValue, ok := value.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("value is not a []byte]: %v", value)
+	}
+	return byteValue, nil
+}
+
+// SetPayerToCache set payer to cache
+func (p *pkACProvider) SetPayerToCache(key []byte, value []byte) error {
+	p.payerList.Store(key, value)
+	return nil
 }

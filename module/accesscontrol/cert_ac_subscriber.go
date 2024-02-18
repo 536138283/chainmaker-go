@@ -45,6 +45,8 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 		cp.onMessageCertAliasUpdate(msg)
 	case msgbus.MaxbftEpochConf:
 		cp.onMessageMaxbftChainconfigInEpoch(msg)
+	case msgbus.PayerConfig:
+		cp.onMessagePayerConfig(msg)
 	}
 
 }
@@ -64,6 +66,32 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	_ = proto.Unmarshal(dataBytes, chainConfig)
 
 	cp.messageChainConfig(chainConfig, false)
+}
+
+func (cp *certACProvider) onMessagePayerConfig(msg *msgbus.Message) {
+	// todo wcx
+	dataStr, _ := msg.Payload.([]string)
+	dataBytes := []byte(dataStr[0])
+
+	payerConfig := &config.ConfigKeyValue{}
+	_ = proto.Unmarshal(dataBytes, payerConfig)
+
+	cp.acService.log.Errorf("wcx debug: key=%s", payerConfig.Key)
+	cp.acService.log.Errorf("wcx debug: value=%s", payerConfig.Value)
+
+	if payerConfig.Value != "" { // add or update
+		cp.payerList.Store(payerConfig.Key, payerConfig.Value)
+	} else { //del
+		cp.payerList.Delete(payerConfig.Key)
+	}
+
+	cp.payerList.Range(func(key, value interface{}) bool {
+		k := key.(string)
+		v := value.(string)
+		cp.acService.log.Errorf("wcx debug: key=%s, value=%s", k, v)
+		return true
+	})
+
 }
 
 func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
