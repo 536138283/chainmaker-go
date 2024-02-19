@@ -68,6 +68,7 @@ func (pp *permissionedPkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	pp.acService.memberCache.Clear()
 }
 
+//Processing messages for setting up a debit account
 func (pp *permissionedPkACProvider) onMessagePayerConfig(msg *msgbus.Message) {
 	dataStr, _ := msg.Payload.([]string)
 	dataBytes := []byte(dataStr[0])
@@ -75,21 +76,14 @@ func (pp *permissionedPkACProvider) onMessagePayerConfig(msg *msgbus.Message) {
 	payerConfig := &config.ConfigKeyValue{}
 	_ = proto.Unmarshal(dataBytes, payerConfig)
 
-	pp.acService.log.Errorf("wcx debug: key=%s", payerConfig.Key)
-	pp.acService.log.Errorf("wcx debug: value=%s", payerConfig.Value)
+	pp.acService.log.Debugf("key=%s", payerConfig.Key)
+	pp.acService.log.Debugf("value=%s", payerConfig.Value)
 
 	if payerConfig.Value != "" { // add or update
 		pp.payerList.Store(payerConfig.Key, payerConfig.Value)
 	} else { //del
 		pp.payerList.Delete(payerConfig.Key)
 	}
-
-	pp.payerList.Range(func(key, value interface{}) bool {
-		k := key.(string)
-		v := value.(string)
-		pp.acService.log.Errorf("wcx debug: key=%s, value=%s", k, v)
-		return true
-	})
 
 }
 

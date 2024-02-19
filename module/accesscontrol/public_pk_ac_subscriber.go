@@ -71,20 +71,9 @@ func (p *pkACProvider) onMessagePayerConfig(msg *msgbus.Message) {
 	payerConfig := &config.ConfigKeyValue{}
 	_ = proto.Unmarshal(dataBytes, payerConfig)
 
-	p.log.Errorf("wcx debug: key=%s", payerConfig.Key)
-	p.log.Errorf("wcx debug: value=%s", payerConfig.Value)
-
 	if payerConfig.Value != "" { // add or update
 		p.payerList.Store(payerConfig.Key, payerConfig.Value)
 	} else { //del
 		p.payerList.Delete(payerConfig.Key)
 	}
-
-	p.payerList.Range(func(key, value interface{}) bool {
-		k := key.(string)
-		v := value.(string)
-		p.log.Errorf("wcx debug: key=%s, value=%s", k, v)
-		return true
-	})
-
 }

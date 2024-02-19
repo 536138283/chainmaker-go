@@ -1060,24 +1060,19 @@ func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot,
 	var err error
 
 	// 先从缓存查
-	fmt.Println("wcx debug:get from cache")
 	_, pkBytes, err = utils.GetContractMethodPayerPKFromAC(ac, contractName, method)
 	if pkBytes != nil {
-		fmt.Println("wcx debug:get from cache, found ", pkBytes)
 		return pkBytes, nil
 	}
-	fmt.Println("wcx debug:get from cache, not found. ", err)
 
 	// 缓存查不到从snapshot查
 	key, value, err := utils.GetContractMethodPayerPK(snapshot, contractName, method)
 	if err != nil {
 		return nil, fmt.Errorf("get contract method payer failed, error: %v", err)
 	}
-	fmt.Println("wcx debug:get from snapshot, key = ", string(key), " value = ", string(value))
 	// 加入缓存
 	if value != nil {
 		ac.SetPayerToCache(key, value)
-		fmt.Println("wcx debug:set key and value")
 	}
 	return value, nil
 }

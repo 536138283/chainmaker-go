@@ -68,6 +68,7 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	cp.messageChainConfig(chainConfig, false)
 }
 
+//Processing messages for setting up a debit account
 func (cp *certACProvider) onMessagePayerConfig(msg *msgbus.Message) {
 	dataStr, _ := msg.Payload.([]string)
 	dataBytes := []byte(dataStr[0])
@@ -75,22 +76,14 @@ func (cp *certACProvider) onMessagePayerConfig(msg *msgbus.Message) {
 	payerConfig := &config.ConfigKeyValue{}
 	_ = proto.Unmarshal(dataBytes, payerConfig)
 
-	cp.acService.log.Errorf("wcx debug: key=%s", payerConfig.Key)
-	cp.acService.log.Errorf("wcx debug: value=%s", payerConfig.Value)
+	cp.acService.log.Debugf("key=%s", payerConfig.Key)
+	cp.acService.log.Debugf("value=%s", payerConfig.Value)
 
 	if payerConfig.Value != "" { // add or update
 		cp.payerList.Store(payerConfig.Key, payerConfig.Value)
 	} else { //del
 		cp.payerList.Delete(payerConfig.Key)
 	}
-
-	cp.payerList.Range(func(key, value interface{}) bool {
-		k := key.(string)
-		v := value.(string)
-		cp.acService.log.Errorf("wcx debug: key=%s, value=%s", k, v)
-		return true
-	})
-
 }
 
 func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {

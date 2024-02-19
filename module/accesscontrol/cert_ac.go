@@ -1188,7 +1188,7 @@ func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Pu
 
 // GetPayerFromCache get payer from cache
 func (cp *certACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
-	cp.acService.log.Errorf("wcx debug: get from cache, key=", string(key))
+	cp.acService.log.Debugf("get from cache, key=", string(key))
 	value, ok := cp.payerList.Load(string(key))
 	if !ok {
 		return nil, fmt.Errorf("not found %s", string(key))
@@ -1202,7 +1202,7 @@ func (cp *certACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 
 // SetPayerToCache set payer to cache
 func (cp *certACProvider) SetPayerToCache(key []byte, value []byte) error {
-	cp.acService.log.Errorf("wcx debug: set cache, key=", string(key), "#value=", string(value))
+	cp.acService.log.Debugf("set cache, key=", string(key), "#value=", string(value))
 	cp.payerList.Store(string(key), string(value))
 	return nil
 }
