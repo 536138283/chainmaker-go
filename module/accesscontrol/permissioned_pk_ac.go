@@ -45,7 +45,7 @@ type permissionedPkACProvider struct {
 	consensusMember *sync.Map
 
 	// used to cache the deduction account address to avoid reading the database every time
-	payerList *sync.Map
+	payerList sync.Map
 }
 
 type adminMemberModel struct {
@@ -82,6 +82,7 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 	ppacProvider := &permissionedPkACProvider{
 		adminMember:     &sync.Map{},
 		consensusMember: &sync.Map{},
+		payerList:       sync.Map{},
 		localOrg:        localOrgId,
 	}
 	chainConfig.AuthType = strings.ToLower(chainConfig.AuthType)
@@ -410,7 +411,7 @@ func (pp *permissionedPkACProvider) GetAddressFromCache(pkBytes []byte) (string,
 
 // GetPayerFromCache get payer from cache
 func (pp *permissionedPkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
-	value, ok := pp.payerList.Load(key)
+	value, ok := pp.payerList.Load(string(key))
 	if !ok {
 		return nil, fmt.Errorf("not found %s", key)
 	}
@@ -423,6 +424,6 @@ func (pp *permissionedPkACProvider) GetPayerFromCache(key []byte) ([]byte, error
 
 // SetPayerToCache set payer to cache
 func (pp *permissionedPkACProvider) SetPayerToCache(key []byte, value []byte) error {
-	pp.payerList.Store(key, value)
+	pp.payerList.Store(string(key), value)
 	return nil
 }

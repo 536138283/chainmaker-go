@@ -69,7 +69,6 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 }
 
 func (cp *certACProvider) onMessagePayerConfig(msg *msgbus.Message) {
-	// todo wcx
 	dataStr, _ := msg.Payload.([]string)
 	dataBytes := []byte(dataStr[0])
 
