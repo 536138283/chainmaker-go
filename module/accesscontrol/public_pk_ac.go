@@ -922,15 +922,15 @@ func (p *pkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 	if !ok {
 		return nil, fmt.Errorf("not found %s", key)
 	}
-	byteValue, ok := value.([]byte)
+	byteValue, ok := value.(string)
 	if !ok {
 		return nil, fmt.Errorf("value is not a []byte]: %v", value)
 	}
-	return byteValue, nil
+	return []byte(byteValue), nil
 }
 
 // SetPayerToCache set payer to cache
 func (p *pkACProvider) SetPayerToCache(key []byte, value []byte) error {
-	p.payerList.Store(string(key), value)
+	p.payerList.Store(string(key), string(value))
 	return nil
 }
