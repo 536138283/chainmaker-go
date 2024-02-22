@@ -8,6 +8,9 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/utils/v2"
 	"encoding/hex"
 	"fmt"
 
@@ -29,8 +32,8 @@ func (pp *permissionedPkACProvider) OnMessage(msg *msgbus.Message) {
 	case msgbus.PubkeyManageDelete:
 		pp.acService.log.Infof("[AC_PWK] receive msg, topic: %s", msg.Topic.String())
 		pp.onMessagePublishKeyManageDelete(msg)
-	case msgbus.PayerConfig:
-		pp.onMessagePayerConfig(msg)
+	case msgbus.BlockInfo:
+		pp.onMessageBlockInfo(msg)
 	}
 
 }
@@ -85,6 +88,75 @@ func (pp *permissionedPkACProvider) onMessagePayerConfig(msg *msgbus.Message) {
 		pp.payerList.Delete(payerConfig.Key)
 	}
 
+}
+
+func (pp *permissionedPkACProvider) onMessageBlockInfo(msg *msgbus.Message) {
+
+	switch blockInfo := msg.Payload.(type) {
+	case *commonPb.BlockInfo:
+		if blockInfo == nil || blockInfo.Block == nil {
+			pp.acService.log.Errorf("error message BlockInfo = nil")
+			return
+		}
+		//（set-payer）配置交易 + gas交易
+		if len(blockInfo.Block.Txs) > 2 {
+			return
+		}
+		// 是set-payer交易,并且交易执行成功
+		if blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
+			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String() &&
+			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
+
+			//解析交易入参，根据入参更新缓存
+			params := &syscontract.SetContractMethodPayerParams{}
+			var value []byte
+			for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+				if pair.Key == syscontract.SetContractMethodPayer_PARAMS.String() {
+					value = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+				}
+			}
+			_ = proto.Unmarshal(value, params)
+			//获取缓存key
+			dbKey := utils.PrefixContractMethodPayer
+			if params.Method != "" || params.ContractName != "" {
+				dbKey += params.ContractName + utils.Separator + params.Method
+			} else if params.ContractName != "" {
+				dbKey += params.ContractName
+			} else {
+				pp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+			}
+
+			pp.payerList.Store(dbKey, params.PayerAddress)
+			pp.acService.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
+		} else if (blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
+			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_UNSET_CONTRACT_METHOD_PAYER.String()) &&
+			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
+			//解析交易入参，根据入参删除缓存
+			var contractName, method string
+			for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+				if pair.Key == syscontract.UnsetContractMethodPayer_CONTRACT_NAME.String() {
+					contractName = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+				} else if pair.Key == syscontract.UnsetContractMethodPayer_METHOD.String() {
+					method = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+				}
+			}
+			//获取缓存key
+			dbKey := utils.PrefixContractMethodPayer
+			if method != "" || contractName != "" {
+				dbKey += contractName + utils.Separator + method
+			} else if contractName != "" {
+				dbKey += contractName
+			} else {
+				pp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+			}
+
+			pp.payerList.Delete(dbKey)
+			pp.acService.log.Debugf("unset payer in cache, key=%s", dbKey)
+		}
+
+	default:
+		pp.acService.log.Errorf("error type(%s)", blockInfo)
+	}
 }
 
 func (pp *permissionedPkACProvider) onMessagePublishKeyManageDelete(msg *msgbus.Message) {

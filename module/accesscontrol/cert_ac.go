@@ -97,7 +97,7 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsAliasDelete, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
 	msgBus.Register(msgbus.MaxbftEpochConf, certACProvider)
-	msgBus.Register(msgbus.PayerConfig, certACProvider)
+	msgBus.Register(msgbus.BlockInfo, certACProvider)
 
 	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)   //nolint: staticcheck

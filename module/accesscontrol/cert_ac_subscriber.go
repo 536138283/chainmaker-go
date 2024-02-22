@@ -8,6 +8,8 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/utils/v2"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
@@ -45,10 +47,9 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 		cp.onMessageCertAliasUpdate(msg)
 	case msgbus.MaxbftEpochConf:
 		cp.onMessageMaxbftChainconfigInEpoch(msg)
-	case msgbus.PayerConfig:
-		cp.onMessagePayerConfig(msg)
+	case msgbus.BlockInfo:
+		cp.onMessageBlockInfo(msg)
 	}
-
 }
 
 func (cp *certACProvider) OnQuit() {
@@ -68,21 +69,72 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	cp.messageChainConfig(chainConfig, false)
 }
 
-//Processing messages for setting up a debit account
-func (cp *certACProvider) onMessagePayerConfig(msg *msgbus.Message) {
-	dataStr, _ := msg.Payload.([]string)
-	dataBytes := []byte(dataStr[0])
+func (cp *certACProvider) onMessageBlockInfo(msg *msgbus.Message) {
 
-	payerConfig := &config.ConfigKeyValue{}
-	_ = proto.Unmarshal(dataBytes, payerConfig)
+	switch blockInfo := msg.Payload.(type) {
+	case *commonPb.BlockInfo:
+		if blockInfo == nil || blockInfo.Block == nil {
+			cp.acService.log.Errorf("error message BlockInfo = nil")
+			return
+		}
+		//（set-payer）配置交易 + gas交易
+		if len(blockInfo.Block.Txs) > 2 {
+			return
+		}
+		// 是set-payer交易,并且交易执行成功
+		if (blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
+			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String()) &&
+			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
 
-	cp.acService.log.Debugf("key=%s", payerConfig.Key)
-	cp.acService.log.Debugf("value=%s", payerConfig.Value)
+			//解析交易入参，根据入参更新缓存
+			params := &syscontract.SetContractMethodPayerParams{}
+			var value []byte
+			for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+				if pair.Key == syscontract.SetContractMethodPayer_PARAMS.String() {
+					value = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+				}
+			}
+			_ = proto.Unmarshal(value, params)
+			//获取缓存key
+			dbKey := utils.PrefixContractMethodPayer
+			if params.Method != "" || params.ContractName != "" {
+				dbKey += params.ContractName + utils.Separator + params.Method
+			} else if params.ContractName != "" {
+				dbKey += params.ContractName
+			} else {
+				cp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+			}
 
-	if payerConfig.Value != "" { // add or update
-		cp.payerList.Store(payerConfig.Key, payerConfig.Value)
-	} else { //del
-		cp.payerList.Delete(payerConfig.Key)
+			cp.payerList.Store(dbKey, params.PayerAddress)
+			cp.acService.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
+		} else if (blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
+			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_UNSET_CONTRACT_METHOD_PAYER.String()) &&
+			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
+			//解析交易入参，根据入参删除缓存
+			var contractName, method string
+			for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+				if pair.Key == syscontract.UnsetContractMethodPayer_CONTRACT_NAME.String() {
+					contractName = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+				} else if pair.Key == syscontract.UnsetContractMethodPayer_METHOD.String() {
+					method = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+				}
+			}
+			//获取缓存key
+			dbKey := utils.PrefixContractMethodPayer
+			if method != "" || contractName != "" {
+				dbKey += contractName + utils.Separator + method
+			} else if contractName != "" {
+				dbKey += contractName
+			} else {
+				cp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+			}
+
+			cp.payerList.Delete(dbKey)
+			cp.acService.log.Debugf("unset payer in cache, key=%s", dbKey)
+		}
+
+	default:
+		cp.acService.log.Errorf("error type(%s)", blockInfo)
 	}
 }
 

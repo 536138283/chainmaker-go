@@ -164,7 +164,7 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	}
 
 	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
-	msgBus.Register(msgbus.PayerConfig, pkAcProvider)
+	msgBus.Register(msgbus.BlockInfo, pkAcProvider)
 	//v220_compat Deprecated
 	chainConf.AddWatch(pkAcProvider) //nolint: staticcheck
 	return pkAcProvider, nil

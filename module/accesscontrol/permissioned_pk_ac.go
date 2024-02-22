@@ -68,7 +68,7 @@ func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, 
 	}
 	msgBus.Register(msgbus.ChainConfig, pPkACProvider)
 	msgBus.Register(msgbus.PubkeyManageDelete, pPkACProvider)
-	msgBus.Register(msgbus.PayerConfig, pPkACProvider)
+	msgBus.Register(msgbus.BlockInfo, pPkACProvider)
 	// v220_compat Deprecated
 	{
 		chainConf.AddWatch(pPkACProvider)   //nolint: staticcheck
