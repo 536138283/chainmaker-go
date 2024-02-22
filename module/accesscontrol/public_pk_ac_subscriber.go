@@ -97,55 +97,62 @@ func (p *pkACProvider) onMessageBlockInfo(msg *msgbus.Message) {
 		if blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
 			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String() &&
 			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
-
-			//解析交易入参，根据入参更新缓存
-			params := &syscontract.SetContractMethodPayerParams{}
-			var value []byte
-			for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
-				if pair.Key == syscontract.SetContractMethodPayer_PARAMS.String() {
-					value = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
-				}
-			}
-			_ = proto.Unmarshal(value, params)
-			//获取缓存key
-			dbKey := utils.PrefixContractMethodPayer
-			if params.Method != "" || params.ContractName != "" {
-				dbKey += params.ContractName + utils.Separator + params.Method
-			} else if params.ContractName != "" {
-				dbKey += params.ContractName
-			} else {
-				p.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
-			}
-
-			p.payerList.Store(dbKey, params.PayerAddress)
-			p.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
+			p.handleSetPayer(blockInfo)
 		} else if (blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
 			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_UNSET_CONTRACT_METHOD_PAYER.String()) &&
 			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
-			//解析交易入参，根据入参删除缓存
-			var contractName, method string
-			for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
-				if pair.Key == syscontract.UnsetContractMethodPayer_CONTRACT_NAME.String() {
-					contractName = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
-				} else if pair.Key == syscontract.UnsetContractMethodPayer_METHOD.String() {
-					method = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
-				}
-			}
-			//获取缓存key
-			dbKey := utils.PrefixContractMethodPayer
-			if method != "" || contractName != "" {
-				dbKey += contractName + utils.Separator + method
-			} else if contractName != "" {
-				dbKey += contractName
-			} else {
-				p.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
-			}
-
-			p.payerList.Delete(dbKey)
-			p.log.Debugf("unset payer in cache, key=%s", dbKey)
+			p.handleUnsetPayer(blockInfo)
 		}
 
 	default:
 		p.log.Errorf("error type(%s)", blockInfo)
 	}
+}
+
+func (p *pkACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo) {
+	//解析交易入参，根据入参更新缓存
+	params := &syscontract.SetContractMethodPayerParams{}
+	var value []byte
+	for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+		if pair.Key == syscontract.SetContractMethodPayer_PARAMS.String() {
+			value = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+		}
+	}
+	_ = proto.Unmarshal(value, params)
+	//获取缓存key
+	dbKey := utils.PrefixContractMethodPayer
+	if params.Method != "" || params.ContractName != "" {
+		dbKey += params.ContractName + utils.Separator + params.Method
+	} else if params.ContractName != "" {
+		dbKey += params.ContractName
+	} else {
+		p.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+	}
+
+	p.payerList.Store(dbKey, params.PayerAddress)
+	p.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
+}
+
+func (p *pkACProvider) handleUnsetPayer(blockInfo *commonPb.BlockInfo) {
+	//解析交易入参，根据入参删除缓存
+	var contractName, method string
+	for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+		if pair.Key == syscontract.UnsetContractMethodPayer_CONTRACT_NAME.String() {
+			contractName = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+		} else if pair.Key == syscontract.UnsetContractMethodPayer_METHOD.String() {
+			method = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+		}
+	}
+	//获取缓存key
+	dbKey := utils.PrefixContractMethodPayer
+	if method != "" || contractName != "" {
+		dbKey += contractName + utils.Separator + method
+	} else if contractName != "" {
+		dbKey += contractName
+	} else {
+		p.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+	}
+
+	p.payerList.Delete(dbKey)
+	p.log.Debugf("unset payer in cache, key=%s", dbKey)
 }

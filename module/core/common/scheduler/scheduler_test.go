@@ -3158,6 +3158,7 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 	type args struct {
 		snapshot protocol.Snapshot
 		tx       *commonPb.Transaction
+		ac       protocol.AccessControlProvider
 	}
 
 	ctrl := gomock.NewController(t)
@@ -3320,7 +3321,7 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			pk, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot)
+			pk, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot, tt.args.ac)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getPayerPkFromTx() error = %v, wantErr %v", err, tt.wantErr)
 				return
