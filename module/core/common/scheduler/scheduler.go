@@ -1060,7 +1060,7 @@ func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot,
 	var err error
 
 	// 先从缓存查
-	_, pkBytes, err = utils.GetContractMethodPayerPKFromAC(ac, contractName, method)
+	_, pkBytes, _ = utils.GetContractMethodPayerPKFromAC(ac, contractName, method)
 	if pkBytes != nil {
 		return pkBytes, nil
 	}
@@ -1072,7 +1072,7 @@ func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot,
 	}
 	// 加入缓存
 	if value != nil {
-		ac.SetPayerToCache(key, value)
+		_ = ac.SetPayerToCache(key, value)
 	}
 	return value, nil
 }
