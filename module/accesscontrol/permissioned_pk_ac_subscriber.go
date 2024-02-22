@@ -72,25 +72,6 @@ func (pp *permissionedPkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	pp.acService.memberCache.Clear()
 }
 
-//Processing messages for setting up a debit account
-func (pp *permissionedPkACProvider) onMessagePayerConfig(msg *msgbus.Message) {
-	dataStr, _ := msg.Payload.([]string)
-	dataBytes := []byte(dataStr[0])
-
-	payerConfig := &config.ConfigKeyValue{}
-	_ = proto.Unmarshal(dataBytes, payerConfig)
-
-	pp.acService.log.Debugf("key=%s", payerConfig.Key)
-	pp.acService.log.Debugf("value=%s", payerConfig.Value)
-
-	if payerConfig.Value != "" { // add or update
-		pp.payerList.Store(payerConfig.Key, payerConfig.Value)
-	} else { //del
-		pp.payerList.Delete(payerConfig.Key)
-	}
-
-}
-
 func (pp *permissionedPkACProvider) onMessageBlockInfo(msg *msgbus.Message) {
 
 	switch blockInfo := msg.Payload.(type) {

@@ -68,20 +68,6 @@ func (p *pkACProvider) onMessageChainConfig(msg *msgbus.Message) {
 
 }
 
-func (p *pkACProvider) onMessagePayerConfig(msg *msgbus.Message) {
-	dataStr, _ := msg.Payload.([]string)
-	dataBytes := []byte(dataStr[0])
-
-	payerConfig := &config.ConfigKeyValue{}
-	_ = proto.Unmarshal(dataBytes, payerConfig)
-
-	if payerConfig.Value != "" { // add or update
-		p.payerList.Store(payerConfig.Key, payerConfig.Value)
-	} else { //del
-		p.payerList.Delete(payerConfig.Key)
-	}
-}
-
 func (p *pkACProvider) onMessageBlockInfo(msg *msgbus.Message) {
 
 	switch blockInfo := msg.Payload.(type) {
