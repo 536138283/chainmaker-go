@@ -8,12 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package accesscontrol
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/utils/v2"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"strings"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/utils/v2"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
