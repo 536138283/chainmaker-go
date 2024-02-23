@@ -640,14 +640,15 @@ func (vb *VerifierBlock) ValidateBlock(
 	if vb.chainConf.ChainConfig().Block.BlockTimestampVerify && mode == protocol.CONSENSUS_VERIFY {
 		currentTime := utils.CurrentTimeSeconds()
 		vb.log.DebugDynamic(func() string {
-			return fmt.Sprintf("verify block timestamp blocktimestamp:%d, current timestamp:%d， timeout:%d",
+			return fmt.Sprintf("verify block timestamp blocktimestamp:%d, current timestamp:%d, timeout:%d",
 				block.Header.BlockTimestamp, currentTime,
 				vb.chainConf.ChainConfig().Block.BlockTimeout)
 		})
 
-		if currentTime-block.Header.BlockTimestamp > int64(vb.chainConf.ChainConfig().Block.BlockTimeout) {
+		if currentTime-block.Header.BlockTimestamp > int64(vb.chainConf.ChainConfig().Block.BlockTimeout) ||
+			block.Header.BlockTimestamp-currentTime > int64(vb.chainConf.ChainConfig().Block.BlockTimeout) {
 			return nil, nil, nil, nil, fmt.Errorf(
-				"verify block[%d-%x] timestamp fail, blocktimestamp:%d, current timestamp:%d， timeout:%d",
+				"verify block[%d-%x] timestamp fail, blocktimestamp:%d, current timestamp:%d, timeout:%d",
 				block.Header.BlockHeight, block.Header.BlockHash, block.Header.BlockTimestamp, currentTime,
 				vb.chainConf.ChainConfig().Block.BlockTimeout)
 		}
