@@ -1066,7 +1066,6 @@ func getPayerFromContract(tx *commonPb.Transaction, snapshot protocol.Snapshot,
 	}
 
 	// 缓存查不到从snapshot查
-
 	key, value, err := utils.GetContractMethodPayerPK(snapshot, contractName, method)
 	if err != nil {
 		return nil, fmt.Errorf("get contract method payer failed, error: %v", err)
