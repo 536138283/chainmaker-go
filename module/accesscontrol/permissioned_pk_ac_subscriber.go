@@ -118,7 +118,7 @@ func (pp *permissionedPkACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo
 	_ = proto.Unmarshal(valueParams, params)
 	//获取缓存key
 	dbKey := utils.PrefixContractMethodPayer
-	if params.Method != "" || params.ContractName != "" {
+	if params.Method != "" && params.ContractName != "" {
 		dbKey += params.ContractName + utils.Separator + params.Method
 	} else if params.ContractName != "" {
 		dbKey += params.ContractName
@@ -163,7 +163,7 @@ func (pp *permissionedPkACProvider) handleUnsetPayer(blockInfo *commonPb.BlockIn
 	}
 	//获取缓存key
 	dbKey := utils.PrefixContractMethodPayer
-	if method != "" || contractName != "" {
+	if method != "" && contractName != "" {
 		dbKey += contractName + utils.Separator + method
 	} else if contractName != "" {
 		dbKey += contractName
