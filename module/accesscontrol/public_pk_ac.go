@@ -918,12 +918,15 @@ func (p *pkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Publi
 
 // GetPayerFromCache get payer from cache
 func (p *pkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
+	p.log.Debugf("get from cache, key=", string(key))
 	value, ok := p.payerList.Load(string(key))
 	if !ok {
+		p.log.Debugf("not found %s", key)
 		return nil, fmt.Errorf("not found %s", key)
 	}
 	byteValue, ok := value.(string)
 	if !ok {
+		p.log.Debugf("value is not a []byte]: %v", value)
 		return nil, fmt.Errorf("value is not a []byte]: %v", value)
 	}
 	return []byte(byteValue), nil
@@ -931,6 +934,7 @@ func (p *pkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 
 // SetPayerToCache set payer to cache
 func (p *pkACProvider) SetPayerToCache(key []byte, value []byte) error {
+	p.log.Debugf("set from cache, key=", string(key), "#value=", string(value))
 	p.payerList.Store(string(key), string(value))
 	return nil
 }

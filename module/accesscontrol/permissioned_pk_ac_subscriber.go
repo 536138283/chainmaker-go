@@ -103,13 +103,19 @@ func (pp *permissionedPkACProvider) onMessageBlockInfo(msg *msgbus.Message) {
 func (pp *permissionedPkACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo) {
 	//解析交易入参，根据入参更新缓存
 	params := &syscontract.SetContractMethodPayerParams{}
-	var value []byte
+	var valueParams, valueEndorsementEntry []byte
 	for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
 		if pair.Key == syscontract.SetContractMethodPayer_PARAMS.String() {
-			value = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+			valueParams = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+		}
+		if pair.Key == syscontract.SetContractMethodPayer_ENDORSEMENT.String() {
+			valueEndorsementEntry = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
 		}
 	}
-	_ = proto.Unmarshal(value, params)
+	//获取pk
+	pkStr := pp.getPK(valueEndorsementEntry)
+
+	_ = proto.Unmarshal(valueParams, params)
 	//获取缓存key
 	dbKey := utils.PrefixContractMethodPayer
 	if params.Method != "" || params.ContractName != "" {
@@ -120,8 +126,29 @@ func (pp *permissionedPkACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo
 		pp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
 	}
 
-	pp.payerList.Store(dbKey, params.PayerAddress)
+	pp.payerList.Store(dbKey, pkStr)
 	pp.acService.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
+}
+
+func (pp *permissionedPkACProvider) getPK(endorsementBytes []byte) string {
+	// 获取 payer 签名
+	endorsementEntry := commonPb.EndorsementEntry{}
+	if err := proto.Unmarshal(endorsementBytes, &endorsementEntry); err != nil {
+		pp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	signerMember, err := pp.NewMember(endorsementEntry.GetSigner())
+	if err != nil {
+		pp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	pk := signerMember.GetPk()
+	pkStr, err := pk.String()
+	if err != nil {
+		pp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	return pkStr
 }
 
 func (pp *permissionedPkACProvider) handleUnsetPayer(blockInfo *commonPb.BlockInfo) {

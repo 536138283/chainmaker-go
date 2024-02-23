@@ -102,13 +102,19 @@ func (cp *certACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo) {
 
 	//解析交易入参，根据入参更新缓存
 	params := &syscontract.SetContractMethodPayerParams{}
-	var value []byte
+	var valueParams, valueEndorsementEntry []byte
 	for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
 		if pair.Key == syscontract.SetContractMethodPayer_PARAMS.String() {
-			value = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+			valueParams = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+		}
+		if pair.Key == syscontract.SetContractMethodPayer_ENDORSEMENT.String() {
+			valueEndorsementEntry = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
 		}
 	}
-	_ = proto.Unmarshal(value, params)
+	//获取pk
+	pkStr := cp.getPK(valueEndorsementEntry)
+
+	_ = proto.Unmarshal(valueParams, params)
 	//获取缓存key
 	dbKey := utils.PrefixContractMethodPayer
 	if params.Method != "" || params.ContractName != "" {
@@ -119,7 +125,7 @@ func (cp *certACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo) {
 		cp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
 	}
 
-	cp.payerList.Store(dbKey, params.PayerAddress)
+	cp.payerList.Store(dbKey, pkStr)
 	cp.acService.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
 }
 
@@ -243,6 +249,27 @@ func (cp *certACProvider) onMessageCertDelete(msg *msgbus.Message) {
 			cp.certCache.Remove(string(bin))
 		}
 	}
+}
+
+func (cp *certACProvider) getPK(endorsementBytes []byte) string {
+	// 获取 payer 签名
+	endorsementEntry := commonPb.EndorsementEntry{}
+	if err := proto.Unmarshal(endorsementBytes, &endorsementEntry); err != nil {
+		cp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	signerMember, err := cp.NewMember(endorsementEntry.GetSigner())
+	if err != nil {
+		cp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	pk := signerMember.GetPk()
+	pkStr, err := pk.String()
+	if err != nil {
+		cp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	return pkStr
 }
 
 func (cp *certACProvider) onMessageCertAliasDelete(msg *msgbus.Message) {
