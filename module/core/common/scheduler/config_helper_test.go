@@ -69,7 +69,12 @@ func initAC(ctl *gomock.Controller) protocol.AccessControlProvider {
 		return publicKeyString, pk, nil
 
 	}).AnyTimes()
-
+	ac.EXPECT().GetPayerFromCache(gomock.Any()).DoAndReturn(func(key []byte) ([]byte, error) {
+		return nil, nil
+	}).AnyTimes()
+	ac.EXPECT().SetPayerToCache(gomock.Any(), gomock.Any()).DoAndReturn(func(key []byte, value []byte) error {
+		return nil
+	}).AnyTimes()
 	return ac
 }
 
