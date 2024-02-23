@@ -2424,7 +2424,12 @@ func Test_getSenderTxsMap(t *testing.T) {
 
 	ac := mock.NewMockAccessControlProvider(ctl)
 	ac.EXPECT().GetAddressFromCache(gomock.Any()).Return("sender1", nil, nil).AnyTimes()
-
+	ac.EXPECT().GetPayerFromCache(gomock.Any()).DoAndReturn(func(key []byte) ([]byte, error) {
+		return nil, nil
+	}).AnyTimes()
+	ac.EXPECT().SetPayerToCache(gomock.Any(), gomock.Any()).DoAndReturn(func(key []byte, value []byte) error {
+		return nil
+	}).AnyTimes()
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
 	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
