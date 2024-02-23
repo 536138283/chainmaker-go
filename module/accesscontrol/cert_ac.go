@@ -55,6 +55,9 @@ type certACProvider struct {
 	//third-party trusted members
 	trustMembers *sync.Map
 
+	// used to cache the deduction account address to avoid reading the database every time
+	payerList sync.Map
+
 	store protocol.BlockchainStore
 
 	//consensus type
@@ -94,6 +97,7 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	msgBus.Register(msgbus.CertManageCertsAliasDelete, certACProvider)
 	msgBus.Register(msgbus.CertManageCertsAliasUpdate, certACProvider)
 	msgBus.Register(msgbus.MaxbftEpochConf, certACProvider)
+	msgBus.Register(msgbus.BlockInfo, certACProvider)
 
 	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)   //nolint: staticcheck
@@ -107,6 +111,7 @@ func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 		certCache:  NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
 		crl:        sync.Map{},
 		frozenList: sync.Map{},
+		payerList:  sync.Map{},
 		opts: bcx509.VerifyOptions{
 			Intermediates: bcx509.NewCertPool(),
 			Roots:         bcx509.NewCertPool(),
@@ -1179,4 +1184,25 @@ func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Pu
 	acs.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
 
 	return publicKeyString, pk, nil
+}
+
+// GetPayerFromCache get payer from cache
+func (cp *certACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
+	cp.acService.log.Debugf("get from cache, key=", string(key))
+	value, ok := cp.payerList.Load(string(key))
+	if !ok {
+		return nil, fmt.Errorf("not found %s", string(key))
+	}
+	byteValue, ok := value.(string)
+	if !ok {
+		return nil, fmt.Errorf("value is not a []byte]: %v", value)
+	}
+	return []byte(byteValue), nil
+}
+
+// SetPayerToCache set payer to cache
+func (cp *certACProvider) SetPayerToCache(key []byte, value []byte) error {
+	cp.acService.log.Debugf("set cache, key=", string(key), "#value=", string(value))
+	cp.payerList.Store(string(key), string(value))
+	return nil
 }

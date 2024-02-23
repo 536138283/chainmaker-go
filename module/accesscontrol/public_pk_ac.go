@@ -132,6 +132,9 @@ type pkACProvider struct {
 
 	consensusMember *sync.Map
 
+	// used to cache the deduction account address to avoid reading the database every time
+	payerList sync.Map
+
 	memberCache *ShardCache
 
 	dataStore protocol.BlockchainStore
@@ -161,6 +164,7 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	}
 
 	msgBus.Register(msgbus.ChainConfig, pkAcProvider)
+	msgBus.Register(msgbus.BlockInfo, pkAcProvider)
 	//v220_compat Deprecated
 	chainConf.AddWatch(pkAcProvider) //nolint: staticcheck
 	return pkAcProvider, nil
@@ -187,6 +191,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 		resourceNamePolicyMap2320: &sync.Map{},
 		exceptionalPolicyMap2320:  &sync.Map{},
 		latestPolicyMap:           &sync.Map{},
+		payerList:                 sync.Map{},
 	}
 
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
@@ -909,4 +914,27 @@ func (p *pkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Publi
 	p.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
 
 	return publicKeyString, pk, nil
+}
+
+// GetPayerFromCache get payer from cache
+func (p *pkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
+	p.log.Debugf("get from cache, key=", string(key))
+	value, ok := p.payerList.Load(string(key))
+	if !ok {
+		p.log.Debugf("not found %s", key)
+		return nil, fmt.Errorf("not found %s", key)
+	}
+	byteValue, ok := value.(string)
+	if !ok {
+		p.log.Debugf("value is not a []byte]: %v", value)
+		return nil, fmt.Errorf("value is not a []byte]: %v", value)
+	}
+	return []byte(byteValue), nil
+}
+
+// SetPayerToCache set payer to cache
+func (p *pkACProvider) SetPayerToCache(key []byte, value []byte) error {
+	p.log.Debugf("set from cache, key=", string(key), "#value=", string(value))
+	p.payerList.Store(string(key), string(value))
+	return nil
 }

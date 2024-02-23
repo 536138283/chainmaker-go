@@ -13,6 +13,9 @@ import (
 	"fmt"
 	"strings"
 
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
@@ -45,8 +48,9 @@ func (cp *certACProvider) OnMessage(msg *msgbus.Message) {
 		cp.onMessageCertAliasUpdate(msg)
 	case msgbus.MaxbftEpochConf:
 		cp.onMessageMaxbftChainconfigInEpoch(msg)
+	case msgbus.BlockInfo:
+		cp.onMessageBlockInfo(msg)
 	}
-
 }
 
 func (cp *certACProvider) OnQuit() {
@@ -64,6 +68,89 @@ func (cp *certACProvider) onMessageChainConfig(msg *msgbus.Message) {
 	_ = proto.Unmarshal(dataBytes, chainConfig)
 
 	cp.messageChainConfig(chainConfig, false)
+}
+
+func (cp *certACProvider) onMessageBlockInfo(msg *msgbus.Message) {
+
+	switch blockInfo := msg.Payload.(type) {
+	case *commonPb.BlockInfo:
+		if blockInfo == nil || blockInfo.Block == nil {
+			cp.acService.log.Errorf("error message BlockInfo = nil")
+			return
+		}
+		//（set-payer）配置交易 + gas交易
+		if len(blockInfo.Block.Txs) > 2 {
+			return
+		}
+		// 是set-payer交易,并且交易执行成功
+		if (blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
+			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String()) &&
+			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
+			cp.handleSetPayer(blockInfo)
+		} else if (blockInfo.Block.Txs[0].Payload.ContractName == syscontract.SystemContract_ACCOUNT_MANAGER.String() &&
+			blockInfo.Block.Txs[0].Payload.Method == syscontract.GasAccountFunction_UNSET_CONTRACT_METHOD_PAYER.String()) &&
+			blockInfo.Block.Txs[0].Result.Code == commonPb.TxStatusCode_SUCCESS {
+			cp.handleUnsetPayer(blockInfo)
+		}
+
+	default:
+		cp.acService.log.Errorf("error type(%s)", blockInfo)
+	}
+}
+
+func (cp *certACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo) {
+
+	//解析交易入参，根据入参更新缓存
+	params := &syscontract.SetContractMethodPayerParams{}
+	var valueParams, valueEndorsementEntry []byte
+	for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+		if pair.Key == syscontract.SetContractMethodPayer_PARAMS.String() {
+			valueParams = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+		}
+		if pair.Key == syscontract.SetContractMethodPayer_ENDORSEMENT.String() {
+			valueEndorsementEntry = blockInfo.Block.Txs[0].Payload.Parameters[i].Value
+		}
+	}
+	//获取pk
+	pkStr := cp.getPK(valueEndorsementEntry)
+
+	_ = proto.Unmarshal(valueParams, params)
+	//获取缓存key
+	dbKey := utils.PrefixContractMethodPayer
+	if params.Method != "" && params.ContractName != "" {
+		dbKey += params.ContractName + utils.Separator + params.Method
+	} else if params.ContractName != "" {
+		dbKey += params.ContractName
+	} else {
+		cp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+	}
+
+	cp.payerList.Store(dbKey, pkStr)
+	cp.acService.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
+}
+
+func (cp *certACProvider) handleUnsetPayer(blockInfo *commonPb.BlockInfo) {
+	//解析交易入参，根据入参删除缓存
+	var contractName, method string
+	for i, pair := range blockInfo.Block.Txs[0].Payload.Parameters {
+		if pair.Key == syscontract.UnsetContractMethodPayer_CONTRACT_NAME.String() {
+			contractName = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+		} else if pair.Key == syscontract.UnsetContractMethodPayer_METHOD.String() {
+			method = string(blockInfo.Block.Txs[0].Payload.Parameters[i].Value)
+		}
+	}
+	//获取缓存key
+	dbKey := utils.PrefixContractMethodPayer
+	if method != "" && contractName != "" {
+		dbKey += contractName + utils.Separator + method
+	} else if contractName != "" {
+		dbKey += contractName
+	} else {
+		cp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
+	}
+
+	cp.payerList.Delete(dbKey)
+	cp.acService.log.Debugf("unset payer in cache, key=%s", dbKey)
 }
 
 func (cp *certACProvider) onMessageCertFreeze(msg *msgbus.Message) {
@@ -162,6 +249,27 @@ func (cp *certACProvider) onMessageCertDelete(msg *msgbus.Message) {
 			cp.certCache.Remove(string(bin))
 		}
 	}
+}
+
+func (cp *certACProvider) getPK(endorsementBytes []byte) string {
+	// 获取 payer 签名
+	endorsementEntry := commonPb.EndorsementEntry{}
+	if err := proto.Unmarshal(endorsementBytes, &endorsementEntry); err != nil {
+		cp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	signerMember, err := cp.NewMember(endorsementEntry.GetSigner())
+	if err != nil {
+		cp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	pk := signerMember.GetPk()
+	pkStr, err := pk.String()
+	if err != nil {
+		cp.acService.log.Errorf(err.Error())
+		return ""
+	}
+	return pkStr
 }
 
 func (cp *certACProvider) onMessageCertAliasDelete(msg *msgbus.Message) {

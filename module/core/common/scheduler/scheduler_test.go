@@ -1870,6 +1870,12 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 		return publicKeyString, pk, nil
 
 	}).AnyTimes()
+	ac.EXPECT().GetPayerFromCache(gomock.Any()).DoAndReturn(func(key []byte) ([]byte, error) {
+		return nil, nil
+	}).AnyTimes()
+	ac.EXPECT().SetPayerToCache(gomock.Any(), gomock.Any()).DoAndReturn(func(key []byte, value []byte) error {
+		return nil
+	}).AnyTimes()
 	chainConfig := &configpb.ChainConfig{
 		AccountConfig: &configpb.GasAccountConfig{
 			EnableGas: true,
@@ -2342,7 +2348,12 @@ func TestNewSenderGroup(t *testing.T) {
 
 	ac := mock.NewMockAccessControlProvider(ctl)
 	ac.EXPECT().GetAddressFromCache(gomock.Any()).Return("sender1", nil, nil).AnyTimes()
-
+	ac.EXPECT().GetPayerFromCache(gomock.Any()).DoAndReturn(func(key []byte) ([]byte, error) {
+		return nil, nil
+	}).AnyTimes()
+	ac.EXPECT().SetPayerToCache(gomock.Any(), gomock.Any()).DoAndReturn(func(key []byte, value []byte) error {
+		return nil
+	}).AnyTimes()
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
 	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
@@ -2413,7 +2424,12 @@ func Test_getSenderTxsMap(t *testing.T) {
 
 	ac := mock.NewMockAccessControlProvider(ctl)
 	ac.EXPECT().GetAddressFromCache(gomock.Any()).Return("sender1", nil, nil).AnyTimes()
-
+	ac.EXPECT().GetPayerFromCache(gomock.Any()).DoAndReturn(func(key []byte) ([]byte, error) {
+		return nil, nil
+	}).AnyTimes()
+	ac.EXPECT().SetPayerToCache(gomock.Any(), gomock.Any()).DoAndReturn(func(key []byte, value []byte) error {
+		return nil
+	}).AnyTimes()
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
 	snapshot.EXPECT().GetLastChainConfig().Return(chainConfig).AnyTimes()
@@ -2503,6 +2519,12 @@ func Test_getPayerHashKey(t *testing.T) {
 
 		return publicKeyString, pk, nil
 
+	}).AnyTimes()
+	ac.EXPECT().GetPayerFromCache(gomock.Any()).DoAndReturn(func(key []byte) ([]byte, error) {
+		return nil, nil
+	}).AnyTimes()
+	ac.EXPECT().SetPayerToCache(gomock.Any(), gomock.Any()).DoAndReturn(func(key []byte, value []byte) error {
+		return nil
 	}).AnyTimes()
 	_, _, _, _, _, contractId, _ := prepare(t, false, false, 2, true)
 	snapshot := mock.NewMockSnapshot(ctl)
@@ -3158,6 +3180,7 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 	type args struct {
 		snapshot protocol.Snapshot
 		tx       *commonPb.Transaction
+		ac       protocol.AccessControlProvider
 	}
 
 	ctrl := gomock.NewController(t)
@@ -3320,7 +3343,7 @@ func TestTxScheduler_getPayerPk(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			pk, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot)
+			pk, err := getPayerPkFromTx(tt.args.tx, tt.args.snapshot, tt.args.ac)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("getPayerPkFromTx() error = %v, wantErr %v", err, tt.wantErr)
 				return
