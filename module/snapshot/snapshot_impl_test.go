@@ -26,7 +26,6 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	uatomic "go.uber.org/atomic"
-	uberAtomic "go.uber.org/atomic"
 )
 
 var _ protocol.TxSimContext = (*MockSimContextImpl)(nil)
@@ -263,21 +262,24 @@ func TestSnapshot(t *testing.T) {
 
 func testSnapshot(t *testing.T, i int) {
 	snapshot := &SnapshotImpl{
-		lock:            sync.RWMutex{},
-		blockchainStore: nil,
-		sealed:          uberAtomic.NewBool(false),
-		chainId:         "",
-		blockTimestamp:  0,
-		blockProposer:   nil,
-		blockHeight:     100,
-		blockVersion:    210,
-		preSnapshot:     nil,
-		txRWSetTable:    nil,
-		txTable:         make([]*commonPb.Transaction, 0, 2048),
-		txResultMap:     make(map[string]*commonPb.Result, 256),
-		readTable:       newShardSet(),
-		writeTable:      newShardSet(),
-		log:             &test.GoLogger{},
+		lock:              sync.RWMutex{},
+		blockchainStore:   nil,
+		sealed:            uatomic.NewBool(false),
+		chainId:           "",
+		blockTimestamp:    0,
+		blockProposer:     nil,
+		blockHeight:       100,
+		blockVersion:      210,
+		preSnapshot:       nil,
+		txRWSetTable:      nil,
+		txTable:           make([]*commonPb.Transaction, 0, 2048),
+		txResultMap:       make(map[string]*commonPb.Result, 256),
+		readTable:         newShardSet(),
+		writeTable:        newShardSet(),
+		applyConflictTime: uatomic.NewInt64(0),
+		applyAddReadTime:  uatomic.NewInt64(0),
+		applyAddWriteTime: uatomic.NewInt64(0),
+		log:               &test.GoLogger{},
 	}
 
 	txSimContext := &MockSimContextImpl{
@@ -424,20 +426,23 @@ func dumpDAG(dag *commonPb.DAG) {
 }
 
 var snapshot = &SnapshotImpl{
-	lock:            sync.RWMutex{},
-	blockchainStore: nil,
-	sealed:          uatomic.NewBool(false),
-	chainId:         "",
-	blockTimestamp:  0,
-	blockProposer:   nil,
-	blockHeight:     100,
-	preSnapshot:     nil,
-	txRWSetTable:    nil,
-	txTable:         make([]*commonPb.Transaction, 0, 2048),
-	txResultMap:     make(map[string]*commonPb.Result, 256),
-	readTable:       newShardSet(),
-	writeTable:      newShardSet(),
-	log:             &test.GoLogger{},
+	lock:              sync.RWMutex{},
+	blockchainStore:   nil,
+	sealed:            uatomic.NewBool(false),
+	chainId:           "",
+	blockTimestamp:    0,
+	blockProposer:     nil,
+	blockHeight:       100,
+	preSnapshot:       nil,
+	txRWSetTable:      nil,
+	txTable:           make([]*commonPb.Transaction, 0, 2048),
+	txResultMap:       make(map[string]*commonPb.Result, 256),
+	readTable:         newShardSet(),
+	writeTable:        newShardSet(),
+	applyConflictTime: uatomic.NewInt64(0),
+	applyAddReadTime:  uatomic.NewInt64(0),
+	applyAddWriteTime: uatomic.NewInt64(0),
+	log:               &test.GoLogger{},
 }
 
 type fields struct {
@@ -456,8 +461,6 @@ type fields struct {
 	txTable         []*commonPb.Transaction
 	specialTxTable  []*commonPb.Transaction
 	txResultMap     map[string]*commonPb.Result
-	readTable       map[string]*sv
-	writeTable      map[string]*sv
 	txRoot          []byte
 	dagHash         []byte
 	rwSetHash       []byte
@@ -542,25 +545,28 @@ func TestSnapshotImpl_BuildDAG(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &SnapshotImpl{
-				lock:            sync.RWMutex{},
-				blockchainStore: tt.fields.blockchainStore,
-				log:             tt.fields.log,
-				sealed:          tt.fields.sealed,
-				chainId:         tt.fields.chainId,
-				blockTimestamp:  tt.fields.blockTimestamp,
-				blockProposer:   tt.fields.blockProposer,
-				blockHeight:     tt.fields.blockHeight,
-				preBlockHash:    tt.fields.preBlockHash,
-				preSnapshot:     tt.fields.preSnapshot,
-				txRWSetTable:    tt.fields.txRWSetTable,
-				txTable:         tt.fields.txTable,
-				specialTxTable:  tt.fields.specialTxTable,
-				txResultMap:     tt.fields.txResultMap,
-				readTable:       newShardSet(),
-				writeTable:      newShardSet(),
-				txRoot:          tt.fields.txRoot,
-				dagHash:         tt.fields.dagHash,
-				rwSetHash:       tt.fields.rwSetHash,
+				lock:              sync.RWMutex{},
+				blockchainStore:   tt.fields.blockchainStore,
+				log:               tt.fields.log,
+				sealed:            tt.fields.sealed,
+				chainId:           tt.fields.chainId,
+				blockTimestamp:    tt.fields.blockTimestamp,
+				blockProposer:     tt.fields.blockProposer,
+				blockHeight:       tt.fields.blockHeight,
+				preBlockHash:      tt.fields.preBlockHash,
+				preSnapshot:       tt.fields.preSnapshot,
+				txRWSetTable:      tt.fields.txRWSetTable,
+				txTable:           tt.fields.txTable,
+				specialTxTable:    tt.fields.specialTxTable,
+				txResultMap:       tt.fields.txResultMap,
+				readTable:         newShardSet(),
+				writeTable:        newShardSet(),
+				applyConflictTime: uatomic.NewInt64(0),
+				applyAddReadTime:  uatomic.NewInt64(0),
+				applyAddWriteTime: uatomic.NewInt64(0),
+				txRoot:            tt.fields.txRoot,
+				dagHash:           tt.fields.dagHash,
+				rwSetHash:         tt.fields.rwSetHash,
 			}
 			if got := s.BuildDAG(tt.args.isSql, nil); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("BuildDAG() = %v, want %v", got, tt.want)
@@ -998,25 +1004,28 @@ func TestReBuildDag(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := &SnapshotImpl{
-				lock:            sync.RWMutex{},
-				blockchainStore: tt.fields.blockchainStore,
-				log:             tt.fields.log,
-				sealed:          tt.fields.sealed,
-				chainId:         tt.fields.chainId,
-				blockTimestamp:  tt.fields.blockTimestamp,
-				blockProposer:   tt.fields.blockProposer,
-				blockHeight:     tt.fields.blockHeight,
-				preBlockHash:    tt.fields.preBlockHash,
-				preSnapshot:     tt.fields.preSnapshot,
-				txRWSetTable:    []*commonPb.TxRWSet{},
-				txTable:         []*commonPb.Transaction{},
-				specialTxTable:  tt.fields.specialTxTable,
-				txResultMap:     map[string]*commonPb.Result{},
-				readTable:       newShardSet(),
-				writeTable:      newShardSet(),
-				txRoot:          tt.fields.txRoot,
-				dagHash:         tt.fields.dagHash,
-				rwSetHash:       tt.fields.rwSetHash,
+				lock:              sync.RWMutex{},
+				blockchainStore:   tt.fields.blockchainStore,
+				log:               tt.fields.log,
+				sealed:            tt.fields.sealed,
+				chainId:           tt.fields.chainId,
+				blockTimestamp:    tt.fields.blockTimestamp,
+				blockProposer:     tt.fields.blockProposer,
+				blockHeight:       tt.fields.blockHeight,
+				preBlockHash:      tt.fields.preBlockHash,
+				preSnapshot:       tt.fields.preSnapshot,
+				txRWSetTable:      []*commonPb.TxRWSet{},
+				txTable:           []*commonPb.Transaction{},
+				specialTxTable:    tt.fields.specialTxTable,
+				txResultMap:       map[string]*commonPb.Result{},
+				readTable:         newShardSet(),
+				writeTable:        newShardSet(),
+				applyConflictTime: uatomic.NewInt64(0),
+				applyAddReadTime:  uatomic.NewInt64(0),
+				applyAddWriteTime: uatomic.NewInt64(0),
+				txRoot:            tt.fields.txRoot,
+				dagHash:           tt.fields.dagHash,
+				rwSetHash:         tt.fields.rwSetHash,
 			}
 			for i, t := range tt.fields.txRWSetTable {
 				txSimContext := &MockSimContextImpl{
