@@ -26,7 +26,6 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/test"
 	uatomic "go.uber.org/atomic"
-	uberAtomic "go.uber.org/atomic"
 )
 
 var _ protocol.TxSimContext = (*MockSimContextImpl)(nil)
@@ -265,7 +264,7 @@ func testSnapshot(t *testing.T, i int) {
 	snapshot := &SnapshotImpl{
 		lock:            sync.RWMutex{},
 		blockchainStore: nil,
-		sealed:          uberAtomic.NewBool(false),
+		sealed:          uatomic.NewBool(false),
 		chainId:         "",
 		blockTimestamp:  0,
 		blockProposer:   nil,
@@ -424,20 +423,23 @@ func dumpDAG(dag *commonPb.DAG) {
 }
 
 var snapshot = &SnapshotImpl{
-	lock:            sync.RWMutex{},
-	blockchainStore: nil,
-	sealed:          uatomic.NewBool(false),
-	chainId:         "",
-	blockTimestamp:  0,
-	blockProposer:   nil,
-	blockHeight:     100,
-	preSnapshot:     nil,
-	txRWSetTable:    nil,
-	txTable:         make([]*commonPb.Transaction, 0, 2048),
-	txResultMap:     make(map[string]*commonPb.Result, 256),
-	readTable:       newShardSet(),
-	writeTable:      newShardSet(),
-	log:             &test.GoLogger{},
+	lock:              sync.RWMutex{},
+	blockchainStore:   nil,
+	sealed:            uatomic.NewBool(false),
+	chainId:           "",
+	blockTimestamp:    0,
+	blockProposer:     nil,
+	blockHeight:       100,
+	preSnapshot:       nil,
+	txRWSetTable:      nil,
+	txTable:           make([]*commonPb.Transaction, 0, 2048),
+	txResultMap:       make(map[string]*commonPb.Result, 256),
+	readTable:         newShardSet(),
+	writeTable:        newShardSet(),
+	applyConflictTime: uatomic.NewInt64(0),
+	applyAddReadTime:  uatomic.NewInt64(0),
+	applyAddWriteTime: uatomic.NewInt64(0),
+	log:               &test.GoLogger{},
 }
 
 type fields struct {
