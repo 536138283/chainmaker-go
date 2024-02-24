@@ -567,7 +567,7 @@ storage:
     # bloom config for state db, it only takes effect when using kvdb
     # bloom_config:
     #   enable: true # enable bloom filter or not
-    #   dump_path: "../data/wx-org1.chainmaker.org/state/bloom" # bloom filter data dump to file in the path
+    #   dump_path: "../data/{org_id}/state/bloom" # bloom filter data dump to file in the path
     #   # bloom filter calculates the number of enabled hash functions and the number of bits used
     #   # based on the key capacity and false positive rate.
     #   keys_capacity: 1000000000
