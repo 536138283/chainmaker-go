@@ -74,9 +74,14 @@ func (m *ManagerDelegate) makeSnapshotImpl(block *commonPb.Block) *SnapshotImpl 
 		preBlockHash:    block.Header.PreBlockHash,
 		lastChainConfig: lastChainConfig,
 
-		txTable:    nil,
-		readTable:  make(map[string]*sv, txCount),
-		writeTable: make(map[string]*sv, txCount),
+		txTable:      make([]*commonPb.Transaction, 0, txCount),
+		txRWSetTable: make([]*commonPb.TxRWSet, 0, txCount*10),
+		readTable:    newShardSet(),
+		writeTable:   newShardSet(),
+
+		applyConflictTime: atomic.NewInt64(0),
+		applyAddReadTime:  atomic.NewInt64(0),
+		applyAddWriteTime: atomic.NewInt64(0),
 
 		txRoot:    block.Header.TxRoot,
 		dagHash:   block.Header.DagHash,

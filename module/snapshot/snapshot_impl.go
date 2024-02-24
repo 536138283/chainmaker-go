@@ -10,6 +10,7 @@ package snapshot
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"go.uber.org/atomic"
 
@@ -31,6 +32,7 @@ type sv struct {
 
 type SnapshotImpl struct {
 	lock            sync.RWMutex
+	tableLock       sync.RWMutex
 	blockchainStore protocol.BlockchainStore
 	log             protocol.Logger
 	// If the snapshot has been sealed, the results of subsequent vm execution will not be added to the snapshot
@@ -53,8 +55,14 @@ type SnapshotImpl struct {
 	txTable        []*commonPb.Transaction
 	specialTxTable []*commonPb.Transaction
 	txResultMap    map[string]*commonPb.Result
-	readTable      map[string]*sv
-	writeTable     map[string]*sv
+
+	// 调整为分片map
+	readTable  *ShardSet
+	writeTable *ShardSet
+
+	applyConflictTime *atomic.Int64
+	applyAddReadTime  *atomic.Int64
+	applyAddWriteTime *atomic.Int64
 
 	txRoot    []byte
 	dagHash   []byte
@@ -87,10 +95,15 @@ func NewQuerySnapshot(store protocol.BlockchainStore, log protocol.Logger) (*Sna
 		preBlockHash:    lastBlock.Header.PreBlockHash,
 		lastChainConfig: lastChainConfig,
 
-		txTable: nil,
+		txTable:      make([]*commonPb.Transaction, 0, txCount),
+		txRWSetTable: make([]*commonPb.TxRWSet, 0, txCount*10),
 
-		readTable:  make(map[string]*sv, txCount),
-		writeTable: make(map[string]*sv, txCount),
+		readTable:  newShardSet(),
+		writeTable: newShardSet(),
+
+		applyConflictTime: atomic.NewInt64(0),
+		applyAddReadTime:  atomic.NewInt64(0),
+		applyAddWriteTime: atomic.NewInt64(0),
 
 		txRoot:    lastBlock.Header.TxRoot,
 		dagHash:   lastBlock.Header.DagHash,
@@ -122,8 +135,8 @@ func (s *SnapshotImpl) GetLastChainConfig() *config.ChainConfig {
 
 // GetSnapshotSize return the len of the txTable
 func (s *SnapshotImpl) GetSnapshotSize() int {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+	s.tableLock.RLock()
+	defer s.tableLock.RUnlock()
 	return len(s.txTable)
 }
 
@@ -146,7 +159,6 @@ func (s *SnapshotImpl) GetTxResultMap() map[string]*commonPb.Result {
 func (s *SnapshotImpl) GetTxRWSetTable() []*commonPb.TxRWSet {
 	if localconf.ChainMakerConfig.SchedulerConfig.RWSetLog {
 		s.log.DebugDynamic(func() string {
-
 			info := "rwset: "
 			for i, txRWSet := range s.txRWSetTable {
 				info += fmt.Sprintf("read set for tx id:[%s], count [%d]<", s.txTable[i].Payload.TxId, len(txRWSet.TxReads))
@@ -183,18 +195,18 @@ func (s *SnapshotImpl) GetTxRWSetTable() []*commonPb.TxRWSet {
 // GetKey from snapshot
 func (s *SnapshotImpl) GetKey(txExecSeq int, contractName string, key []byte) ([]byte, error) {
 	// get key before txExecSeq
-	snapshotSize := s.GetSnapshotSize()
+	//snapshotSize := s.GetSnapshotSize()
 
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	if txExecSeq > snapshotSize || txExecSeq < 0 {
-		txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
-	}
+	//s.lock.RLock()
+	//defer s.lock.RUnlock()
+	//if txExecSeq > snapshotSize || txExecSeq < 0 {
+	//	txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
+	//}
 	finalKey := constructKey(contractName, key)
-	if sv, ok := s.writeTable[finalKey]; ok {
+	if sv, ok := s.writeTable.getByLock(finalKey); ok {
 		return sv.value, nil
 	}
-	if sv, ok := s.readTable[finalKey]; ok {
+	if sv, ok := s.readTable.getByLock(finalKey); ok {
 		return sv.value, nil
 	}
 
@@ -221,13 +233,13 @@ func (s *SnapshotImpl) GetKeys(txExecSeq int, keys []*vmPb.BatchKey) ([]*vmPb.Ba
 		value             []*vmPb.BatchKey
 	)
 	// get key before txExecSeq
-	snapshotSize := s.GetSnapshotSize()
-
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-	if txExecSeq > snapshotSize || txExecSeq < 0 {
-		txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
-	}
+	//snapshotSize := s.GetSnapshotSize()
+	//
+	////s.lock.RLock()
+	////defer s.lock.RUnlock()
+	//if txExecSeq > snapshotSize || txExecSeq < 0 {
+	//	txExecSeq = snapshotSize //nolint: ineffassign, staticcheck
+	//}
 
 	if writeSetValues, emptyWriteSetKeys, done = s.getBatchFromWriteSet(keys); done {
 		return writeSetValues, nil
@@ -288,7 +300,7 @@ func (s *SnapshotImpl) getBatchFromWriteSet(keys []*vmPb.BatchKey) ([]*vmPb.Batc
 	emptyTxWrite := make([]*vmPb.BatchKey, 0, len(keys))
 	for _, key := range keys {
 		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
-		if sv, ok := s.writeTable[finalKey]; ok {
+		if sv, ok := s.writeTable.getByLock(finalKey); ok {
 			key.Value = sv.value
 			txWrites = append(txWrites, key)
 		} else {
@@ -309,7 +321,7 @@ func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.Batch
 	emptyTxReadsKeys := make([]*vmPb.BatchKey, 0, len(keys))
 	for _, key := range keys {
 		finalKey := constructKey(key.ContractName, protocol.GetKeyStr(key.Key, key.Field))
-		if sv, ok := s.readTable[finalKey]; ok {
+		if sv, ok := s.readTable.getByLock(finalKey); ok {
 			key.Value = sv.value
 			txReads = append(txReads, key)
 		} else {
@@ -327,96 +339,80 @@ func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.Batch
 func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
 	runVmSuccess bool, applySpecialTx bool) (bool, int) {
 
+	tx := txSimContext.GetTx()
 	s.log.DebugDynamic(func() string {
-		tx := txSimContext.GetTx()
-		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v",
-			tx.Payload.TxId, specialTxType, runVmSuccess, applySpecialTx)
+		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
+			specialTxType, runVmSuccess, applySpecialTx)
 	})
 
 	if !applySpecialTx && s.IsSealed() {
 		return false, s.GetSnapshotSize()
+	}
+	// 乐观处理，以所有交易都不冲突的情况进行优先处理
+	txExecSeq := txSimContext.GetTxExecSeq()
+	var txRWSet *commonPb.TxRWSet
+	var txResult *commonPb.Result
+
+	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
+	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
+	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", txSimContext.GetTx().Payload.TxId, txRWSet)
+	txResult = txSimContext.GetTxResult()
+	// 实现准备好要处理的数据
+	finalReadKvs := make(map[string]*sv, len(txRWSet.TxReads))
+	for _, txRead := range txRWSet.TxReads {
+		finalKey := constructKey(txRead.ContractName, txRead.Key)
+		// 乐观检查，便于提前发现冲突
+		if sv, ok := s.writeTable.getByLock(finalKey); ok {
+			if sv.seq >= txExecSeq {
+				s.log.Debugf("Key Conflicted %+v-%+v, tx id:%s", sv.seq, txExecSeq, tx.Payload.TxId)
+				return false, len(s.txTable) + len(s.specialTxTable)
+			}
+		}
+		finalReadKvs[finalKey] = &sv{
+			value: txRead.Value,
+		}
+	}
+	finalWriteKvs := make(map[string]*sv, len(txRWSet.TxWrites))
+	// Append to write table
+	for _, txWrite := range txRWSet.TxWrites {
+		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+		finalWriteKvs[finalKey] = &sv{
+			value: txWrite.Value,
+		}
 	}
 
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	// it is necessary to check sealed secondly
 	if !applySpecialTx && s.IsSealed() {
-		return false, len(s.txTable)
+		return false, s.GetSnapshotSize()
 	}
 
-	// When scheduling, the applySpecialTx is false, it should return
-	// len(s.txTable) + len(s.specialTxTable) for all tx, because maybe normal tx after a specialTx.
-	if !applySpecialTx {
-		return s.applyNormalTxForSchedule(txSimContext, specialTxType, runVmSuccess)
-	}
-	// When simulate with dag or schedule special tx, it only returns len(s.txTable)
-	return s.applyAllTxForSimulate(txSimContext, specialTxType, runVmSuccess)
-}
-
-// Only apply normal tx, but return normal and special tx count, so schedule can be finished
-func (s *SnapshotImpl) applyNormalTxForSchedule(txSimContext protocol.TxSimContext,
-	specialTxType protocol.ExecOrderTxType, runVmSuccess bool) (bool, int) {
-
-	tx := txSimContext.GetTx()
-	if specialTxType == protocol.ExecOrderTxTypeIterator {
+	if !applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator {
 		s.specialTxTable = append(s.specialTxTable, tx)
-		return true, len(s.txTable) + len(s.specialTxTable)
+		return true, s.GetSnapshotSize() + len(s.specialTxTable)
 	}
-
-	txExecSeq := txSimContext.GetTxExecSeq()
-	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
-	txRWSet := txSimContext.GetTxRWSet(runVmSuccess)
-	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", tx.Payload.TxId, txRWSet)
-	txResult := txSimContext.GetTxResult()
-	if txExecSeq >= len(s.txTable) {
-		s.apply(tx, txRWSet, txResult, runVmSuccess)
-		return true, len(s.txTable) + len(s.specialTxTable)
-	}
-
-	// Check whether the dependent state has been modified during the running it
-	for _, txRead := range txRWSet.TxReads {
-		finalKey := constructKey(txRead.ContractName, txRead.Key)
-		if sv, ok := s.writeTable[finalKey]; ok {
-			if sv.seq >= txExecSeq {
-				s.log.Debugf("Key Conflicted %+v-%+v, tx id:%s", sv.seq, txExecSeq, tx.Payload.TxId)
-				return false, len(s.txTable) + len(s.specialTxTable)
-			}
-		}
-	}
-
-	s.apply(tx, txRWSet, txResult, runVmSuccess)
-	return true, len(s.txTable) + len(s.specialTxTable)
-}
-
-// Only apply normal tx, but return normal and special tx count, so schedule can be finished
-func (s *SnapshotImpl) applyAllTxForSimulate(txSimContext protocol.TxSimContext,
-	specialTxType protocol.ExecOrderTxType, runVmSuccess bool) (bool, int) {
-
-	tx := txSimContext.GetTx()
-	txExecSeq := txSimContext.GetTxExecSeq()
-	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
-	txRWSet := txSimContext.GetTxRWSet(runVmSuccess)
-	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", tx.Payload.TxId, txRWSet)
-	txResult := txSimContext.GetTxResult()
 
 	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.txTable) {
-		s.apply(tx, txRWSet, txResult, runVmSuccess)
-		return true, len(s.txTable)
+		s.applyOptimize(tx, txRWSet, txResult, runVmSuccess, finalReadKvs, finalWriteKvs)
+		return true, s.GetSnapshotSize()
 	}
 
+	// Double-Check
 	// Check whether the dependent state has been modified during the running it
-	for _, txRead := range txRWSet.TxReads {
-		finalKey := constructKey(txRead.ContractName, txRead.Key)
-		if sv, ok := s.writeTable[finalKey]; ok {
+	start := time.Now()
+	for finalKey := range finalReadKvs {
+		if sv, ok := s.writeTable.getByLock(finalKey); ok {
 			if sv.seq >= txExecSeq {
 				s.log.Debugf("Key Conflicted %+v-%+v, tx id:%s", sv.seq, txExecSeq, tx.Payload.TxId)
-				return false, len(s.txTable)
+				return false, s.GetSnapshotSize() + len(s.specialTxTable)
 			}
 		}
 	}
-
-	s.apply(tx, txRWSet, txResult, runVmSuccess)
-	return true, len(s.txTable)
+	micro := time.Since(start).Microseconds()
+	s.applyConflictTime.Add(micro)
+	s.applyOptimize(tx, txRWSet, txResult, runVmSuccess, finalReadKvs, finalWriteKvs)
+	return true, s.GetSnapshotSize()
 }
 
 // ApplyBlock apply tx rwset map to block
@@ -434,27 +430,28 @@ func (s *SnapshotImpl) ApplyBlock(block *commonPb.Block, txRWSetMap map[string]*
 func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet, txResult *commonPb.Result,
 	runVmSuccess bool) {
 	// Append to read table
-	applySeq := len(s.txTable)
+	//applySeq := len(s.txTable)
+	applySeq := s.GetSnapshotSize()
 	// compatible with version lower than 2201, failed transaction should not apply read set to snapshot
 	// that may cause next transaction read out an error value. Failed transaction can produce invalid read set
 	// by read, write and then read again the same value.
 	if s.blockVersion < 2201 || runVmSuccess {
 		for _, txRead := range txRWSet.TxReads {
 			finalKey := constructKey(txRead.ContractName, txRead.Key)
-			s.readTable[finalKey] = &sv{
+			s.readTable.putByLock(finalKey, &sv{
 				seq:   applySeq,
 				value: txRead.Value,
-			}
+			})
 		}
 	}
 
 	// Append to write table
 	for _, txWrite := range txRWSet.TxWrites {
 		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
-		s.writeTable[finalKey] = &sv{
+		s.writeTable.putByLock(finalKey, &sv{
 			seq:   applySeq,
 			value: txWrite.Value,
-		}
+		})
 	}
 
 	// Append to read-write-set table
@@ -473,6 +470,66 @@ func (s *SnapshotImpl) apply(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet
 	s.txResultMap[tx.Payload.TxId] = txResult
 
 	// Add to transaction table
+	s.tableLock.Lock()
+	defer s.tableLock.Unlock()
+	s.txTable = append(s.txTable, tx)
+}
+
+// After the read-write set is generated, add TxSimContext to the snapshot
+func (s *SnapshotImpl) applyOptimize(tx *commonPb.Transaction, txRWSet *commonPb.TxRWSet, txResult *commonPb.Result,
+	runVmSuccess bool, finalReadKvs, finalWriteKvs map[string]*sv) {
+	// Append to read table
+	applySeq := len(s.txTable)
+	//applySeq := s.GetSnapshotSize()
+	// compatible with version lower than 2201, failed transaction should not apply read set to snapshot
+	// that may cause next transaction read out an error value. Failed transaction can produce invalid read set
+	// by read, write and then read again the same value.
+	var wg sync.WaitGroup
+	wg.Add(1)
+	if s.blockVersion < 2201 || runVmSuccess {
+		wg.Add(1)
+		go func() {
+			start := time.Now()
+			for finalKey, rsv := range finalReadKvs {
+				rsv.seq = applySeq
+				s.readTable.putByLock(finalKey, rsv)
+			}
+			wg.Done()
+			micro := time.Since(start).Microseconds()
+			s.applyAddReadTime.Add(micro)
+		}()
+	}
+
+	// Append to write table
+	go func() {
+		start := time.Now()
+		for finalKey, wsv := range finalWriteKvs {
+			wsv.seq = applySeq
+			s.writeTable.putByLock(finalKey, wsv)
+		}
+		wg.Done()
+		micro := time.Since(start).Microseconds()
+		s.applyAddWriteTime.Add(micro)
+	}()
+	wg.Wait()
+	// Append to read-write-set table
+	s.txRWSetTable = append(s.txRWSetTable, txRWSet)
+	//s.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("apply tx: %s, rwset.TxReads: %v", tx.Payload.TxId, txRWSet.TxReads)
+	//})
+	//s.log.DebugDynamic(func() string {
+	//	return fmt.Sprintf("apply tx: %s, rwset.TxWrites: %v", tx.Payload.TxId, txRWSet.TxWrites)
+	//})
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("apply tx: %s, rwset table size %d", tx.Payload.TxId, len(s.txRWSetTable))
+	})
+
+	// Add to tx result map
+	s.txResultMap[tx.Payload.TxId] = txResult
+
+	// Add to transaction table
+	s.tableLock.Lock()
+	defer s.tableLock.Unlock()
 	s.txTable = append(s.txTable, tx)
 }
 
@@ -499,6 +556,8 @@ func (s *SnapshotImpl) GetBlockProposer() *accesscontrol.Member {
 // Seal the snapshot
 func (s *SnapshotImpl) Seal() {
 	s.sealed.Store(true)
+	s.log.Infof("block apply time[%d] is %d, %d, %d", s.blockHeight,
+		s.applyConflictTime.Load(), s.applyAddReadTime.Load(), s.applyAddWriteTime.Load())
 }
 
 // BuildDAG build the block dag according to the read-write table

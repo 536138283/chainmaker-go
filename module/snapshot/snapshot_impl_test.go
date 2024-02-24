@@ -275,8 +275,8 @@ func testSnapshot(t *testing.T, i int) {
 		txRWSetTable:    nil,
 		txTable:         make([]*commonPb.Transaction, 0, 2048),
 		txResultMap:     make(map[string]*commonPb.Result, 256),
-		readTable:       make(map[string]*sv, 256),
-		writeTable:      make(map[string]*sv, 256),
+		readTable:       newShardSet(),
+		writeTable:      newShardSet(),
 		log:             &test.GoLogger{},
 	}
 
@@ -435,8 +435,8 @@ var snapshot = &SnapshotImpl{
 	txRWSetTable:    nil,
 	txTable:         make([]*commonPb.Transaction, 0, 2048),
 	txResultMap:     make(map[string]*commonPb.Result, 256),
-	readTable:       make(map[string]*sv, 256),
-	writeTable:      make(map[string]*sv, 256),
+	readTable:       newShardSet(),
+	writeTable:      newShardSet(),
 	log:             &test.GoLogger{},
 }
 
@@ -556,8 +556,8 @@ func TestSnapshotImpl_BuildDAG(t *testing.T) {
 				txTable:         tt.fields.txTable,
 				specialTxTable:  tt.fields.specialTxTable,
 				txResultMap:     tt.fields.txResultMap,
-				readTable:       tt.fields.readTable,
-				writeTable:      tt.fields.writeTable,
+				readTable:       newShardSet(),
+				writeTable:      newShardSet(),
 				txRoot:          tt.fields.txRoot,
 				dagHash:         tt.fields.dagHash,
 				rwSetHash:       tt.fields.rwSetHash,
@@ -1012,8 +1012,8 @@ func TestReBuildDag(t *testing.T) {
 				txTable:         []*commonPb.Transaction{},
 				specialTxTable:  tt.fields.specialTxTable,
 				txResultMap:     map[string]*commonPb.Result{},
-				readTable:       map[string]*sv{},
-				writeTable:      map[string]*sv{},
+				readTable:       newShardSet(),
+				writeTable:      newShardSet(),
 				txRoot:          tt.fields.txRoot,
 				dagHash:         tt.fields.dagHash,
 				rwSetHash:       tt.fields.rwSetHash,
