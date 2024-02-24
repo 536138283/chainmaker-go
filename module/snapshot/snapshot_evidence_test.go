@@ -220,8 +220,11 @@ func createSnapshotEvidenceList(t *testing.T) []*SnapshotEvidence {
 						Code: code,
 					},
 				},
-				log:    &test.GoLogger{},
-				sealed: uatomic.NewBool(false),
+				log:               &test.GoLogger{},
+				sealed:            uatomic.NewBool(false),
+				applyConflictTime: uatomic.NewInt64(0),
+				applyAddReadTime:  uatomic.NewInt64(0),
+				applyAddWriteTime: uatomic.NewInt64(0),
 			},
 			log: &test.GoLogger{},
 		}
