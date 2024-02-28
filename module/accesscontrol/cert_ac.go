@@ -29,7 +29,6 @@ import (
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/common/v2/json"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
@@ -56,7 +55,7 @@ type certACProvider struct {
 	trustMembers *sync.Map
 
 	// used to cache the deduction account address to avoid reading the database every time
-	payerList sync.Map
+	payerList *ShardCache
 
 	store protocol.BlockchainStore
 
@@ -108,10 +107,10 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger) (*certACProvider, error) {
 	certACProvider := &certACProvider{
-		certCache:  NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		certCache:  NewShardCache(GetCertCacheSize()),
 		crl:        sync.Map{},
 		frozenList: sync.Map{},
-		payerList:  sync.Map{},
+		payerList:  NewShardCache(GetCertCacheSize()),
 		opts: bcx509.VerifyOptions{
 			Intermediates: bcx509.NewCertPool(),
 			Roots:         bcx509.NewCertPool(),
@@ -1189,7 +1188,7 @@ func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Pu
 // GetPayerFromCache get payer from cache
 func (cp *certACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 	cp.acService.log.Debugf("get from cache, key=", string(key))
-	value, ok := cp.payerList.Load(string(key))
+	value, ok := cp.payerList.Get(string(key))
 	if !ok {
 		return nil, fmt.Errorf("not found %s", string(key))
 	}
@@ -1203,6 +1202,6 @@ func (cp *certACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 // SetPayerToCache set payer to cache
 func (cp *certACProvider) SetPayerToCache(key []byte, value []byte) error {
 	cp.acService.log.Debugf("set cache, key=", string(key), "#value=", string(value))
-	cp.payerList.Store(string(key), string(value))
+	cp.payerList.Add(string(key), string(value))
 	return nil
 }

@@ -36,6 +36,8 @@ const (
 	PARAM_ALIAS                  = "alias"
 	PUBLIC_KEYS                  = "pubkey"
 	unsupportedRuleErrorTemplate = "bad configuration: unsupported rule [%s]"
+
+	defaultCertCacheSize = 1024
 )
 
 var notEnoughParticipantsSupportError = "authentication fail: not enough participants support this action"
@@ -249,6 +251,12 @@ type memberCached struct {
 	pk        crypto.PublicKey
 }
 
+func GetCertCacheSize() int {
+	if localconf.ChainMakerConfig.NodeConfig.CertCacheSize > 0 {
+		return localconf.ChainMakerConfig.NodeConfig.CertCacheSize
+	}
+	return defaultCertCacheSize
+}
 func initAccessControlService(hashType, authType string, addressType config.AddrType,
 	store protocol.BlockchainStore, log protocol.Logger) *accessControlService {
 	acService := &accessControlService{
@@ -263,7 +271,7 @@ func initAccessControlService(hashType, authType string, addressType config.Addr
 		exceptionalPolicyMap220:   &sync.Map{},
 		resourceNamePolicyMap2320: &sync.Map{},
 		exceptionalPolicyMap2320:  &sync.Map{},
-		memberCache:               NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		memberCache:               NewShardCache(GetCertCacheSize()),
 		dataStore:                 store,
 		log:                       log,
 		hashType:                  hashType,
