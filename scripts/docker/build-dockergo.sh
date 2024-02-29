@@ -7,9 +7,8 @@
 #
 function buildImage() {
   rm -rf vm-engine
-  git clone https://git.code.tencent.com/ChainMaker/vm-engine.git
+  git clone -b v2.3.3_qc --depth=1 https://git.code.tencent.com/ChainMaker/vm-engine.git
   cd vm-engine
-  git checkout v2.3.3_qc
   make build-image
   cd ..
   rm -rf vm-engine
