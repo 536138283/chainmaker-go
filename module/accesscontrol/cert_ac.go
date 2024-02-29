@@ -1186,6 +1186,7 @@ func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Pu
 	return publicKeyString, pk, nil
 }
 
+// GetCertFromCache get cert from cache
 func (cp *certACProvider) GetCertFromCache(certId []byte) ([]byte, error) {
 	ret, ok := cp.certCache.Get(string(certId))
 	if !ok {
