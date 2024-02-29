@@ -22,7 +22,6 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
@@ -133,7 +132,7 @@ type pkACProvider struct {
 	consensusMember *sync.Map
 
 	// used to cache the deduction account address to avoid reading the database every time
-	payerList sync.Map
+	payerList *ShardCache
 
 	memberCache *ShardCache
 
@@ -179,7 +178,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 		addressType:               chainConfig.Vm.AddrType,
 		adminMember:               &sync.Map{},
 		consensusMember:           &sync.Map{},
-		memberCache:               NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		memberCache:               NewShardCache(GetCertCacheSize()),
 		log:                       log,
 		dataStore:                 store,
 		txTypePolicyMap:           &sync.Map{},
@@ -191,7 +190,7 @@ func newPkACProvider(chainConfig *config.ChainConfig,
 		resourceNamePolicyMap2320: &sync.Map{},
 		exceptionalPolicyMap2320:  &sync.Map{},
 		latestPolicyMap:           &sync.Map{},
-		payerList:                 sync.Map{},
+		payerList:                 NewShardCache(GetCertCacheSize()),
 	}
 
 	if chainConfig.Consensus.Type == consensus.ConsensusType_DPOS {
@@ -794,30 +793,30 @@ func (p *pkACProvider) GetAllPolicy() (map[string]*pbac.Policy, error) {
 }
 
 // VerifyPrincipalLT2330 verifies if the principal for the resource is met
-func (pk *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, blockVersion uint32) (bool, error) {
+func (p *pkACProvider) VerifyPrincipalLT2330(principal protocol.Principal, blockVersion uint32) (bool, error) {
 
 	if blockVersion <= blockVersion220 {
-		return verifyPrincipal220(pk, principal)
+		return verifyPrincipal220(p, principal)
 
 	} else if blockVersion < blockVersion2330 {
-		return verifyPrincipal2320(pk, principal)
+		return verifyPrincipal2320(p, principal)
 	}
 
 	return false, fmt.Errorf("`VerifyPrincipalLT2330` should not used by blockVersion(%d)", blockVersion)
 }
 
 // GetValidEndorsements filters all endorsement entries and returns all valid ones
-func (pk *pkACProvider) GetValidEndorsements(
+func (p *pkACProvider) GetValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*common.EndorsementEntry, error) {
 
 	if blockVersion <= blockVersion220 {
-		return pk.getValidEndorsements220(principal)
+		return p.getValidEndorsements220(principal)
 	}
 
 	if blockVersion < blockVersion2330 {
-		return pk.getValidEndorsements2320(principal)
+		return p.getValidEndorsements2320(principal)
 	}
-	return pk.getValidEndorsements(principal, blockVersion)
+	return p.getValidEndorsements(principal, blockVersion)
 }
 
 // VerifyMsgPrincipal verifies if the principal for the resource is met
@@ -879,6 +878,7 @@ func (p *pkACProvider) IsRuleSupportedByMultiSign(resourceName string, blockVers
 	return isRuleSupportedByMultiSign(p, resourceName, blockVersion, p.log)
 }
 
+// GetCertFromCache get cert from cache
 func (p *pkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
 
 	pkPem := string(pkBytes)
@@ -916,10 +916,15 @@ func (p *pkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Publi
 	return publicKeyString, pk, nil
 }
 
+// GetCertFromCache get cert from cache
+func (p *pkACProvider) GetCertFromCache(keyBytes []byte) ([]byte, error) {
+	return nil, fmt.Errorf("not support in pkACProvider")
+}
+
 // GetPayerFromCache get payer from cache
 func (p *pkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 	p.log.Debugf("get from cache, key=", string(key))
-	value, ok := p.payerList.Load(string(key))
+	value, ok := p.payerList.Get(string(key))
 	if !ok {
 		p.log.Debugf("not found %s", key)
 		return nil, fmt.Errorf("not found %s", key)
@@ -935,6 +940,6 @@ func (p *pkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 // SetPayerToCache set payer to cache
 func (p *pkACProvider) SetPayerToCache(key []byte, value []byte) error {
 	p.log.Debugf("set from cache, key=", string(key), "#value=", string(value))
-	p.payerList.Store(string(key), string(value))
+	p.payerList.Add(string(key), string(value))
 	return nil
 }

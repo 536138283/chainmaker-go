@@ -45,7 +45,7 @@ type permissionedPkACProvider struct {
 	consensusMember *sync.Map
 
 	// used to cache the deduction account address to avoid reading the database every time
-	payerList sync.Map
+	payerList *ShardCache
 }
 
 type adminMemberModel struct {
@@ -82,7 +82,7 @@ func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId str
 	ppacProvider := &permissionedPkACProvider{
 		adminMember:     &sync.Map{},
 		consensusMember: &sync.Map{},
-		payerList:       sync.Map{},
+		payerList:       NewShardCache(GetCertCacheSize()),
 		localOrg:        localOrgId,
 	}
 	chainConfig.AuthType = strings.ToLower(chainConfig.AuthType)
@@ -372,6 +372,7 @@ func (pp *permissionedPkACProvider) IsRuleSupportedByMultiSign(resourceName stri
 	return isRuleSupportedByMultiSign(pp, resourceName, blockVersion, pp.acService.log)
 }
 
+// GetCertFromCache get cert from cache
 func (pp *permissionedPkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
 	pkPem := string(pkBytes)
 	acs := pp.acService
@@ -409,9 +410,13 @@ func (pp *permissionedPkACProvider) GetAddressFromCache(pkBytes []byte) (string,
 	return publicKeyString, pk, nil
 }
 
+func (pp *permissionedPkACProvider) GetCertFromCache(keyBytes []byte) ([]byte, error) {
+	return nil, fmt.Errorf("not support in permissionedPkACProvider")
+}
+
 // GetPayerFromCache get payer from cache
 func (pp *permissionedPkACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
-	value, ok := pp.payerList.Load(string(key))
+	value, ok := pp.payerList.Get(string(key))
 	if !ok {
 		return nil, fmt.Errorf("not found %s", key)
 	}
@@ -424,6 +429,6 @@ func (pp *permissionedPkACProvider) GetPayerFromCache(key []byte) ([]byte, error
 
 // SetPayerToCache set payer to cache
 func (pp *permissionedPkACProvider) SetPayerToCache(key []byte, value []byte) error {
-	pp.payerList.Store(string(key), string(value))
+	pp.payerList.Add(string(key), string(value))
 	return nil
 }

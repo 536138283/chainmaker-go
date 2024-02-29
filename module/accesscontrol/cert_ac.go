@@ -29,7 +29,6 @@ import (
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/common/v2/json"
-	"chainmaker.org/chainmaker/localconf/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
@@ -56,7 +55,7 @@ type certACProvider struct {
 	trustMembers *sync.Map
 
 	// used to cache the deduction account address to avoid reading the database every time
-	payerList sync.Map
+	payerList *ShardCache
 
 	store protocol.BlockchainStore
 
@@ -108,10 +107,10 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger) (*certACProvider, error) {
 	certACProvider := &certACProvider{
-		certCache:  NewShardCache(localconf.ChainMakerConfig.NodeConfig.CertCacheSize),
+		certCache:  NewShardCache(GetCertCacheSize()),
 		crl:        sync.Map{},
 		frozenList: sync.Map{},
-		payerList:  sync.Map{},
+		payerList:  NewShardCache(GetCertCacheSize()),
 		opts: bcx509.VerifyOptions{
 			Intermediates: bcx509.NewCertPool(),
 			Roots:         bcx509.NewCertPool(),
@@ -1155,6 +1154,7 @@ func (cp *certACProvider) IsRuleSupportedByMultiSign(resourceName string, blockV
 	return isRuleSupportedByMultiSign(cp, resourceName, blockVersion, cp.acService.log)
 }
 
+// GetCertFromCache get cert from cache
 func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
 	pkPem := string(pkBytes)
 	acs := cp.acService
@@ -1186,10 +1186,42 @@ func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Pu
 	return publicKeyString, pk, nil
 }
 
+// GetCertFromCache get cert from cache
+func (cp *certACProvider) GetCertFromCache(certId []byte) ([]byte, error) {
+	ret, ok := cp.certCache.Get(string(certId))
+	if !ok {
+		cp.acService.log.Debugf("looking up the full certificate for the compressed one [%v]", certId)
+		if cp.acService.dataStore == nil {
+			cp.acService.log.Errorf("local data storage is not set up")
+			return nil, fmt.Errorf("local data storage is not set up")
+		}
+		certIdHex := hex.EncodeToString(certId)
+		cert, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(certIdHex))
+		if err != nil {
+			cp.acService.log.Errorf("fail to load compressed certificate from local storage [%s]", certIdHex)
+			return nil, fmt.Errorf("fail to load compressed certificate from local storage [%s]", certIdHex)
+		}
+		if cert == nil {
+			cp.acService.log.Warnf("cert id [%s] does not exist in local storage", certIdHex)
+			return nil, fmt.Errorf("cert id [%s] does not exist in local storage", certIdHex)
+		}
+		cp.addCertCache(string(certId), cert)
+		cp.acService.log.Debugf("compressed certificate [%s] found and stored in cache", certIdHex)
+		return cert, nil
+	} else if ret != nil {
+		cp.acService.log.Debugf("compressed certificate [%v] found in cache", []byte(certId))
+		return ret.([]byte), nil
+	} else {
+		cp.acService.log.Debugf("fail to look up compressed certificate [%v] due to an internal error of local cache",
+			[]byte(certId))
+		return nil, fmt.Errorf("fail to look up compressed certificate due to an internal error of local cache")
+	}
+}
+
 // GetPayerFromCache get payer from cache
 func (cp *certACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 	cp.acService.log.Debugf("get from cache, key=", string(key))
-	value, ok := cp.payerList.Load(string(key))
+	value, ok := cp.payerList.Get(string(key))
 	if !ok {
 		return nil, fmt.Errorf("not found %s", string(key))
 	}
@@ -1203,6 +1235,6 @@ func (cp *certACProvider) GetPayerFromCache(key []byte) ([]byte, error) {
 // SetPayerToCache set payer to cache
 func (cp *certACProvider) SetPayerToCache(key []byte, value []byte) error {
 	cp.acService.log.Debugf("set cache, key=", string(key), "#value=", string(value))
-	cp.payerList.Store(string(key), string(value))
+	cp.payerList.Add(string(key), string(value))
 	return nil
 }

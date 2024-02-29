@@ -125,7 +125,7 @@ func (cp *certACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo) {
 		cp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
 	}
 
-	cp.payerList.Store(dbKey, pkStr)
+	cp.payerList.Add(dbKey, pkStr)
 	cp.acService.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, params.PayerAddress)
 }
 
@@ -149,7 +149,7 @@ func (cp *certACProvider) handleUnsetPayer(blockInfo *commonPb.BlockInfo) {
 		cp.acService.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
 	}
 
-	cp.payerList.Delete(dbKey)
+	cp.payerList.Remove(dbKey)
 	cp.acService.log.Debugf("unset payer in cache, key=%s", dbKey)
 }
 

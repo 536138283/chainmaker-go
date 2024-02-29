@@ -123,7 +123,7 @@ func (p *pkACProvider) handleSetPayer(blockInfo *commonPb.BlockInfo) {
 		return
 	}
 
-	p.payerList.Store(dbKey, pkStr)
+	p.payerList.Add(dbKey, pkStr)
 	p.log.Debugf("set payer in cache, key=%s, value=%s", dbKey, pkStr)
 }
 
@@ -168,6 +168,6 @@ func (p *pkACProvider) handleUnsetPayer(blockInfo *commonPb.BlockInfo) {
 		p.log.Errorf("err Parameters (%v)", blockInfo.Block.Txs[0].Payload.Parameters)
 	}
 
-	p.payerList.Delete(dbKey)
+	p.payerList.Remove(dbKey)
 	p.log.Debugf("unset payer in cache, key=%s", dbKey)
 }
