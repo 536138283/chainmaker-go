@@ -372,6 +372,7 @@ func (pp *permissionedPkACProvider) IsRuleSupportedByMultiSign(resourceName stri
 	return isRuleSupportedByMultiSign(pp, resourceName, blockVersion, pp.acService.log)
 }
 
+// GetCertFromCache get cert from cache
 func (pp *permissionedPkACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
 	pkPem := string(pkBytes)
 	acs := pp.acService
@@ -407,6 +408,10 @@ func (pp *permissionedPkACProvider) GetAddressFromCache(pkBytes []byte) (string,
 	acs.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
 
 	return publicKeyString, pk, nil
+}
+
+func (pp *permissionedPkACProvider) GetCertFromCache(keyBytes []byte) ([]byte, error) {
+	return nil, fmt.Errorf("not support in permissionedPkACProvider")
 }
 
 // GetPayerFromCache get payer from cache

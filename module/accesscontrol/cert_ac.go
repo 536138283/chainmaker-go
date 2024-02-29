@@ -1154,6 +1154,7 @@ func (cp *certACProvider) IsRuleSupportedByMultiSign(resourceName string, blockV
 	return isRuleSupportedByMultiSign(cp, resourceName, blockVersion, cp.acService.log)
 }
 
+// GetCertFromCache get cert from cache
 func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.PublicKey, error) {
 	pkPem := string(pkBytes)
 	acs := cp.acService
@@ -1183,6 +1184,37 @@ func (cp *certACProvider) GetAddressFromCache(pkBytes []byte) (string, crypto.Pu
 	acs.memberCache.Add(indexKey, &memberCached{address: publicKeyString, pk: pk})
 
 	return publicKeyString, pk, nil
+}
+
+func (cp *certACProvider) GetCertFromCache(certId []byte) ([]byte, error) {
+	ret, ok := cp.certCache.Get(string(certId))
+	if !ok {
+		cp.acService.log.Debugf("looking up the full certificate for the compressed one [%v]", certId)
+		if cp.acService.dataStore == nil {
+			cp.acService.log.Errorf("local data storage is not set up")
+			return nil, fmt.Errorf("local data storage is not set up")
+		}
+		certIdHex := hex.EncodeToString(certId)
+		cert, err := cp.acService.dataStore.ReadObject(syscontract.SystemContract_CERT_MANAGE.String(), []byte(certIdHex))
+		if err != nil {
+			cp.acService.log.Errorf("fail to load compressed certificate from local storage [%s]", certIdHex)
+			return nil, fmt.Errorf("fail to load compressed certificate from local storage [%s]", certIdHex)
+		}
+		if cert == nil {
+			cp.acService.log.Warnf("cert id [%s] does not exist in local storage", certIdHex)
+			return nil, fmt.Errorf("cert id [%s] does not exist in local storage", certIdHex)
+		}
+		cp.addCertCache(string(certId), cert)
+		cp.acService.log.Debugf("compressed certificate [%s] found and stored in cache", certIdHex)
+		return cert, nil
+	} else if ret != nil {
+		cp.acService.log.Debugf("compressed certificate [%v] found in cache", []byte(certId))
+		return ret.([]byte), nil
+	} else {
+		cp.acService.log.Debugf("fail to look up compressed certificate [%v] due to an internal error of local cache",
+			[]byte(certId))
+		return nil, fmt.Errorf("fail to look up compressed certificate [%v] due to an internal error of local cache")
+	}
 }
 
 // GetPayerFromCache get payer from cache
