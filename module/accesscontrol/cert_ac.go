@@ -1213,7 +1213,7 @@ func (cp *certACProvider) GetCertFromCache(certId []byte) ([]byte, error) {
 	} else {
 		cp.acService.log.Debugf("fail to look up compressed certificate [%v] due to an internal error of local cache",
 			[]byte(certId))
-		return nil, fmt.Errorf("fail to look up compressed certificate [%v] due to an internal error of local cache")
+		return nil, fmt.Errorf("fail to look up compressed certificate due to an internal error of local cache")
 	}
 }
 
