@@ -466,6 +466,7 @@ storage:
     leveldb_config:
       # LevelDb store path
       store_path: ../data/{org_id}/block
+      write_buffer_size: 64
 
     # Example for sql provider
     # Databases type support leveldb, sql, badgerdb, tikvdb
@@ -508,6 +509,8 @@ storage:
     provider: leveldb
     leveldb_config:
       store_path: ../data/{org_id}/state
+      write_buffer_size: 256
+
     # bloom config for state db, it only takes effect when using kvdb
     # bloom_config:
     #   enable: true # enable bloom filter or not
@@ -527,6 +530,7 @@ storage:
     disable_account_history: true
     leveldb_config:
       store_path: ../data/{org_id}/history
+      write_buffer_size: 64
 
   # Result db config, default enable result db
   disable_resultdb: false
@@ -534,6 +538,7 @@ storage:
     provider: leveldb
     leveldb_config:
       store_path: ../data/{org_id}/result
+      write_buffer_size: 64
 
   # Disable contract event database or not. If it is false, contract_eventdb_config must be mysql
   disable_contract_eventdb: true
