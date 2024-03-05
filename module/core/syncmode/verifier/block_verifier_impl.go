@@ -208,6 +208,10 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
 	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot, v.ac, blockVersion); err != nil {
+			v.log.Warnf("verify failed [%d](%x), %s", newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
+			if protocol.CONSENSUS_VERIFY == mode {
+				v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, false, txRWSetMap, rwSetVerifyFailTx))
+			}
 			return err
 		}
 	}
@@ -216,7 +220,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	beginConsensCheck := utils.CurrentTimeMillisSeconds()
 	if protocol.SYNC_VERIFY == mode {
 		if err = v.verifyVoteSig(newBlock); err != nil {
-			v.log.Warnf("verify failed [%d](%x), votesig %s",
+			v.log.Warnf("verify failed [%d](%x), vote sig %s",
 				newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
 			return err
 		}

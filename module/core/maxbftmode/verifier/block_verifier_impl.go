@@ -240,7 +240,12 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
 	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot, v.ac, blockVersion); err != nil {
-			return nil, err
+			v.log.Warnf("verify failed [%d](%x), %s", newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
+			verifyResult = parseVerifyResult(newBlock, true, txRWSetMap, rwSetVerifyFailTx)
+			if protocol.CONSENSUS_VERIFY == mode {
+				v.msgBus.Publish(msgbus.VerifyResult, verifyResult)
+			}
+			return verifyResult, err
 		}
 	}
 
