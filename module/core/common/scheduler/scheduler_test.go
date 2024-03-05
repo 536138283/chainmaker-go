@@ -640,6 +640,7 @@ func TestSchedule4(t *testing.T) {
 			Value:        []byte("V2"),
 		}},
 	}
+	txResultMap := make(map[string]*commonPb.Result)
 
 	// simulate Calling ApplyTxSimContext(...) 3 times
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
@@ -647,6 +648,7 @@ func TestSchedule4(t *testing.T) {
 	//snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
+	snapshot.EXPECT().GetTxResultMap().Return(txResultMap)
 
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},
@@ -708,6 +710,7 @@ func TestSchedule5(t *testing.T) {
 			Value:        []byte("V3"),
 		}},
 	}
+	txResultMap := make(map[string]*commonPb.Result)
 
 	// simulate Calling ApplyTxSimContext(...) 3 times
 	snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).Return(true, 1).Times(1)
@@ -715,6 +718,7 @@ func TestSchedule5(t *testing.T) {
 	//snapshot.EXPECT().ApplyTxSimContext(gomock.Any(), gomock.Any(), gomock.Any(), gomock.Any()).After(preCall2).Return(true, 3).Times(1)
 	snapshot.EXPECT().IsSealed().AnyTimes().Return(false)
 	snapshot.EXPECT().Seal().Return()
+	snapshot.EXPECT().GetTxResultMap().Return(txResultMap)
 
 	dag := &commonPb.DAG{
 		Vertexes: []*commonPb.DAG_Neighbor{{}},

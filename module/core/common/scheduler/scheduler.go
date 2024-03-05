@@ -1231,7 +1231,7 @@ func (ts *TxScheduler) appendChargeGasTx(
 	snapshot protocol.Snapshot,
 	senderCollection *SenderCollection) {
 	ts.log.Debug("TxScheduler => appendChargeGasTx() => createChargeGasTx() begin ")
-	tx, err := ts.createChargeGasTx(senderCollection)
+	tx, err := ts.createChargeGasTx(senderCollection, snapshot)
 	if err != nil {
 		return
 	}
@@ -1259,13 +1259,19 @@ func (ts *TxScheduler) signTxPayload(
 }
 
 func (ts *TxScheduler) createChargeGasTx(
-	senderCollection *SenderCollection) (*commonPb.Transaction, error) {
+	senderCollection *SenderCollection, snapshot protocol.Snapshot) (*commonPb.Transaction, error) {
+	resultMap := snapshot.GetTxResultMap()
 
 	// 构造参数
 	parameters := make([]*commonPb.KeyValuePair, 0, len(senderCollection.txsMap))
 	for address, txCollection := range senderCollection.txsMap {
 		totalGasUsed := int64(0)
 		for _, tx := range txCollection.txs {
+			// 不在resultMap中意味着调度超时了，且该笔交易不会被打包进block中，因此不计算在totalGasUsed中
+			if _, ok := resultMap[tx.Payload.TxId]; !ok {
+				continue
+			}
+
 			if tx.Result != nil {
 				totalGasUsed += int64(tx.Result.ContractResult.GasUsed)
 			}
