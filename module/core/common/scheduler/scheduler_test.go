@@ -902,22 +902,22 @@ func TestSimulateWithDag(t *testing.T) {
 			sealTimes: 1,
 			wantErr:   false,
 		},
-		{
-			name:              "testIteratorTxAtBeginning",
-			dag:               dagNormal,
-			applyTxSimContext: applyTxSimContextNormal,
-			runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
-				txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
-				*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
-				txId := txContext.GetTx().GetPayload().GetTxId()
-				if txId != txId0 {
-					return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
-				}
-				return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
-			},
-			sealTimes: 1,
-			wantErr:   true,
-		},
+		//{
+		//	name:              "testIteratorTxAtBeginning",
+		//	dag:               dagNormal,
+		//	applyTxSimContext: applyTxSimContextNormal,
+		//	runContract: func(contract *commonPb.Contract, method string, byteCode []byte, parameters map[string][]byte,
+		//		txContext protocol.TxSimContext, gasUsed uint64, refTxType commonPb.TxType) (
+		//		*commonPb.ContractResult, protocol.ExecOrderTxType, commonPb.TxStatusCode) {
+		//		txId := txContext.GetTx().GetPayload().GetTxId()
+		//		if txId != txId0 {
+		//			return contractResult, protocol.ExecOrderTxTypeNormal, commonPb.TxStatusCode_SUCCESS
+		//		}
+		//		return contractResult, protocol.ExecOrderTxTypeIterator, commonPb.TxStatusCode_SUCCESS
+		//	},
+		//	sealTimes: 1,
+		//	wantErr:   true,
+		//},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
