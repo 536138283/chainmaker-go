@@ -700,15 +700,15 @@ func (p *pkACProvider) checkResourcePolicyRuleMajorityCase(policy *pbac.Policy) 
 		return true
 	case 1:
 		if policy.RoleList[0] != string(protocol.RoleAdmin) {
-			p.log.Errorf("role allowed in [%s] is only [%s], [%s] will be overridden", protocol.RuleMajority,
-				protocol.RoleAdmin, policy.RoleList[0])
+			p.log.Errorf("role allowed in [%s] is only [%s]", protocol.RuleMajority,
+				protocol.RoleAdmin)
 			return false
 		}
 		return true
 	default:
-		p.log.Warnf("role allowed in [%s] is only [%s], the other roles in the list will be ignored",
+		p.log.Errorf("role allowed in [%s] is only [%s]",
 			protocol.RuleMajority, protocol.RoleAdmin)
-		return true
+		return false
 	}
 }
 
