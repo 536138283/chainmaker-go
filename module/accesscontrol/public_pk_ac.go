@@ -706,6 +706,7 @@ func (p *pkACProvider) checkResourcePolicyRuleMajorityCase(policy *pbac.Policy) 
 		}
 		return true
 	default:
+
 		p.log.Errorf("role allowed in [%s] is only [%s]",
 			protocol.RuleMajority, protocol.RoleAdmin)
 		return false
