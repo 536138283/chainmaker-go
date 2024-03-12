@@ -61,6 +61,7 @@ type BlockChainSyncServer struct {
 	minLagReachC chan struct{}
 	//if a synced block is committed to local ledger put a event to this channel
 	commitBlockC chan struct{}
+	closeWait    sync.WaitGroup
 }
 
 // NewBlockChainSyncServer Create a new BlockChainSyncServer instance
@@ -131,8 +132,16 @@ func (sync *BlockChainSyncServer) Start() error {
 	if err := sync.processor.begin(); err != nil {
 		return err
 	}
-	go sync.loop()
-	go sync.blockRequestEntrance()
+
+	sync.closeWait.Add(2)
+	go func() {
+		defer sync.closeWait.Done()
+		sync.loop()
+	}()
+	go func() {
+		defer sync.closeWait.Done()
+		sync.blockRequestEntrance()
+	}()
 	return nil
 }
 
@@ -575,6 +584,7 @@ func (sync *BlockChainSyncServer) Stop() {
 	sync.scheduler.end()
 	sync.processor.end()
 	close(sync.close)
+	sync.closeWait.Wait()
 	_ = sync.net.CancelSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG)
 	_ = sync.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
 }
