@@ -419,9 +419,9 @@ func getSelfAddress(cc *sdk.ChainClient) (string, error) {
 // @return *cobra.Command
 func newSetInvokeBaseGasCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set-base-gas",
-		Short: "set VM base gas of invoke tx",
-		Long:  "set VM base gas of invoke tx",
+		Use:   "set-default-gas",
+		Short: "set VM default gas of invoke tx",
+		Long:  "set VM default gas of invoke tx",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			//// 1.Chain Client
 			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
@@ -469,9 +469,9 @@ func newSetInvokeBaseGasCMD() *cobra.Command {
 // @return *cobra.Command
 func newSetInvokeGasPriceCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "set-invoke-gas-price",
-		Short: "set VM base gas price of invoke tx",
-		Long:  "set VM base gas price of invoke tx",
+		Use:   "set-default-gas-price",
+		Short: "set VM default gas price of invoke tx",
+		Long:  "set VM default gas price of invoke tx",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			//// 1.Chain Client
 			cc, err := util.CreateChainClientWithConfPath(sdkConfPath, false)
