@@ -415,7 +415,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	if txResourceId != resourceId {
 		crossCall = true
 	} else {
-		txBytes, err := utils.CalcUnsignedTxBytes(tx)
+		txBytes, err = utils.CalcUnsignedTxBytes(tx)
 		if err != nil {
 			return false, fmt.Errorf("get tx bytes failed, err = %v", err)
 		}
