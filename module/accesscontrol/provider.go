@@ -408,15 +408,17 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	var allow bool
 	var crossCall bool
 
-	txBytes, err := utils.CalcUnsignedTxBytes(tx)
-	if err != nil {
-		return false, fmt.Errorf("get tx bytes failed, err = %v", err)
-	}
+	txBytes := []byte("")
 	txType := tx.Payload.TxType
 	txResourceId := utils.GetTxResourceName(tx)
 	crossCall = false
 	if txResourceId != resourceId {
 		crossCall = true
+	} else {
+		txBytes, err := utils.CalcUnsignedTxBytes(tx)
+		if err != nil {
+			return false, fmt.Errorf("get tx bytes failed, err = %v", err)
+		}
 	}
 
 	// check tx_type
