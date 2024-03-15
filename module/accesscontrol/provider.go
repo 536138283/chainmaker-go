@@ -409,6 +409,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	var crossCall bool
 
 	txBytes := []byte("")
+
 	txType := tx.Payload.TxType
 	txResourceId := utils.GetTxResourceName(tx)
 	crossCall = false
