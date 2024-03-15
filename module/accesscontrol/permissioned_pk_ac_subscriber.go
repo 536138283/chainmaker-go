@@ -81,7 +81,7 @@ func (pp *permissionedPkACProvider) onMessageBlockInfo(msg *msgbus.Message) {
 			return
 		}
 		//（set-payer）配置交易 + gas交易
-		if len(blockInfo.Block.Txs) > 2 {
+		if len(blockInfo.Block.Txs) > 2 || len(blockInfo.Block.Txs) <= 0 {
 			return
 		}
 		// 是set-payer交易,并且交易执行成功

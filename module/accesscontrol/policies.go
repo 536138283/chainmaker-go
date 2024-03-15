@@ -507,10 +507,10 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPK() {
 		// trust-root management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyMajorityAdmin)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyMajorityAdmin)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pubPolicyMajorityAdmin)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyForbidden)
 
 		// version management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
@@ -703,10 +703,10 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 		// trust-member management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_TRUST_ROOT_UPDATE.String(), pubPolicyMajorityAdmin)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyMajorityAdmin)
-		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyMajorityAdmin)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_TRUST_ROOT_ADD.String(), pubPolicyForbidden)
+		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_TRUST_ROOT_DELETE.String(), pubPolicyForbidden)
 
 		// version management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
