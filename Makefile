@@ -171,7 +171,7 @@ generate-vendor:
 	go mod vendor
 	# 注意：执行此方法前需要切换common项目到对应分支或commit
 	# 密码学 gmssl 相关
-	cd ../common && git checkout v2.3.2 && git pull
+	cd ../common && git checkout v2.3.3 && git pull
 	cp -a ../common/opencrypto/gmssl/gmssl/include ./vendor/chainmaker.org/chainmaker/common/v2/opencrypto/gmssl/gmssl/
 	cp -a ../common/opencrypto/gmssl/gmssl/lib ./vendor/chainmaker.org/chainmaker/common/v2/opencrypto/gmssl/gmssl/lib/
 	# 密码学 tencentsm 相关
