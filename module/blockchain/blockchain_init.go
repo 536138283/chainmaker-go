@@ -223,9 +223,10 @@ func (bc *Blockchain) initNetService() (err error) {
 }
 
 // initStore add next time
-//  @Description:
-//  @receiver bc
-//  @return err
+//
+//	@Description:
+//	@receiver bc
+//	@return err
 func (bc *Blockchain) initStore() (err error) {
 	_, ok := bc.initModules[moduleNameStore]
 	if ok {
@@ -607,9 +608,15 @@ func (bc *Blockchain) initVM() (err error) {
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
 		for _, vmType := range chainConfig.Vm.SupportList {
-			bc.addVmManager(vmType, supportedVmManagerList)
+			err = bc.addVmManager(vmType, supportedVmManagerList)
+			if err != nil {
+				return err
+			}
 			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				err = bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -654,9 +661,15 @@ func (bc *Blockchain) initVM() (err error) {
 		supportedVmManagerList := make(map[common.RuntimeType]protocol.VmInstancesManager)
 
 		for _, vmType := range chainConfig.Vm.SupportList {
-			bc.addVmManager(vmType, supportedVmManagerList)
+			err = bc.addVmManager(vmType, supportedVmManagerList)
+			if err != nil {
+				return err
+			}
 			if componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)] == common.RuntimeType_DOCKER_GO {
-				bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				err = bc.addVmManager(componentVm.RunTimeTypeToVmType[common.RuntimeType_GO], supportedVmManagerList)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -683,18 +696,20 @@ func (bc *Blockchain) initVMNative() {
 }
 
 func (bc *Blockchain) addVmManager(vmType string,
-	supportedVmManagerList map[common.RuntimeType]protocol.VmInstancesManager) {
+	supportedVmManagerList map[common.RuntimeType]protocol.VmInstancesManager) error {
 	vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
 	vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
 	if err != nil {
 		bc.log.Errorf("create instance manager failed, %v", err)
+		return err
 	}
 	if vmInstancesManager == nil {
 		bc.log.Debugf("vm instances manager of %s is nil", vmType)
-		return
+		return nil
 	}
 	runtime := componentVm.VmTypeToRunTimeType[strings.ToUpper(vmType)]
 	supportedVmManagerList[runtime] = vmInstancesManager
+	return nil
 }
 
 type soloChainNodesInfoProvider struct{}

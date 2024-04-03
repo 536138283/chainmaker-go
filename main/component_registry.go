@@ -77,7 +77,7 @@ func init() {
 				chainId,
 				logger.GetLoggerByChain(logger.MODULE_VM, chainId),
 				localconf.ChainMakerConfig.VMConfig.Go,
-			), nil
+			)
 		})
 
 	// consensus
