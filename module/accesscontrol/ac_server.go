@@ -446,7 +446,7 @@ func (acs *accessControlService) memberToAddress(member *pbac.Member) (string, e
 	var pk []byte
 	var publicKey crypto.PublicKey
 	switch member.MemberType {
-	case pbac.MemberType_CERT, pbac.MemberType_CERT_HASH:
+	case pbac.MemberType_CERT, pbac.MemberType_CERT_HASH, pbac.MemberType_ALIAS:
 		pk, err = publicKeyFromCert(member.MemberInfo)
 		if err != nil {
 			return "", err
