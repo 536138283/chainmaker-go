@@ -329,7 +329,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId st
 
 		// version management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyMajorityAdmin)
+			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 
 		// archive management
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_ARCHIVE_MANAGE.String()+"-"+
@@ -514,7 +514,7 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPK() {
 
 		// version management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
+			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyMajorityAdmin)
 
 		// archive management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ARCHIVE_MANAGE.String()+"-"+
