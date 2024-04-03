@@ -514,7 +514,7 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPK() {
 
 		// version management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), pubPolicyMajorityAdmin)
+			syscontract.ChainConfigFunction_UPDATE_VERSION.String(), policyConfig)
 
 		// archive management
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ARCHIVE_MANAGE.String()+"-"+
