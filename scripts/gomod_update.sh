@@ -12,7 +12,7 @@ BRANCH_OLD='v2.3.0_qc'
 TAG_OLD='v2.3.0'
 
 if [[ ! -n $BRANCH ]]; then
-				  BRANCH="v2.3.3_qc"
+				  BRANCH="v2.3.4_qc"
 fi
 cd ..
 

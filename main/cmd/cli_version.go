@@ -33,8 +33,10 @@ func logo() string {
 	s := fig.String()
 	fragment := "================================================================================="
 	//versionInfo := "::ChainMaker::  version(" + protocol.DefaultBlockVersion + ")"
+	// blockchain.CurrentVersion 为对外发布的版本，仅支持三位，如：v2.3.3
 	versionInfo := fmt.Sprintf("ChainMaker Version: %s\n", blockchain.CurrentVersion)
 
+	// protocol.DefaultBlockVersion 为当前执行逻辑时的判断版本号，支持四位，如02030300（最前面0可忽略）
 	versionInfo += fmt.Sprintf("Block Version:%6s%d\n", " ", protocol.DefaultBlockVersion)
 
 	if blockchain.BuildDateTime != "" {
