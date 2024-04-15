@@ -44,7 +44,7 @@ func (s *ApiService) dealTxSubscription(tx *commonPb.Transaction, server apiPb.R
 		preTxId      string
 		preOrgId     string
 	)
-
+	s.log.Debugf("payload.Parameters=%s", payload.Parameters)
 	for _, kv := range payload.Parameters {
 		if kv.Key == syscontract.SubscribeTx_START_BLOCK.String() {
 			startBlock, err = bytehelper.BytesToInt64(kv.Value)
@@ -358,6 +358,7 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 					tx.Sender.Signer.MemberInfo,
 					string(tx.Sender.Signer.MemberInfo),
 					preAlias)
+				continue
 			}
 		}
 		//preTxId
@@ -371,6 +372,7 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 				s.log.Debugf("TxId matching failed，txId=[%s], preTxId=[%s]",
 					tx.Payload.TxId,
 					preTxId)
+				continue
 			}
 		}
 		//preOrgId
@@ -384,6 +386,7 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 				s.log.Debugf("OrgId matching failed，orgId=[%s], preOrgId=[%s]",
 					tx.Sender.Signer.OrgId,
 					preOrgId)
+				continue
 			}
 		}
 		if s.checkIsContinue(tx, contractName, txIds, txIdsMap) {
