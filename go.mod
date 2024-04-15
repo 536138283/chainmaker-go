@@ -14,7 +14,7 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.4
 	chainmaker.org/chainmaker/net-libp2p v1.2.4
 	chainmaker.org/chainmaker/net-liquid v1.1.2
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.4
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240415075551-bb03c72b8740
 	chainmaker.org/chainmaker/protocol/v2 v2.3.5-0.20240407102340-f61c385c074e
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.4
 	chainmaker.org/chainmaker/store/v2 v2.3.5
@@ -50,14 +50,14 @@ require (
 	github.com/spf13/cobra v1.1.3
 	github.com/spf13/pflag v1.0.5
 	github.com/spf13/viper v1.10.1
-	github.com/stretchr/testify v1.8.2
+	github.com/stretchr/testify v1.8.4
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
 	github.com/tidwall/pretty v1.2.0
 	github.com/tmc/grpc-websocket-proxy v0.0.0-20201229170055-e5319fda7802
 	go.uber.org/atomic v1.7.0
-	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
-	golang.org/x/time v0.0.0-20210608053304-ed9ce3a009e4
-	google.golang.org/grpc v1.47.0
+	golang.org/x/net v0.20.0
+	golang.org/x/time v0.3.0
+	google.golang.org/grpc v1.61.0
 )
 
 require (
@@ -74,7 +74,7 @@ require (
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
-	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	golang.org/x/sync v0.5.0
 )
 
 replace (
@@ -90,4 +90,5 @@ replace (
 	github.com/marten-seemann/qtls-go1-19 => chainmaker.org/third_party/qtls-go1-19 v1.0.0
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.1.0
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v1.0.0
+	google.golang.org/grpc => google.golang.org/grpc v1.47.0
 )
