@@ -377,6 +377,12 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 		}
 		//preOrgId
 		if len(preOrgId) > 0 {
+			//client发送交易时会填写orgId，可能为空
+			if tx.Sender == nil || tx.Sender.Signer == nil || len(tx.Sender.Signer.OrgId) <= 0 {
+				s.log.Debugf("OrgId matching failed," +
+					"The organization id of the transaction sender was not found")
+				continue
+			}
 			if strings.HasPrefix(tx.Sender.Signer.OrgId, preOrgId) {
 				if err = s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
 					return err
