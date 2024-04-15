@@ -347,7 +347,23 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 		}
 
 		//preAlias
-		if len(preAlias) > 0 && tx.Sender.Signer.MemberType == pbac.MemberType_ALIAS {
+		if len(preAlias) > 0 {
+			//创世区块中的配置交易，sender为空
+			if tx.Sender == nil || tx.Sender.Signer == nil || len(tx.Sender.Signer.OrgId) <= 0 {
+				s.log.Debugf("Alias matching failed," +
+					"The alias of the transaction sender was not found")
+				continue
+			}
+			if tx.Sender.Signer.MemberType != pbac.MemberType_ALIAS {
+				s.log.Debugf("This transaction is not an alias transaction,MemberType=%s", tx.Sender.Signer.MemberType)
+				continue
+			}
+			//创世区块中的配置交易，sender为空
+			if tx.Sender == nil || tx.Sender.Signer == nil || len(tx.Sender.Signer.MemberInfo) <= 0 {
+				s.log.Debugf("Alias matching failed," +
+					"The alias of the transaction sender was not found")
+				continue
+			}
 			if strings.HasPrefix(string(tx.Sender.Signer.MemberInfo), preAlias) {
 				if err = s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
 					return err
@@ -377,7 +393,7 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 		}
 		//preOrgId
 		if len(preOrgId) > 0 {
-			//client发送交易时会填写orgId，可能为空
+			//创世区块中的配置交易，sender为空
 			if tx.Sender == nil || tx.Sender.Signer == nil || len(tx.Sender.Signer.OrgId) <= 0 {
 				s.log.Debugf("OrgId matching failed," +
 					"The organization id of the transaction sender was not found")
