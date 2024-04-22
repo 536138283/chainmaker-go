@@ -263,13 +263,18 @@ func verifyTxTypePrincipal(p acProvider, tx *commonPb.Transaction,
 }
 
 func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byte,
-	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
+	blockVersion uint32, bypassVerifySign bool, currentResourceName string) (allow bool, err error) {
 
 	if p.getTotalVoterNum() <= 0 {
 		return false, fmt.Errorf("authentication failed: empty organization list or trusted node list on this chain")
 	}
+	resourceName := ""
+	if bypassVerifySign {
+		resourceName = currentResourceName
+	} else {
+		resourceName = utils.GetTxResourceName(tx)
+	}
 
-	resourceName := utils.GetTxResourceName(tx)
 	principal, err := p.CreatePrincipal(
 		resourceName,
 		[]*commonPb.EndorsementEntry{tx.Sender},
@@ -314,9 +319,14 @@ func verifySenderPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byt
 }
 
 func verifyEndorsementsPrincipal(p acProvider, tx *commonPb.Transaction, txBytes []byte,
-	blockVersion uint32, bypassVerifySign bool) (allow bool, err error) {
+	blockVersion uint32, bypassVerifySign bool, currentResourceName string) (allow bool, err error) {
+	resourceName := ""
+	if bypassVerifySign {
+		resourceName = currentResourceName
+	} else {
+		resourceName = utils.GetTxResourceName(tx)
+	}
 
-	resourceName := utils.GetTxResourceName(tx)
 	return verifyEndorsementsPrincipalCommon(p, tx, txBytes, resourceName, blockVersion, bypassVerifySign)
 }
 
@@ -412,6 +422,8 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	txType := tx.Payload.TxType
 	txResourceId := utils.GetTxResourceName(tx)
 	crossCall = false
+	//resourceId 被调用合约资源序号
+	//txResourceId 用户发送原始交易中资源序号
 	if txResourceId != resourceId {
 		crossCall = true
 	} else {
@@ -435,7 +447,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	}
 
 	// check sender: because sender has been verified by tx_type checking
-	allow, err = verifySenderPrincipal(p, tx, txBytes, blockVersion, true)
+	allow, err = verifySenderPrincipal(p, tx, txBytes, blockVersion, true, resourceId)
 	if err != nil {
 		return false, fmt.Errorf("[verifySenderPrincipal]authentication error: %s", err)
 	}
@@ -444,7 +456,7 @@ func verifyTxPrincipal(tx *commonPb.Transaction, resourceId string,
 	}
 
 	// check endorsements
-	allow, err = verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, crossCall)
+	allow, err = verifyEndorsementsPrincipal(p, tx, txBytes, blockVersion, crossCall, resourceId)
 	if err != nil {
 		return false, fmt.Errorf("[verifyEndorsementsPrincipal]authentication error for %s: %s", resourceId, err)
 	}
