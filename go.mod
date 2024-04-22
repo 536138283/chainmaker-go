@@ -10,7 +10,7 @@ require (
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.4
 	chainmaker.org/chainmaker/localconf/v2 v2.3.3
-	chainmaker.org/chainmaker/logger/v2 v2.3.0
+	chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240422065628-9c4f9c644721
 	chainmaker.org/chainmaker/net-common v1.2.4
 	chainmaker.org/chainmaker/net-libp2p v1.2.4
 	chainmaker.org/chainmaker/net-liquid v1.1.2
@@ -21,7 +21,7 @@ require (
 	chainmaker.org/chainmaker/utils/v2 v2.3.4
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.5
-	chainmaker.org/chainmaker/vm-evm/v2 v2.3.4
+	chainmaker.org/chainmaker/vm-evm/v2 v2.3.5-0.20240422070352-754533cc22b8
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.2
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.4
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.2
