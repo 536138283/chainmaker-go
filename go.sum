@@ -48,6 +48,8 @@ chainmaker.org/chainmaker/net-liquid v1.1.2/go.mod h1:N3Y/kQTgPbaUWyjAhX+ThANxe4
 chainmaker.org/chainmaker/pb-go/v2 v2.3.0/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.2/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.4/go.mod h1:iFPBDm4j5qxctV2GJ+41KrZXEAvsJouoGUCOAbueG/Q=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240422065048-7c4884c6cb59 h1:m37jjyHkO9pnM0LZRqGnpmyQ9zahVhXgL5FW6T0KAh4=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240422065048-7c4884c6cb59/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423064128-fc0c2b84bd37 h1:XZC97/WGUTKyd4DQ7XzL+baKvm1p4YG+EBoj5UJfSRE=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423064128-fc0c2b84bd37/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
 chainmaker.org/chainmaker/protocol/v2 v2.3.0/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
