@@ -7,12 +7,13 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
-	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"context"
 	"errors"
 	"fmt"
 	"strings"
 	"sync/atomic"
+
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
