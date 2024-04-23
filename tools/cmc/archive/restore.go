@@ -40,7 +40,6 @@ func newRestoreCMD() *cobra.Command {
 	util.AttachAndRequiredFlags(cmd, flags,
 		[]string{
 			flagSdkConfPath,
-			flagTimeOut,
 		})
 	util.AttachFlags(cmd, flags, []string{flagBatch})
 	return cmd
@@ -53,7 +52,7 @@ func runRestoreCMD(restoreEndHeight uint64) error {
 		return chainClientErr
 	}
 	defer chainClient.Stop()
-	progress := uiprogress.New()
+	var progress *uiprogress.Progress
 	var bar *uiprogress.Bar
 	init := false
 	err := chainClient.RestoreBlocks(restoreEndHeight, "", func(msg sdk.ProcessMessage) error {
@@ -61,7 +60,10 @@ func runRestoreCMD(restoreEndHeight uint64) error {
 			fmt.Println(msg.Error.Error())
 			return msg.Error
 		}
+
 		if !init {
+			progress = uiprogress.New()
+
 			bar = progress.AddBar(int(msg.Total)).AppendCompleted().PrependElapsed()
 			bar.PrependFunc(func(b *uiprogress.Bar) string {
 				return fmt.Sprintf("Restoring Blocks (%d/%d)\n", b.Current(), msg.Total)
@@ -72,7 +74,10 @@ func runRestoreCMD(restoreEndHeight uint64) error {
 		bar.Incr()
 		return nil
 	})
-	progress.Stop()
+	if progress != nil {
+		defer progress.Stop()
+	}
+
 	if err != nil {
 		return err
 	}
