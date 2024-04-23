@@ -85,10 +85,15 @@ func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction, server apiP
 	}
 
 	if lastBlockHeight, err = s.checkAndGetLastBlockHeight(db, startBlock); err != nil {
-		errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		return status.Error(codes.Internal, errMsg)
+		if lastBlockHeight > 0 {
+			startBlock = lastBlockHeight
+			s.log.Warn("Set startBlock to the latestBlockHeight")
+		} else {
+			errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
+			errMsg = s.getErrMsg(errCode, err)
+			s.log.Error(errMsg)
+			return status.Error(codes.Internal, errMsg)
+		}
 	}
 
 	reqSender, err = s.getRoleFromTx(tx)
@@ -97,18 +102,13 @@ func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction, server apiP
 		return err
 	}
 
-	var startBlockHeight int64
-	if startBlock > startBlockHeight {
-		startBlockHeight = startBlock
-	}
-
 	if startBlock == -1 && endBlock == -1 {
 		return s.sendNewBlock(db, tx, server, endBlock, withRWSet, onlyHeader,
 			-1, reqSender, reqSenderOrgId)
 	}
 
 	if endBlock != -1 && endBlock <= lastBlockHeight {
-		_, err = s.sendHistoryBlock(db, server, startBlockHeight, endBlock,
+		_, err = s.sendHistoryBlock(db, server, startBlock, endBlock,
 			withRWSet, onlyHeader, reqSender, reqSenderOrgId)
 
 		if err != nil {
@@ -119,7 +119,7 @@ func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction, server apiP
 		return status.Error(codes.OK, "OK")
 	}
 
-	alreadySendHistoryBlockHeight, err := s.sendHistoryBlock(db, server, startBlockHeight, endBlock,
+	alreadySendHistoryBlockHeight, err := s.sendHistoryBlock(db, server, startBlock, endBlock,
 		withRWSet, onlyHeader, reqSender, reqSenderOrgId)
 
 	if err != nil {

@@ -101,8 +101,8 @@ func (s *ApiService) checkAndGetLastBlockHeight(store protocol.BlockchainStore,
 		errMsg = fmt.Sprintf("payload start block height:%d > last block height:%d",
 			payloadStartBlockHeight, lastBlockHeight)
 
-		s.log.Error(errMsg)
-		return -1, status.Error(codes.InvalidArgument, errMsg)
+		s.log.Warn(errMsg)
+		return int64(lastBlock.Header.BlockHeight), status.Error(codes.InvalidArgument, errMsg)
 	}
 
 	return int64(lastBlock.Header.BlockHeight), nil

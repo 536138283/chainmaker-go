@@ -4,8 +4,10 @@ chainmaker.org/chainmaker/chainconf/v2 v2.3.3 h1:XKtEqaWHaXsk6CuxfMkYWJs+Mv1g6Cs
 chainmaker.org/chainmaker/chainconf/v2 v2.3.3/go.mod h1:CT7DqQuq8ISoLTIoY7u5SgRiPv5XzvqFvO2iZvYjTJA=
 chainmaker.org/chainmaker/common/v2 v2.3.0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/common/v2 v2.3.1/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
-chainmaker.org/chainmaker/common/v2 v2.3.3 h1:UUhT7hXWN7MGyrvEJiT+4pPejV0huxO0RaWESs9D0Q8=
 chainmaker.org/chainmaker/common/v2 v2.3.3/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
+chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423031928-680e04db0cb1/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
+chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423082926-e04b3c789015 h1:x1y3fvIcFQ/rcqCwApo9iDHFYbxZcM0ugsbP0Bm2n3c=
+chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423082926-e04b3c789015/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0 h1:7dn8fg1WC0SfnLpgrIFboT8un5F/CueMXuimtLifHd4=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0/go.mod h1:S8tZsTGHzLAHhdm8n+aXtTobIB938CwT6rcQhyvFCr0=
 chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.4-0.20240423020850-3809d45898ef h1:6d2oNq0b973iQCUJ+jAL7u9CztXGCuYMocGqhoZIqgs=
@@ -30,8 +32,8 @@ chainmaker.org/chainmaker/localconf/v2 v2.3.3 h1:ypoQK04IiH+so2B4SM6u6V8L7MWm/jO
 chainmaker.org/chainmaker/localconf/v2 v2.3.3/go.mod h1:gRPKmvNDcO6FJK9jXVZ79KfWV+GzGiGZGe73067oA8k=
 chainmaker.org/chainmaker/logger/v2 v2.3.0/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
 chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240419062408-c8fdf07a669f/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
-chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240422065628-9c4f9c644721 h1:TgFTd82eTLpfu+FG9v6+qHIB8errqC12h/raQ/07Oos=
-chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240422065628-9c4f9c644721/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
+chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240423061335-3ccc60a12181 h1:gnw3L5cMGqwSDsEcUVA4PqMRCdhl+L62v2LYX6oiFbo=
+chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240423061335-3ccc60a12181/go.mod h1:eckQS1RMRGNAPhpAXH97D2h1qsa2hNquauXchFEKxWI=
 chainmaker.org/chainmaker/lws v1.1.0/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
 chainmaker.org/chainmaker/lws v1.2.1 h1:xqbBOgpf+DBy3iiHVbOGfXbY8yHZSTw/3xa3KnQfdLs=
 chainmaker.org/chainmaker/lws v1.2.1/go.mod h1:CzzVcJywHPSmKa6ghuGHzzbP7VXPSyYjrMKRdKw3JMY=
@@ -47,8 +49,9 @@ chainmaker.org/chainmaker/net-liquid v1.1.2/go.mod h1:N3Y/kQTgPbaUWyjAhX+ThANxe4
 chainmaker.org/chainmaker/pb-go/v2 v2.3.0/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.2/go.mod h1:MB2+suualBWOKvd6FRQD/XcZzlav7APiSa7uzdDLkY8=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.4/go.mod h1:iFPBDm4j5qxctV2GJ+41KrZXEAvsJouoGUCOAbueG/Q=
-chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240422065048-7c4884c6cb59 h1:m37jjyHkO9pnM0LZRqGnpmyQ9zahVhXgL5FW6T0KAh4=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240422065048-7c4884c6cb59/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423085802-17ae02ada0d6 h1:4P5fAR1eI3J5+bQXWU29oeE0jgtlKXDt1uRCSybgBKE=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423085802-17ae02ada0d6/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
 chainmaker.org/chainmaker/protocol/v2 v2.3.0/go.mod h1:l3EfuaCdGG1FKcCItDbGeIJ4YmYnMjSUIoXQ5GElARY=
 chainmaker.org/chainmaker/protocol/v2 v2.3.2/go.mod h1:PGP3kYeurnv5lmoYuXr2jvrGjR2Sp3GGocpTj2i5SJM=
 chainmaker.org/chainmaker/protocol/v2 v2.3.4/go.mod h1:PJdyIfyACEwiXmEUUmQl4JJ0mDICOfg+HYqELwyCKWk=

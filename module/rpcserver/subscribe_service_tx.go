@@ -13,6 +13,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -39,8 +41,11 @@ func (s *ApiService) dealTxSubscription(tx *commonPb.Transaction, server apiPb.R
 		contractName string
 		txIds        []string
 		reqSender    protocol.Role
+		preAlias     string
+		preTxId      string
+		preOrgId     string
 	)
-
+	s.log.Debugf("payload.Parameters=%s", payload.Parameters)
 	for _, kv := range payload.Parameters {
 		if kv.Key == syscontract.SubscribeTx_START_BLOCK.String() {
 			startBlock, err = bytehelper.BytesToInt64(kv.Value)
@@ -52,6 +57,12 @@ func (s *ApiService) dealTxSubscription(tx *commonPb.Transaction, server apiPb.R
 			if kv.Value != nil {
 				txIds = strings.Split(string(kv.Value), ",")
 			}
+		} else if kv.Key == syscontract.SubscribeTx_PRE_ALIAS.String() {
+			preAlias = string(kv.Value)
+		} else if kv.Key == syscontract.SubscribeTx_PRE_TX_ID.String() {
+			preTxId = string(kv.Value)
+		} else if kv.Key == syscontract.SubscribeTx_PRE_ORG_ID.String() {
+			preOrgId = string(kv.Value)
 		}
 
 		if err != nil {
@@ -85,12 +96,15 @@ func (s *ApiService) dealTxSubscription(tx *commonPb.Transaction, server apiPb.R
 		return err
 	}
 	reqSenderOrgId := tx.Sender.Signer.OrgId
-	return s.doSendTx(tx, db, server, startBlock, endBlock, contractName, txIds, reqSender, reqSenderOrgId)
+	return s.doSendTx(tx, db, server, startBlock, endBlock, contractName, txIds,
+		preAlias, preTxId, preOrgId,
+		reqSender, reqSenderOrgId)
 }
 
 func (s *ApiService) doSendTx(tx *commonPb.Transaction, db protocol.BlockchainStore,
 	server apiPb.RpcNode_SubscribeServer, startBlock, endBlock int64, contractName string,
-	txIds []string, reqSender protocol.Role, reqSenderOrgId string) error {
+	txIds []string, preAlias string, preTxId string, preOrgId string,
+	reqSender protocol.Role, reqSenderOrgId string) error {
 
 	var (
 		txIdsMap                      = make(map[string]struct{})
@@ -104,11 +118,14 @@ func (s *ApiService) doSendTx(tx *commonPb.Transaction, db protocol.BlockchainSt
 
 	if startBlock == -1 && endBlock == -1 {
 		return s.sendNewTx(db, tx, server, startBlock, endBlock, contractName, txIds,
+			preAlias, preTxId, preOrgId,
 			txIdsMap, -1, reqSender, reqSenderOrgId)
 	}
 
 	if alreadySendHistoryBlockHeight, err = s.doSendHistoryTx(db, server, startBlock, endBlock,
-		contractName, txIds, txIdsMap, reqSender, reqSenderOrgId); err != nil {
+		contractName, txIds,
+		preAlias, preTxId, preOrgId,
+		txIdsMap, reqSender, reqSenderOrgId); err != nil {
 		return err
 	}
 
@@ -116,12 +133,14 @@ func (s *ApiService) doSendTx(tx *commonPb.Transaction, db protocol.BlockchainSt
 		return status.Error(codes.OK, "OK")
 	}
 
-	return s.sendNewTx(db, tx, server, startBlock, endBlock, contractName, txIds, txIdsMap,
+	return s.sendNewTx(db, tx, server, startBlock, endBlock, contractName, txIds,
+		preAlias, preTxId, preOrgId, txIdsMap,
 		alreadySendHistoryBlockHeight, reqSender, reqSenderOrgId)
 }
 
 func (s *ApiService) doSendHistoryTx(db protocol.BlockchainStore, server apiPb.RpcNode_SubscribeServer,
 	startBlock, endBlock int64, contractName string, txIds []string,
+	preAlias string, preTxId string, preOrgId string,
 	txIdsMap map[string]struct{}, reqSender protocol.Role, reqSenderOrgId string) (int64, error) {
 
 	var (
@@ -145,7 +164,8 @@ func (s *ApiService) doSendHistoryTx(db protocol.BlockchainStore, server apiPb.R
 
 	if endBlock != -1 && endBlock <= lastBlockHeight {
 		_, err = s.sendHistoryTx(db, server, startBlockHeight, endBlock, contractName,
-			txIds, txIdsMap, reqSender, reqSenderOrgId)
+			txIds, preAlias, preTxId, preOrgId,
+			txIdsMap, reqSender, reqSenderOrgId)
 
 		if err != nil {
 			s.log.Errorf("sendHistoryTx failed, %s", err)
@@ -160,7 +180,7 @@ func (s *ApiService) doSendHistoryTx(db protocol.BlockchainStore, server apiPb.R
 	}
 
 	alreadySendHistoryBlockHeight, err := s.sendHistoryTx(db, server, startBlockHeight, endBlock, contractName,
-		txIds, txIdsMap, reqSender, reqSenderOrgId)
+		txIds, preAlias, preTxId, preOrgId, txIdsMap, reqSender, reqSenderOrgId)
 
 	if err != nil {
 		s.log.Errorf("sendHistoryTx failed, %s", err)
@@ -179,7 +199,8 @@ func (s *ApiService) doSendHistoryTx(db protocol.BlockchainStore, server apiPb.R
 // sendNewTx - send new tx to subscriber
 func (s *ApiService) sendNewTx(store protocol.BlockchainStore, tx *commonPb.Transaction,
 	server apiPb.RpcNode_SubscribeServer, startBlock, endBlock int64, contractName string,
-	txIds []string, txIdsMap map[string]struct{}, alreadySendHistoryBlockHeight int64,
+	txIds []string, preAlias string, preTxId string, preOrgId string,
+	txIdsMap map[string]struct{}, alreadySendHistoryBlockHeight int64,
 	reqSender protocol.Role, reqSenderOrgId string) error {
 
 	var (
@@ -217,7 +238,9 @@ func (s *ApiService) sendNewTx(store protocol.BlockchainStore, tx *commonPb.Tran
 
 			if alreadySendHistoryBlockHeight < atomic.LoadInt64(&lastBlockHeight) {
 				alreadySendHistoryBlockHeight, err = s.sendHistoryTx(store, server, alreadySendHistoryBlockHeight+1,
-					endBlock, contractName, txIds, txIdsMap, reqSender, reqSenderOrgId)
+					endBlock, contractName, txIds,
+					preAlias, preTxId, preOrgId,
+					txIdsMap, reqSender, reqSenderOrgId)
 				if err != nil {
 					s.log.Errorf("send history block failed, %s", err)
 					return err
@@ -249,7 +272,9 @@ func (s *ApiService) sendNewTx(store protocol.BlockchainStore, tx *commonPb.Tran
 func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 	server apiPb.RpcNode_SubscribeServer,
 	startBlockHeight, endBlockHeight int64,
-	contractName string, txIds []string, txIdsMap map[string]struct{},
+	contractName string, txIds []string,
+	preAlias string, preTxId string, preOrgId string,
+	txIdsMap map[string]struct{},
 	reqSender protocol.Role, reqSenderOrgId string) (int64, error) {
 
 	var (
@@ -290,7 +315,9 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 				return i - 1, nil
 			}
 
-			if err := s.sendSubscribeTx(server, block.Txs, contractName, txIds, txIdsMap,
+			if err := s.sendSubscribeTx(server, block.Txs, contractName, txIds,
+				preAlias, preTxId, preOrgId,
+				txIdsMap,
 				reqSender, reqSenderOrgId); err != nil {
 				errMsg = fmt.Sprintf("send subscribe tx failed, %s", err)
 				s.log.Error(errMsg)
@@ -304,6 +331,7 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 
 func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 	txs []*commonPb.Transaction, contractName string, txIds []string,
+	preAlias string, preTxId string, preOrgId string,
 	txIdsMap map[string]struct{}, reqSender protocol.Role, reqSenderOrgId string) error {
 
 	var (
@@ -311,13 +339,35 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 	)
 
 	for _, tx := range txs {
-		if contractName == "" && len(txIds) == 0 {
+		if contractName == "" && len(txIds) == 0 &&
+			preAlias == "" && preTxId == "" && preOrgId == "" {
 			if err = s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
 				return err
 			}
 			continue
 		}
 
+		//preAlias
+		if len(preAlias) > 0 {
+			if err = s.handlePreAlias(server, tx, reqSender, reqSenderOrgId, preAlias); err != nil {
+				return err
+			}
+			continue
+		}
+		//preTxId
+		if len(preTxId) > 0 {
+			if err = s.handlePreTxId(server, tx, reqSender, reqSenderOrgId, preTxId); err != nil {
+				return err
+			}
+			continue
+		}
+		//preOrgId
+		if len(preOrgId) > 0 {
+			if err = s.handlePreOrgId(server, tx, reqSender, reqSenderOrgId, preOrgId); err != nil {
+				return err
+			}
+			continue
+		}
 		if s.checkIsContinue(tx, contractName, txIds, txIdsMap) {
 			continue
 		}
@@ -327,6 +377,71 @@ func (s *ApiService) sendSubscribeTx(server apiPb.RpcNode_SubscribeServer,
 		}
 	}
 
+	return nil
+}
+
+func (s *ApiService) handlePreAlias(server apiPb.RpcNode_SubscribeServer, tx *commonPb.Transaction,
+	reqSender protocol.Role, reqSenderOrgId string, preAlias string) error {
+	//创世区块中的配置交易，sender为空
+	if tx.Sender == nil || tx.Sender.Signer == nil || len(tx.Sender.Signer.OrgId) <= 0 {
+		s.log.Debugf("Alias matching failed," +
+			"The alias of the transaction sender was not found")
+		return nil
+	}
+	if tx.Sender.Signer.MemberType != pbac.MemberType_ALIAS {
+		s.log.Debugf("This transaction is not an alias transaction,MemberType=%s", tx.Sender.Signer.MemberType)
+		return nil
+	}
+	//创世区块中的配置交易，sender为空
+	if tx.Sender == nil || tx.Sender.Signer == nil || len(tx.Sender.Signer.MemberInfo) <= 0 {
+		s.log.Debugf("Alias matching failed," +
+			"The alias of the transaction sender was not found")
+		return nil
+	}
+	if strings.HasPrefix(string(tx.Sender.Signer.MemberInfo), preAlias) {
+		if err := s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
+			return err
+		}
+	} else {
+		s.log.Debugf("Alias matching failed，alias=[%v,%s], preAlias=[%s]",
+			tx.Sender.Signer.MemberInfo,
+			string(tx.Sender.Signer.MemberInfo),
+			preAlias)
+	}
+	return nil
+}
+
+func (s *ApiService) handlePreTxId(server apiPb.RpcNode_SubscribeServer, tx *commonPb.Transaction,
+	reqSender protocol.Role, reqSenderOrgId string, preTxId string) error {
+	if strings.HasPrefix(tx.Payload.TxId, preTxId) {
+		if err := s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
+			return err
+		}
+	} else {
+		s.log.Debugf("TxId matching failed，txId=[%s], preTxId=[%s]",
+			tx.Payload.TxId,
+			preTxId)
+	}
+	return nil
+}
+
+func (s *ApiService) handlePreOrgId(server apiPb.RpcNode_SubscribeServer, tx *commonPb.Transaction,
+	reqSender protocol.Role, reqSenderOrgId string, preOrgId string) error {
+	//创世区块中的配置交易，sender为空
+	if tx.Sender == nil || tx.Sender.Signer == nil || len(tx.Sender.Signer.OrgId) <= 0 {
+		s.log.Debugf("OrgId matching failed," +
+			"The organization id of the transaction sender was not found")
+		return nil
+	}
+	if strings.HasPrefix(tx.Sender.Signer.OrgId, preOrgId) {
+		if err := s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
+			return err
+		}
+	} else {
+		s.log.Debugf("OrgId matching failed，orgId=[%s], preOrgId=[%s]",
+			tx.Sender.Signer.OrgId,
+			preOrgId)
+	}
 	return nil
 }
 
