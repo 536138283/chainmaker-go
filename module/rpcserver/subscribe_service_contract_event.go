@@ -141,22 +141,24 @@ func (s *ApiService) doSendHistoryContractEvent(db protocol.BlockchainStore, ser
 		errCode         commonErr.ErrCode
 		lastBlockHeight int64
 	)
-
-	var startBlockHeight int64
-	if startBlock > startBlockHeight {
-		startBlockHeight = startBlock
+	if startBlock < 0 {
+		startBlock = 0
 	}
-
 	if lastBlockHeight, err = s.checkAndGetLastBlockHeight(db, startBlock); err != nil {
-		errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		return -1, status.Error(codes.Internal, errMsg)
+		if lastBlockHeight > 0 {
+			startBlock = lastBlockHeight
+			s.log.Warn("Set startBlock to the latestBlockHeight")
+		} else {
+			errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
+			errMsg = s.getErrMsg(errCode, err)
+			s.log.Error(errMsg)
+			return -1, status.Error(codes.Internal, errMsg)
+		}
 	}
 
 	// only send history contract event
 	if endBlock > 0 && endBlock <= lastBlockHeight {
-		_, err = s.sendHistoryContractEvent(db, server, startBlockHeight, endBlock, contractName, topic)
+		_, err = s.sendHistoryContractEvent(db, server, startBlock, endBlock, contractName, topic)
 
 		if err != nil {
 			s.log.Errorf("sendHistoryContractEvent failed, %s", err)
@@ -166,7 +168,7 @@ func (s *ApiService) doSendHistoryContractEvent(db protocol.BlockchainStore, ser
 		return 0, status.Error(codes.OK, "OK")
 	}
 
-	alreadySendHistoryBlockHeight, err := s.sendHistoryContractEvent(db, server, startBlockHeight, endBlock,
+	alreadySendHistoryBlockHeight, err := s.sendHistoryContractEvent(db, server, startBlock, endBlock,
 		contractName, topic)
 
 	if err != nil {
