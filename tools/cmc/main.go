@@ -16,6 +16,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/cert"
 	"chainmaker.org/chainmaker-go/tools/cmc/client"
 	commandutil "chainmaker.org/chainmaker-go/tools/cmc/command_util"
+	"chainmaker.org/chainmaker-go/tools/cmc/consensus"
 	"chainmaker.org/chainmaker-go/tools/cmc/console"
 	"chainmaker.org/chainmaker-go/tools/cmc/gas"
 	"chainmaker.org/chainmaker-go/tools/cmc/hibe"
@@ -58,6 +59,8 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(txpool.NewTxPoolCMD())
 	mainCmd.AddCommand(version.VersionCMD())
 	mainCmd.AddCommand(commandutil.NewUtilCMD())
+	mainCmd.AddCommand(consensus.NewConsensusCMD())
+
 	// 后续改成go-sdk
 	//mainCmd.AddCommand(payload.PayloadCMD())
 	//mainCmd.AddCommand(log.LogCMD())

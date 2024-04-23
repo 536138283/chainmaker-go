@@ -15,7 +15,7 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.2.4
 	chainmaker.org/chainmaker/net-liquid v1.1.2
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423064128-fc0c2b84bd37
-	chainmaker.org/chainmaker/protocol/v2 v2.3.5-0.20240407102340-f61c385c074e
+	chainmaker.org/chainmaker/protocol/v2 v2.3.5-0.20240422081833-9e2c922d11db
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.4
 	chainmaker.org/chainmaker/store/v2 v2.3.5
 	chainmaker.org/chainmaker/utils/v2 v2.3.4
@@ -61,7 +61,7 @@ require (
 )
 
 require (
-	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.3
+	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.4-0.20240423020850-3809d45898ef
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.4
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3
@@ -75,6 +75,7 @@ require (
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
+	google.golang.org/protobuf v1.27.1
 )
 
 replace (
