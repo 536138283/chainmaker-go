@@ -4,8 +4,9 @@ chainmaker.org/chainmaker/chainconf/v2 v2.3.3 h1:XKtEqaWHaXsk6CuxfMkYWJs+Mv1g6Cs
 chainmaker.org/chainmaker/chainconf/v2 v2.3.3/go.mod h1:CT7DqQuq8ISoLTIoY7u5SgRiPv5XzvqFvO2iZvYjTJA=
 chainmaker.org/chainmaker/common/v2 v2.3.0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/common/v2 v2.3.1/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
-chainmaker.org/chainmaker/common/v2 v2.3.3 h1:UUhT7hXWN7MGyrvEJiT+4pPejV0huxO0RaWESs9D0Q8=
 chainmaker.org/chainmaker/common/v2 v2.3.3/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
+chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423031928-680e04db0cb1 h1:TZiqhzx5Swj7+yDfe6Ck7jB6+tiUnBBw6ha0lTyrgxc=
+chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423031928-680e04db0cb1/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0 h1:7dn8fg1WC0SfnLpgrIFboT8un5F/CueMXuimtLifHd4=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0/go.mod h1:S8tZsTGHzLAHhdm8n+aXtTobIB938CwT6rcQhyvFCr0=
 chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.3 h1:SlOcwwZAhQtxRiv8b7CDb936yXci4ojEyxBwwsR5/PM=
@@ -28,8 +29,9 @@ chainmaker.org/chainmaker/localconf/v2 v2.3.0/go.mod h1:FsrIi0ts5Ba9MmRhg+j+dLAB
 chainmaker.org/chainmaker/localconf/v2 v2.3.1/go.mod h1:j9FLoNFgeunr3VGmi/F7H1IJ7A0GH0R8Ao45fCPGyw0=
 chainmaker.org/chainmaker/localconf/v2 v2.3.3 h1:ypoQK04IiH+so2B4SM6u6V8L7MWm/jOKgDvpq96jyMw=
 chainmaker.org/chainmaker/localconf/v2 v2.3.3/go.mod h1:gRPKmvNDcO6FJK9jXVZ79KfWV+GzGiGZGe73067oA8k=
-chainmaker.org/chainmaker/logger/v2 v2.3.0 h1:SuBA48m+OQ5HChX34j6eXk4o0uhXHi8Jfkrjf90U7rQ=
 chainmaker.org/chainmaker/logger/v2 v2.3.0/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
+chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240423061335-3ccc60a12181 h1:gnw3L5cMGqwSDsEcUVA4PqMRCdhl+L62v2LYX6oiFbo=
+chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240423061335-3ccc60a12181/go.mod h1:eckQS1RMRGNAPhpAXH97D2h1qsa2hNquauXchFEKxWI=
 chainmaker.org/chainmaker/lws v1.1.0/go.mod h1:H4kO5vkCy50+67S2Jv6NXH4DYFOW0W5QEnvyQa+H86E=
 chainmaker.org/chainmaker/lws v1.2.1 h1:xqbBOgpf+DBy3iiHVbOGfXbY8yHZSTw/3xa3KnQfdLs=
 chainmaker.org/chainmaker/lws v1.2.1/go.mod h1:CzzVcJywHPSmKa6ghuGHzzbP7VXPSyYjrMKRdKw3JMY=

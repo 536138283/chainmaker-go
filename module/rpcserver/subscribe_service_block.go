@@ -85,10 +85,15 @@ func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction, server apiP
 	}
 
 	if lastBlockHeight, err = s.checkAndGetLastBlockHeight(db, startBlock); err != nil {
-		errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		return status.Error(codes.Internal, errMsg)
+		if lastBlockHeight > 0 {
+			startBlock = lastBlockHeight
+			s.log.Warn("Set startBlock to the latestBlockHeight")
+		} else {
+			errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
+			errMsg = s.getErrMsg(errCode, err)
+			s.log.Error(errMsg)
+			return status.Error(codes.Internal, errMsg)
+		}
 	}
 
 	reqSender, err = s.getRoleFromTx(tx)
