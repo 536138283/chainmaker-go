@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.3
-	chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423031928-680e04db0cb1
+	chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423082926-e04b3c789015
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.0
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.3
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.0
@@ -14,7 +14,7 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.4
 	chainmaker.org/chainmaker/net-libp2p v1.2.4
 	chainmaker.org/chainmaker/net-liquid v1.1.2
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423064128-fc0c2b84bd37
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423085802-17ae02ada0d6
 	chainmaker.org/chainmaker/protocol/v2 v2.3.5-0.20240422081833-9e2c922d11db
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.5-0.20240422104846-34a0e46bfed5
 	chainmaker.org/chainmaker/store/v2 v2.3.5
