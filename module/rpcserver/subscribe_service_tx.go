@@ -401,14 +401,13 @@ func (s *ApiService) handlePreAlias(server apiPb.RpcNode_SubscribeServer, tx *co
 		if err := s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
 			return err
 		}
-		return nil
 	} else {
 		s.log.Debugf("Alias matching failed，alias=[%v,%s], preAlias=[%s]",
 			tx.Sender.Signer.MemberInfo,
 			string(tx.Sender.Signer.MemberInfo),
 			preAlias)
-		return nil
 	}
+	return nil
 }
 
 func (s *ApiService) handlePreTxId(server apiPb.RpcNode_SubscribeServer, tx *commonPb.Transaction,
@@ -417,13 +416,12 @@ func (s *ApiService) handlePreTxId(server apiPb.RpcNode_SubscribeServer, tx *com
 		if err := s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
 			return err
 		}
-		return nil
 	} else {
 		s.log.Debugf("TxId matching failed，txId=[%s], preTxId=[%s]",
 			tx.Payload.TxId,
 			preTxId)
-		return nil
 	}
+	return nil
 }
 
 func (s *ApiService) handlePreOrgId(server apiPb.RpcNode_SubscribeServer, tx *commonPb.Transaction,
@@ -438,13 +436,12 @@ func (s *ApiService) handlePreOrgId(server apiPb.RpcNode_SubscribeServer, tx *co
 		if err := s.doSendSubscribeTx(server, tx, reqSender, reqSenderOrgId); err != nil {
 			return err
 		}
-		return nil
 	} else {
 		s.log.Debugf("OrgId matching failed，orgId=[%s], preOrgId=[%s]",
 			tx.Sender.Signer.OrgId,
 			preOrgId)
-		return nil
 	}
+	return nil
 }
 
 func (s *ApiService) doSendSubscribeTx(server apiPb.RpcNode_SubscribeServer, tx *commonPb.Transaction,
