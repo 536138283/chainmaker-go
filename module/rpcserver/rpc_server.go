@@ -68,7 +68,6 @@ const (
 // TLS Mode
 const (
 	TLS_MODE_DISABLE = "disable"
-	TLS_MODE_ONEWAY  = "oneway"
 	TLS_MODE_TWOWAY  = "twoway"
 )
 
