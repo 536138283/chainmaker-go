@@ -51,7 +51,9 @@ type ApiService struct {
 	metricQueryCounter          *prometheus.CounterVec
 	metricInvokeCounter         *prometheus.CounterVec
 	metricInvokeTxSizeHistogram *prometheus.HistogramVec
-	ctx                         context.Context
+	metricQueryContractCounter  *prometheus.CounterVec
+
+	ctx context.Context
 }
 
 // NewApiService - new ApiService object
@@ -86,6 +88,14 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		apiService.metricQueryCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_query_request_counter",
 			"query request counts metric", "chainId", "state")
+		apiService.metricQueryContractCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER,
+			"metric_query_contract_request_counter",
+			"query contract request counts metric",
+			"chainId",
+			"contractName",
+			"method",
+			"timeStamp",
+			"state")
 		apiService.metricInvokeCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_invoke_request_counter",
 			"invoke request counts metric", "chainId", "state")
 		apiService.metricInvokeTxSizeHistogram = monitor.NewHistogramVec(
@@ -375,8 +385,18 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
+			s.metricQueryContractCounter.WithLabelValues(chainId,
+				tx.Payload.ContractName,
+				tx.Payload.Method,
+				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
+				"true").Inc()
 		} else {
 			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
+			s.metricQueryContractCounter.WithLabelValues(chainId,
+				tx.Payload.ContractName,
+				tx.Payload.Method,
+				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
+				"true").Inc()
 		}
 	}
 	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
