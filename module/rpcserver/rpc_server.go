@@ -114,7 +114,6 @@ func (s *RPCServer) Start() error {
 	var (
 		err       error
 		tlsConfig *cmtls.Config
-		caCerts   []string
 	)
 
 	s.ctx, s.cancel = context.WithCancel(context.Background())
@@ -122,6 +121,36 @@ func (s *RPCServer) Start() error {
 	s.isShutdown = false
 
 	// check chainconf trust roots change if TLS is twoway or oneway
+	err = s.checkAndReloadChainConfTrustRoots()
+	if err != nil {
+		return err
+	}
+
+	if err = s.RegisterHandler(); err != nil {
+		return fmt.Errorf("register handler failed, %s", err.Error())
+	}
+
+	err = s.configureTLS(tlsConfig)
+	if err != nil {
+		return err
+	}
+
+	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
+		localconf.ChainMakerConfig.RpcConfig.Port)
+	conn, err := net.Listen("tcp", endPoint)
+	if err != nil {
+		return fmt.Errorf("TCP listen failed, %s", err.Error())
+	}
+
+	go s.startServer(conn, tlsConfig)
+
+	s.log.Infof("gRPC server listen on %s", endPoint)
+
+	return nil
+}
+
+func (s *RPCServer) checkAndReloadChainConfTrustRoots() error {
+	var err error
 	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 		if s.curChainConfTrustRootsHash == "" {
 			s.curChainConfTrustRootsHash, err = s.getCurChainConfTrustRootsHash()
@@ -134,16 +163,16 @@ func (s *RPCServer) Start() error {
 			s.log.Debugf("[START] current chain config trust roots hash: %s", s.curChainConfTrustRootsHash)
 		}
 	}
+	return nil
+}
 
-	if err = s.RegisterHandler(); err != nil {
-		return fmt.Errorf("register handler failed, %s", err.Error())
-	}
-
+func (s *RPCServer) configureTLS(tlsConfig *cmtls.Config) error {
+	var err error
+	var caCerts []string
 	if strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.PermissionedWithKey ||
 		strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.Public {
 		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
-				var caCerts []string
 				for _, certFile := range localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaCertFiles {
 					certPEMBlock, err := os.ReadFile(certFile)
 					if err != nil {
@@ -198,30 +227,21 @@ func (s *RPCServer) Start() error {
 		}
 
 	}
-
-	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
-		localconf.ChainMakerConfig.RpcConfig.Port)
-	conn, err := net.Listen("tcp", endPoint)
-	if err != nil {
-		return fmt.Errorf("TCP listen failed, %s", err.Error())
-	}
-
-	go func() {
-		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_DISABLE {
-			err = s.mixServer.Serve(conn)
-		} else {
-			err = s.mixServer.Serve(ca.NewTLSListener(conn, tlsConfig))
-		}
-		if err == http.ErrServerClosed {
-			s.log.Info("RPCServer http closed")
-		} else {
-			s.log.Errorf("RPCServer http serve failed, %s", err.Error())
-		}
-	}()
-
-	s.log.Infof("gRPC server listen on %s", endPoint)
-
 	return nil
+}
+
+func (s *RPCServer) startServer(conn net.Listener, tlsConfig *cmtls.Config) {
+	var err error
+	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_DISABLE {
+		err = s.mixServer.Serve(conn)
+	} else {
+		err = s.mixServer.Serve(ca.NewTLSListener(conn, tlsConfig))
+	}
+	if err == http.ErrServerClosed {
+		s.log.Info("RPCServer http closed")
+	} else {
+		s.log.Errorf("RPCServer http serve failed, %s", err.Error())
+	}
 }
 
 // RegisterHandler - register apiservice handler to rpcserver
