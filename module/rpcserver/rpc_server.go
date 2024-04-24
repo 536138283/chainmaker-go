@@ -174,7 +174,8 @@ func (s *RPCServer) configureTLS(tlsConfig *cmtls.Config) error {
 		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
 				for _, certFile := range localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaCertFiles {
-					certPEMBlock, err := os.ReadFile(certFile)
+					var certPEMBlock []byte
+					certPEMBlock, err = os.ReadFile(certFile)
 					if err != nil {
 						log.Warnf("read file(%s) err, %v", certFile, err)
 					}
