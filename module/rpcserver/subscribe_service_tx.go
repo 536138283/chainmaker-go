@@ -150,20 +150,24 @@ func (s *ApiService) doSendHistoryTx(db protocol.BlockchainStore, server apiPb.R
 		lastBlockHeight int64
 	)
 
-	var startBlockHeight int64
-	if startBlock > startBlockHeight {
-		startBlockHeight = startBlock
+	if startBlock < 0 {
+		startBlock = 0
 	}
 
 	if lastBlockHeight, err = s.checkAndGetLastBlockHeight(db, startBlock); err != nil {
-		errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		return -1, status.Error(codes.Internal, errMsg)
+		if lastBlockHeight > 0 {
+			startBlock = lastBlockHeight
+			s.log.Warn("Set startBlock to the latestBlockHeight")
+		} else {
+			errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
+			errMsg = s.getErrMsg(errCode, err)
+			s.log.Error(errMsg)
+			return -1, status.Error(codes.Internal, errMsg)
+		}
 	}
 
 	if endBlock != -1 && endBlock <= lastBlockHeight {
-		_, err = s.sendHistoryTx(db, server, startBlockHeight, endBlock, contractName,
+		_, err = s.sendHistoryTx(db, server, startBlock, endBlock, contractName,
 			txIds, preAlias, preTxId, preOrgId,
 			txIdsMap, reqSender, reqSenderOrgId)
 
@@ -179,7 +183,7 @@ func (s *ApiService) doSendHistoryTx(db protocol.BlockchainStore, server apiPb.R
 		return 0, status.Error(codes.OK, "OK")
 	}
 
-	alreadySendHistoryBlockHeight, err := s.sendHistoryTx(db, server, startBlockHeight, endBlock, contractName,
+	alreadySendHistoryBlockHeight, err := s.sendHistoryTx(db, server, startBlock, endBlock, contractName,
 		txIds, preAlias, preTxId, preOrgId, txIdsMap, reqSender, reqSenderOrgId)
 
 	if err != nil {
