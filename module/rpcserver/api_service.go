@@ -88,8 +88,14 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		apiService.metricQueryCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_query_request_counter",
 			"query request counts metric", "chainId", "state")
-		apiService.metricQueryContractCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_query_contract_request_counter",
-			"query contract request counts metric", "chainId", "contractName", "method", "timeStamp", "state")
+		apiService.metricQueryContractCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER,
+			"metric_query_contract_request_counter",
+			"query contract request counts metric",
+			"chainId",
+			"contractName",
+			"method",
+			"timeStamp",
+			"state")
 		apiService.metricInvokeCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_invoke_request_counter",
 			"invoke request counts metric", "chainId", "state")
 		apiService.metricInvokeTxSizeHistogram = monitor.NewHistogramVec(
