@@ -129,7 +129,7 @@ func (s *RPCServer) Start() error {
 		return fmt.Errorf("register handler failed, %s", err.Error())
 	}
 
-	err = s.configureTLS(tlsConfig)
+	tlsConfig, err = s.configureTLS()
 	if err != nil {
 		return err
 	}
@@ -165,7 +165,8 @@ func (s *RPCServer) checkAndReloadChainConfTrustRoots() error {
 	return nil
 }
 
-func (s *RPCServer) configureTLS(tlsConfig *cmtls.Config) error {
+func (s *RPCServer) configureTLS() (*cmtls.Config, error) {
+	var tlsConfig *cmtls.Config
 	var err error
 	var caCerts []string
 	if strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.PermissionedWithKey ||
@@ -189,7 +190,7 @@ func (s *RPCServer) configureTLS(tlsConfig *cmtls.Config) error {
 
 			if err != nil {
 				log.Errorf("GetTLSConfig, failed, %s", err.Error())
-				return err
+				return nil, err
 			}
 
 			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
@@ -201,7 +202,7 @@ func (s *RPCServer) configureTLS(tlsConfig *cmtls.Config) error {
 			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
 				caCerts, err = getCACerts(s.chainMakerServer)
 				if err != nil {
-					return err
+					return nil, err
 				}
 			}
 
@@ -212,7 +213,7 @@ func (s *RPCServer) configureTLS(tlsConfig *cmtls.Config) error {
 
 			if err != nil {
 				log.Errorf("GetTLSConfig, failed, %s", err.Error())
-				return err
+				return nil, err
 			}
 
 			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
@@ -220,14 +221,14 @@ func (s *RPCServer) configureTLS(tlsConfig *cmtls.Config) error {
 				acs, err = s.chainMakerServer.GetAllAC()
 				if err != nil {
 					log.Errorf("get all AccessControlProvider failed, %s", err.Error())
-					return err
+					return nil, err
 				}
 				tlsConfig.VerifyPeerCertificate = createMixVerifyPeerCertificateFunc(acs, s.log)
 			}
 		}
 
 	}
-	return nil
+	return tlsConfig, nil
 }
 
 func (s *RPCServer) startServer(conn net.Listener, tlsConfig *cmtls.Config) {
