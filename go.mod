@@ -62,7 +62,7 @@ require (
 
 require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.4-0.20240423020850-3809d45898ef
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.4
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.5-0.20240425123203-84ce336ee05f
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.3
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.3
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.3
