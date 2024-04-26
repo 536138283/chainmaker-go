@@ -43,6 +43,7 @@ BUILD_CONFIG_PATH=${BUILD_PATH}/config
 CRYPTOGEN_TOOL_PATH=${PROJECT_PATH}/tools/chainmaker-cryptogen
 CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/pk_config_template.yml
+CRYPTOGEN_TLS_CONF=${CRYPTOGEN_TOOL_PATH}/config/pk_tls_config_template.yml
 #CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
 
 function show_help() {
@@ -164,6 +165,21 @@ function generate_keys() {
     xsed "s%count: 4%count: ${NODE_CNT}%g" crypto_config.yml
 
     ${CRYPTOGEN_TOOL_BIN} generate-pk -c ./crypto_config.yml #-p ./pkcs11_keys.yml
+}
+
+function generate_tls() {
+
+    cd "${BUILD_PATH}"
+
+    cp $CRYPTOGEN_TLS_CONF crypto_tls_config.yml
+    xsed "s%count: n%count: ${NODE_CNT}%g" crypto_tls_config.yml
+
+    ${CRYPTOGEN_TOOL_BIN} generate -c ./crypto_tls_config.yml
+
+    find "./crypto-config/wx-org.chainmaker.org" -type f -name "*.sign.*" -exec rm -f {} \;
+    find "./crypto-config/wx-org.chainmaker.org" -depth  -type d -name "vm" -exec rm -rf {} \;
+    find "./crypto-config/wx-org.chainmaker.org" -type f -name "*.addr" -exec rm -f {} \;
+    find "./crypto-config/wx-org.chainmaker.org" -type f -name "*.nodeid" -exec rm -f {} \;
 }
 
 function generate_config() {
@@ -391,3 +407,4 @@ function generate_config() {
 check_params
 generate_keys
 generate_config $@
+generate_tls

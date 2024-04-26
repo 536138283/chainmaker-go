@@ -60,8 +60,19 @@ function package() {
 
     c=0
     dirNames[0]=""
+    file1=""
     for file in `ls -v $BUILD_CRYPTO_CONFIG_PATH`
     do
+        if [ "$file1" == "" ]
+        then
+            file1="$file"
+        else
+            # 提取字符串的前四个字符进行比较
+            if [ "${file1:0:4}" != "${file:0:4}" ]
+            then
+                continue
+            fi
+        fi
         chainmaker_file=chainmaker-$VERSION-$file
         dirNames[$c]=$chainmaker_file
         c=$(($c+1))
