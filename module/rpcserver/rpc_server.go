@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -67,7 +68,6 @@ const (
 // TLS Mode
 const (
 	TLS_MODE_DISABLE = "disable"
-	TLS_MODE_ONEWAY  = "oneway"
 	TLS_MODE_TWOWAY  = "twoway"
 )
 
@@ -113,7 +113,6 @@ func (s *RPCServer) Start() error {
 	var (
 		err       error
 		tlsConfig *cmtls.Config
-		caCerts   []string
 	)
 
 	s.ctx, s.cancel = context.WithCancel(context.Background())
@@ -121,6 +120,36 @@ func (s *RPCServer) Start() error {
 	s.isShutdown = false
 
 	// check chainconf trust roots change if TLS is twoway or oneway
+	err = s.checkAndReloadChainConfTrustRoots()
+	if err != nil {
+		return err
+	}
+
+	if err = s.RegisterHandler(); err != nil {
+		return fmt.Errorf("register handler failed, %s", err.Error())
+	}
+
+	tlsConfig, err = s.configureTLS()
+	if err != nil {
+		return err
+	}
+
+	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
+		localconf.ChainMakerConfig.RpcConfig.Port)
+	conn, err := net.Listen("tcp", endPoint)
+	if err != nil {
+		return fmt.Errorf("TCP listen failed, %s", err.Error())
+	}
+
+	go s.startServer(conn, tlsConfig)
+
+	s.log.Infof("gRPC server listen on %s", endPoint)
+
+	return nil
+}
+
+func (s *RPCServer) checkAndReloadChainConfTrustRoots() error {
+	var err error
 	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 		if s.curChainConfTrustRootsHash == "" {
 			s.curChainConfTrustRootsHash, err = s.getCurChainConfTrustRootsHash()
@@ -133,63 +162,87 @@ func (s *RPCServer) Start() error {
 			s.log.Debugf("[START] current chain config trust roots hash: %s", s.curChainConfTrustRootsHash)
 		}
 	}
-
-	if err = s.RegisterHandler(); err != nil {
-		return fmt.Errorf("register handler failed, %s", err.Error())
-	}
-
-	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
-		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
-			caCerts, err = getCACerts(s.chainMakerServer)
-			if err != nil {
-				return err
-			}
-		}
-
-		tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
-			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts,
-			localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertEncFile,
-			localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivEncKeyFile)
-
-		if err != nil {
-			log.Errorf("GetTLSConfig, failed, %s", err.Error())
-			return err
-		}
-
-		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
-			var acs []protocol.AccessControlProvider
-			acs, err = s.chainMakerServer.GetAllAC()
-			if err != nil {
-				log.Errorf("get all AccessControlProvider failed, %s", err.Error())
-				return err
-			}
-			tlsConfig.VerifyPeerCertificate = createMixVerifyPeerCertificateFunc(acs, s.log)
-		}
-	}
-
-	endPoint := fmt.Sprintf("%s:%d", localconf.ChainMakerConfig.RpcConfig.Host,
-		localconf.ChainMakerConfig.RpcConfig.Port)
-	conn, err := net.Listen("tcp", endPoint)
-	if err != nil {
-		return fmt.Errorf("TCP listen failed, %s", err.Error())
-	}
-
-	go func() {
-		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_DISABLE {
-			err = s.mixServer.Serve(conn)
-		} else {
-			err = s.mixServer.Serve(ca.NewTLSListener(conn, tlsConfig))
-		}
-		if err == http.ErrServerClosed {
-			s.log.Info("RPCServer http closed")
-		} else {
-			s.log.Errorf("RPCServer http serve failed, %s", err.Error())
-		}
-	}()
-
-	s.log.Infof("gRPC server listen on %s", endPoint)
-
 	return nil
+}
+
+func (s *RPCServer) configureTLS() (*cmtls.Config, error) {
+	var tlsConfig *cmtls.Config
+	var err error
+	var caCerts []string
+	if strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.PermissionedWithKey ||
+		strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.Public {
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+				for _, certFile := range localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaCertFiles {
+					var certPEMBlock []byte
+					certPEMBlock, err = os.ReadFile(certFile)
+					if err != nil {
+						log.Warnf("read file(%s) err, %v", certFile, err)
+					}
+					caCerts = append(caCerts, string(certPEMBlock))
+				}
+				log.Debug("caCerts=", caCerts)
+			}
+			tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertEncFile,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivEncKeyFile)
+
+			if err != nil {
+				log.Errorf("GetTLSConfig, failed, %s", err.Error())
+				return nil, err
+			}
+
+			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+				tlsConfig.VerifyPeerCertificate = nil
+			}
+		}
+	} else { //Cert
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+				caCerts, err = getCACerts(s.chainMakerServer)
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			tlsConfig, err = ca.GetTLSConfig(localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile, []string{}, caCerts,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertEncFile,
+				localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivEncKeyFile)
+
+			if err != nil {
+				log.Errorf("GetTLSConfig, failed, %s", err.Error())
+				return nil, err
+			}
+
+			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+				var acs []protocol.AccessControlProvider
+				acs, err = s.chainMakerServer.GetAllAC()
+				if err != nil {
+					log.Errorf("get all AccessControlProvider failed, %s", err.Error())
+					return nil, err
+				}
+				tlsConfig.VerifyPeerCertificate = createMixVerifyPeerCertificateFunc(acs, s.log)
+			}
+		}
+
+	}
+	return tlsConfig, nil
+}
+
+func (s *RPCServer) startServer(conn net.Listener, tlsConfig *cmtls.Config) {
+	var err error
+	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_DISABLE {
+		err = s.mixServer.Serve(conn)
+	} else {
+		err = s.mixServer.Serve(ca.NewTLSListener(conn, tlsConfig))
+	}
+	if err == http.ErrServerClosed {
+		s.log.Info("RPCServer http closed")
+	} else {
+		s.log.Errorf("RPCServer http serve failed, %s", err.Error())
+	}
 }
 
 // RegisterHandler - register apiservice handler to rpcserver
@@ -359,50 +412,82 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 	if strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.PermissionedWithKey ||
 		strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.Public {
 		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
-			localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode = TLS_MODE_DISABLE
-			log.Infof("the tls mode has been automatically set to [disable] according to the authType:[%s]",
-				localconf.ChainMakerConfig.AuthType)
-		}
-	}
+			var caCerts []string
+			for _, certFile := range localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaCertFiles {
+				certPEMBlock, err := os.ReadFile(certFile)
+				if err != nil {
+					log.Warnf("read file(%s) err, %v", certFile, err)
+				}
+				caCerts = append(caCerts, string(certPEMBlock))
+			}
+			log.Debug("caCerts=", caCerts)
+			tlsRPCServer := ca.CAServer{
+				CaCerts:  caCerts,
+				CertFile: localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+				KeyFile:  localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
+				Logger:   log,
+			}
 
-	if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+			checkClientAuth := false
+			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+				checkClientAuth = true
+				log.Infof("need check client auth")
+			}
+			customVerify := ca.CustomVerify{
+				VerifyPeerCertificate:   nil,
+				GMVerifyPeerCertificate: nil,
+			}
 
-		caCerts, err := getCACerts(chainMakerServer)
-		if err != nil {
-			return nil, err
-		}
+			c, err := tlsRPCServer.GetCredentialsByCA(checkClientAuth, customVerify)
+			if err != nil {
+				log.Errorf("new gRPC failed, GetTLSCredentialsByCA err: %v", err)
+				return nil, err
+			}
 
-		tlsRPCServer := ca.CAServer{
-			CaCerts:  caCerts,
-			CertFile: localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
-			KeyFile:  localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
-			Logger:   log,
-		}
-
-		checkClientAuth := false
-		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
-			checkClientAuth = true
-			log.Infof("need check client auth")
-		}
-
-		acs, err := chainMakerServer.GetAllAC()
-		if err != nil {
-			log.Errorf("get all AccessControlProvider failed, %s", err.Error())
-			return nil, err
-		}
-
-		customVerify := ca.CustomVerify{
-			VerifyPeerCertificate:   createVerifyPeerCertificateFunc(acs),
-			GMVerifyPeerCertificate: createGMVerifyPeerCertificateFunc(acs),
+			opts = append(opts, grpc.Creds(*c))
 		}
 
-		c, err := tlsRPCServer.GetCredentialsByCA(checkClientAuth, customVerify)
-		if err != nil {
-			log.Errorf("new gRPC failed, GetTLSCredentialsByCA err: %v", err)
-			return nil, err
+	} else { //Cert
+		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
+
+			caCerts, err := getCACerts(chainMakerServer)
+			if err != nil {
+				return nil, err
+			}
+
+			tlsRPCServer := ca.CAServer{
+				CaCerts:  caCerts,
+				CertFile: localconf.ChainMakerConfig.RpcConfig.TLSConfig.CertFile,
+				KeyFile:  localconf.ChainMakerConfig.RpcConfig.TLSConfig.PrivKeyFile,
+				Logger:   log,
+			}
+
+			checkClientAuth := false
+			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
+				checkClientAuth = true
+				log.Infof("need check client auth")
+			}
+
+			acs, err := chainMakerServer.GetAllAC()
+			if err != nil {
+				log.Errorf("get all AccessControlProvider failed, %s", err.Error())
+				return nil, err
+			}
+
+			customVerify := ca.CustomVerify{
+				VerifyPeerCertificate:   createVerifyPeerCertificateFunc(acs),
+				GMVerifyPeerCertificate: createGMVerifyPeerCertificateFunc(acs),
+			}
+
+			c, err := tlsRPCServer.GetCredentialsByCA(checkClientAuth, customVerify)
+			if err != nil {
+				log.Errorf("new gRPC failed, GetTLSCredentialsByCA err: %v", err)
+				return nil, err
+			}
+
+			opts = append(opts, grpc.Creds(*c))
 		}
 
-		opts = append(opts, grpc.Creds(*c))
 	}
 
 	opts = append(opts, grpc.MaxSendMsgSize(localconf.ChainMakerConfig.RpcConfig.MaxSendMsgSize))

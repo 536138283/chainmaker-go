@@ -28,8 +28,9 @@ chainmaker.org/chainmaker/libp2p-pubsub v1.1.4 h1:vMrNf9gg1XyM6c1N9ErzqDwfVaXuKr
 chainmaker.org/chainmaker/libp2p-pubsub v1.1.4/go.mod h1:qzJIZh87I7JIfqbQE7PSnRBt4uthqrab1QWclTkRSi4=
 chainmaker.org/chainmaker/localconf/v2 v2.3.0/go.mod h1:FsrIi0ts5Ba9MmRhg+j+dLAB9oGyVTQsPgjSA39Ql+k=
 chainmaker.org/chainmaker/localconf/v2 v2.3.1/go.mod h1:j9FLoNFgeunr3VGmi/F7H1IJ7A0GH0R8Ao45fCPGyw0=
-chainmaker.org/chainmaker/localconf/v2 v2.3.3 h1:ypoQK04IiH+so2B4SM6u6V8L7MWm/jOKgDvpq96jyMw=
 chainmaker.org/chainmaker/localconf/v2 v2.3.3/go.mod h1:gRPKmvNDcO6FJK9jXVZ79KfWV+GzGiGZGe73067oA8k=
+chainmaker.org/chainmaker/localconf/v2 v2.3.4-0.20240424092943-b0626805e5db h1:3UNXRPMmwdH+mXVDizxSV89LOEsQzI/QyBugfnWrebM=
+chainmaker.org/chainmaker/localconf/v2 v2.3.4-0.20240424092943-b0626805e5db/go.mod h1:gRPKmvNDcO6FJK9jXVZ79KfWV+GzGiGZGe73067oA8k=
 chainmaker.org/chainmaker/logger/v2 v2.3.0/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
 chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240419062408-c8fdf07a669f/go.mod h1:kmHXCIBl9833c0UO+G4GKAifbhqhNdiL4f5dDsR+Vks=
 chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240423061335-3ccc60a12181 h1:gnw3L5cMGqwSDsEcUVA4PqMRCdhl+L62v2LYX6oiFbo=
