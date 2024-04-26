@@ -68,6 +68,7 @@ type BlockProposerImpl struct {
 	finishProposeC chan bool // channel to receive signal to yield propose block
 
 	metricBlockPackageTime *prometheus.HistogramVec
+	metricRandomAttackTime *prometheus.CounterVec
 	proposer               *pbac.Member
 
 	blockBuilder *common.BlockBuilder
@@ -157,6 +158,14 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 	}
 
 	blockProposerImpl.blockBuilder = common.NewBlockBuilder(bbConf)
+
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		//chainId,height,txInfo,timeStamp
+		blockProposerImpl.metricRandomAttackTime = monitor.NewCounterVec(monitor.SUBSYSTEM_CORE_PROPOSER,
+			"metric_random_tx_attack",
+			"Total number of random tx attack",
+			"chainId", "height", "txId", "contractName", "method", "timeStamp")
+	}
 
 	return blockProposerImpl, nil
 }
@@ -481,6 +490,19 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 	common.RetryAndRemoveTxs(bp.txPool, retryTxs,
 		removeTxs, bp.log)
 	bp.proposalCache.ClearProposedBlockAt(height)
+
+	txs, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
+	for _, tx := range txs {
+		bp.log.Warnf("<METRIC> delete random Tx,chainId:%s, height:%d, "+
+			"txId:%s, contractName:%s, method:%s, timeStamp:%d",
+			bp.chainId, rwSetVerifyFailTxs.BlockHeight,
+			tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
+
+		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+			bp.metricRandomAttackTime.WithLabelValues(bp.chainId, fmt.Sprint(rwSetVerifyFailTxs.BlockHeight),
+				tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, fmt.Sprint(utils.CurrentTimeMillisSeconds())).Inc()
+		}
+	}
 }
 
 // yieldProposing, to yield proposing handle
