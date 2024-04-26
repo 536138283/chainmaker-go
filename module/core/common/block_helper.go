@@ -46,7 +46,7 @@ var (
 
 const (
 	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
-	//blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
+	// BlockSig blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
 	BlockSig            = "blockSig"
 	VM                  = "vm"
 	TxVerify            = "txVerify"
@@ -910,6 +910,7 @@ type BlockCommitterImpl struct {
 
 	mTxCount     uint64 // store tx total count for persistent
 	mBlockHeight uint64 // store latest block height for persistent
+	metricMethodInvokeCount *prometheus.CounterVec // metric method invoke count after commit block
 }
 
 type BlockCommitterConfig struct {
@@ -1563,6 +1564,14 @@ func (chain *BlockCommitterImpl) initMetrics() {
 		monitor.HelpTpsGaugeMetric,
 		monitor.ChainId,
 	)
+	chain.metricMethodInvokeCount = monitor.NewCounterVec(
+		monitor.SUBSYSTEM_CORE_COMMITTER,
+		monitor.MetricTxCounter, // todo
+		monitor.HelpTxCountsMetric, // todo
+		MetricChainId,
+		MetricContractName,
+		"method", //todo
+	)
 
 	localDb := chain.blockchainStore.GetDBHandle("")
 	// init tx counter metric
@@ -1613,6 +1622,14 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 	chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
 	chain.metricTpsGauge.WithLabelValues(chain.chainId).
 		Set(float64(bi.Block.Header.TxCount) / (float64(interval) / 1000))
+
+	// todo 新增一个埋点，统计一个执行某个合约、方法的调用
+	for _, tx := range bi.Block.Txs {
+		chain.metricMethodInvokeCount.WithLabelValues(
+			bi.Block.Header.ChainId,
+			tx.Payload.ContractName,
+			tx.Payload.Method).Inc()
+	}
 
 	// persist metrics to local db
 	localDb := chain.blockchainStore.GetDBHandle("")
