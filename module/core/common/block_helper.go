@@ -1566,11 +1566,11 @@ func (chain *BlockCommitterImpl) initMetrics() {
 	)
 	chain.metricMethodInvokeCount = monitor.NewCounterVec(
 		SUBSYSTEM_CORE_COMMITTER,
-		MetricTxCounter,
-		HelpTxCountsMetric,
+		MetricMethodInvokeCounter,
+		HelpMethodInvokeCountsMetric,
 		MetricChainId,
 		MetricContractName,
-		MetricContractmethod,
+		MetricContractMethod,
 	)
 
 	localDb := chain.blockchainStore.GetDBHandle("")
