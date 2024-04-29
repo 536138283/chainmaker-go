@@ -172,6 +172,11 @@ function generate_keys() {
 
 function generate_tls() {
 
+    if [ ! -f "$CRYPTOGEN_TLS_CONF" ]; then
+        echo "WARN:File $CRYPTOGEN_TLS_CONF does not exist.Unable to generate tls certificate."
+        return 0
+    fi
+
     cd "${BUILD_PATH}"
 
     cp $CRYPTOGEN_TLS_CONF crypto_tls_config.yml
