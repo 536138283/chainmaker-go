@@ -33,6 +33,9 @@ RPC_PORT=$4
 VM_GO_RUNTIME_PORT=$5
 VM_GO_ENGINE_PORT=$6
 
+CLIENT_CNT=5
+DOMAIN=chainmaker.org
+HOST_NAME=wx-org
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
 BUILD_PATH=${PROJECT_PATH}/build
@@ -176,10 +179,29 @@ function generate_tls() {
 
     ${CRYPTOGEN_TOOL_BIN} generate -c ./crypto_tls_config.yml
 
-    find "./crypto-config/wx-org.chainmaker.org" -type f -name "*.sign.*" -exec rm -f {} \;
-    find "./crypto-config/wx-org.chainmaker.org" -depth  -type d -name "vm" -exec rm -rf {} \;
-    find "./crypto-config/wx-org.chainmaker.org" -type f -name "*.addr" -exec rm -f {} \;
-    find "./crypto-config/wx-org.chainmaker.org" -type f -name "*.nodeid" -exec rm -f {} \;
+    #ca
+    for ((i = 1;  i <= $NODE_CNT; i = i + 1)); do         #node$i
+           for ((j = 1;  j <= $NODE_CNT; j = j + 1)); do  #wx-org$j
+                  mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/ca/$HOST_NAME$j.$DOMAIN/"
+                  cp -rf "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$j.$DOMAIN/ca" "$BUILD_CRYPTO_CONFIG_PATH/node$i/ca/$HOST_NAME$j.$DOMAIN/"
+           done
+
+           #node
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.sign.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.sign.crt"
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.sign.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.sign.key"
+
+           #client
+            for ((k = 1;  k <= ${CLIENT_CNT}; k = k + 1)); do  #client$k
+                 mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.sign.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.sign.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+            done
+    done
+
+    for ((i = 1;  i <= $NODE_CNT; i = i + 1)); do
+        rm -rf "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/"
+    done
+
 }
 
 function generate_config() {
@@ -406,5 +428,6 @@ function generate_config() {
 
 check_params
 generate_keys
-generate_config $@
 generate_tls
+generate_config $@
+
