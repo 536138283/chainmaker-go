@@ -9,8 +9,10 @@ package rpcserver
 
 import (
 	"context"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
@@ -52,6 +54,7 @@ type ApiService struct {
 	metricInvokeCounter         *prometheus.CounterVec
 	metricInvokeTxSizeHistogram *prometheus.HistogramVec
 	metricQueryContractCounter  *prometheus.CounterVec
+	metricTxInvokeIllegal       *prometheus.CounterVec
 
 	ctx context.Context
 }
@@ -102,6 +105,9 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 			monitor.SUBSYSTEM_RPCSERVER, "metric_invoke_tx_size_histogram",
 			"invoke tx size histogram metric", prometheus.ExponentialBuckets(1024, 2, 12),
 			"chainId", "state")
+		apiService.metricTxInvokeIllegal = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_tx_invoke_illegal",
+			"Total number of tx invoke illegal",
+			"chainId", "timeStamp", "txId", "signerMemberInfo")
 	}
 
 	return &apiService
@@ -202,6 +208,18 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 			errMsg += fmt.Sprintf("%s ", endorser.Signer.MemberInfo)
 		}
 		s.log.Error(errMsg)
+		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+			if strings.Contains(err.Error(), "verify tx authentation failed") {
+				sender := hex.EncodeToString(tx.Sender.Signer.MemberInfo)
+				//交易发起者身份不合法 chainId,timeStamp,txId,signerMemberInfo
+				s.log.Warnf("<METRIC> verify tx authentation failed, chainId:%s, timeStamp:%d, txId:%s, signerMemberInfo:%s",
+					tx.Payload.ChainId, utils.CurrentTimeMillisSeconds(), tx.Payload.TxId, sender)
+
+				s.metricTxInvokeIllegal.WithLabelValues(tx.Payload.ChainId, fmt.Sprint(utils.CurrentTimeMillisSeconds()),
+					tx.Payload.TxId, sender).Inc()
+			}
+
+		}
 		return
 	}
 

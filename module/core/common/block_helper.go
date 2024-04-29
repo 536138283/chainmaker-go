@@ -46,7 +46,7 @@ var (
 
 const (
 	DEFAULTDURATION = 1000 // default proposal duration, millis seconds
-	//blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
+	// BlockSig blockSig:%d,vm:%d,txVerify:%d,txRoot:%d
 	BlockSig            = "blockSig"
 	VM                  = "vm"
 	TxVerify            = "txVerify"
@@ -908,8 +908,9 @@ type BlockCommitterImpl struct {
 	storeHelper             conf.StoreHelper
 	blockInterval           int64
 
-	mTxCount     uint64 // store tx total count for persistent
-	mBlockHeight uint64 // store latest block height for persistent
+	mTxCount                uint64                 // store tx total count for persistent
+	mBlockHeight            uint64                 // store latest block height for persistent
+	metricMethodInvokeCount *prometheus.CounterVec // metric method invoke count after commit block
 }
 
 type BlockCommitterConfig struct {
@@ -1517,51 +1518,59 @@ func DeserializeTxBatchInfo(data []byte) (*commonPb.TxBatchInfo, error) {
 }
 
 // metric tx counter key in db
-const dbKeyTxCounterPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricTxCounter
+const dbKeyTxCounterPrefix = SUBSYSTEM_CORE_COMMITTER + "_" + MetricTxCounter
 
 // metric block height
-const dbKeyBlockHeightPrefix = monitor.SUBSYSTEM_CORE_COMMITTER + "_" + monitor.MetricBlockCounter
+const dbKeyBlockHeightPrefix = SUBSYSTEM_CORE_COMMITTER + "_" + MetricBlockCounter
 
 func (chain *BlockCommitterImpl) initMetrics() {
 	// new metrics
 	chain.metricBlockSize = monitor.NewHistogramVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockSize,
-		monitor.HelpCurrentBlockSizeMetric,
+		SUBSYSTEM_CORE_COMMITTER,
+		MetricBlockSize,
+		HelpCurrentBlockSizeMetric,
 		prometheus.ExponentialBuckets(1024, 2, 16),
-		monitor.ChainId,
+		ChainId,
 	)
 	chain.metricBlockHeight = monitor.NewGaugeVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockCounter,
-		monitor.HelpBlockCountsMetric,
-		monitor.ChainId,
+		SUBSYSTEM_CORE_COMMITTER,
+		MetricBlockCounter,
+		HelpBlockCountsMetric,
+		ChainId,
 	)
 	chain.metricTxCounter = monitor.NewCounterVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricTxCounter,
-		monitor.HelpTxCountsMetric,
-		monitor.ChainId,
+		SUBSYSTEM_CORE_COMMITTER,
+		MetricTxCounter,
+		HelpTxCountsMetric,
+		ChainId,
 	)
 	chain.metricBlockCommitTime = monitor.NewHistogramVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockCommitTime,
-		monitor.HelpBlockCommitTimeMetric,
+		SUBSYSTEM_CORE_COMMITTER,
+		MetricBlockCommitTime,
+		HelpBlockCommitTimeMetric,
 		[]float64{0.005, 0.01, 0.015, 0.05, 0.1, 1, 2, 5, 10},
-		monitor.ChainId,
+		ChainId,
 	)
 	chain.metricBlockIntervalTime = monitor.NewHistogramVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricBlockIntervalTime,
-		monitor.HelpBlockIntervalTimeMetric,
+		SUBSYSTEM_CORE_COMMITTER,
+		MetricBlockIntervalTime,
+		HelpBlockIntervalTimeMetric,
 		[]float64{0.2, 0.5, 1, 2, 5, 10, 20},
-		monitor.ChainId,
+		ChainId,
 	)
 	chain.metricTpsGauge = monitor.NewGaugeVec(
-		monitor.SUBSYSTEM_CORE_COMMITTER,
-		monitor.MetricTpsGauge,
-		monitor.HelpTpsGaugeMetric,
-		monitor.ChainId,
+		SUBSYSTEM_CORE_COMMITTER,
+		MetricTpsGauge,
+		HelpTpsGaugeMetric,
+		ChainId,
+	)
+	chain.metricMethodInvokeCount = monitor.NewCounterVec(
+		SUBSYSTEM_CORE_COMMITTER,
+		MetricMethodInvokeCounter,
+		HelpMethodInvokeCountsMetric,
+		MetricChainId,
+		MetricContractName,
+		MetricContractMethod,
 	)
 
 	localDb := chain.blockchainStore.GetDBHandle("")
@@ -1613,6 +1622,13 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 	chain.metricBlockIntervalTime.WithLabelValues(chain.chainId).Observe(float64(interval) / 1000)
 	chain.metricTpsGauge.WithLabelValues(chain.chainId).
 		Set(float64(bi.Block.Header.TxCount) / (float64(interval) / 1000))
+
+	for _, tx := range bi.Block.Txs {
+		chain.metricMethodInvokeCount.WithLabelValues(
+			bi.Block.Header.ChainId,
+			tx.Payload.ContractName,
+			tx.Payload.Method).Inc()
+	}
 
 	// persist metrics to local db
 	localDb := chain.blockchainStore.GetDBHandle("")
