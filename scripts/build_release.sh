@@ -60,6 +60,7 @@ function package() {
 
     c=0
     dirNames[0]=""
+    file1=""
     for file in `ls -v $BUILD_CRYPTO_CONFIG_PATH`
     do
         chainmaker_file=chainmaker-$VERSION-$file

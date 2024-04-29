@@ -33,6 +33,9 @@ RPC_PORT=$4
 VM_GO_RUNTIME_PORT=$5
 VM_GO_ENGINE_PORT=$6
 
+CLIENT_CNT=5
+DOMAIN=chainmaker.org
+HOST_NAME=wx-org
 CURRENT_PATH=$(pwd)
 PROJECT_PATH=$(dirname "${CURRENT_PATH}")
 BUILD_PATH=${PROJECT_PATH}/build
@@ -43,6 +46,7 @@ BUILD_CONFIG_PATH=${BUILD_PATH}/config
 CRYPTOGEN_TOOL_PATH=${PROJECT_PATH}/tools/chainmaker-cryptogen
 CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/pk_config_template.yml
+CRYPTOGEN_TLS_CONF=${CRYPTOGEN_TOOL_PATH}/config/pk_tls_config_template.yml
 #CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
 
 function show_help() {
@@ -164,6 +168,40 @@ function generate_keys() {
     xsed "s%count: 4%count: ${NODE_CNT}%g" crypto_config.yml
 
     ${CRYPTOGEN_TOOL_BIN} generate-pk -c ./crypto_config.yml #-p ./pkcs11_keys.yml
+}
+
+function generate_tls() {
+
+    cd "${BUILD_PATH}"
+
+    cp $CRYPTOGEN_TLS_CONF crypto_tls_config.yml
+    xsed "s%count: n%count: ${NODE_CNT}%g" crypto_tls_config.yml
+
+    ${CRYPTOGEN_TOOL_BIN} generate -c ./crypto_tls_config.yml
+
+    #ca
+    for ((i = 1;  i <= $NODE_CNT; i = i + 1)); do         #node$i
+           for ((j = 1;  j <= $NODE_CNT; j = j + 1)); do  #wx-org$j
+                  mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/ca/$HOST_NAME$j.$DOMAIN/"
+                  cp -rf "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$j.$DOMAIN/ca" "$BUILD_CRYPTO_CONFIG_PATH/node$i/ca/$HOST_NAME$j.$DOMAIN/"
+           done
+
+           #node
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.sign.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.sign.crt"
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.sign.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.sign.key"
+
+           #client
+            for ((k = 1;  k <= ${CLIENT_CNT}; k = k + 1)); do  #client$k
+                 mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.sign.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.sign.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+            done
+    done
+
+    for ((i = 1;  i <= $NODE_CNT; i = i + 1)); do
+        rm -rf "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/"
+    done
+
 }
 
 function generate_config() {
@@ -390,4 +428,6 @@ function generate_config() {
 
 check_params
 generate_keys
+generate_tls
 generate_config $@
+
