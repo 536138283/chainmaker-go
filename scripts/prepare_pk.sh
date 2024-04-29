@@ -178,7 +178,6 @@ function generate_tls() {
     fi
 
     cd "${BUILD_PATH}"
-
     cp $CRYPTOGEN_TLS_CONF crypto_tls_config.yml
     xsed "s%count: n%count: ${NODE_CNT}%g" crypto_tls_config.yml
 
