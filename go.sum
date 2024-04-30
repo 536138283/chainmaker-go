@@ -43,8 +43,8 @@ chainmaker.org/chainmaker/net-common v1.2.4 h1:bU3y1FktYlz9CheTOUQBv7BOjitSuF9DP
 chainmaker.org/chainmaker/net-common v1.2.4/go.mod h1:/UDvh28QVMkQ8zJNP5PRoBpIgJ3XHZLzr/UrWiJ9KF8=
 chainmaker.org/chainmaker/net-libp2p v1.2.0/go.mod h1:gqYbyevyMOhh81ny3Y1t7ZPdByuDbVRbC/w/3NOLHxk=
 chainmaker.org/chainmaker/net-libp2p v1.2.4/go.mod h1:Nwlc2bRJFDd3qI8FGsusTXDNSVUZ1afMs5IHqI/jrts=
-chainmaker.org/chainmaker/net-libp2p v1.2.5-0.20240424084440-dd35664d5e27 h1:bBdt1Py/aEZWT0k2iuDhjH8xhTpPGIuinGVv4KetlGU=
-chainmaker.org/chainmaker/net-libp2p v1.2.5-0.20240424084440-dd35664d5e27/go.mod h1:Nwlc2bRJFDd3qI8FGsusTXDNSVUZ1afMs5IHqI/jrts=
+chainmaker.org/chainmaker/net-libp2p v1.2.5-0.20240429070539-7ebe6902cf1b h1:gII6kRMTXe980Dto6XZgYco+Fqy9wXQpALHNCGhETn0=
+chainmaker.org/chainmaker/net-libp2p v1.2.5-0.20240429070539-7ebe6902cf1b/go.mod h1:Nwlc2bRJFDd3qI8FGsusTXDNSVUZ1afMs5IHqI/jrts=
 chainmaker.org/chainmaker/net-liquid v1.1.0/go.mod h1:A1fjmgLv7ejD1eFh320+ZxGB4OWKYi1wgh56TJZ8b/A=
 chainmaker.org/chainmaker/net-liquid v1.1.2 h1:RckJGrphkD99RP/+3aLitadSQJ/o3dvuLUB2eG84cPw=
 chainmaker.org/chainmaker/net-liquid v1.1.2/go.mod h1:N3Y/kQTgPbaUWyjAhX+ThANxe4+ijAt+6pJ2NhPzOQE=

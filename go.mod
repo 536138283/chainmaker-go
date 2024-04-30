@@ -12,7 +12,7 @@ require (
 	chainmaker.org/chainmaker/localconf/v2 v2.3.4-0.20240424092943-b0626805e5db
 	chainmaker.org/chainmaker/logger/v2 v2.3.1-0.20240423061335-3ccc60a12181
 	chainmaker.org/chainmaker/net-common v1.2.4
-	chainmaker.org/chainmaker/net-libp2p v1.2.5-0.20240424084440-dd35664d5e27
+	chainmaker.org/chainmaker/net-libp2p v1.2.5-0.20240429070539-7ebe6902cf1b
 	chainmaker.org/chainmaker/net-liquid v1.1.2
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.5-0.20240423085802-17ae02ada0d6
 	chainmaker.org/chainmaker/protocol/v2 v2.3.5-0.20240422081833-9e2c922d11db
