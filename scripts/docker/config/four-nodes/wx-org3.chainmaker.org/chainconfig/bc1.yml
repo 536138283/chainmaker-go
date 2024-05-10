@@ -6,7 +6,7 @@
 #
 
 chain_id: chain1        # 链标识
-version: "2030300"
+version: "2030400"
 sequence: 0             # 配置版本
 auth_type: "identity"   # 认证类型
 
