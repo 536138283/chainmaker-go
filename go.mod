@@ -21,7 +21,7 @@ require (
 	chainmaker.org/chainmaker/utils/v2 v2.3.5-0.20240429082210-d1cbb23924b4
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.4-0.20240506025252-9c3ae0a4ae48
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.6-0.20240506070416-7123a6defd62
-	chainmaker.org/chainmaker/vm-evm/v2 v2.3.5-0.20240506023536-80b199fd653d
+	chainmaker.org/chainmaker/vm-evm/v2 v2.3.5-0.20240514084546-4d90172262ff
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.3-0.20240506021407-2dec717b703f
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.5-0.20240430022111-80d32f1d447b
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.4-0.20240506020651-118ecd492b4d
@@ -66,6 +66,7 @@ require (
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4-0.20240429085116-c29db8e1fb2b
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.4-0.20240429083511-705ba75c56ad
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.4-0.20240429084151-ee1a2d5f8a4b
+	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
