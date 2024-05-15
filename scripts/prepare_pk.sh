@@ -191,14 +191,14 @@ function generate_tls() {
            done
 
            #node
-           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.sign.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.sign.crt"
-           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.sign.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.sign.key"
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.crt"
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.key"
 
            #client
             for ((k = 1;  k <= ${CLIENT_CNT}; k = k + 1)); do  #client$k
                  mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
-                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.sign.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
-                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.sign.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
             done
     done
 
