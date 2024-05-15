@@ -62,11 +62,10 @@ require (
 
 require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.4-0.20240506090001-1032c74b38ed
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.5-0.20240506091857-29aa6dd616fb
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.5-0.20240515073700-22f140b6e2db
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4-0.20240429085116-c29db8e1fb2b
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.4-0.20240429083511-705ba75c56ad
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.4-0.20240429084151-ee1a2d5f8a4b
-	chainmaker.org/chainmaker/vm-wasmer/v3 v3.0.1
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/gosuri/uilive v0.0.4 // indirect
 	github.com/hashicorp/golang-lru v0.5.5-0.20210104140557-80c98217689d // indirect
