@@ -52,6 +52,17 @@ func stakeGetAllCandidates() *cobra.Command {
 				return fmt.Errorf("all-candidates failed, %s", err.Error())
 			}
 
+			candidates := new(syscontract.ValidatorVector)
+			err = proto.Unmarshal(resp.ContractResult.Result, candidates)
+			if err != nil {
+				return err
+			}
+			if candidates != nil {
+				resp.ContractResult.Result, err = json.Marshal(candidates.Vector)
+				if err != nil {
+					return err
+				}
+			}
 			fmt.Printf("resp: %+v\n", resp)
 
 			return nil
