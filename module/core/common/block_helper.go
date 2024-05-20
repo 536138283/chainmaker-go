@@ -1275,13 +1275,20 @@ func GetProposerId(
 }
 
 // GetTurboBlock get turbo block
-func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *commonPb.Block {
+func GetTurboBlock(block, turboBlock *commonPb.Block,
+	chainConf protocol.ChainConf, logger protocol.Logger) *commonPb.Block {
 	turboBlock.Header = block.Header
 	turboBlock.Dag = block.Dag
 	turboBlock.AdditionalData = block.AdditionalData
 
 	if TxPoolType == batch.TxPoolType {
 		logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
+
+		// 如果开启coinbase交易，则保留coinbase交易
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			turboBlock.Txs = []*commonPb.Transaction{block.Txs[block.Header.TxCount-1]}
+		}
+
 		return turboBlock
 	}
 
@@ -1301,6 +1308,14 @@ func GetTurboBlock(block, turboBlock *commonPb.Block, logger protocol.Logger) *c
 
 	}
 	turboBlock.Txs = newTxs
+
+	// 如果开启了coinbase交易，coinbase交易不得裁剪
+	if block.Header.BlockType == commonPb.BlockType_CONFIG_BLOCK|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_NORMAL_BLOCK|commonPb.BlockType_HAS_COINBASE ||
+		block.Header.BlockType == commonPb.BlockType_CONTRACT_MGR_BLOCK|commonPb.BlockType_HAS_COINBASE {
+		turboBlock.Txs[turboBlock.Header.TxCount-1] = block.Txs[turboBlock.Header.TxCount-1]
+	}
+
 	logger.Debugf("turn on consensus message turbo, block[%d]", turboBlock.Header.BlockHeight)
 
 	return turboBlock
@@ -1322,6 +1337,7 @@ func RecoverBlock(
 	return recoverBlock(block, mode, chainConf, txPool, ac, netService, logger)
 }
 
+// recoverBlockByBatch recover block by batch
 func recoverBlockByBatch(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,
@@ -1331,7 +1347,8 @@ func recoverBlockByBatch(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if len(block.Txs) == 0 && block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY {
+	if block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY &&
+		chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_RAFT {
 
 		newBlock := &commonPb.Block{
 			Header:         block.Header,
@@ -1356,10 +1373,17 @@ func recoverBlockByBatch(
 		if err != nil {
 			return nil, nil, err
 		}
-		if len(indexes) != int(block.Header.TxCount) {
-			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d",
-				block.Header.BlockHeight, block.Header.TxCount, len(indexes))
+
+		expectedCount := len(indexes)
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			expectedCount++
 		}
+
+		if expectedCount != int(block.Header.TxCount) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, indexes: %d, expectedCount:%d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes), expectedCount)
+		}
+
 		if len(batchIds) == 0 {
 			logger.DebugDynamic(func() string {
 				return fmt.Sprintf("batchIds is nil, not need to recover the block[%d], additionalData :%v",
@@ -1389,17 +1413,31 @@ func recoverBlockByBatch(
 			newTxs = append(newTxs, tx...)
 		}
 
-		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIds:%v, num:%d",
-			block.Header.BlockHeight, batchIds, len(newTxs)))
+		logger.Infof(fmt.Sprintf("get add txs by batchIds,height:%d, batchIdsLen:%v, want:%d, got:%d",
+			block.Header.BlockHeight, len(batchIds), len(indexes), len(newTxs)))
 
-		if len(newTxs) != int(block.Header.TxCount) {
-			return nil, nil,
-				fmt.Errorf("GetAllTxsByBatchIds fail,height: %d, want count: %d, got count: %d",
-					block.Header.BlockHeight, block.Header.TxCount, len(newTxs))
+		if len(newTxs) != len(indexes) {
+			return nil, nil, fmt.Errorf("recover block by batch fail, height: %d, txs: %d, want: %d, got:%d",
+				block.Header.BlockHeight, block.Header.TxCount, len(indexes), len(newTxs))
 		}
 
 		for i, v := range indexes {
 			newBlock.Txs[i] = newTxs[int(v)]
+		}
+
+		// 如果原区块中包含了coinbase交易，需要从提案节点给到的区块中将coinbase交易添加进来
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			if len(block.Txs) == 0 || block.Txs[0] == nil {
+				return nil, nil, fmt.Errorf("could not get coinbase tx from proposer,height:%d,hash:%x",
+					block.Header.BlockHeight, block.Header.BlockHash)
+			}
+			newBlock.Txs[len(newBlock.Txs)-1] = block.Txs[0]
+		}
+
+		if len(newBlock.Txs) != int(block.Header.TxCount) {
+			return nil, nil,
+				fmt.Errorf("GetAllTxsByBatchIds fail,height: %d, want count: %d, got count: %d",
+					block.Header.BlockHeight, block.Header.TxCount, len(newBlock.Txs))
 		}
 
 		return newBlock, batchIds, nil
@@ -1418,6 +1456,7 @@ func recoverBlockByBatch(
 	}, batchIds, nil
 }
 
+// recoverBlock recover block
 func recoverBlock(
 	block *commonPb.Block,
 	mode protocol.VerifyMode,
@@ -1446,6 +1485,19 @@ func recoverBlock(
 			return nil, nil, err
 		}
 
+		// coinbase就不需要到提案节点要了，直接从block中取即可。
+		if coinbasemgr.CheckCoinbaseEnable(chainConf) {
+			return recoverBlockWithCoinBaseTx(
+				txIds,
+				block,
+				newBlock,
+				txPool,
+				maxRetryTime,
+				retryInterval,
+				proposerId,
+				logger)
+		}
+
 		txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
 			int(maxRetryTime*retryInterval))
 		if err != nil {
@@ -1472,6 +1524,41 @@ func recoverBlock(
 
 }
 
+func recoverBlockWithCoinBaseTx(
+	txIds []string,
+	block, newBlock *commonPb.Block,
+	txPool protocol.TxPool,
+	maxRetryTime, retryInterval uint64,
+	proposerId string,
+	logger protocol.Logger) (*commonPb.Block, []string, error) {
+	txIds = txIds[:len(txIds)-1]
+
+	if !coinbasemgr.IsGasTx(block.Txs[block.Header.TxCount-1]) {
+		return nil, nil, fmt.Errorf("recover block failed[height:%d,hash:%x,txCount:%d],"+
+			"invaild coinbase tx[txId:%s,txType:%s]",
+			block.Header.BlockHeight, block.Header.BlockHash, block.Header.TxCount,
+			block.Txs[block.Header.TxCount-1].Payload.TxId, block.Txs[block.Header.TxCount-1].Payload.TxType)
+	}
+
+	txsMap, err := txPool.GetAllTxsByTxIds(txIds, proposerId, block.Header.BlockHeight,
+		int(maxRetryTime*retryInterval))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := range block.Txs[:block.Header.TxCount-1] {
+		newBlock.Txs[i] = txsMap[block.Txs[i].Payload.TxId]
+		newBlock.Txs[i].Result = block.Txs[i].Result
+		logger.Debugf("recover the block[%d], TxId[%s, %s]",
+			newBlock.Header.BlockHeight, newBlock.Txs[i].Payload.TxId, newBlock.Txs[i].Payload.ContractName)
+	}
+
+	newBlock.Txs[block.Header.TxCount-1] = block.Txs[block.Header.TxCount-1]
+
+	return newBlock, nil, nil
+}
+
+// SerializeTxBatchInfo serialize tx batch info
 func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
 	fetchBatches [][]*commonPb.Transaction, logger protocol.Logger) ([]byte, error) {
 
@@ -1506,6 +1593,7 @@ func SerializeTxBatchInfo(batchIds []string, txs []*commonPb.Transaction,
 	return buffer, err
 }
 
+// DeserializeTxBatchInfo deserialize tx batch info
 func DeserializeTxBatchInfo(data []byte) (*commonPb.TxBatchInfo, error) {
 
 	txBatchInfo := new(commonPb.TxBatchInfo)
@@ -1607,6 +1695,7 @@ func (chain *BlockCommitterImpl) initMetrics() {
 	}
 }
 
+// updateMetrics update metrics
 func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, interval int64) {
 	defer func() {
 		if panicError := recover(); panicError != nil {
@@ -1654,6 +1743,7 @@ func (chain *BlockCommitterImpl) updateMetrics(bi *commonPb.BlockInfo, elapsed, 
 	}
 }
 
+// ClearProposeRepeatTimerMap clear map data
 func ClearProposeRepeatTimerMap() {
 	ProposeRepeatTimerMap.Range(func(key, value interface{}) bool {
 		ProposeRepeatTimerMap.Delete(key)

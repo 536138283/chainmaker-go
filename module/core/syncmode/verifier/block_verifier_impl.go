@@ -193,7 +193,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		}
 
 		// clear snapshot when verify fail
-		if snapErr := v.snapshotManager.ClearSnapshot(block); snapErr != nil {
+		if snapErr := v.snapshotManager.ClearSnapshot(newBlock); snapErr != nil {
 			snapErr = fmt.Errorf("clear snapshot fail[%d](hash:%x), err: %s",
 				block.Header.BlockHeight, block.Header.BlockHash, snapErr.Error())
 			v.log.Error(snapErr)
@@ -202,9 +202,9 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		return err
 	}
 
-	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
+	snapshot := v.snapshotManager.GetSnapshot(lastBlock, newBlock)
 	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
-		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot, v.ac, blockVersion); err != nil {
+		if err = scheduler.VerifyOptimizeChargeGasTx(newBlock, snapshot, v.ac, blockVersion); err != nil {
 			v.log.Warnf("verify failed [%d](%x), %s", newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
 			if protocol.CONSENSUS_VERIFY == mode {
 				v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, false, txRWSetMap, rwSetVerifyFailTx))
