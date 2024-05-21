@@ -491,8 +491,7 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 		removeTxs, bp.log)
 	bp.proposalCache.ClearProposedBlockAt(height)
 
-	txs, _ := bp.txPool.GetTxsByTxIds(rwSetVerifyFailTxs.TxIds)
-	for _, tx := range txs {
+	for _, tx := range removeTxs {
 		bp.log.Warnf("<METRIC> delete random Tx,chainId:%s, height:%d, "+
 			"txId:%s, contractName:%s, method:%s, timeStamp:%d",
 			bp.chainId, rwSetVerifyFailTxs.BlockHeight,
@@ -618,7 +617,7 @@ func (bp *BlockProposerImpl) getCutBlock(block *commonpb.Block) *commonpb.Block 
 	cutBlock := new(commonpb.Block)
 	if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
 		common.TxPoolType == batch.TxPoolType {
-		cutBlock = common.GetTurboBlock(block, cutBlock, bp.log)
+		cutBlock = common.GetTurboBlock(block, cutBlock, bp.chainConf, bp.log)
 	} else {
 		cutBlock = block
 	}
@@ -740,7 +739,7 @@ func (bp *BlockProposerImpl) dealProposalRequestWithProposalCache(
 			cutBlock := new(commonpb.Block)
 			if common.IfOpenConsensusMessageTurbo(bp.chainConf) ||
 				common.TxPoolType == batch.TxPoolType {
-				cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.log)
+				cutBlock = common.GetTurboBlock(selfProposedBlock, cutBlock, bp.chainConf, bp.log)
 			} else {
 				cutBlock = selfProposedBlock
 			}
