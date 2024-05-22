@@ -182,6 +182,9 @@ function generate_tls() {
     xsed "s%count: n%count: ${NODE_CNT}%g" crypto_tls_config.yml
 
     ${CRYPTOGEN_TOOL_BIN} generate -c ./crypto_tls_config.yml
+    DOMAIN=$(grep "domain:" ./crypto_tls_config.yml | awk '{print $3}')
+    HOST_NAME=$(grep "host_name:" ./crypto_tls_config.yml | awk '{print $2}')
+    CLIENT_CNT=$(grep -A 6 "user:" ./crypto_tls_config.yml | grep "count:" | awk '{print $2}')
 
     #ca
     for ((i = 1;  i <= $NODE_CNT; i = i + 1)); do         #node$i
