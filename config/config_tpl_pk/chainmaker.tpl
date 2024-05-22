@@ -182,6 +182,10 @@ rpc:
   tls:
     # TLS mode, can be disable, oneway, twoway.
     mode: disable
+    cert_file: ../config/{org_path}/{org_path}.tls.crt
+    priv_key_file: ../config/{org_path}/{org_path}.tls.key
+    client_root_ca_cert_files: ../{org_path}/ca
+
 
   # RPC blacklisted ip addresses
   blacklist:
