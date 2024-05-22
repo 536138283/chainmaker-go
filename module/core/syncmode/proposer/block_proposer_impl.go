@@ -465,6 +465,18 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 			txs = append(txs, v)
 		}
 		common.RetryAndRemoveTxs(bp.txPool, nil, txs, bp.log)
+
+		for _, tx := range txs {
+			bp.log.Warnf("<METRIC> delete random Tx,chainId:%s, height:%d, "+
+				"txId:%s, contractName:%s, method:%s, timeStamp:%d",
+				bp.chainId, rwSetVerifyFailTxs.BlockHeight,
+				tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
+
+			if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+				bp.metricRandomAttackTime.WithLabelValues(bp.chainId, fmt.Sprint(rwSetVerifyFailTxs.BlockHeight),
+					tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, fmt.Sprint(utils.CurrentTimeMillisSeconds())).Inc()
+			}
+		}
 		return
 	}
 
