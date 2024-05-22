@@ -495,8 +495,8 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 					tx.Payload.TxId, rwSet, err)
 				return nil, nil, nil, err
 			}
-			result.RwSetHash = rwsetHash
-
+			tx.Result.RwSetHash = rwsetHash
+			// calc tx hash with version
 			hash, err := utils.CalcTxHashWithVersion(
 				vt.chainConf.ChainConfig().Crypto.Hash, tx, int(block.Header.BlockVersion))
 			if err != nil {
@@ -507,14 +507,17 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 			txHashes = append(txHashes, hash)
 
 		} else {
+			// calc rw set hash
 			rwsetHash, err := utils.CalcRWSetHash(vt.chainConf.ChainConfig().Crypto.Hash, rwSet)
 			if err != nil {
 				vt.log.Warnf("calc rwset hash error (tx:%s), rwSet: %v, %s",
 					tx.Payload.TxId, rwSet, err)
 				return nil, nil, nil, err
 			}
+			// check rw set
 			if err = IsTxRWSetValid(vt.block, tx, rwSet, result, rwsetHash); err != nil {
-				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s", vt.block.Header.BlockHeight, err)
+				vt.log.Warnf("verify tx rw set failed, block height:%d, err:%s",
+					vt.block.Header.BlockHeight, err)
 
 				// coinbase or gas tx needn't delete from txPool
 				if !coinbasemgr.IsGasTx(tx) {
@@ -542,10 +545,10 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 
 			txHashes = append(txHashes, hash)
 		}
-
+		// calc other use time
 		stat.OthersLasts += utils.CurrentTimeMillisSeconds() - startOthersTicker
 	}
-
+	// if rw set verify fail tx ids has existed, return rwSetVerifyFailTxIds, error
 	if len(rwSetVerifyFailTxIds) > 0 {
 		vt.log.Warn(commonErr.WarnRwSetVerifyFailTxs.Message)
 		return nil, nil, rwSetVerifyFailTxIds, commonErr.WarnRwSetVerifyFailTxs
@@ -554,6 +557,14 @@ func (vt *VerifierTx) verifyTx(txs []*commonpb.Transaction, txsRet map[string]*c
 	return txHashes, newAddTxs, nil, nil
 }
 
+// verifyTxWithRWSet verify tx with rw set
+//
+//	@receiver vt
+//	@param txs
+//	@param stat
+//	@param block
+//	@return [][]byte
+//	@return error
 func (vt *VerifierTx) verifyTxWithRWSet(txs []*commonpb.Transaction,
 	stat *VerifyStat, block *commonpb.Block) ([][]byte, error) {
 	txHashes := make([][]byte, 0)

@@ -140,10 +140,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	blockVersion := block.Header.BlockVersion
 	startTick := utils.CurrentTimeMillisSeconds()
 	if err = utils.IsEmptyBlock(block); err != nil {
-		v.log.Error(err)
-		v.log.Debugf("empty block. height:%+v, hash:%+v, chainId:%+v, preHash:%+v, signature:%+v",
-			block.Header.BlockHeight, block.Header.BlockHash,
-			block.Header.ChainId, block.Header.PreBlockHash, block.Header.Signature)
+		v.log.Errorf("%+v, block: %+v", err, block)
 		return err
 	}
 
@@ -196,7 +193,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		}
 
 		// clear snapshot when verify fail
-		if snapErr := v.snapshotManager.ClearSnapshot(block); snapErr != nil {
+		if snapErr := v.snapshotManager.ClearSnapshot(newBlock); snapErr != nil {
 			snapErr = fmt.Errorf("clear snapshot fail[%d](hash:%x), err: %s",
 				block.Header.BlockHeight, block.Header.BlockHash, snapErr.Error())
 			v.log.Error(snapErr)
@@ -205,9 +202,9 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 		return err
 	}
 
-	snapshot := v.snapshotManager.GetSnapshot(lastBlock, block)
+	snapshot := v.snapshotManager.GetSnapshot(lastBlock, newBlock)
 	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
-		if err = scheduler.VerifyOptimizeChargeGasTx(block, snapshot, v.ac, blockVersion); err != nil {
+		if err = scheduler.VerifyOptimizeChargeGasTx(newBlock, snapshot, v.ac, blockVersion); err != nil {
 			v.log.Warnf("verify failed [%d](%x), %s", newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
 			if protocol.CONSENSUS_VERIFY == mode {
 				v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, false, txRWSetMap, rwSetVerifyFailTx))
