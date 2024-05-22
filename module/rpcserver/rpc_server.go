@@ -187,6 +187,12 @@ func loadCerts(caPaths []string) ([]string, error) {
 				if ok {
 					filepaths = append(filepaths, caPath+pathSep+fi.Name())
 				}
+			} else {
+				paths, err := loadCerts([]string{caPath + pathSep + fi.Name()})
+				if err != nil {
+					fmt.Printf("load certs err in rpcserver, %v", err)
+				}
+				filepaths = append(filepaths, paths...)
 			}
 		}
 	}
