@@ -12,6 +12,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -165,6 +166,40 @@ func (s *RPCServer) checkAndReloadChainConfTrustRoots() error {
 	return nil
 }
 
+func loadCerts(caPaths []string) ([]string, error) {
+	var filepaths []string
+
+	for _, caPath := range caPaths {
+		if caPath == "" {
+			continue
+		}
+
+		dir, err := ioutil.ReadDir(caPath)
+		if err != nil {
+			return nil, err
+		}
+
+		pathSep := string(os.PathSeparator)
+
+		for _, fi := range dir {
+			if !fi.IsDir() {
+				ok := strings.HasSuffix(fi.Name(), ".crt")
+				if ok {
+					filepaths = append(filepaths, caPath+pathSep+fi.Name())
+				}
+			} else {
+				paths, err := loadCerts([]string{caPath + pathSep + fi.Name()})
+				if err != nil {
+					fmt.Printf("load certs err in rpcserver, %v", err)
+				}
+				filepaths = append(filepaths, paths...)
+			}
+		}
+	}
+
+	return filepaths, nil
+}
+
 func (s *RPCServer) configureTLS() (*cmtls.Config, error) {
 	var tlsConfig *cmtls.Config
 	var err error
@@ -173,7 +208,13 @@ func (s *RPCServer) configureTLS() (*cmtls.Config, error) {
 		strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.Public {
 		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
-				for _, certFile := range localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaCertFiles {
+				var certs []string
+				certs, err = loadCerts(
+					localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaPaths)
+				if err != nil {
+					return nil, err
+				}
+				for _, certFile := range certs {
 					var certPEMBlock []byte
 					certPEMBlock, err = os.ReadFile(certFile)
 					if err != nil {
@@ -413,8 +454,13 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 		strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.Public {
 		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 			var caCerts []string
-			for _, certFile := range localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaCertFiles {
-				certPEMBlock, err := os.ReadFile(certFile)
+			certs, err := loadCerts(localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaPaths)
+			if err != nil {
+				return nil, err
+			}
+			for _, certFile := range certs {
+				var certPEMBlock []byte
+				certPEMBlock, err = os.ReadFile(certFile)
 				if err != nil {
 					log.Warnf("read file(%s) err, %v", certFile, err)
 				}
