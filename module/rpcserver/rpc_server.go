@@ -208,7 +208,9 @@ func (s *RPCServer) configureTLS() (*cmtls.Config, error) {
 		strings.ToLower(localconf.ChainMakerConfig.AuthType) == protocol.Public {
 		if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode != TLS_MODE_DISABLE {
 			if localconf.ChainMakerConfig.RpcConfig.TLSConfig.Mode == TLS_MODE_TWOWAY {
-				certs, err := loadCerts(localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaPaths)
+				var certs []string
+				certs, err = loadCerts(
+					localconf.ChainMakerConfig.RpcConfig.TLSConfig.ClientRootCaPaths)
 				if err != nil {
 					return nil, err
 				}
@@ -457,7 +459,8 @@ func newGrpc(chainMakerServer *blockchain.ChainMakerServer) (*grpc.Server, error
 				return nil, err
 			}
 			for _, certFile := range certs {
-				certPEMBlock, err := os.ReadFile(certFile)
+				var certPEMBlock []byte
+				certPEMBlock, err = os.ReadFile(certFile)
 				if err != nil {
 					log.Warnf("read file(%s) err, %v", certFile, err)
 				}
