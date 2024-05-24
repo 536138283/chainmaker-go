@@ -93,12 +93,10 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 			"query request counts metric", "chainId", "state")
 		apiService.metricQueryContractCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER,
 			"metric_query_contract_request_counter",
-			"query contract request counts metric",
+			"query contract counts metric",
 			"chainId",
 			"contractName",
-			"method",
-			"timeStamp",
-			"state")
+			"method")
 		apiService.metricInvokeCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_invoke_request_counter",
 			"invoke request counts metric", "chainId", "state")
 		apiService.metricInvokeTxSizeHistogram = monitor.NewHistogramVec(
@@ -403,19 +401,12 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
-			s.metricQueryContractCounter.WithLabelValues(chainId,
-				tx.Payload.ContractName,
-				tx.Payload.Method,
-				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
-				"true").Inc()
 		} else {
 			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
-			s.metricQueryContractCounter.WithLabelValues(chainId,
-				tx.Payload.ContractName,
-				tx.Payload.Method,
-				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
-				"true").Inc()
 		}
+		s.metricQueryContractCounter.WithLabelValues(chainId,
+			tx.Payload.ContractName,
+			tx.Payload.Method).Inc()
 	}
 	if txStatusCode != commonPb.TxStatusCode_SUCCESS {
 		errMsg = fmt.Sprintf("txStatusCode:%d, resultCode:%d, contractName[%s] method[%s] txType[%s], %s",
