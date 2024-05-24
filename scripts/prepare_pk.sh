@@ -404,7 +404,6 @@ function generate_config() {
             fi
 
             c=0
-            echo `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
             do
                 c=$(($c+1))
