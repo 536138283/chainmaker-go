@@ -189,7 +189,6 @@ function generate_tls() {
     CLIENT_CNT=$(grep -A 6 "user:" ./crypto_tls_config.yml | grep "count:" | awk '{print $2}')
 
     #ca
-    echo $node_count
     for ((i = 1;  i <= $node_count; i = i + 1)); do         #node$i
            for ((j = 1;  j <= $node_count; j = j + 1)); do  #wx-org$j
                   mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/ca/$HOST_NAME$j.$DOMAIN/"
