@@ -5,7 +5,13 @@ chain_client:
   # 客户端用户交易签名私钥路径
   user_sign_key_file_path: "./testdata/crypto-config/node1/admin/admin1/admin1.key"
   # 客户端用户交易签名私钥密码(无密码则不需要设置)
-#  user_sign_key_pwd: "123"
+  #  user_sign_key_pwd: "123"
+  # 客户端用户私钥路径，用于tls连接
+  # user_key_file_path: "./testdata/crypto-config/node1/client-tls/client1/client1.tls.key"
+  # 客户端用户私钥密码(无密码则不需要设置)
+  #  user_key_pwd: "123"
+  # 客户端用户证书路径，用于tls连接
+  # user_crt_file_path: "./testdata/crypto-config/node1/client-tls/client1/client1.tls.crt"
   # 签名使用的哈希算法，和节点保持一直
   crypto:
     hash: SHA256
@@ -22,6 +28,13 @@ chain_client:
       node_addr: "127.0.0.1:12301"
       # 节点连接数
       conn_cnt: 10
+      # RPC连接是否启用双向TLS认证
+      enable_tls: false
+      # 信任证书池路径
+      trust_root_paths:
+        - "./testdata/crypto-config/node1/ca/wx-org1.chainmaker.org/ca"
+      # TLS hostname
+      tls_host_name: "chainmaker.org"
 
   archive:
     # 数据归档链外存储相关配置
