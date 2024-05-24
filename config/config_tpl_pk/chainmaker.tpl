@@ -180,11 +180,15 @@ rpc:
       token_bucket_size: 100
   # RPC TLS settings
   tls:
-    # TLS mode, can be disable, oneway, twoway.
+    # TLS mode, can be disable, twoway.
     mode: disable
+    # TLS Certificate file path.
     cert_file: ../config/{org_path}/{org_path}.tls.crt
+    # TLS private key file path.
     priv_key_file: ../config/{org_path}/{org_path}.tls.key
-    client_root_ca_paths: ../config/{org_path}/ca
+    # TLS certificate file path
+    client_root_ca_paths:
+      - ../config/{org_path}/ca
 
 
   # RPC blacklisted ip addresses

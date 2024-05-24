@@ -224,7 +224,7 @@ rpc:
 
   # RPC TLS settings
   tls:
-    # TLS mode, can be disable, oneway, twoway.
+    # TLS mode, can be disable, twoway.
     mode:           twoway
 
     # RPC TLS private key file path
