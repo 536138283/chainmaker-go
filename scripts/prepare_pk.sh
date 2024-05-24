@@ -177,9 +177,11 @@ function generate_tls() {
         return 0
     fi
 
+    node_count=$( grep -A 3 "node:" ./crypto_config.yml| grep -o 'count:[[:space:]]*[0-9]*'|awk '{print $2}')
+
     cd "${BUILD_PATH}"
     cp $CRYPTOGEN_TLS_CONF crypto_tls_config.yml
-    xsed "s%count: n%count: ${NODE_CNT}%g" crypto_tls_config.yml
+    xsed "s%count: n%count: ${node_count}%g" crypto_tls_config.yml
 
     ${CRYPTOGEN_TOOL_BIN} generate -c ./crypto_tls_config.yml
     DOMAIN=$(grep "domain:" ./crypto_tls_config.yml | awk '{print $3}')
@@ -187,8 +189,9 @@ function generate_tls() {
     CLIENT_CNT=$(grep -A 6 "user:" ./crypto_tls_config.yml | grep "count:" | awk '{print $2}')
 
     #ca
-    for ((i = 1;  i <= $NODE_CNT; i = i + 1)); do         #node$i
-           for ((j = 1;  j <= $NODE_CNT; j = j + 1)); do  #wx-org$j
+    echo $node_count
+    for ((i = 1;  i <= $node_count; i = i + 1)); do         #node$i
+           for ((j = 1;  j <= $node_count; j = j + 1)); do  #wx-org$j
                   mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/ca/$HOST_NAME$j.$DOMAIN/"
                   cp -rf "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$j.$DOMAIN/ca" "$BUILD_CRYPTO_CONFIG_PATH/node$i/ca/$HOST_NAME$j.$DOMAIN/"
            done
@@ -205,7 +208,7 @@ function generate_tls() {
             done
     done
 
-    for ((i = 1;  i <= $NODE_CNT; i = i + 1)); do
+    for ((i = 1;  i <= $node_count; i = i + 1)); do
         rm -rf "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/"
     done
 
@@ -402,6 +405,7 @@ function generate_config() {
             fi
 
             c=0
+            echo `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
             for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
             do
                 c=$(($c+1))
