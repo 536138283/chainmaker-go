@@ -4,8 +4,8 @@ chainmaker.org/chainmaker/common/v2 v2.3.0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah4
 chainmaker.org/chainmaker/common/v2 v2.3.3/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423031928-680e04db0cb1/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240423082926-e04b3c789015/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
-chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240522110950-738e29db16d0 h1:7A/iKTc1UzVjZDAnt6/+4MYnbfyP1jjOd8MYP/3tg6k=
-chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240522110950-738e29db16d0/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
+chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240530030051-3065e0c91280 h1:ttump3dSgJwSc2MZQi8W5sw+ekBSxkYVdCcaPnvMwwg=
+chainmaker.org/chainmaker/common/v2 v2.3.4-0.20240530030051-3065e0c91280/go.mod h1:LV6bEVvqWBa6NY/QyNY9CDIdah44Hpd/aEqWkG5rXws=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.1-0.20240506112522-23280e2ebda7 h1:ld5btgsEF63Ql4Kgb68Udn4kGdv1gepAKGs14OSVh9Y=
 chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.1-0.20240506112522-23280e2ebda7/go.mod h1:O9oSkuri+E/1vE/pd6JVoC+8hqsJRTXcVUX6MiLriUY=
 chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.4-0.20240506090001-1032c74b38ed h1:nbN/e/uNIDZiwv78LLwnQABotTWVC7dEr8DF1ucycLs=
