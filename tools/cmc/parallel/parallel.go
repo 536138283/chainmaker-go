@@ -59,6 +59,8 @@ var (
 	hostnamesString    string
 	userCrtPathsString string
 	userKeyPathsString string
+	tlsCrtPathsString  string
+	tlsKeyPathsString  string
 	orgIDsString       string
 	hashAlgo           string
 	caPathsString      string
@@ -80,6 +82,8 @@ var (
 	hostnames    []string
 	userCrtPaths []string
 	userKeyPaths []string
+	tlsCrtPaths  []string
+	tlsKeyPaths  []string
 	orgIDs       []string
 
 	nodeNum int
@@ -165,6 +169,8 @@ func ParallelCMD() *cobra.Command {
 			hostnames = strings.Split(hostnamesString, ",")
 			userCrtPaths = strings.Split(userCrtPathsString, ",")
 			userKeyPaths = strings.Split(userKeyPathsString, ",")
+			tlsCrtPaths = strings.Split(tlsCrtPathsString, ",")
+			tlsKeyPaths = strings.Split(tlsKeyPathsString, ",")
 			orgIDs = strings.Split(orgIDsString, ",")
 
 			if authType == sdk.Public {
@@ -181,6 +187,11 @@ func ParallelCMD() *cobra.Command {
 					panic(fmt.Sprintf("hosts[%d], user-crts[%d], user-keys[%d], ca-path[%d], orgIDs[%d] length invalid",
 						len(hosts), len(userCrtPaths), len(userKeyPaths), len(caPaths), len(orgIDs)))
 				}
+			}
+
+			if useTLS && (len(hosts) != len(tlsCrtPaths) || len(hosts) != len(tlsKeyPaths)) {
+				panic(fmt.Sprintf("use tls, but hosts[%d], tls-crts[%d], tls-keys[%d] length invalid",
+					len(hosts), len(tlsCrtPaths), len(tlsKeyPaths)))
 			}
 
 			nodeNum = len(hosts)
@@ -208,8 +219,10 @@ func ParallelCMD() *cobra.Command {
 	flags.IntVarP(&sleepTime, "sleepTime", "S", 100, "specify sleep time(unit: ms)")
 	flags.IntVarP(&climbTime, "climbTime", "L", 10, "specify climb time(unit: s)")
 	flags.StringVarP(&hostsString, "hosts", "H", "localhost:17988,localhost:27988", "specify hosts")
-	flags.StringVarP(&userCrtPathsString, "user-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify user crt path")
-	flags.StringVarP(&userKeyPathsString, "user-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify user key path")
+	flags.StringVarP(&userCrtPathsString, "user-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.crt", "specify user crt path")
+	flags.StringVarP(&userKeyPathsString, "user-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.key", "specify user key path")
+	flags.StringVar(&tlsCrtPathsString, "tls-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify tls crt path")
+	flags.StringVar(&tlsKeyPathsString, "tls-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify tls key path")
 	flags.StringVarP(&orgIDsString, "org-IDs", "I", "wx-org1,wx-org2", "specify user key path")
 	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
 	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
@@ -585,8 +598,8 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, erro
 		tlsClient := ca.CAClient{
 			ServerName: serverName,
 			CaPaths:    []string{caPaths[index]},
-			CertFile:   userCrtPaths[index],
-			KeyFile:    userKeyPaths[index],
+			CertFile:   tlsCrtPaths[index],
+			KeyFile:    tlsKeyPaths[index],
 		}
 
 		c, err := tlsClient.GetCredentialsByCA()
