@@ -57,6 +57,8 @@ var (
 
 	hostsString        string
 	hostnamesString    string
+	signCrtPathsString string
+	signKeyPathsString string
 	userCrtPathsString string
 	userKeyPathsString string
 	orgIDsString       string
@@ -78,6 +80,8 @@ var (
 	caPaths      []string
 	hosts        []string
 	hostnames    []string
+	signCrtPaths []string
+	signKeyPaths []string
 	userCrtPaths []string
 	userKeyPaths []string
 	orgIDs       []string
@@ -163,24 +167,31 @@ func ParallelCMD() *cobra.Command {
 			caPaths = strings.Split(caPathsString, ",")
 			hosts = strings.Split(hostsString, ",")
 			hostnames = strings.Split(hostnamesString, ",")
+			signCrtPaths = strings.Split(signCrtPathsString, ",")
+			signKeyPaths = strings.Split(signKeyPathsString, ",")
 			userCrtPaths = strings.Split(userCrtPathsString, ",")
 			userKeyPaths = strings.Split(userKeyPathsString, ",")
 			orgIDs = strings.Split(orgIDsString, ",")
 
 			if authType == sdk.Public {
-				if len(hosts) != len(userKeyPaths) {
-					panic(fmt.Sprintf("hosts[%d], user-keys[%d] length invalid", len(hosts), len(userKeyPaths)))
+				if len(hosts) != len(signKeyPaths) {
+					panic(fmt.Sprintf("hosts[%d], sign-keys[%d] length invalid", len(hosts), len(signKeyPaths)))
 				}
 			} else if authType == sdk.PermissionedWithKey {
-				if len(hosts) != len(userKeyPaths) || len(hosts) != len(orgIDs) {
-					panic(fmt.Sprintf("hosts[%d], user-keys[%d], orgIDs[%d] length invalid",
-						len(hosts), len(userKeyPaths), len(orgIDs)))
+				if len(hosts) != len(signKeyPaths) || len(hosts) != len(orgIDs) {
+					panic(fmt.Sprintf("hosts[%d], sign-keys[%d], orgIDs[%d] length invalid",
+						len(hosts), len(signKeyPaths), len(orgIDs)))
 				}
 			} else {
-				if len(hosts) != len(userCrtPaths) || len(hosts) != len(userKeyPaths) || len(hosts) != len(caPaths) || len(hosts) != len(orgIDs) {
-					panic(fmt.Sprintf("hosts[%d], user-crts[%d], user-keys[%d], ca-path[%d], orgIDs[%d] length invalid",
-						len(hosts), len(userCrtPaths), len(userKeyPaths), len(caPaths), len(orgIDs)))
+				if len(hosts) != len(signCrtPaths) || len(hosts) != len(signKeyPaths) || len(hosts) != len(caPaths) || len(hosts) != len(orgIDs) {
+					panic(fmt.Sprintf("hosts[%d], sign-crts[%d], sign-keys[%d], ca-path[%d], orgIDs[%d] length invalid",
+						len(hosts), len(signCrtPaths), len(signKeyPaths), len(caPaths), len(orgIDs)))
 				}
+			}
+
+			if useTLS && (len(hosts) != len(userCrtPaths) || len(hosts) != len(userKeyPaths)) {
+				panic(fmt.Sprintf("use tls, but hosts[%d], user-crts[%d], user-keys[%d] length invalid",
+					len(hosts), len(userCrtPaths), len(userKeyPaths)))
 			}
 
 			nodeNum = len(hosts)
@@ -208,8 +219,10 @@ func ParallelCMD() *cobra.Command {
 	flags.IntVarP(&sleepTime, "sleepTime", "S", 100, "specify sleep time(unit: ms)")
 	flags.IntVarP(&climbTime, "climbTime", "L", 10, "specify climb time(unit: s)")
 	flags.StringVarP(&hostsString, "hosts", "H", "localhost:17988,localhost:27988", "specify hosts")
-	flags.StringVarP(&userCrtPathsString, "user-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify user crt path")
-	flags.StringVarP(&userKeyPathsString, "user-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify user key path")
+	flags.StringVarP(&signCrtPathsString, "sign-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.crt", "specify user crt path")
+	flags.StringVarP(&signKeyPathsString, "sign-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.key", "specify user key path")
+	flags.StringVar(&userCrtPathsString, "user-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify tls crt path")
+	flags.StringVar(&userKeyPathsString, "user-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify tls key path")
 	flags.StringVarP(&orgIDsString, "org-IDs", "I", "wx-org1,wx-org2", "specify user key path")
 	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
 	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
@@ -494,7 +507,7 @@ func (t *Thread) Init() error {
 	}
 	t.client = apiPb.NewRpcNodeClient(t.conn)
 
-	file, err := ioutil.ReadFile(userKeyPaths[t.index])
+	file, err := ioutil.ReadFile(signKeyPaths[t.index])
 	if err != nil {
 		return err
 	}
@@ -522,7 +535,7 @@ func (t *Thread) Start() {
 			} else if authType == sdk.PermissionedWithKey {
 				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i)
 			} else {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], userCrtPaths[t.index], i)
+				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], signCrtPaths[t.index], i)
 			}
 
 			elapsed := time.Since(start)
