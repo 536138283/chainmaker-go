@@ -196,7 +196,8 @@ func (bb *BlockBuilder) GenerateNewBlock(
 		block.Header.TxCount = uint32(len(block.Txs))
 	}
 
-	if TxPoolType == batch.TxPoolType {
+	// maxbft等出空块的共识场景下，空块不需要往区块中添加交易批次信息
+	if TxPoolType == batch.TxPoolType && len(block.Txs) != 0 {
 		var batchIdBytes []byte
 		// set batchIds into additional data
 		batchIdBytes, err = SerializeTxBatchInfo(batchIds, block.Txs, fetchBatches, bb.log)
@@ -1329,6 +1330,10 @@ func RecoverBlock(
 	ac protocol.AccessControlProvider,
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
+
+	if block.Header.TxCount == 0 {
+		return block, nil, nil
+	}
 
 	if TxPoolType == batch.TxPoolType {
 		return recoverBlockByBatch(block, mode, chainConf, txPool, ac, netService, logger)
