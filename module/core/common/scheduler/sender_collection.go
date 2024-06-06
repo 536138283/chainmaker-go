@@ -47,6 +47,21 @@ func NewSenderCollection(
 	}
 }
 
+func (s *SenderCollection) resetTotalGasUsed() {
+	for _, txCollection := range s.txsMap {
+		txCollection.totalGasUsed = 0
+	}
+}
+
+func (s *SenderCollection) getParallelTxsNum() int {
+	num := 0
+	for _, txCollection := range s.txsMap {
+		num += len(txCollection.txs)
+	}
+
+	return num
+}
+
 // getSenderTxCollection split txs in txBatch by sender account
 func getSenderTxCollection(
 	txBatch []*commonPb.Transaction,
