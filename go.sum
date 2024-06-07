@@ -56,9 +56,13 @@ chainmaker.org/chainmaker/store-sqldb/v2 v2.3.3-0.20240429092647-0ff1106732c8 h1
 chainmaker.org/chainmaker/store-sqldb/v2 v2.3.3-0.20240429092647-0ff1106732c8/go.mod h1:YiYSR0MFidXBa+yz3JeEwqAR8VDqAMyN/yeymcL764Q=
 chainmaker.org/chainmaker/store-tikv/v2 v2.3.4-0.20240429093100-2e9d7de7dc5d h1:re6vp3iP+qUhPXM49G8qRQZYtn6PDIO11BHCWvK01wM=
 chainmaker.org/chainmaker/store-tikv/v2 v2.3.4-0.20240429093100-2e9d7de7dc5d/go.mod h1:+2hDv5cwA1PLMaxho0m/Z1lilCIcYYpLUgAei/86w9M=
+chainmaker.org/chainmaker/store-tikv/v2 v2.3.4-0.20240606110420-b85f1b053ba7 h1:ICWlO1pOYFi6nOM5sJOvaP6UF61pULeT3S7L+nOwGTI=
+chainmaker.org/chainmaker/store-tikv/v2 v2.3.4-0.20240606110420-b85f1b053ba7/go.mod h1:+2hDv5cwA1PLMaxho0m/Z1lilCIcYYpLUgAei/86w9M=
 chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240429095419-195154001db6/go.mod h1:rIhJXM8fm0CPFuCmLvpTjkywmMxbPGbdrnryTuYE3XQ=
 chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240515092743-a0fe41caa52d h1:yv9okMK/uX8XG4rY7Fu4mgiImWKRYW+rTqzlKR+3gIU=
 chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240515092743-a0fe41caa52d/go.mod h1:rIhJXM8fm0CPFuCmLvpTjkywmMxbPGbdrnryTuYE3XQ=
+chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240607031550-0eb50116b555 h1:loWrM4oATqsCmQ9BLB64KeXES85Rmx4fu2aVe8maZtI=
+chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240607031550-0eb50116b555/go.mod h1:pZn7fK9waK9PFE+Mc5GPA0VAhqY/9mk71ICUKbWJGqU=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4-0.20240429085116-c29db8e1fb2b h1:D0RRYitEPBiIJk44+ttUGmuZyB6wTTgHa/cqpuCe8Zw=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4-0.20240429085116-c29db8e1fb2b/go.mod h1:spbtn7555AuPXZHNHzwJA+oB0pHaghLbL+3otcfkMdU=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.3.4-0.20240429083511-705ba75c56ad h1:eYrzNMjitv3+PHmb+jNNRMyi0m0vzshWCla9WH/Olxg=
