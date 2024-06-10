@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package scheduler
 
 import (
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	ac "chainmaker.org/chainmaker-go/module/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -45,6 +47,7 @@ const (
 	blockVersion2312       = uint32(2030102)
 	blockVersion2320       = uint32(2030200)
 	blockVersion2330       = uint32(2030300)
+	blockVersion2340       = uint32(2030400)
 )
 
 const (
@@ -115,6 +118,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	runningTxC := make(chan *commonPb.Transaction, txBatchSize)
 	finishC := make(chan bool)
 
+	blockVersion := block.Header.BlockVersion
 	enableOptimizeChargeGas := IsOptimizeChargeGasEnabled(ts.chainConf)
 	enableSenderGroup := ts.chainConf.ChainConfig().Core.EnableSenderGroup
 	enableConflictsBitWindow, conflictsBitWindow := ts.initOptimizeTools(txBatch)
@@ -122,7 +126,7 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	var senderCollection *SenderCollection
 	if enableOptimizeChargeGas {
 		ts.log.Debugf("before prepare `SenderCollection` ")
-		senderCollection = NewSenderCollection(txBatch, snapshot, ts.ac, block.Header.BlockVersion, ts.log)
+		senderCollection = ts.NewSenderCollection(txBatch, snapshot, ts.ac, blockVersion, ts.log)
 		ts.log.Debugf("end prepare `SenderCollection` ")
 	} else if enableSenderGroup {
 		ts.log.Debugf("before prepare `SenderGroup` ")
@@ -200,14 +204,52 @@ func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Trans
 	timeCostA := time.Since(startTime)
 	block.Dag = snapshot.BuildDAG(ts.chainConf.ChainConfig().Contract.EnableSqlSupport, nil)
 
-	// Execute special tx sequentially, and add to dag
-	if len(snapshot.GetSpecialTxTable()) > 0 {
-		ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
+	if blockVersion < blockVersion2340 {
+		// Execute special tx sequentially, and add to dag
+		if len(snapshot.GetSpecialTxTable()) > 0 {
+			ts.simulateSpecialTxs(block.Dag, snapshot, block, txBatchSize)
+		}
+
+	} else {
+		// Execute special tx sequentially, and add to dag
+		noBalanceTxsNum := 0
+		if enableOptimizeChargeGas && senderCollection != nil {
+			noBalanceTxsNum = len(senderCollection.specialTxTable)
+		}
+		serialTxs := make([]*commonPb.Transaction, 0, len(snapshot.GetSpecialTxTable())+noBalanceTxsNum)
+		serialTxsNum := len(snapshot.GetTxTable())
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("1) serialTxsNum = %v, noBalanceTxsNum = %v",
+				serialTxsNum, noBalanceTxsNum)
+		})
+		iterTxsNum := len(snapshot.GetSpecialTxTable())
+		if iterTxsNum > 0 {
+			ts.log.Infof("append txs[iter] into dag, size = %v", iterTxsNum)
+			serialTxs = append(serialTxs, snapshot.GetSpecialTxTable()...)
+			serialTxsNum += iterTxsNum
+		}
+		if enableOptimizeChargeGas && senderCollection != nil {
+			if noBalanceTxsNum > 0 {
+				ts.log.Infof("append txs[no balance] into dag, size = %v", noBalanceTxsNum)
+				serialTxs = append(serialTxs, senderCollection.specialTxTable...)
+				serialTxsNum += noBalanceTxsNum
+			}
+		}
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("2) serialTxsNum = %v", serialTxsNum)
+		})
+		if len(serialTxs) > 0 {
+			ts.simulateSpecialTxs(
+				serialTxs, block.Dag, snapshot,
+				block, serialTxsNum, senderCollection)
+		}
 	}
 
 	// if the block is not empty, append the charging gas tx
 	if enableOptimizeChargeGas && snapshot.GetSnapshotSize() > 0 {
-		ts.log.Debug("append charge gas tx to block ...")
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("append charge gas tx to block ...")
+		})
 		ts.appendChargeGasTx(block, snapshot, senderCollection)
 	}
 
@@ -412,6 +454,19 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 		return nil, nil, err
 	}
 
+	var senderCollection *SenderCollection
+	//txAddressCache := make(map[string]string, snapshot.GetSnapshotSize())
+	enableOptimizeChargeGas := coinbasemgr.IsOptimizeChargeGasEnabled(ts.chainConf)
+
+	blockVersion := block.Header.BlockVersion
+	if enableOptimizeChargeGas {
+		ts.log.Debugf("before prepare `SenderCollection` ")
+		senderCollection = ts.NewSenderCollection(block.Txs, snapshot, ts.ac, blockVersion, ts.log)
+		// reset totalGasUsed for recalculating txs in block
+		senderCollection.resetTotalGasUsed()
+		ts.log.Debugf("end prepare `SenderCollection` ")
+	}
+
 	txBatchSize := len(dag.Vertexes)
 	runningTxC := make(chan int, txBatchSize)
 	doneTxC := make(chan int, txBatchSize)
@@ -448,7 +503,9 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 				tx := txMapping[txIndex]
 				ts.log.Debugf("simulate with dag, prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
 				err = goRoutinePool.Submit(func() {
-					handleTxInSimulateWithDag(block, snapshot, ts, tx, txIndex, doneTxC, finishC, txExecOrderTypeC, txBatchSize)
+					handleTxInSimulateWithDag(
+						block, snapshot, ts, tx, txIndex, doneTxC,
+						finishC, txExecOrderTypeC, txBatchSize, senderCollection)
 				})
 				if err != nil {
 					ts.log.Warnf("failed to submit tx id %s during simulate with dag, %+v",
@@ -535,7 +592,8 @@ func handleTxInSimulateWithDag(
 	block *commonPb.Block, snapshot protocol.Snapshot,
 	ts *TxScheduler, tx *commonPb.Transaction, txIndex int,
 	doneTxC chan int, finishC chan bool,
-	txExecOrderTypeC chan TxIdAndExecOrderType, txBatchSize int) {
+	txExecOrderTypeC chan TxIdAndExecOrderType, txBatchSize int,
+	collection *SenderCollection) {
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block)
 	// send specialTxType BEFORE snapshot.ApplyTxSimContext which has a lock, ensuring that all txs have it
 	// and eliminating race condition
@@ -1113,9 +1171,20 @@ func (ts *TxScheduler) dispatchTxs(
 	conflictsBitWindow *ConflictsBitWindow,
 	snapshot protocol.Snapshot) {
 	if enableOptimizeChargeGas {
-		ts.log.Debugf("before `SenderCollection` dispatch => ")
-		ts.dispatchTxsInSenderCollection(block, senderCollection, runningTxC, snapshot)
-		ts.log.Debugf("end `SenderCollection` dispatch => ")
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("before `SenderCollection` dispatch => ")
+		})
+		defer ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("end `SenderCollection` dispatch => ")
+		})
+
+		blockVersion := block.Header.BlockVersion
+		if blockVersion < blockVersion2340 {
+			ts.dispatchTxsInSenderCollection(block, senderCollection, runningTxC, snapshot)
+			return
+		}
+
+		ts.dispatchTxsInSenderCollection234(block, senderCollection, runningTxC, snapshot)
 
 	} else if enableSenderGroup {
 		ts.log.Debugf("before `SenderGroup` dispatch => ")
@@ -1191,7 +1260,7 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 			}
 
 			// if the balance less than gas limit, set the result ahead, working goroutine will never runVM for it.
-			if balance-gasLimit < 0 {
+			if int64(balance)-gasLimit < 0 {
 				pkStr, _ := txCollection.publicKey.String()
 				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pkStr)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
@@ -1207,8 +1276,46 @@ func (ts *TxScheduler) dispatchTxsInSenderCollection(
 					Message:   errMsg,
 				}
 			} else {
-				balance = balance - gasLimit
+				balance = balance - uint64(gasLimit)
 			}
+
+			runningTxC <- tx
+		}
+	}
+}
+
+// dispatchTxsInSenderCollection dispatch txs from senderCollection to runningTxC chan
+// if the balance less than gas limit, set the result of tx and dispatch this tx.
+// use snapshot for newest data
+func (ts *TxScheduler) dispatchTxsInSenderCollection234(
+	block *commonPb.Block,
+	senderCollection *SenderCollection,
+	runningTxC chan *commonPb.Transaction,
+	snapshot protocol.Snapshot) {
+
+	ts.log.DebugDynamic(func() string {
+		return "begin dispatchTxsInSenderCollection(...)"
+	})
+	for addr, txCollection := range senderCollection.txsMap {
+
+		ts.log.DebugDynamic(func() string {
+			return fmt.Sprintf("%v => {balance: %v, tx size: %v}",
+				addr, txCollection.accountBalance, len(txCollection.txs))
+		})
+
+		for _, tx := range txCollection.txs {
+			ts.log.DebugDynamic(func() string {
+				return fmt.Sprintf("dispatch sender collection tx => %s", tx.Payload)
+			})
+
+			txNeedChargeGas := ts.checkNativeFilter(
+				block.GetHeader().GetBlockVersion(),
+				tx.GetPayload().ContractName,
+				tx.GetPayload().Method,
+				tx, snapshot)
+			ts.log.DebugDynamic(func() string {
+				return fmt.Sprintf("tx need charge gas => %v", txNeedChargeGas)
+			})
 
 			runningTxC <- tx
 		}
