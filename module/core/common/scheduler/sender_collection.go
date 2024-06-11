@@ -18,7 +18,7 @@ import (
 // key: address
 // value: tx collection will address's other data
 type SenderCollection struct {
-	txsMap map[string]*TxCollection
+	txsMap         map[string]*TxCollection
 	txAddressCache map[string]string
 	specialTxTable []*commonPb.Transaction
 }
