@@ -13,6 +13,12 @@ import (
 
 func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ac protocol.AccessControlProvider, blockVersion uint32) error {
+
+	// maxbft would have empty block
+	if len(block.Txs) == 0 {
+		return nil
+	}
+
 	// gas to charge from validator
 	gasCalc := make(map[string]uint64, 24)
 	// gas to charge from proposer
