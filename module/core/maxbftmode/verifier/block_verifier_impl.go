@@ -218,12 +218,14 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	if err != nil {
 		v.log.Warnf("verify failed [%d](%x),preBlockHash:%x, %s",
 			newBlock.Header.BlockHeight, newBlock.Header.BlockHash, newBlock.Header.PreBlockHash, err.Error())
+
+		// if mode equal consensus verify, publish to consensus verify result signal
 		if protocol.CONSENSUS_VERIFY == mode {
 			v.log.DebugDynamic(func() string {
 				return fmt.Sprintf("publish verfiy failed rw set txs, "+
 					"block height:%d, err: %s", newBlock.Header.BlockHeight, err.Error())
 			})
-			verifyResult = parseVerifyResult(newBlock, true, txRWSetMap, rwSetVerifyFailTx)
+			verifyResult = parseVerifyResult(newBlock, false, txRWSetMap, rwSetVerifyFailTx)
 			v.msgBus.Publish(msgbus.VerifyResult, verifyResult)
 		}
 
@@ -237,7 +239,8 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, newBlock)
 	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(newBlock, snapshot, v.ac, blockVersion); err != nil {
-			v.log.Warnf("verify failed [%d](%x), %s", newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
+			v.log.Warnf("verify failed [%d](%x), %s",
+				newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
 			verifyResult = parseVerifyResult(newBlock, true, txRWSetMap, rwSetVerifyFailTx)
 			if protocol.CONSENSUS_VERIFY == mode {
 				v.msgBus.Publish(msgbus.VerifyResult, verifyResult)
@@ -271,6 +274,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock.Txs), newBlock.Header.BlockHeight)
 	}
 
+	// if mode equal consensus verify, publish to consensus verify result signal
 	if protocol.CONSENSUS_VERIFY == mode {
 		verifyResult = parseVerifyResult(newBlock, true, txRWSetMap, nil)
 		v.msgBus.Publish(msgbus.VerifyResult, verifyResult)
@@ -281,6 +285,7 @@ func (v *BlockVerifierImpl) verifyBlock(block *commonpb.Block, mode protocol.Ver
 		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[common.BlockSig], timeLasts[common.VM],
 		timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
 
+	// monitor config open case
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
@@ -373,6 +378,7 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		v.txPool.AddTxsToPendingCache(coinbasemgr.FilterCoinBaseTxOrGasTx(newBlock.Txs), newBlock.Header.BlockHeight)
 	}
 
+	// if mode equal consensus verify, publish to consensus verify result signal
 	if protocol.CONSENSUS_VERIFY == mode {
 		v.msgBus.Publish(msgbus.VerifyResult, parseVerifyResult(newBlock, true, txRWSetMap, nil))
 	}
@@ -382,16 +388,19 @@ func (v *BlockVerifierImpl) VerifyBlockWithRwSets(block *commonpb.Block,
 		newBlock.Header.BlockHeight, newBlock.Header.BlockHash, timeLasts[common.BlockSig], timeLasts[common.VM],
 		timeLasts[common.TxVerify], timeLasts[common.TxRoot], lastPool, consensusCheckUsed, elapsed)
 
+	// monitor config open case
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		v.metricBlockVerifyTime.WithLabelValues(v.chainId).Observe(float64(elapsed) / 1000)
 	}
 	return nil
 }
 
+// Module return module name core
 func (v *BlockVerifierImpl) Module() string {
 	return ModuleNameCore
 }
 
+// Watch if tx paramer size less than or equal 0, set the parameter value max length by default parameter value max size
 func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) error {
 	v.chainConf.ChainConfig().Block = chainConfig.Block
 	protocol.ParametersValueMaxLength = chainConfig.Block.TxParameterSize * 1024 * 1024
@@ -402,6 +411,7 @@ func (v *BlockVerifierImpl) Watch(chainConfig *chainConfConfig.ChainConfig) erro
 	return nil
 }
 
+// validateBlock validate block
 func (v *BlockVerifierImpl) validateBlock(block,
 	lastBlock *commonpb.Block, mode protocol.VerifyMode) (map[string]*commonpb.TxRWSet,
 	map[string][]*commonpb.ContractEvent,
@@ -410,7 +420,6 @@ func (v *BlockVerifierImpl) validateBlock(block,
 	timeLasts := make(map[string]int64)
 	var err error
 	var txCapacity uint32
-
 	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
@@ -434,9 +443,11 @@ func (v *BlockVerifierImpl) validateBlock(block,
 		return nil, nil, timeLasts, nil, err
 	}
 
+	// ValidateBlock block by verifier
 	return v.verifierBlock.ValidateBlock(block, lastBlock, hashType, timeLasts, mode)
 }
 
+// validateBlockWithRWSets validate block with rw sets
 func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.Block, mode protocol.VerifyMode,
 	txRWSetMap map[string]*commonpb.TxRWSet) (
 	map[string][]*commonpb.ContractEvent, map[string]int64, error) {
@@ -448,13 +459,16 @@ func (v *BlockVerifierImpl) validateBlockWithRWSets(block, lastBlock *commonpb.B
 	// check if this block height is 1 bigger than last block height
 	lastBlockHash := lastBlock.Header.BlockHash
 	err = common.CheckPreBlock(block, lastBlockHash, proposedHeight)
+
 	if err != nil {
 		return nil, timeLasts, err
 	}
 
+	// ValidateBlockWithRWSets block by verifier
 	return v.verifierBlock.ValidateBlockWithRWSets(block, hashType, timeLasts, txRWSetMap, mode)
 }
 
+// checkPreBlock_MAXBFT check prepare block by max bft consensus type
 func (v *BlockVerifierImpl) checkPreBlock_MAXBFT(block *commonpb.Block, lastBlock *commonpb.Block, err error,
 	lastBlockHash []byte, proposedHeight uint64) error {
 
@@ -479,10 +493,12 @@ func (v *BlockVerifierImpl) checkPreBlock_MAXBFT(block *commonpb.Block, lastBloc
 	return nil
 }
 
+// verifyVoteSig verify vote signatures
 func (v *BlockVerifierImpl) verifyVoteSig(block *commonpb.Block) error {
 	return consensus.VerifyBlockSignatures(v.chainConf, v.ac, v.blockchainStore, block, v.ledgerCache)
 }
 
+// parseVerifyResult pater verify result, return verify result
 func parseVerifyResult(
 	block *commonpb.Block,
 	isValid bool,
@@ -498,6 +514,7 @@ func parseVerifyResult(
 	} else {
 		verifyResult.Msg = "FAIL"
 		verifyResult.Code = consensuspb.VerifyResult_FAIL
+		// if rw set verify fail tx not nil, set the verify result tx ids and block height
 		if rwSetVerifyFailTxs != nil {
 			verifyResult.RwSetVerifyFailTxs = &consensuspb.RwSetVerifyFailTxs{
 				TxIds:       rwSetVerifyFailTxs.TxIds,
@@ -508,6 +525,7 @@ func parseVerifyResult(
 	return verifyResult
 }
 
+// cutBlocks cut blocks
 func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep *commonpb.Block) {
 
 	if common.TxPoolType == batch.TxPoolType {
@@ -520,9 +538,11 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 
 	cutTxs := make([]*commonpb.Transaction, 0)
 	txMap := make(map[string]interface{})
+	// make map, the key is tx id, and the value tx
 	for _, tx := range blockToKeep.Txs {
 		txMap[tx.Payload.TxId] = struct{}{}
 	}
+	// collect the tx map
 	for _, blockToCut := range blocksToCut {
 		v.log.Infof("cut block hash: %x, height: %v", blockToCut.Header.BlockHash, blockToCut.Header.BlockHeight)
 		for _, txToCut := range blockToCut.Txs {
@@ -534,6 +554,7 @@ func (v *BlockVerifierImpl) cutBlocks(blocksToCut []*commonpb.Block, blockToKeep
 			cutTxs = append(cutTxs, txToCut)
 		}
 	}
+	// if cut txs not nil, retry txs to tx pool
 	if len(cutTxs) > 0 {
 		common.RetryAndRemoveTxs(v.txPool, cutTxs, nil, v.log)
 	}
