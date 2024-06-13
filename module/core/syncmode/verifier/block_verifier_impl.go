@@ -10,18 +10,10 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
-
-	"chainmaker.org/chainmaker/protocol/v2"
-
-	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
-
-	batch "chainmaker.org/chainmaker/txpool-batch/v2"
-
-	"github.com/gogo/protobuf/proto"
-
 	"chainmaker.org/chainmaker-go/module/consensus"
 	"chainmaker.org/chainmaker-go/module/core/common"
+	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
+	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
 	"chainmaker.org/chainmaker-go/module/core/provider/conf"
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
@@ -30,7 +22,11 @@ import (
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	chainConfConfig "chainmaker.org/chainmaker/pb-go/v2/config"
 	consensuspb "chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/protocol/v2"
+	batch "chainmaker.org/chainmaker/txpool-batch/v2"
 	"chainmaker.org/chainmaker/utils/v2"
+
+	"github.com/gogo/protobuf/proto"
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -203,7 +199,7 @@ func (v *BlockVerifierImpl) VerifyBlock(block *commonpb.Block, mode protocol.Ver
 	}
 
 	snapshot := v.snapshotManager.GetSnapshot(lastBlock, newBlock)
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		if err = scheduler.VerifyOptimizeChargeGasTx(newBlock, snapshot, v.ac, blockVersion); err != nil {
 			v.log.Warnf("verify failed [%d](%x), %s", newBlock.Header.BlockHeight, newBlock.Header.BlockHash, err.Error())
 			if protocol.CONSENSUS_VERIFY == mode {
@@ -400,7 +396,7 @@ func (v *BlockVerifierImpl) validateBlock(block, lastBlock *commonpb.Block, mode
 	timeLasts := make(map[string]int64)
 	var err error
 	var txCapacity uint32
-	if scheduler.IsOptimizeChargeGasEnabled(v.chainConf) {
+	if coinbasemgr.IsOptimizeChargeGasEnabled(v.chainConf) {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity + 1
 	} else {
 		txCapacity = v.chainConf.ChainConfig().Block.BlockTxCapacity

@@ -32,20 +32,14 @@ func (ts *TxScheduler) guardForExecuteTx2220(tx *commonPb.Transaction, txSimCont
 }
 
 func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimContext protocol.TxSimContext,
-	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot) (txIsAllow bool) {
-
-	txNeedChargeGas := ts.checkNativeFilter(
-		txSimContext.GetBlockVersion(),
-		tx.Payload.ContractName,
-		tx.Payload.Method,
-		tx,
-		txSimContext.GetSnapshot())
+	enableGas bool, enableOptimizeChargeGas bool, snapshot protocol.Snapshot, accountStatus commonPb.TxStatusCode,
+	blockVersion uint32) (txIsAllow bool) {
 
 	if enableOptimizeChargeGas {
 		// below code is in charge_gas_optimize mode
 
 		// need charge gas, but gasLimit is not set
-		if txNeedChargeGas && tx.Payload.Limit == nil {
+		if tx.Payload.Limit == nil {
 			// `verify node` should return error result same with `proposer node` do in `dispatchTxsInSenderCollection`
 			txResult := &commonPb.Result{
 				Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
@@ -60,91 +54,94 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			}
 			txSimContext.SetTxResult(txResult)
 			return false
+		}
+		// in `proposer node`:
+		// 	1) tx.Result should be set by `dispatchTxsInSenderCollection()`
+		//  2) tx.Result should be set by `runVM()`
+		// in `verify node`:
+		//  1) tx.Result should be set in this place
+		//  2) tx.Result should be set in `runVM()` later
+		//pk, _ := getPayerPkFromTx(tx, snapshot, ts.ac, blockVersion)
+		addr, pk, _ := getPayerAddressAndPkFromTx(tx, snapshot, ts.ac)
+		if tx.Result != nil || blockVersion >= blockVersion2340 && accountStatus != commonPb.TxStatusCode_SUCCESS {
+			txResult := &commonPb.Result{
+				ContractResult: &commonPb.ContractResult{
+					Code:    uint32(1),
+					Result:  nil,
+					GasUsed: uint64(0),
+				},
+				RwSetHash: nil,
+			}
 
-		} else if txNeedChargeGas && tx.Payload.Limit != nil {
-			// in `proposer node`:
-			// 	1) tx.Result should be set by `dispatchTxsInSenderCollection()`
-			//  2) tx.Result should be set by `runVM()`
-			// in `verify node`:
-			//  1) tx.Result should be set in this place
-			//  2) tx.Result should be set in `runVM()` later
-			//pk, _ := getPayerPkFromTx(tx, snapshot, ts.ac, blockVersion)
-			addr, pk, _ := getPayerAddressAndPkFromTx(tx, snapshot, ts.ac)
-			if tx.Result != nil {
-				txResult := &commonPb.Result{
-					ContractResult: &commonPb.ContractResult{
-						Code:    uint32(1),
-						Result:  nil,
-						GasUsed: uint64(0),
-					},
-					RwSetHash: nil,
-				}
+			txResultCode := tx.Result.Code
+			if blockVersion >= blockVersion2340 {
+				txResultCode = accountStatus
+			}
 
-				if tx.Result.Code == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
-					ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
-					errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
+			if txResultCode == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
+				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
+				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
 
-					txResult.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
-					txResult.Message = errMsg
-					txResult.ContractResult.Message = errMsg
+				txResult.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
+				txResult.Message = errMsg
+				txResult.ContractResult.Message = errMsg
 
-					txSimContext.SetTxResult(txResult)
-					return false
+				txSimContext.SetTxResult(txResult)
+				return false
 
-				} else if tx.Result.Code == commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED {
+			} else if txResultCode == commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED {
 
-					ts.log.Debugf("get account balance failed. address = %v, public key = %s", addr, pk)
-					errMsg := fmt.Sprintf("get account `%s` balance failed.", addr)
+				ts.log.Debugf("get account balance failed. address = %v, public key = %s", addr, pk)
+				errMsg := fmt.Sprintf("get account `%s` balance failed.", addr)
 
-					txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
-					txResult.Message = errMsg
-					txResult.ContractResult.Message = errMsg
+				txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
+				txResult.Message = errMsg
+				txResult.ContractResult.Message = errMsg
 
-					txSimContext.SetTxResult(txResult)
-					return false
+				txSimContext.SetTxResult(txResult)
+				return false
 
-				} else if tx.Result.Code == commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED {
+			} else if txResultCode == commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED {
 
-					ts.log.Debugf("parse account balance failed. address = %v, public key = %s", addr, pk)
-					errMsg := fmt.Sprintf("parse account `%s` balance failed.", addr)
+				ts.log.Debugf("parse account balance failed. address = %v, public key = %s", addr, pk)
+				errMsg := fmt.Sprintf("parse account `%s` balance failed.", addr)
 
-					txResult.Code = commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
-					txResult.Message = errMsg
-					txResult.ContractResult.Message = errMsg
+				txResult.Code = commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
+				txResult.Message = errMsg
+				txResult.ContractResult.Message = errMsg
 
-					txSimContext.SetTxResult(txResult)
-					return false
+				txSimContext.SetTxResult(txResult)
+				return false
 
-				} else if tx.Result.Code == commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED {
+			} else if txResultCode == commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED {
 
-					ts.log.Debugf("get account status failed. address = %v, public key = %s", addr, pk)
-					errMsg := fmt.Sprintf("get account `%s` status failed.", addr)
+				ts.log.Debugf("get account status failed. address = %v, public key = %s", addr, pk)
+				errMsg := fmt.Sprintf("get account `%s` status failed.", addr)
 
-					txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED
-					txResult.Message = errMsg
-					txResult.ContractResult.Message = errMsg
+				txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED
+				txResult.Message = errMsg
+				txResult.ContractResult.Message = errMsg
 
-					txSimContext.SetTxResult(txResult)
-					return false
+				txSimContext.SetTxResult(txResult)
+				return false
 
-				} else if tx.Result.Code == commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN {
+			} else if txResultCode == commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN {
 
-					ts.log.Debugf("account has been frozen. address = %v, public key = %s", addr, pk)
-					errMsg := fmt.Sprintf("the account `%s` has been frozen.", addr)
+				ts.log.Debugf("account has been frozen. address = %v, public key = %s", addr, pk)
+				errMsg := fmt.Sprintf("the account `%s` has been frozen.", addr)
 
-					txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN
-					txResult.Message = errMsg
-					txResult.ContractResult.Message = errMsg
+				txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN
+				txResult.Message = errMsg
+				txResult.ContractResult.Message = errMsg
 
-					txSimContext.SetTxResult(txResult)
-					return false
-				}
+				txSimContext.SetTxResult(txResult)
+				return false
 			}
 		}
 	} else if enableGas {
 		// below code is in charge_gas mode
 
-		if txNeedChargeGas && tx.Payload.Limit == nil {
+		if tx.Payload.Limit == nil {
 			txResult := &commonPb.Result{
 				Code: commonPb.TxStatusCode_GAS_LIMIT_NOT_SET,
 				ContractResult: &commonPb.ContractResult{

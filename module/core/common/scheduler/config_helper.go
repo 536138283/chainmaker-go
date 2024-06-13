@@ -11,19 +11,6 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 )
 
-func IsOptimizeChargeGasEnabled(chainConf protocol.ChainConf) bool {
-	enableGas := false
-	enableOptimizeChargeGas := false
-	if chainConf.ChainConfig() != nil && chainConf.ChainConfig().AccountConfig != nil {
-		enableGas = chainConf.ChainConfig().AccountConfig.EnableGas
-	}
-
-	if chainConf.ChainConfig() != nil && chainConf.ChainConfig().Core != nil {
-		enableOptimizeChargeGas = chainConf.ChainConfig().Core.EnableOptimizeChargeGas
-	}
-	return enableGas && enableOptimizeChargeGas
-}
-
 func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot,
 	ac protocol.AccessControlProvider, blockVersion uint32) error {
 	// gas to charge from validator
