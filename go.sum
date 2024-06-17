@@ -60,6 +60,8 @@ chainmaker.org/chainmaker/store-tikv/v2 v2.3.4-0.20240606110420-b85f1b053ba7/go.
 chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240429095419-195154001db6/go.mod h1:rIhJXM8fm0CPFuCmLvpTjkywmMxbPGbdrnryTuYE3XQ=
 chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240607031550-0eb50116b555 h1:loWrM4oATqsCmQ9BLB64KeXES85Rmx4fu2aVe8maZtI=
 chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240607031550-0eb50116b555/go.mod h1:pZn7fK9waK9PFE+Mc5GPA0VAhqY/9mk71ICUKbWJGqU=
+chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240617083400-86ce7b600d85 h1:+7Z5PCSrV6SFVAUOTFutBaKUKakImBrn+d18eQWNwe4=
+chainmaker.org/chainmaker/store/v2 v2.3.6-0.20240617083400-86ce7b600d85/go.mod h1:pZn7fK9waK9PFE+Mc5GPA0VAhqY/9mk71ICUKbWJGqU=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4-0.20240429085116-c29db8e1fb2b h1:D0RRYitEPBiIJk44+ttUGmuZyB6wTTgHa/cqpuCe8Zw=
 chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4-0.20240429085116-c29db8e1fb2b/go.mod h1:spbtn7555AuPXZHNHzwJA+oB0pHaghLbL+3otcfkMdU=
 chainmaker.org/chainmaker/txpool-normal/v2 v2.3.4-0.20240429083511-705ba75c56ad h1:eYrzNMjitv3+PHmb+jNNRMyi0m0vzshWCla9WH/Olxg=
