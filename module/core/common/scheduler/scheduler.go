@@ -74,6 +74,12 @@ type TxIdAndExecOrderType struct {
 	protocol.ExecOrderTxType
 }
 
+type applyResult struct {
+	txIndex        int
+	isApplySuccess bool
+	applySize      int
+}
+
 // Schedule according to a batch of transactions,
 // and generating DAG according to the conflict relationship
 func (ts *TxScheduler) Schedule(block *commonPb.Block, txBatch []*commonPb.Transaction,
@@ -485,10 +491,12 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 
 	txBatchSize := len(dag.Vertexes)
 	runningTxC := make(chan int, txBatchSize)
-	doneTxC := make(chan int, txBatchSize)
+	doneTxC := make(chan *applyResult, txBatchSize)
 
 	timeoutC := time.After(ScheduleWithDagTimeout * time.Second)
-	finishC := make(chan bool)
+	finishC := make(chan bool, 1)
+	// simulate 理论上不会apply fail，除非出现了随机函数或者主节点dag构造错误的情况
+	failApplyCount := 0
 
 	var goRoutinePool *ants.Pool
 	if goRoutinePool, err = ants.NewPool(len(block.Txs), ants.WithPreAlloc(true)); err != nil {
@@ -515,22 +523,32 @@ func (ts *TxScheduler) SimulateWithDag(block *commonPb.Block, snapshot protocol.
 			select {
 			case txIndex := <-runningTxC:
 				tx := txMapping[txIndex]
-				ts.log.Debugf("simulate with dag, prepare to submit running task for tx id:%s", tx.Payload.GetTxId())
+				ts.log.Debugf("simulate with dag, prepare to submit running task for tx id:%s",
+					tx.Payload.GetTxId())
 				err = goRoutinePool.Submit(func() {
 					handleTxInSimulateWithDag(
-						block, snapshot, ts, tx, txIndex, doneTxC,
-						finishC, txBatchSize, senderCollection)
+						block, snapshot, ts, tx, txIndex, doneTxC, txBatchSize, senderCollection)
 				})
 				if err != nil {
 					ts.log.Warnf("failed to submit tx id %s during simulate with dag, %+v",
 						tx.Payload.GetTxId(), err)
 				}
-			case doneTxIndex := <-doneTxC:
-				txIndexBatchAfterShrink := ts.shrinkDag(doneTxIndex, dagRemain, reverseDagRemain)
+			case txApplyResult := <-doneTxC:
+				if !txApplyResult.isApplySuccess {
+					failApplyCount++
+				}
+				txIndexBatchAfterShrink := ts.shrinkDag(txApplyResult.txIndex, dagRemain, reverseDagRemain)
 				ts.log.Debugf("block [%d] simulate with dag, pop next tx index batch size:%d, dagRemain size:%d",
 					block.Header.BlockHeight, len(txIndexBatchAfterShrink), len(dagRemain))
 				for _, tx := range txIndexBatchAfterShrink {
 					runningTxC <- tx
+				}
+				if txApplyResult.applySize+failApplyCount >= txBatchSize {
+					ts.log.DebugDynamic(func() string {
+						return fmt.Sprintf("finished 1 batch, apply size:%d, tx batch size:%d",
+							txApplyResult.applySize, txBatchSize)
+					})
+					finishC <- true
 				}
 			case <-finishC:
 				ts.log.Debugf("block [%d] simulate with dag finish", block.Header.BlockHeight)
@@ -605,32 +623,25 @@ func (ts *TxScheduler) initSimulateDag(dag *commonPb.DAG) (
 func handleTxInSimulateWithDag(
 	block *commonPb.Block, snapshot protocol.Snapshot,
 	ts *TxScheduler, tx *commonPb.Transaction, txIndex int,
-	doneTxC chan int, finishC chan bool, txBatchSize int,
+	doneTxC chan *applyResult, txBatchSize int,
 	collection *SenderCollection) {
 	txSimContext, specialTxType, runVmSuccess := ts.executeTx(tx, snapshot, block, collection)
 
 	// if apply failed means this tx's read set conflict with other txs' write set
-	applyResult, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
-	if !applyResult {
+	isApplySuccess, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
+	doneTxC <- &applyResult{txIndex, isApplySuccess, applySize}
+	if !isApplySuccess {
 		ts.log.DebugDynamic(func() string {
 			return fmt.Sprintf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
 		})
-		// apply fails in verification, make it done rather than retry it
-		doneTxC <- txIndex
-	} else {
-		ts.log.DebugDynamic(func() string {
-			return fmt.Sprintf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
-				tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
-		})
-		doneTxC <- txIndex
+
+		return
 	}
-	// If all transactions in current batch have been successfully added to dag
-	if applySize >= txBatchSize {
-		ts.log.DebugDynamic(func() string {
-			return fmt.Sprintf("finished 1 batch, apply size:%d, tx batch size:%d", applySize, txBatchSize)
-		})
-		finishC <- true
-	}
+
+	ts.log.DebugDynamic(func() string {
+		return fmt.Sprintf("apply to snapshot for tx id:%s, result:%+v, apply count:%d, tx batch size:%d",
+			tx.Payload.GetTxId(), txSimContext.GetTxResult(), applySize, txBatchSize)
+	})
 }
 
 func (ts *TxScheduler) adjustPoolSize(pool *ants.Pool, conflictsBitWindow *ConflictsBitWindow, txExecType TxExecType) {
