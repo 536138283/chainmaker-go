@@ -16,11 +16,11 @@ require (
 	chainmaker.org/chainmaker/net-liquid v1.1.3
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.6-0.20240802075330-514dcc8b6031
 	chainmaker.org/chainmaker/protocol/v2 v2.3.6-0.20240802081452-1a9e1f836f84
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.6-0.20240730073328-1eb23ec0ec14
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.6-0.20240805094053-824d360b2819
 	chainmaker.org/chainmaker/store/v2 v2.3.6
 	chainmaker.org/chainmaker/utils/v2 v2.3.5
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.5
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.6
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.7-0.20240730073108-04ac926a5683
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.5
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.5
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.5

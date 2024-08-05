@@ -21,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker-go/tools/cmc/gas"
 	"chainmaker.org/chainmaker-go/tools/cmc/hibe"
 	"chainmaker.org/chainmaker-go/tools/cmc/key"
+	"chainmaker.org/chainmaker-go/tools/cmc/node"
 	"chainmaker.org/chainmaker-go/tools/cmc/paillier"
 	"chainmaker.org/chainmaker-go/tools/cmc/parallel"
 	"chainmaker.org/chainmaker-go/tools/cmc/payload"
@@ -60,6 +61,7 @@ For detailed logs, please see ./sdk.log
 	mainCmd.AddCommand(version.VersionCMD())
 	mainCmd.AddCommand(commandutil.NewUtilCMD())
 	mainCmd.AddCommand(consensus.NewConsensusCMD())
+	mainCmd.AddCommand(node.NewNodeCMD())
 
 	// 后续改成go-sdk
 	//mainCmd.AddCommand(payload.PayloadCMD())

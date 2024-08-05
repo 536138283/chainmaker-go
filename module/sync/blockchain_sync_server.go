@@ -118,11 +118,10 @@ func (sync *BlockChainSyncServer) Start() error {
 	sync.scheduler = NewRoutine("scheduler", scheduler.handler, scheduler.getServiceState, sync.log)
 	sync.processor = NewRoutine("processor", processor.handler, processor.getServiceState, sync.log)
 	sync.getStateFn = func() state {
-		s := state{
-			blocks_has_synced: processor.maxHeightInQueue,
-			blocks_in_cache:   len(processor.queue),
+		return state{
+			blocksHasSynced: processor.maxHeightInQueue,
+			blocksInCache:   len(processor.queue),
 		}
-		return s
 	}
 	// 2. register msgs handler
 	if sync.msgBus != nil && sync.conf.broadcastStatusPerBlocksCommitted > 0 {
@@ -249,11 +248,13 @@ func (sync *BlockChainSyncServer) handleNodeStatusReq(from string) error {
 		err    error
 	)
 	if height, err = sync.ledgerCache.CurrentHeight(); err != nil {
+		sync.log.Errorf("fail to get the current height from ledgerCache:%s", err.Error())
 		return err
 	}
 	archivedHeight := sync.blockChainStore.GetArchivedPivot()
 	sync.log.Debugf("receive node status request from node [%s]", from)
 	if bz, err = proto.Marshal(&syncPb.BlockHeightBCM{BlockHeight: height, ArchivedHeight: archivedHeight}); err != nil {
+		sync.log.Errorf("fail to proto.marshal BlockHeightBCM for status request:%s", err.Error())
 		return err
 	}
 	return sync.sendMsg(syncPb.SyncMsg_NODE_STATUS_RESP, bz, from)
@@ -263,6 +264,7 @@ func (sync *BlockChainSyncServer) handleNodeStatusReq(from string) error {
 func (sync *BlockChainSyncServer) handleNodeStatusResp(syncMsg *syncPb.SyncMsg, from string) error {
 	msg := syncPb.BlockHeightBCM{}
 	if err := proto.Unmarshal(syncMsg.Payload, &msg); err != nil {
+		sync.log.Errorf("fail to proto.unmarshal BlockHeightBCM for status response:%s", err.Error())
 		return err
 	}
 	sync.log.Debugf("receive node[%s] status, height [%d], archived height [%d]", from, msg.BlockHeight,
@@ -321,6 +323,8 @@ func (sync *BlockChainSyncServer) sendInfos(req *syncPb.BlockSyncReq, from strin
 	for i := uint64(0); i < req.BatchSize; i++ {
 		if req.WithRwset {
 			if blkRwInfo, err = sync.blockChainStore.GetBlockWithRWSets(req.BlockHeight + i); err != nil {
+				sync.log.Errorf("[SyncMsg_BLOCK_SYNC_RESP] get block[%d] with reset with err: %s",
+					req.BlockHeight+i, err.Error())
 				return err
 			}
 			if blkRwInfo == nil {
@@ -329,7 +333,8 @@ func (sync *BlockChainSyncServer) sendInfos(req *syncPb.BlockSyncReq, from strin
 			}
 		} else {
 			if blk, err = sync.blockChainStore.GetBlock(req.BlockHeight + i); err != nil {
-				sync.log.Debugf("[SyncMsg_BLOCK_SYNC_RESP] get block without reset with err: %s", err.Error())
+				sync.log.Errorf("[SyncMsg_BLOCK_SYNC_RESP] get block[%d] without reset with err: %s",
+					req.BlockHeight+i, err.Error())
 				return err
 			}
 			if blk == nil {
@@ -346,9 +351,11 @@ func (sync *BlockChainSyncServer) sendInfos(req *syncPb.BlockSyncReq, from strin
 			Data: &syncPb.SyncBlockBatch_BlockinfoBatch{BlockinfoBatch: &syncPb.BlockInfoBatch{
 				Batch: []*commonPb.BlockInfo{info}}}, WithRwset: req.WithRwset,
 		}); err != nil {
+			sync.log.Errorf("fail to proto.Marshal the syncPb.SyncBlockBatch:%s", err.Error())
 			return err
 		}
 		if err := sync.sendMsg(syncPb.SyncMsg_BLOCK_SYNC_RESP, bz, from); err != nil {
+			sync.log.Errorf("fail to send message to [%s] error: %s", from, err.Error())
 			return err
 		}
 	}
@@ -601,9 +608,10 @@ func (sync *BlockChainSyncServer) Stop() {
 	_ = sync.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
 }
 
-func (sync *BlockChainSyncServer) GetState(with_peer bool) (*syncPb.SyncState, error) {
+func (sync *BlockChainSyncServer) GetState(withPeers bool) (*syncPb.SyncState, error) {
 	height, err := sync.ledgerCache.CurrentHeight()
 	if err != nil {
+		sync.log.Errorf("[GetState] gets the current height error:%s", err.Error())
 		return nil, err
 	}
 	archivedHeight := sync.blockChainStore.GetArchivedPivot()
@@ -611,12 +619,12 @@ func (sync *BlockChainSyncServer) GetState(with_peer bool) (*syncPb.SyncState, e
 	state := syncPb.SyncState{
 		Height:          height,
 		ArchivedHeight:  archivedHeight,
-		BlocksHasSynced: basicState.blocks_has_synced,
-		BlocksInCache:   int32(basicState.blocks_in_cache),
+		BlocksHasSynced: basicState.blocksHasSynced,
+		BlocksInCache:   int32(basicState.blocksInCache),
 		ConfigShow:      sync.conf.print(),
 		Timestamp:       time.Now().Unix(),
 	}
-	if with_peer {
+	if withPeers {
 		state.Others = sync.nodeList.GetAll()
 	}
 	return &state, nil
