@@ -25,23 +25,10 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// dealContractEventSubscription - deal contract event subscribe request
-func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
-	server apiPb.RpcNode_SubscribeServer) error {
+func (s *ApiService) checkDealContractEventSubscriptionParams(tx *commonPb.Transaction) (
+	startBlock int64, endBlock int64, contractName string, topic string, err error) {
 
-	var (
-		err          error
-		errMsg       string
-		errCode      commonErr.ErrCode
-		db           protocol.BlockchainStore
-		payload      = tx.Payload
-		startBlock   int64
-		endBlock     int64
-		contractName string
-		topic        string
-	)
-
-	for _, kv := range payload.Parameters {
+	for _, kv := range tx.Payload.Parameters {
 		if kv.Key == syscontract.SubscribeContractEvent_START_BLOCK.String() {
 			startBlock, err = bytehelper.BytesToInt64(kv.Value)
 		} else if kv.Key == syscontract.SubscribeContractEvent_END_BLOCK.String() {
@@ -55,28 +42,55 @@ func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 		}
 
 		if err != nil {
-			errCode = commonErr.ERR_CODE_CHECK_PAYLOAD_PARAM_SUBSCRIBE_CONTRACT_EVENT
-			errMsg = s.getErrMsg(errCode, err)
-			s.log.Error(errMsg)
-			return status.Error(codes.InvalidArgument, errMsg)
+			errCode := commonErr.ERR_CODE_CHECK_PAYLOAD_PARAM_SUBSCRIBE_CONTRACT_EVENT
+			errMsg := s.getErrMsg(errCode, err)
+			err = status.Error(codes.InvalidArgument, errMsg)
+			return
 		}
+	}
+
+	return
+}
+
+// dealContractEventSubscription - deal contract event subscribe request
+func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
+	server apiPb.RpcNode_SubscribeServer) error {
+
+	var (
+		err          error
+		errMsg       string
+		errCode      commonErr.ErrCode
+		db           protocol.BlockchainStore
+		txId         = tx.Payload.TxId
+		startBlock   int64
+		endBlock     int64
+		contractName string
+		topic        string
+	)
+
+	startBlock, endBlock, contractName, topic, err = s.checkDealContractEventSubscriptionParams(tx)
+	if err != nil {
+		s.log.Warnf(fmt.Sprintf("check deal contract event subscription params failed, err:%s. [txId:%s]",
+			err, txId))
+		return err
 	}
 
 	if err = s.checkSubscribeContractEventPayload(startBlock, endBlock); err != nil {
 		errCode = commonErr.ERR_CODE_CHECK_PAYLOAD_PARAM_SUBSCRIBE_CONTRACT_EVENT
 		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
+		s.log.Warnf(errMsg + fmt.Sprintf("[reqTxId:%s]", txId))
 		return status.Error(codes.InvalidArgument, errMsg)
 	}
 
-	s.log.Infof("Recv contract event subscribe request: [start:%d]/[end:%d]/[contractName:%s]/[topic:%s]",
-		startBlock, endBlock, contractName, topic)
+	s.log.Infof(
+		"Recv contract event subscribe request: [start:%d]/[end:%d]/[contractName:%s]/[topic:%s]/[txId:%s]",
+		startBlock, endBlock, contractName, topic, txId)
 
 	chainId := tx.Payload.ChainId
 	if db, err = s.chainMakerServer.GetStore(chainId); err != nil {
 		errCode = commonErr.ERR_CODE_GET_STORE
 		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
+		s.log.Warnf(errMsg + fmt.Sprintf("[reqTxId:%s]", txId))
 		return status.Error(codes.Internal, errMsg)
 	}
 
@@ -101,21 +115,34 @@ func (s *ApiService) doSendContractEvent(tx *commonPb.Transaction, db protocol.B
 	var (
 		alreadySendHistoryBlockHeight int64
 		err                           error
+		txId                          = tx.Payload.TxId
 	)
 
+	senderAddr, err := s.getTxSenderAddress(db, tx)
+	if err != nil {
+		s.log.Warnf(err.Error() + fmt.Sprintf("txId:%s", txId))
+		return err
+	}
+
 	if startBlock == -1 && endBlock == 0 {
+		s.log.Infof("send contract event: [sender:%s] [contractName:%s] [topic:%s] "+
+			"[startBlock:%d] [endBlock:%d] [txId:%s, addr:%s]",
+			senderAddr, contractName, topic, startBlock, endBlock, txId, senderAddr)
 		return status.Error(codes.OK, "OK")
 	}
 
 	// just send realtime contract event
 	// == 0 for compatibility
 	if (startBlock == -1 && endBlock == -1) || (startBlock == 0 && endBlock == 0) {
-		return s.sendNewContractEvent(db, tx, server, startBlock, endBlock, contractName, topic, -1)
+		return s.sendNewContractEvent(db, tx, server, startBlock, endBlock,
+			contractName, topic, -1, senderAddr)
 	}
 
 	if startBlock != -1 {
 		if alreadySendHistoryBlockHeight, err = s.doSendHistoryContractEvent(db, server, startBlock, endBlock,
-			contractName, topic); err != nil {
+			contractName, topic, txId, senderAddr); err != nil {
+			s.log.Warnf(err.Error() + fmt.Sprintf("[txId:%s, addr:%s, contractName:%s, topic:%s]",
+				txId, senderAddr, contractName, topic))
 			return err
 		}
 	}
@@ -129,11 +156,11 @@ func (s *ApiService) doSendContractEvent(tx *commonPb.Transaction, db protocol.B
 	}
 
 	return s.sendNewContractEvent(db, tx, server, startBlock, endBlock, contractName, topic,
-		alreadySendHistoryBlockHeight)
+		alreadySendHistoryBlockHeight, senderAddr)
 }
 
 func (s *ApiService) doSendHistoryContractEvent(db protocol.BlockchainStore, server apiPb.RpcNode_SubscribeServer,
-	startBlock, endBlock int64, contractName, topic string) (int64, error) {
+	startBlock, endBlock int64, contractName, topic, txId, senderAddr string) (int64, error) {
 
 	var (
 		err             error
@@ -151,17 +178,21 @@ func (s *ApiService) doSendHistoryContractEvent(db protocol.BlockchainStore, ser
 		} else {
 			errCode = commonErr.ERR_CODE_GET_LAST_BLOCK
 			errMsg = s.getErrMsg(errCode, err)
-			s.log.Error(errMsg)
+			s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, senderAddr:%s, contractName:%s, topic:%s]",
+				txId, senderAddr, contractName, topic))
 			return -1, status.Error(codes.Internal, errMsg)
 		}
 	}
 
 	// only send history contract event
 	if endBlock > 0 && endBlock <= lastBlockHeight {
-		_, err = s.sendHistoryContractEvent(db, server, startBlock, endBlock, contractName, topic)
+		_, err = s.sendHistoryContractEvent(db, server, startBlock, endBlock,
+			contractName, topic, txId, senderAddr)
 
 		if err != nil {
-			s.log.Errorf("sendHistoryContractEvent failed, %s", err)
+			s.log.Warnf(
+				"sendHistoryContractEvent failed:%s. [txId:%s, senderAddr:%s, contractName:%s, topic:%s]",
+				err, txId, senderAddr, contractName, topic)
 			return -1, err
 		}
 
@@ -169,10 +200,11 @@ func (s *ApiService) doSendHistoryContractEvent(db protocol.BlockchainStore, ser
 	}
 
 	alreadySendHistoryBlockHeight, err := s.sendHistoryContractEvent(db, server, startBlock, endBlock,
-		contractName, topic)
+		contractName, topic, txId, senderAddr)
 
 	if err != nil {
-		s.log.Errorf("sendHistoryContractEvent failed, %s", err)
+		s.log.Warnf("sendHistoryContractEvent failed:%s, [txId:%s, senderAddr:%s, contractName:%s, topic:%s]",
+			err, txId, senderAddr, contractName, topic)
 		return -1, err
 	}
 
@@ -186,7 +218,7 @@ func (s *ApiService) doSendHistoryContractEvent(db protocol.BlockchainStore, ser
 func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 	server apiPb.RpcNode_SubscribeServer,
 	startBlockHeight, endBlockHeight int64,
-	contractName, topic string) (int64, error) {
+	contractName, topic, txId, senderAddr string) (int64, error) {
 
 	var (
 		err    error
@@ -198,15 +230,23 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 	for {
 		select {
 		case <-server.Context().Done():
+			s.log.Infof("server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+				txId, senderAddr, contractName, topic)
 			return -1, nil
 		case <-s.ctx.Done():
+			s.log.Warnf("service context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+				txId, senderAddr, contractName, topic)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
 			if err = s.getRateLimitToken(); err != nil {
+				s.log.Warnf(err.Error() + fmt.Sprintf("[txId:%s, sender:%s]", txId, senderAddr))
 				return -1, status.Error(codes.Internal, err.Error())
 			}
 
 			if endBlockHeight > 0 && i > endBlockHeight {
+				s.log.Infof("sendHistoryContractEvent done[height:%d, endBlockHeight:%d]."+
+					"[txId:%s, sender:%s, contractName:%s, topic:%s]",
+					i, endBlockHeight, txId, senderAddr, contractName, topic)
 				return i - 1, nil
 			}
 
@@ -214,7 +254,8 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 
 			if err != nil {
 				errMsg = fmt.Sprintf("get block failed, at [height:%d], %s", i, err)
-				s.log.Error(errMsg)
+				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s, contractName:%s, topic:%s]",
+					txId, senderAddr, contractName, topic))
 				return -1, status.Error(codes.Internal, errMsg)
 			}
 
@@ -224,10 +265,12 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 
 			if err := s.sendSubscribeContractEvent(server, block, contractName, topic); err != nil {
 				errMsg = fmt.Sprintf("send subscribe tx failed, %s", err)
-				s.log.Error(errMsg)
+				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s, contractName:%s, topic:%s]",
+					txId, senderAddr, contractName, topic))
 				return -1, status.Error(codes.Internal, errMsg)
 			}
-
+			s.log.Infof("sendHistoryContractEvent[height:%d]. [txId:%s, sender:%s, contractName:%s, topic:%s]",
+				i, txId, senderAddr, contractName, topic)
 			i++
 		}
 	}
@@ -301,7 +344,7 @@ func (s *ApiService) doSendSubscribeContractEvent(server apiPb.RpcNode_Subscribe
 
 func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *commonPb.Transaction,
 	server apiPb.RpcNode_SubscribeServer, startBlock, endBlock int64,
-	contractName string, topic string, alreadySendHistoryBlockHeight int64) error {
+	contractName string, topic string, alreadySendHistoryBlockHeight int64, senderAddr string) error {
 
 	var (
 		errCode         commonErr.ErrCode
@@ -309,6 +352,7 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 		errMsg          string
 		lastBlockHeight int64
 		chainId         = tx.Payload.ChainId
+		txId            = tx.Payload.TxId
 	)
 
 	contractEventC := make(chan model.NewContractEvent, 1)
@@ -318,7 +362,8 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_SUBSCRIBER
 		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
+		s.log.Warnf(errMsg + fmt.Sprintf("[reqTxId:%s, senderAddr:%s, contractName:%s, topic:%s]",
+			txId, senderAddr, contractName, topic))
 		return status.Error(codes.Internal, errMsg)
 	}
 
@@ -333,20 +378,28 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 			// 注意：当且仅当 endBlockHeight != -1 时，才有可能结束发送数据。
 			// 当 endBlockHeight == -1 时，永不结束。
 			if endBlock != -1 && alreadySendHistoryBlockHeight >= endBlock {
+				s.log.Infof("send contract event finish: alreadySendHistoryBlockHeight:%d, "+
+					"endBlock:%d,[txId:%s, sender:%s, contractName:%s, topic:%s].",
+					alreadySendHistoryBlockHeight, endBlock, txId, senderAddr, contractName, topic)
 				return status.Error(codes.OK, "OK")
 			}
 
 			if alreadySendHistoryBlockHeight < atomic.LoadInt64(&lastBlockHeight) {
-				alreadySendHistoryBlockHeight, err = s.sendHistoryContractEvent(store, server, alreadySendHistoryBlockHeight+1,
-					endBlock, contractName, topic)
+				alreadySendHistoryBlockHeight, err = s.sendHistoryContractEvent(store, server,
+					alreadySendHistoryBlockHeight+1, endBlock, contractName, topic, txId, senderAddr)
 				if err != nil {
-					s.log.Errorf("send history contract event failed, %s", err)
+					s.log.Warnf("send history contract event failed:%s,[txId:%s, sender:%s, "+
+						"contractName:%s, topic:%s].", err.Error(), txId, senderAddr, contractName, topic)
 					return err
 				}
 			}
 		case <-server.Context().Done():
+			s.log.Infof("server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+				txId, senderAddr, contractName, topic)
 			return nil
 		case <-s.ctx.Done():
+			s.log.Warnf("service context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+				txId, senderAddr, contractName, topic)
 			return nil
 		}
 	}
@@ -361,7 +414,7 @@ func (s *ApiService) getContractEventSubscribeResult(contractEvents []*commonPb.
 	})
 
 	if err != nil {
-		errMsg := fmt.Sprintf("marshal contract event info failed, %s", err)
+		errMsg := fmt.Sprintf("marshal contract event info failed:%s", err)
 		s.log.Error(errMsg)
 		return nil, errors.New(errMsg)
 	}

@@ -10,11 +10,16 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	"encoding/hex"
+
+	"chainmaker.org/chainmaker-go/module/snapshot"
 	cmx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
 	"chainmaker.org/chainmaker/logger/v2"
 	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/pkg/errors"
 )
 
@@ -188,4 +193,70 @@ func checkTxSignCert(tx *common.Transaction) error {
 		return errors.New("tls certificate is misused for tx sign")
 	}
 	return nil
+}
+
+func publicKeyPEMFromMember(member *pbac.Member, store protocol.BlockchainStore) ([]byte, error) {
+
+	var pk []byte
+	var err error
+	switch member.MemberType {
+	case pbac.MemberType_CERT:
+		pk, err = publicKeyFromCert(member.MemberInfo)
+		if err != nil {
+			return nil, err
+		}
+
+	case pbac.MemberType_CERT_HASH:
+		var certInfo *common.CertInfo
+		infoHex := hex.EncodeToString(member.MemberInfo)
+
+		var snap protocol.Snapshot
+		snap, err = snapshot.NewQuerySnapshot(store, log)
+		if err != nil {
+			return nil, err
+		}
+
+		if certInfo, err = wholeCertInfoFromSnapshot(snap, infoHex); err != nil {
+			return nil, fmt.Errorf(" can not load the whole cert info,member[%s],reason: %s", infoHex, err)
+		}
+
+		pk, err = publicKeyFromCert(certInfo.Cert)
+		if err != nil {
+			return nil, err
+		}
+
+	case pbac.MemberType_PUBLIC_KEY:
+		pk = member.MemberInfo
+
+	default:
+		err = fmt.Errorf("invalid member type: %s", member.MemberType)
+		return nil, err
+	}
+
+	return pk, nil
+}
+
+// parseUserAddress
+func publicKeyFromCert(member []byte) ([]byte, error) {
+	certificate, err := utils.ParseCert(member)
+	if err != nil {
+		return nil, err
+	}
+	pubKeyStr, err := certificate.PublicKey.String()
+	if err != nil {
+		return nil, err
+	}
+	return []byte(pubKeyStr), nil
+}
+
+func wholeCertInfoFromSnapshot(snapshot protocol.Snapshot, certHash string) (*common.CertInfo, error) {
+	certBytes, err := snapshot.GetKey(-1, syscontract.SystemContract_CERT_MANAGE.String(), []byte(certHash))
+	if err != nil {
+		return nil, err
+	}
+
+	return &common.CertInfo{
+		Hash: certHash,
+		Cert: certBytes,
+	}, nil
 }
