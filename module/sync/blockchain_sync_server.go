@@ -62,6 +62,10 @@ type BlockChainSyncServer struct {
 	//if a synced block is committed to local ledger put a event to this channel
 	commitBlockC chan struct{}
 	closeWait    sync.WaitGroup
+	// node list store all peer node never delete
+	nodeList *NodeList
+	//getStateFn used to get some running state
+	getStateFn getStateFn
 }
 
 // NewBlockChainSyncServer Create a new BlockChainSyncServer instance
@@ -88,6 +92,7 @@ func NewBlockChainSyncServer(
 		requestCache:    sync.Map{},
 		minLagReachC:    make(chan struct{}),
 		commitBlockC:    make(chan struct{}),
+		nodeList:        NewNodeList(),
 	}
 	return syncServer
 }
@@ -112,7 +117,13 @@ func (sync *BlockChainSyncServer) Start() error {
 	}
 	sync.scheduler = NewRoutine("scheduler", scheduler.handler, scheduler.getServiceState, sync.log)
 	sync.processor = NewRoutine("processor", processor.handler, processor.getServiceState, sync.log)
-
+	sync.getStateFn = func() state {
+		s := state{
+			blocks_has_synced: processor.maxHeightInQueue,
+			blocks_in_cache:   len(processor.queue),
+		}
+		return s
+	}
 	// 2. register msgs handler
 	if sync.msgBus != nil && sync.conf.broadcastStatusPerBlocksCommitted > 0 {
 		sync.msgBus.Register(msgbus.BlockInfo, sync)
@@ -256,6 +267,7 @@ func (sync *BlockChainSyncServer) handleNodeStatusResp(syncMsg *syncPb.SyncMsg, 
 	}
 	sync.log.Debugf("receive node[%s] status, height [%d], archived height [%d]", from, msg.BlockHeight,
 		msg.ArchivedHeight)
+	sync.nodeList.AddNode(from, msg.BlockHeight, msg.ArchivedHeight)
 	return sync.scheduler.addTask(&NodeStatusMsg{msg: msg, from: from})
 }
 
@@ -587,6 +599,27 @@ func (sync *BlockChainSyncServer) Stop() {
 	sync.closeWait.Wait()
 	_ = sync.net.CancelSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG)
 	_ = sync.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
+}
+
+func (sync *BlockChainSyncServer) GetState(with_peer bool) (*syncPb.SyncState, error) {
+	height, err := sync.ledgerCache.CurrentHeight()
+	if err != nil {
+		return nil, err
+	}
+	archivedHeight := sync.blockChainStore.GetArchivedPivot()
+	basicState := sync.getStateFn()
+	state := syncPb.SyncState{
+		Height:          height,
+		ArchivedHeight:  archivedHeight,
+		BlocksHasSynced: basicState.blocks_has_synced,
+		BlocksInCache:   int32(basicState.blocks_in_cache),
+		ConfigShow:      sync.conf.print(),
+		Timestamp:       time.Now().Unix(),
+	}
+	if with_peer {
+		state.Others = sync.nodeList.GetAll()
+	}
+	return &state, nil
 }
 
 // OnMessage msgbus Subscriber interface implementation

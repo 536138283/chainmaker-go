@@ -14,7 +14,7 @@ NET_LIBP2P_BRANCH='v1.2.5_qc'
 NET_LIQUID_BRANCH='v1.1.3_qc'
 
 if [[ ! -n $BRANCH ]]; then
-				  BRANCH="v2.3.4_qc"
+				  BRANCH="v2.3.5_qc"
 fi
 cd ..
 

@@ -31,7 +31,7 @@ type blockWithPeerInfo struct {
 	rwsets     []*commonPb.TxRWSet
 }
 
-//processor used to verify that the received block data that needs to be verified is valid
+// processor used to verify that the received block data that needs to be verified is valid
 type processor struct {
 	// Information about the blocks will be processed
 	queue map[uint64]blockWithPeerInfo
@@ -41,6 +41,8 @@ type processor struct {
 	// Provides the latest chain state for the node
 	ledgerCache protocol.LedgerCache
 	verifyAndAddBlock
+	// The max height of blocks that wait to be processed
+	maxHeightInQueue uint64
 }
 
 func newProcessor(verify verifyAndAddBlock, ledgerCache protocol.LedgerCache, log protocol.Logger) *processor {
@@ -69,7 +71,7 @@ func (pro *processor) handler(event queue.Item) (queue.Item, error) {
 	return nil, nil
 }
 
-//handleReceivedBlockInfos put the received block data into its own queue
+// handleReceivedBlockInfos put the received block data into its own queue
 func (pro *processor) handleReceivedBlockInfos(msg *ReceivedBlockInfos) {
 	pro.log.Info("handleReceivedBlockInfos start")
 	lastCommitBlockHeight := pro.lastCommitBlockHeight()
@@ -83,6 +85,9 @@ func (pro *processor) handleReceivedBlockInfos(msg *ReceivedBlockInfos) {
 			if _, exist := pro.queue[blk.Header.BlockHeight]; !exist {
 				pro.queue[blk.Header.BlockHeight] = blockWithPeerInfo{
 					blk: blk, rwsets: nil, id: msg.from, withRWSets: msg.WithRwset,
+				}
+				if blk.Header.BlockHeight > pro.maxHeightInQueue {
+					pro.maxHeightInQueue = blk.Header.BlockHeight
 				}
 				pro.log.Debugf("received block [height: %d] from node [%s]",
 					blk.Header.BlockHeight, msg.from)
@@ -99,6 +104,9 @@ func (pro *processor) handleReceivedBlockInfos(msg *ReceivedBlockInfos) {
 				pro.queue[blkinfo.Block.Header.BlockHeight] = blockWithPeerInfo{
 					blk: blkinfo.Block, rwsets: blkinfo.RwsetList, id: msg.from, withRWSets: msg.WithRwset,
 				}
+				if blkinfo.Block.Header.BlockHeight > pro.maxHeightInQueue {
+					pro.maxHeightInQueue = blkinfo.Block.Header.BlockHeight
+				}
 				pro.log.Debugf("received block with rwsets [height: %d] from node [%s]",
 					blkinfo.Block.Header.BlockHeight, msg.from)
 				pro.log.Debugf("current length of processor queue is: [%d]", len(pro.queue))
@@ -114,8 +122,8 @@ func (pro *processor) handleStopSyncMsg() {
 	pro.queue = make(map[uint64]blockWithPeerInfo)
 }
 
-//handleProcessBlockMsg validate and commit block data
-//spit out the result of the verification for the next step
+// handleProcessBlockMsg validate and commit block data
+// spit out the result of the verification for the next step
 func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
 	var (
 		exist  bool
@@ -148,7 +156,7 @@ func (pro *processor) handleProcessBlockMsg() (queue.Item, error) {
 	}, nil
 }
 
-//handleDataDetection eliminate invalid data from the maintained data list
+// handleDataDetection eliminate invalid data from the maintained data list
 func (pro *processor) handleDataDetection() {
 	pendingBlockHeight := pro.lastCommitBlockHeight() + 1
 	for height := range pro.queue {

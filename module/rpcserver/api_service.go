@@ -27,6 +27,7 @@ import (
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
+	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"chainmaker.org/chainmaker/protocol/v2"
 	tbf "chainmaker.org/chainmaker/store/v2/types/blockfile"
@@ -750,4 +751,13 @@ func (s *ApiService) GetConsensusHeight(ctx context.Context,
 		return nil, err
 	}
 	return wrapperspb.UInt64(height), nil
+}
+
+// GetSyncState get sync state by rpc request
+func (s *ApiService) GetSyncState(ctx context.Context, request *syncPb.GetSyncStateRequest) (*syncPb.SyncState, error) {
+	syncService, err := s.chainMakerServer.GetSync(request.ChainId)
+	if err != nil {
+		return nil, err
+	}
+	return syncService.GetState(request.WithPeers)
 }
