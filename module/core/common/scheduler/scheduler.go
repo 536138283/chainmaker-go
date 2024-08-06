@@ -631,9 +631,8 @@ func handleTxInSimulateWithDag(
 	isApplySuccess, applySize := snapshot.ApplyTxSimContext(txSimContext, specialTxType, runVmSuccess, true)
 	doneTxC <- &applyResult{txIndex, isApplySuccess, applySize}
 	if !isApplySuccess {
-		ts.log.DebugDynamic(func() string {
-			return fmt.Sprintf("failed to apply snapshot for tx id:%s, shouldn't have its rwset", tx.Payload.TxId)
-		})
+		ts.log.Warnf("failed to apply snapshot for tx id:%s, shouldn't have its rwset",
+			tx.Payload.GetTxId())
 
 		return
 	}
