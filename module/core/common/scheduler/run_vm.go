@@ -79,7 +79,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 			}
 
 			if txResultCode == commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED {
-				ts.log.Debugf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
+				ts.log.Warnf("balance is too low to execute tx. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("`%s` has no enough balance to execute tx.", addr)
 
 				txResult.Code = commonPb.TxStatusCode_GAS_BALANCE_NOT_ENOUGH_FAILED
@@ -91,7 +91,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 
 			} else if txResultCode == commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED {
 
-				ts.log.Debugf("get account balance failed. address = %v, public key = %s", addr, pk)
+				ts.log.Warnf("get account balance failed. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("get account `%s` balance failed.", addr)
 
 				txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_BALANCE_FAILED
@@ -103,7 +103,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 
 			} else if txResultCode == commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED {
 
-				ts.log.Debugf("parse account balance failed. address = %v, public key = %s", addr, pk)
+				ts.log.Warnf("parse account balance failed. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("parse account `%s` balance failed.", addr)
 
 				txResult.Code = commonPb.TxStatusCode_PARSE_ACCOUNT_BALANCE_FAILED
@@ -115,7 +115,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 
 			} else if txResultCode == commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED {
 
-				ts.log.Debugf("get account status failed. address = %v, public key = %s", addr, pk)
+				ts.log.Warnf("get account status failed. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("get account `%s` status failed.", addr)
 
 				txResult.Code = commonPb.TxStatusCode_GET_ACCOUNT_STATUS_FAILED
@@ -127,7 +127,7 @@ func (ts *TxScheduler) guardForExecuteTx2300(tx *commonPb.Transaction, txSimCont
 
 			} else if txResultCode == commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN {
 
-				ts.log.Debugf("account has been frozen. address = %v, public key = %s", addr, pk)
+				ts.log.Warnf("account has been frozen. address = %v, public key = %s", addr, pk)
 				errMsg := fmt.Sprintf("the account `%s` has been frozen.", addr)
 
 				txResult.Code = commonPb.TxStatusCode_ACCOUNT_STATUS_FROZEN
@@ -223,6 +223,7 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	if ts.checkGasEnable() && !enableOptimizeChargeGas {
 		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contract.Name, method)
 		if err != nil {
+			ts.log.Errorf("get account manager contract and pk error:%v", err)
 			return result, specialTxType, err
 		}
 
@@ -269,8 +270,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 			return result, specialTxType, err
 		}
 		contractResultPayload.GasUsed += gasRWSet
-		ts.log.Debugf("【gas calc】%v, before `calcTxEventGasUsed` gasUsed = %v, err = %v",
-			tx.Payload.TxId, contractResultPayload.GasUsed, err)
+		ts.log.Debugf("【gas calc】%v, before `calcTxEventGasUsed` gasUsed = %v",
+			tx.Payload.TxId, contractResultPayload.GasUsed)
 
 		gasEvents, err = calcTxEventGasUsed(
 			txSimContext,
@@ -286,8 +287,8 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 		contractResultPayload.GasUsed += gasEvents
 	}
 
-	ts.log.Debugf("【gas calc】%v, after `calcTxEventGasUsed` gasUsed = %v, err = %v",
-		tx.Payload.TxId, contractResultPayload.GasUsed, err)
+	ts.log.Debugf("【gas calc】%v, after `calcTxEventGasUsed` gasUsed = %v",
+		tx.Payload.TxId, contractResultPayload.GasUsed)
 	result.Code = txStatusCode
 	result.ContractResult = contractResultPayload
 
@@ -295,12 +296,13 @@ func (ts *TxScheduler) runVM2300(tx *commonPb.Transaction,
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
 		if !ts.checkNativeFilter(txSimContext.GetBlockVersion(), contract.Name, method, tx, txSimContext.GetSnapshot()) {
-			return result, specialTxType, err
+			return result, specialTxType, nil
 		}
 
 		// check and refund gas
 		if err = ts.checkRefundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
 			contractResultPayload, enableOptimizeChargeGas); err != nil {
+			ts.log.Errorf("check refund gas error:%v", err)
 			return result, specialTxType, err
 		}
 	}
@@ -378,6 +380,7 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 	if ts.checkGasEnable() && !enableOptimizeChargeGas {
 		accountMangerContract, pk, err = ts.getAccountMgrContractAndPk(txSimContext, tx, contract.Name, method)
 		if err != nil {
+			ts.log.Errorf("get account manager contract and pk error:%v", err)
 			return result, specialTxType, err
 		}
 
@@ -402,7 +405,7 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 	if ts.checkGasEnable() {
 		// check if this invoke needs charging gas
 		if !ts.checkNativeFilter(txSimContext.GetBlockVersion(), contract.Name, method, tx, txSimContext.GetSnapshot()) {
-			return result, specialTxType, err
+			return result, specialTxType, nil
 		}
 
 		// get tx's gas limit
@@ -427,6 +430,9 @@ func (ts *TxScheduler) runVM2220(tx *commonPb.Transaction,
 			if _, err = ts.refundGas(accountMangerContract, tx, txSimContext, contractName, method, pk, result,
 				contractResultPayload); err != nil {
 				ts.log.Errorf("refund gas err is %v", err)
+				// we will not return the error here to avoid to shadowing the error of the contract result,
+				// and in order to remain the same return value as the logical of previous versions, it
+				// is not returned here.
 			}
 		}
 	}
@@ -522,6 +528,9 @@ func (ts *TxScheduler) runVM2210(tx *commonPb.Transaction, txSimContext protocol
 		contractResultPayload)
 	if err != nil {
 		ts.log.Errorf("refund gas err is %v", err)
+		// we will not return the error here to avoid to shadowing the error of the contract result,
+		// and in order to remain the same return value as the logical of previous versions, it
+		// is not returned here.
 	}
 
 	if txStatusCode == commonPb.TxStatusCode_SUCCESS {
@@ -615,37 +624,41 @@ func (ts *TxScheduler) parseParameter2210(parameterPairs []*commonPb.KeyValuePai
 func (ts *TxScheduler) getContractFromCache(txSimContext protocol.TxSimContext,
 	contractName string) (*commonPb.Contract, error) {
 	var contract *commonPb.Contract
-	var err error
+	var (
+		err error
+		ct  interface{}
+		ok  bool
+	)
 	// if contract exists in cache, assign to contract
-	if ct, ok := ts.contractCache.Load(contractName); ok {
+	if ct, ok = ts.contractCache.Load(contractName); ok {
 		if contract, ok = ct.(*commonPb.Contract); !ok {
 			err = errors.New("failed to transfer contract from interface to struct")
 			ts.log.Error(err)
 			return nil, err
 		}
-	} else {
-		// contract not exists in cache, use single flight to get contract
-		ct, err, _ = sf.Do(contractName, func() (interface{}, error) {
-			var ctTmp *commonPb.Contract
-			ctTmp, err = txSimContext.GetContractByName(contractName)
-			if err != nil {
-				ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
-				return nil, err
-			}
-			// store to contract cache after get contract
-			ts.contractCache.Store(contractName, ctTmp)
-			return ctTmp, nil
-		})
-
+		return contract, nil
+	}
+	// contract not exists in cache, use single flight to get contract
+	ct, err, _ = sf.Do(contractName, func() (interface{}, error) {
+		var ctTmp *commonPb.Contract
+		ctTmp, err = txSimContext.GetContractByName(contractName)
 		if err != nil {
+			ts.log.Errorf("Get contract info by name[%s] error:%s", contractName, err)
 			return nil, err
 		}
+		// store to contract cache after get contract
+		ts.contractCache.Store(contractName, ctTmp)
+		return ctTmp, nil
+	})
 
-		if contract, ok = ct.(*commonPb.Contract); !ok {
-			err = errors.New("failed to transfer contract from interface to struct")
-			ts.log.Error(err)
-			return nil, err
-		}
+	if err != nil {
+		return nil, err
+	}
+
+	if contract, ok = ct.(*commonPb.Contract); !ok {
+		err = errors.New("failed to transfer contract from interface to struct")
+		ts.log.Error(err)
+		return nil, err
 	}
 	return contract, nil
 }
