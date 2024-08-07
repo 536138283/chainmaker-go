@@ -10,7 +10,7 @@ set -x
 BRANCH=$1
 LWS_BRANCH='v1.2.1'
 NET_COMMON_BRANCH='v1.2.5_qc'
-NET_LIBP2P_BRANCH='v1.2.5_qc'
+NET_LIBP2P_BRANCH='v1.2.6_qc'
 NET_LIQUID_BRANCH='v1.1.3_qc'
 
 if [[ ! -n $BRANCH ]]; then
@@ -20,11 +20,11 @@ cd ..
 
 go get chainmaker.org/chainmaker/lws@${LWS_BRANCH}
 go get chainmaker.org/chainmaker/chainconf/v2@${BRANCH}
-go get chainmaker.org/chainmaker/common/v2@${BRANCH}
+go get chainmaker.org/chainmaker/common/v2@v2.3.5_qc
 go get chainmaker.org/chainmaker/localconf/v2@${BRANCH}
 go get chainmaker.org/chainmaker/logger/v2@${BRANCH}
 go get chainmaker.org/chainmaker/pb-go/v2@${BRANCH}
-go get chainmaker.org/chainmaker/protocol/v2@${BRANCH}
+go get chainmaker.org/chainmaker/protocol/v2@v2.3.5_qc
 go get chainmaker.org/chainmaker/utils/v2@${BRANCH}
 go get chainmaker.org/chainmaker/net-common@${NET_COMMON_BRANCH}
 go get chainmaker.org/chainmaker/net-libp2p@${NET_LIBP2P_BRANCH}
@@ -37,17 +37,17 @@ go get chainmaker.org/chainmaker/consensus-maxbft/v2@${BRANCH}
 go get chainmaker.org/chainmaker/consensus-tbft/v2@${BRANCH}
 go get chainmaker.org/chainmaker/store/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-docker-go/v2@${BRANCH}
-go get chainmaker.org/chainmaker/vm-engine/v2@${BRANCH}
+go get chainmaker.org/chainmaker/vm-engine/v2@v2.3.5_qc
 go get chainmaker.org/chainmaker/vm-evm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-gasm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-native/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-wasmer/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-wxvm/v2@${BRANCH}
-go get chainmaker.org/chainmaker/vm/v2@${BRANCH}
+go get chainmaker.org/chainmaker/vm/v2@v2.3.5_qc
 go get chainmaker.org/chainmaker/txpool-batch/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-normal/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-single/v2@${BRANCH}
-go get chainmaker.org/chainmaker/sdk-go/v2@${BRANCH}
+go get chainmaker.org/chainmaker/sdk-go/v2@v2.3.5_qc
 
 go mod tidy
 

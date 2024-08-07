@@ -1,1 +1,1 @@
-docker-compose -f solo.docker-compose.yml down
+docker-compose -f solo-docker-compose.yml down
