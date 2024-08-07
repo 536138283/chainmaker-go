@@ -578,6 +578,15 @@ func (server *ChainMakerServer) GetAllAC() ([]protocol.AccessControlProvider, er
 	return accessControls, nil
 }
 
+// GetSync get the sync instance of chain which id is the given.
+func (server *ChainMakerServer) GetSync(chainId string) (protocol.SyncService, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		return blockchain.(*Blockchain).syncServer, nil
+	}
+
+	return nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
 // Version of chainmaker.
 func (server *ChainMakerServer) Version() string {
 	return CurrentVersion
