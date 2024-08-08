@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.4
-	chainmaker.org/chainmaker/common/v2 v2.3.4
+	chainmaker.org/chainmaker/common/v2 v2.3.5-0.20240808034436-5846f433253c
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5
@@ -19,12 +19,12 @@ require (
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.6-0.20240805094053-824d360b2819
 	chainmaker.org/chainmaker/store/v2 v2.3.6
 	chainmaker.org/chainmaker/utils/v2 v2.3.5
-	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.5
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.7-0.20240730073108-04ac926a5683
+	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.6-0.20240807032135-2e9efbe2976d
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.7-0.20240807032437-97a9aa96682d
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.6-0.20240807032057-16d13b2d8303
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.6-0.20240807031313-3e25878b692b
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.5
-	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.5
+	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.6-0.20240807030339-7d83f73a7b09
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.6-0.20240807031528-e8ad1b8081da
 	chainmaker.org/chainmaker/vm/v2 v2.3.6-0.20240730075439-3f1037c23400
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
