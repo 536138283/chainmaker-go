@@ -154,9 +154,10 @@ func (c *BlockSyncServerConf) SetBroadcastStatusPerBlocksCommitted(n int) *Block
 }
 
 func (c *BlockSyncServerConf) print() string {
-	return fmt.Sprintf("blockPoolSize: %d, request timeout: %d, batchSizeFromOneNode: %d"+
-		", processBlockTick: %v, schedulerTick: %v, livenessTick: %v, nodeStatusTick: %v,"+
+	return fmt.Sprintf("blockPoolSize: %d, request timeout: %dms, batchSizeFromOneNode: %d"+
+		", processBlockTick: %dms, schedulerTick: %dms, livenessTick: %dms, nodeStatusTick: %dms,"+
 		"broadcastStatusPerBlocksCommitted: %d, preferenceNodes %+v\n",
-		c.blockPoolSize, c.timeOut, c.batchSizeFromOneNode, c.processBlockTick, c.schedulerTick, c.livenessTick,
-		c.nodeStatusTick, c.broadcastStatusPerBlocksCommitted, c.preferenceNodes)
+		c.blockPoolSize, c.timeOut.Milliseconds(), c.batchSizeFromOneNode, c.processBlockTick.Milliseconds(),
+		c.schedulerTick.Milliseconds(), c.livenessTick.Milliseconds(),
+		c.nodeStatusTick.Milliseconds(), c.broadcastStatusPerBlocksCommitted, c.preferenceNodes)
 }
