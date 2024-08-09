@@ -687,6 +687,10 @@ func (p *pkACProvider) checkResourcePolicyRule(resourcePolicy *config.ResourcePo
 	case string(protocol.RuleDelete):
 		p.log.Debugf("delete policy configuration of %s", resourcePolicy.ResourceName)
 		return true
+	case string(protocol.RuleSelf):
+		//In order to be compatible with historical versions, the warn log is printed here but returns true.
+		p.log.Warnf("pk mode should not set self, please modify %s", resourcePolicy.ResourceName)
+		return true
 	default:
 		return p.checkResourcePolicyRuleDefaultCase(resourcePolicy.Policy)
 	}
