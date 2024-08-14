@@ -153,6 +153,8 @@ func (server *ChainMakerServer) initNet() error {
 		net.WithBlackNodeIds(localconf.ChainMakerConfig.NetConfig.BlackList.NodeIds...),
 		net.WithMsgCompression(localconf.ChainMakerConfig.DebugConfig.UseNetMsgCompression),
 		net.WithInsecurity(localconf.ChainMakerConfig.DebugConfig.IsNetInsecurity),
+		net.WithTlsEnabled(localconf.ChainMakerConfig.NetConfig.TLSConfig.Enabled),
+		net.WithPeerHttpTunnelTargetAddressList(localconf.ChainMakerConfig.NetConfig.SeedTargetAddressList...),
 		net.WithStunClient(localconf.ChainMakerConfig.NetConfig.StunClient.ListenAddr,
 			localconf.ChainMakerConfig.NetConfig.StunClient.StunServerAddr,
 			localconf.ChainMakerConfig.NetConfig.StunClient.NetworkType,

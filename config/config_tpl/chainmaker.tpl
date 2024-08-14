@@ -110,7 +110,12 @@ net:
   # Example ip format: "/ip4/127.0.0.1/tcp/11301/p2p/"+nodeid
   # Example dns format："/dns/cm-node1.org/tcp/11301/p2p/"+nodeid
   seeds:
-
+   # Example node1："node1id-//127.0.0.1"
+   # Example  "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH/http://cm-node1.org"
+  seed_target_address_list:
+      # Example - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH/127.0.0.1"
+      # Example - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH/http://cm-node1.org"
+      # Example - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH/cm-node1.org"
   # Network tls settings.
   tls:
     # Enable tls or not. Currently it can only be true...

@@ -256,6 +256,30 @@ func WithMsgCompression(enable bool) NetOption {
 	}
 }
 
+func WithTlsEnabled(tls bool) NetOption {
+	return func(nf *NetFactory) error {
+		switch nf.netType {
+		case protocol.Libp2p:
+			n, _ := nf.n.(*libp2p.LibP2pNet)
+			n.Prepare().SetIsTls(tls)
+		}
+		return nil
+	}
+}
+
+func WithPeerHttpTunnelTargetAddressList(list ...string) NetOption {
+	return func(nf *NetFactory) error {
+		switch nf.netType {
+		case protocol.Libp2p:
+			n, _ := nf.n.(*libp2p.LibP2pNet)
+			for _, address := range list {
+				n.Prepare().SetPeerHttpTunnelTargetAddress(address)
+			}
+		}
+		return nil
+	}
+}
+
 func WithInsecurity(isInsecurity bool) NetOption {
 	return func(nf *NetFactory) error {
 		switch nf.netType {
