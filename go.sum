@@ -21,8 +21,8 @@ chainmaker.org/chainmaker/libp2p-core v1.0.0/go.mod h1:o5hZnNkN7gMbfe34vRKlgAtnd
 chainmaker.org/chainmaker/libp2p-pubsub v1.1.5 h1:hs/1/SDV+cw6Y+OGk7Y78ZgZpDiayMIx/HSd905h4rw=
 chainmaker.org/chainmaker/libp2p-pubsub v1.1.5/go.mod h1:dvu9s60RVY12O96shHv6Fy8I1fMiapUyWU1cBmFCx+E=
 chainmaker.org/chainmaker/localconf/v2 v2.3.4/go.mod h1:lq2BcWK3YzLLADxbDLrcbWR5B6SNZQ+9IwO3dbqa8BM=
-chainmaker.org/chainmaker/localconf/v2 v2.3.5-0.20240807090949-f2a14cd4c8d5 h1:qd0gz8MH22pnN8Awub2m/FYMQtN9rfi3eHgNJVEKbBo=
-chainmaker.org/chainmaker/localconf/v2 v2.3.5-0.20240807090949-f2a14cd4c8d5/go.mod h1:IKKdVoK5Vqc3kRK0g/CjdWIRy1xgI5QYDBquqfTkvx0=
+chainmaker.org/chainmaker/localconf/v2 v2.3.5-0.20240809083048-79af1e445bb3 h1:52l/Ctf6wD66fb7JUxuMtxFgCf1o5nNgvkxXkw17LZQ=
+chainmaker.org/chainmaker/localconf/v2 v2.3.5-0.20240809083048-79af1e445bb3/go.mod h1:IKKdVoK5Vqc3kRK0g/CjdWIRy1xgI5QYDBquqfTkvx0=
 chainmaker.org/chainmaker/logger/v2 v2.3.4 h1:Cxh61xj6s+V8ECrcCOPSPPtwkMCo0DQa0CTVzExlMXE=
 chainmaker.org/chainmaker/logger/v2 v2.3.4/go.mod h1:NdCoViHM85yoRojDHsF9+cWF1RVyNTlDN9in4PitOWY=
 chainmaker.org/chainmaker/lws v1.2.1 h1:xqbBOgpf+DBy3iiHVbOGfXbY8yHZSTw/3xa3KnQfdLs=
@@ -30,8 +30,8 @@ chainmaker.org/chainmaker/lws v1.2.1/go.mod h1:CzzVcJywHPSmKa6ghuGHzzbP7VXPSyYjr
 chainmaker.org/chainmaker/net-common v1.2.5 h1:8PVsf5obrii3uMXRE2mri94gOZ58ZIykF81kZaUiBB0=
 chainmaker.org/chainmaker/net-common v1.2.5/go.mod h1:fnrzuTcRWq8hBFrvoMLct8mof4BOg3RiOf8p9fmIJfQ=
 chainmaker.org/chainmaker/net-libp2p v1.2.5/go.mod h1:xFm85LmOd6X/qzZ71Eq6PX1RHMerKUDlKZ+us0jTCoY=
-chainmaker.org/chainmaker/net-libp2p v1.2.6-0.20240730072654-70b86bf47f89 h1:iSV+XkCXLiqwIM6ho8PthGq89qNKCAI7TN5aoaHS9mk=
-chainmaker.org/chainmaker/net-libp2p v1.2.6-0.20240730072654-70b86bf47f89/go.mod h1:xFm85LmOd6X/qzZ71Eq6PX1RHMerKUDlKZ+us0jTCoY=
+chainmaker.org/chainmaker/net-libp2p v1.2.6-0.20240814034016-c8599a792b50 h1:6E/hh0geS2+UBF0WFciJrq8VLUDsfVvwyToKOZRhLvY=
+chainmaker.org/chainmaker/net-libp2p v1.2.6-0.20240814034016-c8599a792b50/go.mod h1:MSm7TKXibBLuAJWl25OZGgUpctYxIx2L0dJyIcZ/S2M=
 chainmaker.org/chainmaker/net-liquid v1.1.3 h1:jiDiHY1tLvT0rPxeO1xk9X6H7qyz4lfC9rnkF5HTB2I=
 chainmaker.org/chainmaker/net-liquid v1.1.3/go.mod h1:X86+zxPxJ6Qkid6mWaj83knJnsPCMV2lp3YvjACJaSg=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.5/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
@@ -82,8 +82,8 @@ chainmaker.org/third_party/badger/v3 v3.0.0 h1:8fPIUB8dyCCPu2QbQbp6r4QcixYVK7KOd
 chainmaker.org/third_party/badger/v3 v3.0.0/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
 chainmaker.org/third_party/cuckoo-filter v1.0.0 h1:YLeHR9IxaIxZDoODQSRDe7glygrWYEGGMbiDDxoYufw=
 chainmaker.org/third_party/cuckoo-filter v1.0.0/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
-chainmaker.org/third_party/go-conn-security-multistream v1.0.2 h1:N7uO41Ie6oe35/Y+YBjmEk37+ciKAw+NLcCZJGMfF7E=
-chainmaker.org/third_party/go-conn-security-multistream v1.0.2/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
+chainmaker.org/third_party/go-conn-security-multistream v1.0.5 h1:arAvhGxhBOkRdiHXjdCciZe6vO7XmRqKGgCvAbhCshc=
+chainmaker.org/third_party/go-conn-security-multistream v1.0.5/go.mod h1:hZN4MjlNetKD3Rq5Jb/P5ohUnFLNzEAR4DLSzpn2QLU=
 chainmaker.org/third_party/goleveldb v1.1.0 h1:W6xG1ysvaI4aX4uI7ZB6FMPmWg7abkEv9FoLl5lB9kM=
 chainmaker.org/third_party/goleveldb v1.1.0/go.mod h1:7aC8mnQ0XjdIgSSoZfGGBE8QHMPl7QKbJVSzPavj47Y=
 chainmaker.org/third_party/qtls-go1-16 v1.1.0 h1:MUHJgjk1a9ykX42/qukoeA5zFO7Mt003cEY/FVx0rQY=
