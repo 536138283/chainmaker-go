@@ -47,7 +47,7 @@ CRYPTOGEN_TOOL_PATH=${PROJECT_PATH}/tools/chainmaker-cryptogen
 CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/pk_config_template.yml
 CRYPTOGEN_TLS_CONF=${CRYPTOGEN_TOOL_PATH}/config/pk_tls_config_template.yml
-#CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
+#CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/hsm_keys.yml
 
 function show_help() {
     echo "Usage:  "
@@ -163,11 +163,11 @@ function generate_keys() {
     fi
 
     cp $CRYPTOGEN_TOOL_CONF crypto_config.yml
-#    cp $CRYPTOGEN_TOOL_PKCS11_KEYS pkcs11_keys.yml
+#    cp $CRYPTOGEN_TOOL_PKCS11_KEYS hsm_keys.yml
 
     xsed "s%count: 4%count: ${NODE_CNT}%g" crypto_config.yml
 
-    ${CRYPTOGEN_TOOL_BIN} generate-pk -c ./crypto_config.yml #-p ./pkcs11_keys.yml
+    ${CRYPTOGEN_TOOL_BIN} generate-pk -c ./crypto_config.yml #-p ./hsm_keys.yml
 }
 
 function generate_tls() {

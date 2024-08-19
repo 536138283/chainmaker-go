@@ -43,7 +43,7 @@ BUILD_CONFIG_PATH=${BUILD_PATH}/config
 CRYPTOGEN_TOOL_PATH=${PROJECT_PATH}/tools/chainmaker-cryptogen
 CRYPTOGEN_TOOL_BIN=${CRYPTOGEN_TOOL_PATH}/bin/chainmaker-cryptogen
 CRYPTOGEN_TOOL_CONF=${CRYPTOGEN_TOOL_PATH}/config/pwk_config_template.yml
-#CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/pkcs11_keys.yml
+#CRYPTOGEN_TOOL_PKCS11_KEYS=${CRYPTOGEN_TOOL_PATH}/config/hsm_keys.yml
 
 BC_YML_TRUST_ROOT_LINE=$(awk '/trust roots list start/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
 BC_YML_TRUST_ROOT_LINE_END=$(awk '/trust roots list end/{print NR}' ${CONFIG_TPL_PATH}/chainconfig/bc_4_7.tpl)
@@ -162,11 +162,11 @@ function generate_keys() {
     fi
 
     cp $CRYPTOGEN_TOOL_CONF crypto_config.yml
-#    cp $CRYPTOGEN_TOOL_PKCS11_KEYS pkcs11_keys.yml
+#    cp $CRYPTOGEN_TOOL_PKCS11_KEYS hsm_keys.yml
 
     xsed "s%count: 4%count: ${NODE_CNT}%g" crypto_config.yml
 
-    ${CRYPTOGEN_TOOL_BIN} generate-pwk -c ./crypto_config.yml #-p ./pkcs11_keys.yml
+    ${CRYPTOGEN_TOOL_BIN} generate-pwk -c ./crypto_config.yml #-p ./hsm_keys.yml
 }
 
 function generate_config() {
