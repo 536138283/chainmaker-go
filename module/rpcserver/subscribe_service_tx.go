@@ -324,22 +324,23 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 	for {
 		select {
 		case <-server.Context().Done():
-			s.log.Infof("server context done[height:%d, txId:%s, sender:%s].",
-				i, txId, senderAddr)
+			s.log.Infof("server context done[height:%d, txId:%s, sender:%s, contractName:%s].",
+				i, txId, senderAddr, contractName)
 			return -1, nil
 		case <-s.ctx.Done():
-			s.log.Warnf("service context done[height:%d, txId:%s, sender:%s].", i, txId, senderAddr)
+			s.log.Warnf("service context done[height:%d, txId:%s, sender:%s, contractName:%s].",
+				i, txId, senderAddr, contractName)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
 			if err = s.getRateLimitToken(); err != nil {
-				s.log.Warnf("get rate limit token failed, %s. height:%d, txId:%s, sender:%s",
-					err, i, txId, senderAddr)
+				s.log.Warnf("get rate limit token failed, %s. height:%d, txId:%s, sender:%s, contractName:%s",
+					err, i, txId, senderAddr, contractName)
 				return -1, status.Error(codes.Internal, err.Error())
 			}
 
 			if endBlockHeight != -1 && i > endBlockHeight {
 				s.log.Infof("send history tx finish, alreadySendHistoryBlockHeight is %d, endBlock is %d, "+
-					"reqTxId is %s, senderAddr:%s", i, endBlockHeight, txId, senderAddr)
+					"reqTxId is %s, senderAddr:%s, contractName:%s", i, endBlockHeight, txId, senderAddr, contractName)
 				return i - 1, nil
 			}
 
@@ -356,9 +357,13 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 			}
 
 			if block == nil {
+				s.log.Infof("get block[%d] nil.[txId:%s, sender:%s, contractName:%s]",
+					i, txId, senderAddr, contractName)
 				return i - 1, nil
 			}
 
+			s.log.Infof("get block[%d] finish.[txId:%s, sender:%s, contractName:%s]",
+				i, txId, senderAddr, contractName)
 			if err := s.sendSubscribeTx(server, block.Txs, contractName, txIds,
 				preAlias, preTxId, preOrgId,
 				txIdsMap,
@@ -368,8 +373,8 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 				return -1, status.Error(codes.Internal, errMsg)
 			}
 
-			s.log.Infof("send subscribe tx finish, height:%d, txId:%s, sender:%s", i, txId, senderAddr)
-
+			s.log.Infof("send subscribe tx finish, height:%d, txId:%s, sender:%s, contractName:%s",
+				i, txId, senderAddr, contractName)
 			i++
 		}
 	}

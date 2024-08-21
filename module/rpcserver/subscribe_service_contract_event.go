@@ -260,9 +260,13 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 			}
 
 			if block == nil {
+				s.log.Infof("get block[%d] nil.[txId:%s, sender:%s, contractName:%s, topic:%s]",
+					i, txId, senderAddr, contractName, topic)
 				return i - 1, nil
 			}
 
+			s.log.Infof("get block[%d] finish.[txId:%s, sender:%s, contractName:%s, topic:%s]",
+				i, txId, senderAddr, contractName, topic)
 			if err := s.sendSubscribeContractEvent(server, block, contractName, topic); err != nil {
 				errMsg = fmt.Sprintf("send subscribe tx failed, %s", err)
 				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s, contractName:%s, topic:%s]",
