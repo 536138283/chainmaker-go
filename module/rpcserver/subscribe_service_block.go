@@ -306,12 +306,14 @@ func (s *ApiService) sendHistoryBlock(store protocol.BlockchainStore, server api
 				return alreadySendHistoryBlockHeight, nil
 			}
 
+			s.log.Infof("get block[%d] finish.[txId:%s, sender:%s]", i, txId, senderAddress)
 			if result, err = s.getBlockSubscribeResult(blockInfo, onlyHeader); err != nil {
 				errMsg = fmt.Sprintf("get block subscribe result failed, %s", err)
 				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s]", txId, senderAddress))
 				return -1, errors.New(errMsg)
 			}
 
+			s.log.Infof("get block[%d] subscribe result finish.[txId:%s, sender:%s]", i, txId, senderAddress)
 			if err := server.Send(result); err != nil {
 				errMsg = fmt.Sprintf("send block info by history failed:%s", err)
 				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s]", txId, senderAddress))
