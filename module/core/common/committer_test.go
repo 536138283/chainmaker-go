@@ -38,7 +38,7 @@ func TestCommitBlock_CommitBlock(t *testing.T) {
 
 	// msgbus
 	msgbus := mbusmock.NewMockMessageBus(ctl)
-	//msgbus.EXPECT().PublishSafe(gomock.Any(), gomock.Any()).Return()
+	msgbus.EXPECT().Publish(gomock.Any(), gomock.Any()).Return()
 
 	// storehelper
 	storeHelper := mock.NewMockStoreHelper(ctl)
