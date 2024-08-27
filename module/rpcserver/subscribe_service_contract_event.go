@@ -251,7 +251,6 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 			}
 
 			block, err = store.GetBlock(uint64(i))
-
 			if err != nil {
 				errMsg = fmt.Sprintf("get block failed, at [height:%d], %s", i, err)
 				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s, contractName:%s, topic:%s]",
@@ -308,6 +307,10 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 					}
 				}
 			}
+		}
+
+		if len(contractEvents) == 0 {
+			continue
 		}
 
 		if err = s.doSendSubscribeContractEvent(server, contractEvents); err != nil {

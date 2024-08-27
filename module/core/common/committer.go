@@ -108,7 +108,10 @@ func (cb *CommitBlock) CommitBlock(
 
 // publishContractEvent publish contract event, return time used
 func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*commonpb.ContractEvent) int64 {
+	eventsInfo := make([]*commonpb.ContractEventInfo, 0, len(events))
 	if len(events) == 0 {
+		// 为避免由于没有event的情况下，导致contract event订阅落后很多区块，此处依然选择推送event事件给订阅模块
+		cb.msgBus.Publish(msgbus.ContractEventInfo, &commonpb.ContractEventInfoList{ContractEvents: eventsInfo})
 		return 0
 	}
 
@@ -117,7 +120,6 @@ func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*com
 		return fmt.Sprintf("start publish contractEventsInfo: block[%d] ",
 			block.Header.BlockHeight)
 	})
-	eventsInfo := make([]*commonpb.ContractEventInfo, 0, len(events))
 	for _, t := range events {
 		eventInfo := &commonpb.ContractEventInfo{
 			BlockHeight:     block.Header.BlockHeight,
