@@ -1660,7 +1660,7 @@ func TestBlockchain_initConsensus(t *testing.T) {
 		{
 			name: "test0",
 			fields: fields{
-				log:     nil,
+				log:     log,
 				chainId: "",
 				chainConf: func() protocol.ChainConf {
 					chainConf := newMockChainConf(t)

@@ -781,6 +781,10 @@ func (bc *Blockchain) initConsensus() (err error) {
 	//node7 ;
 	if !isConsensusNode &&
 		bc.chainConf.ChainConfig().Consensus.Type != consensusPb.ConsensusType_MAXBFT {
+
+		bc.log.Infof("not consensus node, delete consensus module，chainId:%s, currentNodeId:%s, consensus nodeId list[%v]",
+			bc.chainId, id, nodeIds)
+
 		// this node is not a consensus node
 		delete(bc.initModules, moduleNameConsensus)
 		return nil
