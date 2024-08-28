@@ -17,5 +17,7 @@ type NewBlockEvent struct {
 }
 
 type NewContractEvent struct {
+	BlockHeight           uint64
+	ChainId               string
 	ContractEventInfoList *commonPb.ContractEventInfoList
 }
