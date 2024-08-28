@@ -207,7 +207,7 @@ func (s *ApiService) startSubscribeContractEvent(ctx context.Context, lastBlockH
 		for {
 			select {
 			case ev := <-contractEventC:
-				atomic.StoreInt64(lastBlockHeight, int64(ev.ContractEventInfoList.ContractEvents[0].BlockHeight))
+				atomic.StoreInt64(lastBlockHeight, int64(ev.BlockHeight))
 				select {
 				case dataC <- ev:
 				default:

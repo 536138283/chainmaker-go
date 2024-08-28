@@ -108,31 +108,44 @@ func (cb *CommitBlock) CommitBlock(
 
 // publishContractEvent publish contract event, return time used
 func (cb *CommitBlock) publishContractEvent(block *commonpb.Block, events []*commonpb.ContractEvent) int64 {
-	eventsInfo := make([]*commonpb.ContractEventInfo, 0, len(events))
+
+	var (
+		eventsInfos = make([]*commonpb.ContractEventInfo, 0, len(events))
+		height      = block.Header.BlockHeight
+		chainId     = block.Header.ChainId
+	)
+
 	if len(events) == 0 {
 		// 为避免由于没有event的情况下，导致contract event订阅落后很多区块，此处依然选择推送event事件给订阅模块
-		cb.msgBus.Publish(msgbus.ContractEventInfo, &commonpb.ContractEventInfoList{ContractEvents: eventsInfo})
+		cb.msgBus.Publish(msgbus.ContractEventInfo, &commonpb.ContractEventMessageInfo{
+			BlockHeight:       height,
+			ChainId:           chainId,
+			ContractEventList: &commonpb.ContractEventInfoList{ContractEvents: eventsInfos},
+		})
 		return 0
 	}
 
 	startPublishContractEventTick := utils.CurrentTimeMillisSeconds()
 	cb.log.DebugDynamic(func() string {
-		return fmt.Sprintf("start publish contractEventsInfo: block[%d] ",
-			block.Header.BlockHeight)
+		return fmt.Sprintf("start publish contractEventsInfo: block[%d] ", height)
 	})
 	for _, t := range events {
 		eventInfo := &commonpb.ContractEventInfo{
-			BlockHeight:     block.Header.BlockHeight,
-			ChainId:         block.Header.GetChainId(),
+			BlockHeight:     height,
+			ChainId:         chainId,
 			Topic:           t.Topic,
 			TxId:            t.TxId,
 			ContractName:    t.ContractName,
 			ContractVersion: t.ContractVersion,
 			EventData:       t.EventData,
 		}
-		eventsInfo = append(eventsInfo, eventInfo)
+		eventsInfos = append(eventsInfos, eventInfo)
 	}
-	cb.msgBus.Publish(msgbus.ContractEventInfo, &commonpb.ContractEventInfoList{ContractEvents: eventsInfo})
+	cb.msgBus.Publish(msgbus.ContractEventInfo, &commonpb.ContractEventMessageInfo{
+		BlockHeight:       height,
+		ChainId:           chainId,
+		ContractEventList: &commonpb.ContractEventInfoList{ContractEvents: eventsInfos},
+	})
 	return utils.CurrentTimeMillisSeconds() - startPublishContractEventTick
 }
 
