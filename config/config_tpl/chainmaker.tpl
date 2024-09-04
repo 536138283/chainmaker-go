@@ -83,6 +83,32 @@ node:
     # It can be SHA256 or SM3.
     hash: "SHA256"  # [*]
 
+  # KMS settings
+  kms:
+    # Enable it or not
+    enabled: false
+
+    # Public cloud or private cloud
+    is_public: true
+
+    # KMS SecretId
+    secret_id: ""
+
+    # KMS SecretKey
+    secret_key: ""
+
+    # KMS server address, ip or dns
+    address: "kms.tencentcloudapi.com"
+
+    # KMS server region
+    region: "ap-guangzhou"
+
+    # KMS sdk scheme, http or https
+    sdk_scheme: "https"
+
+    # Optional settings，style "{k1:v1, k2:v2}".
+    ext_params: ""
+
 # Network Settings
 net:
   # Network provider, can be libp2p or liquid.
