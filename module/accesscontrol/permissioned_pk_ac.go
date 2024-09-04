@@ -189,6 +189,9 @@ func (pp *permissionedPkACProvider) RefineEndorsements(endorsements []*common.En
 	var refinedEndorsement []*common.EndorsementEntry
 
 	for _, endorsementEntry := range endorsements {
+		if endorsementEntry == nil || endorsementEntry.Signer == nil {
+			continue
+		}
 		endorsement := &common.EndorsementEntry{
 			Signer: &pbac.Member{
 				OrgId:      endorsementEntry.Signer.OrgId,

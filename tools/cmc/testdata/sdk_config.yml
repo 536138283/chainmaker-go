@@ -78,4 +78,15 @@ chain_client:
   #     trust_ca_list:
   #       - ./testdata/archivecenter/ca.crt    
   #   max_send_msg_size: 200
-  #   max_recv_msg_size: 200 
+  #   max_recv_msg_size: 200
+  # KMS settings
+  kms:
+    enabled: false            # kms enable flag, set true if use kms
+    is_public: true           # private cloud kms or public cloud kms, set true if use public kms
+    secret_id: ""             # cloud kms SecretId
+    secret_key: ""            # cloud kms SecretKey
+    address: "kms.tencentcloudapi.com" # kms server address, ip or dns
+    region: "ap-guangzhou"    # kms server region
+    sdk_scheme: "https"       # kms sdk scheme, http or https
+    ext_params: ""            # optional，this is a map string, like "{k1:v1, k2:v2}".
+
