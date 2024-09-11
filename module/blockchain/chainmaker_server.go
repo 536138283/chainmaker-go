@@ -16,6 +16,10 @@ import (
 	"strings"
 	"sync"
 
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/kms"
+	"chainmaker.org/chainmaker/common/v2/kmsutils"
+
 	"chainmaker.org/chainmaker/vm-evm/v2/evm-go/math"
 
 	"chainmaker.org/chainmaker-go/module/net"
@@ -182,9 +186,24 @@ func (server *ChainMakerServer) initNet() error {
 	if err != nil {
 		return err
 	}
-	privateKey, err := asym.PrivateKeyFromPEM(file, nil)
-	if err != nil {
-		return err
+
+	var privateKey crypto.PrivateKey
+	kmsConfig := localconf.ChainMakerConfig.NodeConfig.KMSConfig
+	if kmsConfig.Enabled {
+		if err = initKMS(); err != nil {
+			return fmt.Errorf("fail to initialize identity management service: [%v]", err)
+		}
+
+		privateKey, err = kmsutils.ParseKMSPrivKey(file)
+		if err != nil {
+			return fmt.Errorf("fail to initialize identity management service: [%v]", err)
+		}
+
+	} else {
+		privateKey, err = asym.PrivateKeyFromPEM(file, nil)
+		if err != nil {
+			return err
+		}
 	}
 	nodeId, err := helper.CreateLibp2pPeerIdWithPrivateKey(privateKey)
 	if err != nil {
@@ -206,6 +225,43 @@ func (server *ChainMakerServer) initNet() error {
 		server.net.SetChainCustomTrustRoots(chainTrustRoots.ChainId, roots)
 		log.Infof("set custom trust roots for chain[%s] success.", chainTrustRoots.ChainId)
 	}
+	return nil
+}
+
+// initKMS
+//  @Description: init kms context, only effect when kms enabled
+//  @return error
+//
+func initKMS() error {
+	config := localconf.ChainMakerConfig.NodeConfig.KMSConfig // todo 如果为nil
+	if !config.Enabled {
+		kmsEnable := os.Getenv("KMS_ENABLE")
+		if strings.EqualFold(strings.ToLower(kmsEnable), "true") {
+			config.SecretId = os.Getenv("KMS_SECRET_ID")
+			config.SecretKey = os.Getenv("KMS_SECRET_KEY")
+			config.Address = os.Getenv("KMS_ADDRESS")
+			config.Region = os.Getenv("KMS_REGION")
+			config.SdkScheme = os.Getenv("SMK_SDK_SCHEME")
+			isPublicStr := os.Getenv("KMS_IS_PUBLIC")
+			if strings.EqualFold(strings.ToLower(isPublicStr), "true") {
+				config.Enabled = true
+			}
+		}
+	}
+	if !config.Enabled {
+		return nil
+	}
+	kmsutils.InitKMS(kmsutils.KMSConfig{
+		Enable: config.Enabled,
+		Config: kms.Config{
+			IsPublic:  config.IsPublic,
+			SecretId:  config.SecretId,
+			SecretKey: config.SecretKey,
+			Address:   config.Address,
+			Region:    config.Region,
+			SDKScheme: config.SdkScheme,
+		},
+	})
 	return nil
 }
 

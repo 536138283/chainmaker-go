@@ -64,17 +64,29 @@ func MakeEndorsement(adminKeys, adminCrts, adminOrgs []string, client *sdk.Chain
 
 			endorsementEntrys[i] = e
 		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				client.GetHashType(),
-				"",
-				payload,
-			)
-			if err != nil {
-				return nil, err
-			}
+			if sdk.KMSEnabled() {
+				e, err := sdkutils.MakePkEndorserWithPathAndP11Handle(adminKeys[i],
+					client.GetHashType(),
+					true,
+					"",
+					payload)
+				if err != nil {
+					return nil, err
+				}
+				endorsementEntrys[i] = e
+			} else {
+				e, err := sdkutils.MakePkEndorserWithPath(
+					adminKeys[i],
+					client.GetHashType(),
+					"",
+					payload,
+				)
+				if err != nil {
+					return nil, err
+				}
 
-			endorsementEntrys[i] = e
+				endorsementEntrys[i] = e
+			}
 		}
 	}
 	return endorsementEntrys, nil

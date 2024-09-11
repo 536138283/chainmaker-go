@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.4
-	chainmaker.org/chainmaker/common/v2 v2.3.5-0.20240808034436-5846f433253c
+	chainmaker.org/chainmaker/common/v2 v2.3.5-0.20240911093503-73cde4e954e7
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5
@@ -12,11 +12,11 @@ require (
 	chainmaker.org/chainmaker/localconf/v2 v2.3.5-0.20240904093900-64b017a1259b
 	chainmaker.org/chainmaker/logger/v2 v2.3.4
 	chainmaker.org/chainmaker/net-common v1.2.5
-	chainmaker.org/chainmaker/net-libp2p v1.2.6-0.20240815015825-438d2129f4eb
+	chainmaker.org/chainmaker/net-libp2p v1.2.6-0.20240912015548-9b26ef1612c2
 	chainmaker.org/chainmaker/net-liquid v1.1.3
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.6-0.20240828092527-2057d3a19f77
 	chainmaker.org/chainmaker/protocol/v2 v2.3.6-0.20240815011832-0ae5b43fdec9
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.6-0.20240905020528-08c57ec0fbc4
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.6-0.20240911105314-27158bf8d49b
 	chainmaker.org/chainmaker/store/v2 v2.3.7-0.20240905020007-f2bd24e8df69
 	chainmaker.org/chainmaker/utils/v2 v2.3.5
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.6-0.20240815014535-a5af396f012c
@@ -82,7 +82,7 @@ replace (
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.5
-	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.0
+	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.0.1-0.20240912014815-cd4561228b34
 	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v1.0.0
 	github.com/lucas-clemente/quic-go v0.26.0 => chainmaker.org/third_party/quic-go v1.2.2
 	github.com/marten-seemann/qtls-go1-16 => chainmaker.org/third_party/qtls-go1-16 v1.1.0

@@ -16,6 +16,8 @@ import (
 	"strconv"
 	"strings"
 
+	"chainmaker.org/chainmaker/common/v2/kmsutils"
+
 	"chainmaker.org/chainmaker/common/v2/crypto/kms"
 
 	bcx509 "chainmaker.org/chainmaker/common/v2/crypto/x509"
@@ -92,7 +94,7 @@ func initKMS() error {
 	if !config.Enabled {
 		return nil
 	}
-	cert.InitKMS(cert.KMSConfig{
+	kmsutils.InitKMS(kmsutils.KMSConfig{
 		Enable: config.Enabled,
 		Config: kms.Config{
 			IsPublic:  config.IsPublic,
@@ -187,7 +189,7 @@ func InitCertSigningMember(chainConfig *config.ChainConfig, localOrgId,
 			if err = initKMS(); err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
-			sk, err = cert.ParseKMSPrivKey(skPEM)
+			sk, err = kmsutils.ParseKMSPrivKey(skPEM)
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
@@ -240,7 +242,7 @@ func InitPKSigningMember(hashType,
 			if err = initKMS(); err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
-			sk, err = cert.ParseKMSPrivKey(skPEM)
+			sk, err = kmsutils.ParseKMSPrivKey(skPEM)
 			if err != nil {
 				return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 			}
