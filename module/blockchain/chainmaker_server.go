@@ -189,7 +189,7 @@ func (server *ChainMakerServer) initNet() error {
 
 	var privateKey crypto.PrivateKey
 	kmsConfig := localconf.ChainMakerConfig.NodeConfig.KMSConfig
-	if kmsConfig.Enabled {
+	if kmsConfig.Enabled && pubKeyMode {
 		if err = initKMS(); err != nil {
 			return fmt.Errorf("fail to initialize identity management service: [%v]", err)
 		}
@@ -205,6 +205,7 @@ func (server *ChainMakerServer) initNet() error {
 			return err
 		}
 	}
+
 	nodeId, err := helper.CreateLibp2pPeerIdWithPrivateKey(privateKey)
 	if err != nil {
 		return err
