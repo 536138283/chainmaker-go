@@ -12,6 +12,8 @@ import (
 	"encoding/pem"
 	"fmt"
 
+	"chainmaker.org/chainmaker/common/v2/kmsutils"
+
 	"strings"
 
 	"chainmaker.org/chainmaker/common/v2/cert"
@@ -282,7 +284,7 @@ func NewCertSigningMember(hashType string, member *pbac.Member, privateKeyPem,
 		if err = initKMS(); err != nil {
 			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 		}
-		sk, err = cert.ParseKMSPrivKey([]byte(privateKeyPem))
+		sk, err = kmsutils.ParseKMSPrivKey([]byte(privateKeyPem))
 		if err != nil {
 			return nil, fmt.Errorf("fail to initialize identity management service: [%v]", err)
 		}

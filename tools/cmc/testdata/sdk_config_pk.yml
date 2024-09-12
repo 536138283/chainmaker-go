@@ -49,6 +49,16 @@ chain_client:
     send_tx_timeout: 60 # grpc 客户端发送交易超时时间
     get_tx_timeout: 60 # rpc 客户端查询交易超时时间 
 
+  kms:
+    enabled: false            # kms enable flag, set true if use kms
+    is_public: true           # private cloud kms or public cloud kms, set true if use public kms
+    secret_id: ""             # cloud kms SecretId
+    secret_key: ""            # cloud kms SecretKey
+    address: "kms.tencentcloudapi.com" # kms server address, ip or dns
+    region: "ap-beijing"    # kms server region
+    sdk_scheme: "https"       # kms sdk scheme, http or https
+    ext_params: ""            # optional，this is a map string, like "{k1:v1, k2:v2}".
+
   # # 如果启用了归档中心,可以打开下面的归档中心配置  
   archive_center_query_first: true # 如果为true且归档中心配置打开,那么查询数据优先从归档中心查询 
   # archive_center_config:
