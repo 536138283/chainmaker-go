@@ -155,50 +155,59 @@ func configTrustRoot(op int) error {
 		return err
 	}
 
-	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
-	for i := range adminKeys {
-		if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithCert {
-			e, err := sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else if sdk.AuthTypeToStringMap[client.GetAuthType()] == protocol.PermissionedWithKey {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				client.GetHashType(),
-				adminOrgs[i],
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		} else {
-			e, err := sdkutils.MakePkEndorserWithPath(
-				adminKeys[i],
-				client.GetHashType(),
-				"",
-				payload,
-			)
-			if err != nil {
-				return err
-			}
-
-			endorsementEntrys[i] = e
-		}
+	endorsementEntrys, err := getEndorsementEntrys(client, adminKeys, adminCrts, adminOrgs, payload)
+	if err != nil {
+		return err
 	}
 
 	resp, err := client.SendChainConfigUpdateRequest(payload, endorsementEntrys, -1, syncResult)
 	if err != nil {
 		return err
 	}
+
 	err = util.CheckProposalRequestResp(resp, false)
 	if err != nil {
 		return err
 	}
 	fmt.Printf("trustroot response %+v\n", resp)
 	return nil
+}
+
+func getEndorsementEntrys(client *sdk.ChainClient, adminKeys, adminCrts, adminOrgs []string, payload *common.Payload) (
+	[]*common.EndorsementEntry, error) {
+	endorsementEntrys := make([]*common.EndorsementEntry, len(adminKeys))
+	for i := range adminKeys {
+		authType := sdk.AuthTypeToStringMap[client.GetAuthType()]
+
+		var e *common.EndorsementEntry
+		var err error
+		switch authType {
+		case protocol.PermissionedWithCert:
+			if sdk.GetP11Handle() != nil || sdk.KMSEnabled() {
+				e, err = sdkutils.MakeEndorserWithPathAndP11Handle(
+					adminKeys[i], adminCrts[i], sdk.GetP11Handle(), sdk.KMSEnabled(), payload)
+			} else {
+				e, err = sdkutils.MakeEndorserWithPath(adminKeys[i], adminCrts[i], payload)
+			}
+
+		case protocol.PermissionedWithKey:
+			e, err = sdkutils.MakePkEndorserWithPath(adminKeys[i], client.GetHashType(), adminOrgs[i], payload)
+
+		default:
+			if sdk.KMSEnabled() {
+				e, err = sdkutils.MakePkEndorserWithPathAndP11Handle(
+					adminKeys[i], client.GetHashType(), sdk.KMSEnabled(), "", payload)
+			} else {
+				e, err = sdkutils.MakePkEndorserWithPath(adminKeys[i], client.GetHashType(), "", payload)
+			}
+		}
+
+		if err != nil {
+			return nil, err
+		}
+
+		endorsementEntrys[i] = e
+	}
+
+	return endorsementEntrys, nil
 }
