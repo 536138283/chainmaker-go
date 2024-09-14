@@ -36,7 +36,7 @@ go get chainmaker.org/chainmaker/consensus-solo/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/consensus-utils/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/consensus-maxbft/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/consensus-tbft/v2@${PRE_BRANCH}
-go get chainmaker.org/chainmaker/store/v2@${BRANCH}
+go get chainmaker.org/chainmaker/store/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-docker-go/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-engine/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-evm/v2@${BRANCH}
