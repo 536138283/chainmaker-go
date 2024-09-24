@@ -286,6 +286,7 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 		err error
 	)
 
+	var hasSendContractEvent bool
 	for _, tx := range block.Txs {
 		var contractEvents []*commonPb.ContractEventInfo
 		for idx, event := range tx.Result.ContractResult.ContractEvent {
@@ -316,6 +317,15 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 		if err = s.doSendSubscribeContractEvent(server, contractEvents); err != nil {
 			return err
 		}
+
+		hasSendContractEvent = true
+	}
+
+	if !hasSendContractEvent {
+		return s.doSendSubscribeContractEvent(server, []*commonPb.ContractEventInfo{{
+			BlockHeight: block.Header.BlockHeight,
+			ChainId:     block.Header.ChainId,
+		}})
 	}
 
 	return nil
