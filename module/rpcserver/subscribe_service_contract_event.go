@@ -232,7 +232,7 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 		case <-server.Context().Done():
 			s.log.Infof("server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
-			return -1, nil
+			return -1, status.Error(codes.Internal, "client close subscribe, please check it")
 		case <-s.ctx.Done():
 			s.log.Warnf("service context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
