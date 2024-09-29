@@ -6,7 +6,7 @@
 #
 
 chain_id: chain1        # 链标识
-version: "2030100"
+version: "2030600"
 sequence: 1             # 配置版本
 auth_type: "permissionedWithCert"   # 认证类型
 

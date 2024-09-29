@@ -24,7 +24,7 @@ checkEnv
 
 set -e
 
-VERSION='"2030500"'
+VERSION='"2030600"'
 
 NODE_CNT=$1
 CHAIN_CNT=$2
@@ -200,12 +200,18 @@ function generate_tls() {
            #node
            cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.crt"
            cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.key"
+           #add enc key and crt when gmtls1.1, but output to /dev/null where error.
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.enc.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.enc.crt" 2>/dev/null
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.enc.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.enc.key" 2>/dev/null
 
            #client
             for ((k = 1;  k <= ${CLIENT_CNT}; k = k + 1)); do  #client$k
                  mkdir -p "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
                  cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
                  cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
+                 #add enc key and crt when gmtls1.1, but output to /dev/null where error.
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.enc.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/" 2>/dev/null
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.enc.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/" 2>/dev/null
             done
     done
 
