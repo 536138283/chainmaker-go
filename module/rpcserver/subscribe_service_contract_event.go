@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/localconf/v2"
+
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -54,25 +56,62 @@ func (s *ApiService) checkDealContractEventSubscriptionParams(tx *commonPb.Trans
 
 // dealContractEventSubscription - deal contract event subscribe request
 func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
-	server apiPb.RpcNode_SubscribeServer) error {
+	server apiPb.RpcNode_SubscribeServer) (retErr error) {
 
 	var (
-		err          error
-		errMsg       string
-		errCode      commonErr.ErrCode
-		db           protocol.BlockchainStore
-		txId         = tx.Payload.TxId
-		startBlock   int64
-		endBlock     int64
-		contractName string
-		topic        string
+		err           error
+		errMsg        string
+		errCode       commonErr.ErrCode
+		db            protocol.BlockchainStore
+		txId          = tx.Payload.TxId
+		chainId       = tx.Payload.ChainId
+		startBlock    int64
+		endBlock      int64
+		subscribeType string
+		senderAddr    string
+		contractName  string
+		topic         string
 	)
+
+	defer func() {
+		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+			//metric subscribe active counter
+			s.metricSubscribeActiveCounter.WithLabelValues(chainId, senderAddr, subscribeType, contractName, topic).Dec()
+			// if the function returns an error, count the number of subscription interruptions
+			if retErr != nil {
+				s.log.Errorf("dealContractEventSubscription encountered an error: %v [txId:%s, sender:%s]",
+					retErr, txId, senderAddr)
+				s.metricSubscribeInterruptedCounter.WithLabelValues(chainId, senderAddr, subscribeType, contractName, topic).Inc()
+			}
+		}
+	}()
+
+	subscribeType = syscontract.SubscribeFunction_SUBSCRIBE_CONTRACT_EVENT.String()
+	chainId = tx.Payload.ChainId
+	if db, err = s.chainMakerServer.GetStore(chainId); err != nil {
+		errCode = commonErr.ERR_CODE_GET_STORE
+		errMsg = s.getErrMsg(errCode, err)
+		s.log.Warnf(errMsg + fmt.Sprintf("[reqTxId:%s]", txId))
+		return status.Error(codes.Internal, errMsg)
+	}
+	senderAddr, err = s.getTxSenderAddress(db, tx)
+	if err != nil {
+		s.log.Warnf(err.Error() + fmt.Sprintf("[txId:%s]", txId))
+		return err
+	}
 
 	startBlock, endBlock, contractName, topic, err = s.checkDealContractEventSubscriptionParams(tx)
 	if err != nil {
 		s.log.Warnf(fmt.Sprintf("check deal contract event subscription params failed, err:%s. [txId:%s]",
 			err, txId))
 		return err
+	}
+
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		//metric subscribe total counter
+		s.metricSubscribeTotalCounter.WithLabelValues(chainId, senderAddr, subscribeType, contractName, topic).Inc()
+		//metric subscribe active counter
+		s.metricSubscribeActiveCounter.WithLabelValues(chainId, senderAddr, subscribeType, contractName, topic).Inc()
 	}
 
 	if err = s.checkSubscribeContractEventPayload(startBlock, endBlock); err != nil {
@@ -85,14 +124,6 @@ func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 	s.log.Infof(
 		"Recv contract event subscribe request: [start:%d]/[end:%d]/[contractName:%s]/[topic:%s]/[txId:%s]",
 		startBlock, endBlock, contractName, topic, txId)
-
-	chainId := tx.Payload.ChainId
-	if db, err = s.chainMakerServer.GetStore(chainId); err != nil {
-		errCode = commonErr.ERR_CODE_GET_STORE
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Warnf(errMsg + fmt.Sprintf("[reqTxId:%s]", txId))
-		return status.Error(codes.Internal, errMsg)
-	}
 
 	return s.doSendContractEvent(tx, db, server, startBlock, endBlock, contractName, topic)
 }
@@ -377,7 +408,6 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 	if alreadySendHistoryBlockHeight == -1 {
 		alreadySendHistoryBlockHeight = atomic.LoadInt64(&lastBlockHeight)
 	}
-
 	for {
 		select {
 		case <-contractEventC:

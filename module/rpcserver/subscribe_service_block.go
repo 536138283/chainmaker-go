@@ -12,6 +12,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/localconf/v2"
+
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -56,7 +58,8 @@ func (s *ApiService) checkDealBlockSubscriptionParams(tx *commonPb.Transaction) 
 }
 
 // dealBlockSubscription - deal block subscribe request
-func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction, server apiPb.RpcNode_SubscribeServer) error {
+func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction,
+	server apiPb.RpcNode_SubscribeServer) (retErr error) {
 	var (
 		err             error
 		errMsg          string
@@ -69,7 +72,43 @@ func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction, server apiP
 		onlyHeader      bool
 		reqSender       protocol.Role
 		txId            = tx.Payload.TxId
+		chainId         = tx.Payload.ChainId
+		subscribeType   string
+		senderAddr      string
 	)
+
+	defer func() {
+		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+			// metric subscribe active counter
+			s.metricSubscribeActiveCounter.WithLabelValues(chainId, senderAddr, subscribeType, "", "").Dec()
+			// if the function returns an error, count the number of subscription interruptions
+			if retErr != nil {
+				s.log.Errorf("dealBlockSubscription encountered an error: %v [txId:%s, sender:%s]", retErr, txId, senderAddr)
+				s.metricSubscribeInterruptedCounter.WithLabelValues(chainId, senderAddr, subscribeType, "", "").Inc()
+			}
+		}
+	}()
+
+	subscribeType = syscontract.SubscribeFunction_SUBSCRIBE_BLOCK.String()
+	chainId = tx.Payload.ChainId
+	if db, err = s.chainMakerServer.GetStore(chainId); err != nil {
+		errCode = commonErr.ERR_CODE_GET_STORE
+		errMsg = s.getErrMsg(errCode, err)
+		s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s]", txId))
+		return status.Error(codes.Internal, errMsg)
+	}
+	senderAddr, err = s.getTxSenderAddress(db, tx)
+	if err != nil {
+		s.log.Warnf(err.Error() + fmt.Sprintf("[txId:%s]", txId))
+		return err
+	}
+
+	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		//metric subscribe total counter
+		s.metricSubscribeTotalCounter.WithLabelValues(chainId, senderAddr, subscribeType, "", "").Inc()
+		//metric subscribe active counter
+		s.metricSubscribeActiveCounter.WithLabelValues(chainId, senderAddr, subscribeType, "", "").Inc()
+	}
 
 	startBlock, endBlock, withRWSet, onlyHeader, err = s.checkDealBlockSubscriptionParams(tx)
 	if err != nil {
@@ -85,24 +124,9 @@ func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction, server apiP
 		return status.Error(codes.InvalidArgument, errMsg)
 	}
 
-	chainId := tx.Payload.ChainId
-
 	s.log.Infof(
 		"Recv block subscribe request: [start:%d]/[end:%d]/[withRWSet:%v]/[onlyHeader:%v]/[txId:%s,chainId:%s]",
 		startBlock, endBlock, withRWSet, onlyHeader, txId, chainId)
-
-	if db, err = s.chainMakerServer.GetStore(chainId); err != nil {
-		errCode = commonErr.ERR_CODE_GET_STORE
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s]", txId))
-		return status.Error(codes.Internal, errMsg)
-	}
-
-	senderAddr, err := s.getTxSenderAddress(db, tx)
-	if err != nil {
-		s.log.Warnf(err.Error() + fmt.Sprintf("[txId:%s]", txId))
-		return err
-	}
 
 	// 计算addr之前，统一在日志中返回string的tx.Sender.Signer.MemberInfo
 	if lastBlockHeight, err = s.checkAndGetLastBlockHeight(db, startBlock); err != nil {
