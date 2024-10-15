@@ -65,20 +65,21 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 	log := logger.GetLogger(logger.MODULE_RPC)
 	logBrief := logger.GetLogger(logger.MODULE_BRIEF)
 
-	tokenBucketSize := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenBucketSize
-	tokenPerSecond := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenPerSecond
-
 	var subscriberRateLimiter *rate.Limiter
-	if tokenBucketSize >= 0 && tokenPerSecond >= 0 {
-		if tokenBucketSize == 0 {
-			tokenBucketSize = subscriberRateLimitDefaultTokenBucketSize
-		}
+	if localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.Enabled {
+		tokenBucketSize := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenBucketSize
+		tokenPerSecond := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenPerSecond
+		if tokenBucketSize >= 0 && tokenPerSecond >= 0 {
+			if tokenBucketSize == 0 {
+				tokenBucketSize = subscriberRateLimitDefaultTokenBucketSize
+			}
 
-		if tokenPerSecond == 0 {
-			tokenPerSecond = subscriberRateLimitDefaultTokenPerSecond
-		}
+			if tokenPerSecond == 0 {
+				tokenPerSecond = subscriberRateLimitDefaultTokenPerSecond
+			}
 
-		subscriberRateLimiter = rate.NewLimiter(rate.Limit(tokenPerSecond), tokenBucketSize)
+			subscriberRateLimiter = rate.NewLimiter(rate.Limit(tokenPerSecond), tokenBucketSize)
+		}
 	}
 
 	apiService := ApiService{
