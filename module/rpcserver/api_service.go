@@ -22,14 +22,12 @@ import (
 	"chainmaker.org/chainmaker-go/module/snapshot"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/monitor"
-	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
-	"chainmaker.org/chainmaker/protocol/v2"
 	tbf "chainmaker.org/chainmaker/store/v2/types/blockfile"
 	"chainmaker.org/chainmaker/utils/v2"
 	native "chainmaker.org/chainmaker/vm-native/v2"
@@ -98,7 +96,7 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 			"chainId",
 			"contractName",
 			"method",
-			"timeStamp",
+			"date",
 			"state")
 		apiService.metricInvokeCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_invoke_request_counter",
 			"invoke request counts metric", "chainId", "state")
@@ -108,7 +106,7 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 			"chainId", "state")
 		apiService.metricTxInvokeIllegal = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_tx_invoke_illegal",
 			"Total number of tx invoke illegal",
-			"chainId", "timeStamp", "txId", "signerMemberInfo")
+			"chainId", "date", "signerMemberInfo")
 	}
 
 	return &apiService
@@ -210,14 +208,19 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		}
 		s.log.Error(errMsg)
 		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+			// 获取当前时间
+			now := time.Now()
+			// 获取当前日期（年、月、日）
+			year, month, day := now.Date()
+
 			if strings.Contains(err.Error(), "verify tx authentation failed") {
 				sender := hex.EncodeToString(tx.Sender.Signer.MemberInfo)
 				//交易发起者身份不合法 chainId,timeStamp,txId,signerMemberInfo
-				s.log.Warnf("<METRIC> verify tx authentation failed, chainId:%s, timeStamp:%d, txId:%s, signerMemberInfo:%s",
-					tx.Payload.ChainId, utils.CurrentTimeMillisSeconds(), tx.Payload.TxId, sender)
+				s.log.Warnf("<METRIC> verify tx authentation failed, chainId:%s, date:%d-%d-%d, signerMemberInfo:%s",
+					tx.Payload.ChainId, year, month, day, sender)
 
-				s.metricTxInvokeIllegal.WithLabelValues(tx.Payload.ChainId, fmt.Sprint(utils.CurrentTimeMillisSeconds()),
-					tx.Payload.TxId, sender).Inc()
+				s.metricTxInvokeIllegal.WithLabelValues(tx.Payload.ChainId, fmt.Sprintf("%d-%d-%d", year, month, day),
+					sender).Inc()
 			}
 
 		}
@@ -402,19 +405,24 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+		// 获取当前时间
+		now := time.Now()
+		// 获取当前日期（年、月、日）
+		year, month, day := now.Date()
+
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
 			s.metricQueryContractCounter.WithLabelValues(chainId,
 				tx.Payload.ContractName,
 				tx.Payload.Method,
-				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
+				fmt.Sprintf("%d-%d-%d", year, month, day),
 				"true").Inc()
 		} else {
 			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
 			s.metricQueryContractCounter.WithLabelValues(chainId,
 				tx.Payload.ContractName,
 				tx.Payload.Method,
-				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
+				fmt.Sprintf("%d-%d-%d", year, month, day),
 				"true").Inc()
 		}
 	}
