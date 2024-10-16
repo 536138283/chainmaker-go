@@ -240,7 +240,7 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 				txId, senderAddr, contractName, topic)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
-			if err = s.getRateLimitToken(); err != nil {
+			if err = s.getRateLimitToken(senderAddr); err != nil {
 				s.log.Warnf(err.Error() + fmt.Sprintf("[txId:%s, sender:%s]", txId, senderAddr))
 				return -1, status.Error(codes.Internal, err.Error())
 			}
@@ -275,7 +275,7 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 			}
 			sendSubscribeContractEventCost := utils.CurrentTimeMillisSeconds() - sendSubscribeContractEventStick
 
-			s.log.Infof("sendHistoryContractEvent[height:%d]. [txId:%s, sender:%s, " +
+			s.log.Infof("sendHistoryContractEvent[height:%d]. [txId:%s, sender:%s, "+
 				"contractName:%s, topic:%s, getBlockCost:%d, sendSubscribeContractEventCost:%d]",
 				i, txId, senderAddr, contractName, topic, getBlockCost, sendSubscribeContractEventCost)
 			i++

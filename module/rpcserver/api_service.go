@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
+	"chainmaker.org/chainmaker-go/module/rpcserver/rateLimiter"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -35,7 +36,6 @@ import (
 	native "chainmaker.org/chainmaker/vm-native/v2"
 	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/time/rate"
 )
 
 const (
@@ -50,7 +50,7 @@ type ApiService struct {
 	chainMakerServer            *blockchain.ChainMakerServer
 	log                         *logger.CMLogger
 	logBrief                    *logger.CMLogger
-	subscriberRateLimiter       *rate.Limiter
+	subscriberRateLimiter       rateLimiter.SubscriberRateLimiter
 	metricQueryCounter          *prometheus.CounterVec
 	metricInvokeCounter         *prometheus.CounterVec
 	metricInvokeTxSizeHistogram *prometheus.HistogramVec
@@ -65,28 +65,11 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 	log := logger.GetLogger(logger.MODULE_RPC)
 	logBrief := logger.GetLogger(logger.MODULE_BRIEF)
 
-	var subscriberRateLimiter *rate.Limiter
-	if localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.Enabled {
-		tokenBucketSize := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenBucketSize
-		tokenPerSecond := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenPerSecond
-		if tokenBucketSize >= 0 && tokenPerSecond >= 0 {
-			if tokenBucketSize == 0 {
-				tokenBucketSize = subscriberRateLimitDefaultTokenBucketSize
-			}
-
-			if tokenPerSecond == 0 {
-				tokenPerSecond = subscriberRateLimitDefaultTokenPerSecond
-			}
-
-			subscriberRateLimiter = rate.NewLimiter(rate.Limit(tokenPerSecond), tokenBucketSize)
-		}
-	}
-
 	apiService := ApiService{
 		chainMakerServer:      chainMakerServer,
 		log:                   log,
 		logBrief:              logBrief,
-		subscriberRateLimiter: subscriberRateLimiter,
+		subscriberRateLimiter: rateLimiter.NewSubscriberRateLimiter(log),
 		ctx:                   ctx,
 	}
 

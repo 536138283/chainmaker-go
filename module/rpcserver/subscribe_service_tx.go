@@ -332,7 +332,7 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 				i, txId, senderAddr, contractName)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
-			if err = s.getRateLimitToken(); err != nil {
+			if err = s.getRateLimitToken(senderAddr); err != nil {
 				s.log.Warnf("get rate limit token failed, %s. height:%d, txId:%s, sender:%s, contractName:%s",
 					err, i, txId, senderAddr, contractName)
 				return -1, status.Error(codes.Internal, err.Error())

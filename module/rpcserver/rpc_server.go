@@ -60,10 +60,6 @@ const (
 	// rpc ratelimit config
 	rateLimitDefaultTokenPerSecond  = 10000
 	rateLimitDefaultTokenBucketSize = 10000
-
-	// subscriber ratelimit config
-	subscriberRateLimitDefaultTokenPerSecond  = 1000
-	subscriberRateLimitDefaultTokenBucketSize = 1000
 )
 
 // TLS Mode

@@ -284,7 +284,7 @@ func (s *ApiService) sendHistoryBlock(store protocol.BlockchainStore, server api
 			s.log.Warnf("chain server context done[txId:%s, sender:%s].", txId, senderAddress)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
-			if err = s.getRateLimitToken(); err != nil {
+			if err = s.getRateLimitToken(senderAddress); err != nil {
 				s.log.Warnf("get rate limit token failed:%s, [txId:%s, sender:%s].", err, txId, senderAddress)
 				return -1, status.Error(codes.Internal, err.Error())
 			}
