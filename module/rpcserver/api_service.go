@@ -28,6 +28,7 @@ import (
 	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"chainmaker.org/chainmaker/protocol/v2"
 	tbf "chainmaker.org/chainmaker/store/v2/types/blockfile"
 	"chainmaker.org/chainmaker/utils/v2"
 	native "chainmaker.org/chainmaker/vm-native/v2"
