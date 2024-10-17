@@ -269,7 +269,6 @@ func getCurrentDate() string {
 	now := time.Now()
 	// 获取当前日期（年、月、日）
 	year, month, day := now.Date()
-
 	return fmt.Sprintf("%d-%d-%d", year, month, day)
 }
 
