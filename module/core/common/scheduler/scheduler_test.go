@@ -1274,7 +1274,6 @@ func TestTxScheduler_parseParameter(t *testing.T) {
 				scheduleFinishC: tt.fields.scheduleFinishC,
 				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
-				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
@@ -1297,7 +1296,6 @@ func TestTxScheduler_dumpDAG(t *testing.T) {
 		scheduleFinishC chan bool
 		log             protocol.Logger
 		chainConf       protocol.ChainConf
-		metricVMRunTime *prometheus.HistogramVec
 		StoreHelper     conf.StoreHelper
 		keyReg          *regexp.Regexp
 	}
@@ -1333,7 +1331,6 @@ func TestTxScheduler_dumpDAG(t *testing.T) {
 				scheduleFinishC: make(chan bool),
 				log:             logger,
 				chainConf:       chainConf,
-				metricVMRunTime: nil,
 				StoreHelper:     storeHelper,
 				keyReg:          nil,
 			},
@@ -1381,7 +1378,6 @@ func TestTxScheduler_dumpDAG(t *testing.T) {
 				scheduleFinishC: tt.fields.scheduleFinishC,
 				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
-				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
@@ -1397,7 +1393,6 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 		scheduleFinishC chan bool
 		log             protocol.Logger
 		chainConf       protocol.ChainConf
-		metricVMRunTime *prometheus.HistogramVec
 		StoreHelper     conf.StoreHelper
 		keyReg          *regexp.Regexp
 	}
@@ -1446,9 +1441,8 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
 				}(),
-				metricVMRunTime: nil,
-				StoreHelper:     storeHelper,
-				keyReg:          nil,
+				StoreHelper: storeHelper,
+				keyReg:      nil,
 			},
 			args: args{
 				accountMangerContract: &commonPb.Contract{
@@ -1495,9 +1489,8 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
 				}(),
-				metricVMRunTime: nil,
-				StoreHelper:     storeHelper,
-				keyReg:          nil,
+				StoreHelper: storeHelper,
+				keyReg:      nil,
 			},
 			args: args{
 				accountMangerContract: &commonPb.Contract{
@@ -1553,9 +1546,8 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 					chainConf.EXPECT().ChainConfig().Return(chainConfig).AnyTimes()
 					return chainConf
 				}(),
-				metricVMRunTime: nil,
-				StoreHelper:     storeHelper,
-				keyReg:          nil,
+				StoreHelper: storeHelper,
+				keyReg:      nil,
 			},
 			args: args{
 				accountMangerContract: &commonPb.Contract{
@@ -1602,7 +1594,6 @@ func TestTxScheduler_chargeGasLimit(t *testing.T) {
 				scheduleFinishC: tt.fields.scheduleFinishC,
 				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
-				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
@@ -1625,7 +1616,6 @@ func TestTxScheduler_refundGas(t *testing.T) {
 		scheduleFinishC chan bool
 		log             protocol.Logger
 		chainConf       protocol.ChainConf
-		metricVMRunTime *prometheus.HistogramVec
 		StoreHelper     conf.StoreHelper
 		keyReg          *regexp.Regexp
 	}
@@ -1815,7 +1805,6 @@ func TestTxScheduler_refundGas(t *testing.T) {
 				scheduleFinishC: tt.fields.scheduleFinishC,
 				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
-				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
@@ -1842,7 +1831,6 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 		scheduleFinishC chan bool
 		log             protocol.Logger
 		chainConf       protocol.ChainConf
-		metricVMRunTime *prometheus.HistogramVec
 		StoreHelper     conf.StoreHelper
 		keyReg          *regexp.Regexp
 	}
@@ -2046,7 +2034,6 @@ func TestTxScheduler_getAccountMgrContractAndPk(t *testing.T) {
 				scheduleFinishC: tt.fields.scheduleFinishC,
 				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
-				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
@@ -2073,7 +2060,6 @@ func TestTxScheduler_checkGasEnable(t *testing.T) {
 		scheduleFinishC chan bool
 		log             protocol.Logger
 		chainConf       protocol.ChainConf
-		metricVMRunTime *prometheus.HistogramVec
 		StoreHelper     conf.StoreHelper
 		keyReg          *regexp.Regexp
 	}
@@ -2128,7 +2114,6 @@ func TestTxScheduler_checkGasEnable(t *testing.T) {
 				scheduleFinishC: tt.fields.scheduleFinishC,
 				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
-				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},
@@ -2146,7 +2131,6 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 		scheduleFinishC chan bool
 		log             protocol.Logger
 		chainConf       protocol.ChainConf
-		metricVMRunTime *prometheus.HistogramVec
 		StoreHelper     conf.StoreHelper
 		keyReg          *regexp.Regexp
 	}
@@ -2193,7 +2177,6 @@ func TestTxScheduler_checkNativeFilter(t *testing.T) {
 				scheduleFinishC: tt.fields.scheduleFinishC,
 				log:             tt.fields.log,
 				chainConf:       tt.fields.chainConf,
-				metricVMRunTime: tt.fields.metricVMRunTime,
 				StoreHelper:     tt.fields.StoreHelper,
 				keyReg:          tt.fields.keyReg,
 				contractCache:   &sync.Map{},

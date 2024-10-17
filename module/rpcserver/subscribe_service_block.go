@@ -208,10 +208,10 @@ func (s *ApiService) sendNewBlock(store protocol.BlockchainStore, tx *commonPb.T
 				}
 			}
 		case <-server.Context().Done():
-			s.log.Infof("server context done[txId:%s, sender:%s].", txId, senderAddress)
+			s.log.Infof("client server context done[txId:%s, sender:%s].", txId, senderAddress)
 			return nil
 		case <-s.ctx.Done():
-			s.log.Warnf("service context done[txId:%s, sender:%s].", txId, senderAddress)
+			s.log.Warnf("chain server context done[txId:%s, sender:%s].", txId, senderAddress)
 			return nil
 		}
 	}
@@ -278,13 +278,13 @@ func (s *ApiService) sendHistoryBlock(store protocol.BlockchainStore, server api
 	for {
 		select {
 		case <-server.Context().Done():
-			s.log.Infof("server context done[txId:%s, sender:%s].", txId, senderAddress)
+			s.log.Infof("client server context done[txId:%s, sender:%s].", txId, senderAddress)
 			return -1, nil
 		case <-s.ctx.Done():
-			s.log.Warnf("service context done[txId:%s, sender:%s].", txId, senderAddress)
+			s.log.Warnf("chain server context done[txId:%s, sender:%s].", txId, senderAddress)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
-			if err = s.getRateLimitToken(); err != nil {
+			if err = s.getRateLimitToken(senderAddress); err != nil {
 				s.log.Warnf("get rate limit token failed:%s, [txId:%s, sender:%s].", err, txId, senderAddress)
 				return -1, status.Error(codes.Internal, err.Error())
 			}
@@ -306,21 +306,24 @@ func (s *ApiService) sendHistoryBlock(store protocol.BlockchainStore, server api
 				return alreadySendHistoryBlockHeight, nil
 			}
 
-			s.log.Infof("get block[%d] finish.[txId:%s, sender:%s]", i, txId, senderAddress)
+			getBlockSubscribeResultStick := utils.CurrentTimeMillisSeconds()
 			if result, err = s.getBlockSubscribeResult(blockInfo, onlyHeader); err != nil {
 				errMsg = fmt.Sprintf("get block subscribe result failed, %s", err)
 				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s]", txId, senderAddress))
 				return -1, errors.New(errMsg)
 			}
+			getBlockSubscribeResultCost := utils.CurrentTimeMillisSeconds() - getBlockSubscribeResultStick
 
-			s.log.Infof("get block[%d] subscribe result finish.[txId:%s, sender:%s]", i, txId, senderAddress)
-			if err := server.Send(result); err != nil {
+			sendStartStick := utils.CurrentTimeMillisSeconds()
+			if err = server.Send(result); err != nil {
 				errMsg = fmt.Sprintf("send block info by history failed:%s", err)
 				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s]", txId, senderAddress))
 				return -1, status.Error(codes.Internal, errMsg)
 			}
-			s.log.Infof("send block info by history[height:%d], [txId:%s, sender:%s].",
-				i, txId, senderAddress)
+			sendCost := utils.CurrentTimeMillisSeconds() - sendStartStick
+
+			s.log.Infof("send block info by history[height:%d], [txId:%s, sender:%s, getSubscribeResultCost:%d, sendCost:%d].",
+				i, txId, senderAddress, getBlockSubscribeResultCost, sendCost)
 			i++
 		}
 	}

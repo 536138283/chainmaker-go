@@ -164,7 +164,7 @@ func NewBlockProposer(config BlockProposerConfig, log protocol.Logger) (protocol
 		blockProposerImpl.metricRandomAttackTime = monitor.NewCounterVec(monitor.SUBSYSTEM_CORE_PROPOSER,
 			"metric_random_tx_attack",
 			"Total number of random tx attack",
-			"chainId", "height", "txId", "contractName", "method", "timeStamp")
+			"chainId", "contractName", "method", "timeStamp")
 	}
 
 	return blockProposerImpl, nil
@@ -473,8 +473,9 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 				tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
 
 			if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-				bp.metricRandomAttackTime.WithLabelValues(bp.chainId, fmt.Sprint(rwSetVerifyFailTxs.BlockHeight),
-					tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, fmt.Sprint(utils.CurrentTimeMillisSeconds())).Inc()
+				timeForHours := time.Now().Unix() / 3600
+				bp.metricRandomAttackTime.WithLabelValues(bp.chainId, tx.Payload.ContractName,
+					tx.Payload.Method, fmt.Sprint(timeForHours)).Inc()
 			}
 		}
 		return
@@ -510,8 +511,9 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 			tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
 
 		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-			bp.metricRandomAttackTime.WithLabelValues(bp.chainId, fmt.Sprint(rwSetVerifyFailTxs.BlockHeight),
-				tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, fmt.Sprint(utils.CurrentTimeMillisSeconds())).Inc()
+			timeForHours := time.Now().Unix() / 3600
+			bp.metricRandomAttackTime.WithLabelValues(bp.chainId, tx.Payload.ContractName,
+				tx.Payload.Method, fmt.Sprint(timeForHours)).Inc()
 		}
 	}
 }

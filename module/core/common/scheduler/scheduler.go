@@ -32,7 +32,6 @@ import (
 	"github.com/gogo/protobuf/proto"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/panjf2000/ants/v2"
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
@@ -57,8 +56,6 @@ type TxScheduler struct {
 	scheduleFinishC chan bool
 	log             protocol.Logger
 	chainConf       protocol.ChainConf // chain config
-
-	metricVMRunTime *prometheus.HistogramVec
 	StoreHelper     conf.StoreHelper
 	keyReg          *regexp.Regexp
 	signer          protocol.SigningMember
@@ -301,10 +298,6 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 		})
 		return
 	}
-	var start time.Time
-	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		start = time.Now()
-	}
 
 	// execute tx, and get
 	// 1) the read/write set
@@ -338,7 +331,7 @@ func handleTx(block *commonPb.Block, snapshot protocol.Snapshot,
 
 	} else {
 		ts.handleApplyResult(enableConflictsBitWindow, enableSenderGroup,
-			conflictsBitWindow, senderGroup, goRoutinePool, tx, start)
+			conflictsBitWindow, senderGroup, goRoutinePool, tx)
 
 		ts.log.DebugDynamic(func() string {
 			return fmt.Sprintf("apply to snapshot success, tx id:%s, result:%+v, apply count:%d",
@@ -398,14 +391,11 @@ func (ts *TxScheduler) sendTxBySenderGroup(conflictsBitWindow *ConflictsBitWindo
 // and adjust the go routine size
 func (ts *TxScheduler) handleApplyResult(enableConflictsBitWindow bool, enableSenderGroup bool,
 	conflictsBitWindow *ConflictsBitWindow, senderGroup *SenderGroup, goRoutinePool *ants.Pool,
-	tx *commonPb.Transaction, start time.Time) {
+	tx *commonPb.Transaction) {
 	if enableConflictsBitWindow {
 		ts.adjustPoolSize(goRoutinePool, conflictsBitWindow, NormalTx)
 	}
-	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		elapsed := time.Since(start)
-		ts.metricVMRunTime.WithLabelValues(tx.Payload.ChainId).Observe(elapsed.Seconds())
-	}
+
 	if enableSenderGroup {
 		hashKey, _ := getPayerHashKey(tx, senderGroup.snapshot, ts.ac)
 		senderGroup.doneTxKeyC <- hashKey

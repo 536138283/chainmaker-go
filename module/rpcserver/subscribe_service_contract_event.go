@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker/utils/v2"
+
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	"chainmaker.org/chainmaker/common/v2/bytehelper"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
@@ -230,15 +232,15 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 	for {
 		select {
 		case <-server.Context().Done():
-			s.log.Infof("server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+			s.log.Infof("client server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
-			return -1, nil
+			return -1, status.Error(codes.Internal, "client close subscribe, please check it")
 		case <-s.ctx.Done():
-			s.log.Warnf("service context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+			s.log.Warnf("chain server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
-			if err = s.getRateLimitToken(); err != nil {
+			if err = s.getRateLimitToken(senderAddr); err != nil {
 				s.log.Warnf(err.Error() + fmt.Sprintf("[txId:%s, sender:%s]", txId, senderAddr))
 				return -1, status.Error(codes.Internal, err.Error())
 			}
@@ -250,6 +252,7 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 				return i - 1, nil
 			}
 
+			getBlockStick := utils.CurrentTimeMillisSeconds()
 			block, err = store.GetBlock(uint64(i))
 			if err != nil {
 				errMsg = fmt.Sprintf("get block failed, at [height:%d], %s", i, err)
@@ -257,23 +260,24 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 					txId, senderAddr, contractName, topic))
 				return -1, status.Error(codes.Internal, errMsg)
 			}
+			getBlockCost := utils.CurrentTimeMillisSeconds() - getBlockStick
 
 			if block == nil {
-				s.log.Infof("get block[%d] nil.[txId:%s, sender:%s, contractName:%s, topic:%s]",
-					i, txId, senderAddr, contractName, topic)
 				return i - 1, nil
 			}
 
-			s.log.Infof("get block[%d] finish.[txId:%s, sender:%s, contractName:%s, topic:%s]",
-				i, txId, senderAddr, contractName, topic)
-			if err := s.sendSubscribeContractEvent(server, block, contractName, topic); err != nil {
+			sendSubscribeContractEventStick := utils.CurrentTimeMillisSeconds()
+			if err = s.sendSubscribeContractEvent(server, block, contractName, topic); err != nil {
 				errMsg = fmt.Sprintf("send subscribe tx failed, %s", err)
 				s.log.Warnf(errMsg + fmt.Sprintf("[txId:%s, sender:%s, contractName:%s, topic:%s]",
 					txId, senderAddr, contractName, topic))
 				return -1, status.Error(codes.Internal, errMsg)
 			}
-			s.log.Infof("sendHistoryContractEvent[height:%d]. [txId:%s, sender:%s, contractName:%s, topic:%s]",
-				i, txId, senderAddr, contractName, topic)
+			sendSubscribeContractEventCost := utils.CurrentTimeMillisSeconds() - sendSubscribeContractEventStick
+
+			s.log.Infof("sendHistoryContractEvent[height:%d]. [txId:%s, sender:%s, "+
+				"contractName:%s, topic:%s, getBlockCost:%d, sendSubscribeContractEventCost:%d]",
+				i, txId, senderAddr, contractName, topic, getBlockCost, sendSubscribeContractEventCost)
 			i++
 		}
 	}
@@ -283,7 +287,8 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 	block *commonPb.Block, contractName, topic string) error {
 
 	var (
-		err error
+		err     error
+		hasSent bool
 	)
 
 	for _, tx := range block.Txs {
@@ -316,6 +321,15 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 		if err = s.doSendSubscribeContractEvent(server, contractEvents); err != nil {
 			return err
 		}
+
+		hasSent = true
+	}
+
+	if !hasSent {
+		return s.doSendSubscribeContractEvent(server, []*commonPb.ContractEventInfo{{
+			BlockHeight: block.Header.BlockHeight,
+			ChainId:     block.Header.ChainId,
+		}})
 	}
 
 	return nil
@@ -401,11 +415,11 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 				}
 			}
 		case <-server.Context().Done():
-			s.log.Infof("server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+			s.log.Infof("client server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
 			return nil
 		case <-s.ctx.Done():
-			s.log.Warnf("service context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
+			s.log.Warnf("chain server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
 			return nil
 		}
