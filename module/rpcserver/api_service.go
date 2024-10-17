@@ -411,10 +411,6 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-		// 获取当前时间
-		now := time.Now()
-		// 获取当前日期（年、月、日）
-		year, month, day := now.Date()
 
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
