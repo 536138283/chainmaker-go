@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package rpcserver
 
 import (
+	"chainmaker.org/chainmaker-go/module/rpcserver/rateLimiter"
 	"context"
 	"encoding/hex"
 	"encoding/json"
@@ -35,7 +36,6 @@ import (
 	native "chainmaker.org/chainmaker/vm-native/v2"
 	"chainmaker.org/chainmaker/vm/v2"
 	"github.com/prometheus/client_golang/prometheus"
-	"golang.org/x/time/rate"
 )
 
 const (
@@ -50,7 +50,7 @@ type ApiService struct {
 	chainMakerServer                  *blockchain.ChainMakerServer
 	log                               *logger.CMLogger
 	logBrief                          *logger.CMLogger
-	subscriberRateLimiter             *rate.Limiter
+	subscriberRateLimiter             rateLimiter.SubscriberRateLimiter
 	metricQueryCounter                *prometheus.CounterVec
 	metricInvokeCounter               *prometheus.CounterVec
 	metricInvokeTxSizeHistogram       *prometheus.HistogramVec
@@ -67,27 +67,11 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 	log := logger.GetLogger(logger.MODULE_RPC)
 	logBrief := logger.GetLogger(logger.MODULE_BRIEF)
 
-	tokenBucketSize := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenBucketSize
-	tokenPerSecond := localconf.ChainMakerConfig.RpcConfig.SubscriberConfig.RateLimitConfig.TokenPerSecond
-
-	var subscriberRateLimiter *rate.Limiter
-	if tokenBucketSize >= 0 && tokenPerSecond >= 0 {
-		if tokenBucketSize == 0 {
-			tokenBucketSize = subscriberRateLimitDefaultTokenBucketSize
-		}
-
-		if tokenPerSecond == 0 {
-			tokenPerSecond = subscriberRateLimitDefaultTokenPerSecond
-		}
-
-		subscriberRateLimiter = rate.NewLimiter(rate.Limit(tokenPerSecond), tokenBucketSize)
-	}
-
 	apiService := ApiService{
 		chainMakerServer:      chainMakerServer,
 		log:                   log,
 		logBrief:              logBrief,
-		subscriberRateLimiter: subscriberRateLimiter,
+		subscriberRateLimiter: rateLimiter.NewSubscriberRateLimiter(log),
 		ctx:                   ctx,
 	}
 
@@ -100,7 +84,7 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 			"chainId",
 			"contractName",
 			"method",
-			"timeStamp",
+			"date",
 			"state")
 		apiService.metricInvokeCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_invoke_request_counter",
 			"invoke request counts metric", "chainId", "state")
@@ -110,7 +94,7 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 			"chainId", "state")
 		apiService.metricTxInvokeIllegal = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_tx_invoke_illegal",
 			"Total number of tx invoke illegal",
-			"chainId", "timeStamp", "txId", "signerMemberInfo")
+			"chainId", "date", "signerMemberInfo")
 		apiService.metricSubscribeTotalCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER,
 			"metric_subscribe_total_counter", "subscribe total counter metric",
 			"chainId", "sender", "subscribeType", "contractName", "topic")
@@ -224,11 +208,11 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 			if strings.Contains(err.Error(), "verify tx authentation failed") {
 				sender := hex.EncodeToString(tx.Sender.Signer.MemberInfo)
 				//交易发起者身份不合法 chainId,timeStamp,txId,signerMemberInfo
-				s.log.Warnf("<METRIC> verify tx authentation failed, chainId:%s, timeStamp:%d, txId:%s, signerMemberInfo:%s",
-					tx.Payload.ChainId, utils.CurrentTimeMillisSeconds(), tx.Payload.TxId, sender)
+				s.log.Warnf("<METRIC> verify tx authentation failed, chainId:%s, date:%s, signerMemberInfo:%s",
+					tx.Payload.ChainId, getCurrentDate(), sender)
 
-				s.metricTxInvokeIllegal.WithLabelValues(tx.Payload.ChainId, fmt.Sprint(utils.CurrentTimeMillisSeconds()),
-					tx.Payload.TxId, sender).Inc()
+				s.metricTxInvokeIllegal.WithLabelValues(tx.Payload.ChainId, getCurrentDate(),
+					sender).Inc()
 			}
 
 		}
@@ -273,6 +257,14 @@ func (s *ApiService) invoke(ctx context.Context, tx *commonPb.Transaction, sourc
 		resp.Message = commonErr.ERR_CODE_TXTYPE.String()
 		return resp
 	}
+}
+
+func getCurrentDate() string {
+	// 获取当前时间
+	now := time.Now()
+	// 获取当前日期（年、月、日）
+	year, month, day := now.Date()
+	return fmt.Sprintf("%d-%d-%d", year, month, day)
 }
 
 // dealQuery - deal query tx
@@ -413,19 +405,20 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
+
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
 			s.metricQueryContractCounter.WithLabelValues(chainId,
 				tx.Payload.ContractName,
 				tx.Payload.Method,
-				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
+				getCurrentDate(),
 				"true").Inc()
 		} else {
 			s.metricQueryCounter.WithLabelValues(chainId, "false").Inc()
 			s.metricQueryContractCounter.WithLabelValues(chainId,
 				tx.Payload.ContractName,
 				tx.Payload.Method,
-				fmt.Sprint(utils.CurrentTimeMillisSeconds()),
+				getCurrentDate(),
 				"true").Inc()
 		}
 	}

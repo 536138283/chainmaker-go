@@ -13,6 +13,8 @@ import (
 	"fmt"
 	"sync/atomic"
 
+	"chainmaker.org/chainmaker-go/module/rpcserver/rateLimiter"
+
 	"chainmaker.org/chainmaker-go/module/subscriber/model"
 	commonErr "chainmaker.org/chainmaker/common/v2/errors"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
@@ -108,16 +110,21 @@ func (s *ApiService) checkAndGetLastBlockHeight(store protocol.BlockchainStore,
 	return int64(lastBlock.Header.BlockHeight), nil
 }
 
-func (s *ApiService) getRateLimitToken() error {
-	if s.subscriberRateLimiter != nil {
-		if err := s.subscriberRateLimiter.Wait(s.ctx); err != nil {
-			errMsg := fmt.Sprintf("subscriber rateLimiter wait token failed, %s", err.Error())
-			s.log.Error(errMsg)
-			return errors.New(errMsg)
-		}
+func (s *ApiService) getRateLimitToken(sender string) error {
+	// disable subscriber rate limiter
+	if s.subscriberRateLimiter == nil {
+		return nil
 	}
 
-	return nil
+	subscriberRateLimiterType := s.subscriberRateLimiter.GetSubscriberRateLimiterType()
+	switch subscriberRateLimiterType {
+	case rateLimiter.GlobalRateLimiterType:
+		return s.subscriberRateLimiter.Wait(s.ctx, nil)
+	case rateLimiter.SenderRateLimiterType:
+		return s.subscriberRateLimiter.Wait(s.ctx, &rateLimiter.LimiterOptions{Sender: sender})
+	default:
+		return fmt.Errorf("invaild Subscriber Rate Limiter Type[%d]", subscriberRateLimiterType)
+	}
 }
 
 // checkSubscribeBlockHeight - check subscriber payload info
