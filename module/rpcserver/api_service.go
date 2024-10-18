@@ -47,17 +47,19 @@ var _ apiPb.RpcNodeServer = (*ApiService)(nil)
 
 // ApiService struct define
 type ApiService struct {
-	chainMakerServer            *blockchain.ChainMakerServer
-	log                         *logger.CMLogger
-	logBrief                    *logger.CMLogger
-	subscriberRateLimiter       rateLimiter.SubscriberRateLimiter
-	metricQueryCounter          *prometheus.CounterVec
-	metricInvokeCounter         *prometheus.CounterVec
-	metricInvokeTxSizeHistogram *prometheus.HistogramVec
-	metricQueryContractCounter  *prometheus.CounterVec
-	metricTxInvokeIllegal       *prometheus.CounterVec
-
-	ctx context.Context
+	chainMakerServer                  *blockchain.ChainMakerServer
+	log                               *logger.CMLogger
+	logBrief                          *logger.CMLogger
+	subscriberRateLimiter             rateLimiter.SubscriberRateLimiter
+	metricQueryCounter                *prometheus.CounterVec
+	metricInvokeCounter               *prometheus.CounterVec
+	metricInvokeTxSizeHistogram       *prometheus.HistogramVec
+	metricQueryContractCounter        *prometheus.CounterVec
+	metricTxInvokeIllegal             *prometheus.CounterVec
+	metricSubscribeTotalCounter       *prometheus.CounterVec
+	metricSubscribeInterruptedCounter *prometheus.CounterVec
+	metricSubscribeActiveCounter      *prometheus.GaugeVec
+	ctx                               context.Context
 }
 
 // NewApiService - new ApiService object
@@ -93,6 +95,15 @@ func NewApiService(ctx context.Context, chainMakerServer *blockchain.ChainMakerS
 		apiService.metricTxInvokeIllegal = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER, "metric_tx_invoke_illegal",
 			"Total number of tx invoke illegal",
 			"chainId", "date", "signerMemberInfo")
+		apiService.metricSubscribeTotalCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER,
+			"metric_subscribe_total_counter", "subscribe total counter metric",
+			"chainId", "sender", "subscribeType", "contractName", "topic")
+		apiService.metricSubscribeActiveCounter = monitor.NewGaugeVec(monitor.SUBSYSTEM_RPCSERVER,
+			"metric_subscribe_active_counter", "subscribe active counter metric",
+			"chainId", "sender", "subscribeType", "contractName", "topic")
+		apiService.metricSubscribeInterruptedCounter = monitor.NewCounterVec(monitor.SUBSYSTEM_RPCSERVER,
+			"metric_subscribe_interrupted_counter", "subscribe interrupted counter metric",
+			"chainId", "sender", "subscribeType", "contractName", "topic")
 	}
 
 	return &apiService
