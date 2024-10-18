@@ -471,9 +471,8 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 				tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
 
 			if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-				timeForHours := time.Now().Unix() / 3600
 				bp.metricRandomAttackTime.WithLabelValues(bp.chainId, tx.Payload.ContractName,
-					tx.Payload.Method, fmt.Sprint(timeForHours)).Inc()
+					tx.Payload.Method, getCurrentTimeHour()).Inc()
 			}
 		}
 		return
@@ -509,9 +508,8 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 			tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
 
 		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-			timeForHours := time.Now().Unix() / 3600
 			bp.metricRandomAttackTime.WithLabelValues(bp.chainId, tx.Payload.ContractName,
-				tx.Payload.Method, fmt.Sprint(timeForHours)).Inc()
+				tx.Payload.Method, getCurrentTimeHour()).Inc()
 		}
 	}
 }
@@ -541,6 +539,17 @@ func (bp *BlockProposerImpl) getDuration() time.Duration {
 		return DEFAULTDURATION * time.Millisecond
 	}
 	return time.Duration(duration) * time.Millisecond
+}
+
+func getCurrentTimeHour() string {
+	// 获取当前时间
+	now := time.Now()
+	// 获取当前日期 (年、月、日)
+	year, month, day := now.Date()
+	// 获取当前小时
+	hour := now.Hour()
+	// 返回格式化后的日期和时间
+	return fmt.Sprintf("%d-%d-%d %d:00", year, month, day, hour)
 }
 
 // getChainVersion, get chain version from config.

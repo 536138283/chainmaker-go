@@ -318,12 +318,10 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 	block *commonPb.Block, contractName, topic string) error {
 
 	var (
-		err     error
-		hasSent bool
+		contractEvents []*commonPb.ContractEventInfo
 	)
 
 	for _, tx := range block.Txs {
-		var contractEvents []*commonPb.ContractEventInfo
 		for idx, event := range tx.Result.ContractResult.ContractEvent {
 			if contractName == "" || contractName == event.ContractName {
 				if topic == "" || topic == event.Topic {
@@ -344,26 +342,18 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 				}
 			}
 		}
-
-		if len(contractEvents) == 0 {
-			continue
-		}
-
-		if err = s.doSendSubscribeContractEvent(server, contractEvents); err != nil {
-			return err
-		}
-
-		hasSent = true
 	}
 
-	if !hasSent {
+	// If no matching events are found, send an empty contract event with block height and chain id.
+	if len(contractEvents) == 0 {
 		return s.doSendSubscribeContractEvent(server, []*commonPb.ContractEventInfo{{
 			BlockHeight: block.Header.BlockHeight,
 			ChainId:     block.Header.ChainId,
 		}})
 	}
 
-	return nil
+	// Send all collected contract events in a single batch.
+	return s.doSendSubscribeContractEvent(server, contractEvents)
 }
 
 func (s *ApiService) doSendSubscribeContractEvent(server apiPb.RpcNode_SubscribeServer,
