@@ -119,7 +119,8 @@ sql-qta:
 	cd test/chain2 && ./stop.sh
 	cd test/chain2 && ./clean.sh
 
-qta: cert-qta pub-qta docker-qta
+# 去掉pub-qta, 因为dpos无法确认管理员，无法充值gas
+qta: cert-qta docker-qta
 
 cert-qta:
 	echo "clear environment"
