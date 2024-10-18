@@ -473,9 +473,8 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 				tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
 
 			if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-				timeForHours := time.Now().Unix() / 3600
 				bp.metricRandomAttackTime.WithLabelValues(bp.chainId, tx.Payload.ContractName,
-					tx.Payload.Method, fmt.Sprint(timeForHours)).Inc()
+					tx.Payload.Method, fmt.Sprint(getCurrentTimeHour())).Inc()
 			}
 		}
 		return
@@ -511,9 +510,8 @@ func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *con
 			tx.Payload.TxId, tx.Payload.ContractName, tx.Payload.Method, utils.CurrentTimeMillisSeconds())
 
 		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-			timeForHours := time.Now().Unix() / 3600
 			bp.metricRandomAttackTime.WithLabelValues(bp.chainId, tx.Payload.ContractName,
-				tx.Payload.Method, fmt.Sprint(timeForHours)).Inc()
+				tx.Payload.Method, fmt.Sprint(getCurrentTimeHour())).Inc()
 		}
 	}
 }
@@ -543,6 +541,10 @@ func (bp *BlockProposerImpl) getDuration() time.Duration {
 		return DEFAULTDURATION * time.Millisecond
 	}
 	return time.Duration(duration) * time.Millisecond
+}
+
+func getCurrentTimeHour() int64 {
+	return time.Now().Unix() / 3600
 }
 
 // getChainVersion, get chain version from config.
