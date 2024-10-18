@@ -20,7 +20,7 @@ linters:
   disable-all: true
   enable:
     - deadcode
-    - goconst
+#    - goconst  # 常量检查可能导致代码可读性变差，因此关闭
     - gocyclo
     - gofmt
     - ineffassign
