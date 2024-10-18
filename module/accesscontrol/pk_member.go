@@ -111,8 +111,8 @@ type signingPKMember struct {
 	sk bccrypto.PrivateKey
 }
 
-// When using public key instead of certificate,
-//hashType is used to specify the hash algorithm while the signature algorithm is decided by the public key itself.
+// Sign When using public key instead of certificate,
+// hashType is used to specify the hash algorithm while the signature algorithm is decided by the public key itself.
 func (spm *signingPKMember) Sign(hashType string, msg []byte) ([]byte, error) {
 	hash, ok := bccrypto.HashAlgoMap[hashType]
 	if !ok {

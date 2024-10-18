@@ -199,9 +199,7 @@ func testPublicPKCreateEndorsementEntry(testPKMember *testPkMember, roleType pro
 	}, nil
 }
 
-// **************************************************
-// 		Verify Transaction
-// **************************************************
+// TestPublicPKVerifyAnyPolicy
 func TestPublicPKVerifyAnyPolicy(t *testing.T) {
 	testPkMember := testInitPublicPKFunc(t)
 	memberInfo1 := testPkMember[testOrg1]

@@ -260,7 +260,7 @@ func createBlockChain(t *testing.T) []*Blockchain {
 }
 
 // 不同情况的 consensusType
-//consensusType := consensuspb.ConsensusType_SOLO // 0-SOLO,1-TBFT,2-MBFT,3-MAXBFT,4-RAFT,10-POW
+// consensusType := consensuspb.ConsensusType_SOLO // 0-SOLO,1-TBFT,2-MBFT,3-MAXBFT,4-RAFT,10-POW
 func getConsensusType(i int) consensuspb.ConsensusType {
 
 	switch i {

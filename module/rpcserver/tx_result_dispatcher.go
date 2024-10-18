@@ -174,10 +174,10 @@ func (root *RootDispatcher) CheckAndUpdate() error {
 
 // Register for transaction result events.
 // Note that Unregister must be called when the registration is no longer needed.
-// - chainId is the chain ID for which events are to be received
-// - txId is the transaction ID for which events are to be received
-// - Returns the channel that is used to receive result. The channel
-//   is closed when Unregister is called.
+// chainId is the chain ID for which events are to be received
+// txId is the transaction ID for which events are to be received
+// Returns the channel that is used to receive result. The channel
+// is closed when Unregister is called.
 func (root *RootDispatcher) Register(chainId, txId string) (chan *TxResultExt, error) {
 	child, ok := root.loadChild(chainId)
 	if !ok {
@@ -287,9 +287,9 @@ func (child *childDispatcher) stop() {
 }
 
 // register for transaction result events.
-// - txId is the transaction ID for which events are to be received
-// - Returns the channel that is used to receive result. The channel
-//   is closed when unregister is called.
+// txId is the transaction ID for which events are to be received
+// Returns the channel that is used to receive result. The channel
+// is closed when unregister is called.
 func (child *childDispatcher) register(txId string) (chan *TxResultExt, error) {
 	child.mu.Lock()
 	defer child.mu.Unlock()

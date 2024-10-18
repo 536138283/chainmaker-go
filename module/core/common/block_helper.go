@@ -872,9 +872,9 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	return contractEventMap, nil, nil
 }
 
-//nolint: staticcheck
+// CheckPreBlock
+// nolint: staticcheck
 func CheckPreBlock(block *commonPb.Block, lastBlockHash []byte, proposedHeight uint64) error {
-
 	if err := IsHeightValid(block, proposedHeight); err != nil {
 		return err
 	}
@@ -1200,7 +1200,8 @@ func (chain *BlockCommitterImpl) syncWithTxPool(block *commonPb.Block, height ui
 	return txRetry, batchRetry, nil, nil
 }
 
-//nolint: ineffassign, staticcheck
+// nolint: ineffassign, staticcheck
+// checkLastProposedBlock check the last proposed block
 func (chain *BlockCommitterImpl) checkLastProposedBlock(block *commonPb.Block) (
 	*commonPb.Block, map[string]*commonPb.TxRWSet, map[string][]*commonPb.ContractEvent, error) {
 	err := chain.verifier.VerifyBlock(block, protocol.SYNC_VERIFY)

@@ -230,9 +230,8 @@ func (server *ChainMakerServer) initNet() error {
 }
 
 // initKMS
-//  @Description: init kms context, only effect when kms enabled
-//  @return error
-//
+// @Description: init kms context, only effect when kms enabled
+// @return error
 func initKMS() error {
 	config := localconf.ChainMakerConfig.NodeConfig.KMSConfig // todo 如果为nil
 	if !config.Enabled {

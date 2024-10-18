@@ -527,12 +527,12 @@ func verifyPrincipal220(p acProvider220, principal protocol.Principal) (bool, er
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-//nolint:gocyclo
+// verifyTxPrincipal220
 // verify transaction sender's authentication (include signature verification,
-//cert-chain verification, access verification)
+// cert-chain verification, access verification)
 // move from ChainMaker/utils/transaction.go
+// nolint:gocyclo
 func verifyTxPrincipal220(t *commonPb.Transaction, ac acProvider220) error {
-
 	var principal protocol.Principal
 	var err error
 	txBytes, err := utils.CalcUnsignedTxBytes(t)

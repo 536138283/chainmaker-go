@@ -23,7 +23,7 @@ const (
 )
 
 // configConsensueNodeIdCMD consensus node id management sub command
-//用于管理Consensus下Org下的NodeId
+// 用于管理Consensus下Org下的NodeId
 // @return *cobra.Command
 func configConsensueNodeIdCMD() *cobra.Command {
 	cmd := &cobra.Command{

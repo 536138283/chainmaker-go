@@ -322,9 +322,8 @@ func (acs *accessControlService) checkResourcePolicyOrgList(policy *pbac.Policy)
 		} else if _, alreadyIn := orgCheckList[org]; alreadyIn {
 			acs.log.Errorf("bad configuration: duplicated entries [%s] in organization list", org)
 			return false
-		} else {
-			orgCheckList[org] = true
 		}
+		orgCheckList[org] = true
 	}
 	return true
 }

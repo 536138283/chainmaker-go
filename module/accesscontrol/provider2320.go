@@ -172,9 +172,7 @@ func (p *pkACProvider) getValidEndorsements2320(principal protocol.Principal) ([
 	return p.getValidEndorsementsInner(orgList, roleList, endorsements), nil
 }
 
-// ****************************************************
-//  access control service
-// ****************************************************
+// lookUpPolicy2320 loop up policy with version v2.3.2
 func (acs *accessControlService) lookUpPolicy2320(resourceName string) (*acPb.Policy, error) {
 
 	if p, ok := acs.latestPolicyMap.Load(resourceName); ok {
@@ -236,12 +234,12 @@ func verifyPrincipal2320(p acProvider2320, principal protocol.Principal) (bool, 
 	return p.verifyPrincipalPolicy(principal, refinedPrincipal, pol)
 }
 
-//nolint:gocyclo
+// verifyTxPrincipal2320
 // verify transaction sender's authentication (include signature verification,
-//cert-chain verification, access verification)
+// cert-chain verification, access verification)
 // move from ChainMaker/utils/transaction.go
+// nolint:gocyclo
 func verifyTxPrincipal2320(t *commonPb.Transaction, resourceId string, ac acProvider2320) error {
-
 	var principal protocol.Principal
 	var err error
 	txBytes, err := utils.CalcUnsignedTxBytes(t)

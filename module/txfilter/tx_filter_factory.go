@@ -28,7 +28,7 @@ var once sync.Once
 var _instance *txFilterFactory
 
 // Factory return the global tx filter factory.
-//nolint: revive
+// nolint: revive
 func Factory() *txFilterFactory {
 	once.Do(func() { _instance = new(txFilterFactory) })
 	return _instance
