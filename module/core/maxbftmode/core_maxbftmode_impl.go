@@ -28,7 +28,7 @@ import (
 
 // CoreEngine is a block handle engine.
 // One core engine for one chain.
-//nolint: unused, structcheck
+// nolint: unused, structcheck
 type CoreEngine struct {
 	chainId   string             // chainId, identity of a chain
 	chainConf protocol.ChainConf // chain config

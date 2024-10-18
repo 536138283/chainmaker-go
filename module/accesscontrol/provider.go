@@ -103,9 +103,7 @@ func (pk *pkACProvider) findFromEndorsementsPolicies(resourceName string, blockV
 		pk.latestPolicyMap, pk.resourceNamePolicyMap)
 }
 
-// ****************************************************
-//  getValidEndorsements2330
-// ****************************************************
+// getValidEndorsements get Valid Endorsements
 func (cp *certACProvider) getValidEndorsements(
 	principal protocol.Principal, blockVersion uint32) ([]*commonPb.EndorsementEntry, error) {
 

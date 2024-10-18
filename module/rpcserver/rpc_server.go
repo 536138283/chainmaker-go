@@ -575,9 +575,14 @@ func newMixServer(grpcServer *grpc.Server, chainMakerServer *blockchain.ChainMak
 	if localconf.ChainMakerConfig.RpcConfig.GatewayConfig.Enabled {
 		httpServer = &http.Server{
 			Handler: wsproxy.WebsocketProxy(handler, wsproxy.WithMaxRespBodyBufferSize(
-				localconf.ChainMakerConfig.RpcConfig.GatewayConfig.MaxRespBodySize*1024*1024))}
+				localconf.ChainMakerConfig.RpcConfig.GatewayConfig.MaxRespBodySize*1024*1024)),
+			ReadHeaderTimeout: 30 * time.Second,
+		}
 	} else {
-		httpServer = &http.Server{Handler: handler}
+		httpServer = &http.Server{
+			Handler:           handler,
+			ReadHeaderTimeout: 30 * time.Second,
+		}
 	}
 
 	return httpServer, nil

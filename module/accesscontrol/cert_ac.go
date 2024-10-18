@@ -836,13 +836,12 @@ func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 		cp.acService.log.Debugf("compressed certificate [%s] found and stored in cache", certIdHex)
 		return cert, true
 	} else if ret != nil {
-		cp.acService.log.Debugf("compressed certificate [%v] found in cache", []byte(certId))
+		cp.acService.log.Debugf("compressed certificate [%v] found in cache", certId)
 		return ret.([]byte), true
-	} else {
-		cp.acService.log.Debugf("fail to look up compressed certificate [%v] due to an internal error of local cache",
-			[]byte(certId))
-		return nil, false
 	}
+	cp.acService.log.Debugf("fail to look up compressed certificate [%v] due to an internal error of local cache",
+		certId)
+	return nil, false
 }
 
 func (cp *certACProvider) addCertCache(certId string, cert []byte) {
@@ -1209,13 +1208,12 @@ func (cp *certACProvider) GetCertFromCache(certId []byte) ([]byte, error) {
 		cp.acService.log.Debugf("compressed certificate [%s] found and stored in cache", certIdHex)
 		return cert, nil
 	} else if ret != nil {
-		cp.acService.log.Debugf("compressed certificate [%v] found in cache", []byte(certId))
+		cp.acService.log.Debugf("compressed certificate [%v] found in cache", certId)
 		return ret.([]byte), nil
-	} else {
-		cp.acService.log.Debugf("fail to look up compressed certificate [%v] due to an internal error of local cache",
-			[]byte(certId))
-		return nil, fmt.Errorf("fail to look up compressed certificate due to an internal error of local cache")
 	}
+	cp.acService.log.Debugf("fail to look up compressed certificate [%v] due to an internal error of local cache",
+		certId)
+	return nil, fmt.Errorf("fail to look up compressed certificate due to an internal error of local cache")
 }
 
 // GetPayerFromCache get payer from cache

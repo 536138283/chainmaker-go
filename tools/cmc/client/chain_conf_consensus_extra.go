@@ -23,7 +23,7 @@ const (
 )
 
 // configConsensueExtraCMD consensus extra config management sub command
-//用于管理Consensus下的ext_config
+// 用于管理Consensus下的ext_config
 // @return *cobra.Command
 func configConsensueExtraCMD() *cobra.Command {
 	cmd := &cobra.Command{

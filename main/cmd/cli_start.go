@@ -132,8 +132,13 @@ func startPProf() {
 	go func() {
 		addr := fmt.Sprintf(":%d", localconf.ChainMakerConfig.PProfConfig.Port)
 		log.Infof("pprof start at [%s]", addr)
-		err := http.ListenAndServe(addr, nil)
-		if err != nil {
+		server := &http.Server{
+			Addr:         addr,
+			ReadTimeout:  60 * time.Second,
+			WriteTimeout: 60 * time.Second,
+			IdleTimeout:  60 * time.Second,
+		}
+		if err := server.ListenAndServe(); err != nil {
 			fmt.Println(err)
 		}
 	}()

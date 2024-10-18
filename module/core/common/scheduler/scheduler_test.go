@@ -967,8 +967,6 @@ func TestSimulateWithDag(t *testing.T) {
 	}
 }
 
-//func TestSimulateWithDagUnderGasEnabled(t *testing.T) {
-//
 //	dagNormal := &commonPb.DAG{
 //		Vertexes: []*commonPb.DAG_Neighbor{
 //			{

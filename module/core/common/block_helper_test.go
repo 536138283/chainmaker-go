@@ -20,35 +20,6 @@ import (
 	"github.com/golang/mock/gomock"
 )
 
-//
-//import (
-//	"errors"
-//	"fmt"
-//	"reflect"
-//	"testing"
-//	"time"
-//
-//	"chainmaker.org/chainmaker-go/module/core/cache"
-//	"chainmaker.org/chainmaker-go/module/core/provider/conf"
-//	"chainmaker.org/chainmaker-go/module/subscriber"
-//	"chainmaker.org/chainmaker/common/v2/crypto/hash"
-//	"chainmaker.org/chainmaker/common/v2/msgbus"
-//	"chainmaker.org/chainmaker/localconf/v2"
-//	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-//	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-//	"chainmaker.org/chainmaker/pb-go/v2/config"
-//	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
-//	"chainmaker.org/chainmaker/pb-go/v2/consensus"
-//	"chainmaker.org/chainmaker/protocol/v2"
-//	"chainmaker.org/chainmaker/protocol/v2/mock"
-//	"chainmaker.org/chainmaker/utils/v2"
-//
-//	"github.com/golang/mock/gomock"
-//	"github.com/golang/protobuf/proto"
-//	"github.com/prometheus/client_golang/prometheus"
-//	"github.com/stretchr/testify/require"
-//)
-//
 ////  statistic the time consuming of finalizeBlock between sync and async
 //// logLevel: Debug TxNum: 1000000; async:3037 ; sync: 4264
 //// logLevel: Info  TxNum: 1000000; async:224 ; sync: 251

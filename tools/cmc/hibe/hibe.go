@@ -213,7 +213,8 @@ func getParams() error {
 }
 
 // TODO 此函数太大需要拆解
-//nolint:gocyclo
+// genPrivateKey
+// nolint:gocyclo
 func genPrivateKey() error {
 	err := hibe.ValidateId(orgId)
 	if err != nil {

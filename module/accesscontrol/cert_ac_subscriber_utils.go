@@ -94,7 +94,7 @@ func isConsensusCert(raw interface{}) bool {
 	return false
 }
 
-//loadChainConfigFromGovernance used to load config from system contract, only for maxbft
+// loadChainConfigFromGovernance used to load config from system contract, only for maxbft
 func (cp *certACProvider) loadChainConfigFromGovernance() (*maxbft.GovernanceContract, error) {
 	contractName := syscontract.SystemContract_GOVERNANCE.String()
 	bz, err := cp.store.ReadObject(contractName, []byte(contractName))

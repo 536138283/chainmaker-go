@@ -34,7 +34,7 @@ var ModuleNameCore = "Core"
 
 // BlockVerifierImpl implements BlockVerifier interface.
 // Verify block and transactions.
-//nolint: structcheck,unused
+// nolint: structcheck,unused
 type BlockVerifierImpl struct {
 	chainId         string                   // chain id, to identity this chain
 	msgBus          msgbus.MessageBus        // message bus

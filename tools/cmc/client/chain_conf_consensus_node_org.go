@@ -24,7 +24,7 @@ const (
 )
 
 // configConsensueNodeOrgCMD consensus node org management
-//用于管理Consensus下的Org
+// 用于管理Consensus下的Org
 // @return *cobra.Command
 func configConsensueNodeOrgCMD() *cobra.Command {
 	cmd := &cobra.Command{

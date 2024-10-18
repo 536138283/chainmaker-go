@@ -5,7 +5,7 @@ SPDX-License-Identifier: Apache-2.0
 */
 
 // Package bulletproofs Bulletproofs中文意思为“防弹证明”，所以也称为防弹证明协议，防弹证明是由Bootle在2016年提出的，
-//基于离散对数的更节省空间的零知识证明。
+// 基于离散对数的更节省空间的零知识证明。
 package bulletproofs
 
 import (

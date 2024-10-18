@@ -575,7 +575,7 @@ func (bp *BlockProposerImpl) getDuration() time.Duration {
 // getChainVersion, get chain version from config.
 // If not access from config, use default value.
 // @Deprecated
-//nolint: unused
+// nolint: unused
 func (bp *BlockProposerImpl) getChainVersion() uint32 {
 	if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
 		bp.log.Warnf("No chain config found, use default block version:%d", protocol.DefaultBlockVersion)
@@ -625,17 +625,15 @@ func (bp *BlockProposerImpl) setIsSelfProposer(isSelfProposer bool) {
 	}
 }
 
-//isSelfProposer, return if this node is consensus proposer
+// isSelfProposer, return if this node is consensus proposer
 func (bp *BlockProposerImpl) isSelfProposer() bool {
 	bp.proposerMu.RLock()
 	defer bp.proposerMu.RUnlock()
 	return bp.isProposer
 }
 
-/*
- * shouldProposeByMaxBFT, check if node should propose new block
- * Only for maxbft consensus
- */
+// shouldProposeByMaxBFT check if node should propose new block
+// Only for maxbft consensus
 func (bp *BlockProposerImpl) shouldProposeByMaxBFT(height uint64, preHash []byte) bool {
 	committedBlock := bp.ledgerCache.GetLastCommittedBlock()
 	if committedBlock == nil {
@@ -699,10 +697,8 @@ func (bp *BlockProposerImpl) ProposeBlock(proposal *maxbft.BuildProposal) (*cons
 	return proposalBlock, nil
 }
 
-/*
- * shouldProposeByMaxBFT, check if node should propose new block
- * Only for maxbft consensus
- */
+// shouldProposeByMaxBFT check if node should propose new block
+// Only for maxbft consensus
 func (bp *BlockProposerImpl) shouldProposeByMaxBFTSync(height uint64, preHash []byte) (bool, error) {
 	var err error
 	committedBlock := bp.ledgerCache.GetLastCommittedBlock()

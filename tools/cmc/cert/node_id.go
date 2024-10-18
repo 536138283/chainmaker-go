@@ -62,9 +62,7 @@ func getNodeId() error {
 		}
 		fmt.Printf("node id : %s \n", nodeId)
 		return nil
-	} else {
-		fmt.Printf("invalid parameter\n")
-		return nil
 	}
-
+	fmt.Printf("invalid parameter\n")
+	return nil
 }

@@ -361,10 +361,10 @@ func (nf *NetFactory) Apply(opts ...NetOption) error {
 	return nil
 }
 
-//WithStunClient read stun client cfg
-//clientListenAddr: listen bind addr
-//stunServerAddr: stun server addr
-//networkType: udp,tcp,quic
+// WithStunClient read stun client cfg
+// clientListenAddr: listen bind addr
+// stunServerAddr: stun server addr
+// networkType: udp,tcp,quic
 func WithStunClient(clientListenAddr, stunServerAddr, networkType string, enable bool) NetOption {
 	return func(nf *NetFactory) error {
 		switch nf.netType {
@@ -384,10 +384,10 @@ func WithStunClient(clientListenAddr, stunServerAddr, networkType string, enable
 	}
 }
 
-//WithStunServer read stun server cfg
-//enable: set stun server if enable
-//twoPublicAddr: one device have two PublicAddr
-//addr1, addr2 must set
+// WithStunServer read stun server cfg
+// enable: set stun server if enable
+// twoPublicAddr: one device have two PublicAddr
+// addr1, addr2 must set
 func WithStunServer(enable, twoPublicAddr bool, other string, notifyAddr, localNotify,
 	addr1, addr2, addr3, addr4, networkType string) NetOption {
 	return func(nf *NetFactory) error {
@@ -417,8 +417,8 @@ func WithStunServer(enable, twoPublicAddr bool, other string, notifyAddr, localN
 	}
 }
 
-//WithHolePunch read hole-punch cfg
-//enable: set hole-punch function if enable
+// WithHolePunch read hole-punch cfg
+// enable: set hole-punch function if enable
 func WithHolePunch(enable bool) NetOption {
 	return func(nf *NetFactory) error {
 		switch nf.netType {

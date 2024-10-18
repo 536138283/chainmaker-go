@@ -447,9 +447,7 @@ func (bp *BlockProposerImpl) OnReceiveYieldProposeSignal(isYield bool) {
 	}
 }
 
-/*
- * OnReceiveRwSetVerifyFailTxs, remove verify fail txs
- */
+// OnReceiveRwSetVerifyFailTxs remove verify fail txs
 func (bp *BlockProposerImpl) OnReceiveRwSetVerifyFailTxs(rwSetVerifyFailTxs *consensuspb.RwSetVerifyFailTxs) {
 	if common.TxPoolType == batch.TxPoolType {
 		bp.log.Warnf("batch tx pool not support recover the problem about rwSet in conformity")
@@ -550,7 +548,7 @@ func getCurrentTimeHour() int64 {
 // getChainVersion, get chain version from config.
 // If not access from config, use default value.
 // @Deprecated
-//nolint: unused
+// nolint: unused
 func (bp *BlockProposerImpl) getChainVersion() []byte {
 	if bp.chainConf == nil || bp.chainConf.ChainConfig() == nil {
 		return []byte(DEFAULTVERSION)

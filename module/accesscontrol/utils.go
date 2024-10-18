@@ -34,19 +34,17 @@ import (
 )
 
 // getHSMHandleId
-//  @Description: get hsm handle, only effect when pkcs11 enabled
-//  @return string
-//
+// @Description: get hsm handle, only effect when pkcs11 enabled
+// @return string
 func getHSMHandleId() string {
 	p11Config := localconf.ChainMakerConfig.NodeConfig.P11Config
 	return p11Config.Library + p11Config.Label
 }
 
 // getHSMHandle
-//  @Description: get hsm handle, support pkcs11 and sdf
-//  @return interface{}
-//  @return error
-//
+// @Description: get hsm handle, support pkcs11 and sdf
+// @return interface{}
+// @return error
 func getHSMHandle() (interface{}, error) {
 	var err error
 	cfg := localconf.ChainMakerConfig.NodeConfig.P11Config
@@ -72,9 +70,8 @@ func getHSMHandle() (interface{}, error) {
 }
 
 // initKMS
-//  @Description: init kms context, only effect when kms enabled
-//  @return error
-//
+// @Description: init kms context, only effect when kms enabled
+// @return error
 func initKMS() error {
 	config := localconf.ChainMakerConfig.NodeConfig.KMSConfig
 	if !config.Enabled {
@@ -109,10 +106,9 @@ func initKMS() error {
 }
 
 // pubkeyHash
-//  @Description: calculate publickey hash
-//  @param pubkey
-//  @return string
-//
+// @Description: calculate publickey hash
+// @param pubkey
+// @return string
 func pubkeyHash(pubkey []byte) string {
 	pkHash := sha256.Sum256(pubkey)
 	strPkHash := base58.Encode(pkHash[:])
@@ -272,11 +268,10 @@ func InitPKSigningMember(hashType,
 }
 
 // cryptoEngineOption parse public key by CryptoEngine
-//  @Description: parse public key of cert to another public key by crypto engine
-//  this used to improve the performance of GM-SM2 signature verifying
-//  @param cert
-//  @return error
-//
+// @Description: parse public key of cert to another public key by crypto engine
+// this used to improve the performance of GM-SM2 signature verifying
+// @param cert
+// @return error
 func cryptoEngineOption(cert *bcx509.Certificate) error {
 	pkPem, err := cert.PublicKey.String()
 	if err != nil {
@@ -290,23 +285,22 @@ func cryptoEngineOption(cert *bcx509.Certificate) error {
 }
 
 // getBlockVersionAndResourceName return blockVersion and resourceName
-//  @Description:
-//  @param resourceNameWithPrefix
-//  @return blockVersion
-//  @return resourceName
-//
+// @Description:
+// @param resourceNameWithPrefix
+// @return blockVersion
+// @return resourceName
 func getBlockVersionAndResourceName(resourceNameWithPrefix string) (blockVersion uint32, resourceName string) {
 	blockVersionAndResourceName := strings.Split(resourceNameWithPrefix, ":")
 	if len(blockVersionAndResourceName) == 2 {
 		version, err := strconv.ParseUint(blockVersionAndResourceName[0], 10, 32)
 		if err != nil {
 			blockVersion = 0
+		} else {
+			blockVersion = uint32(version)
 		}
-		blockVersion = uint32(version)
 		resourceName = blockVersionAndResourceName[1]
 	} else if len(blockVersionAndResourceName) == 1 {
 		resourceName = blockVersionAndResourceName[0]
 	}
-
 	return blockVersion, resourceName
 }
