@@ -45,7 +45,7 @@ go get chainmaker.org/chainmaker/vm-gasm/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-native/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-wasmer/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-wxvm/v2@${LAST_PRE_BRANCH}
-go get chainmaker.org/chainmaker/vm/v2@${LAST_PRE_BRANCH}
+go get chainmaker.org/chainmaker/vm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-batch/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/txpool-normal/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/txpool-single/v2@${PRE_BRANCH}
