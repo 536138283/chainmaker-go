@@ -81,7 +81,7 @@ func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 			s.metricSubscribeActiveCounter.WithLabelValues(chainId, senderAddr, subscribeType, contractName, topic).Dec()
 			// if the function returns an error, count the number of subscription interruptions
 			if retErr != nil {
-				s.log.Errorf("dealContractEventSubscription encountered an error: %v [txId:%s, sender:%s]",
+				s.log.Warnf("dealContractEventSubscription encountered:%v [txId:%s, sender:%s]",
 					retErr, txId, senderAddr)
 				s.metricSubscribeInterruptedCounter.WithLabelValues(chainId, senderAddr, subscribeType, contractName, topic).Inc()
 			}
@@ -437,11 +437,11 @@ func (s *ApiService) sendNewContractEvent(store protocol.BlockchainStore, tx *co
 		case <-server.Context().Done():
 			s.log.Infof("client server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
-			return nil
+			return status.Error(codes.Internal, "client close subscribe, please check it")
 		case <-s.ctx.Done():
 			s.log.Warnf("chain server context done[txId:%s, sender:%s, contractName:%s, topic:%s].",
 				txId, senderAddr, contractName, topic)
-			return nil
+			return status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		}
 	}
 }
