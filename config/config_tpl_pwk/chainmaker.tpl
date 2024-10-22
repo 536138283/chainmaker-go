@@ -183,10 +183,15 @@ rpc:
     ratelimit:
       # Ratelimit switch. Default is false.
       enabled: false
+
       # Rate limit type
-      # 0: limit globally, 1: limit by sender
+      # 0: limit globally, 1: limit by sender. Default is globally.
       type: 0
+
+      # Token number added to bucket per second. Default is 100.
       token_per_second: 100
+
+      # Token bucket size. Default is 100.
       token_bucket_size: 100
 
   # RPC TLS settings

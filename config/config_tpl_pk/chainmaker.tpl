@@ -178,15 +178,21 @@ rpc:
     ratelimit:
       # Ratelimit switch. Default is false.
       enabled: false
+
       # Rate limit type
-      # 0: limit globally, 1: limit by sender
+      # 0: limit globally, 1: limit by sender. Default is globally.
       type: 0
+
+      # Token number added to bucket per second. Default is 100.
       token_per_second: 100
+
+      # Token bucket size. Default is 100.
       token_bucket_size: 100
+
   # RPC TLS settings
   tls:
-    # TLS mode, can be disable, twoway.
-    mode: twoway
+    # TLS mode, can be disable, twoway. Default is disable.
+    mode: disable
 
     # TLS private key file path.
     priv_key_file: ../config/{org_path}/{org_path}.tls.key
