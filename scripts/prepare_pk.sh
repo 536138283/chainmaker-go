@@ -164,12 +164,12 @@ function generate_keys() {
     fi
 
     cp $CRYPTOGEN_TOOL_CONF crypto_config.yml
-    cp $CRYPTOGEN_TOOL_KMS_CONF hsm_keys_pk.yml
+#    cp $CRYPTOGEN_TOOL_KMS_CONF hsm_keys_pk.yml
 #    cp $CRYPTOGEN_TOOL_PKCS11_KEYS hsm_keys.yml
 
     xsed "s%count: 4%count: ${NODE_CNT}%g" crypto_config.yml
 
-    ${CRYPTOGEN_TOOL_BIN} generate-pk -c ./crypto_config.yml -p ./hsm_keys_pk.yml -t pk
+    ${CRYPTOGEN_TOOL_BIN} generate-pk -c ./crypto_config.yml # -p ./hsm_keys_pk.yml -t pk
 }
 
 function generate_tls() {
@@ -201,8 +201,8 @@ function generate_tls() {
            cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.crt"
            cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.key"
            #add enc key and crt when gmtls1.1, but output to /dev/null where error.
-           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.enc.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.enc.crt" 2>/dev/null
-           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.enc.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.enc.key" 2>/dev/null
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.enc.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.enc.crt" 2>/dev/null || true
+           cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/node/node1/node1.tls.enc.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/node$i.tls.enc.key" 2>/dev/null || true
 
            #client
             for ((k = 1;  k <= ${CLIENT_CNT}; k = k + 1)); do  #client$k
@@ -210,8 +210,8 @@ function generate_tls() {
                  cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
                  cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/"
                  #add enc key and crt when gmtls1.1, but output to /dev/null where error.
-                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.enc.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/" 2>/dev/null
-                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.enc.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/" 2>/dev/null
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.enc.crt" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/" 2>/dev/null || true
+                 cp "$BUILD_CRYPTO_CONFIG_PATH/$HOST_NAME$i.$DOMAIN/user/client$k/client$k.tls.enc.key" "$BUILD_CRYPTO_CONFIG_PATH/node$i/client-tls/client$k/" 2>/dev/null || true
             done
     done
 
