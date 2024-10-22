@@ -250,6 +250,11 @@ rpc:
   # Rate limit settings for subscriber
   subscriber:
     ratelimit:
+      # Ratelimit switch. Default is false.
+      enabled: false
+      # Rate limit type
+      # 0: limit globally, 1: limit by sender
+      type: 0
       token_per_second: 100
       token_bucket_size: 100
 
