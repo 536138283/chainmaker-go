@@ -40,7 +40,7 @@ go get chainmaker.org/chainmaker/consensus-tbft/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/store/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-docker-go/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-engine/v2@${LAST_PRE_BRANCH}
-go get chainmaker.org/chainmaker/vm-evm/v2@${LAST_PRE_BRANCH}
+go get chainmaker.org/chainmaker/vm-evm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/vm-gasm/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-native/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-wasmer/v2@${LAST_PRE_BRANCH}
