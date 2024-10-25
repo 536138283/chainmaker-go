@@ -357,11 +357,13 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 				i, txId, senderAddr, contractName)
 			return -1, status.Error(codes.Internal, "chainmaker is restarting, please retry later")
 		default:
+			getTokenStick := utils.CurrentTimeMillisSeconds()
 			if err = s.getRateLimitToken(senderAddr); err != nil {
 				s.log.Warnf("get rate limit token failed, %s. height:%d, txId:%s, sender:%s, contractName:%s",
 					err, i, txId, senderAddr, contractName)
 				return -1, status.Error(codes.Internal, err.Error())
 			}
+			getTokenCost := utils.CurrentTimeMillisSeconds() - getTokenStick
 
 			if endBlockHeight != -1 && i > endBlockHeight {
 				s.log.Infof("send history tx finish, alreadySendHistoryBlockHeight is %d, endBlock is %d, "+
@@ -398,8 +400,8 @@ func (s *ApiService) sendHistoryTx(store protocol.BlockchainStore,
 				return -1, status.Error(codes.Internal, errMsg)
 			}
 
-			s.log.Infof("send subscribe tx finish, height:%d, txId:%s, sender:%s, contractName:%s",
-				i, txId, senderAddr, contractName)
+			s.log.Infof("send subscribe tx finish, height:%d, txId:%s, sender:%s, contractName:%s, getTokenCost:%d",
+				i, txId, senderAddr, contractName, getTokenCost)
 			i++
 		}
 	}
