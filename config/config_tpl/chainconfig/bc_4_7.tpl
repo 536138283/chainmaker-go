@@ -16,7 +16,7 @@ version: {version}
 
 # Starting from version 2.4.0, configuring the genesis block time is supported.
 # default timestamp is "2020-11-30 0:0:0"
-genesisTime: 1606669261
+genesis_time: 1606669261
 
 # chain config sequence
 sequence: 0

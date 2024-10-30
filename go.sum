@@ -73,7 +73,6 @@ chainmaker.org/chainmaker/txpool-normal/v2 v2.3.5-0.20240924031528-14fc6d9c8524/
 chainmaker.org/chainmaker/txpool-single/v2 v2.3.5-0.20240924031653-b69086d742fb h1:jsm4YxYx5Kgsapg4PiRtp78Fyz9oCFT+obMG6zGRHb0=
 chainmaker.org/chainmaker/txpool-single/v2 v2.3.5-0.20240924031653-b69086d742fb/go.mod h1:6NlOlw1dC2TTk0Y3ggt6bvo18dHbkLGqnivvmSim+lw=
 chainmaker.org/chainmaker/utils/v2 v2.3.5/go.mod h1:LlCRtHxbWYDJGFpp7ImFfQuptAl65a8Dtt/SA3OZbE8=
-chainmaker.org/chainmaker/utils/v2 v2.3.6-0.20240924030042-e1f375955e81 h1:SlZERqi2JmFV9XjA58GFzwJdlfySpnLZT2K2TIqmyaI=
 chainmaker.org/chainmaker/utils/v2 v2.3.6-0.20240924030042-e1f375955e81/go.mod h1:tktofnDZuad5JkHktRXMtPqq1gG3kUnKRRxne1nvgL4=
 chainmaker.org/chainmaker/utils/v2 v2.3.6-0.20241030032755-1eef56619b21 h1:juq3EkzGmZ2Aj2gZwuDCF2Yy0sbQUqUiyVbQDb/yZtE=
 chainmaker.org/chainmaker/utils/v2 v2.3.6-0.20241030032755-1eef56619b21/go.mod h1:3K8ZN+tme6c9zQZ4LndjkkHAhOxlUCDQFHTMprrK6Hw=
