@@ -27,7 +27,7 @@ go get chainmaker.org/chainmaker/localconf/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/logger/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/pb-go/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/protocol/v2@${BRANCH}
-go get chainmaker.org/chainmaker/utils/v2@${PRE_BRANCH}
+go get chainmaker.org/chainmaker/utils/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/net-common@${NET_COMMON_BRANCH}
 go get chainmaker.org/chainmaker/net-libp2p@${NET_LIBP2P_BRANCH}
 go get chainmaker.org/chainmaker/net-liquid@${NET_LIQUID_BRANCH}
