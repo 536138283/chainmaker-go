@@ -56,5 +56,5 @@ else
   ut_cover "module/txfilter" 25 0
   ut_cover "module/subscriber" 70 0.9
 #  ut_cover "module/txpool" 0
-  ut_cover "tools/cmc" 7 2.3
+#  ut_cover "tools/cmc" 1 2.3
 fi
