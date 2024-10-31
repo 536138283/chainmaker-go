@@ -316,6 +316,13 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 	}
 }
 
+// sendSubscribeContractEvent send contract even by subscribe request.
+/*
+For example:
+  - If both `contract_name` and `event_name` are provided, only events matching both will be returned.
+  - If `contract_name` is provided and `event_name` is empty, all events for the specified contract will be returned.
+  - If `contract_name` is empty, an error will be raised, as it is no longer supported.
+*/
 func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeServer,
 	block *commonPb.Block, contractName, topic string) error {
 
@@ -325,7 +332,7 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 
 	for _, tx := range block.Txs {
 		for idx, event := range tx.Result.ContractResult.ContractEvent {
-			if contractName == "" || contractName == event.ContractName {
+			if contractName == event.ContractName {
 				if topic == "" || topic == event.Topic {
 					eventInfo := commonPb.ContractEventInfo{
 						BlockHeight:     block.Header.BlockHeight,
