@@ -8,14 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package monitor
 
 import (
-	"fmt"
-	"net"
-	"net/http"
-
 	commonMonitor "chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
+	"fmt"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"net"
+	"net/http"
 )
 
 type MonitorServer struct {
