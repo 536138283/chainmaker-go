@@ -169,19 +169,6 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		bc  *blockchain.Blockchain
 	)
 
-	/**
-	change from v2.3.6
-	Previously, an empty contract name was supported, which would return all events related to all contracts.
-	However, due to the potential for a large amount of data being returned, this approach is no longer supported.
-	Now, a contract name must be specified.
-	*/
-	if tx.Payload.ContractName == "" {
-		errCode = commonErr.ERR_CODE_SYSTEM_CONTRACT_UNSUPPORT_CONTRACT_NAME
-		errMsg = s.getErrMsg(errCode, err)
-		s.log.Error(errMsg)
-		return
-	}
-
 	chainConfig, err := s.chainMakerServer.GetChainConf(tx.Payload.ChainId)
 	if err != nil {
 		errCode = commonErr.ERR_CODE_GET_CHAIN_CONF

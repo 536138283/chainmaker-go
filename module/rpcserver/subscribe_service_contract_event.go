@@ -39,6 +39,20 @@ func (s *ApiService) checkDealContractEventSubscriptionParams(tx *commonPb.Trans
 			endBlock, err = bytehelper.BytesToInt64(kv.Value)
 		} else if kv.Key == syscontract.SubscribeContractEvent_CONTRACT_NAME.String() {
 			contractName = string(kv.Value)
+
+			/**
+			change from v2.3.6
+			Previously, an empty contract name was supported, which would return all events related to all contracts.
+			However, due to the potential for a large amount of data being returned, this approach is no longer supported.
+			Now, a contract name must be specified.
+			*/
+			if contractName == "" {
+				errCode := commonErr.ERR_CODE_SYSTEM_CONTRACT_UNSUPPORT_CONTRACT_NAME
+				errMsg := s.getErrMsg(errCode, err)
+				err = status.Error(codes.InvalidArgument, errMsg)
+				return
+			}
+
 		} else if kv.Key == syscontract.SubscribeContractEvent_TOPIC.String() {
 			if kv.Value != nil {
 				topic = string(kv.Value)
