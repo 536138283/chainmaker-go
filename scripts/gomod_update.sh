@@ -22,7 +22,7 @@ cd ..
 
 go get chainmaker.org/chainmaker/lws@${LWS_BRANCH}
 go get chainmaker.org/chainmaker/chainconf/v2@${PRE_BRANCH}
-go get chainmaker.org/chainmaker/common/v2@${LAST_PRE_BRANCH}
+go get chainmaker.org/chainmaker/common/v2@${BRANCH}
 go get chainmaker.org/chainmaker/localconf/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/logger/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/pb-go/v2@${LAST_PRE_BRANCH}
