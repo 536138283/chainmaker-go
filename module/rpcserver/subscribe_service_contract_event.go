@@ -48,7 +48,7 @@ func (s *ApiService) checkDealContractEventSubscriptionParams(tx *commonPb.Trans
 			*/
 			if contractName == "" {
 				errCode := commonErr.ERR_CODE_SYSTEM_CONTRACT_UNSUPPORT_CONTRACT_NAME
-				errMsg := s.getErrMsg(errCode, err)
+				errMsg := s.getErrMsg(errCode, fmt.Errorf("contract name should not be empty"))
 				err = status.Error(codes.InvalidArgument, errMsg)
 				return
 			}
