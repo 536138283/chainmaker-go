@@ -4,29 +4,29 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.4
-	chainmaker.org/chainmaker/common/v2 v2.3.6-0.20241104013433-80d557be820e
+	chainmaker.org/chainmaker/common/v2 v2.3.6
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.5
 	chainmaker.org/chainmaker/localconf/v2 v2.3.5
 	chainmaker.org/chainmaker/logger/v2 v2.3.4
-	chainmaker.org/chainmaker/net-common v1.2.6-0.20241014030838-c56b32eb1a36
-	chainmaker.org/chainmaker/net-libp2p v1.2.7-0.20241014080127-3b97a24253a9
+	chainmaker.org/chainmaker/net-common v1.2.6
+	chainmaker.org/chainmaker/net-libp2p v1.2.7
 	chainmaker.org/chainmaker/net-liquid v1.1.3
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.6
-	chainmaker.org/chainmaker/protocol/v2 v2.3.7-0.20240929075514-edea7abcccd7
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.7-0.20241018110914-695770b58a34
-	chainmaker.org/chainmaker/store/v2 v2.3.7-0.20241030100757-bffff47dd4fd
-	chainmaker.org/chainmaker/utils/v2 v2.3.6-0.20241031023027-a372030be741
+	chainmaker.org/chainmaker/protocol/v2 v2.3.7
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.7
+	chainmaker.org/chainmaker/store/v2 v2.3.7
+	chainmaker.org/chainmaker/utils/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.7
-	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7-0.20241025095736-5d6a54d2586a
+	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.6
-	chainmaker.org/chainmaker/vm/v2 v2.3.7-0.20241018073644-db58acb84192
+	chainmaker.org/chainmaker/vm/v2 v2.3.7
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
