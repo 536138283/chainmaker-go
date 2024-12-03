@@ -12,8 +12,9 @@ LWS_BRANCH='v1.2.1'
 PRE_BRANCH="v2.3.4_qc"
 LAST_PRE_BRANCH="v2.3.5_qc"
 NET_COMMON_BRANCH='v1.2.6_qc'
-NET_LIBP2P_BRANCH='v1.2.7_qc'
+NET_LIBP2P_BRANCH='v1.2.8_qc'
 NET_LIQUID_BRANCH='v1.1.3_qc'
+COMMON_BRANCH='v2.3.6.1_qc'
 
 if [[ ! -n $BRANCH ]]; then
 				  BRANCH="v2.3.6_qc"
@@ -22,7 +23,7 @@ cd ..
 
 go get chainmaker.org/chainmaker/lws@${LWS_BRANCH}
 go get chainmaker.org/chainmaker/chainconf/v2@${PRE_BRANCH}
-go get chainmaker.org/chainmaker/common/v2@${BRANCH}
+go get chainmaker.org/chainmaker/common/v2@${COMMON_BRANCH}
 go get chainmaker.org/chainmaker/localconf/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/logger/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/pb-go/v2@${LAST_PRE_BRANCH}
