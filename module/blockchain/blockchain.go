@@ -15,6 +15,7 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"sync"
 )
 
 const (
@@ -93,8 +94,13 @@ type Blockchain struct {
 
 	txFilter protocol.TxFilter
 
-	initModules  map[string]struct{}
-	startModules map[string]struct{}
+	// initModuleLock for initModules map
+	initModuleLock sync.RWMutex
+	initModules    map[string]struct{}
+
+	// startModuleLock for startModules map
+	startModuleLock sync.RWMutex
+	startModules    map[string]struct{}
 }
 
 // NewBlockchain create a new Blockchain instance.

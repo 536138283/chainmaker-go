@@ -15,6 +15,7 @@ NET_COMMON_BRANCH='v1.2.6_qc'
 NET_LIBP2P_BRANCH='v1.2.8_qc'
 NET_LIQUID_BRANCH='v1.1.3_qc'
 COMMON_BRANCH='v2.3.6.1_qc'
+PROTOCOL_BRANCH='v2.3.6.1_qc'
 
 if [[ ! -n $BRANCH ]]; then
 				  BRANCH="v2.3.6_qc"
@@ -24,10 +25,10 @@ cd ..
 go get chainmaker.org/chainmaker/lws@${LWS_BRANCH}
 go get chainmaker.org/chainmaker/chainconf/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/common/v2@${COMMON_BRANCH}
-go get chainmaker.org/chainmaker/localconf/v2@${LAST_PRE_BRANCH}
+go get chainmaker.org/chainmaker/localconf/v2@${BRANCH}
 go get chainmaker.org/chainmaker/logger/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/pb-go/v2@${LAST_PRE_BRANCH}
-go get chainmaker.org/chainmaker/protocol/v2@${BRANCH}
+go get chainmaker.org/chainmaker/protocol/v2@${PROTOCOL_BRANCH}
 go get chainmaker.org/chainmaker/utils/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/net-common@${NET_COMMON_BRANCH}
 go get chainmaker.org/chainmaker/net-libp2p@${NET_LIBP2P_BRANCH}
@@ -37,7 +38,7 @@ go get chainmaker.org/chainmaker/consensus-raft/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/consensus-solo/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/consensus-utils/v2@${PRE_BRANCH}
 go get chainmaker.org/chainmaker/consensus-maxbft/v2@${PRE_BRANCH}
-go get chainmaker.org/chainmaker/consensus-tbft/v2@${PRE_BRANCH}
+go get chainmaker.org/chainmaker/consensus-tbft/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/store/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-docker-go/v2@${LAST_PRE_BRANCH}
 go get chainmaker.org/chainmaker/vm-engine/v2@${LAST_PRE_BRANCH}

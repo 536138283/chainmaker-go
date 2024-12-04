@@ -207,7 +207,9 @@ func (bc *Blockchain) initExtModules(extModules []map[string]func() error) (err 
 }
 
 func (bc *Blockchain) initNetService() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameNetService]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("net service module existed, ignore.")
 		return
@@ -218,6 +220,8 @@ func (bc *Blockchain) initNetService() (err error) {
 		bc.log.Errorf("new net service failed, %s", err)
 		return
 	}
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameNetService] = struct{}{}
 	return
 }
@@ -228,7 +232,9 @@ func (bc *Blockchain) initNetService() (err error) {
 //	@receiver bc
 //	@return err
 func (bc *Blockchain) initStore() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameStore]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("store module existed, ignore.")
 		return
@@ -263,12 +269,16 @@ func (bc *Blockchain) initStore() (err error) {
 		bc.log.Errorf("new store failed, %s", err.Error())
 		return err
 	}
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameStore] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initOldStore() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameOldStore]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("store module existed, ignore.")
 		return
@@ -316,11 +326,15 @@ func (bc *Blockchain) initOldStore() (err error) {
 		bc.log.Errorf("new store failed, %s", err.Error())
 		return err
 	}
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameOldStore] = struct{}{}
 	return
 }
 func (bc *Blockchain) initChainConf() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameChainConf]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("chain config module existed, ignore.")
 		return
@@ -373,20 +387,23 @@ func (bc *Blockchain) initChainConf() (err error) {
 		bc.log.Errorf("load node list of chain config failed, %s", err)
 		return err
 	}
+
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameChainConf] = struct{}{}
 
 	// register myself as config watcher
 	bc.msgBus.Register(msgbus.ChainConfig, bc)
-
 	// v220_compat Deprecated
 	// register myself as config watcher
 	bc.chainConf.AddWatch(bc) //nolint: staticcheck
-
 	return
 }
 
 func (bc *Blockchain) initCache() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameLedger]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("ledger module existed, ignore.")
 		return
@@ -458,12 +475,16 @@ func (bc *Blockchain) initCache() (err error) {
 	bc.ledgerCache.SetLastCommittedBlock(bc.lastBlock)
 	bc.proposalCache = cache.NewProposalCache(bc.chainConf, bc.ledgerCache, bc.log)
 	bc.log.Debugf("go last block: %+v", bc.lastBlock)
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameLedger] = struct{}{}
 	return nil
 }
 
 func (bc *Blockchain) initAC() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameAccessControl]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("access control module existed, ignore.")
 		return
@@ -518,13 +539,16 @@ func (bc *Blockchain) initAC() (err error) {
 		bc.log.Errorf("initialize identity failed, %s", err.Error())
 		return
 	}
-
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameAccessControl] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initTxPool() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameTxPool]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("tx pool module existed, ignore.")
 		return
@@ -564,12 +588,16 @@ func (bc *Blockchain) initTxPool() (err error) {
 	}
 
 	bc.txPool = currentTxPool
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameTxPool] = struct{}{}
 	return nil
 }
 
 func (bc *Blockchain) initVM() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameVM]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("vm module existed, ignore.")
 		return
@@ -683,6 +711,8 @@ func (bc *Blockchain) initVM() (err error) {
 		)
 	}
 	bc.initVMNative()
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameVM] = struct{}{}
 	return
 }
@@ -719,7 +749,9 @@ func (s *soloChainNodesInfoProvider) GetChainNodesInfo() ([]*protocol.ChainNodeI
 }
 
 func (bc *Blockchain) initCore() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameCore]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("core engine module existed, ignore.")
 		return
@@ -758,6 +790,8 @@ func (bc *Blockchain) initCore() (err error) {
 		bc.log.Errorf("new core engine failed, %s", err.Error())
 		return err
 	}
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameCore] = struct{}{}
 	return
 }
@@ -786,10 +820,14 @@ func (bc *Blockchain) initConsensus() (err error) {
 			bc.chainId, id, nodeIds)
 
 		// this node is not a consensus node
+		bc.initModuleLock.Lock()
+		defer bc.initModuleLock.Unlock()
 		delete(bc.initModules, moduleNameConsensus)
 		return nil
 	}
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameConsensus]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("consensus module existed, ignore.")
 		return
@@ -816,12 +854,16 @@ func (bc *Blockchain) initConsensus() (err error) {
 		bc.log.Errorf("new consensus engine failed, %s", err)
 		return err
 	}
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameConsensus] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initSync() (err error) {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameSync]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("sync module existed, ignore.")
 		return
@@ -838,23 +880,31 @@ func (bc *Blockchain) initSync() (err error) {
 		bc.coreEngine.GetBlockCommitter(),
 		logger.GetLoggerByChain(logger.MODULE_SYNC, bc.chainId),
 	)
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameSync] = struct{}{}
 	return
 }
 
 func (bc *Blockchain) initSubscriber() error {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameSubscriber]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("subscriber module existed, ignore.")
 		return nil
 	}
 	bc.eventSubscriber = subscriber.NewSubscriber(bc.msgBus)
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameSubscriber] = struct{}{}
 	return nil
 }
 
 func (bc *Blockchain) initTxFilter() error {
+	bc.initModuleLock.RLock()
 	_, ok := bc.initModules[moduleNameTxFilter]
+	bc.initModuleLock.RUnlock()
 	if ok {
 		bc.log.Infof("tx filter module existed, ignore.")
 		return nil
@@ -869,11 +919,15 @@ func (bc *Blockchain) initTxFilter() error {
 		return err
 	}
 	bc.txFilter = txFilter
+	bc.initModuleLock.Lock()
+	defer bc.initModuleLock.Unlock()
 	bc.initModules[moduleNameTxFilter] = struct{}{}
 	return nil
 }
 
 func (bc *Blockchain) isModuleInit(moduleName string) bool {
+	bc.initModuleLock.RLock()
+	defer bc.initModuleLock.RUnlock()
 	_, ok := bc.initModules[moduleName]
 	return ok
 }
