@@ -55,7 +55,7 @@ node:
 #  # Timeout for waiting for block request response, unit second.
 #  wait_time_requested: 30
 #  # The number of blocks requested at a time.
-#  batch_Size_from_one_node: 1
+#  batch_size_from_one_node: 1
 #  # The time interval for verifying cached block, unit millisecond.
 #  process_block_tick: 20
 #  # The time interval for broadcasting a request to obtain the status of other nodes, unit second.
