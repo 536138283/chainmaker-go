@@ -14,8 +14,8 @@ chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5 h1:jTFguedrZn31aHVJg5xlb++LCz
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5/go.mod h1:z7j1kauKJAks9TQ5JRDSDMc1E1+TwikgpdsxGpZyJTE=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5 h1:3a9Fq34Pzzmbg9OydiobSqgv1iNmHIAT87QW1vVpgEo=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5/go.mod h1:vIGGFfNKgGYdIBj2N/ruaO3QL4MityftT5A3TJtuMuE=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6-0.20241204073225-cf583964ea83 h1:1JtLAa5YjIqrXcStLjaI2CN02/oFJdNTuKUCZfJbzhk=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6-0.20241204073225-cf583964ea83/go.mod h1:rrQHhv6qt5BRMQnNyJ41G/BoX1hd3c6TpCU1QI/amg4=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6-0.20241206092403-ed661218015e h1:Jmy0giQHfy87cY/h2BLE4yDuS9tgvSfuKp9RA52p0ec=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6-0.20241206092403-ed661218015e/go.mod h1:rrQHhv6qt5BRMQnNyJ41G/BoX1hd3c6TpCU1QI/amg4=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.5 h1:olWjIdYhVyx9PVc4dMrw5AOsNbsNiWvCeEWBzkCsXxE=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.5/go.mod h1:CKZL+fgw6gGj4tdAvFRHwUNslRuJD1hM48T8KC1TErw=
 chainmaker.org/chainmaker/libp2p-core v1.1.0 h1:46XbMWnLz2HNfoaUQ4OSCDanCmkZA7M2qdbQpiIu9Pc=
