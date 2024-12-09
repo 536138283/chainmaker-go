@@ -481,6 +481,9 @@ consensus:
 
     # Min time unit in rate election and heartbeat.
     ticker: 1
+  # tbft:
+    # the interval milliseconds of broadcasting status messages about tbft consensus, Default is 1000
+    # broadcaster_interval: 1000
 
 # Scheduler related settings
 scheduler:
