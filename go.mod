@@ -12,7 +12,7 @@ require (
 	chainmaker.org/chainmaker/localconf/v2 v2.3.6-0.20241205101204-fc6c2fade7ed
 	chainmaker.org/chainmaker/logger/v2 v2.3.4
 	chainmaker.org/chainmaker/net-common v1.2.6
-	chainmaker.org/chainmaker/net-libp2p v1.2.8-0.20241205064953-32513e220799
+	chainmaker.org/chainmaker/net-libp2p v1.2.8-0.20241211093829-b846666e9252
 	chainmaker.org/chainmaker/net-liquid v1.1.3
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.6
 	chainmaker.org/chainmaker/protocol/v2 v2.3.8-0.20241204072728-bd814b79a873
@@ -82,7 +82,7 @@ replace (
 	github.com/RedisBloom/redisbloom-go => chainmaker.org/third_party/redisbloom-go v1.0.0
 	github.com/dgraph-io/badger/v3 => chainmaker.org/third_party/badger/v3 v3.0.0
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.5
-	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.1.0
+	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.1.1-0.20241211015731-1d827de75ede
 	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v1.0.0
 	github.com/lucas-clemente/quic-go v0.26.0 => chainmaker.org/third_party/quic-go v1.2.2
 	github.com/marten-seemann/qtls-go1-16 => chainmaker.org/third_party/qtls-go1-16 v1.1.0
