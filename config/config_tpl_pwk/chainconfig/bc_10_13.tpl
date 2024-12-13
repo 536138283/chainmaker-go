@@ -51,6 +51,7 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+    - "dockerjava"
   native:
       multisign:
         enable_manual_run: true
@@ -69,7 +70,7 @@ block:
   block_tx_capacity: 100
 
   # Max block size, in MB
-  block_size: 10
+  block_size: 50
 
   # The interval of block proposing attempts, in millisecond.
   # should be within the range of [10,10000]
@@ -82,6 +83,8 @@ block:
   # block timeout, in second.
   # if abs(now - block_timestamp) > block_timeout, the block is invalid.
   block_timeout: 30
+
+  tx_parameter_size: 40
 
 # Core settings
 core:

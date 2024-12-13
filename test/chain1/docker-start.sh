@@ -4,7 +4,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.3.5"
+VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0_alpha_qc"
 
 set -x
 

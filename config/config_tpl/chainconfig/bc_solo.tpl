@@ -55,6 +55,7 @@ vm:
     - "gasm"
     - "evm"
     - "dockergo"
+    - "dockerjava"
     - "wxvm"
   native:
       multisign:
@@ -87,6 +88,9 @@ block:
   # block timeout, in second.
   # if abs(now - block_timestamp) > block_timeout, the block is invalid.
   block_timeout: 30
+
+  # maximum value per parameter, MB
+  tx_parameter_size: 50
 
 # Core settings
 core:

@@ -166,6 +166,10 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig)
 
+		// for vm support list add new vm type
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), policyConfig)
+
 		// multi-sign management, use default policy
 
 		// private-compute management
@@ -355,6 +359,10 @@ func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId st
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), policyConfig)
 
+		// for vm support list add new vm type
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), policyConfig)
+
 		// private-compute management
 		acs.resourceNamePolicyMap.Store(protocol.ResourceNamePrivateCompute, policyWrite)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_PRIVATE_COMPUTE.String()+"-"+
@@ -539,6 +547,10 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPK() {
 			syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), pubPolicyForbidden)
+
+		// for vm support list add new vm type
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), pubPolicyMajorityAdmin)
 
 		// multi-sign management, use default policy
 
@@ -729,6 +741,10 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 			syscontract.ContractManageFunction_REVOKE_CONTRACT_ACCESS.String(), pubPolicyForbidden)
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CONTRACT_MANAGE.String()+"-"+
 			syscontract.ContractManageFunction_VERIFY_CONTRACT_ACCESS.String(), pubPolicyForbidden)
+
+		// for vm support list add new vm type
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_VM_SUPPORT_LIST_ADD.String(), pubPolicyMajorityAdmin)
 
 		// multi-sign management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_MULTI_SIGN.String()+"-"+

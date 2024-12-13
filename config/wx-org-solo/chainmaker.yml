@@ -82,6 +82,8 @@ rpc:
     mode: twoway
     priv_key_file: ../config/wx-org-solo/certs/wx-org.chainmaker.org/node/consensus1/consensus1.tls.key
     cert_file: ../config/wx-org-solo/certs/wx-org.chainmaker.org/node/consensus1/consensus1.tls.crt
+  max_send_msg_size: 100
+  max_recv_msg_size: 100
 
 tx_filter:
   # default(store) 0; bird's nest 1; map 2; 3 sharding bird's nest
@@ -206,6 +208,21 @@ debug:
   is_http_open: false
 # Contract Virtual Machine(VM) configs
 vm:
+
+  common:
+    # Grpc configs during communication between chainmaker and contract VM
+    # Grpc max send message size, Default size is 100, unit: MB
+    max_send_msg_size: 100
+    # Grpc max receive message size, Default size is 100, unit: MB
+    max_recv_msg_size: 100
+    # Grpc dialing timeout, default size is 10, uint: s
+    dial_timeout: 10
+
+    #  Configs of docker runtime server (handle messages with contract sandbox)
+    runtime_server:
+      # Runtime server port, default 32351
+      port: 32351
+
   # Golang runtime in docker container
   go:
     # Enable docker go virtual machine, default: false
@@ -214,10 +231,7 @@ vm:
     data_mount_path: ../data/wx-org.chainmaker.org/go
     # Mount log path in chainmaker
     log_mount_path: ../log/wx-org.chainmaker.org/go
-    # Communication protocol, used for chainmaker and docker manager communication
-    # 1. tcp: docker vm uses TCP to communicate with chain
-    # 2. uds: docker vm uses unix domain socket to communicate with chain
-    protocol: tcp
+
     # If use a customized VM configuration file, supplement it; else, do not configure
     # Priority: chainmaker.yml > vm.yml > default settings
     # dockervm_config_path: /config_path/vm.yml
@@ -226,20 +240,8 @@ vm:
     # Log level of docker vm go
     log_level: INFO
 
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
-    max_send_msg_size: 100
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
-    max_recv_msg_size: 100
-    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
-    dial_timeout: 10
-
     # max process num for execute original txs
     max_concurrency: 20
-
-    #  Configs of docker runtime server (handle messages with contract sandbox)
-    runtime_server:
-      # Runtime server port, default 32351
-      port: 32351
 
     # Configs of contract engine server (handle messages with contract engine)
     contract_engine:
@@ -247,5 +249,33 @@ vm:
       host: 127.0.0.1
       # Docker vm contract engine server port, default 22351
       port: 22351
+      # Max number of connection created to connect docker vm service
+      max_connection: 5
+
+  java:
+    # Enable docker java virtual machine, default: false
+    enable: true
+    # Mount data path in chainmaker, include contracts, uds socks
+    data_mount_path: ../data/wx-org.chainmaker.org/java
+    # Mount log path in chainmaker
+    log_mount_path: ../log/wx-org.chainmaker.org/java
+
+    # If use a customized VM configuration file, supplement it; else, do not configure
+    # Priority: chainmaker.yml > vm.yml > default settings
+    # dockervm_config_path: /config_path/vm.yml
+    # Whether to print log on terminal
+    log_in_console: false
+    # Log level of docker vm go
+    log_level: INFO
+
+    # max process num for execute original txs
+    max_concurrency: 20
+
+    # Configs of contract engine server (handle messages with contract engine)
+    contract_engine:
+      # Docker vm contract engine server host, default 127.0.0.1
+      host: 127.0.0.1
+      # Docker vm contract engine server port, default 23351
+      port: 23351
       # Max number of connection created to connect docker vm service
       max_connection: 5

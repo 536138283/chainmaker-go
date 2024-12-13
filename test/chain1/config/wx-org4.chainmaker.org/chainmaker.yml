@@ -518,6 +518,12 @@ storage:
 
 # Contract Virtual Machine(VM) configs
 vm:
+  common:
+    #  Configs of docker runtime server (handle messages with contract sandbox)
+    runtime_server:
+      # Runtime server port, default 32351
+      port: 32354
+
   # Golang runtime in docker container
   go:
     # Enable docker go virtual machine, default: false
@@ -547,11 +553,6 @@ vm:
 
     # max process num for execute original txs
     max_concurrency: 20
-
-    #  Configs of docker runtime server (handle messages with contract sandbox)
-    runtime_server:
-      # Runtime server port, default 32351
-      port: 32354
 
     # Configs of contract engine server (handle messages with contract engine)
     contract_engine:
