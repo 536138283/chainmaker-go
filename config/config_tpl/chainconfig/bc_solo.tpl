@@ -15,8 +15,8 @@ chain_id: {chain_id}
 version: {version}
 
 # Starting from version 2.4.0, configuring the genesis block time is supported.
-# default timestamp is "2020-11-30 00:00:00"
-genesis_time: "2024-10-30 T00:00:00+08:00"
+# default timestamp is "2024-10-30T00:00:00+08:00"
+genesis_time: "2024-10-30T00:00:00+08:00"
 
 # chain config sequence
 sequence: 0
