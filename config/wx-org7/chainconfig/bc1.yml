@@ -27,6 +27,7 @@ vm:
     - "evm"
     - "dockergo"
     - "wxvm"
+    - "dockerjava"
   native:
     multisign:
       enable_manual_run: true

@@ -570,11 +570,27 @@ storage:
 
 # Contract Virtual Machine(VM) configs
 vm:
+  # Common configs of docker vm
+  common:
+    # Grpc configs during communication between chainmaker and contract VM
+    # Grpc max send message size, Default size is 100, unit: MB
+    max_send_msg_size: 100
+    # Grpc max receive message size, Default size is 100, unit: MB
+    max_recv_msg_size: 100
+    # Grpc dialing timeout, default size is 10, uint: s
+    dial_timeout: 10
+
+    #  Configs of docker runtime server (handle messages with contract sandbox)
+    runtime_server:
+      # runtime server host, default 127.0.0.1
+      # host: 127.0.0.1
+      # Runtime server port, default 32351
+      port: {docker_vm_runtime_port}
+
   # Golang runtime in docker container
   go:
     # Enable docker go virtual machine, default: false
-    enable: {enable_vm_go}
-
+    enable: {enable_docker_go}
     # Mount data path in chainmaker, include contracts, uds socks
     data_mount_path: ../data/{org_id}/go
 
@@ -593,26 +609,10 @@ vm:
     log_in_console: false
 
     # Log level of docker vm go
-    log_level: INFO
-
-    # Grpc max send message size of the following 2 servers, Default size is 100, unit: MB
-    max_send_msg_size: 100
-
-    # Grpc max receive message size of the following 2 servers, Default size is 100, unit: MB
-    max_recv_msg_size: 100
-
-    # Grpc dialing timeout of the following 2 servers, default size is 100, uint: s
-    dial_timeout: 10
+    log_level: {docker_go_log_level}
 
     # max process num for execute original txs
     max_concurrency: 20
-
-    #  Configs of docker runtime server (handle messages with contract sandbox)
-    runtime_server:
-      # runtime server host, default 127.0.0.1
-      # host: 127.0.0.1
-      # Runtime server port, default 32351
-      port: {vm_go_runtime_port}
 
     # Configs of contract engine server (handle messages with contract engine)
     contract_engine:
@@ -620,7 +620,41 @@ vm:
       host: 127.0.0.1
 
       # Docker vm contract engine server port, default 22351
-      port: {vm_go_engine_port}
-
+      port: {docker_go_engine_port}
       # Max number of connection created to connect docker vm service
+      max_connection: 5
+
+
+  # Java runtime in docker container
+  java:
+    # Enable docker java virtual machine, default: false
+    enable: {enable_docker_java}
+
+    # Mount data path in chainmaker, include contracts, uds socks
+    data_mount_path: ../data/{org_id}/java
+
+    # Mount log path in chainmaker
+    log_mount_path: ../log/{org_id}/java
+
+    # If use a customized VM configuration file, supplement it; else, do not configure
+    # Priority: chainmaker.yml > vm.yml > default settings
+    # dockervm_config_path: /config_path/vm.yml
+    # Whether to print log on terminal
+    log_in_console: false
+
+    # Log level of docker vm java
+    log_level: {docker_java_log_level}
+
+    # max process num for execute original txs
+    max_concurrency: 20
+
+    # Configs of contract engine server (handle messages with contract engine)
+    contract_engine:
+      # Docker vm contract engine server host, default 127.0.0.1
+      host: 127.0.0.1
+
+      # Docker vm contract engine server port, default 23351
+      port: {docker_java_engine_port}
+
+      # Max number of connection created to connect docker vm engine service
       max_connection: 5

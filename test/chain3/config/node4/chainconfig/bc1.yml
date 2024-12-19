@@ -46,6 +46,8 @@ vm:
     - "gasm"
     - "evm"
     - "wxvm"
+    - "dockergo"
+    - "dockerjava"
 
 # Block proposing related settings
 block:

@@ -97,6 +97,7 @@ var (
 	gasEnable bool
 
 	addressType                      int32
+	vmType                           string
 	permissionResourceName           string
 	permissionResourcePolicyRule     string
 	permissionResourcePolicyOrgList  []string
@@ -174,6 +175,7 @@ const (
 	flagGasLimit                         = "gas-limit"
 	flagGasEnable                        = "gas-enable"
 	flagAddressType                      = "address-type"
+	flagVmType                           = "vm-type"
 	flagPermissionResourceName           = "permission-resource-name"
 	flagPermissionResourcePolicyRule     = "permission-resource-policy-rule"
 	flagPermissionResourcePolicyOrgList  = "permission-resource-policy-orgList"
@@ -220,7 +222,7 @@ func init() {
 	flags.StringVar(&version, flagVersion, "", "specify user contract version, eg: 1.0.0")
 	flags.StringVar(&byteCodePath, flagByteCodePath, "", "specify user contract byte code path")
 	flags.StringVar(&runtimeType, flagRuntimeType, "", "specify user contract runtime type, such as: "+
-		"NATIVE | WASMER | WXVM | GASM | EVM | DOCKER_GO | JAVA")
+		"NATIVE | WASMER | WXVM | GASM | EVM | DOCKER_GO | DOCKER_JAVA")
 	flags.StringVar(&chainId, flagChainId, "", "specify the chain id, such as: chain1, chain2 etc.")
 	flags.IntVar(&sendTimes, flagSendTimes, 1, "specify SendTimes , default once")
 	flags.Int64Var(&timeout, flagTimeout, 10, "specify timeout in seconds, default 10s")
@@ -304,6 +306,7 @@ func init() {
 	flags.BoolVar(&gasEnable, flagGasEnable, false, "enable or disable gas feature")
 
 	flags.Int32Var(&addressType, flagAddressType, 0, "address type, eg. ChainMaker:0, ZXL:1")
+	flags.StringVar(&vmType, flagVmType, "", "chain config vm type in vm support list. e.g. --vm-type=dockerjava")
 	flags.StringVar(&permissionResourceName, flagPermissionResourceName, "", "chain config permission resource name")
 	flags.StringVar(&permissionResourcePolicyRule, flagPermissionResourcePolicyRule, "",
 		"chain config permission resource policy rule")

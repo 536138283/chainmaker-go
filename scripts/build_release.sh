@@ -15,7 +15,7 @@ RELEASE_PATH=${PROJECT_PATH}/build/release
 BACKUP_PATH=${PROJECT_PATH}/build/backup
 BUILD_CRYPTO_CONFIG_PATH=${BUILD_PATH}/crypto-config
 BUILD_CONFIG_PATH=${BUILD_PATH}/config
-VERSION=v2.3.6
+VERSION=v2.4.0_alpha_qc
 DATETIME=$(date "+%Y%m%d%H%M%S")
 PLATFORM=$(uname -m)
 system=$(uname)
@@ -60,8 +60,7 @@ function package() {
 
     c=0
     dirNames[0]=""
-    file1=""
-    for file in `ls -v $BUILD_CRYPTO_CONFIG_PATH`
+    for file in `ls -tr $BUILD_CRYPTO_CONFIG_PATH`
     do
         chainmaker_file=chainmaker-$VERSION-$file
         dirNames[$c]=$chainmaker_file

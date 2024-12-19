@@ -16,7 +16,7 @@ version: {version}
 
 # Starting from version 2.4.0, configuring the genesis block time is supported.
 # default timestamp is "2020-11-30 00:00:00"
-genesis_time: "2024-10-30 00:00:00"
+genesis_time: "2024-10-30T00:00:00+08:00"
 
 # chain config sequence
 sequence: 0
@@ -55,6 +55,7 @@ vm:
     - "gasm"
     - "evm"
     - "dockergo"
+    - "dockerjava"
     - "wxvm"
   native:
       multisign:
@@ -87,6 +88,9 @@ block:
   # block timeout, in second.
   # if abs(now - block_timestamp) > block_timeout, the block is invalid.
   block_timeout: 30
+
+  # maximum value per parameter, MB
+  tx_parameter_size: 50
 
 # Core settings
 core:

@@ -667,7 +667,8 @@ func (ts *TxScheduler) getContractBytecode(txSimContext protocol.TxSimContext,
 	contract *commonPb.Contract) ([]byte, error) {
 	if contract.RuntimeType != commonPb.RuntimeType_NATIVE &&
 		contract.RuntimeType != commonPb.RuntimeType_DOCKER_GO &&
-		contract.RuntimeType != commonPb.RuntimeType_GO {
+		contract.RuntimeType != commonPb.RuntimeType_GO &&
+		contract.RuntimeType != commonPb.RuntimeType_DOCKER_JAVA {
 		byteCode, err := txSimContext.GetContractBytecode(contract.Name)
 		if err != nil {
 			ts.log.Errorf("Get contract bytecode by name[%s] error:%s", contract.Name, err)
