@@ -7,7 +7,7 @@
 #
 function buildImage() {
   rm -rf vm-engine
-  git clone -b v2.4.0_alpha_qc --depth=1 https://git.code.tencent.com/ChainMaker/vm-engine.git
+  git clone -b v2.4.0_qc --depth=1 https://git.code.tencent.com/ChainMaker/vm-engine.git
   cd vm-engine
   make build-image
   cd ..
@@ -15,7 +15,7 @@ function buildImage() {
 }
 
 
-dockerGoImage=$( docker images | grep "^chainmakerofficial/chainmaker-vm-engine" | grep "v2.4.0_alpha_qc\s" )
+dockerGoImage=$( docker images | grep "^chainmakerofficial/chainmaker-vm-engine" | grep "v2.4.0_qc\s" )
 echo "image:" $dockerGoImage
 if [[ -n $dockerGoImage ]] ;then
     echo "docker go image exist, don't need build again"

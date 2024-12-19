@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: Apache-2.0
 #
-VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0_alpha_qc"
+VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0_qc"
 
 set -x
 function xsed() {
