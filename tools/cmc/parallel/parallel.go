@@ -57,6 +57,7 @@ var (
 
 	hostsString        string
 	hostnamesString    string
+	statisticalType    string
 	signCrtPathsString string
 	signKeyPathsString string
 	userCrtPathsString string
@@ -241,7 +242,7 @@ func ParallelCMD() *cobra.Command {
 	flags.Uint32Var(&authTypeUint32, "auth-type", 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
 	flags.Uint64Var(&gasLimit, "gas-limit", 0, "gas limit in uint64 type")
 	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
-
+	flags.StringVarP(&statisticalType, "statistical-type", "", "default", "normal statistical type or block based statistical type, input normal or block default:normal ")
 	cmd.AddCommand(invokeCMD())
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())
@@ -264,7 +265,6 @@ func parallel(parallelMethod string) error {
 	}
 	timeoutChan := make(chan struct{}, threadNum)
 	doneChan := make(chan struct{}, threadNum)
-	doneCount := 0
 
 	// Statistician updater
 	statistician := &Statistician{
@@ -283,42 +283,145 @@ func parallel(parallelMethod string) error {
 
 	var threads []*Thread
 	for i := 0; i < threadNum; i++ {
-		t := &Thread{
-			id:           i,
-			loopNum:      loopNum,
-			doneChan:     doneChan,
-			timeoutChan:  timeoutChan,
-			statistician: statistician,
+		thread, err := threadFactory(i, parallelMethod, doneChan, timeoutChan, statistician)
+		if err != nil {
+			return err
 		}
-		switch parallelMethod {
-		case invokerMethod:
-			t.operationName = invokerMethod
-			t.handler = &invokeHandler{threadId: i}
-		case queryMethod:
-			t.operationName = queryMethod
-			t.handler = &queryHandler{threadId: i}
-		case createContractStr:
-			t.operationName = createContractStr
-			t.handler = &createContractHandler{threadId: i}
-		case upgradeContractStr:
-			t.operationName = upgradeContractStr
-			t.handler = &upgradeContractHandler{threadId: i}
-		}
-		threads = append(threads, t)
+		threads = append(threads, thread)
 	}
 
 	statistician.startTime = time.Now()
 	statistician.lastStartTime = time.Now()
-
+	fmt.Println(time.Now())
+	// init threads request params pool
+	var wg sync.WaitGroup
 	for _, thread := range threads {
-		if err := thread.Init(); err != nil {
-			return err
+		wg.Add(1)
+		go func(thread *Thread) {
+			defer wg.Done()
+			err := thread.BindRequestParams(parallelMethod)
+			if err != nil {
+				fmt.Println("error binding request params:", err)
+				return
+			}
+		}(thread)
+	}
+	wg.Wait()
+	fmt.Println(time.Now())
+	go parallelStart(threads)
+	printTicker := time.NewTicker(time.Duration(printTime) * time.Second)
+	go printResult(printTicker, statistician)
+
+	go sub(threads[0])
+	listenAndExitParallel(timeoutChan, doneChan, printTicker)
+	// last once statistics
+	fmt.Println("Statistics for the entire test")
+	statistician.endTime = time.Now()
+	statistician.PrintDetails(true)
+	// close client conn
+	for _, t := range threads {
+		t.Stop()
+	}
+	return nil
+}
+
+func sub(thread *Thread) error {
+	// 开启另一个携程订阅节点
+	s := SubscribeBlock{
+		threadId:    thread.id,
+		sk3:         thread.sk3,
+		userCrtPath: signCrtPaths[thread.index],
+	}
+	param, err := s.Build()
+	if err != nil {
+		fmt.Println(
+			"error building subscribe params:", err)
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	c, err := sendSubscribe(context.Background(), thread.client, param)
+	if err != nil {
+		fmt.Println("error sendSubscribe :", err)
+		return err
+	}
+	for {
+		select {
+		case block, ok := <-c:
+			if !ok {
+				return errors.New("chan is close")
+			}
+
+			if block == nil {
+				return errors.New("received block is nil")
+			}
+
+			blockHeader, ok := block.(*commonPb.BlockHeader)
+			if !ok {
+				return errors.New("received data is not *common.BlockHeader")
+			}
+
+			fmt.Printf("recv blockHeader [%d] => %+v\n", blockHeader.BlockHeight, blockHeader)
+
+		case <-ctx.Done():
+			return nil
 		}
 	}
+	return nil
+}
 
-	go parallelStart(threads)
+// print test report
+func printResult(printTicker *time.Ticker, statistician *Statistician) {
+	for {
+		select {
+		case <-printTicker.C:
+			go statistician.PrintDetails(false)
+		}
+	}
+}
 
-	printTicker := time.NewTicker(time.Duration(printTime) * time.Second)
+func threadFactory(id int, method string, doneChan, timeoutChan chan struct{}, statistician *Statistician) (*Thread, error) {
+	var err error
+	t := &Thread{id: id, loopNum: loopNum, doneChan: doneChan, timeoutChan: timeoutChan, statistician: statistician}
+	t.index = t.id % len(hosts)
+	t.conn, err = t.initGRPCConnect(useTLS, t.index)
+	if err != nil {
+		return nil, err
+	}
+	t.client = apiPb.NewRpcNodeClient(t.conn)
+
+	file, err := ioutil.ReadFile(signKeyPaths[t.index])
+	if err != nil {
+		return nil, err
+	}
+
+	t.sk3, err = asym.PrivateKeyFromPEM(file, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	switch method {
+	case invokerMethod:
+		t.operationName = invokerMethod
+		t.handler = &invokeHandler{threadId: id}
+	case queryMethod:
+		t.operationName = queryMethod
+		t.handler = &queryHandler{threadId: id}
+	case createContractStr:
+		t.operationName = createContractStr
+		t.handler = &createContractHandler{threadId: id}
+	case upgradeContractStr:
+		t.operationName = upgradeContractStr
+		t.handler = &upgradeContractHandler{threadId: id}
+	}
+	return t, nil
+}
+
+// listen channel ,when arrive some condition exit
+// 1、exit when arrive user set timeout value (second)
+// 2、exit when all goroutine done work
+func listenAndExitParallel(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker) {
+	doneCount := 0
 	timeoutTicker := time.NewTicker(time.Duration(timeout) * time.Second)
 	timeoutOnce := sync.Once{}
 	for {
@@ -328,8 +431,6 @@ func parallel(parallelMethod string) error {
 		select {
 		case <-doneChan:
 			doneCount++
-		case <-printTicker.C:
-			go statistician.PrintDetails(false)
 		case <-timeoutTicker.C:
 			go func() {
 				timeoutOnce.Do(func() {
@@ -340,20 +441,10 @@ func parallel(parallelMethod string) error {
 			}()
 		}
 	}
-
-	statistician.endTime = time.Now()
-
-	fmt.Println("Statistics for the entire test")
-	statistician.PrintDetails(true)
-
 	close(timeoutChan)
 	close(doneChan)
 	printTicker.Stop()
 	timeoutTicker.Stop()
-	for _, t := range threads {
-		t.Stop()
-	}
-	return nil
 }
 
 func parallelStart(threads []*Thread) {
@@ -490,33 +581,42 @@ type Thread struct {
 	statistician  *Statistician
 	operationName string
 
-	conn   *grpc.ClientConn
-	client apiPb.RpcNodeClient
-	sk3    crypto.PrivateKey
-	index  int
+	conn      *grpc.ClientConn
+	client    apiPb.RpcNodeClient
+	sk3       crypto.PrivateKey
+	reqParams []*commonPb.TxRequest
+	index     int
 }
 
-// Init init thread data
+// BindRequestParams
 // @return error
-func (t *Thread) Init() error {
-	var err error
-	t.index = t.id % len(hosts)
-	t.conn, err = t.initGRPCConnect(useTLS, t.index)
-	if err != nil {
-		return err
+func (t *Thread) BindRequestParams(parallelMethod string) error {
+	var orgId, userCrtPath string
+	switch authType {
+	case sdk.Public:
+	case sdk.PermissionedWithKey:
+		orgId = orgIDs[t.index]
+	default:
+		orgId, userCrtPath = orgIDs[t.index], signCrtPaths[t.index]
 	}
-	t.client = apiPb.NewRpcNodeClient(t.conn)
-
-	file, err := ioutil.ReadFile(signKeyPaths[t.index])
-	if err != nil {
-		return err
+	for loopId := 0; loopId < loopNum; loopId++ {
+		var buildObject ParamBuild
+		switch parallelMethod {
+		case queryMethod:
+			buildObject = Query{t.id, loopId, t.sk3, orgId, userCrtPath}
+		case invokerMethod:
+			buildObject = Invoke{t.id, loopId, t.sk3, orgId, userCrtPath}
+		case createContractStr:
+			buildObject = Create{t.id, loopId, t.sk3, orgId, userCrtPath}
+		case upgradeContractStr:
+			buildObject = Upgrade{t.id, loopId, t.sk3, orgId, userCrtPath}
+		}
+		reqParam, err := buildObject.Build()
+		if err != nil {
+			return err
+		}
+		t.reqParams = append(t.reqParams, reqParam)
 	}
-
-	t.sk3, err = asym.PrivateKeyFromPEM(file, nil)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -530,13 +630,7 @@ func (t *Thread) Start() {
 		default:
 			start := time.Now()
 			var err error
-			if authType == sdk.Public {
-				err = t.handler.handle(t.client, t.sk3, "", "", i)
-			} else if authType == sdk.PermissionedWithKey {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], "", i)
-			} else {
-				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], signCrtPaths[t.index], i)
-			}
+			err = sendInvokeRequest(t.client, orgIDs[t.index], i, t.reqParams[i])
 
 			elapsed := time.Since(start)
 
@@ -779,7 +873,6 @@ func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.Pr
 	if err != nil {
 		return err
 	}
-
 	if checkResult && resp.Code != commonPb.TxStatusCode_SUCCESS {
 		return fmt.Errorf(respStr, resp)
 	}
