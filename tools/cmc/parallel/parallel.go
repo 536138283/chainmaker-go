@@ -9,7 +9,6 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -23,19 +22,12 @@ import (
 
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	"chainmaker.org/chainmaker/logger/v2"
-	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
-	"chainmaker.org/chainmaker/utils/v2"
 	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
 )
 
 var log = logger.GetLogger(logger.MODULE_CLI)
@@ -134,7 +126,12 @@ type reqStat struct {
 	nodeId  int
 }
 
+type cReqStat struct {
+	blockHeader *commonPb.BlockHeader
+}
+
 type Statistician struct {
+	// rpc standards
 	reqStatC          chan *reqStat
 	minSuccessElapsed int64
 	maxSuccessElapsed int64
@@ -149,11 +146,28 @@ type Statistician struct {
 	endTime   time.Time
 
 	// Classify by node id
+	cReqStatC             chan *cReqStat
 	nodeMinSuccessElapsed []int64
 	nodeMaxSuccessElapsed []int64
 	nodeSumSuccessElapsed []int64
 	nodeSuccessReqCount   []int
 	nodeTotalReqCount     []int
+
+	// block chain standards
+	BlockNum             int64
+	TxTotal              int64
+	NodeBlockNum         []int64
+	NodeTxTotal          []int64
+	NodeMaxTxBlockHeight []int64
+	NodeMaxTxBlockCount  []int64
+	NodeMinTxBlockHeight []int64
+	NodeMinTxBlockCount  []int64
+	MaxTxBlockHeight     []int64
+	MinTxBlockCount      []int64
+	firstBlockTime       time.Time
+	firstBlockHeight     int64
+	lastBlockTime        time.Time
+	lastBlockHeight      int64
 }
 
 // ParallelCMD parallel sub command
@@ -247,7 +261,7 @@ func ParallelCMD() *cobra.Command {
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())
 	cmd.AddCommand(upgradeContractCMD())
-
+	cmd.AddCommand(subscribeCMD())
 	return cmd
 }
 
@@ -260,59 +274,33 @@ const (
 
 func parallel(parallelMethod string) error {
 	if nodeNum > threadNum {
-		//fmt.Println("threadNum:", threadNum, "less nodeNum:", nodeNum, "change threadNum=nodeNum")
 		threadNum = nodeNum
 	}
+	// 开始生产请求参数
+	initParallel()
+	go producer(invokerMethod)
+	// produce request param
+	produceSignal <- -1
+	// 定义退出channel
 	timeoutChan := make(chan struct{}, threadNum)
 	doneChan := make(chan struct{}, threadNum)
-
-	// Statistician updater
-	statistician := &Statistician{
-		reqStatC: make(chan *reqStat, threadNum),
-
-		nodeMinSuccessElapsed: make([]int64, nodeNum),
-		nodeMaxSuccessElapsed: make([]int64, nodeNum),
-		nodeSumSuccessElapsed: make([]int64, nodeNum),
-		nodeSuccessReqCount:   make([]int, nodeNum),
-		nodeTotalReqCount:     make([]int, nodeNum),
-	}
+	statistician := getStatistician()
 	for i := 0; i < nodeNum; i++ {
 		statistician.nodeMinSuccessElapsed[i] = math.MaxInt16
 	}
 	go statistician.Start()
-
-	var threads []*Thread
-	for i := 0; i < threadNum; i++ {
-		thread, err := threadFactory(i, parallelMethod, doneChan, timeoutChan, statistician)
-		if err != nil {
-			return err
-		}
-		threads = append(threads, thread)
+	//go subNodes(statistician)
+	threads, err := threadFactory(threadNum, parallelMethod, doneChan, timeoutChan, statistician)
+	if err != nil {
+		return err
 	}
-
 	statistician.startTime = time.Now()
 	statistician.lastStartTime = time.Now()
-	fmt.Println(time.Now())
-	// init threads request params pool
-	var wg sync.WaitGroup
-	for _, thread := range threads {
-		wg.Add(1)
-		go func(thread *Thread) {
-			defer wg.Done()
-			err := thread.BindRequestParams(parallelMethod)
-			if err != nil {
-				fmt.Println("error binding request params:", err)
-				return
-			}
-		}(thread)
-	}
-	wg.Wait()
 	fmt.Println(time.Now())
 	go parallelStart(threads)
 	printTicker := time.NewTicker(time.Duration(printTime) * time.Second)
 	go printResult(printTicker, statistician)
 
-	go sub(threads[0])
 	listenAndExitParallel(timeoutChan, doneChan, printTicker)
 	// last once statistics
 	fmt.Println("Statistics for the entire test")
@@ -325,49 +313,23 @@ func parallel(parallelMethod string) error {
 	return nil
 }
 
-func sub(thread *Thread) error {
-	// 开启另一个携程订阅节点
-	s := SubscribeBlock{
-		threadId:    thread.id,
-		sk3:         thread.sk3,
-		userCrtPath: signCrtPaths[thread.index],
+func getStatistician() *Statistician {
+	return &Statistician{
+		reqStatC:              make(chan *reqStat, threadNum),
+		nodeMinSuccessElapsed: make([]int64, nodeNum),
+		nodeMaxSuccessElapsed: make([]int64, nodeNum),
+		nodeSumSuccessElapsed: make([]int64, nodeNum),
+		nodeSuccessReqCount:   make([]int, nodeNum),
+		nodeTotalReqCount:     make([]int, nodeNum),
+		NodeBlockNum:          make([]int64, nodeNum),
+		NodeTxTotal:           make([]int64, nodeNum),
+		NodeMaxTxBlockHeight:  make([]int64, nodeNum),
+		NodeMaxTxBlockCount:   make([]int64, nodeNum),
+		NodeMinTxBlockHeight:  make([]int64, nodeNum),
+		NodeMinTxBlockCount:   make([]int64, nodeNum),
+		MaxTxBlockHeight:      make([]int64, nodeNum),
+		MinTxBlockCount:       make([]int64, nodeNum),
 	}
-	param, err := s.Build()
-	if err != nil {
-		fmt.Println(
-			"error building subscribe params:", err)
-		return err
-	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	c, err := sendSubscribe(context.Background(), thread.client, param)
-	if err != nil {
-		fmt.Println("error sendSubscribe :", err)
-		return err
-	}
-	for {
-		select {
-		case block, ok := <-c:
-			if !ok {
-				return errors.New("chan is close")
-			}
-
-			if block == nil {
-				return errors.New("received block is nil")
-			}
-
-			blockHeader, ok := block.(*commonPb.BlockHeader)
-			if !ok {
-				return errors.New("received data is not *common.BlockHeader")
-			}
-
-			fmt.Printf("recv blockHeader [%d] => %+v\n", blockHeader.BlockHeight, blockHeader)
-
-		case <-ctx.Done():
-			return nil
-		}
-	}
-	return nil
 }
 
 // print test report
@@ -380,41 +342,35 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 	}
 }
 
-func threadFactory(id int, method string, doneChan, timeoutChan chan struct{}, statistician *Statistician) (*Thread, error) {
+func threadFactory(number int, method string, doneChan,
+	timeoutChan chan struct{}, statistician *Statistician) ([]*Thread, error) {
+	threads := make([]*Thread, number)
 	var err error
-	t := &Thread{id: id, loopNum: loopNum, doneChan: doneChan, timeoutChan: timeoutChan, statistician: statistician}
-	t.index = t.id % len(hosts)
-	t.conn, err = t.initGRPCConnect(useTLS, t.index)
-	if err != nil {
-		return nil, err
+	for i := 0; i < number; i++ {
+		t := &Thread{id: i, loopNum: loopNum, doneChan: doneChan, timeoutChan: timeoutChan, statistician: statistician}
+		t.index = t.id % len(hosts)
+		t.conn, err = t.initGRPCConnect(useTLS, t.index)
+		if err != nil {
+			return nil, err
+		}
+		t.client = apiPb.NewRpcNodeClient(t.conn)
+		switch method {
+		case invokerMethod:
+			t.operationName = invokerMethod
+			//t.handler = &invokeHandler{threadId: i}
+		case queryMethod:
+			t.operationName = queryMethod
+			//t.handler = &queryHandler{threadId: i}
+		case createContractStr:
+			t.operationName = createContractStr
+			//t.handler = &createContractHandler{threadId: i}
+		case upgradeContractStr:
+			t.operationName = upgradeContractStr
+			//t.handler = &upgradeContractHandler{threadId: i}
+		}
+		threads[i] = t
 	}
-	t.client = apiPb.NewRpcNodeClient(t.conn)
-
-	file, err := ioutil.ReadFile(signKeyPaths[t.index])
-	if err != nil {
-		return nil, err
-	}
-
-	t.sk3, err = asym.PrivateKeyFromPEM(file, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	switch method {
-	case invokerMethod:
-		t.operationName = invokerMethod
-		t.handler = &invokeHandler{threadId: id}
-	case queryMethod:
-		t.operationName = queryMethod
-		t.handler = &queryHandler{threadId: id}
-	case createContractStr:
-		t.operationName = createContractStr
-		t.handler = &createContractHandler{threadId: id}
-	case upgradeContractStr:
-		t.operationName = upgradeContractStr
-		t.handler = &upgradeContractHandler{threadId: id}
-	}
-	return t, nil
+	return threads, nil
 }
 
 // listen channel ,when arrive some condition exit
@@ -581,43 +537,9 @@ type Thread struct {
 	statistician  *Statistician
 	operationName string
 
-	conn      *grpc.ClientConn
-	client    apiPb.RpcNodeClient
-	sk3       crypto.PrivateKey
-	reqParams []*commonPb.TxRequest
-	index     int
-}
-
-// BindRequestParams
-// @return error
-func (t *Thread) BindRequestParams(parallelMethod string) error {
-	var orgId, userCrtPath string
-	switch authType {
-	case sdk.Public:
-	case sdk.PermissionedWithKey:
-		orgId = orgIDs[t.index]
-	default:
-		orgId, userCrtPath = orgIDs[t.index], signCrtPaths[t.index]
-	}
-	for loopId := 0; loopId < loopNum; loopId++ {
-		var buildObject ParamBuild
-		switch parallelMethod {
-		case queryMethod:
-			buildObject = Query{t.id, loopId, t.sk3, orgId, userCrtPath}
-		case invokerMethod:
-			buildObject = Invoke{t.id, loopId, t.sk3, orgId, userCrtPath}
-		case createContractStr:
-			buildObject = Create{t.id, loopId, t.sk3, orgId, userCrtPath}
-		case upgradeContractStr:
-			buildObject = Upgrade{t.id, loopId, t.sk3, orgId, userCrtPath}
-		}
-		reqParam, err := buildObject.Build()
-		if err != nil {
-			return err
-		}
-		t.reqParams = append(t.reqParams, reqParam)
-	}
-	return nil
+	conn   *grpc.ClientConn
+	client apiPb.RpcNodeClient
+	index  int
 }
 
 // Start thread start
@@ -627,24 +549,27 @@ func (t *Thread) Start() {
 		case <-t.timeoutChan:
 			t.doneChan <- struct{}{}
 			return
-		default:
+		case req, ok := <-paramQueues[t.index]:
+			// 如果chan 关闭，被分配到该chan的线程也一起关闭
+			if !ok {
+				return
+			}
+			if len(paramQueues[t.index]) < productFactor/2 {
+				produceSignal <- t.index
+			}
 			start := time.Now()
 			var err error
-			err = sendInvokeRequest(t.client, orgIDs[t.index], i, t.reqParams[i])
-
-			elapsed := time.Since(start)
-
+			err = sendRequest(t.client, orgIDs[t.index], i, req.Param)
+			// 结果进入结果集
 			atomic.AddInt32(&t.statistician.totalCount, 1)
 			t.statistician.reqStatC <- &reqStat{
 				success: err == nil,
-				elapsed: elapsed.Milliseconds(),
+				elapsed: time.Since(start).Milliseconds(),
 				nodeId:  t.index,
 			}
-
 			if recordLog && err != nil {
 				log.Errorf("threadId: %d, loopId: %d, nodeId: %d, err: %s", t.id, i, t.index, err)
 			}
-
 			time.Sleep(time.Duration(sleepTime) * time.Millisecond)
 		}
 	}
@@ -673,7 +598,10 @@ func getPairInfos() ([]*KeyValuePair, error) {
 
 // Stop thread stop
 func (t *Thread) Stop() {
-	t.conn.Close()
+	err := t.conn.Close()
+	if err != nil {
+		return
+	}
 }
 
 func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, error) {
@@ -726,6 +654,7 @@ var totalSentTxs int64
 var totalRandomSentTxs int64
 var resp *commonPb.TxResponse
 
+/*
 type InvokerMsg struct {
 	txType       commonPb.TxType
 	chainId      string
@@ -741,7 +670,7 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvs(h.threadId, loopId)
+	pairs := makeKvs(11111)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -796,7 +725,7 @@ func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey,
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvs(h.threadId, loopId)
+	pairs := makeKvs(1111)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -933,7 +862,12 @@ func GenerateUpgradeContractPayload(contractName, version string, runtimeType co
 	return payload, nil
 }
 
+
+*/
+
+/*
 func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *InvokerMsg, orgId, userCrtPath string,
+
 	payload *commonPb.Payload, endorsers []*commonPb.EndorsementEntry) (*commonPb.TxResponse, error) {
 
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(requestTimeout)*time.Second))
@@ -985,7 +919,6 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 	}
 
 	// 构造Header
-
 	req := &commonPb.TxRequest{
 		Payload: payload,
 		Sender: &commonPb.EndorsementEntry{
@@ -1022,3 +955,4 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 	}
 	return result, nil
 }
+*/

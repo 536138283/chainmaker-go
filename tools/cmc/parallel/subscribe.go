@@ -1,24 +1,16 @@
-/*
-Copyright (C) BABEC. All rights reserved.
-Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
-
-SPDX-License-Identifier: Apache-2.0
-*/
-
 package parallel
 
-import (
-	"github.com/spf13/cobra"
-)
+import "github.com/spf13/cobra"
 
-// invokeCMD invoke contract
-// @return *cobra.Command
-func invokeCMD() *cobra.Command {
+func subscribeCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   invokerMethod,
-		Short: "Invoke",
+		Use:   "subscribe",
+		Short: "subscribe",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return parallel(invokerMethod)
+			statistician := getStatistician()
+			initParallel()
+			subNodes(statistician)
+			return nil
 		},
 	}
 
