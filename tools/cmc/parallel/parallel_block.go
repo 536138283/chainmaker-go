@@ -14,13 +14,13 @@ import (
 	"context"
 	"encoding/binary"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/gogo/protobuf/proto"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"io"
 	"io/ioutil"
+	"math"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -48,6 +48,9 @@ var produceSignal chan int
 var productFactor int
 
 func initParallel() {
+	if nodeNum > threadNum {
+		threadNum = nodeNum
+	}
 	initProductFactor(100)
 	produceSignal = make(chan int, 1)
 	paramQueues = make([]chan RequestParam, nodeNum)
@@ -68,7 +71,7 @@ func initParallel() {
 	}
 }
 
-// 对半法加载成产因子
+// 对半法加载生产因子
 func initProductFactor(factor int) {
 	if threadNum*loopNum/factor > threadNum {
 		productFactor = threadNum * loopNum / nodeNum / factor
@@ -84,7 +87,7 @@ func initProductFactor(factor int) {
 // 该方法用于批量生成请求参数，生成个数由生产因子控制，当index为-1的时候像每个chan成产数据，否则像指定chan生产数据
 func producer(method string) {
 	fmt.Printf("producer method: %s\n", method)
-	var builder Builder
+	var builder StressBuilder
 	switch method {
 	case invokerMethod:
 		builder = Invoke{}
@@ -138,7 +141,7 @@ func producer(method string) {
 
 }
 
-type Builder interface {
+type StressBuilder interface {
 	Build(requestId int64, index int) (*commonPb.TxRequest, error)
 }
 
@@ -289,16 +292,20 @@ func makeKvs(requestId int64) []*commonPb.KeyValuePair {
 	return outKvs
 }
 
+type Builder interface {
+	Build(index int) (*commonPb.TxRequest, error)
+}
+
 type SubscribeBlock struct {
+	blockHeight uint64
 }
 
 func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
 	req := &commonPb.TxRequest{}
 	startBlockHeightByte := make([]byte, 8)
-	binary.LittleEndian.PutUint64(make([]byte, 8), 0)
-	//endBlockHeightByte := make([]byte, 8)
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.LittleEndian, int64(-1))
+	binary.LittleEndian.PutUint64(startBlockHeightByte, s.blockHeight)
+	endBlockHeightBuf := new(bytes.Buffer)
+	err := binary.Write(endBlockHeightBuf, binary.LittleEndian, int64(-1))
 	if err != nil {
 		fmt.Println("Error:", err)
 		return nil, err
@@ -317,7 +324,7 @@ func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
 			},
 			{
 				Key:   syscontract.SubscribeBlock_END_BLOCK.String(),
-				Value: buf.Bytes(),
+				Value: endBlockHeightBuf.Bytes(),
 			},
 			{
 				Key:   syscontract.SubscribeBlock_WITH_RWSET.String(),
@@ -330,6 +337,36 @@ func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
 		},
 	}
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], req.Payload, nil)
+}
+
+type QueryBlockHeight struct{}
+
+func (s QueryBlockHeight) Build(index int) (*commonPb.TxRequest, error) {
+	var kvs []*commonPb.KeyValuePair
+	kvs = append(kvs, &commonPb.KeyValuePair{
+		Key:   sdkutils.KeyBlockContractBlockHeight,
+		Value: []byte(strconv.FormatUint(math.MaxUint, 10)),
+	})
+	kvs = append(kvs, &commonPb.KeyValuePair{
+		Key:   sdkutils.KeyBlockContractWithRWSet,
+		Value: []byte(strconv.FormatBool(false)),
+	})
+	kvs = append(kvs, &commonPb.KeyValuePair{
+		Key:   sdkutils.KeyBlockContractTruncateValueLen,
+		Value: []byte(strconv.FormatInt(1000, 10)),
+	})
+	payload := sdkutils.NewPayload(
+		sdkutils.WithChainId(chainId),
+		sdkutils.WithTxType(commonPb.TxType_QUERY_CONTRACT),
+		sdkutils.WithTxId(""),
+		sdkutils.WithTimestamp(time.Now().Unix()),
+		sdkutils.WithContractName(syscontract.SystemContract_CHAIN_QUERY.String()),
+		sdkutils.WithMethod(syscontract.ChainQueryFunction_GET_BLOCK_BY_HEIGHT.String()),
+		sdkutils.WithParameters(kvs),
+		sdkutils.WithSequence(0),
+		sdkutils.WithLimit(nil),
+	)
+	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
 }
 
 func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
@@ -401,19 +438,41 @@ func sendRequest(client apiPb.RpcNodeClient, orgId string, loopId int, req *comm
 	return nil
 }
 
-// 订阅区块 subscribeBlock
-// 订阅交易 subscribeTx
-// getCurrentBlockHeight
-func sendSubscribe(ctx context.Context, client apiPb.RpcNodeClient, req *commonPb.TxRequest) (<-chan interface{}, error) {
-	resp, err := client.Subscribe(ctx, req)
+func getBlockHeight() (uint64, error) {
+	threads, err := threadFactory(1, "", nil, nil, nil)
 	if err != nil {
-		return nil, err
+		fmt.Printf("getBlockHeight err: %v\n", err)
+		return 0, err
+	}
+	builder := QueryBlockHeight{}
+	param, err := builder.Build(0)
+	if err != nil {
+		fmt.Printf("fail to build query block height: %v\n", err)
+		return 0, err
+	}
+	resp, err := threads[0].client.SendRequest(context.Background(), param)
+	if err != nil {
+		if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.DeadlineExceeded {
+			return 0, fmt.Errorf("client.call err: deadline\n")
+		}
+		return 0, err
+	}
+	blockInfo := &commonPb.BlockInfo{}
+	if err = proto.Unmarshal(resp.ContractResult.Result, blockInfo); err != nil {
+		return 0, fmt.Errorf("fail to unmarshal block height: %v\n", err)
+	}
+	fmt.Println("height: ", blockInfo.Block.Header.BlockHeight)
+	return blockInfo.Block.Header.BlockHeight, nil
+}
+
+// 订阅区块 subscribeNewBlock
+func subscribeNewBlock(ctx context.Context, thread *Thread, req *commonPb.TxRequest) error {
+	resp, err := thread.client.Subscribe(ctx, req)
+	if err != nil {
+		return err
 	}
 	fmt.Println("subscribe start")
-	c := make(chan interface{})
-
 	go func() {
-		defer close(c)
 		for {
 			select {
 			case <-ctx.Done():
@@ -421,32 +480,22 @@ func sendSubscribe(ctx context.Context, client apiPb.RpcNodeClient, req *commonP
 			default:
 				var result *commonPb.SubscribeResult
 				result, err = resp.Recv()
-				if err == io.EOF {
+				if err == io.EOF || err != nil {
 					return
-				}
-
-				if err != nil {
-					return
-				}
-
-				var ret interface{}
-				blockInfo := &commonPb.BlockInfo{}
-				if err = proto.Unmarshal(result.Data, blockInfo); err == nil {
-					ret = blockInfo
-					break
 				}
 				blockHeader := &commonPb.BlockHeader{}
-				if err = proto.Unmarshal(result.Data, blockHeader); err == nil {
-					ret = blockHeader
-					break
+				if err = proto.Unmarshal(result.Data, blockHeader); err != nil {
+					return
 				}
-				fmt.Println("block：", blockInfo)
-				close(c)
-				c <- ret
+				fmt.Println("block：", blockHeader)
+				thread.statistician.cReqStatC <- &cReqStat{
+					blockHeader, thread.index, time.Now().Unix(),
+				}
 			}
+
 		}
 	}()
-	return c, err
+	return err
 }
 
 func subNodes(statistician *Statistician) {
@@ -456,8 +505,17 @@ func subNodes(statistician *Statistician) {
 		return
 	}
 	params := make([]*commonPb.TxRequest, nodeNum)
+
+	blockHeight, err := getBlockHeight()
+	if err != nil {
+		fmt.Println("getBlockHeight err:", err)
+		return
+	}
+	fmt.Println("blockHeight:", blockHeight)
 	for i := 0; i < nodeNum; i++ {
-		s := SubscribeBlock{}
+		s := SubscribeBlock{
+			blockHeight: blockHeight,
+		}
 		params[i], err = s.Build(i)
 		if err != nil {
 			fmt.Println("error building subscribe params:", err)
@@ -466,38 +524,10 @@ func subNodes(statistician *Statistician) {
 	}
 	for i := 0; i < nodeNum; i++ {
 		go func(index int) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-			c, err := sendSubscribe(context.Background(), threads[index].client, params[index])
-			if err != nil {
+			//defer wg.Done()
+			if err := subscribeNewBlock(context.Background(), threads[index], params[index]); err != nil {
 				fmt.Println("error sendSubscribe :", err)
 				return
-			}
-			for {
-				select {
-				case block, ok := <-c:
-					if !ok {
-						fmt.Println(errors.New("chan is close"))
-						return
-					}
-
-					if block == nil {
-						fmt.Println(errors.New("received block is nil"))
-						return
-					}
-
-					blockHeader, ok := block.(*commonPb.BlockHeader)
-					if !ok {
-						fmt.Println(errors.New("received data is not *common.BlockHeader"))
-						return
-					}
-					statistician.cReqStatC <- &cReqStat{
-						blockHeader,
-					}
-					fmt.Printf("recv blockHeader [%d] => %+v\n", blockHeader.BlockHeight, blockHeader)
-				case <-ctx.Done():
-					return
-				}
 			}
 		}(i)
 	}

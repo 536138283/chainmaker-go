@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"chainmaker.org/chainmaker/common/v2/ca"
-	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/logger/v2"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -128,6 +127,8 @@ type reqStat struct {
 
 type cReqStat struct {
 	blockHeader *commonPb.BlockHeader
+	nodeId      int
+	elapsed     int64
 }
 
 type Statistician struct {
@@ -158,16 +159,16 @@ type Statistician struct {
 	TxTotal              int64
 	NodeBlockNum         []int64
 	NodeTxTotal          []int64
-	NodeMaxTxBlockHeight []int64
-	NodeMaxTxBlockCount  []int64
-	NodeMinTxBlockHeight []int64
-	NodeMinTxBlockCount  []int64
+	NodeMaxTxBlockHeight []uint64
+	NodeMaxTxBlockCount  []uint32
+	NodeMinTxBlockHeight []uint64
+	NodeMinTxBlockCount  []uint32
 	MaxTxBlockHeight     []int64
 	MinTxBlockCount      []int64
-	firstBlockTime       time.Time
-	firstBlockHeight     int64
+	firstBlockTime       int64
+	firstBlockHeight     uint64
 	lastBlockTime        time.Time
-	lastBlockHeight      int64
+	lastBlockHeight      uint64
 }
 
 // ParallelCMD parallel sub command
@@ -261,7 +262,6 @@ func ParallelCMD() *cobra.Command {
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())
 	cmd.AddCommand(upgradeContractCMD())
-	cmd.AddCommand(subscribeCMD())
 	return cmd
 }
 
@@ -273,11 +273,8 @@ const (
 )
 
 func parallel(parallelMethod string) error {
-	if nodeNum > threadNum {
-		threadNum = nodeNum
-	}
-	// 开始生产请求参数
 	initParallel()
+	// 开始生产请求参数
 	go producer(invokerMethod)
 	// produce request param
 	produceSignal <- -1
@@ -289,7 +286,7 @@ func parallel(parallelMethod string) error {
 		statistician.nodeMinSuccessElapsed[i] = math.MaxInt16
 	}
 	go statistician.Start()
-	//go subNodes(statistician)
+	go subNodes(statistician)
 	threads, err := threadFactory(threadNum, parallelMethod, doneChan, timeoutChan, statistician)
 	if err != nil {
 		return err
@@ -322,13 +319,15 @@ func getStatistician() *Statistician {
 		nodeSuccessReqCount:   make([]int, nodeNum),
 		nodeTotalReqCount:     make([]int, nodeNum),
 		NodeBlockNum:          make([]int64, nodeNum),
-		NodeTxTotal:           make([]int64, nodeNum),
-		NodeMaxTxBlockHeight:  make([]int64, nodeNum),
-		NodeMaxTxBlockCount:   make([]int64, nodeNum),
-		NodeMinTxBlockHeight:  make([]int64, nodeNum),
-		NodeMinTxBlockCount:   make([]int64, nodeNum),
-		MaxTxBlockHeight:      make([]int64, nodeNum),
-		MinTxBlockCount:       make([]int64, nodeNum),
+
+		cReqStatC:            make(chan *cReqStat, threadNum),
+		NodeTxTotal:          make([]int64, nodeNum),
+		NodeMaxTxBlockHeight: make([]uint64, nodeNum),
+		NodeMaxTxBlockCount:  make([]uint32, nodeNum),
+		NodeMinTxBlockHeight: make([]uint64, nodeNum),
+		NodeMinTxBlockCount:  make([]uint32, nodeNum),
+		MaxTxBlockHeight:     make([]int64, nodeNum),
+		MinTxBlockCount:      make([]int64, nodeNum),
 	}
 }
 
@@ -446,8 +445,31 @@ func (s *Statistician) Start() {
 				s.nodeSuccessReqCount[stat.nodeId]++
 				s.nodeSumSuccessElapsed[stat.nodeId] += stat.elapsed
 			}
-
 			s.nodeTotalReqCount[stat.nodeId]++
+		case stat := <-s.cReqStatC:
+			// 统计节点最大区块高度
+			if s.NodeMaxTxBlockHeight[stat.nodeId] < stat.blockHeader.BlockHeight {
+				s.NodeMaxTxBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
+			}
+			// 最大交易数量
+			if s.NodeMaxTxBlockCount[stat.nodeId] < stat.blockHeader.TxCount {
+				s.NodeMaxTxBlockCount[stat.nodeId] = stat.blockHeader.TxCount
+			}
+			// 最小区块高度
+			if s.NodeMinTxBlockHeight[stat.nodeId] > stat.blockHeader.BlockHeight {
+				s.NodeMaxTxBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
+			}
+			// 最小交易数量
+			if s.NodeMinTxBlockCount[stat.nodeId] > stat.blockHeader.TxCount {
+				s.NodeMinTxBlockCount[stat.nodeId] = stat.blockHeader.TxCount
+			}
+			if s.firstBlockHeight == 0 {
+				s.firstBlockHeight = stat.blockHeader.BlockHeight
+			}
+			if s.firstBlockTime != 0 {
+				s.firstBlockTime = stat.blockHeader.BlockTimestamp
+			}
+			s.lastBlockHeight = stat.blockHeader.BlockHeight
 		}
 	}
 }
@@ -529,11 +551,11 @@ func (s *Statistician) statisticsResults(ret *numberResults, all bool, nowTime t
 
 // Thread for multi-thread object
 type Thread struct {
-	id            int
-	loopNum       int
-	doneChan      chan struct{}
-	timeoutChan   chan struct{}
-	handler       Handler
+	id          int
+	loopNum     int
+	doneChan    chan struct{}
+	timeoutChan chan struct{}
+	//handler       Handler
 	statistician  *Statistician
 	operationName string
 
@@ -635,14 +657,14 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, erro
 }
 
 // Handler do multi-thread operation action
-type Handler interface {
-	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int) error
-}
+//type Handler interface {
+//	handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey, orgId string, userCrtPath string, loopId int) error
+//}
 
 // invokeHandler contract invoke handler
-type invokeHandler struct {
-	threadId int
-}
+//type invokeHandler struct {
+//	threadId int
+//}
 
 var (
 	respStr     = "proposalRequest error, resp: %+v"
@@ -956,3 +978,23 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 	return result, nil
 }
 */
+
+type outerFunc func(statistician *Statistician)
+
+func rPrint(s *Statistician, of ...outerFunc) {
+	for _, o := range of {
+		o(s)
+	}
+}
+
+func outA() outerFunc {
+	return func(statistician *Statistician) {
+		fmt.Println("")
+	}
+}
+
+func outB() outerFunc {
+	return func(statistician *Statistician) {
+
+	}
+}

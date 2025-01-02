@@ -1,4 +1,4 @@
-chain_client:
+  chain_client:
   # 链ID
   chain_id: "chain1"
   # 组织ID
