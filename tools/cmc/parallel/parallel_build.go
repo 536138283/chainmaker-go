@@ -3,22 +3,15 @@ package parallel
 import (
 	"bytes"
 	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
-	"context"
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/gogo/protobuf/proto"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"io"
 	"io/ioutil"
 	"math"
 	"os"
@@ -26,120 +19,6 @@ import (
 	"sync/atomic"
 	"time"
 )
-
-type RequestParam struct {
-	Param     *commonPb.TxRequest
-	RequestId int64
-}
-
-// 请求参数队列，存放请求参数，队列的数量为节点的数量
-// 队列的index为队列的下标
-var paramQueues []chan RequestParam
-
-var privateKeys []crypto.PrivateKey
-
-// 每一个请求参数的唯一id
-var requestId int64
-
-// 生产信号，当该chan接收到数据时，开始生产请求参数
-var produceSignal chan int
-
-// 生产因子，用来控制生产消息的数量
-var productFactor int
-
-func initParallel() {
-	if nodeNum > threadNum {
-		threadNum = nodeNum
-	}
-	initProductFactor(100)
-	produceSignal = make(chan int, 1)
-	paramQueues = make([]chan RequestParam, nodeNum)
-	for i := 0; i < nodeNum; i++ {
-		paramQueues[i] = make(chan RequestParam, productFactor)
-		// 解析签名私钥
-		file, err := os.ReadFile(signKeyPaths[i])
-		if err != nil {
-			fmt.Printf("read node[%s] sign key err: %s\n", hosts[i], err.Error())
-			return
-		}
-		signKey, err := asym.PrivateKeyFromPEM(file, nil)
-		if err != nil {
-			fmt.Printf("analysis node[%s] sign key err: %s\n", hosts[i], err.Error())
-			return
-		}
-		privateKeys = append(privateKeys, signKey)
-	}
-}
-
-// 对半法加载生产因子
-func initProductFactor(factor int) {
-	if threadNum*loopNum/factor > threadNum {
-		productFactor = threadNum * loopNum / nodeNum / factor
-		return
-	} else {
-		productFactor = productFactor / 2
-	}
-}
-
-// 构建请求参数
-// param：
-// @method：方法接收器，接受不同的cmd命令构建不同的方法调用所需要的请求参数
-// 该方法用于批量生成请求参数，生成个数由生产因子控制，当index为-1的时候像每个chan成产数据，否则像指定chan生产数据
-func producer(method string) {
-	fmt.Printf("producer method: %s\n", method)
-	var builder StressBuilder
-	switch method {
-	case invokerMethod:
-		builder = Invoke{}
-	case queryMethod:
-		builder = Query{}
-	case createContractStr:
-		builder = Create{}
-	case upgradeContractStr:
-		builder = Upgrade{}
-	}
-	for {
-		if requestId >= int64(threadNum*loopNum) {
-			close(produceSignal)
-			return
-		}
-		select {
-		case index := <-produceSignal:
-			if index == -1 {
-				for i := 0; i < productFactor; i++ {
-					for nodeIndex := 0; nodeIndex < nodeNum; nodeIndex++ {
-						atomic.AddInt64(&requestId, 1)
-						param, err := builder.Build(requestId, nodeIndex)
-						if err != nil {
-							fmt.Printf("producer err: %s\n", err.Error())
-						}
-						paramQueues[nodeIndex] <- RequestParam{
-							Param:     param,
-							RequestId: requestId,
-						}
-					}
-
-				}
-			} else {
-				go func() {
-					for i := 0; i < productFactor; i++ {
-						atomic.AddInt64(&requestId, 1)
-						param, err := builder.Build(requestId, index)
-						if err != nil {
-							fmt.Printf("producer err: %s\n", err.Error())
-						}
-						paramQueues[index] <- RequestParam{
-							Param:     param,
-							RequestId: requestId,
-						}
-					}
-				}()
-			}
-
-		}
-	}
-
-}
 
 type StressBuilder interface {
 	Build(requestId int64, index int) (*commonPb.TxRequest, error)
@@ -194,7 +73,6 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(index, "  requestId:", requestId)
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
 }
 
@@ -419,116 +297,4 @@ func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 	}
 	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
 	return req, nil
-}
-
-func sendRequest(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.TxRequest) error {
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(requestTimeout)*time.Second))
-	defer cancel()
-	result, err := client.SendRequest(ctx, req)
-	if err != nil {
-		if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.DeadlineExceeded {
-			return fmt.Errorf("client.call err: deadline\n")
-		}
-		return fmt.Errorf("client.call err: %v\n", err)
-	}
-	if outputResult {
-		msg := fmt.Sprintf(resultStr, orgId, loopId, result.ContractResult, result.TxId, result)
-		fmt.Println(msg)
-	}
-	return nil
-}
-
-func getBlockHeight() (uint64, error) {
-	threads, err := threadFactory(1, "", nil, nil, nil)
-	if err != nil {
-		fmt.Printf("getBlockHeight err: %v\n", err)
-		return 0, err
-	}
-	builder := QueryBlockHeight{}
-	param, err := builder.Build(0)
-	if err != nil {
-		fmt.Printf("fail to build query block height: %v\n", err)
-		return 0, err
-	}
-	resp, err := threads[0].client.SendRequest(context.Background(), param)
-	if err != nil {
-		if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.DeadlineExceeded {
-			return 0, fmt.Errorf("client.call err: deadline\n")
-		}
-		return 0, err
-	}
-	blockInfo := &commonPb.BlockInfo{}
-	if err = proto.Unmarshal(resp.ContractResult.Result, blockInfo); err != nil {
-		return 0, fmt.Errorf("fail to unmarshal block height: %v\n", err)
-	}
-	fmt.Println("height: ", blockInfo.Block.Header.BlockHeight)
-	return blockInfo.Block.Header.BlockHeight, nil
-}
-
-// 订阅区块 subscribeNewBlock
-func subscribeNewBlock(ctx context.Context, thread *Thread, req *commonPb.TxRequest) error {
-	resp, err := thread.client.Subscribe(ctx, req)
-	if err != nil {
-		return err
-	}
-	fmt.Println("subscribe start")
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				var result *commonPb.SubscribeResult
-				result, err = resp.Recv()
-				if err == io.EOF || err != nil {
-					return
-				}
-				blockHeader := &commonPb.BlockHeader{}
-				if err = proto.Unmarshal(result.Data, blockHeader); err != nil {
-					return
-				}
-				fmt.Println("block：", blockHeader)
-				thread.statistician.cReqStatC <- &cReqStat{
-					blockHeader, thread.index, time.Now().Unix(),
-				}
-			}
-
-		}
-	}()
-	return err
-}
-
-func subNodes(statistician *Statistician) {
-	threads, err := threadFactory(nodeNum, invokerMethod, nil, nil, statistician)
-	if err != nil {
-		fmt.Println("subNodes threadFactory err:", err)
-		return
-	}
-	params := make([]*commonPb.TxRequest, nodeNum)
-
-	blockHeight, err := getBlockHeight()
-	if err != nil {
-		fmt.Println("getBlockHeight err:", err)
-		return
-	}
-	fmt.Println("blockHeight:", blockHeight)
-	for i := 0; i < nodeNum; i++ {
-		s := SubscribeBlock{
-			blockHeight: blockHeight,
-		}
-		params[i], err = s.Build(i)
-		if err != nil {
-			fmt.Println("error building subscribe params:", err)
-			return
-		}
-	}
-	for i := 0; i < nodeNum; i++ {
-		go func(index int) {
-			//defer wg.Done()
-			if err := subscribeNewBlock(context.Background(), threads[index], params[index]); err != nil {
-				fmt.Println("error sendSubscribe :", err)
-				return
-			}
-		}(i)
-	}
 }
