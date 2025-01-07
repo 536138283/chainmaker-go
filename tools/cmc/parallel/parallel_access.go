@@ -226,17 +226,22 @@ func (s *Statistician) PrintDetails(all bool) {
 	//}
 	//fmt.Println(string(bytes))
 	resultSet := &ResultSet{}
-	s.elapsedSeconds = float32(time.Now().Sub(s.preTime).Seconds())
-	fmt.Printf("当前时间与上一次统计时间的时间间隔为: %.3f 秒\n", s.elapsedSeconds)
-	s.outBlockInfo(resultSet)
-	//s.outNodeBlockInfo(resultSet)
-	// 统计结束更新时间间隔
-	s.preTime = time.Now()
-	jsonByte1, err := json.Marshal(*resultSet)
-	if err != nil {
-		fmt.Println("e: ", err)
+	if !all {
+		s.elapsedSeconds = float32(time.Now().Sub(s.preTime).Seconds())
+		fmt.Printf("当前时间与上一次统计时间的时间间隔为: %.3f 秒\n", s.elapsedSeconds)
+		s.outBlockInfo(resultSet)
+		s.outNodeBlockInfo(resultSet)
+		// 统计结束更新时间切片
+		s.preTime = time.Now()
+		jsonByte, err := json.Marshal(*resultSet)
+		if err != nil {
+			fmt.Println("e: ", err)
+		}
+		fmt.Println("result set: ", string(jsonByte))
+	} else {
+
 	}
-	fmt.Println("result set: ", string(jsonByte1))
+
 }
 
 func getPairInfos() ([]*KeyValuePair, error) {
