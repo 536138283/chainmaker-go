@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var interrupt bool
+
 // 构建请求参数
 // param：
 // @method：方法接收器，接受不同的cmd命令构建不同的方法调用所需要的请求参数
@@ -34,8 +36,17 @@ func producer(method string) {
 		}
 		select {
 		case index := <-produceSignal:
+			if index == -2 {
+				for i := 0; i < nodeNum; i++ {
+					close(paramQueues[i])
+				}
+				return
+			}
 			if index == -1 {
 				for i := 0; i < productFactor; i++ {
+					if interrupt {
+						return
+					}
 					for nodeIndex := 0; nodeIndex < nodeNum; nodeIndex++ {
 						atomic.AddInt64(&requestId, 1)
 						param, err := builder.Build(requestId, nodeIndex)
@@ -52,6 +63,9 @@ func producer(method string) {
 			} else {
 				go func() {
 					for i := 0; i < productFactor; i++ {
+						if interrupt {
+							return
+						}
 						atomic.AddInt64(&requestId, 1)
 						param, err := builder.Build(requestId, index)
 						if err != nil {
@@ -92,6 +106,7 @@ func parallelStart(threads []*Thread) {
 // 1、exit when arrive user set timeout value (second)
 // 2、exit when all goroutine done work
 func listenAndExit(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker) {
+	fmt.Println("start listenAndExit")
 	doneCount := 0
 	timeoutTicker := time.NewTicker(time.Duration(timeout) * time.Second)
 	timeoutOnce := sync.Once{}
@@ -103,6 +118,7 @@ func listenAndExit(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker
 		case <-doneChan:
 			doneCount++
 		case <-timeoutTicker.C:
+			interrupt = true
 			go func() {
 				timeoutOnce.Do(func() {
 					for i := 0; i < threadNum; i++ {
@@ -178,7 +194,6 @@ func (t *Thread) Start() {
 			go func() {
 				defer func() {
 					if e := recover(); e != nil {
-						fmt.Println("produce param ok")
 					}
 				}()
 				if len(paramQueues[t.index]) < productFactor {

@@ -74,7 +74,7 @@ func initParallel() {
 // 对半法加载生产因子
 // 在一个chan内每个线程分配一个请求参数和一个预处理请求参数
 func initProductFactor(factor int) {
-	if factor/nodeNum > threadNum/nodeNum*2 {
+	if factor/nodeNum > threadNum/nodeNum*5 {
 		initProductFactor(factor / 2)
 	} else {
 		productFactor = factor
@@ -110,7 +110,7 @@ func parallel(parallelMethod string) error {
 	// last once statistics
 	fmt.Println("Statistics for the entire test")
 	//statistician.endTime = time.Now()
-	statistician.PrintDetails(true)
+	statistician.PrintDetails()
 	// close client conn
 	for _, t := range threads {
 		t.Stop()
@@ -123,14 +123,14 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 	for {
 		select {
 		case <-printTicker.C:
-			go statistician.PrintDetails(false)
+			go statistician.PrintDetails()
 		}
 	}
 }
 
 // PrintDetails print statistics results
 // @param all
-func (s *Statistician) PrintDetails(all bool) {
+func (s *Statistician) PrintDetails() {
 	m := make(map[string]interface{})
 	s.endTime = time.Now()
 	s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())

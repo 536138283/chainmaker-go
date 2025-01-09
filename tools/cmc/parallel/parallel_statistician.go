@@ -130,7 +130,7 @@ func (s *Statistician) outBlockInfo(resultSet *ChainResultSet) {
 	// 计算ctps
 	resultSet.CTps = float32(s.txTotal) / float32(s.elapsedSeconds)
 	// 计算区块内平均的交易数
-	resultSet.BlockTxNumAvg = float32(s.totalCount) / float32(resultSet.BlockNum)
+	resultSet.BlockTxNumAvg = float32(s.txTotal) / float32(resultSet.BlockNum)
 	// 成功上链交易数量
 	resultSet.SuccessCount = s.txTotal
 	// 未上链交易数量
@@ -149,10 +149,9 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 	resultSet.Nodes = make(map[string]*NodeInfo)
 	for i, _ := range hosts {
 		// 第一次计算是以第一个区块的高度为准，所以这里定义一个加数防止少计算一个区块
-		var addNum uint64
 		nodeInfo := &NodeInfo{}
 		// 节点的区块数量
-		nodeInfo.BlockNum = s.nodeLastBlockHeight[i] - s.nodeFirstBlockHeight[i] + addNum
+		nodeInfo.BlockNum = s.nodeLastBlockHeight[i] - s.nodeFirstBlockHeight[i] + 1
 		// 节点的平均区出块时间
 		nodeInfo.BlockOutAvg = float32(nodeInfo.BlockNum) / s.elapsedSeconds
 		// 第一个区块的出块时间, 高度
