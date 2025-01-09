@@ -7,9 +7,9 @@ import (
 )
 
 type reqStat struct {
-	success bool
-	elapsed int64
-	nodeId  int
+	success bool  // 请求是否成功
+	elapsed int64 // 单次请求结束用时 单位：毫秒
+	nodeId  int   // 节点id
 }
 
 type cReqStat struct {
@@ -19,125 +19,122 @@ type cReqStat struct {
 }
 
 type Statistician struct {
+	rpcStatistician
+	chainStatistician
+	// 通用统计数据
+	nodeTotalReqCount []uint32 // 发起 交易/请求总数
+	totalCount        uint32   // 各个节点发起 交易/请求 总数
+	elapsedSeconds    float32  // 统计的时间间隔
+}
+
+// rpc统计对象
+type rpcStatistician struct {
 	// rpc standards
-	reqStatC           chan *reqStat
-	minSuccessElapsed  int64
-	maxSuccessElapsed  int64
-	sumSuccessElapsed  int64
-	totalCount         uint32
-	successCount       int
-	lastIndex          int
-	lastStartTime      time.Time
-	startTime          time.Time // 开始时间
-	endTime            time.Time // 结束时间
-	preTime            time.Time // 上次的统计结束的时间用来计算时间间隔
-	preBlockHeight     uint64
-	preBlockTime       int64
-	nodePreBlockHeight []uint64
-	nodePreBlockTime   []int64
-	elapsedSeconds     float32 // 统计的时间间隔
-	// Classify by node id
-	cReqStatC             chan *cReqStat
-	nodeMinSuccessElapsed []int64
-	nodeMaxSuccessElapsed []int64
-	nodeSumSuccessElapsed []int64
-	nodeSuccessReqCount   []int
-	nodeTotalReqCount     []int
-	// block chain standards
-	temporaryTxTotal     uint32
-	nodeTemporaryTxTotal []uint32
-	nodeRequestTotal     []uint32
-	txDealSpeedTicker    *time.Ticker
-	TemporaryTxSpeed     uint32
-	MaxTxDealSpeed       uint32
-	MinTxDealSpeed       uint32
-	blockNum             int64
-	nodeBlockNum         []int64
-	nodeTxTotal          []uint32
-	nodeMaxTxBlockHeight []uint64
-	nodeMaxTxBlockCount  []uint32
-	nodeMinTxBlockHeight []uint64
-	nodeMinTxBlockCount  []uint32
-	nodeFirstBlockHeight []uint64
-	nodeLastBlockHeight  []uint64
-	nodeFirstBlockTime   []int64
-	nodeLastBlockTime    []int64
-	maxTxBlockHeight     uint64
-	maxTxBlockCount      uint32
-	minTxBlockHeight     uint64
-	minTxBlockCount      uint32
-	firstBlockTime       int64
-	firstBlockHeight     uint64
-	lastBlockTime        int64
-	lastBlockHeight      uint64
-	txTotal              uint32
-	blockTotal           uint32
+	reqStatC              chan *reqStat // 用来接收rpc响应的chan，从该chan中读取请求响应信息并进行统计
+	minSuccessElapsed     int64         // 最短成功响应时长 单位：ms
+	maxSuccessElapsed     int64         // 最大成功响应时长 单位：ms
+	sumSuccessElapsed     int64         // 成功请求总延时 单位：ms
+	successCount          uint32        // 成功请求数
+	startTime             time.Time     // 开始时间
+	endTime               time.Time     // 结束时间
+	nodeMinSuccessElapsed []int64       // 节点最短请求响应成功时间
+	nodeMaxSuccessElapsed []int64       // 节点最大请求响应成功时间
+	nodeSumSuccessElapsed []int64       // 节点总响应成功时间
+	nodeSuccessCount      []uint32      // 节点成功请求数
 }
 
+// 区块链统计对象
+type chainStatistician struct {
+	cReqStatC chan *cReqStat // 用来接收订阅的节点返回的区块的chan,从该chan中读取区块信息并进行统计
+	blockStatistician
+	nodeBlockStatistician
+}
+
+// 整链子区块统计对象
+type blockStatistician struct {
+	temporaryTxSpeed  uint32       // 链上临时交易处理速度
+	txDealSpeedTicker *time.Ticker // 时间定时器
+	MaxTxDealSpeed    uint32       // 链上最块交易处理速度
+	MinTxDealSpeed    uint32       // 链上最慢交易处理速度
+	blockNum          int64        // 链上的出块总数
+	maxTxBlockHeight  uint64       // 链上包含最多交易的区块的区块高度
+	maxTxBlockCount   uint32       // 链上包含最多交易的区块的交易数量
+	minTxBlockHeight  uint64       // 链上包含最少交易的区块的区块高度
+	minTxBlockCount   uint32       // 链上包含最少交易的区块的交易数量
+	firstBlockTime    int64        // 链上第一次出块的时间
+	firstBlockHeight  uint64       // 链上第一次出块的区块高度
+	lastBlockTime     int64        // 链上最后一次出块的时间
+	lastBlockHeight   uint64       // 链上最后一次出块的区块高度
+	txTotal           uint32       // 链上交易总数
+	blockTotal        uint32       // 链上出块总数
+}
+
+// 节点区块统计对象
+type nodeBlockStatistician struct {
+	nodeTemporaryTxSpeed []uint32 // 各个节点的临时交易处理速度，每秒统计一次统计后清空
+	nodeMaxTxDealSpeed   []uint32 // 各个节点的最大交易处理速度，单位 笔/秒
+	nodeMinTxDealSpeed   []uint32 // 各个节点的最小交易处理速度，单位 笔/秒
+	nodeTxTotal          []uint32 // 各个节点的交易总数
+	nodeMaxTxBlockHeight []uint64 // 各个节点包含最多交易的区块的高度
+	nodeMaxTxBlockCount  []uint32 // 各个节点包含最多交易的区块的交易数
+	nodeMinTxBlockHeight []uint64 // 各个节点包含最少交易的区块高度
+	nodeMinTxBlockCount  []uint32 // 各个节点包含最少交易的区块的交易数
+	nodeFirstBlockHeight []uint64 // 各个节点第一个区块的区块高度
+	nodeLastBlockHeight  []uint64 // 各个节点最后一个区块的区块高度
+	nodeFirstBlockTime   []int64  // 各个节点出块第一个出块时间
+	nodeLastBlockTime    []int64  // 节点最后一次出块的时间
+}
+
+// 初始化默认统计对象
 func getStatistician() *Statistician {
-	return &Statistician{
-		reqStatC:              make(chan *reqStat, threadNum),
-		nodeMinSuccessElapsed: make([]int64, nodeNum),
-		nodeMaxSuccessElapsed: make([]int64, nodeNum),
-		nodeSumSuccessElapsed: make([]int64, nodeNum),
-		nodeSuccessReqCount:   make([]int, nodeNum),
-		nodeTotalReqCount:     make([]int, nodeNum),
-		nodeBlockNum:          make([]int64, nodeNum),
-		nodeTemporaryTxTotal:  make([]uint32, nodeNum),
-		nodePreBlockTime:      make([]int64, nodeNum),
-		nodePreBlockHeight:    make([]uint64, nodeNum),
-		cReqStatC:             make(chan *cReqStat, threadNum),
-		nodeTxTotal:           make([]uint32, nodeNum),
-		nodeMaxTxBlockHeight:  make([]uint64, nodeNum),
-		nodeMaxTxBlockCount:   make([]uint32, nodeNum),
-		nodeMinTxBlockHeight:  make([]uint64, nodeNum),
-		nodeMinTxBlockCount:   make([]uint32, nodeNum),
-		nodeFirstBlockHeight:  make([]uint64, nodeNum),
-		nodeLastBlockHeight:   make([]uint64, nodeNum),
-		nodeFirstBlockTime:    make([]int64, nodeNum),
-		nodeLastBlockTime:     make([]int64, nodeNum),
-		nodeRequestTotal:      make([]uint32, nodeNum),
-		txDealSpeedTicker:     time.NewTicker(time.Second),
-	}
+	s := &Statistician{}
+	s.reqStatC = make(chan *reqStat, threadNum)
+	s.nodeMinSuccessElapsed = make([]int64, nodeNum)
+	s.nodeMaxSuccessElapsed = make([]int64, nodeNum)
+	s.nodeSumSuccessElapsed = make([]int64, nodeNum)
+	s.nodeSuccessCount = make([]uint32, nodeNum)
+	s.nodeTotalReqCount = make([]uint32, nodeNum)
+	s.cReqStatC = make(chan *cReqStat, threadNum)
+	s.nodeTxTotal = make([]uint32, nodeNum)
+	s.nodeMaxTxBlockHeight = make([]uint64, nodeNum)
+	s.nodeMaxTxBlockCount = make([]uint32, nodeNum)
+	s.nodeMinTxBlockHeight = make([]uint64, nodeNum)
+	s.nodeMinTxBlockCount = make([]uint32, nodeNum)
+	s.nodeFirstBlockHeight = make([]uint64, nodeNum)
+	s.nodeLastBlockHeight = make([]uint64, nodeNum)
+	s.nodeFirstBlockTime = make([]int64, nodeNum)
+	s.nodeLastBlockTime = make([]int64, nodeNum)
+	s.txDealSpeedTicker = time.NewTicker(time.Second)
+	s.nodeTemporaryTxSpeed = make([]uint32, nodeNum)
+	s.nodeMaxTxDealSpeed = make([]uint32, nodeNum)
+	s.nodeMinTxDealSpeed = make([]uint32, nodeNum)
+	return s
 }
 
-func (s *Statistician) outBlockInfo(resultSet *ResultSet) {
+// 将结果输出到result set结果集
+func (s *Statistician) outBlockInfo(resultSet *ChainResultSet) {
 	if s.blockTotal == 0 {
 		fmt.Println("no block")
 		return
 	}
-	// 第一次计算是以第一个区块的高度为准，所以这里定义一个加数防止少计算一个区块
-	var addNum uint64
-	if s.preBlockHeight == 0 {
-		s.preBlockHeight = s.firstBlockHeight
-		s.preBlockTime = s.firstBlockTime
-		addNum = 1
-	} else {
-		addNum = 0
-	}
-	// 计算平均出块时间
-	resultSet.BlockOutAvg = float32(s.lastBlockHeight-s.preBlockHeight+addNum) / float32(s.elapsedSeconds)
 	// 区块数量
-	resultSet.BlockNum = s.lastBlockHeight - s.preBlockHeight + addNum
+	resultSet.BlockNum = s.lastBlockHeight - s.firstBlockHeight + 1
+	// 计算平均出块时间
+	resultSet.BlockOutAvg = float32(resultSet.BlockNum) / float32(s.elapsedSeconds)
 	// 第一个区块的出块时间, 高度
-	resultSet.FirstBlockTime = time.Unix(s.preBlockTime, 0).Format("2006-01-02 15:04:05.000")
-	resultSet.FirstBlockHeight = s.preBlockHeight
+	resultSet.FirstBlockTime = time.Unix(s.firstBlockTime, 0).Format("2006-01-02 15:04:05.000")
+	resultSet.FirstBlockHeight = s.firstBlockHeight
 	// 最后一个区块的出块时间，高度
 	resultSet.LastBlockHeight = s.lastBlockHeight
 	resultSet.LastBlockTime = time.Unix(s.lastBlockTime, 0).Format("2006-01-02 15:04:05.000")
 	// 计算ctps
-	resultSet.CTps = float32(s.temporaryTxTotal) / float32(s.elapsedSeconds)
+	resultSet.CTps = float32(s.txTotal) / float32(s.elapsedSeconds)
 	// 计算区块内平均的交易数
-	resultSet.BlockTxNumAvg = float32(s.temporaryTxTotal) / float32(resultSet.BlockNum)
+	resultSet.BlockTxNumAvg = float32(s.totalCount) / float32(resultSet.BlockNum)
 	// 成功上链交易数量
 	resultSet.SuccessCount = s.txTotal
 	// 未上链交易数量
 	resultSet.FailCount = s.totalCount - s.txTotal
-	// 开始结束时间
-	resultSet.StartTime = s.preTime.Format("2006-01-02 15:04:05.000")
-	resultSet.EndTime = time.Now().Format("2006-01-02 15:04:05.000")
-	resultSet.ThreadNum = threadNum
-	resultSet.LoopNum = loopNum
 	// 获取包含最大最小交易数的区块的区块高度和交易数量
 	resultSet.MaxTxBlock.BlockHeight = s.maxTxBlockHeight
 	resultSet.MaxTxBlock.TxCount = s.maxTxBlockCount
@@ -146,120 +143,73 @@ func (s *Statistician) outBlockInfo(resultSet *ResultSet) {
 	// 获取到处理速度
 	resultSet.DealMax = s.MaxTxDealSpeed
 	resultSet.DealMin = s.MinTxDealSpeed
-	// 计算完毕 以当前最后一个区块为准计算下一次的平均区块产出
-	s.preBlockHeight = s.lastBlockHeight
-	s.preBlockTime = s.lastBlockTime
-	s.temporaryTxTotal = 0
 }
 
-func (s *Statistician) outNodeBlockInfo(resultSet *ResultSet) {
+func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
+	resultSet.Nodes = make(map[string]*NodeInfo)
 	for i, _ := range hosts {
 		// 第一次计算是以第一个区块的高度为准，所以这里定义一个加数防止少计算一个区块
 		var addNum uint64
-		if s.nodePreBlockHeight[i] == 0 {
-			s.nodePreBlockHeight[i] = s.firstBlockHeight
-			s.nodePreBlockTime[i] = s.firstBlockTime
-			addNum = 1
-		} else {
-			addNum = 0
-		}
 		nodeInfo := &NodeInfo{}
-		// 节点的平均区出块时间
-		nodeInfo.BlockOutAvg = float32(s.nodeLastBlockHeight[i]-s.nodePreBlockHeight[i]+addNum) / s.elapsedSeconds
 		// 节点的区块数量
-		nodeInfo.BlockNum = s.nodeLastBlockHeight[i] - s.nodePreBlockHeight[i] + addNum
+		nodeInfo.BlockNum = s.nodeLastBlockHeight[i] - s.nodeFirstBlockHeight[i] + addNum
+		// 节点的平均区出块时间
+		nodeInfo.BlockOutAvg = float32(nodeInfo.BlockNum) / s.elapsedSeconds
 		// 第一个区块的出块时间, 高度
-		nodeInfo.FirstBlockTime = time.Unix(s.nodePreBlockTime[i], 0).Format("2006-01-02 15:04:05.000")
-		nodeInfo.FirstBlockHeight = s.nodePreBlockHeight[i]
+		nodeInfo.FirstBlockTime = time.Unix(s.nodeFirstBlockTime[i], 0).Format("2006-01-02 15:04:05.000")
+		nodeInfo.FirstBlockHeight = s.nodeFirstBlockHeight[i]
 		// 节点最后一个区块的出块时间，高度
 		nodeInfo.LastBlockHeight = s.nodeLastBlockHeight[i]
 		nodeInfo.LastBlockTime = time.Unix(s.nodeLastBlockTime[i], 0).Format("2006-01-02 15:04:05.000")
 		// 计算节点的ctps
-		nodeInfo.CTps = float32(s.nodeTemporaryTxTotal[i]) / float32(s.elapsedSeconds)
+		nodeInfo.CTps = float32(s.nodeTxTotal[i]) / float32(s.elapsedSeconds)
 		// 计算区块内平均的交易数
-		nodeInfo.BlockTxNumAvg = float32(s.nodeTemporaryTxTotal[i]) / float32(nodeInfo.BlockNum)
+		nodeInfo.BlockTxNumAvg = float32(s.nodeTxTotal[i]) / float32(nodeInfo.BlockNum)
 		// 统计节点的成功上链的交易数量与请求数量
 		nodeInfo.SuccessCount = s.nodeTxTotal[i]
-		nodeInfo.FailCount = s.nodeRequestTotal[i] - s.nodeTxTotal[i]
+		nodeInfo.FailCount = s.nodeTotalReqCount[i] - s.nodeTxTotal[i]
+		nodeInfo.DealMax = s.nodeMaxTxDealSpeed[i]
+		nodeInfo.DealMin = s.nodeMinTxDealSpeed[i]
 		// 添加到节点的结果集信息统计
-		resultSet.Nodes = append(resultSet.Nodes, nodeInfo)
-		// 计算完毕 以当前最后一个区块为准计算下一次的平均区块产出
-		s.nodePreBlockHeight[i] = s.nodeLastBlockHeight[i]
-		s.nodePreBlockTime[i] = s.nodeLastBlockTime[i]
-		s.nodeTemporaryTxTotal[i] = 0
+		resultSet.Nodes[fmt.Sprintf("node%d", i)] = nodeInfo
 	}
 }
 
-func (s *Statistician) statisticsResults(ret *numberResults, all bool, nowTime time.Time) (detail *Detail) {
-	detail = &Detail{
-		Nodes: make(map[string]interface{}),
-	}
-	if ret.count > 0 {
-		detail = &Detail{
-			SuccessCount: ret.successCount,
-			FailCount:    ret.count - ret.successCount,
-			Count:        ret.count,
-			MinTime:      ret.min,
-			MaxTime:      ret.max,
-			AvgTime:      float32(ret.sum) / float32(ret.count),
-			ThreadNum:    threadNum,
-			LoopNum:      loopNum,
-			Nodes:        make(map[string]interface{}),
-		}
+func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
+	resultSet.Nodes = make(map[string]interface{})
+	if s.totalCount > 0 {
+		resultSet.SuccessCount = s.successCount
+		resultSet.FailCount = s.totalCount - s.successCount
+		resultSet.Count = s.totalCount
+		resultSet.MinTime = s.minSuccessElapsed
+		resultSet.MaxTime = s.maxSuccessElapsed
+		resultSet.AvgTime = float32(s.sumSuccessElapsed) / float32(s.totalCount)
 		for i := 0; i < nodeNum; i++ {
-			detail.Nodes[fmt.Sprintf("node%d_successCount", i)] = ret.nodeSuccessCount[i]
-			detail.Nodes[fmt.Sprintf("node%d_failCount", i)] = ret.nodeCount[i] - ret.nodeSuccessCount[i]
-			detail.Nodes[fmt.Sprintf("node%d_count", i)] = ret.nodeCount[i]
-			detail.Nodes[fmt.Sprintf("node%d_minTime", i)] = ret.nodeMin[i]
-			detail.Nodes[fmt.Sprintf("node%d_maxTime", i)] = ret.nodeMax[i]
-			detail.Nodes[fmt.Sprintf("node%d_avgTime", i)] = float32(ret.nodeSum[i]) / float32(ret.nodeCount[i])
+			resultSet.Nodes[fmt.Sprintf("node%d_successCount", i)] = s.nodeSuccessCount[i]
+			resultSet.Nodes[fmt.Sprintf("node%d_failCount", i)] = s.nodeTotalReqCount[i] - s.nodeSuccessCount[i]
+			resultSet.Nodes[fmt.Sprintf("node%d_count", i)] = s.nodeTotalReqCount[i]
+			resultSet.Nodes[fmt.Sprintf("node%d_minTime", i)] = s.nodeMinSuccessElapsed[i]
+			resultSet.Nodes[fmt.Sprintf("node%d_maxTime", i)] = s.nodeMaxSuccessElapsed[i]
+			resultSet.Nodes[fmt.Sprintf("node%d_avgTime", i)] = float32(s.nodeSumSuccessElapsed[i]) / float32(s.nodeTotalReqCount[i])
 		}
 	}
-	if all {
-		detail.StartTime = s.startTime.Format("2006-01-02 15:04:05.000")
-		detail.EndTime = s.endTime.Format("2006-01-02 15:04:05.000")
-		detail.Elapsed = float32(s.endTime.Sub(s.startTime).Milliseconds()) / 1000
-		detail.TPS = float32(ret.successCount) / float32(s.endTime.Sub(s.startTime).Seconds())
-		for i := 0; i < nodeNum; i++ {
-			detail.Nodes[fmt.Sprintf("node%d_tps", i)] = float32(ret.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Seconds())
-		}
-	} else {
-		detail.StartTime = s.lastStartTime.Format("2006-01-02 15:04:05.000")
-		detail.EndTime = nowTime.Format("2006-01-02 15:04:05.000")
-		detail.Elapsed = float32(nowTime.Sub(s.lastStartTime).Milliseconds()) / 1000
-		detail.TPS = float32(ret.successCount) / float32(nowTime.Sub(s.startTime).Seconds())
-		for i := 0; i < nodeNum; i++ {
-			detail.Nodes[fmt.Sprintf("node%d_tps", i)] = float32(ret.nodeSuccessCount[i]) / float32(nowTime.Sub(s.startTime).Seconds())
-		}
+	resultSet.StartTime = s.startTime.Format("2006-01-02 15:04:05.000")
+	resultSet.EndTime = s.endTime.Format("2006-01-02 15:04:05.000")
+	resultSet.Elapsed = s.elapsedSeconds
+	resultSet.TPS = float32(s.successCount) / float32(s.endTime.Sub(s.startTime).Seconds())
+	for i := 0; i < nodeNum; i++ {
+		resultSet.Nodes[fmt.Sprintf("node%d_tps", i)] = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Seconds())
 	}
-	return detail
 }
 
-// 收集参数
-func (s *Statistician) Collect() {
+// 收集参数s
+func (s *Statistician) collect() {
 	flag := true
 	for {
 		select {
 		case stat := <-s.reqStatC:
-			if stat.success {
-				if stat.elapsed < s.minSuccessElapsed {
-					s.minSuccessElapsed = stat.elapsed
-				}
-				if stat.elapsed > s.maxSuccessElapsed {
-					s.maxSuccessElapsed = stat.elapsed
-				}
-				if stat.elapsed < s.nodeMinSuccessElapsed[stat.nodeId] {
-					s.nodeMinSuccessElapsed[stat.nodeId] = stat.elapsed
-				}
-				if stat.elapsed > s.nodeMaxSuccessElapsed[stat.nodeId] {
-					s.nodeMaxSuccessElapsed[stat.nodeId] = stat.elapsed
-				}
-				s.successCount++
-				s.sumSuccessElapsed += stat.elapsed
-				s.nodeSuccessReqCount[stat.nodeId]++
-				s.nodeSumSuccessElapsed[stat.nodeId] += stat.elapsed
-			}
-			s.nodeTotalReqCount[stat.nodeId]++
+			// 统计rpc压测指标
+			s.statisticianRpc(stat)
 		case stat := <-s.cReqStatC:
 			// 第一个区块为上一次执行时的最后一个区块，所以跳过第一个区块
 			if flag {
@@ -274,6 +224,32 @@ func (s *Statistician) Collect() {
 			computeSpeed(stat, s)
 		}
 	}
+}
+
+func (s *Statistician) statisticianRpc(stat *reqStat) {
+	if stat.success {
+		if s.minSuccessElapsed == 0 || s.maxSuccessElapsed == 0 {
+			s.minSuccessElapsed = stat.elapsed
+			s.maxSuccessElapsed = stat.elapsed
+		}
+		if stat.elapsed < s.minSuccessElapsed {
+			s.minSuccessElapsed = stat.elapsed
+		}
+		if stat.elapsed > s.maxSuccessElapsed {
+			s.maxSuccessElapsed = stat.elapsed
+		}
+		if stat.elapsed < s.nodeMinSuccessElapsed[stat.nodeId] {
+			s.nodeMinSuccessElapsed[stat.nodeId] = stat.elapsed
+		}
+		if stat.elapsed > s.nodeMaxSuccessElapsed[stat.nodeId] {
+			s.nodeMaxSuccessElapsed[stat.nodeId] = stat.elapsed
+		}
+		s.successCount++
+		s.sumSuccessElapsed += stat.elapsed
+		s.nodeSuccessCount[stat.nodeId]++
+		s.nodeSumSuccessElapsed[stat.nodeId] += stat.elapsed
+	}
+	s.nodeTotalReqCount[stat.nodeId]++
 }
 
 func (s *Statistician) statisticianTxBlock(stat *cReqStat) {
@@ -298,8 +274,6 @@ func (s *Statistician) statisticianTxBlock(stat *cReqStat) {
 	if s.firstBlockHeight == 0 {
 		s.firstBlockHeight = stat.blockHeader.BlockHeight
 	}
-	// 记录临时的交易处理数量
-	s.temporaryTxTotal += stat.blockHeader.TxCount
 	// 记录交易总数，区块总数
 	s.txTotal += stat.blockHeader.TxCount
 	s.blockTotal++
@@ -314,7 +288,6 @@ func (s *Statistician) statisticianNodeTxBlock(stat *cReqStat) {
 		s.nodeMaxTxBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
 		s.nodeMaxTxBlockCount[stat.nodeId] = stat.blockHeader.TxCount
 	}
-
 	// 统计节点交易最少的区块高度，块交易数量
 	if s.nodeMinTxBlockCount[stat.nodeId] == 0 {
 		s.nodeMaxTxBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
@@ -324,11 +297,10 @@ func (s *Statistician) statisticianNodeTxBlock(stat *cReqStat) {
 		s.nodeMaxTxBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
 		s.nodeMinTxBlockCount[stat.nodeId] = stat.blockHeader.TxCount
 	}
-	// 记录节点临时的交易处理数量
-	s.nodeTemporaryTxTotal[stat.nodeId] += stat.blockHeader.TxCount
 	// 统计节点第一个出块时间和最后一次区块高度
 	if s.nodeFirstBlockTime[stat.nodeId] == 0 {
 		s.nodeFirstBlockTime[stat.nodeId] = stat.blockHeader.BlockTimestamp
+		s.nodeFirstBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
 	}
 	// 更新节点处理交易的总数
 	s.nodeTxTotal[stat.nodeId] += stat.blockHeader.TxCount
@@ -338,21 +310,33 @@ func (s *Statistician) statisticianNodeTxBlock(stat *cReqStat) {
 }
 
 func computeSpeed(stat *cReqStat, s *Statistician) {
-	s.TemporaryTxSpeed += stat.blockHeader.TxCount
+	s.temporaryTxSpeed += stat.blockHeader.TxCount
+	s.nodeTemporaryTxSpeed[stat.nodeId] += stat.blockHeader.TxCount
 	for {
 		select {
 		case <-s.txDealSpeedTicker.C:
 			if s.MinTxDealSpeed == 0 || s.MaxTxDealSpeed == 0 {
-				s.MaxTxDealSpeed = s.TemporaryTxSpeed
-				s.MinTxDealSpeed = s.TemporaryTxSpeed
+				s.MaxTxDealSpeed = s.temporaryTxSpeed
+				s.MinTxDealSpeed = s.temporaryTxSpeed
 			}
-			if s.TemporaryTxSpeed > s.MaxTxDealSpeed {
-				s.MaxTxDealSpeed = s.TemporaryTxSpeed
+			if s.temporaryTxSpeed > s.MaxTxDealSpeed {
+				s.MaxTxDealSpeed = s.temporaryTxSpeed
 			}
-			if s.TemporaryTxSpeed < s.MinTxDealSpeed {
-				s.MinTxDealSpeed = s.TemporaryTxSpeed
+			if s.temporaryTxSpeed < s.MinTxDealSpeed {
+				s.MinTxDealSpeed = s.temporaryTxSpeed
 			}
-			s.TemporaryTxSpeed = 0
+			s.temporaryTxSpeed = 0
+			if s.nodeMinTxDealSpeed[stat.nodeId] == 0 || s.nodeMaxTxDealSpeed[stat.nodeId] == 0 {
+				s.nodeMaxTxDealSpeed[stat.nodeId] = s.nodeTemporaryTxSpeed[stat.nodeId]
+				s.nodeMinTxDealSpeed[stat.nodeId] = s.nodeTemporaryTxSpeed[stat.nodeId]
+			}
+			if s.nodeTemporaryTxSpeed[stat.nodeId] > s.nodeMaxTxDealSpeed[stat.nodeId] {
+				s.nodeMaxTxDealSpeed[stat.nodeId] = s.nodeTemporaryTxSpeed[stat.nodeId]
+			}
+			if s.nodeTemporaryTxSpeed[stat.nodeId] < s.nodeMinTxDealSpeed[stat.nodeId] {
+				s.nodeMinTxDealSpeed[stat.nodeId] = s.nodeTemporaryTxSpeed[stat.nodeId]
+			}
+			s.nodeTemporaryTxSpeed[stat.nodeId] = 0
 		default:
 			return
 		}
@@ -376,7 +360,7 @@ type BlockInfo struct {
 	BlockTxNumAvg    float32 `json:"blockTxNumAvg"`
 	CTps             float32 `json:"ctps"`
 }
-type ResultSet struct {
+type ChainResultSet struct {
 	BlockInfo
 	MaxTxBlock struct {
 		BlockHeight uint64 `json:"blockHeight"`
@@ -390,20 +374,29 @@ type ResultSet struct {
 	FailCount    uint32 `json:"failCount"`
 	DealMax      uint32 `json:"dealMax"`
 	DealMin      uint32 `json:"dealMin"`
-	//CTPs         float64     `json:"ctps"`
-	QTPs      float64     `json:"qtps"`
-	ThreadNum int         `json:"threadNum"`
-	LoopNum   int         `json:"loopNum"`
-	StartTime string      `json:"startTime"`
-	EndTime   string      `json:"endTime"`
-	Nodes     []*NodeInfo `json:"nodes"`
+	//StartTime    string               `json:"startTime"`
+	//EndTime      string               `json:"endTime"`
+	Nodes map[string]*NodeInfo `json:"nodes"`
 }
 
 type NodeInfo struct {
 	BlockInfo
-	Qtps         float64 `json:"qtps"`
-	SuccessCount uint32  `json:"successCount"`
-	FailCount    uint32  `json:"failCount"`
-	DealMax      int     `json:"dealMax"`
-	DealMin      int     `json:"dealMin"`
+	SuccessCount uint32 `json:"successCount"`
+	FailCount    uint32 `json:"failCount"`
+	DealMax      uint32 `json:"dealMax"`
+	DealMin      uint32 `json:"dealMin"`
+}
+
+type RpcResultSet struct {
+	TPS          float32                `json:"tps"`
+	SuccessCount uint32                 `json:"successCount"`
+	FailCount    uint32                 `json:"failCount"`
+	Count        uint32                 `json:"count"`
+	MinTime      int64                  `json:"minTime"`
+	MaxTime      int64                  `json:"maxTime"`
+	AvgTime      float32                `json:"avgTime"`
+	StartTime    string                 `json:"startTime"`
+	EndTime      string                 `json:"endTime"`
+	Elapsed      float32                `json:"elapsed"`
+	Nodes        map[string]interface{} `json:"nodes"`
 }

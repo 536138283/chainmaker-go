@@ -18,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 var log = logger.GetLogger(logger.MODULE_CLI)
@@ -93,22 +92,6 @@ type KeyValuePair struct {
 	// mu protect IntValue in Increase/Decrease scene.
 	mu       sync.Mutex
 	IntValue int64 `json:"-"`
-}
-
-type Detail struct {
-	TPS          float32                `json:"tps"`
-	SuccessCount int                    `json:"successCount"`
-	FailCount    int                    `json:"failCount"`
-	Count        int                    `json:"count"`
-	MinTime      int64                  `json:"minTime"`
-	MaxTime      int64                  `json:"maxTime"`
-	AvgTime      float32                `json:"avgTime"`
-	StartTime    string                 `json:"startTime"`
-	EndTime      string                 `json:"endTime"`
-	Elapsed      float32                `json:"elapsed"`
-	ThreadNum    int                    `json:"threadNum"`
-	LoopNum      int                    `json:"loopNum"`
-	Nodes        map[string]interface{} `json:"nodes"`
 }
 
 // ParallelCMD parallel sub command
@@ -203,45 +186,6 @@ func ParallelCMD() *cobra.Command {
 	cmd.AddCommand(createContractCMD())
 	cmd.AddCommand(upgradeContractCMD())
 	return cmd
-}
-
-// PrintDetails print statistics results
-// @param all
-func (s *Statistician) PrintDetails(all bool) {
-	//nowCount := atomic.LoadInt32(&s.totalCount)
-	//nowTime := time.Now()
-
-	//detail := s.statisticsResults(&numberResults{count: int(s.totalCount), successCount: s.successCount,
-	//	max: s.maxSuccessElapsed, min: s.minSuccessElapsed, sum: s.sumSuccessElapsed,
-	//	nodeSuccessCount: s.nodeSuccessReqCount,
-	//	nodeCount:        s.nodeTotalReqCount, nodeMin: s.nodeMinSuccessElapsed,
-	//	nodeMax: s.nodeMaxSuccessElapsed, nodeSum: s.nodeSumSuccessElapsed}, all, nowTime)
-	//s.lastIndex = int(nowCount)
-	//s.lastStartTime = time.Now()
-	//
-	//bytes, err := json.Marshal(detail)
-	//if err != nil {
-	//	fmt.Println(err)
-	//	return
-	//}
-	//fmt.Println(string(bytes))
-	resultSet := &ResultSet{}
-	if !all {
-		s.elapsedSeconds = float32(time.Now().Sub(s.preTime).Seconds())
-		fmt.Printf("当前时间与上一次统计时间的时间间隔为: %.3f 秒\n", s.elapsedSeconds)
-		s.outBlockInfo(resultSet)
-		s.outNodeBlockInfo(resultSet)
-		// 统计结束更新时间切片
-		s.preTime = time.Now()
-		jsonByte, err := json.Marshal(*resultSet)
-		if err != nil {
-			fmt.Println("e: ", err)
-		}
-		fmt.Println("result set: ", string(jsonByte))
-	} else {
-
-	}
-
 }
 
 func getPairInfos() ([]*KeyValuePair, error) {

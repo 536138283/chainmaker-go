@@ -4,6 +4,7 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"encoding/json"
 	"fmt"
 	"math"
 	"os"
@@ -91,27 +92,24 @@ func parallel(parallelMethod string) error {
 	doneChan := make(chan struct{}, threadNum)
 	statistician := getStatistician()
 	statistician.startTime = time.Now()
-	statistician.preTime = time.Now()
 	for i := 0; i < nodeNum; i++ {
 		statistician.nodeMinSuccessElapsed[i] = math.MaxInt16
 	}
-	go statistician.Collect()
+	go statistician.collect()
 	go subNodes(statistician)
 	threads, err := threadFactory(threadNum, parallelMethod, doneChan, timeoutChan, statistician)
 	if err != nil {
 		return err
 	}
+	// 订阅后记录当前时间
 	statistician.startTime = time.Now()
-	statistician.lastStartTime = time.Now()
-	fmt.Println(time.Now())
 	go parallelStart(threads)
 	printTicker := time.NewTicker(time.Duration(printTime) * time.Second)
 	go printResult(printTicker, statistician)
-
 	listenAndExit(timeoutChan, doneChan, printTicker)
 	// last once statistics
 	fmt.Println("Statistics for the entire test")
-	statistician.endTime = time.Now()
+	//statistician.endTime = time.Now()
 	statistician.PrintDetails(true)
 	// close client conn
 	for _, t := range threads {
@@ -127,5 +125,55 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 		case <-printTicker.C:
 			go statistician.PrintDetails(false)
 		}
+	}
+}
+
+// PrintDetails print statistics results
+// @param all
+func (s *Statistician) PrintDetails(all bool) {
+	m := make(map[string]interface{})
+	s.endTime = time.Now()
+	s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
+	fmt.Printf("当前时间与上一次统计时间的时间间隔为: %.3f 秒\n", s.elapsedSeconds)
+	s.run(m, s.usualPrint(), s.chainPrint(), s.rpcPrint())
+	jsonChainByte, err := json.Marshal(m)
+	if err != nil {
+		fmt.Println("e: ", err)
+		return
+	}
+	fmt.Println("result set: ", string(jsonChainByte))
+}
+
+type printOpt func(map[string]interface{})
+
+func (s *Statistician) run(m map[string]interface{}, opts ...printOpt) {
+	for _, opt := range opts {
+		opt(m)
+	}
+}
+
+func (s *Statistician) usualPrint() printOpt {
+	return func(m map[string]interface{}) {
+		m["threadNum"] = threadNum
+		m["loopNum"] = loopNum
+		m["startTime"] = s.startTime.Format("2006-01-02 15:04:05")
+		m["endTime"] = s.endTime.Format("2006-01-02 15:04:05")
+	}
+}
+
+func (s *Statistician) chainPrint() printOpt {
+	return func(m map[string]interface{}) {
+		chainResult := &ChainResultSet{}
+		s.outBlockInfo(chainResult)
+		s.outNodeBlockInfo(chainResult)
+		m["chainResult"] = *chainResult
+	}
+}
+
+func (s *Statistician) rpcPrint() printOpt {
+	return func(m map[string]interface{}) {
+		rpcResult := &RpcResultSet{}
+		s.outRpcInfo(rpcResult)
+		m["rpcResult"] = *rpcResult
 	}
 }

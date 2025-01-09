@@ -175,15 +175,21 @@ func (t *Thread) Start() {
 			if !ok {
 				return
 			}
-			if len(paramQueues[t.index]) < productFactor/2 {
-				produceSignal <- t.index
-			}
+			go func() {
+				defer func() {
+					if e := recover(); e != nil {
+						fmt.Println("produce param ok")
+					}
+				}()
+				if len(paramQueues[t.index]) < productFactor {
+					produceSignal <- t.index
+				}
+			}()
 			start := time.Now()
 			var err error
 			err = sendRequest(t.client, orgIDs[t.index], i, req.Param)
 			// 结果进入结果集
 			atomic.AddUint32(&t.statistician.totalCount, 1)
-			atomic.AddUint32(&t.statistician.nodeRequestTotal[t.index], 1)
 			t.statistician.reqStatC <- &reqStat{
 				success: err == nil,
 				elapsed: time.Since(start).Milliseconds(),

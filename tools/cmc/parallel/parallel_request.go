@@ -120,6 +120,5 @@ func getBlockHeight() (uint64, error) {
 	if err = proto.Unmarshal(resp.ContractResult.Result, blockInfo); err != nil {
 		return 0, fmt.Errorf("fail to unmarshal block height: %v\n", err)
 	}
-	fmt.Println("height: ", blockInfo.Block.Header.BlockHeight)
 	return blockInfo.Block.Header.BlockHeight, nil
 }
