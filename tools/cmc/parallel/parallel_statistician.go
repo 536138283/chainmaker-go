@@ -108,6 +108,7 @@ func getStatistician() *Statistician {
 	s.nodeTemporaryTxSpeed = make([]uint32, nodeNum)
 	s.nodeMaxTxDealSpeed = make([]uint32, nodeNum)
 	s.nodeMinTxDealSpeed = make([]uint32, nodeNum)
+	s.startTime = time.Now()
 	return s
 }
 
@@ -226,11 +227,14 @@ func (s *Statistician) collect() {
 }
 
 func (s *Statistician) statisticianRpc(stat *reqStat) {
+	// 统计rpc结果到Statistician对象
 	if stat.success {
+		// 初始化最长最短的响应时长
 		if s.minSuccessElapsed == 0 || s.maxSuccessElapsed == 0 {
 			s.minSuccessElapsed = stat.elapsed
 			s.maxSuccessElapsed = stat.elapsed
 		}
+		// 统计最长最短的成功响应时长
 		if stat.elapsed < s.minSuccessElapsed {
 			s.minSuccessElapsed = stat.elapsed
 		}
@@ -359,6 +363,7 @@ type BlockInfo struct {
 	BlockTxNumAvg    float32 `json:"blockTxNumAvg"`
 	CTps             float32 `json:"ctps"`
 }
+
 type ChainResultSet struct {
 	BlockInfo
 	MaxTxBlock struct {
@@ -369,13 +374,11 @@ type ChainResultSet struct {
 		BlockHeight uint64 `json:"blockHeight"`
 		TxCount     uint32 `json:"txCount"`
 	} `json:"minTxBlock"`
-	SuccessCount uint32 `json:"successCount"`
-	FailCount    uint32 `json:"failCount"`
-	DealMax      uint32 `json:"dealMax"`
-	DealMin      uint32 `json:"dealMin"`
-	//StartTime    string               `json:"startTime"`
-	//EndTime      string               `json:"endTime"`
-	Nodes map[string]*NodeInfo `json:"nodes"`
+	SuccessCount uint32               `json:"successCount"`
+	FailCount    uint32               `json:"failCount"`
+	DealMax      uint32               `json:"dealMax"`
+	DealMin      uint32               `json:"dealMin"`
+	Nodes        map[string]*NodeInfo `json:"nodes"`
 }
 
 type NodeInfo struct {

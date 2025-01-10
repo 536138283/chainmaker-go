@@ -38,7 +38,6 @@ func subNodes(statistician *Statistician) {
 	}
 	for i := 0; i < nodeNum; i++ {
 		go func(index int) {
-			//defer wg.Done()
 			if err := subscribeNewBlock(context.Background(), threads[index], params[index]); err != nil {
 				fmt.Println("error sendSubscribe :", err)
 				return
@@ -80,7 +79,7 @@ func subscribeNewBlock(ctx context.Context, thread *Thread, req *commonPb.TxRequ
 	return err
 }
 
-func sendRequest(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.TxRequest) error {
+func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.TxRequest) error {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(requestTimeout)*time.Second))
 	defer cancel()
 	result, err := client.SendRequest(ctx, req)

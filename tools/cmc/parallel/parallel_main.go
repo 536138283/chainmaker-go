@@ -6,7 +6,6 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"encoding/json"
 	"fmt"
-	"math"
 	"os"
 	"time"
 )
@@ -47,6 +46,9 @@ var produceSignal chan int
 // 生产因子，用来控制生产消息的数量
 var productFactor int
 
+// 中断信号 不可逆中断状态，一旦检测到中断信号为true，停止所有的生产行为
+var interruptSignal bool
+
 func initParallel() {
 	if nodeNum > threadNum {
 		threadNum = nodeNum
@@ -83,24 +85,15 @@ func initProductFactor(factor int) {
 
 func parallel(parallelMethod string) error {
 	initParallel()
-	// 开始生产请求参数
-	go producer(invokerMethod)
-	// produce request param
-	produceSignal <- -1
-	// 定义退出channel
 	timeoutChan := make(chan struct{}, threadNum)
 	doneChan := make(chan struct{}, threadNum)
 	statistician := getStatistician()
-	statistician.startTime = time.Now()
-	for i := 0; i < nodeNum; i++ {
-		statistician.nodeMinSuccessElapsed[i] = math.MaxInt16
-	}
-	go statistician.collect()
-	go subNodes(statistician)
 	threads, err := threadFactory(threadNum, parallelMethod, doneChan, timeoutChan, statistician)
 	if err != nil {
 		return err
 	}
+	go subNodes(statistician)
+	go statistician.collect()
 	// 订阅后记录当前时间
 	statistician.startTime = time.Now()
 	go parallelStart(threads)

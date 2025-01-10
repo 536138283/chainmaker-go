@@ -11,14 +11,33 @@ import (
 	"time"
 )
 
-var interrupt bool
-
 // 构建请求参数
 // param：
 // @method：方法接收器，接受不同的cmd命令构建不同的方法调用所需要的请求参数
-// 该方法用于批量生成请求参数，生成个数由生产因子控制，当index为-1的时候像每个chan成产数据，否则像指定chan生产数据
+// 该方法用于批量生成请求参数，生成个数由生产因子控制，当index为-1的时候向每个chan生产数据，否则像指定chan生产数据
 func producer(method string) {
-	var builder StressBuilder
+	builder := stressBuilderFactory(method)
+	for {
+		if requestId >= int64(threadNum*loopNum) {
+			close(produceSignal)
+			return
+		}
+		select {
+		case index := <-produceSignal:
+			if index == -1 {
+				for nodeIndex := 0; nodeIndex < nodeNum; nodeIndex++ {
+					produce(builder, nodeIndex)
+				}
+			} else {
+				go func() {
+					produce(builder, index)
+				}()
+			}
+		}
+	}
+}
+
+func stressBuilderFactory(method string) (builder StressBuilder) {
 	switch method {
 	case invokerMethod:
 		builder = Invoke{}
@@ -29,62 +48,29 @@ func producer(method string) {
 	case upgradeContractStr:
 		builder = Upgrade{}
 	}
-	for {
-		if requestId >= int64(threadNum*loopNum) {
-			close(produceSignal)
+	return
+}
+
+func produce(builder StressBuilder, index int) {
+	for i := 0; i < productFactor; i++ {
+		if interruptSignal {
 			return
 		}
-		select {
-		case index := <-produceSignal:
-			if index == -2 {
-				for i := 0; i < nodeNum; i++ {
-					close(paramQueues[i])
-				}
-				return
-			}
-			if index == -1 {
-				for i := 0; i < productFactor; i++ {
-					if interrupt {
-						return
-					}
-					for nodeIndex := 0; nodeIndex < nodeNum; nodeIndex++ {
-						atomic.AddInt64(&requestId, 1)
-						param, err := builder.Build(requestId, nodeIndex)
-						if err != nil {
-							fmt.Printf("producer err: %s\n", err.Error())
-						}
-						paramQueues[nodeIndex] <- RequestParam{
-							Param:     param,
-							RequestId: requestId,
-						}
-					}
-
-				}
-			} else {
-				go func() {
-					for i := 0; i < productFactor; i++ {
-						if interrupt {
-							return
-						}
-						atomic.AddInt64(&requestId, 1)
-						param, err := builder.Build(requestId, index)
-						if err != nil {
-							fmt.Printf("producer err: %s\n", err.Error())
-						}
-						paramQueues[index] <- RequestParam{
-							Param:     param,
-							RequestId: requestId,
-						}
-					}
-				}()
-			}
-
+		atomic.AddInt64(&requestId, 1)
+		param, err := builder.Build(requestId, index)
+		if err != nil {
+			fmt.Printf("producer err: %s\n", err.Error())
+		}
+		paramQueues[index] <- RequestParam{
+			Param:     param,
+			RequestId: requestId,
 		}
 	}
-
 }
 
 func parallelStart(threads []*Thread) {
+	go producer(invokerMethod)
+	produceSignal <- -1
 	count := threadNum / 10
 	if count == 0 {
 		count = 1
@@ -92,7 +78,7 @@ func parallelStart(threads []*Thread) {
 	interval := time.Duration(climbTime/count) * time.Second
 	for index := 0; index < threadNum; {
 		for j := 0; j < 10; j++ {
-			go threads[index].Start()
+			go threads[index].consume()
 			index++
 			if index >= threadNum {
 				break
@@ -109,23 +95,23 @@ func listenAndExit(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker
 	fmt.Println("start listenAndExit")
 	doneCount := 0
 	timeoutTicker := time.NewTicker(time.Duration(timeout) * time.Second)
-	timeoutOnce := sync.Once{}
+	once := sync.Once{}
 	for {
 		if doneCount >= threadNum {
+			fmt.Println("complete!")
 			break
 		}
 		select {
 		case <-doneChan:
 			doneCount++
 		case <-timeoutTicker.C:
-			interrupt = true
-			go func() {
-				timeoutOnce.Do(func() {
-					for i := 0; i < threadNum; i++ {
-						timeoutChan <- struct{}{}
-					}
-				})
-			}()
+			interruptSignal = true
+			once.Do(func() {
+				for i := 0; i < threadNum; i++ {
+					timeoutChan <- struct{}{}
+				}
+				fmt.Println("complete timeout")
+			})
 		}
 	}
 	close(timeoutChan)
@@ -148,6 +134,7 @@ type Thread struct {
 	index  int
 }
 
+// 初始化线程对象，分配grpc连接，返回thead数组
 func threadFactory(number int, method string, doneChan,
 	timeoutChan chan struct{}, statistician *Statistician) ([]*Thread, error) {
 	threads := make([]*Thread, number)
@@ -180,7 +167,7 @@ func threadFactory(number int, method string, doneChan,
 }
 
 // Start thread start
-func (t *Thread) Start() {
+func (t *Thread) consume() {
 	for i := 0; i < t.loopNum; i++ {
 		select {
 		case <-t.timeoutChan:
@@ -189,20 +176,15 @@ func (t *Thread) Start() {
 		case req, ok := <-paramQueues[t.index]:
 			// 如果chan 关闭，被分配到该chan的线程也一起关闭
 			if !ok {
+				t.doneChan <- struct{}{}
 				return
 			}
-			go func() {
-				defer func() {
-					if e := recover(); e != nil {
-					}
-				}()
-				if len(paramQueues[t.index]) < productFactor {
-					produceSignal <- t.index
-				}
-			}()
+			if len(paramQueues[t.index]) < productFactor && !interruptSignal {
+				produceSignal <- t.index
+			}
 			start := time.Now()
 			var err error
-			err = sendRequest(t.client, orgIDs[t.index], i, req.Param)
+			err = sendTx(t.client, orgIDs[t.index], i, req.Param)
 			// 结果进入结果集
 			atomic.AddUint32(&t.statistician.totalCount, 1)
 			t.statistician.reqStatC <- &reqStat{
@@ -219,7 +201,6 @@ func (t *Thread) Start() {
 	t.doneChan <- struct{}{}
 }
 
-// Thread for multi-thread object
 // Stop thread stop
 func (t *Thread) Stop() {
 	err := t.conn.Close()
