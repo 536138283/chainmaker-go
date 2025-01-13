@@ -76,7 +76,7 @@ func initParallel() {
 // 对半法加载生产因子
 // 在一个chan内每个线程分配一个请求参数和一个预处理请求参数
 func initProductFactor(factor int) {
-	if factor/nodeNum > threadNum/nodeNum*5 {
+	if factor/nodeNum > threadNum/nodeNum*2 {
 		initProductFactor(factor / 2)
 	} else {
 		productFactor = factor
@@ -88,23 +88,30 @@ func parallel(parallelMethod string) error {
 	timeoutChan := make(chan struct{}, threadNum)
 	doneChan := make(chan struct{}, threadNum)
 	statistician := getStatistician()
+	// 开始生产请求参数
+	go producer(invokerMethod)
+	produceSignal <- -1
+	// 创建线程对象
 	threads, err := threadFactory(threadNum, parallelMethod, doneChan, timeoutChan, statistician)
 	if err != nil {
 		return err
 	}
+	// 开启节点订阅
 	go subNodes(statistician)
+	// 开启结果收集
 	go statistician.collect()
 	// 订阅后记录当前时间
 	statistician.startTime = time.Now()
+	// 启动线程，并发请求
 	go parallelStart(threads)
+	// 定时打印结果
 	printTicker := time.NewTicker(time.Duration(printTime) * time.Second)
 	go printResult(printTicker, statistician)
+	// 等待超时或请求执行完毕
 	listenAndExit(timeoutChan, doneChan, printTicker)
-	// last once statistics
 	fmt.Println("Statistics for the entire test")
-	//statistician.endTime = time.Now()
 	statistician.PrintDetails()
-	// close client conn
+	// 关闭client
 	for _, t := range threads {
 		t.Stop()
 	}

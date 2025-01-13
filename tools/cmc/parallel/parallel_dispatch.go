@@ -19,7 +19,7 @@ func producer(method string) {
 	builder := stressBuilderFactory(method)
 	for {
 		if requestId >= int64(threadNum*loopNum) {
-			close(produceSignal)
+			interruptSignal = true
 			return
 		}
 		select {
@@ -69,8 +69,6 @@ func produce(builder StressBuilder, index int) {
 }
 
 func parallelStart(threads []*Thread) {
-	go producer(invokerMethod)
-	produceSignal <- -1
 	count := threadNum / 10
 	if count == 0 {
 		count = 1
@@ -98,14 +96,13 @@ func listenAndExit(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker
 	once := sync.Once{}
 	for {
 		if doneCount >= threadNum {
-			fmt.Println("complete!")
+			interruptSignal = true
 			break
 		}
 		select {
 		case <-doneChan:
 			doneCount++
 		case <-timeoutTicker.C:
-			interruptSignal = true
 			once.Do(func() {
 				for i := 0; i < threadNum; i++ {
 					timeoutChan <- struct{}{}
@@ -114,9 +111,13 @@ func listenAndExit(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker
 			})
 		}
 	}
+	printTicker.Stop()
 	close(timeoutChan)
 	close(doneChan)
-	printTicker.Stop()
+	for i := 0; i < nodeNum; i++ {
+		close(paramQueues[i])
+	}
+	close(produceSignal)
 	timeoutTicker.Stop()
 }
 
@@ -173,29 +174,32 @@ func (t *Thread) consume() {
 		case <-t.timeoutChan:
 			t.doneChan <- struct{}{}
 			return
-		case req, ok := <-paramQueues[t.index]:
-			// 如果chan 关闭，被分配到该chan的线程也一起关闭
-			if !ok {
-				t.doneChan <- struct{}{}
-				return
+		default:
+			select {
+			case req, ok := <-paramQueues[t.index]:
+				// 如果chan 关闭，被分配到该chan的线程也一起关闭
+				if !ok {
+					t.doneChan <- struct{}{}
+					return
+				}
+				if len(paramQueues[t.index]) < productFactor && !interruptSignal {
+					produceSignal <- t.index
+				}
+				start := time.Now()
+				var err error
+				err = sendTx(t.client, orgIDs[t.index], i, req.Param)
+				// 结果进入结果集
+				atomic.AddUint32(&t.statistician.totalCount, 1)
+				t.statistician.reqStatC <- &reqStat{
+					success: err == nil,
+					elapsed: time.Since(start).Milliseconds(),
+					nodeId:  t.index,
+				}
+				if recordLog && err != nil {
+					log.Errorf("threadId: %d, loopId: %d, nodeId: %d, err: %s", t.id, i, t.index, err)
+				}
+				time.Sleep(time.Duration(sleepTime) * time.Millisecond)
 			}
-			if len(paramQueues[t.index]) < productFactor && !interruptSignal {
-				produceSignal <- t.index
-			}
-			start := time.Now()
-			var err error
-			err = sendTx(t.client, orgIDs[t.index], i, req.Param)
-			// 结果进入结果集
-			atomic.AddUint32(&t.statistician.totalCount, 1)
-			t.statistician.reqStatC <- &reqStat{
-				success: err == nil,
-				elapsed: time.Since(start).Milliseconds(),
-				nodeId:  t.index,
-			}
-			if recordLog && err != nil {
-				log.Errorf("threadId: %d, loopId: %d, nodeId: %d, err: %s", t.id, i, t.index, err)
-			}
-			time.Sleep(time.Duration(sleepTime) * time.Millisecond)
 		}
 	}
 	t.doneChan <- struct{}{}
