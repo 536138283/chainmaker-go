@@ -20,16 +20,23 @@ import (
 	"time"
 )
 
+// StressBuilder 构建不同场景下压测所需请求参数的接口，并返回请求对象
+// 非压测请求实现Builder接口以满足参数构建需要
+// 目前支持4种实现方式：Invoke、Query、Create和Upgrade每个类型都定义了自己的Build方法，用于生成不同类型的交易请求：
+// - Invoke：构建调用智能合约的交易请求。
+// - Query：构建查询智能合约的交易请求。
+// - Create：构建部署（安装）智能合约的交易请求。
+// - Upgrade：构建升级智能合约的交易请求。
 type StressBuilder interface {
 	Build(requestId int64, index int) (*commonPb.TxRequest, error)
 }
 
-type Query struct {
-}
+type Query struct{}
 
+// Build 实现StressBuilder接口，用于构建查询智能合约的交易请求
 func (i Query) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
-	// 构造Payload
-	pairs := makeKvs(111)
+	// 构建交易Payload，包含一组键值对（kvs）
+	pairs := makeKvs(requestId)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -39,16 +46,18 @@ func (i Query) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
 			totalSentTxs, totalRandomSentTxs, rate, string(j))
 	}
+	// 使用构造的键值对创建查询Payload
 	payload, err := constructQueryPayload(chainId, contractName, method, pairs, gasLimit)
 	if err != nil {
 		return nil, err
 	}
+	// 构建完整的交易请求
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
 }
 
-type Invoke struct {
-}
+type Invoke struct{}
 
+// Build 实现StressBuilder接口，用于构建调用智能合约的交易请求
 func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	pairs := makeKvs(requestId)
 	if showKey {
@@ -60,6 +69,7 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
 			totalSentTxs, totalRandomSentTxs, rate, string(j))
 	}
+	// 如果有ABI路径，则读取ABI数据，并根据ABI调整方法名和参数对
 	var abiData *[]byte
 	if abiPath != "" {
 		abiData = abiCache.Read(abiPath)
@@ -69,25 +79,29 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 构造调用智能合约的Payload
 	payload, err := constructInvokePayload(chainId, contractName, method1, pairs1, gasLimit)
 	if err != nil {
 		return nil, err
 	}
+	// 构建完整的交易请求
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
 }
 
-type Create struct {
-}
+type Create struct{}
 
+// Build 实现StressBuilder接口，用于构建部署（安装）智能合约的交易请求
 func (c Create) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	// 读取WASM字节码文件
 	wasmBin, err := os.ReadFile(wasmPath)
 	if err != nil {
 		return nil, err
 	}
 	var pairs []*commonPb.KeyValuePair
+	// 使用模板字符串、版本信息、运行时类型等生成Payload
 	payload, _ := utils.GenerateInstallContractPayload(fmt.Sprintf(templateStr, contractName, index,
 		requestId, time.Now().Unix()), "1.0.0", commonPb.RuntimeType(runTime), wasmBin, pairs)
-	// gas limit
+	// 如果设置了gas限制，则添加到Payload
 	if gasLimit > 0 {
 		var limit = &commonPb.Limit{GasLimit: gasLimit}
 		payload.Limit = limit
@@ -96,13 +110,15 @@ func (c Create) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+	// 签名并构建交易请求
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
 }
 
-type Upgrade struct {
-}
+type Upgrade struct{}
 
+// Build 实现StressBuilder接口，用于构建升级智能合约的交易请求
 func (u Upgrade) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	// 生成唯一的交易ID，读取WASM字节码
 	txId := utils.GetTimestampTxId()
 	wasmBin, err := ioutil.ReadFile(wasmPath)
 	if err != nil {
@@ -131,53 +147,21 @@ func (u Upgrade) Build(requestId int64, index int) (*commonPb.TxRequest, error) 
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
 }
 
-func makeKvs(requestId int64) []*commonPb.KeyValuePair {
-	var outKvs []*commonPb.KeyValuePair
-	atomic.AddInt64(&totalSentTxs, 1)
-	for _, p := range globalPairs {
-		var val []byte
-		switch {
-		case p.Unique:
-			val = []byte(fmt.Sprintf(templateStr, p.Value, requestId, time.Now().UnixNano()))
-		case 0 < p.RandomRate && p.RandomRate < 100:
-			if isRandom(p.RandomRate) {
-				val = []byte(fmt.Sprintf(templateStr, p.Value, requestId, time.Now().UnixNano()))
-				atomic.AddInt64(&totalRandomSentTxs, 1)
-			} else {
-				val = []byte(p.Value)
-			}
-		case p.Decrease:
-			p.mu.Lock()
-			val = []byte(fmt.Sprintf("%d", p.IntValue))
-			p.IntValue--
-			p.mu.Unlock()
-			atomic.AddInt64(&totalRandomSentTxs, 1)
-		case p.Increase:
-			p.mu.Lock()
-			val = []byte(fmt.Sprintf("%d", p.IntValue))
-			p.IntValue++
-			p.mu.Unlock()
-			atomic.AddInt64(&totalRandomSentTxs, 1)
-		default:
-			val = []byte(p.Value)
-		}
-
-		outKvs = append(outKvs, &commonPb.KeyValuePair{
-			Key:   p.Key,
-			Value: val,
-		})
-	}
-	return outKvs
-}
-
+// Builder 接口定义了构建非交易请求的方法规范，用于根据索引创建具体的交易请求。
+// 非压测的请求需要实现Builder接口构建请求参数，参数实现逻辑，在实现方法自定义实现
+// 任何实现此接口的类型都需要提供一个Build方法，该方法接收一个int类型的索引作为参数，
+// 并返回一个指向commonPb.TxRequest结构体的指针以及一个潜在的错误。
 type Builder interface {
 	Build(index int) (*commonPb.TxRequest, error)
 }
 
+// SubscribeBlock 结构体用于订阅特定高度起始的区块信息。
 type SubscribeBlock struct {
-	blockHeight uint64
+	blockHeight uint64 // 订阅开始的区块高度
 }
 
+// Build 实现了Builder接口中的Build方法，为指定索引创建一个订阅区块的交易请求。
+// 它构造TxRequest，设置Payload中的各种参数以执行订阅操作，并处理相关的二进制编码和错误处理。
 func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
 	req := &commonPb.TxRequest{}
 	startBlockHeightByte := make([]byte, 8)
@@ -217,8 +201,11 @@ func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], req.Payload, nil)
 }
 
+// QueryBlockHeight 结构体用于查询区块链高度。
 type QueryBlockHeight struct{}
 
+// Build 实现了Builder接口中的Build方法，为指定索引创建一个查询区块高度的交易请求。
+// 它构造TxRequest，设置Payload以查询特定高度的区块信息，并进行相应的参数组装。
 func (s QueryBlockHeight) Build(index int) (*commonPb.TxRequest, error) {
 	var kvs []*commonPb.KeyValuePair
 	kvs = append(kvs, &commonPb.KeyValuePair{
@@ -247,6 +234,62 @@ func (s QueryBlockHeight) Build(index int) (*commonPb.TxRequest, error) {
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
 }
 
+// makeKvs 生成一组键值对（KeyValuePairs）基于全局配置的规则，用于构造交易请求的Payload。
+// 每个键值对的生成会考虑是否需要唯一性、随机性、递增或递减等特性。
+// 请求ID（requestId）会被嵌入到满足条件的键值对的值中，以确保唯一性或生成随机数据。
+// 全局变量globalPairs定义了一系列键值对的基础配置，包括是否具有唯一性（Unique）、
+// 随机生成的比率（RandomRate）、以及整数值的递增或递减（Increase/Decrease）。
+// 函数内部通过原子操作来安全地更新全局统计变量，如总发送交易数（totalSentTxs）和
+// 随机发送的交易数（totalRandomSentTxs）。
+func makeKvs(requestId int64) []*commonPb.KeyValuePair {
+	var outKvs []*commonPb.KeyValuePair
+	// 原子增加总发送交易计数器
+	atomic.AddInt64(&totalSentTxs, 1)
+	// 遍历全局键值对配置列表
+	for _, p := range globalPairs {
+		var val []byte
+		// 根据配置特性生成键值对的值
+		switch {
+		case p.Unique:
+			// 如果要求唯一性，格式化字符串并加入requestId和当前时间戳
+			val = []byte(fmt.Sprintf(templateStr, p.Value, requestId, time.Now().UnixNano()))
+		case 0 < p.RandomRate && p.RandomRate < 100:
+			// 按照随机率判断是否生成随机数据，如果满足则同样加入requestId和时间戳
+			if isRandom(p.RandomRate) {
+				val = []byte(fmt.Sprintf(templateStr, p.Value, requestId, time.Now().UnixNano()))
+				// 原子增加随机发送交易计数器
+				atomic.AddInt64(&totalRandomSentTxs, 1)
+			} else {
+				val = []byte(p.Value)
+			}
+		case p.Decrease:
+			// 如果配置了递减，锁定并递减整数值，然后使用新值
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue--
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		case p.Increase:
+			// 如果配置了递增，同上，但递增整数值
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue++
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		default:
+			val = []byte(p.Value)
+		}
+		// 将键值对添加到输出列表
+		outKvs = append(outKvs, &commonPb.KeyValuePair{
+			Key:   p.Key,
+			Value: val,
+		})
+	}
+	return outKvs
+}
+
+// buildRequestParam 是一个辅助函数，用于构建TxRequest的通用部分，如签名、发送者信息等。
+// 它接收私钥、组织ID、证书路径、Payload以及背书者列表作为参数，并返回一个完整的TxRequest实例。
 func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 	payload *commonPb.Payload, endorsers []*commonPb.EndorsementEntry) (*commonPb.TxRequest, error) {
 	req := &commonPb.TxRequest{}

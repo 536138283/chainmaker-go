@@ -12,8 +12,9 @@ import (
 	"time"
 )
 
+// subNodes 初始化多个线程以订阅区块链的新区块。每个线程负责向一个节点订阅新区块事件，并将统计信息反馈给Statistician
 func subNodes(statistician *Statistician) {
-	threads, err := threadFactory(nodeNum, invokerMethod, nil, nil, statistician)
+	threads, err := threadFactory(nodeNum, nil, nil, statistician)
 	if err != nil {
 		fmt.Println("subNodes threadFactory err:", err)
 		return
@@ -26,6 +27,7 @@ func subNodes(statistician *Statistician) {
 		return
 	}
 	fmt.Println("blockHeight:", blockHeight)
+	// 构建针对每个节点的订阅请求参数
 	for i := 0; i < nodeNum; i++ {
 		s := SubscribeBlock{
 			blockHeight: blockHeight + 1,
@@ -36,6 +38,7 @@ func subNodes(statistician *Statistician) {
 			return
 		}
 	}
+	// 并发启动订阅任务
 	for i := 0; i < nodeNum; i++ {
 		go func(index int) {
 			if err := subscribeNewBlock(context.Background(), threads[index], params[index]); err != nil {
@@ -46,7 +49,7 @@ func subNodes(statistician *Statistician) {
 	}
 }
 
-// 订阅区块
+// subscribeNewBlock 向指定节点订阅新区块事件。当新区块到来时，它会接收并处理区块链头信息，然后更新统计信息。
 func subscribeNewBlock(ctx context.Context, thread *Thread, req *commonPb.TxRequest) error {
 	resp, err := thread.client.Subscribe(ctx, req)
 	if err != nil {
@@ -79,6 +82,7 @@ func subscribeNewBlock(ctx context.Context, thread *Thread, req *commonPb.TxRequ
 	return err
 }
 
+// sendTx 向特定节点发送交易请求。如果请求超时，则返回错误信息
 func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.TxRequest) error {
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(requestTimeout)*time.Second))
 	defer cancel()
@@ -96,8 +100,9 @@ func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.
 	return nil
 }
 
+// getBlockHeight 查询当前区块链的高度。首先创建一个查询线程，然后构建查询高度的请求并发送，最后解析返回的区块信息以获取高度
 func getBlockHeight() (uint64, error) {
-	threads, err := threadFactory(1, "", nil, nil, nil)
+	threads, err := threadFactory(1, nil, nil, nil)
 	if err != nil {
 		fmt.Printf("getBlockHeight err: %v\n", err)
 		return 0, err

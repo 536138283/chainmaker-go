@@ -134,8 +134,6 @@ func (s *Statistician) outBlockInfo(resultSet *ChainResultSet) {
 	resultSet.BlockTxNumAvg = float32(s.txTotal) / float32(resultSet.BlockNum)
 	// 成功上链交易数量
 	resultSet.SuccessCount = s.txTotal
-	// 未上链交易数量
-	resultSet.FailCount = s.totalCount - s.txTotal
 	// 获取包含最大最小交易数的区块的区块高度和交易数量
 	resultSet.MaxTxBlock.BlockHeight = s.maxTxBlockHeight
 	resultSet.MaxTxBlock.TxCount = s.maxTxBlockCount
@@ -165,9 +163,8 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 		nodeInfo.CTps = float32(s.nodeTxTotal[i]) / float32(s.elapsedSeconds)
 		// 计算区块内平均的交易数
 		nodeInfo.BlockTxNumAvg = float32(s.nodeTxTotal[i]) / float32(nodeInfo.BlockNum)
-		// 统计节点的成功上链的交易数量与请求数量
+		// 统计节点的成功上链的交易数量
 		nodeInfo.SuccessCount = s.nodeTxTotal[i]
-		nodeInfo.FailCount = s.nodeTotalReqCount[i] - s.nodeTxTotal[i]
 		nodeInfo.DealMax = s.nodeMaxTxDealSpeed[i]
 		nodeInfo.DealMin = s.nodeMinTxDealSpeed[i]
 		// 添加到节点的结果集信息统计
@@ -202,7 +199,7 @@ func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 	}
 }
 
-// 收集参数s
+// 收集参数
 func (s *Statistician) collect() {
 	flag := true
 	for {
@@ -375,7 +372,6 @@ type ChainResultSet struct {
 		TxCount     uint32 `json:"txCount"`
 	} `json:"minTxBlock"`
 	SuccessCount uint32               `json:"successCount"`
-	FailCount    uint32               `json:"failCount"`
 	DealMax      uint32               `json:"dealMax"`
 	DealMin      uint32               `json:"dealMin"`
 	Nodes        map[string]*NodeInfo `json:"nodes"`
@@ -384,7 +380,6 @@ type ChainResultSet struct {
 type NodeInfo struct {
 	BlockInfo
 	SuccessCount uint32 `json:"successCount"`
-	FailCount    uint32 `json:"failCount"`
 	DealMax      uint32 `json:"dealMax"`
 	DealMin      uint32 `json:"dealMin"`
 }

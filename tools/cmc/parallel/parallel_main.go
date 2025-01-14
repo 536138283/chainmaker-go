@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	//respStr     = "proposalRequest error, resp: %+v"
 	templateStr = "%s_%d_%d_%d"
 	resultStr   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
 )
@@ -83,7 +82,7 @@ func initProductFactor(factor int) {
 	}
 }
 
-func parallel(parallelMethod string) error {
+func parallel(method string) error {
 	initParallel()
 	timeoutChan := make(chan struct{}, threadNum)
 	doneChan := make(chan struct{}, threadNum)
@@ -92,7 +91,7 @@ func parallel(parallelMethod string) error {
 	go producer(invokerMethod)
 	produceSignal <- -1
 	// 创建线程对象
-	threads, err := threadFactory(threadNum, parallelMethod, doneChan, timeoutChan, statistician)
+	threads, err := threadFactory(threadNum, doneChan, timeoutChan, statistician)
 	if err != nil {
 		return err
 	}
@@ -109,13 +108,31 @@ func parallel(parallelMethod string) error {
 	go printResult(printTicker, statistician)
 	// 等待超时或请求执行完毕
 	listenAndExit(timeoutChan, doneChan, printTicker)
-	fmt.Println("Statistics for the entire test")
-	statistician.PrintDetails()
+	finalPrint(statistician)
 	// 关闭client
 	for _, t := range threads {
 		t.Stop()
 	}
 	return nil
+}
+
+func finalPrint(statistician *Statistician) {
+	fmt.Println("final print :")
+	lastHeight := uint64(0)
+	for {
+		height, err := getBlockHeight()
+		if err != nil {
+			fmt.Printf("get last height err: %s\n", err.Error())
+			return
+		}
+		if height == lastHeight {
+			statistician.PrintDetails()
+			return
+		} else {
+			lastHeight = height
+			time.Sleep(time.Second)
+		}
+	}
 }
 
 // print test report
@@ -134,7 +151,6 @@ func (s *Statistician) PrintDetails() {
 	m := make(map[string]interface{})
 	s.endTime = time.Now()
 	s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
-	fmt.Printf("当前时间与上一次统计时间的时间间隔为: %.3f 秒\n", s.elapsedSeconds)
 	s.run(m, s.usualPrint(), s.chainPrint(), s.rpcPrint())
 	jsonChainByte, err := json.Marshal(m)
 	if err != nil {
