@@ -82,6 +82,7 @@ func initProductFactor(factor int) {
 	}
 }
 
+// 压力测试主方法
 func parallel(method string) error {
 	initParallel()
 	timeoutChan := make(chan struct{}, threadNum)
@@ -116,6 +117,18 @@ func parallel(method string) error {
 	return nil
 }
 
+// finalPrint函数用于在区块链高度不再增长时输出统计信息。
+//
+// 参数:
+// statistician (*Statistician): 一个指向Statistician结构体的指针，该结构体包含了需要打印的统计详情。
+//
+// 功能描述:
+// 1. 首先打印提示信息"final print :"。
+// 2. 初始化一个变量lastHeight为0，用于存储上一次查询到的区块高度。
+// 3. 进入无限循环，不断尝试获取最新的区块高度。
+// 4. 调用getBlockHeight函数获取当前区块链高度。如果获取过程中发生错误，则打印错误信息并退出函数。
+// 5. 比较当前高度与上一次的高度，如果两者相同，说明区块高度未发生变化，此时调用statistician.PrintDetails()方法输出统计详情，并结束循环。
+// 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
 func finalPrint(statistician *Statistician) {
 	fmt.Println("final print :")
 	lastHeight := uint64(0)
@@ -126,7 +139,7 @@ func finalPrint(statistician *Statistician) {
 			return
 		}
 		if height == lastHeight {
-			statistician.PrintDetails()
+			statistician.printDetails()
 			return
 		} else {
 			lastHeight = height
@@ -135,19 +148,24 @@ func finalPrint(statistician *Statistician) {
 	}
 }
 
-// print test report
+// 函数负责定时输出统计信息
+// 参数:
+// printTicker (*time.Ticker): 一个时间ticker，每隔一定周期发送一个信号。
+// statistician (*Statistician): 一个指向Statistician结构体的指针，封装了统计数据及其打印方法。
 func printResult(printTicker *time.Ticker, statistician *Statistician) {
 	for {
 		select {
 		case <-printTicker.C:
-			go statistician.PrintDetails()
+			go statistician.printDetails()
 		}
 	}
 }
 
-// PrintDetails print statistics results
-// @param all
-func (s *Statistician) PrintDetails() {
+// PrintDetails方法用于打印Statistician的统计详情。
+// 成员变量修改:
+// endTime (time.Time): 更新为当前时间，表示统计结束的时间点。
+// elapsedSeconds (float32): 计算从开始到结束的持续时间（以秒为单位）。
+func (s *Statistician) printDetails() {
 	m := make(map[string]interface{})
 	s.endTime = time.Now()
 	s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
@@ -160,14 +178,19 @@ func (s *Statistician) PrintDetails() {
 	fmt.Println("result set: ", string(jsonChainByte))
 }
 
+// 定义打印选项类型为一个函数，该函数接收一个map[string]interface{}作为参数
 type printOpt func(map[string]interface{})
 
+// run方法遍历并执行所有提供的打印选项函数。
+// 每个选项函数会修改传入的map，向其中添加或更新键值对，以收集各类统计信息。
 func (s *Statistician) run(m map[string]interface{}, opts ...printOpt) {
 	for _, opt := range opts {
 		opt(m)
 	}
 }
 
+// usualPrint 返回一个printOpt函数，用于填充常规统计信息到给定的映射中
+// 包括线程数、循环次数以及统计的开始和结束时间
 func (s *Statistician) usualPrint() printOpt {
 	return func(m map[string]interface{}) {
 		m["threadNum"] = threadNum
@@ -177,6 +200,8 @@ func (s *Statistician) usualPrint() printOpt {
 	}
 }
 
+// chainPrint返回一个printOpt函数，它负责在映射中添加区块链相关的统计结果。
+// 这包括调用outBlockInfo和outNodeBlockInfo方法获取数据，并存储在一个ChainResultSet结构中。
 func (s *Statistician) chainPrint() printOpt {
 	return func(m map[string]interface{}) {
 		chainResult := &ChainResultSet{}
@@ -186,6 +211,8 @@ func (s *Statistician) chainPrint() printOpt {
 	}
 }
 
+// rpcPrint返回一个printOpt函数，用于向映射中添加RPC调用的统计结果。
+// 具体操作是调用outRpcInfo方法填充RpcResultSet结构，并将其存入映射中。
 func (s *Statistician) rpcPrint() printOpt {
 	return func(m map[string]interface{}) {
 		rpcResult := &RpcResultSet{}

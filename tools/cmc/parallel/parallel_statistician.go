@@ -6,20 +6,21 @@ import (
 	"time"
 )
 
+// 用于记录单次rpc请求的统计信息对象
 type reqStat struct {
-	success bool  // 请求是否成功
-	elapsed int64 // 单次请求结束用时 单位：毫秒
-	nodeId  int   // 节点id
+	success bool  // 标记请求是否成功。true表示成功，false表示失败
+	elapsed int64 // 记录请求的耗时，单位为毫秒。从请求开始到接收到响应的总时间
+	nodeId  int   // 发起请求的目标节点ID，用于区分不同节点的请求统计
 }
 
+// 用来记录链上交易情况的统计信息对象
 type cReqStat struct {
-	blockHeader *commonPb.BlockHeader
-	nodeId      int
-	elapsed     int64
+	blockHeader *commonPb.BlockHeader // 区块头信息
+	nodeId      int                   // 发起请求的目标节点ID，用于区分不同节点的请求统计
 }
 
 type Statistician struct {
-	rpcStatistician
+	rpcStatistician // rpc统计对象
 	chainStatistician
 	// 通用统计数据
 	nodeTotalReqCount []uint32 // 发起 交易/请求总数
@@ -223,6 +224,7 @@ func (s *Statistician) collect() {
 	}
 }
 
+// 统计rpc请求指标
 func (s *Statistician) statisticianRpc(stat *reqStat) {
 	// 统计rpc结果到Statistician对象
 	if stat.success {
@@ -252,6 +254,7 @@ func (s *Statistician) statisticianRpc(stat *reqStat) {
 	s.nodeTotalReqCount[stat.nodeId]++
 }
 
+// 统计链上交易的性能指标
 func (s *Statistician) statisticianTxBlock(stat *cReqStat) {
 	// 统计交易最多的区块高度，块交易数量
 	if s.maxTxBlockCount < stat.blockHeader.TxCount {
@@ -282,6 +285,7 @@ func (s *Statistician) statisticianTxBlock(stat *cReqStat) {
 	s.lastBlockHeight = stat.blockHeader.BlockHeight
 }
 
+// 统计链上交易的性能指标(节点)
 func (s *Statistician) statisticianNodeTxBlock(stat *cReqStat) {
 	// 统计节点交易最多的区块高度，块交易数量
 	if s.nodeMaxTxBlockCount[stat.nodeId] < stat.blockHeader.TxCount {
@@ -309,12 +313,14 @@ func (s *Statistician) statisticianNodeTxBlock(stat *cReqStat) {
 	s.nodeLastBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
 }
 
+// 计算链上处理交易的速度，单位笔/秒
 func computeSpeed(stat *cReqStat, s *Statistician) {
 	s.temporaryTxSpeed += stat.blockHeader.TxCount
 	s.nodeTemporaryTxSpeed[stat.nodeId] += stat.blockHeader.TxCount
 	for {
 		select {
 		case <-s.txDealSpeedTicker.C:
+			// 非节点
 			if s.MinTxDealSpeed == 0 || s.MaxTxDealSpeed == 0 {
 				s.MaxTxDealSpeed = s.temporaryTxSpeed
 				s.MinTxDealSpeed = s.temporaryTxSpeed
@@ -326,6 +332,7 @@ func computeSpeed(stat *cReqStat, s *Statistician) {
 				s.MinTxDealSpeed = s.temporaryTxSpeed
 			}
 			s.temporaryTxSpeed = 0
+			// 节点
 			if s.nodeMinTxDealSpeed[stat.nodeId] == 0 || s.nodeMaxTxDealSpeed[stat.nodeId] == 0 {
 				s.nodeMaxTxDealSpeed[stat.nodeId] = s.nodeTemporaryTxSpeed[stat.nodeId]
 				s.nodeMinTxDealSpeed[stat.nodeId] = s.nodeTemporaryTxSpeed[stat.nodeId]
@@ -343,57 +350,54 @@ func computeSpeed(stat *cReqStat, s *Statistician) {
 	}
 }
 
-type numberResults struct {
-	count, successCount         int
-	min, max, sum               int64
-	nodeSuccessCount, nodeCount []int
-	nodeMin, nodeMax, nodeSum   []int64
-}
-
+// BlockInfo 区块信息
 type BlockInfo struct {
-	FirstBlockHeight uint64  `json:"firstBlockHeight"`
-	LastBlockHeight  uint64  `json:"lastBlockHeight"`
-	FirstBlockTime   string  `json:"firstBlockTime"`
-	LastBlockTime    string  `json:"lastBlockTime"`
-	BlockOutAvg      float32 `json:"blockOutAvg"`
-	BlockNum         uint64  `json:"blockNum"`
-	BlockTxNumAvg    float32 `json:"blockTxNumAvg"`
-	CTps             float32 `json:"ctps"`
+	FirstBlockHeight uint64  `json:"firstBlockHeight"` // 链上的第一个出块的区块高度
+	LastBlockHeight  uint64  `json:"lastBlockHeight"`  // 链上的会后一个出块的区块高度
+	FirstBlockTime   string  `json:"firstBlockTime"`   // 链上的第一个出块的出块时间
+	LastBlockTime    string  `json:"lastBlockTime"`    // 链上的最后一次出块的出块时间
+	BlockOutAvg      float32 `json:"blockOutAvg"`      // 平均出块时间 单位：区块数/秒
+	BlockNum         uint64  `json:"blockNum"`         // 链上出块总数
+	BlockTxNumAvg    float32 `json:"blockTxNumAvg"`    // 区块平均交易数
+	CTps             float32 `json:"ctps"`             // 区块链的吞吐量，用来衡量链上交易的处理能力 单位：交易数/秒
 }
 
+// ChainResultSet 统计结果集
 type ChainResultSet struct {
-	BlockInfo
+	BlockInfo  // 区块信息
 	MaxTxBlock struct {
-		BlockHeight uint64 `json:"blockHeight"`
-		TxCount     uint32 `json:"txCount"`
-	} `json:"maxTxBlock"`
+		BlockHeight uint64 `json:"blockHeight"` // 该区块的高度。
+		TxCount     uint32 `json:"txCount"`     // 该区块中的交易数量
+	} `json:"maxTxBlock"` // 结构体表示交易数量最多的区块信息
 	MinTxBlock struct {
-		BlockHeight uint64 `json:"blockHeight"`
-		TxCount     uint32 `json:"txCount"`
-	} `json:"minTxBlock"`
-	SuccessCount uint32               `json:"successCount"`
-	DealMax      uint32               `json:"dealMax"`
-	DealMin      uint32               `json:"dealMin"`
-	Nodes        map[string]*NodeInfo `json:"nodes"`
+		BlockHeight uint64 `json:"blockHeight"` // 该区块的高度。
+		TxCount     uint32 `json:"txCount"`     // 该区块中的交易数量
+	} `json:"minTxBlock"` // 结构体表示交易数量最少的区块信息
+	SuccessCount uint32               `json:"successCount"` // 上链的交易数
+	DealMax      uint32               `json:"dealMax"`      // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
+	DealMin      uint32               `json:"dealMin"`      // 处理能力的最小值，与DealMax相对应
+	Nodes        map[string]*NodeInfo `json:"nodes"`        // 字符串键映射到NodeInfo指针的字典，用于存储节点的区块信息
 }
 
+// NodeInfo 节点信息
 type NodeInfo struct {
-	BlockInfo
-	SuccessCount uint32 `json:"successCount"`
-	DealMax      uint32 `json:"dealMax"`
-	DealMin      uint32 `json:"dealMin"`
+	BlockInfo           // 节点的区块信息
+	SuccessCount uint32 `json:"successCount"` // 上链的交易数
+	DealMax      uint32 `json:"dealMax"`      // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
+	DealMin      uint32 `json:"dealMin"`      // 处理能力的最小值，与DealMax相对应
 }
 
+// RpcResultSet 结构体用于汇总RPC请求的统计结果，主要关注于性能指标和请求成功率。
 type RpcResultSet struct {
-	TPS          float32                `json:"tps"`
-	SuccessCount uint32                 `json:"successCount"`
-	FailCount    uint32                 `json:"failCount"`
-	Count        uint32                 `json:"count"`
-	MinTime      int64                  `json:"minTime"`
-	MaxTime      int64                  `json:"maxTime"`
-	AvgTime      float32                `json:"avgTime"`
-	StartTime    string                 `json:"startTime"`
-	EndTime      string                 `json:"endTime"`
-	Elapsed      float32                `json:"elapsed"`
-	Nodes        map[string]interface{} `json:"nodes"`
+	TPS          float32                `json:"tps"`          // 每秒处理事务数
+	SuccessCount uint32                 `json:"successCount"` // 成功请求的计数，表示在统计周期内有多少RPC调用成功
+	FailCount    uint32                 `json:"failCount"`    // 失败请求的计数，反映调用失败的次数
+	Count        uint32                 `json:"count"`        // 总请求计数，即成功和失败请求的总和
+	MinTime      int64                  `json:"minTime"`      // 所有请求中耗时最短的时间，单位通常是毫秒
+	MaxTime      int64                  `json:"maxTime"`      // 所有请求中耗时最长的时间，单位通常是毫秒
+	AvgTime      float32                `json:"avgTime"`      // 平均响应时间，所有请求耗时的平均值，单位通常是毫秒
+	StartTime    string                 `json:"startTime"`    // 统计周期的开始时间，格式依据实际应用场景
+	EndTime      string                 `json:"endTime"`      // 统计周期的结束时间，格式与StartTime对应
+	Elapsed      float32                `json:"elapsed"`      // 统计周期的总时长，单位通常是秒
+	Nodes        map[string]interface{} `json:"nodes"`        // 存储与各节点相关的数据，键为节点标识
 }

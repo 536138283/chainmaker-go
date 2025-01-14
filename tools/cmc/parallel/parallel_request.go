@@ -12,7 +12,9 @@ import (
 	"time"
 )
 
-// subNodes 初始化多个线程以订阅区块链的新区块。每个线程负责向一个节点订阅新区块事件，并将统计信息反馈给Statistician
+// subNodes 函数负责初始化并管理一组并发任务，这些任务针对每个区块链节点订阅新区块事件。
+// 参数:
+// statistician (*Statistician): 一个Statistician实例，用于在整个订阅过程中收集统计数据和管理线程。
 func subNodes(statistician *Statistician) {
 	threads, err := threadFactory(nodeNum, nil, nil, statistician)
 	if err != nil {
@@ -20,7 +22,7 @@ func subNodes(statistician *Statistician) {
 		return
 	}
 	params := make([]*commonPb.TxRequest, nodeNum)
-
+	// 获取区块高度
 	blockHeight, err := getBlockHeight()
 	if err != nil {
 		fmt.Println("getBlockHeight err:", err)
@@ -73,7 +75,7 @@ func subscribeNewBlock(ctx context.Context, thread *Thread, req *commonPb.TxRequ
 					return
 				}
 				thread.statistician.cReqStatC <- &cReqStat{
-					blockHeader, thread.index, time.Now().Unix(),
+					blockHeader, thread.index,
 				}
 			}
 
