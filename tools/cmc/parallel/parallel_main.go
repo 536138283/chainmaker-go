@@ -111,7 +111,7 @@ func parallel(method string) error {
 	finalPrint(statistician)
 	// 关闭client
 	for _, t := range threads {
-		t.Stop()
+		t.stop()
 	}
 	return nil
 }
