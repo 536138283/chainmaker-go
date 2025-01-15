@@ -174,30 +174,29 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 }
 
 func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
-	resultSet.Nodes = make(map[string]interface{})
 	if s.totalCount > 0 {
 		resultSet.SuccessCount = s.successCount
 		resultSet.FailCount = s.totalCount - s.successCount
 		resultSet.Count = s.totalCount
 		resultSet.MinTime = s.minSuccessElapsed
 		resultSet.MaxTime = s.maxSuccessElapsed
-		resultSet.AvgTime = float32(s.sumSuccessElapsed) / float32(s.totalCount)
+		resultSet.AvgTime = float32(s.sumSuccessElapsed) / float32(s.successCount)
+		fmt.Println(s.sumSuccessElapsed)
+		fmt.Println(s.successCount)
 		for i := 0; i < nodeNum; i++ {
-			resultSet.Nodes[fmt.Sprintf("node%d_successCount", i)] = s.nodeSuccessCount[i]
-			resultSet.Nodes[fmt.Sprintf("node%d_failCount", i)] = s.nodeTotalReqCount[i] - s.nodeSuccessCount[i]
-			resultSet.Nodes[fmt.Sprintf("node%d_count", i)] = s.nodeTotalReqCount[i]
-			resultSet.Nodes[fmt.Sprintf("node%d_minTime", i)] = s.nodeMinSuccessElapsed[i]
-			resultSet.Nodes[fmt.Sprintf("node%d_maxTime", i)] = s.nodeMaxSuccessElapsed[i]
-			resultSet.Nodes[fmt.Sprintf("node%d_avgTime", i)] = float32(s.nodeSumSuccessElapsed[i]) / float32(s.nodeTotalReqCount[i])
+			nodeName := fmt.Sprintf("node%d", i)
+			nodeInfo := &RpcInfo{}
+			nodeInfo.TPS = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Seconds())
+			nodeInfo.Count = s.nodeTotalReqCount[i]
+			nodeInfo.SuccessCount = s.nodeSuccessCount[i]
+			nodeInfo.FailCount = s.nodeTotalReqCount[i] - s.nodeSuccessCount[i]
+			nodeInfo.MaxTime = s.nodeMaxSuccessElapsed[i]
+			nodeInfo.MinTime = s.nodeMinSuccessElapsed[i]
+			nodeInfo.AvgTime = float32(s.nodeSumSuccessElapsed[i]) / float32(s.nodeSuccessCount[i])
+			resultSet.Nodes[nodeName] = nodeInfo
 		}
 	}
-	resultSet.StartTime = s.startTime.Format("2006-01-02 15:04:05.000")
-	resultSet.EndTime = s.endTime.Format("2006-01-02 15:04:05.000")
-	resultSet.Elapsed = s.elapsedSeconds
 	resultSet.TPS = float32(s.successCount) / float32(s.endTime.Sub(s.startTime).Seconds())
-	for i := 0; i < nodeNum; i++ {
-		resultSet.Nodes[fmt.Sprintf("node%d_tps", i)] = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Seconds())
-	}
 }
 
 // 收集参数
@@ -228,12 +227,12 @@ func (s *Statistician) collect() {
 func (s *Statistician) statisticianRpc(stat *reqStat) {
 	// 统计rpc结果到Statistician对象
 	if stat.success {
-		// 初始化最长最短的响应时长
-		if s.minSuccessElapsed == 0 || s.maxSuccessElapsed == 0 {
-			s.minSuccessElapsed = stat.elapsed
+		if s.maxSuccessElapsed == 0 {
 			s.maxSuccessElapsed = stat.elapsed
 		}
-		// 统计最长最短的成功响应时长
+		if s.minSuccessElapsed == 0 {
+			s.minSuccessElapsed = stat.elapsed
+		}
 		if stat.elapsed < s.minSuccessElapsed {
 			s.minSuccessElapsed = stat.elapsed
 		}
@@ -389,15 +388,17 @@ type NodeInfo struct {
 
 // RpcResultSet 结构体用于汇总RPC请求的统计结果，主要关注于性能指标和请求成功率。
 type RpcResultSet struct {
-	TPS          float32                `json:"tps"`          // 每秒处理事务数
-	SuccessCount uint32                 `json:"successCount"` // 成功请求的计数，表示在统计周期内有多少RPC调用成功
-	FailCount    uint32                 `json:"failCount"`    // 失败请求的计数，反映调用失败的次数
-	Count        uint32                 `json:"count"`        // 总请求计数，即成功和失败请求的总和
-	MinTime      int64                  `json:"minTime"`      // 所有请求中耗时最短的时间，单位通常是毫秒
-	MaxTime      int64                  `json:"maxTime"`      // 所有请求中耗时最长的时间，单位通常是毫秒
-	AvgTime      float32                `json:"avgTime"`      // 平均响应时间，所有请求耗时的平均值，单位通常是毫秒
-	StartTime    string                 `json:"startTime"`    // 统计周期的开始时间，格式依据实际应用场景
-	EndTime      string                 `json:"endTime"`      // 统计周期的结束时间，格式与StartTime对应
-	Elapsed      float32                `json:"elapsed"`      // 统计周期的总时长，单位通常是秒
-	Nodes        map[string]interface{} `json:"nodes"`        // 存储与各节点相关的数据，键为节点标识
+	RpcInfo
+	Nodes map[string]*RpcInfo `json:"nodes"` // 存储与各节点相关的数据，键为节点标识
+}
+
+type RpcInfo struct {
+	TPS          float32 `json:"tps"`          // 每秒处理事务数
+	SuccessCount uint32  `json:"successCount"` // 成功请求的计数，表示在统计周期内有多少RPC调用成功
+	FailCount    uint32  `json:"failCount"`    // 失败请求的计数，反映调用失败的次数
+	Count        uint32  `json:"count"`        // 总请求计数，即成功和失败请求的总和
+	MinTime      int64   `json:"minTime"`      // 所有请求中耗时最短的时间，单位通常是毫秒
+	MaxTime      int64   `json:"maxTime"`      // 所有请求中耗时最长的时间，单位通常是毫秒
+	AvgTime      float32 `json:"avgTime"`      // 平均响应时间，所有请求耗时的平均值，单位通常是毫秒
+	//Elapsed      float32 `json:"elapsed"`      // 统计周期的总时长，单位通常是秒
 }

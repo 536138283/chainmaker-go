@@ -197,6 +197,7 @@ func (s *Statistician) usualPrint() printOpt {
 		m["loopNum"] = loopNum
 		m["startTime"] = s.startTime.Format("2006-01-02 15:04:05")
 		m["endTime"] = s.endTime.Format("2006-01-02 15:04:05")
+		m["elapsed"] = s.elapsedSeconds
 	}
 }
 
@@ -215,7 +216,7 @@ func (s *Statistician) chainPrint() printOpt {
 // 具体操作是调用outRpcInfo方法填充RpcResultSet结构，并将其存入映射中。
 func (s *Statistician) rpcPrint() printOpt {
 	return func(m map[string]interface{}) {
-		rpcResult := &RpcResultSet{}
+		rpcResult := &RpcResultSet{Nodes: make(map[string]*RpcInfo)}
 		s.outRpcInfo(rpcResult)
 		m["rpcResult"] = *rpcResult
 	}
