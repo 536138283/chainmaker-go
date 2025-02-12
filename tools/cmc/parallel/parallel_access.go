@@ -40,6 +40,7 @@ var (
 	hostsString        string
 	hostnamesString    string
 	statisticalType    string
+	checkInterval      int
 	signCrtPathsString string
 	signKeyPathsString string
 	userCrtPathsString string
@@ -181,6 +182,7 @@ func ParallelCMD() *cobra.Command {
 	flags.Uint64Var(&gasLimit, "gas-limit", 0, "gas limit in uint64 type")
 	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
 	flags.StringVarP(&statisticalType, "statistical-type", "", "default", "normal statistical type or block based statistical type, input normal or block default:normal ")
+	flags.IntVarP(&checkInterval, "check-interval", "", 1, "After all threads are done,check the interval time of the last block generation. ")
 	cmd.AddCommand(invokeCMD())
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())

@@ -169,7 +169,6 @@ func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
 	endBlockHeightBuf := new(bytes.Buffer)
 	err := binary.Write(endBlockHeightBuf, binary.LittleEndian, int64(-1))
 	if err != nil {
-		fmt.Println("Error:", err)
 		return nil, err
 	}
 	req.Payload = &commonPb.Payload{
@@ -194,7 +193,7 @@ func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
 			},
 			{
 				Key:   syscontract.SubscribeBlock_ONLY_HEADER.String(),
-				Value: []byte(strconv.FormatBool(true)),
+				Value: []byte(strconv.FormatBool(false)),
 			},
 		},
 	}

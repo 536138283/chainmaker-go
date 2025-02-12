@@ -70,12 +70,12 @@ func subscribeNewBlock(ctx context.Context, thread *Thread, req *commonPb.TxRequ
 					fmt.Printf("subscribe node[%d] receive err: %s\n", thread.index, err.Error())
 					return
 				}
-				blockHeader := &commonPb.BlockHeader{}
-				if err = proto.Unmarshal(result.Data, blockHeader); err != nil {
+				blockInfo := &commonPb.BlockInfo{}
+				if err = proto.Unmarshal(result.Data, blockInfo); err != nil {
 					return
 				}
 				thread.statistician.cReqStatC <- &cReqStat{
-					blockHeader, thread.index,
+					blockInfo.Block.Header, thread.index, blockInfo.Block.Txs,
 				}
 			}
 
@@ -99,6 +99,8 @@ func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.
 		msg := fmt.Sprintf(resultStr, orgId, loopId, result.ContractResult, result.TxId, result)
 		fmt.Println(msg)
 	}
+	// 记录交易id与成功发起交易的时间戳
+	txLatency.Store(result.TxId, time.Now().UnixMilli())
 	return nil
 }
 

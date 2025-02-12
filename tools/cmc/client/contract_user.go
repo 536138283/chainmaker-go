@@ -151,7 +151,6 @@ func invokeContractTimesCMD() *cobra.Command {
 			return invokeContractTimes()
 		},
 	}
-
 	util.AttachFlags(cmd, flags, []string{
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagEnableCertHash, flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId,

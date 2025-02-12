@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -29,6 +30,9 @@ type RequestParam struct {
 	Param     *commonPb.TxRequest
 	RequestId int64
 }
+
+// 交易请求时延，用来记录成功发起交易的时间 key:txId
+var txLatency sync.Map
 
 // 请求参数队列，存放请求参数，队列的数量为节点的数量
 // 队列的index为队列的下标
@@ -70,6 +74,7 @@ func initParallel() {
 		}
 		privateKeys = append(privateKeys, signKey)
 	}
+	txLatency = sync.Map{}
 }
 
 // 对半法加载生产因子
@@ -108,8 +113,8 @@ func parallel(method string) error {
 	printTicker := time.NewTicker(time.Duration(printTime) * time.Second)
 	go printResult(printTicker, statistician)
 	// 等待超时或请求执行完毕
-	listenAndExit(timeoutChan, doneChan, printTicker)
-	finalPrint(statistician)
+	listenAndExit(timeoutChan, doneChan)
+	finalPrint(statistician, printTicker)
 	// 关闭client
 	for _, t := range threads {
 		t.stop()
@@ -129,21 +134,21 @@ func parallel(method string) error {
 // 4. 调用getBlockHeight函数获取当前区块链高度。如果获取过程中发生错误，则打印错误信息并退出函数。
 // 5. 比较当前高度与上一次的高度，如果两者相同，说明区块高度未发生变化，此时调用statistician.PrintDetails()方法输出统计详情，并结束循环。
 // 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
-func finalPrint(statistician *Statistician) {
-	fmt.Println("final print :")
+func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 	lastHeight := uint64(0)
 	for {
 		height, err := getBlockHeight()
 		if err != nil {
-			fmt.Printf("get last height err: %s\n", err.Error())
 			return
 		}
 		if height == lastHeight {
+			printTicker.Stop()
+			fmt.Println("all thread word done finish print")
 			statistician.printDetails()
 			return
 		} else {
 			lastHeight = height
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * time.Duration(checkInterval))
 		}
 	}
 }
@@ -172,10 +177,10 @@ func (s *Statistician) printDetails() {
 	s.run(m, s.usualPrint(), s.chainPrint(), s.rpcPrint())
 	jsonChainByte, err := json.Marshal(m)
 	if err != nil {
-		fmt.Println("e: ", err)
 		return
 	}
 	fmt.Println("result set: ", string(jsonChainByte))
+	fmt.Println()
 }
 
 // 定义打印选项类型为一个函数，该函数接收一个map[string]interface{}作为参数

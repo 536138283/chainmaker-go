@@ -153,7 +153,7 @@ func parallelStart(threads []*Thread) {
 //   - 设置全局中断信号为 true。
 //   - 停止 printTicker 防止资源泄露。
 //   - 关闭各个通道以结束相关协程的执行。
-func listenAndExit(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker) {
+func listenAndExit(timeoutChan, doneChan chan struct{}) {
 	doneCount := 0
 	timeoutTicker := time.NewTicker(time.Duration(timeout) * time.Second)
 	once := sync.Once{}
@@ -173,7 +173,6 @@ func listenAndExit(timeoutChan, doneChan chan struct{}, printTicker *time.Ticker
 		}
 	}
 	interruptSignal = true
-	printTicker.Stop()
 	close(timeoutChan)
 	close(doneChan)
 	close(produceSignal)
