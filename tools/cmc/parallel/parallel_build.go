@@ -340,3 +340,68 @@ func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
 	return req, nil
 }
+
+func getChainClient() ([]*sdk.ChainClient, error) {
+	var chainClients []*sdk.ChainClient
+	for i := range hosts {
+		clientConf := clientConf{
+			host:    hosts[i],
+			tls:     hostnames[i],
+			caPath:  caPaths[i],
+			orgId:   orgIDs[i],
+			chainId: chainId,
+			userKey: userKeyPaths[i],
+			userCrt: userCrtPaths[i],
+			signKey: signKeyPaths[i],
+			signCrt: signCrtPaths[i],
+		}
+		chainClient, err := newChainClient(clientConf)
+		if err != nil {
+			return nil, err
+		}
+		chainClients = append(chainClients, chainClient)
+	}
+	return chainClients, nil
+}
+
+type clientConf struct {
+	host    string
+	tls     string
+	caPath  string
+	orgId   string
+	chainId string
+	userKey string
+	userCrt string
+	signKey string
+	signCrt string
+}
+
+func newChainClient(cf clientConf) (*sdk.ChainClient, error) {
+	nodeConf := sdk.NewNodeConfig(
+		// 节点地址，格式：127.0.0.1:12301
+		sdk.WithNodeAddr(cf.host),
+		// 节点连接数
+		sdk.WithNodeConnCnt(threadNum),
+		// 节点是否启用TLS认证
+		sdk.WithNodeUseTLS(true),
+		// 根证书路径，支持多个
+		sdk.WithNodeCAPaths([]string{cf.caPath}),
+		// TLS Hostname
+		sdk.WithNodeTLSHostName(cf.tls),
+	)
+	return sdk.NewChainClient(
+		// 设置归属组织
+		sdk.WithChainClientOrgId(cf.orgId),
+		sdk.WithChainClientChainId(chainId),
+		// 设置客户端用户私钥路径
+		sdk.WithUserKeyFilePath(cf.userKey),
+		// 设置客户端用户证书
+		sdk.WithUserCrtFilePath(cf.userCrt),
+		// 设置客户端签名证书
+		sdk.WithUserSignCrtFilePath(cf.signCrt),
+		// 设置客户端签名私钥
+		sdk.WithUserSignKeyFilePath(cf.signKey),
+		// 添加节点1
+		sdk.AddChainClientNodeConfig(nodeConf),
+	)
+}

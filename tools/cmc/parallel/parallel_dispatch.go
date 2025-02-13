@@ -257,7 +257,7 @@ func (t *Thread) consume() {
 		default:
 			// 尝试从队列接收请求参数
 			select {
-			case req, ok := <-paramQueues[t.index]:
+			case req, ok := <-paramQueues[loopNum/nodeNum]:
 				// 如果chan 关闭，被分配到该chan的线程也一起关闭
 				if !ok {
 					t.doneChan <- struct{}{}
