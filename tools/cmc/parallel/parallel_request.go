@@ -69,7 +69,7 @@ func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.
 
 // getBlockHeight 查询当前区块链的高度。首先创建一个查询线程，然后构建查询高度的请求并发送，最后解析返回的区块信息以获取高度
 func getBlockHeight() (uint64, error) {
-	blockInfo, err := chainClients[0].GetBlockByHeight(math.MaxInt64, false)
+	blockInfo, err := chainClients[0].GetBlockByHeight(math.MaxUint64, false)
 	if err != nil {
 		return 0, err
 	}

@@ -121,7 +121,6 @@ func getStatistician() *Statistician {
 	s.blockMilli = make([]float64, 0)
 	s.nodeBlockMilli = make([][]float64, nodeNum)
 	s.nodePreBlockTimeMilli = make([]int64, nodeNum)
-	s.startTime = time.Now()
 	return s
 }
 
