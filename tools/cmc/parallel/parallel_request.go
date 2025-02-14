@@ -20,7 +20,7 @@ func subNodes(statistician *Statistician) {
 		go func(index int) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			blockChan, err := chainClients[i].SubscribeBlock(context.Background(), math.MaxInt64,
+			blockChan, err := chainClients[index].SubscribeBlock(context.Background(), math.MaxInt64,
 				-1, false, false)
 			if err != nil {
 				fmt.Println("error sendSubscribe :", err)

@@ -272,9 +272,7 @@ func (t *Thread) consume() {
 				start := time.Now()
 
 				var err error
-				fmt.Println(t.index)
-				fmt.Println(t.clients[loopNum/nodeNum])
-				err = sendTx(t.clients[loopNum/nodeNum], orgIDs[t.index], i, req.Param)
+				err = sendTx(t.clients[loopNum%nodeNum], orgIDs[t.index], i, req.Param)
 				// 结果进入结果集
 				atomic.AddUint32(&t.statistician.totalCount, 1)
 				t.statistician.reqStatC <- &reqStat{
