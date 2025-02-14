@@ -276,6 +276,12 @@ func (s *Statistician) collect() {
 			s.statisticianTxBlock(stat, milliSec)
 			// 统计节点区块信息（节点）
 			s.statisticianNodeTxBlock(stat, milliSec)
+			// 开启另一协程，统计完毕回收内存
+			go func() {
+				for _, v := range stat.txs {
+					txLatency.Delete(v)
+				}
+			}()
 			// 计算交易处理速度
 			computeSpeed(stat, s)
 		}
@@ -343,7 +349,10 @@ func (s *Statistician) statisticianTxBlock(stat *cReqStat, milliSec int64) {
 	s.lastBlockHeight = stat.blockHeader.BlockHeight
 	// 当前区块的交易时延记录在一个数组
 	for _, v := range stat.txs {
-		start, _ := txLatency.Load(v.Payload.TxId)
+		start, ok := txLatency.Load(v.Payload.TxId)
+		if !ok {
+			continue
+		}
 		s.txLatencyMilli = append(s.txLatencyMilli, float64(milliSec-start.(int64)))
 	}
 	// 计算块与快之间的平均区块延时
@@ -352,6 +361,7 @@ func (s *Statistician) statisticianTxBlock(stat *cReqStat, milliSec int64) {
 	}
 	s.blockMilli = append(s.blockMilli, float64(milliSec-s.preBlockTimeMilli))
 	s.preBlockTimeMilli = milliSec
+
 }
 
 // 统计链上交易的性能指标(节点)
@@ -382,7 +392,10 @@ func (s *Statistician) statisticianNodeTxBlock(stat *cReqStat, milliSec int64) {
 	s.nodeLastBlockHeight[stat.nodeId] = stat.blockHeader.BlockHeight
 	// 当前节点的区块的交易时延记录在一个数组
 	for _, v := range stat.txs {
-		start, _ := txLatency.Load(v.Payload.TxId)
+		start, ok := txLatency.Load(v.Payload.TxId)
+		if !ok {
+			continue
+		}
 		s.nodeTxLatencyMilli[stat.nodeId] = append(s.nodeTxLatencyMilli[stat.nodeId], float64(milliSec-start.(int64)))
 	}
 	if s.nodePreBlockTimeMilli[stat.nodeId] == 0 {

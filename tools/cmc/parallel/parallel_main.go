@@ -4,6 +4,7 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -52,9 +53,15 @@ var productFactor int
 // 中断信号 不可逆中断状态，一旦检测到中断信号为true，停止所有的生产行为
 var interruptSignal bool
 
-func initParallel() {
+// 节点的sdk客户端
+var chainClients []*sdk.ChainClient
+
+func initParallel() error {
 	if nodeNum > threadNum {
 		threadNum = nodeNum
+	}
+	if err := initChainClient(); err != nil {
+		return err
 	}
 	initProductFactor(threadNum * loopNum)
 	produceSignal = make(chan int, 1)
@@ -65,19 +72,84 @@ func initParallel() {
 		file, err := os.ReadFile(signKeyPaths[i])
 		if err != nil {
 			fmt.Printf("read node[%s] sign key err: %s\n", hosts[i], err.Error())
-			return
+			return err
 		}
 		signKey, err := asym.PrivateKeyFromPEM(file, nil)
 		if err != nil {
 			fmt.Printf("analysis node[%s] sign key err: %s\n", hosts[i], err.Error())
-			return
+			return err
 		}
 		privateKeys = append(privateKeys, signKey)
 	}
 	txLatency = sync.Map{}
+	return nil
 }
 
-// 对半法加载生产因子
+func initChainClient() error {
+	for i := range hosts {
+		clientConf := clientConf{
+			host:    hosts[i],
+			tls:     hostnames[i],
+			caPath:  caPaths[i],
+			orgId:   orgIDs[i],
+			chainId: chainId,
+			userKey: userKeyPaths[i],
+			userCrt: userCrtPaths[i],
+			signKey: signKeyPaths[i],
+			signCrt: signCrtPaths[i],
+		}
+		chainClient, err := newChainClient(clientConf)
+		if err != nil {
+			return err
+		}
+		chainClients = append(chainClients, chainClient)
+	}
+	return nil
+}
+
+type clientConf struct {
+	host    string
+	tls     string
+	caPath  string
+	orgId   string
+	chainId string
+	userKey string
+	userCrt string
+	signKey string
+	signCrt string
+}
+
+func newChainClient(cf clientConf) (*sdk.ChainClient, error) {
+	nodeConf := sdk.NewNodeConfig(
+		// 节点地址，格式：127.0.0.1:12301
+		sdk.WithNodeAddr(cf.host),
+		// 节点连接数
+		sdk.WithNodeConnCnt(threadNum),
+		// 节点是否启用TLS认证
+		sdk.WithNodeUseTLS(true),
+		// 根证书路径，支持多个
+		sdk.WithNodeCAPaths([]string{cf.caPath}),
+		// TLS Hostname
+		sdk.WithNodeTLSHostName(cf.tls),
+	)
+	return sdk.NewChainClient(
+		// 设置归属组织
+		sdk.WithChainClientOrgId(cf.orgId),
+		sdk.WithChainClientChainId(chainId),
+		// 设置客户端用户私钥路径
+		sdk.WithUserKeyFilePath(cf.userKey),
+		// 设置客户端用户证书
+		sdk.WithUserCrtFilePath(cf.userCrt),
+		// 设置客户端签名证书
+		sdk.WithUserSignCrtFilePath(cf.signCrt),
+		// 设置客户端签名私钥
+		sdk.WithUserSignKeyFilePath(cf.signKey),
+		// 添加节点1
+		sdk.AddChainClientNodeConfig(nodeConf),
+	)
+}
+
+// initProductFactor 对半法加载生产因子
 // 在一个chan内每个线程分配一个请求参数和一个预处理请求参数
 func initProductFactor(factor int) {
 	if factor/nodeNum > threadNum/nodeNum*2 {
@@ -89,7 +161,9 @@ func initProductFactor(factor int) {
 
 // 压力测试主方法
 func parallel(method string) error {
-	initParallel()
+	if err := initParallel(); err != nil {
+		return err
+	}
 	timeoutChan := make(chan struct{}, threadNum)
 	doneChan := make(chan struct{}, threadNum)
 	statistician := getStatistician()
@@ -198,7 +272,6 @@ func (s *Statistician) run(m map[string]interface{}, opts ...printOpt) {
 // 包括线程数、循环次数以及统计的开始和结束时间
 func (s *Statistician) usualPrint() printOpt {
 	return func(m map[string]interface{}) {
-		m["threadNum"] = threadNum
 		m["loopNum"] = loopNum
 		m["startTime"] = s.startTime.Format("2006-01-02 15:04:05")
 		m["endTime"] = s.endTime.Format("2006-01-02 15:04:05")

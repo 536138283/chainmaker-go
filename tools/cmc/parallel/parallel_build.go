@@ -1,7 +1,6 @@
 package parallel
 
 import (
-	"bytes"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -9,13 +8,10 @@ import (
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"os"
-	"strconv"
 	"sync/atomic"
 	"time"
 )
@@ -147,92 +143,6 @@ func (u Upgrade) Build(requestId int64, index int) (*commonPb.TxRequest, error) 
 	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
 }
 
-// Builder 接口定义了构建非交易请求的方法规范，用于根据索引创建具体的交易请求。
-// 非压测的请求需要实现Builder接口构建请求参数，参数实现逻辑，在实现方法自定义实现
-// 任何实现此接口的类型都需要提供一个Build方法，该方法接收一个int类型的索引作为参数，
-// 并返回一个指向commonPb.TxRequest结构体的指针以及一个潜在的错误。
-type Builder interface {
-	Build(index int) (*commonPb.TxRequest, error)
-}
-
-// SubscribeBlock 结构体用于订阅特定高度起始的区块信息。
-type SubscribeBlock struct {
-	blockHeight uint64 // 订阅开始的区块高度
-}
-
-// Build 实现了Builder接口中的Build方法，为指定索引创建一个订阅区块的交易请求。
-// 它构造TxRequest，设置Payload中的各种参数以执行订阅操作，并处理相关的二进制编码和错误处理。
-func (s SubscribeBlock) Build(index int) (*commonPb.TxRequest, error) {
-	req := &commonPb.TxRequest{}
-	startBlockHeightByte := make([]byte, 8)
-	binary.LittleEndian.PutUint64(startBlockHeightByte, s.blockHeight)
-	endBlockHeightBuf := new(bytes.Buffer)
-	err := binary.Write(endBlockHeightBuf, binary.LittleEndian, int64(-1))
-	if err != nil {
-		return nil, err
-	}
-	req.Payload = &commonPb.Payload{
-		ChainId:      chainId,
-		TxId:         utils.GetRandTxId(),
-		TxType:       commonPb.TxType_SUBSCRIBE,
-		Timestamp:    time.Now().Unix(),
-		ContractName: syscontract.SystemContract_SUBSCRIBE_MANAGE.String(),
-		Method:       syscontract.SubscribeFunction_SUBSCRIBE_BLOCK.String(),
-		Parameters: []*commonPb.KeyValuePair{
-			{
-				Key:   syscontract.SubscribeBlock_START_BLOCK.String(),
-				Value: startBlockHeightByte,
-			},
-			{
-				Key:   syscontract.SubscribeBlock_END_BLOCK.String(),
-				Value: endBlockHeightBuf.Bytes(),
-			},
-			{
-				Key:   syscontract.SubscribeBlock_WITH_RWSET.String(),
-				Value: []byte(strconv.FormatBool(false)),
-			},
-			{
-				Key:   syscontract.SubscribeBlock_ONLY_HEADER.String(),
-				Value: []byte(strconv.FormatBool(false)),
-			},
-		},
-	}
-	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], req.Payload, nil)
-}
-
-// QueryBlockHeight 结构体用于查询区块链高度。
-type QueryBlockHeight struct{}
-
-// Build 实现了Builder接口中的Build方法，为指定索引创建一个查询区块高度的交易请求。
-// 它构造TxRequest，设置Payload以查询特定高度的区块信息，并进行相应的参数组装。
-func (s QueryBlockHeight) Build(index int) (*commonPb.TxRequest, error) {
-	var kvs []*commonPb.KeyValuePair
-	kvs = append(kvs, &commonPb.KeyValuePair{
-		Key:   sdkutils.KeyBlockContractBlockHeight,
-		Value: []byte(strconv.FormatUint(math.MaxUint, 10)),
-	})
-	kvs = append(kvs, &commonPb.KeyValuePair{
-		Key:   sdkutils.KeyBlockContractWithRWSet,
-		Value: []byte(strconv.FormatBool(false)),
-	})
-	kvs = append(kvs, &commonPb.KeyValuePair{
-		Key:   sdkutils.KeyBlockContractTruncateValueLen,
-		Value: []byte(strconv.FormatInt(1000, 10)),
-	})
-	payload := sdkutils.NewPayload(
-		sdkutils.WithChainId(chainId),
-		sdkutils.WithTxType(commonPb.TxType_QUERY_CONTRACT),
-		sdkutils.WithTxId(""),
-		sdkutils.WithTimestamp(time.Now().Unix()),
-		sdkutils.WithContractName(syscontract.SystemContract_CHAIN_QUERY.String()),
-		sdkutils.WithMethod(syscontract.ChainQueryFunction_GET_BLOCK_BY_HEIGHT.String()),
-		sdkutils.WithParameters(kvs),
-		sdkutils.WithSequence(0),
-		sdkutils.WithLimit(nil),
-	)
-	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
-}
-
 // makeKvs 生成一组键值对（KeyValuePairs）基于全局配置的规则，用于构造交易请求的Payload。
 // 每个键值对的生成会考虑是否需要唯一性、随机性、递增或递减等特性。
 // 请求ID（requestId）会被嵌入到满足条件的键值对的值中，以确保唯一性或生成随机数据。
@@ -339,69 +249,4 @@ func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 	}
 	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
 	return req, nil
-}
-
-func getChainClient() ([]*sdk.ChainClient, error) {
-	var chainClients []*sdk.ChainClient
-	for i := range hosts {
-		clientConf := clientConf{
-			host:    hosts[i],
-			tls:     hostnames[i],
-			caPath:  caPaths[i],
-			orgId:   orgIDs[i],
-			chainId: chainId,
-			userKey: userKeyPaths[i],
-			userCrt: userCrtPaths[i],
-			signKey: signKeyPaths[i],
-			signCrt: signCrtPaths[i],
-		}
-		chainClient, err := newChainClient(clientConf)
-		if err != nil {
-			return nil, err
-		}
-		chainClients = append(chainClients, chainClient)
-	}
-	return chainClients, nil
-}
-
-type clientConf struct {
-	host    string
-	tls     string
-	caPath  string
-	orgId   string
-	chainId string
-	userKey string
-	userCrt string
-	signKey string
-	signCrt string
-}
-
-func newChainClient(cf clientConf) (*sdk.ChainClient, error) {
-	nodeConf := sdk.NewNodeConfig(
-		// 节点地址，格式：127.0.0.1:12301
-		sdk.WithNodeAddr(cf.host),
-		// 节点连接数
-		sdk.WithNodeConnCnt(threadNum),
-		// 节点是否启用TLS认证
-		sdk.WithNodeUseTLS(true),
-		// 根证书路径，支持多个
-		sdk.WithNodeCAPaths([]string{cf.caPath}),
-		// TLS Hostname
-		sdk.WithNodeTLSHostName(cf.tls),
-	)
-	return sdk.NewChainClient(
-		// 设置归属组织
-		sdk.WithChainClientOrgId(cf.orgId),
-		sdk.WithChainClientChainId(chainId),
-		// 设置客户端用户私钥路径
-		sdk.WithUserKeyFilePath(cf.userKey),
-		// 设置客户端用户证书
-		sdk.WithUserCrtFilePath(cf.userCrt),
-		// 设置客户端签名证书
-		sdk.WithUserSignCrtFilePath(cf.signCrt),
-		// 设置客户端签名私钥
-		sdk.WithUserSignKeyFilePath(cf.signKey),
-		// 添加节点1
-		sdk.AddChainClientNodeConfig(nodeConf),
-	)
 }

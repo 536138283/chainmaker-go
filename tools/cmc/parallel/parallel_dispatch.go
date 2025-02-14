@@ -182,14 +182,14 @@ func listenAndExit(timeoutChan, doneChan chan struct{}) {
 // Thread 结构体表示一个执行特定任务的线程或协程实例，
 // 包含了执行循环次数、通信通道、统计信息以及与 gRPC 服务的连接信息。
 type Thread struct {
-	id           int                 // 是线程的唯一标识符，用于区分不同的线程实例
-	loopNum      int                 // 指定线程需要执行循环操作的次数
-	doneChan     chan struct{}       // 是一个通道，用于传递完成信号。当线程完成其指定任务后，会向此通道发送信号
-	timeoutChan  chan struct{}       // 用于接收超时信号。当接收到信号时，表明当前线程可能需要根据超时情况做出响应或终止操作
-	statistician *Statistician       // 是一个指向 Statistician 实例的指针，用于收集和统计线程执行过程中的性能数据或其他相关信息
-	conn         *grpc.ClientConn    // conn 表示与 gRPC 服务建立的客户端连接，通过此连接可以发起 RPC 调用
-	client       apiPb.RpcNodeClient // 是 gRPC 客户端，类型为 apiPb.RpcNodeClient，封装了对远程节点服务的所有调用能力
-	index        int                 // 代表线程在其所属集合或组中的索引位置，可用于追踪或排序
+	id           int                   // 是线程的唯一标识符，用于区分不同的线程实例
+	loopNum      int                   // 指定线程需要执行循环操作的次数
+	doneChan     chan struct{}         // 是一个通道，用于传递完成信号。当线程完成其指定任务后，会向此通道发送信号
+	timeoutChan  chan struct{}         // 用于接收超时信号。当接收到信号时，表明当前线程可能需要根据超时情况做出响应或终止操作
+	statistician *Statistician         // 是一个指向 Statistician 实例的指针，用于收集和统计线程执行过程中的性能数据或其他相关信息
+	conns        []*grpc.ClientConn    // conn 表示与 gRPC 服务建立的客户端连接，通过此连接可以发起 RPC 调用 conns与clients是相互对应关系
+	clients      []apiPb.RpcNodeClient // 是 gRPC 客户端，类型为 apiPb.RpcNodeClient，封装了对远程节点服务的所有调用能力
+	index        int                   // 用来线程去消费的队列索引
 }
 
 // threadFactory 函数负责创建并初始化一组 Thread 实例，每个实例代表一个工作线程，准备就绪以执行特定任务。
@@ -215,11 +215,13 @@ func threadFactory(number int, doneChan, timeoutChan chan struct{}, statistician
 	for i := 0; i < number; i++ {
 		t := &Thread{id: i, loopNum: loopNum, doneChan: doneChan, timeoutChan: timeoutChan, statistician: statistician}
 		t.index = t.id % len(hosts)
-		t.conn, err = t.initGRPCConnect(useTLS, t.index)
+		t.conns, err = t.initGRPCConnect(useTLS, t.index)
 		if err != nil {
 			return nil, err
 		}
-		t.client = apiPb.NewRpcNodeClient(t.conn)
+		for _, conn := range t.conns {
+			t.clients = append(t.clients, apiPb.NewRpcNodeClient(conn))
+		}
 		threads[i] = t
 	}
 	return threads, nil
@@ -257,18 +259,22 @@ func (t *Thread) consume() {
 		default:
 			// 尝试从队列接收请求参数
 			select {
-			case req, ok := <-paramQueues[loopNum/nodeNum]:
+			case req, ok := <-paramQueues[t.index]:
 				// 如果chan 关闭，被分配到该chan的线程也一起关闭
 				if !ok {
 					t.doneChan <- struct{}{}
 					return
 				}
+				// 如果队列中数量小于生产因子，发送生产信号
 				if len(paramQueues[t.index]) < productFactor && !interruptSignal {
 					produceSignal <- t.index
 				}
 				start := time.Now()
+
 				var err error
-				err = sendTx(t.client, orgIDs[t.index], i, req.Param)
+				fmt.Println(t.index)
+				fmt.Println(t.clients[loopNum/nodeNum])
+				err = sendTx(t.clients[loopNum/nodeNum], orgIDs[t.index], i, req.Param)
 				// 结果进入结果集
 				atomic.AddUint32(&t.statistician.totalCount, 1)
 				t.statistician.reqStatC <- &reqStat{
@@ -289,9 +295,11 @@ func (t *Thread) consume() {
 
 // stop 停止线程并关闭其关联的连接
 func (t *Thread) stop() {
-	err := t.conn.Close()
-	if err != nil {
-		return
+	for _, conn := range t.conns {
+		err := conn.Close()
+		if err != nil {
+			return
+		}
 	}
 }
 
@@ -316,36 +324,48 @@ func (t *Thread) stop() {
 // 返回:
 // - *grpc.ClientConn: 成功建立的 gRPC 客户端连接。
 // - error: 初始化连接过程中发生的错误，如果成功则为 nil。
-func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, error) {
+func (t *Thread) initGRPCConnect(useTLS bool, index int) ([]*grpc.ClientConn, error) {
 	// 设置 gRPC 服务端地址
-	url := hosts[index]
-	// 根据 useTLS 配置选择不同的连接方式
-	if useTLS {
-		var serverName string
-		// 初始化 serverName，如果没有指定 hostnames，则使用默认域名
-		if hostnamesString == "" {
-			serverName = "chainmaker.org"
-		} else {
-			if len(hosts) != len(hostnames) {
-				return nil, errors.New("required len(hosts) == len(hostnames)")
+	var conns []*grpc.ClientConn
+	for i := 0; i < len(hosts); i++ {
+		url := hosts[i]
+		// 根据 useTLS 配置选择不同的连接方式
+		if useTLS {
+			var serverName string
+			// 初始化 serverName，如果没有指定 hostnames，则使用默认域名
+			if hostnamesString == "" {
+				serverName = "chainmaker.org"
+			} else {
+				if len(hosts) != len(hostnames) {
+					return nil, errors.New("required len(hosts) == len(hostnames)")
+				}
+				// 根据索引选择对应的主机名
+				serverName = hostnames[index]
 			}
-			// 根据索引选择对应的主机名
-			serverName = hostnames[index]
+			// 使用 TLS 凭证创建安全的 gRPC 连接
+			tlsClient := ca.CAClient{
+				ServerName: serverName,
+				CaPaths:    []string{caPaths[index]},
+				CertFile:   userCrtPaths[index],
+				KeyFile:    userKeyPaths[index],
+			}
+			// 获取 TLS 凭证
+			c, err := tlsClient.GetCredentialsByCA()
+			if err != nil {
+				return nil, err
+			}
+			conn, err := grpc.Dial(url, grpc.WithTransportCredentials(*c))
+			if err != nil {
+				return nil, err
+			}
+			conns = append(conns, conn)
+		} else {
+			conn, err := grpc.Dial(url, grpc.WithInsecure())
+			if err != nil {
+				return nil, err
+			}
+			conns = append(conns, conn)
 		}
-		// 使用 TLS 凭证创建安全的 gRPC 连接
-		tlsClient := ca.CAClient{
-			ServerName: serverName,
-			CaPaths:    []string{caPaths[index]},
-			CertFile:   userCrtPaths[index],
-			KeyFile:    userKeyPaths[index],
-		}
-		// 获取 TLS 凭证
-		c, err := tlsClient.GetCredentialsByCA()
-		if err != nil {
-			return nil, err
-		}
-		return grpc.Dial(url, grpc.WithTransportCredentials(*c))
-	} else {
-		return grpc.Dial(url, grpc.WithInsecure())
 	}
+	return conns, nil
 }
