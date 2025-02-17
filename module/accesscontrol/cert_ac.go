@@ -114,7 +114,6 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 // Start the ac service.
 func (cp *certACProvider) Start() error {
 	cp.taskCron = cron.New(cron.WithSeconds())
-	cp.runTask() //启动时先执行一次
 	// 添加任务，每天执行
 	_, err := cp.taskCron.AddFunc("0 0 0 ? * *", func() {
 		//添加任务，每2分钟执行一次（测试使用）
@@ -170,11 +169,11 @@ func (cp *certACProvider) runTask() {
 		}
 		expired := isCertExpired(*cert)
 		if expired {
-			cp.log.Infof("the certificate has expired[%s]", key)
+			cp.log.Infof("the certificate has expired[%v]", key)
 			cp.certCache.Remove(key)
-			cp.log.Infof("remove [%s] in cache", key)
+			cp.log.Infof("remove [%v] in cache", key)
 		} else {
-			cp.log.Infof("the certificate has not expired[%s]", key)
+			cp.log.Infof("the certificate has not expired[%v]", key)
 		}
 	})
 }
@@ -925,7 +924,7 @@ func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 }
 
 func (cp *certACProvider) addCertCache(certId string, cert []byte) {
-	cp.log.Debugf("add [%s] in cert cache", certId)
+	cp.log.Debugf("add [%v] in cert cache", certId)
 	cp.certCache.Add(certId, cert)
 }
 
