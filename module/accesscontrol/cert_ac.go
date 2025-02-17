@@ -17,6 +17,9 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
+
+	"github.com/robfig/cron/v3"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
@@ -61,6 +64,9 @@ type certACProvider struct {
 
 	//consensus type
 	consensusType consensus.ConsensusType
+
+	taskCron *cron.Cron
+	log      protocol.Logger
 }
 
 type trustMemberCached struct {
@@ -101,7 +107,81 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 	//v220_compat Deprecated
 	chainConf.AddWatch(certACProvider)   //nolint: staticcheck
 	chainConf.AddVmWatch(certACProvider) //nolint: staticcheck
+	certACProvider.log = log
 	return certACProvider, nil
+}
+
+// Start the ac service.
+func (cp *certACProvider) Start() error {
+	cp.taskCron = cron.New(cron.WithSeconds())
+	cp.runTask() //启动时先执行一次
+	// 添加任务，每天执行
+	_, err := cp.taskCron.AddFunc("0 0 0 ? * *", func() {
+		//添加任务，每2分钟执行一次（测试使用）
+		//_, err := cp.taskCron.AddFunc("0 0/2 * * * ?", func() {
+		cp.runTask()
+	})
+	if err != nil {
+		cp.log.Errorf("add task cron failed:", err)
+		return err
+	}
+	cp.log.Infof("scheduled task added successfully")
+
+	cp.taskCron.Start()
+	return nil
+}
+
+// Stop the ac service.
+func (cp *certACProvider) Stop() error {
+	cp.log.Infof("certACProvider stop")
+	if cp.taskCron != nil {
+		cp.taskCron.Stop()
+		return nil
+	}
+	return fmt.Errorf("task cron is nil")
+}
+
+func (cp *certACProvider) runTask() {
+	cp.log.Debugf("run task in ac, cache size:%d", cp.certCache.Long())
+	// 遍历并打印所有键值对
+	cp.certCache.Iterate(func(key string, value interface{}) {
+		cp.log.Debugf("Key: %s", key)
+		var (
+			cert *bcx509.Certificate
+			err  error
+		)
+		certBytes, ok := value.([]byte)
+		if !ok {
+			certBytes = []byte(value.(string))
+		}
+		certBlock, rest := pem.Decode(certBytes)
+		if certBlock == nil {
+			cert, err = bcx509.ParseCertificate(rest)
+			if err != nil {
+				cp.log.Warnf("new cert member failed, invalid certificate")
+				return
+			}
+		} else {
+			cert, err = bcx509.ParseCertificate(certBlock.Bytes)
+			if err != nil {
+				cp.log.Warnf("new cert member failed, invalid certificate")
+				return
+			}
+		}
+		expired := isCertExpired(*cert)
+		if expired {
+			cp.log.Infof("the certificate has expired[%s]", key)
+			cp.certCache.Remove(key)
+			cp.log.Infof("remove [%s] in cache", key)
+		} else {
+			cp.log.Infof("the certificate has not expired[%s]", key)
+		}
+	})
+}
+
+func isCertExpired(cert bcx509.Certificate) bool {
+	now := time.Now()
+	return now.After(cert.NotAfter)
 }
 
 func newCertACProvider(chainConfig *config.ChainConfig, localOrgId string,
@@ -845,6 +925,7 @@ func (cp *certACProvider) lookUpCertCache(certId []byte) ([]byte, bool) {
 }
 
 func (cp *certACProvider) addCertCache(certId string, cert []byte) {
+	cp.log.Debugf("add [%s] in cert cache", certId)
 	cp.certCache.Add(certId, cert)
 }
 

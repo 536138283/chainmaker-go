@@ -43,6 +43,9 @@ func (bc *Blockchain) Start() error {
 	if bc.isModuleInit(moduleNameSync) && !bc.isModuleStartUp(moduleNameSync) {
 		startModules = append(startModules, map[string]func() error{moduleNameSync: bc.startSyncService})
 	}
+	if bc.isModuleInit(moduleNameAccessControl) && !bc.isModuleStartUp(moduleNameAccessControl) {
+		startModules = append(startModules, map[string]func() error{moduleNameAccessControl: bc.startAc})
+	}
 
 	total := len(startModules)
 
@@ -162,6 +165,16 @@ func (bc *Blockchain) startVM() error {
 
 func (bc *Blockchain) startStore() error {
 	bc.startModules[moduleNameStore] = struct{}{}
+	return nil
+}
+
+func (bc *Blockchain) startAc() error {
+	// start ac
+	if err := bc.ac.Start(); err != nil {
+		bc.log.Errorf("start ac failed, %s", err.Error())
+		return err
+	}
+	bc.startModules[moduleNameAccessControl] = struct{}{}
 	return nil
 }
 

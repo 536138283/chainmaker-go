@@ -169,6 +169,16 @@ func (p *pkACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId st
 	return pkAcProvider, nil
 }
 
+// Start the ac service.
+func (cp *pkACProvider) Start() error {
+	return nil
+}
+
+// Stop the ac service.
+func (cp *pkACProvider) Stop() error {
+	return nil
+}
+
 func newPkACProvider(chainConfig *config.ChainConfig,
 	store protocol.BlockchainStore, log protocol.Logger) (*pkACProvider, error) {
 	pkAcProvider := &pkACProvider{

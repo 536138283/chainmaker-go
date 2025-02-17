@@ -28,6 +28,11 @@ var acProviderRegistry = map[string]reflect.Type{}
 type ACProvider interface {
 	NewACProvider(chainConf protocol.ChainConf, localOrgId string,
 		store protocol.BlockchainStore, log protocol.Logger, msgBus msgbus.MessageBus) (protocol.AccessControlProvider, error)
+
+	// Start the ac service.
+	Start() error
+	// Stop the ac service.
+	Stop() error
 }
 
 // RegisterACProvider registers a ACProvider to global ac registry
