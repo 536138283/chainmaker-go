@@ -113,13 +113,11 @@ func (cp *certACProvider) NewACProvider(chainConf protocol.ChainConf, localOrgId
 
 // Start the ac service.
 func (cp *certACProvider) Start() error {
-	cp.taskCron = cron.New(cron.WithSeconds())
-	// 添加任务，每天执行
-	_, err := cp.taskCron.AddFunc("0 0 0 ? * *", func() {
-		//添加任务，每2分钟执行一次（测试使用）
-		//_, err := cp.taskCron.AddFunc("0 0/2 * * * ?", func() {
-		cp.runTask()
-	})
+	cp.taskCron = cron.New(
+		cron.WithSeconds(),          // 启用秒级调度
+		cron.WithLocation(time.UTC)) // 设置时区为 UTC
+	// 添加任务，每小时执行一次
+	_, err := cp.taskCron.AddFunc("0 0 * * * *", cp.runTask)
 	if err != nil {
 		cp.log.Errorf("add task cron failed:", err)
 		return err
