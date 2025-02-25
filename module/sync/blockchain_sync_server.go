@@ -8,13 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 package sync
 
 import (
-	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 	"fmt"
 	"reflect"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
@@ -293,8 +294,10 @@ func (sync *BlockChainSyncServer) handleTxPoolStatusResp(syncMsg *syncPb.SyncMsg
 		return err
 	}
 	reqId := msg.TxPoolSyncReqId
-	sync.log.Debugf("receive tx pool status resp [%v-%v], common in queue: %v", reqId, from, msg.TxPoolStatus.CommonTxNumInQueue)
-	if float64(msg.TxPoolStatus.CommonTxNumInQueue)/float64(msg.TxPoolStatus.CommonTxPoolSize) <= sync.conf.txPoolSyncProportion {
+	sync.log.Debugf("receive tx pool status resp [%v-%v], "+
+		"common in queue: %v", reqId, from, msg.TxPoolStatus.CommonTxNumInQueue)
+	if float64(msg.TxPoolStatus.CommonTxNumInQueue)/float64(msg.TxPoolStatus.CommonTxPoolSize) <=
+		sync.conf.txPoolSyncProportion {
 		sync.conf.txPoolReq.mux.Lock()
 		defer sync.conf.txPoolReq.mux.Unlock()
 		// if the received message reqId has been processed or an outdated reqId is received,
@@ -559,42 +562,48 @@ func (sync *BlockChainSyncServer) loop() {
 				txPoolStatusTk.Stop()
 				continue
 			}
-			poolStatus := sync.txPool.GetPoolStatus()
+			sync.handleTxPoolStatus(txPoolReqId)
+		}
+	}
+}
 
-			sync.log.Debugf("tx pool status tick trigger, local tx pool [%v, %v]",
-				poolStatus.ConfigTxNumInQueue, poolStatus.CommonTxNumInQueue)
+// handleTxPoolStatus handle tx pool status
+// send tx pool status request to other consensus node
+func (sync *BlockChainSyncServer) handleTxPoolStatus(txPoolReqId int) {
+	poolStatus := sync.txPool.GetPoolStatus()
 
-			if poolStatus.ConfigTxNumInQueue > 0 {
-				sync.log.Debugf("re broadcast config tx in queue, nums: %v", poolStatus.ConfigTxNumInQueue)
-				// sync re broadcast
-				// The config tx has a higher priority and will be broadcast if there is one.
-				sync.txPool.ReBroadcastTx(txpoolPb.TxType_CONFIG_TX, txpoolPb.TxStage_IN_QUEUE)
-			}
+	sync.log.Debugf("tx pool status tick trigger, local tx pool [%v, %v]",
+		poolStatus.ConfigTxNumInQueue, poolStatus.CommonTxNumInQueue)
 
-			if poolStatus.CommonTxNumInQueue > 0 {
-				//Because it will be broadcast to all consensus nodes, all consensus nodes will return a response.
-				//In order to trigger only one broadcast for each request,
-				//The requesting node needs to maintain a txPoolReqId and +1 every time the clock is triggered.
-				txPoolReqId++
-				sync.log.Debugf("broadcast tx pool status request [%v] to consensus nodes", txPoolReqId)
-				data := []byte(strconv.Itoa(txPoolReqId))
-				var (
-					ts  []byte
-					err error
-				)
-				if ts, err = proto.Marshal(&syncPb.SyncMsg{
-					Type:    syncPb.SyncMsg_TX_POOL_STATUS_REQ,
-					Payload: data,
-				}); err != nil {
-					sync.log.Error(err)
-					continue
-				}
-				// sync broadcast TX_POOL_STATUS_REQ msg to all consensus nodes
-				// reuse msg header NetMsg_SYNC_BLOCK_MSG
-				if err = sync.net.ConsensusBroadcastMsg(ts, netPb.NetMsg_SYNC_BLOCK_MSG); err != nil {
-					sync.log.Error(err)
-				}
-			}
+	if poolStatus.ConfigTxNumInQueue > 0 {
+		sync.log.Debugf("re broadcast config tx in queue, nums: %v", poolStatus.ConfigTxNumInQueue)
+		// sync re broadcast
+		// The config tx has a higher priority and will be broadcast if there is one.
+		sync.txPool.ReBroadcastTx(txpoolPb.TxType_CONFIG_TX, txpoolPb.TxStage_IN_QUEUE)
+	}
+
+	if poolStatus.CommonTxNumInQueue > 0 {
+		//Because it will be broadcast to all consensus nodes, all consensus nodes will return a response.
+		//In order to trigger only one broadcast for each request,
+		//The requesting node needs to maintain a txPoolReqId and +1 every time the clock is triggered.
+		txPoolReqId++
+		sync.log.Debugf("broadcast tx pool status request [%v] to consensus nodes", txPoolReqId)
+		data := []byte(strconv.Itoa(txPoolReqId))
+		var (
+			ts  []byte
+			err error
+		)
+		if ts, err = proto.Marshal(&syncPb.SyncMsg{
+			Type:    syncPb.SyncMsg_TX_POOL_STATUS_REQ,
+			Payload: data,
+		}); err != nil {
+			sync.log.Error(err)
+			return
+		}
+		// sync broadcast TX_POOL_STATUS_REQ msg to all consensus nodes
+		// reuse msg header NetMsg_SYNC_BLOCK_MSG
+		if err = sync.net.ConsensusBroadcastMsg(ts, netPb.NetMsg_SYNC_BLOCK_MSG); err != nil {
+			sync.log.Error(err)
 		}
 	}
 }

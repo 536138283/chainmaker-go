@@ -138,10 +138,11 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	mockStore := newMockBlockChainStore(ctrl)
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
 	mockCommit := newMockCommitter(ctrl, mockLedger)
+	mockTxPool := newMockTxPool(ctrl)
 	log := &test.GoLogger{}
 	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
 	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
-	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, nil, log)
+	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
 	require.NoError(t, service.Start())
 	return service, func() {
 		service.Stop()
@@ -332,6 +333,7 @@ func newMockNet2(ctrl *gomock.Controller) protocol.NetService {
 		func(msg []byte, msgType netPb.NetMsg_MsgType, to ...string) error {
 			return nil
 		}).AnyTimes()
+	mockNet.EXPECT().ConsensusSubscribe(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().Subscribe(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().ReceiveMsg(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelSubscribe(gomock.Any()).AnyTimes()
