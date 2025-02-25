@@ -90,6 +90,12 @@ func newMockMessageBus(ctrl *gomock.Controller) msgbus.MessageBus {
 	return mockMsgBus
 }
 
+func newMockTxPool(ctrl *gomock.Controller) protocol.TxPool {
+	mockTxPool := mock.NewMockTxPool(ctrl)
+	mockTxPool.EXPECT().GetPoolStatus().AnyTimes()
+	return mockTxPool
+}
+
 func newMockNet(ctrl *gomock.Controller) protocol.NetService {
 	mockNet := mock.NewMockNetService(ctrl)
 	broadcastMsgs := make([]netMsg, 0)
@@ -105,6 +111,7 @@ func newMockNet(ctrl *gomock.Controller) protocol.NetService {
 			return nil
 		}).AnyTimes()
 	mockNet.EXPECT().Subscribe(gomock.Any(), gomock.Any()).AnyTimes()
+	mockNet.EXPECT().ConsensusSubscribe(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().ReceiveMsg(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelSubscribe(gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelReceiveMsg(gomock.Any()).AnyTimes()

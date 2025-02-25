@@ -171,6 +171,17 @@ net:
       # node_ids:
       #   - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
 
+sync:
+  # enable tx pool sync or not
+  # Independent configuration, will not affect other configurations under the sync tag,
+  # nor will it be affected by other configurations
+  tx_pool_sync_enable: false
+  # tx pool sync tick duration(second)
+  tx_pool_status_tick: 10
+  # tx pool sync proportion (tx num in queue / tx pool size)
+  # when it is less than this ratio, re broadcast will be triggered
+  tx_pool_sync_proportion: 0.1
+
 # Transaction pool settings
 # Other tx_pool settings can be found in tx_Pool_config.go
 txpool:
