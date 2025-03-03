@@ -24,6 +24,7 @@ func blockChainsCMD() *cobra.Command {
 		Long:  "blockchains command",
 	}
 	chainConfigCmd.AddCommand(checkNewBlockchainsCMD())
+	chainConfigCmd.AddCommand(updateChainsCMD())
 	return chainConfigCmd
 }
 
@@ -47,6 +48,25 @@ func checkNewBlockchainsCMD() *cobra.Command {
 	return cmd
 }
 
+func updateChainsCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "update_chains",
+		Short: "update chains",
+		Long:  "update chains",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return updateChains()
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath,
+		flagSdkConfPath, flagOrgId, flagChainId, flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
+		flagEnableCertHash,
+	})
+
+	return cmd
+}
+
 func checkNewBlockchains() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
@@ -59,5 +79,20 @@ func checkNewBlockchains() error {
 		return fmt.Errorf("check new blockchains failed, %s", err.Error())
 	}
 	fmt.Printf("check new blockchains ok \n")
+	return nil
+}
+
+func updateChains() error {
+	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
+	if err != nil {
+		return fmt.Errorf("create user client failed, %s", err.Error())
+	}
+	defer client.Stop()
+	err = client.UpdateChains()
+	if err != nil {
+		return fmt.Errorf("update chains failed, %s", err.Error())
+	}
+	fmt.Printf("update chains ok \n")
 	return nil
 }
