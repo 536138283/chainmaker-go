@@ -272,15 +272,31 @@ func getCurrentDate() string {
 // nolint: revive, gocyclo
 func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSource) *commonPb.TxResponse {
 	var (
-		err     error
-		errMsg  string
-		errCode commonErr.ErrCode
-		store   protocol.BlockchainStore
-		vmMgr   protocol.VmManager
-		resp    = &commonPb.TxResponse{TxId: tx.Payload.TxId}
+		err         error
+		errMsg      string
+		errCode     commonErr.ErrCode
+		store       protocol.BlockchainStore
+		vmMgr       protocol.VmManager
+		ledgerCache protocol.LedgerCache
+		chainConf   protocol.ChainConf
+		resp        = &commonPb.TxResponse{TxId: tx.Payload.TxId}
 	)
 
 	chainId := tx.Payload.ChainId
+	if vmMgr, err = s.chainMakerServer.GetVmManager(chainId); err != nil {
+		errCode = commonErr.ERR_CODE_GET_VM_MGR
+		errMsg = s.getErrMsg(errCode, err)
+		s.log.Error(errMsg)
+		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+		resp.Message = errMsg
+		resp.TxId = tx.Payload.TxId
+		return resp
+	}
+	// 系统链单独处理，不需要获取其他对象，由内部函数完成
+	if chainId == SYSTEM_CHAIN {
+		return s.dealSystemChainQuery(tx, vmMgr)
+	}
+
 	if store, err = s.chainMakerServer.GetStore(chainId); err != nil {
 		errCode = commonErr.ERR_CODE_GET_STORE
 		errMsg = s.getErrMsg(errCode, err)
@@ -291,8 +307,8 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		return resp
 	}
 
-	if vmMgr, err = s.chainMakerServer.GetVmManager(chainId); err != nil {
-		errCode = commonErr.ERR_CODE_GET_VM_MGR
+	if ledgerCache, err = s.chainMakerServer.GetLedgerCache(chainId); err != nil {
+		errCode = commonErr.ERR_CODE_GET_LEDGERCACHE
 		errMsg = s.getErrMsg(errCode, err)
 		s.log.Error(errMsg)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -300,15 +316,29 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		resp.TxId = tx.Payload.TxId
 		return resp
 	}
-
-	if chainId == SYSTEM_CHAIN {
-		return s.dealSystemChainQuery(tx, vmMgr)
+	blockVersion := protocol.DefaultBlockVersion
+	var lastChainConfig *configPb.ChainConfig
+	if chainConf, err = s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err == nil {
+		lastChainConfig = chainConf.ChainConfig()
+		blockVersion = lastChainConfig.GetBlockVersion()
+	} else {
+		// 失败的情况下，从存储中重新获取一次
+		lastChainConfig, err = store.GetLastChainConfig()
+		if err != nil || lastChainConfig == nil {
+			s.log.Error(fmt.Errorf("failed to get last chain config, %v", err))
+			resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
+			resp.Message = err.Error()
+			resp.TxId = tx.Payload.TxId
+			return resp
+		}
+	}
+	if blockVersion == 0 {
+		blockVersion = protocol.DefaultBlockVersion
 	}
 
 	var log = logger.GetLoggerByChain(logger.MODULE_SNAPSHOT, chainId)
-
 	var snap protocol.Snapshot
-	snap, err = snapshot.NewQuerySnapshot(store, log)
+	snap, err = snapshot.NewApiQuerySnapshot(ledgerCache.GetLastCommittedBlock(), lastChainConfig, store, log)
 	if err != nil {
 		s.log.Error(err)
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
@@ -316,17 +346,7 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 		resp.TxId = tx.Payload.TxId
 		return resp
 	}
-
-	blockVersion := protocol.DefaultBlockVersion
-
-	if cc, err1 := s.chainMakerServer.GetChainConf(tx.Payload.ChainId); err1 == nil {
-		blockVersion = cc.ChainConfig().GetBlockVersion()
-	}
-	if blockVersion == 0 {
-		blockVersion = protocol.DefaultBlockVersion
-	}
 	ctx := vm.NewTxSimContext(vmMgr, snap, tx, blockVersion, log)
-
 	//contract, err := store.GetContractByName(tx.Payload.ContractName)
 	contract, err := ctx.GetContractByName(tx.Payload.ContractName)
 	if err != nil {
@@ -406,7 +426,6 @@ func (s *ApiService) dealQuery(tx *commonPb.Transaction, source protocol.TxSourc
 	}
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
-
 		if txStatusCode == commonPb.TxStatusCode_SUCCESS && txResult.Code != 1 {
 			s.metricQueryCounter.WithLabelValues(chainId, "true").Inc()
 			s.metricQueryContractCounter.WithLabelValues(chainId,

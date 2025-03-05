@@ -57,8 +57,8 @@ type SnapshotImpl struct {
 	txResultMap    map[string]*commonPb.Result
 
 	// 调整为分片map
-	readTable  *ShardSet
-	writeTable *ShardSet
+	readTable  mapper
+	writeTable mapper
 
 	applyConflictTime *atomic.Int64
 	applyAddReadTime  *atomic.Int64
@@ -67,6 +67,41 @@ type SnapshotImpl struct {
 	txRoot    []byte
 	dagHash   []byte
 	rwSetHash []byte
+}
+
+// NewApiQuerySnapshot create a snapshot for query tx
+func NewApiQuerySnapshot(lastBlock *commonPb.Block, lastChainConfig *config.ChainConfig, store protocol.BlockchainStore, log protocol.Logger) (*SnapshotImpl, error) {
+	txCount := 1
+	querySnapshot := &SnapshotImpl{
+		blockchainStore: store,
+		preSnapshot:     nil,
+		log:             log,
+		txResultMap:     make(map[string]*commonPb.Result, txCount),
+
+		chainId:         lastBlock.Header.ChainId,
+		blockHeight:     lastBlock.Header.BlockHeight,
+		blockVersion:    lastBlock.Header.BlockVersion,
+		blockTimestamp:  lastBlock.Header.BlockTimestamp,
+		blockProposer:   lastBlock.Header.Proposer,
+		preBlockHash:    lastBlock.Header.PreBlockHash,
+		lastChainConfig: lastChainConfig,
+
+		txTable:      make([]*commonPb.Transaction, 0),
+		txRWSetTable: make([]*commonPb.TxRWSet, 0),
+
+		readTable:  NewInnerMapper(), // 使用纯粹的map，降低时间消耗
+		writeTable: NewInnerMapper(), // 使用纯粹的map，降低时间消耗
+
+		applyConflictTime: atomic.NewInt64(0),
+		applyAddReadTime:  atomic.NewInt64(0),
+		applyAddWriteTime: atomic.NewInt64(0),
+
+		txRoot:    lastBlock.Header.TxRoot,
+		dagHash:   lastBlock.Header.DagHash,
+		rwSetHash: lastBlock.Header.RwSetRoot,
+	}
+
+	return querySnapshot, nil
 }
 
 // NewQuerySnapshot create a snapshot for query tx
