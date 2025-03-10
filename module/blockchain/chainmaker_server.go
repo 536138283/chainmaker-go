@@ -374,6 +374,8 @@ func (server *ChainMakerServer) updateCustomChainTrustRootsTaskListerer() {
 						log.Errorf("load custom chain trust roots failed, %s", err2.Error())
 						return
 					}
+					fmt.Println("wcx debug:chainTrustRoots.ChainId = ", chainTrustRoots.ChainId)
+					fmt.Println("wcx debug:root=", r.Root, rootBytes)
 					roots = append(roots, rootBytes)
 				}
 				log.Debugf("update CustomChainTrustRoots,set chainId:%s roots:%s",
