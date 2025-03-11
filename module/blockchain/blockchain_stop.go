@@ -43,6 +43,9 @@ func (bc *Blockchain) Stop() {
 	if bc.isModuleStartUp(moduleNameTxPool) {
 		stopModules = append(stopModules, map[string]func() error{moduleNameTxPool: bc.stopTxPool})
 	}
+	if bc.isModuleStartUp(moduleNameAccessControl) {
+		stopModules = append(stopModules, map[string]func() error{moduleNameAccessControl: bc.stopAc})
+	}
 
 	total := len(stopModules)
 
@@ -178,5 +181,17 @@ func (bc *Blockchain) stopStore() error {
 		return err
 	}
 	delete(bc.startModules, moduleNameStore)
+	return nil
+}
+
+func (bc *Blockchain) stopAc() error {
+	// stop ac
+	err := bc.ac.Stop()
+	if err != nil {
+		bc.log.Errorf("stop ac failed, %s", err)
+
+		return err
+	}
+	delete(bc.startModules, moduleNameAccessControl)
 	return nil
 }
