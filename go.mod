@@ -15,7 +15,7 @@ require (
 	chainmaker.org/chainmaker/net-libp2p v1.2.7-0.20241014080127-3b97a24253a9
 	chainmaker.org/chainmaker/net-liquid v1.1.3
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250305031636-a9cc6c55adf0
-	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250217063149-681cb3875e53
+	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250307081059-f8d18b7cf1cc
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.7-0.20241204023454-4ee5b4615669
 	chainmaker.org/chainmaker/store/v2 v2.3.7-0.20241017081801-7ffa81831e84
 	chainmaker.org/chainmaker/utils/v2 v2.3.7-0.20241213073938-00acb6333cd5
@@ -23,7 +23,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20241219085246-c81ced637f6e
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7-0.20241025091146-aeeef899298c
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.7-0.20240924062528-6f24f64a6742
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20240924032826-32d500e3eeb8
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250307081147-8fc9255202a2
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.7-0.20240924062152-404d6c15e68a
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.7-0.20240924062724-9b9401d612fb
 	chainmaker.org/chainmaker/vm/v2 v2.3.7-0.20241203054730-7213c0cd222b
@@ -74,6 +74,7 @@ require (
 	github.com/mattn/go-tty v0.0.0-20180907095812-13ff1204f104 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/pkg/term v0.0.0-20180730021639-bffc007b7fd5 // indirect
+	github.com/robfig/cron/v3 v3.0.1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	google.golang.org/protobuf v1.27.1
 )

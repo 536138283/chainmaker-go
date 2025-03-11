@@ -57,6 +57,30 @@ func (s *ShardCache) Remove(k string) {
 	}
 }
 
+// Iterate 遍历 ShardCache 中的所有键值对，并调用回调函数处理每个键值对
+func (s *ShardCache) Iterate(f func(key string, value interface{})) {
+	for i := 0; i < ShardNum; i++ {
+		shard := s.shards[i]
+		shard.RLock()
+		for k, v := range shard.m {
+			f(k, v)
+		}
+		shard.RUnlock()
+	}
+}
+
+//
+func (s *ShardCache) Long() int {
+	long := 0
+	for i := 0; i < ShardNum; i++ {
+		shard := s.shards[i]
+		shard.RLock()
+		long += len(shard.m)
+		shard.RUnlock()
+	}
+	return long
+}
+
 type Shard struct {
 	sync.RWMutex
 	cap int

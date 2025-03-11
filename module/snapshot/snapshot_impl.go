@@ -70,7 +70,9 @@ type SnapshotImpl struct {
 }
 
 // NewApiQuerySnapshot create a snapshot for query tx
-func NewApiQuerySnapshot(lastBlock *commonPb.Block, lastChainConfig *config.ChainConfig, store protocol.BlockchainStore, log protocol.Logger) (*SnapshotImpl, error) {
+func NewApiQuerySnapshot(lastBlock *commonPb.Block, lastChainConfig *config.ChainConfig,
+	store protocol.BlockchainStore,
+	log protocol.Logger) (*SnapshotImpl, error) {
 	txCount := 1
 	querySnapshot := &SnapshotImpl{
 		blockchainStore: store,
