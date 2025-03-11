@@ -8,12 +8,13 @@ SPDX-License-Identifier: Apache-2.0
 package sync
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/txpool"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 	"strconv"
 	"testing"
 	"time"
+
+	"chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -142,7 +143,7 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	log := &test.GoLogger{}
 	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
 	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
-	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
+	service := newBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
 	require.NoError(t, service.Start())
 	return service, func() {
 		service.Stop()
@@ -353,7 +354,7 @@ func initTestSync2(t *testing.T) (protocol.SyncService, func()) {
 	log := &test.GoLogger{}
 	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
 	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
-	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
+	service := newBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
 	require.NoError(t, service.Start())
 	return service, func() {
 		service.Stop()

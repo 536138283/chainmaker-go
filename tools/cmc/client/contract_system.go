@@ -58,6 +58,11 @@ func systemContractCMD() *cobra.Command {
 	systemContractCmd.AddCommand(stakeReadSystemContractAddr())
 	systemContractCmd.AddCommand(stakeReadCompleteUnBoundingEpochNumber())
 
+	// sync
+	systemContractCmd.AddCommand(syncAddRule())
+	systemContractCmd.AddCommand(syncGetRule())
+	systemContractCmd.AddCommand(syncClearRule())
+
 	// system contract manage
 	systemContractCmd.AddCommand(systemContractManageCMD())
 

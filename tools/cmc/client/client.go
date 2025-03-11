@@ -85,6 +85,10 @@ var (
 	validator string
 	epochID   string
 
+	rule        string
+	beginHeight uint64
+	endHeight   uint64
+
 	grantContractList  []string
 	revokeContractList []string
 
@@ -182,6 +186,9 @@ const (
 	flagPermissionResourcePolicyRoleList = "permission-resource-policy-roleList"
 	flagRespResultToString               = "result-to-string"
 	flagMultiSignEnableManualRun         = "multi-sign-enable-manual-run"
+	flagRule                             = "rule"
+	flagBeginHeight                      = "begin-height"
+	flagEndHeight                        = "end-height"
 )
 
 // ClientCMD new client series command
@@ -300,6 +307,11 @@ func init() {
 	flags.StringVar(&epochID, flagEpochID, "", "specify epoch id")
 	flags.StringSliceVar(&grantContractList, flagGrantContractList, nil, "specify grant list")
 	flags.StringSliceVar(&revokeContractList, flagRevokeContractList, nil, "specify revoke list")
+
+	// sync 系统合约
+	flags.StringVar(&rule, flagRule, "", "specify use rule")
+	flags.Uint64Var(&beginHeight, flagBeginHeight, 0, "specify use begin height")
+	flags.Uint64Var(&endHeight, flagEndHeight, 0, "specify use end height")
 
 	// gas limit
 	flags.Uint64Var(&gasLimit, flagGasLimit, 0, "gas limit in uint64 type")

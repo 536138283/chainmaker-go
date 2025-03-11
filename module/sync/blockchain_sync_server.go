@@ -71,10 +71,12 @@ type BlockChainSyncServer struct {
 	getStateFn getStateFn
 	// tx pool for getting and store tx
 	txPool protocol.TxPool
+	// net message handler
+	netHandler *syncNetHandler
 }
 
-// NewBlockChainSyncServer Create a new BlockChainSyncServer instance
-func NewBlockChainSyncServer(
+// NewBlockChainewBlockChainSyncServernSyncServer Create a new BlockChainSyncServer instance
+func newBlockChainSyncServer(
 	chainId string,
 	net protocol.NetService,
 	msgBus msgbus.MessageBus,
@@ -83,6 +85,31 @@ func NewBlockChainSyncServer(
 	blockVerifier protocol.BlockVerifier,
 	blockCommitter protocol.BlockCommitter,
 	txPool protocol.TxPool,
+	log protocol.Logger) protocol.SyncService {
+
+	return newBlockChainSyncServerV1(chainId,
+		net,
+		msgBus,
+		blockchainStore,
+		ledgerCache,
+		blockVerifier,
+		blockCommitter,
+		txPool,
+		newSyncNetHandler(net, log),
+		log,
+	)
+}
+
+func newBlockChainSyncServerV1(
+	chainId string,
+	net protocol.NetService,
+	msgBus msgbus.MessageBus,
+	blockchainStore protocol.BlockchainStore,
+	ledgerCache protocol.LedgerCache,
+	blockVerifier protocol.BlockVerifier,
+	blockCommitter protocol.BlockCommitter,
+	txPool protocol.TxPool,
+	netHandler *syncNetHandler,
 	log protocol.Logger) protocol.SyncService {
 
 	syncServer := &BlockChainSyncServer{
@@ -100,7 +127,9 @@ func NewBlockChainSyncServer(
 		commitBlockC:    make(chan struct{}),
 		nodeList:        NewNodeList(),
 		txPool:          txPool,
+		netHandler:      netHandler,
 	}
+
 	return syncServer
 }
 
@@ -135,10 +164,13 @@ func (sync *BlockChainSyncServer) Start() error {
 		sync.msgBus.Register(msgbus.BlockInfo, sync)
 	}
 	//3. register net subscribe handler
-	if err := sync.net.Subscribe(netPb.NetMsg_SYNC_BLOCK_MSG, sync.blockSyncMsgHandler); err != nil {
-		return err
-	}
-	if err := sync.net.ReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG, sync.blockSyncMsgHandler); err != nil {
+	// if err := sync.net.Subscribe(netPb.NetMsg_SYNC_BLOCK_MSG, sync.blockSyncMsgHandler); err != nil {
+	// 	return err
+	// }
+	// if err := sync.net.ReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG, sync.blockSyncMsgHandler); err != nil {
+	// 	return err
+	// }
+	if err := sync.netHandler.RegisterHandler(sync); err != nil {
 		return err
 	}
 
@@ -264,6 +296,25 @@ func (sync *BlockChainSyncServer) blockSyncMsgHandler(from string, msg []byte, m
 	case syncPb.SyncMsg_TX_POOL_STATUS_RESP:
 		//received a response with block data from other nodes
 		return sync.handleTxPoolStatusResp(&syncMsg, from)
+	}
+	return fmt.Errorf("not support the syncPb.SyncMsg.Type as %d", syncMsg.Type)
+}
+
+func (sync *BlockChainSyncServer) HandleSyncMsg(from string, syncMsg *syncPb.SyncMsg) error {
+	switch syncMsg.Type {
+	case syncPb.SyncMsg_NODE_STATUS_REQ:
+		//received a request to get own state from other nodes
+		return sync.handleNodeStatusReq(from)
+	case syncPb.SyncMsg_NODE_STATUS_RESP:
+		//received a response with peer state data from other nodes
+		return sync.handleNodeStatusResp(syncMsg, from)
+	case syncPb.SyncMsg_BLOCK_SYNC_REQ:
+		//received a request to sync blocks from other nodes
+		return sync.handleBlockReq(syncMsg, from)
+	case syncPb.SyncMsg_BLOCK_SYNC_RESP:
+		//received a response with block data from other nodes
+		sync.log.Debug("receive [SyncMsg_BLOCK_SYNC_RESP] msg, put into scheduler...")
+		return sync.scheduler.addTask(&SyncedBlockMsg{msg: syncMsg.Payload, from: from})
 	}
 	return fmt.Errorf("not support the syncPb.SyncMsg.Type as %d", syncMsg.Type)
 }
@@ -728,6 +779,9 @@ func (sync *BlockChainSyncServer) StartBlockSync() {
 func (sync *BlockChainSyncServer) Stop() {
 	if !atomic.CompareAndSwapInt32(&sync.start, 1, 0) {
 		return
+	}
+	if err := sync.netHandler.UnregisterHandler(sync); err != nil {
+		sync.log.Errorf("Unregister from net handler error: %v", err)
 	}
 	sync.scheduler.end()
 	sync.processor.end()

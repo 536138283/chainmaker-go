@@ -49,6 +49,7 @@ go get chainmaker.org/chainmaker/vm/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-batch/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-normal/v2@${BRANCH}
 go get chainmaker.org/chainmaker/txpool-single/v2@${BRANCH}
+go get chainmaker.org/chainmaker/sync/v2@${BRANCH}
 go get chainmaker.org/chainmaker/sdk-go/v2@${BRANCH}
 
 go mod tidy
