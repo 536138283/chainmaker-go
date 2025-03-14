@@ -600,6 +600,15 @@ func (server *ChainMakerServer) GetStore(chainId string) (protocol.BlockchainSto
 	return nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
 }
 
+// GetLedgerCache get protocol.LedgerCache of chain which id is the given.
+func (server *ChainMakerServer) GetLedgerCache(chainId string) (protocol.LedgerCache, error) {
+	if blockchain, ok := server.blockchains.Load(chainId); ok {
+		return blockchain.(*Blockchain).ledgerCache, nil
+	}
+
+	return nil, fmt.Errorf(chainIdNotFoundErrorTemplate, chainId)
+}
+
 // GetChainConf get protocol.ChainConf of chain which id is the given.
 func (server *ChainMakerServer) GetChainConf(chainId string) (protocol.ChainConf, error) {
 	if blockchain, ok := server.blockchains.Load(chainId); ok {

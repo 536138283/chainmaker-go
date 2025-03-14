@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package main
 
 import (
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"context"
 	"encoding/json"
 	"errors"
@@ -96,7 +97,7 @@ type Result struct {
 	ChainInfo             *discoveryPb.ChainInfo          `json:"chainInfo,omitempty"`
 	ChainList             *discoveryPb.ChainList          `json:"chainList,omitempty"`
 	ContractInfo          *commonPb.Contract              `json:"contractInfo,omitempty"`
-	MultiSignInfo         *commonPb.MultiSignInfo         `json:"multiSignInfo,omitempty"`
+	MultiSignInfo         *syscontract.MultiSignInfo      `json:"multiSignInfo,omitempty"`
 	PayloadHash           string                          `json:"payloadHash,omitempty"`
 	ShortCert             string                          `json:"shortCert,omitempty"`
 	GovernanceInfo        *consensusPb.GovernanceContract `json:"governanceInfo,omitempty"`

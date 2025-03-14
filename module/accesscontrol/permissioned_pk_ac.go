@@ -77,6 +77,16 @@ func (pp *permissionedPkACProvider) NewACProvider(chainConf protocol.ChainConf, 
 	return pPkACProvider, nil
 }
 
+// Start the ac service.
+func (cp *permissionedPkACProvider) Start() error {
+	return nil
+}
+
+// Stop the ac service.
+func (cp *permissionedPkACProvider) Stop() error {
+	return nil
+}
+
 func newPermissionedPkACProvider(chainConfig *config.ChainConfig, localOrgId string,
 	store protocol.BlockchainStore, log protocol.Logger) (*permissionedPkACProvider, error) {
 	ppacProvider := &permissionedPkACProvider{
