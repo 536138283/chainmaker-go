@@ -8,7 +8,7 @@ import (
 )
 
 func (s *ApiService) chainsConfig(tx *commonPb.Transaction) *commonPb.TxResponse {
-	if tx.Payload.TxType != commonPb.TxType_CHAINS_CONFIG {
+	if tx.Payload.TxType != commonPb.TxType_NODE_CONFIG {
 		return &commonPb.TxResponse{
 			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,
 			Message: commonErr.ERR_CODE_TXTYPE.String(),

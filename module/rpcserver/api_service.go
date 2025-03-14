@@ -253,7 +253,7 @@ func (s *ApiService) invoke(ctx context.Context, tx *commonPb.Transaction, sourc
 		return s.dealTransact(ctx, tx, source, syncResult)
 	case commonPb.TxType_ARCHIVE:
 		return s.doArchive(tx)
-	case commonPb.TxType_CHAINS_CONFIG:
+	case commonPb.TxType_NODE_CONFIG:
 		return s.chainsConfig(tx)
 	default:
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
