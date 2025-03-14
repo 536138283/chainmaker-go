@@ -97,6 +97,7 @@ func TestUpdateSeedsTaskListerer(t *testing.T) {
 
 	localconf.UpdateSeedsNotifyC <- "/ip4/127.0.0.1/tcp/11304/p2p/QmU1s1Tq6n2sy6yEAoYGV3xnQLuN5jHVP7o1jz6hZCV3FK"
 	time.Sleep(time.Second)
+
 }
 
 func TestUpdateCustomChainTrustRootsTaskListerer(t *testing.T) {
