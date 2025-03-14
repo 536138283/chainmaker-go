@@ -159,8 +159,17 @@ func initProductFactor(factor int) {
 	}
 }
 
-// 压力测试主方法
 func parallel(method string) error {
+	switch method {
+	case invokerMethod:
+		return parallelInvoke(invokerMethod)
+	default:
+		return parallelOthers(method)
+	}
+}
+
+// 压力测试主方法
+func parallelInvoke(method string) error {
 	if err := initParallel(); err != nil {
 		return err
 	}
