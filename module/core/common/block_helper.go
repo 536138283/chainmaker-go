@@ -1487,8 +1487,8 @@ func recoverBlock(
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
 	// Block recovery is only required in the case of Consensus Verify (in sync mode, the block is complete;
-	// in proposer_verify, the leader node verifies it independently and also has the complete block).
-	if IfOpenConsensusMessageTurbo(chainConf) && mode == protocol.SYNC_VERIFY &&
+	// in proposer_verify, the leader node verifies it independently and also has the complete block)
+	if IfOpenConsensusMessageTurbo(chainConf) && mode == protocol.CONSENSUS_VERIFY &&
 		len(block.Txs) != 0 && block.Txs[0].Payload != nil {
 
 		newBlock := &commonPb.Block{
