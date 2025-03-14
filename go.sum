@@ -46,6 +46,8 @@ chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250314064227-217c03707371 h1:nMzwd
 chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250314064227-217c03707371/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250314083554-b7bb8ad4326c h1:CIQwpUCd78QEJv2+w53dRdZc3aBS5/zhlBRCt5u9bRk=
 chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250314083554-b7bb8ad4326c/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250314091447-16d8e26c7070 h1:pPOi4ngdqaUqHpd7Oh0J2RsPp/my0CjUx39U/SMDYA8=
+chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250314091447-16d8e26c7070/go.mod h1:GXGRIYS+d6bcgmmqKrW7nNBh3mIHE1EwTLv96811OtE=
 chainmaker.org/chainmaker/protocol/v2 v2.3.5/go.mod h1:UDPjfqLH89QY8FbWxfEqNcWS2W5pk/z0pU7zo1FAzyI=
 chainmaker.org/chainmaker/protocol/v2 v2.3.7/go.mod h1:C9KDwuGP7n1FezWAryvvm1wnis2yvDWDUcCPX1lDQ3k=
 chainmaker.org/chainmaker/protocol/v2 v2.3.8/go.mod h1:7nVtFqTgQVn5AnOHQ8yUVJ1b18NM3TpN2WrwXAgwRr4=
@@ -57,6 +59,10 @@ chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250311101237-e6d3f655c672 h1:Wp4G
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250311101237-e6d3f655c672/go.mod h1:0TGevjmW83iUvHWdN/VMaKTFDPKOOTfjleCUH+eyNbY=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250314064938-fa69563bda12 h1:Ft2YLsFzlLUENL0CLdh36etHFd48QJmuTO2i9FRvHo0=
 chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250314064938-fa69563bda12/go.mod h1:o1Sz2hiwjm8o+ISvZ5OSV+DLBmq1O/h/sYAF7JpHeDo=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250314083911-a2d2fa56590a h1:PYEKgn+RPaHXX+8CjSStVzfu9gt1upCCPwm16U0gEu0=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250314083911-a2d2fa56590a/go.mod h1:wPzfi4fbioev8IyeeR+6KCHNdXXSH8PmZO4XW/KR7rk=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250314093846-90a4d9853aba h1:UxCJM7wxFsMbOu6tHk8us8yIOv0DOMHVsD7JnsaBO8k=
+chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250314093846-90a4d9853aba/go.mod h1:98a3kRR8oWk1jz3by4F26GuRTn1229gz2P7ioMiE1Mw=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.5-0.20250311082031-aa18782b2e7d h1:RGTRO+70UW36TGyQGWqyq+oCkV1Af0649s+YKNzTUqE=
 chainmaker.org/chainmaker/store-badgerdb/v2 v2.3.5-0.20250311082031-aa18782b2e7d/go.mod h1:Lc26CI3QfS+UevTV6ryxsu/W7SaIAixOqb/eU1X1zFI=
 chainmaker.org/chainmaker/store-leveldb/v2 v2.3.5-0.20250311081953-9af1927fe5dd h1:sXNRodikTxN0Iwy1xqTJuhqkfWYYsdMLkVP6qnAq9Q4=

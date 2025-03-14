@@ -254,7 +254,7 @@ func (s *ApiService) invoke(ctx context.Context, tx *commonPb.Transaction, sourc
 	case commonPb.TxType_ARCHIVE:
 		return s.doArchive(tx)
 	case commonPb.TxType_NODE_CONFIG:
-		return s.chainsConfig(tx)
+		return s.nodeConfig(tx)
 	default:
 		resp.Code = commonPb.TxStatusCode_INTERNAL_ERROR
 		resp.Message = commonErr.ERR_CODE_TXTYPE.String()

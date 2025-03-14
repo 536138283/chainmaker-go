@@ -7,7 +7,7 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 )
 
-func (s *ApiService) chainsConfig(tx *commonPb.Transaction) *commonPb.TxResponse {
+func (s *ApiService) nodeConfig(tx *commonPb.Transaction) *commonPb.TxResponse {
 	if tx.Payload.TxType != commonPb.TxType_NODE_CONFIG {
 		return &commonPb.TxResponse{
 			Code:    commonPb.TxStatusCode_INTERNAL_ERROR,

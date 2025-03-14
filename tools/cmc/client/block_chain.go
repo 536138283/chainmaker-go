@@ -50,11 +50,11 @@ func checkNewBlockchainsCMD() *cobra.Command {
 
 func updateChainsCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update_chains",
-		Short: "update chains",
-		Long:  "update chains",
+		Use:   "update_node_config",
+		Short: "update node config",
+		Long:  "update node config",
 		RunE: func(_ *cobra.Command, _ []string) error {
-			return updateChains()
+			return updateNodeConfig()
 		},
 	}
 
@@ -82,14 +82,14 @@ func checkNewBlockchains() error {
 	return nil
 }
 
-func updateChains() error {
+func updateNodeConfig() error {
 	client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
 		userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
 	if err != nil {
 		return fmt.Errorf("create user client failed, %s", err.Error())
 	}
 	defer client.Stop()
-	err = client.UpdateChains()
+	err = client.UpdateNodeConfig()
 	if err != nil {
 		return fmt.Errorf("update chains failed, %s", err.Error())
 	}
