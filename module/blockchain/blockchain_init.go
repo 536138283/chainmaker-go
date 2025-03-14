@@ -838,11 +838,13 @@ func (bc *Blockchain) initSync() (err error) {
 		bc.msgBus,
 		bc.store,
 		bc.ledgerCache,
+		bc.chainConf,
 		bc.coreEngine.GetBlockVerifier(),
 		bc.coreEngine.GetBlockCommitter(),
 		bc.txPool,
 		logger.GetLoggerByChain(logger.MODULE_SYNC, bc.chainId),
 	)
+
 	bc.initModules[moduleNameSync] = struct{}{}
 	return
 }

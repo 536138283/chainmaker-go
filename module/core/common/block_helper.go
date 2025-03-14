@@ -14,6 +14,8 @@ import (
 	"sync"
 	"sync/atomic"
 
+	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
+
 	"chainmaker.org/chainmaker-go/module/core/common/coinbasemgr"
 
 	"chainmaker.org/chainmaker-go/module/core/common/scheduler"
@@ -609,8 +611,8 @@ func NewVerifierBlock(conf *VerifierBlockConf) *VerifierBlock {
 
 // SetTxScheduler sets the txScheduler of VerifierBlock
 // only used for test
-func (v *VerifierBlock) SetTxScheduler(txScheduler protocol.TxScheduler) {
-	v.txScheduler = txScheduler
+func (vb *VerifierBlock) SetTxScheduler(txScheduler protocol.TxScheduler) {
+	vb.txScheduler = txScheduler
 }
 
 func (vb *VerifierBlock) FetchLastBlock(block *commonPb.Block) (*commonPb.Block, error) { //nolint: staticcheck
@@ -769,7 +771,7 @@ func (vb *VerifierBlock) ValidateBlock(
 	return txRWSetMap, contractEventMap, timeLasts, nil, nil
 }
 
-// validateBlock, validate block and transactions
+// ValidateBlockWithRWSets validateBlock, validate block and transactions
 func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	block *commonPb.Block, hashType string, timeLasts map[string]int64,
 	txRWSetMap map[string]*commonPb.TxRWSet, mode protocol.VerifyMode) (
@@ -823,6 +825,16 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 
 	vmLasts := utils.CurrentTimeMillisSeconds() - startVMTick
 	timeLasts[VM] = vmLasts
+
+	// 如果是带过滤规则的校验，则直接取tx hash即可
+	if mode == protocol.SYNC_FILTER_VERIFY {
+		return vb.processSyncFilterVerifyModeWithRWSet(block, hashType, timeLasts, txRWSetMap)
+	}
+
+	if block.Header.TxCount != uint32(len(txRWSetMap)) {
+		return nil, timeLasts, fmt.Errorf("simulate txcount expect %d, got %d",
+			block.Header.TxCount, len(txRWSetMap))
+	}
 
 	// 2.transaction verify
 	startTxTick := utils.CurrentTimeMillisSeconds()
@@ -1353,7 +1365,9 @@ func recoverBlockByBatch(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if block.Header.TxCount != 0 && mode != protocol.SYNC_VERIFY &&
+	// Block recovery is only required in the case of Consensus Verify (in sync mode, the block is complete;
+	// in proposer_verify, the leader node verifies it independently and also has the complete block).
+	if block.Header.TxCount != 0 && mode == protocol.CONSENSUS_VERIFY &&
 		chainConf.ChainConfig().Consensus.Type != consensus.ConsensusType_RAFT {
 
 		newBlock := &commonPb.Block{
@@ -1472,7 +1486,9 @@ func recoverBlock(
 	netService protocol.NetService,
 	logger protocol.Logger) (*commonPb.Block, []string, error) {
 
-	if IfOpenConsensusMessageTurbo(chainConf) && mode != protocol.SYNC_VERIFY &&
+	// Block recovery is only required in the case of Consensus Verify (in sync mode, the block is complete;
+	// in proposer_verify, the leader node verifies it independently and also has the complete block)
+	if IfOpenConsensusMessageTurbo(chainConf) && mode == protocol.CONSENSUS_VERIFY &&
 		len(block.Txs) != 0 && block.Txs[0].Payload != nil {
 
 		newBlock := &commonPb.Block{
@@ -1609,6 +1625,166 @@ func DeserializeTxBatchInfo(data []byte) (*commonPb.TxBatchInfo, error) {
 	}
 
 	return txBatchInfo, nil
+}
+
+type TxHashVerifier struct {
+	Index     int
+	TxHash    []byte
+	RwSetHash []byte
+	Tx        *commonPb.Transaction
+	Events    []*commonPb.ContractEvent
+}
+
+// processSyncFilterVerifyModeWithRWSet 在带过滤规则的校验模式下处理区块和交易的验证
+func (vb *VerifierBlock) processSyncFilterVerifyModeWithRWSet(block *commonPb.Block,
+	hashType string, timeLasts map[string]int64,
+	txRWSetMap map[string]*commonPb.TxRWSet) (
+	map[string][]*commonPb.ContractEvent, map[string]int64, error) {
+
+	// 解析 additionalData，得到tx hash的信息
+	txHashSet, err := GetTxHashSet(block)
+	if err != nil {
+		vb.log.Errorf("failed to get txHashSet: %v", err)
+		return nil, nil, err
+	}
+
+	// 并发计算交易哈希和处理交易
+	contractEventMap, txHashes, err := vb.computeAndProcessTxs(block, txHashSet, hashType, txRWSetMap)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// 验证 TxRoot
+	startRootsTick := utils.CurrentTimeMillisSeconds()
+	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
+	if err != nil {
+		return contractEventMap, timeLasts, err
+	}
+	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
+	timeLasts[TxRoot] = rootsLast
+
+	return contractEventMap, timeLasts, nil
+}
+
+// computeAndProcessTxs 并发计算交易哈希和处理交易
+func (vb *VerifierBlock) computeAndProcessTxs(block *commonPb.Block,
+	txHashSet map[string][]byte, hashType string, txRWSetMap map[string]*commonPb.TxRWSet) (
+	map[string][]*commonPb.ContractEvent, [][]byte, error) {
+
+	txCount := len(block.Txs)
+	txHashes := make([][]byte, txCount)
+	chainID := vb.chainConf.ChainConfig().ChainId
+	blockVersion := int(block.Header.BlockVersion)
+	contractEventMap := make(map[string][]*commonPb.ContractEvent, txCount)
+
+	resultChan := make(chan *TxHashVerifier, txCount)
+	var sendWG, recvWG sync.WaitGroup
+
+	// 启动接收协程
+	recvWG.Add(1)
+	go func() {
+		defer recvWG.Done()
+		// 从通道接收计算结果并处理交易
+		for result := range resultChan {
+			tx := result.Tx
+			txHash := result.TxHash
+			rwSetHash := result.RwSetHash
+			index := result.Index
+			events := result.Events
+
+			if txHash != nil {
+				txHashes[index] = txHash
+				tx.Result.RwSetHash = rwSetHash
+			}
+
+			contractEventMap[tx.Payload.TxId] = events
+		}
+	}()
+
+	// 并发计算交易哈希协程
+	for index, tx := range block.Txs {
+		sendWG.Add(1)
+		go func(tx *commonPb.Transaction, index int) {
+			defer sendWG.Done()
+
+			txHash, rwSetHash, events, err := vb.computeTxHashAndRWSetHash(
+				tx, index, txHashSet, hashType, txRWSetMap, chainID, blockVersion)
+			if err != nil {
+				vb.log.Warnf(err.Error())
+			}
+
+			resultChan <- &TxHashVerifier{
+				Tx:        tx,
+				TxHash:    txHash,
+				RwSetHash: rwSetHash,
+				Index:     index,
+				Events:    events,
+			}
+		}(tx, index)
+	}
+
+	// 关闭并发计算交易哈希的通道，等待所有计算完成
+	sendWG.Wait()
+	close(resultChan)
+	recvWG.Wait()
+
+	return contractEventMap, txHashes, nil
+}
+
+// computeTxHashAndRWSetHash 计算交易哈希和 RWSet 哈希，并返回交易相关信息
+func (vb *VerifierBlock) computeTxHashAndRWSetHash(tx *commonPb.Transaction, index int,
+	txHashSet map[string][]byte, hashType string, txRWSetMap map[string]*commonPb.TxRWSet,
+	chainID string, blockVersion int) ([]byte, []byte, []*commonPb.ContractEvent, error) {
+
+	if txHash, ok := txHashSet[tx.Payload.TxId]; ok {
+		return txHash, tx.Result.RwSetHash, nil, nil
+	}
+
+	// 验证交易签名
+	if err := utils.VerifyTxWithoutPayload(tx, chainID, vb.ac, uint32(blockVersion)); err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to verify transaction signature (tx:%s): %s", tx.Payload.TxId, err)
+	}
+
+	// 计算交易哈希
+	txHash, err := utils.CalcTxHashWithVersion(vb.chainConf.ChainConfig().Crypto.Hash, tx, blockVersion)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("failed to calculate transaction hash (tx:%s): %s", tx.Payload.TxId, err)
+	}
+
+	// 计算 RWSet 哈希
+	rwSetHash := tx.Result.RwSetHash
+	rwSet, ok := txRWSetMap[tx.Payload.TxId]
+	if ok {
+		rwSetHash, err = utils.CalcRWSetHash(hashType, rwSet)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("failed to calculate RWSet hash (tx:%s): %s", tx.Payload.TxId, err)
+		}
+	}
+
+	// 获取 contract event
+	var events []*commonPb.ContractEvent
+	if tx.Result != nil && tx.Result.ContractResult != nil && len(tx.Result.ContractResult.ContractEvent) > 0 {
+		events = tx.Result.ContractResult.ContractEvent
+	}
+
+	return txHash, rwSetHash, events, nil
+}
+
+//
+// DeserializeTxHashSet
+//  @Description:  deserialize txHashSet
+//  @param data
+//  @return *syncPb.TxHashSet
+//  @return error
+//
+func DeserializeTxHashSet(data []byte) (*syncPb.TxHashSet, error) {
+	txHashSet := new(syncPb.TxHashSet)
+	err := proto.Unmarshal(data, txHashSet)
+	if err != nil {
+		return nil, err
+	}
+
+	return txHashSet, nil
 }
 
 // metric tx counter key in db

@@ -85,8 +85,29 @@ func newMockLedgerCache(ctrl *gomock.Controller, blk *commonPb.Block) protocol.L
 }
 
 func newMockMessageBus(ctrl *gomock.Controller) msgbus.MessageBus {
-	mockMsgBus := mbusmock.NewMockMessageBus(ctrl)
-	mockMsgBus.EXPECT().Register(gomock.Any(), gomock.Any()).AnyTimes()
+	var (
+		registerMap = make(map[msgbus.Topic][]msgbus.Subscriber)
+		mockMsgBus  = mbusmock.NewMockMessageBus(ctrl)
+	)
+
+	mockMsgBus.EXPECT().Register(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(topic msgbus.Topic, sub msgbus.Subscriber) {
+			registerMap[topic] = append(registerMap[topic], sub)
+		}).AnyTimes()
+	mockMsgBus.EXPECT().Publish(gomock.Any(), gomock.Any()).DoAndReturn(
+		func(topic msgbus.Topic, payload interface{}) {
+			msg := &msgbus.Message{Topic: topic, Payload: payload}
+			for _, sub := range registerMap[topic] {
+				go sub.OnMessage(msg)
+			}
+		}).AnyTimes()
+	mockMsgBus.EXPECT().UnRegister(gomock.Any(), gomock.Any()).Do(func(topic msgbus.Topic, sub msgbus.Subscriber) {
+		for i, s := range registerMap[topic] {
+			if s == sub {
+				registerMap[topic] = append(registerMap[topic][:i], registerMap[topic][i+1:]...)
+			}
+		}
+	}).AnyTimes()
 	return mockMsgBus
 }
 
@@ -115,6 +136,7 @@ func newMockNet(ctrl *gomock.Controller) protocol.NetService {
 	mockNet.EXPECT().ReceiveMsg(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelSubscribe(gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelReceiveMsg(gomock.Any()).AnyTimes()
+	mockNet.EXPECT().CancelConsensusSubscribe(gomock.Any()).AnyTimes()
 	return mockNet
 }
 
@@ -136,10 +158,14 @@ func newMockCommitter(ctrl *gomock.Controller, mockLedger protocol.LedgerCache) 
 
 func newMockBlockChainStore(ctrl *gomock.Controller) protocol.BlockchainStore {
 	mockStore := mock.NewMockBlockchainStore(ctrl)
-	blocks := make(map[uint64]*commonPb.Block)
+	var (
+		lastBlock *commonPb.Block
+		blocks    = make(map[uint64]*commonPb.Block)
+	)
 	mockStore.EXPECT().PutBlock(gomock.Any(), gomock.Any()).DoAndReturn(
 		func(blk *commonPb.Block, txRWSets []*commonPb.TxRWSet) error {
 			blocks[blk.Header.BlockHeight] = blk
+			lastBlock = blk
 			return nil
 		}).AnyTimes()
 	mockStore.EXPECT().GetBlock(gomock.Any()).DoAndReturn(func(height uint64) (*commonPb.Block, error) {
@@ -149,5 +175,9 @@ func newMockBlockChainStore(ctrl *gomock.Controller) protocol.BlockchainStore {
 		return nil, fmt.Errorf("block not find")
 	}).AnyTimes()
 	mockStore.EXPECT().GetArchivedPivot().AnyTimes()
+	mockStore.EXPECT().GetLastBlock().DoAndReturn(func() (*commonPb.Block, error) {
+		return lastBlock, nil
+	}).AnyTimes()
+	mockStore.EXPECT().ReadObject(gomock.Any(), gomock.Any()).AnyTimes()
 	return mockStore
 }

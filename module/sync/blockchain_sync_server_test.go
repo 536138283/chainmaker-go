@@ -8,12 +8,14 @@ SPDX-License-Identifier: Apache-2.0
 package sync
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/txpool"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"strconv"
 	"testing"
 	"time"
+
+	"chainmaker.org/chainmaker/pb-go/v2/txpool"
+	"github.com/gogo/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -130,6 +132,25 @@ func getBlockRespWithRWset(height uint64) ([]byte, error) {
 	return bz, nil
 }
 
+type serverV1 struct {
+	*BlockChainSyncServer
+	netHandler *syncNetHandler
+}
+
+func (s *serverV1) Start() error {
+	if err := s.netHandler.Start(); err != nil {
+		return err
+	}
+	return s.BlockChainSyncServer.Start()
+}
+
+func (s *serverV1) Stop() {
+	s.BlockChainSyncServer.Stop()
+	if err := s.netHandler.Stop(); err != nil {
+		fmt.Printf("stop net handler error: %v", err)
+	}
+}
+
 func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	ctrl := gomock.NewController(t)
 	mockNet := newMockNet(ctrl)
@@ -142,7 +163,15 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	log := &test.GoLogger{}
 	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
 	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
-	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
+	netHandler := newSyncNetHandler(mockNet, log)
+	service := &serverV1{
+		BlockChainSyncServer: newBlockChainSyncServerV1(
+			"chain1", mockNet, mockMsgBus,
+			mockStore, mockLedger, mockVerify,
+			mockCommit, mockTxPool, netHandler, log).(*BlockChainSyncServer),
+		netHandler: netHandler,
+	}
+	// service := newBlockChainSyncServerV1("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
 	require.NoError(t, service.Start())
 	return service, func() {
 		service.Stop()
@@ -155,7 +184,7 @@ func TestBlockChainSyncServer_Start(t *testing.T) {
 	defer fn()
 
 	// consume message
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 	bz := getNodeStatusResp(t, 110)
 	require.NoError(t, implSync.blockSyncMsgHandler("node1", bz, netPb.NetMsg_SYNC_BLOCK_MSG))
 	bz = getNodeStatusResp(t, 120)
@@ -176,7 +205,7 @@ func TestBlockChainSyncServer_Start(t *testing.T) {
 func TestSyncMsg_NODE_STATUS_REQ(t *testing.T) {
 	service, fn := initTestSync(t)
 	defer fn()
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 
 	// 1. req node status
 	require.NoError(t, implSync.blockSyncMsgHandler("node1", getNodeStatusReq(t), netPb.NetMsg_SYNC_BLOCK_MSG))
@@ -191,7 +220,7 @@ func TestSyncMsg_NODE_STATUS_REQ(t *testing.T) {
 func TestSyncMsg_TX_POOL_STATUS_REQ(t *testing.T) {
 	service, fn := initTestSync(t)
 	defer fn()
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 	require.NoError(t, implSync.blockSyncMsgHandler("node1", getTxPoolReq(t), netPb.NetMsg_SYNC_BLOCK_MSG))
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", getTxPoolReq(t), netPb.NetMsg_SYNC_BLOCK_MSG))
 }
@@ -199,7 +228,7 @@ func TestSyncMsg_TX_POOL_STATUS_REQ(t *testing.T) {
 func TestSyncMsg_TX_POOL_STATUS_RESP(t *testing.T) {
 	service, fn := initTestSync(t)
 	defer fn()
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 
 	bz := getTxPoolResp(t)
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", bz, netPb.NetMsg_SYNC_BLOCK_MSG))
@@ -208,7 +237,7 @@ func TestSyncMsg_TX_POOL_STATUS_RESP(t *testing.T) {
 func TestSyncBlock_Req(t *testing.T) {
 	service, fn := initTestSync(t)
 	defer fn()
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 
 	_ = implSync.blockChainStore.PutBlock(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 99}}, nil)
 	_ = implSync.blockChainStore.PutBlock(&commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 100}}, nil)
@@ -228,7 +257,7 @@ func TestSyncBlock_Req(t *testing.T) {
 func TestSyncMsg_NODE_STATUS_RESP(t *testing.T) {
 	service, fn := initTestSync(t)
 	defer fn()
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 
 	bz := getNodeStatusResp(t, 120)
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", bz, netPb.NetMsg_SYNC_BLOCK_MSG))
@@ -241,7 +270,7 @@ func TestSyncMsg_NODE_STATUS_RESP(t *testing.T) {
 func TestSyncMsg_BLOCK_SYNC_RESP(t *testing.T) {
 	service, fn := initTestSync(t)
 	defer fn()
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 	// modify config for a stable unit test result
 	implSync.conf.livenessTick = 10 * time.Second
 	// 1. add peer status
@@ -264,7 +293,7 @@ func TestSyncMsg_BLOCK_SYNC_RESP(t *testing.T) {
 //	localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable = true
 //	service, fn := initTestSync(t)
 //	defer fn()
-//	implSync := service.(*BlockChainSyncServer)
+//	implSync := service.(*serverV1)
 //	// modify config for a stable unit test result
 //	implSync.conf.livenessTick = 10 * time.Second
 //	// 1. add peer status
@@ -291,7 +320,7 @@ func TestStopSyncBlock(t *testing.T) {
 	localconf.ChainMakerConfig.NodeConfig.FastSyncConfig.Enable = true
 	service, fn := initTestSync(t)
 	defer fn()
-	implSync := service.(*BlockChainSyncServer)
+	implSync := service.(*serverV1)
 	// modify config for a stable unit test result
 	implSync.conf.livenessTick = 10 * time.Second
 	// 1. add peer status
@@ -338,6 +367,7 @@ func newMockNet2(ctrl *gomock.Controller) protocol.NetService {
 	mockNet.EXPECT().ReceiveMsg(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelSubscribe(gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelReceiveMsg(gomock.Any()).AnyTimes()
+	mockNet.EXPECT().CancelConsensusSubscribe(gomock.Any()).AnyTimes()
 	return mockNet
 }
 
@@ -353,7 +383,15 @@ func initTestSync2(t *testing.T) (protocol.SyncService, func()) {
 	log := &test.GoLogger{}
 	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
 	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
-	service := NewBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
+	// service := newBlockChainSyncServer("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
+	netHandler := newSyncNetHandler(mockNet, log)
+	service := &serverV1{
+		BlockChainSyncServer: newBlockChainSyncServerV1(
+			"chain1", mockNet, mockMsgBus,
+			mockStore, mockLedger, mockVerify,
+			mockCommit, mockTxPool, netHandler, log).(*BlockChainSyncServer),
+		netHandler: netHandler,
+	}
 	require.NoError(t, service.Start())
 	return service, func() {
 		service.Stop()
@@ -410,7 +448,7 @@ func TestBlockChainSyncServer_OnMessage(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			localconf.ChainMakerConfig.SyncConfig.BroadcastStatusPerBlocksCommitted = tt.args.perBlocks
 			svc, stop := initTestSync2(t)
-			sync := svc.(*BlockChainSyncServer)
+			sync := svc.(*serverV1)
 			broadcastCount = 0
 			for i := 1; i <= tt.args.totalHeight; i++ {
 				sync.OnMessage(genBlockMessage(uint64(i)))
