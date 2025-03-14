@@ -7,7 +7,9 @@ SPDX-License-Identifier: Apache-2.0
 
 package parallel
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+)
 
 // invokeCMD invoke contract
 // @return *cobra.Command
@@ -25,6 +27,6 @@ func invokeCMD() *cobra.Command {
 	flags.StringVarP(&pairsFile, "pairs-file", "A", "", "specify pairs file, if used, set --pairs=\"\"")
 	flags.StringVarP(&method, "method", "m", "increase", "specify contract method")
 	flags.StringVarP(&abiPath, "abi-path", "", "", "abi file path")
-
+	flags.StringVarP(&statisticalType, "statistical-type", "", "default", "normal statistical type or block based statistical type, input normal or block default:normal ")
 	return cmd
 }

@@ -39,6 +39,20 @@ func (s *ApiService) checkDealContractEventSubscriptionParams(tx *commonPb.Trans
 			endBlock, err = bytehelper.BytesToInt64(kv.Value)
 		} else if kv.Key == syscontract.SubscribeContractEvent_CONTRACT_NAME.String() {
 			contractName = string(kv.Value)
+
+			/**
+			change from v2.3.6
+			Previously, an empty contract name was supported, which would return all events related to all contracts.
+			However, due to the potential for a large amount of data being returned, this approach is no longer supported.
+			Now, a contract name must be specified.
+			*/
+			if contractName == "" {
+				errCode := commonErr.ERR_CODE_SYSTEM_CONTRACT_UNSUPPORT_CONTRACT_NAME
+				errMsg := s.getErrMsg(errCode, fmt.Errorf("contract name should not be empty"))
+				err = status.Error(codes.InvalidArgument, errMsg)
+				return
+			}
+
 		} else if kv.Key == syscontract.SubscribeContractEvent_TOPIC.String() {
 			if kv.Value != nil {
 				topic = string(kv.Value)
@@ -316,6 +330,13 @@ func (s *ApiService) sendHistoryContractEvent(store protocol.BlockchainStore,
 	}
 }
 
+// sendSubscribeContractEvent send contract even by subscribe request.
+/*
+For example:
+  - If both `contract_name` and `event_name` are provided, only events matching both will be returned.
+  - If `contract_name` is provided and `event_name` is empty, all events for the specified contract will be returned.
+  - If `contract_name` is empty, an error will be raised, as it is no longer supported.
+*/
 func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeServer,
 	block *commonPb.Block, contractName, topic string) error {
 
@@ -325,7 +346,7 @@ func (s *ApiService) sendSubscribeContractEvent(server apiPb.RpcNode_SubscribeSe
 
 	for _, tx := range block.Txs {
 		for idx, event := range tx.Result.ContractResult.ContractEvent {
-			if contractName == "" || contractName == event.ContractName {
+			if contractName == event.ContractName {
 				if topic == "" || topic == event.Topic {
 					eventInfo := commonPb.ContractEventInfo{
 						BlockHeight:     block.Header.BlockHeight,

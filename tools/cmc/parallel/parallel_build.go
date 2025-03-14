@@ -1,0 +1,252 @@
+package parallel
+
+import (
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
+	"chainmaker.org/chainmaker/utils/v2"
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"sync/atomic"
+	"time"
+)
+
+// StressBuilder 构建不同场景下压测所需请求参数的接口，并返回请求对象
+// 非压测请求实现Builder接口以满足参数构建需要
+// 目前支持4种实现方式：Invoke、Query、Create和Upgrade每个类型都定义了自己的Build方法，用于生成不同类型的交易请求：
+// - Invoke：构建调用智能合约的交易请求。
+// - Query：构建查询智能合约的交易请求。
+// - Create：构建部署（安装）智能合约的交易请求。
+// - Upgrade：构建升级智能合约的交易请求。
+type StressBuilder interface {
+	Build(requestId int64, index int) (*commonPb.TxRequest, error)
+}
+
+type Query struct{}
+
+// Build 实现StressBuilder接口，用于构建查询智能合约的交易请求
+func (i Query) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	// 构建交易Payload，包含一组键值对（kvs）
+	pairs := makeKvs(requestId)
+	if showKey {
+		j, err := json.Marshal(pairs)
+		if err != nil {
+			fmt.Println(err)
+		}
+		rate := totalRandomSentTxs * 100 / totalSentTxs
+		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
+			totalSentTxs, totalRandomSentTxs, rate, string(j))
+	}
+	// 使用构造的键值对创建查询Payload
+	payload, err := constructQueryPayload(chainId, contractName, method, pairs, gasLimit)
+	if err != nil {
+		return nil, err
+	}
+	// 构建完整的交易请求
+	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
+}
+
+type Invoke struct{}
+
+// Build 实现StressBuilder接口，用于构建调用智能合约的交易请求
+func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	pairs := makeKvs(requestId)
+	if showKey {
+		j, err := json.Marshal(pairs)
+		if err != nil {
+			fmt.Println(err)
+		}
+		rate := totalRandomSentTxs * 100 / totalSentTxs
+		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
+			totalSentTxs, totalRandomSentTxs, rate, string(j))
+	}
+	// 如果有ABI路径，则读取ABI数据，并根据ABI调整方法名和参数对
+	var abiData *[]byte
+	if abiPath != "" {
+		abiData = abiCache.Read(abiPath)
+		runTime = 5 //evm
+	}
+	method1, pairs1, err := makePairs(method, abiPath, pairs, commonPb.RuntimeType(runTime), abiData)
+	if err != nil {
+		return nil, err
+	}
+	// 构造调用智能合约的Payload
+	payload, err := constructInvokePayload(chainId, contractName, method1, pairs1, gasLimit)
+	if err != nil {
+		return nil, err
+	}
+	// 构建完整的交易请求
+	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
+}
+
+type Create struct{}
+
+// Build 实现StressBuilder接口，用于构建部署（安装）智能合约的交易请求
+func (c Create) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	// 读取WASM字节码文件
+	wasmBin, err := os.ReadFile(wasmPath)
+	if err != nil {
+		return nil, err
+	}
+	var pairs []*commonPb.KeyValuePair
+	// 使用模板字符串、版本信息、运行时类型等生成Payload
+	payload, _ := utils.GenerateInstallContractPayload(fmt.Sprintf(templateStr, contractName, index,
+		requestId, time.Now().Unix()), "1.0.0", commonPb.RuntimeType(runTime), wasmBin, pairs)
+	// 如果设置了gas限制，则添加到Payload
+	if gasLimit > 0 {
+		var limit = &commonPb.Limit{GasLimit: gasLimit}
+		payload.Limit = limit
+	}
+	endorsement, err := acSign(payload)
+	if err != nil {
+		return nil, err
+	}
+	// 签名并构建交易请求
+	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
+}
+
+type Upgrade struct{}
+
+// Build 实现StressBuilder接口，用于构建升级智能合约的交易请求
+func (u Upgrade) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	// 生成唯一的交易ID，读取WASM字节码
+	txId := utils.GetTimestampTxId()
+	wasmBin, err := ioutil.ReadFile(wasmPath)
+	if err != nil {
+		return nil, err
+	}
+	var pairs []*commonPb.KeyValuePair
+	payload, err := utils.GenerateInstallContractPayload(
+		fmt.Sprintf(templateStr, contractName, index, requestId, time.Now().Unix()),
+		version, commonPb.RuntimeType(runTime), wasmBin, pairs)
+	if err != nil {
+		return nil, err
+	}
+	payload.Method = syscontract.ContractManageFunction_UPGRADE_CONTRACT.String()
+	// gas limit
+	if gasLimit > 0 {
+		var limit = &commonPb.Limit{GasLimit: gasLimit}
+		payload.Limit = limit
+	}
+	payload.TxId = txId
+	payload.ChainId = chainId
+	payload.Timestamp = time.Now().Unix()
+	endorsement, err := acSign(payload)
+	if err != nil {
+		return nil, err
+	}
+	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
+}
+
+// makeKvs 生成一组键值对（KeyValuePairs）基于全局配置的规则，用于构造交易请求的Payload。
+// 每个键值对的生成会考虑是否需要唯一性、随机性、递增或递减等特性。
+// 请求ID（requestId）会被嵌入到满足条件的键值对的值中，以确保唯一性或生成随机数据。
+// 全局变量globalPairs定义了一系列键值对的基础配置，包括是否具有唯一性（Unique）、
+// 随机生成的比率（RandomRate）、以及整数值的递增或递减（Increase/Decrease）。
+// 函数内部通过原子操作来安全地更新全局统计变量，如总发送交易数（totalSentTxs）和
+// 随机发送的交易数（totalRandomSentTxs）。
+func makeKvs(requestId int64) []*commonPb.KeyValuePair {
+	var outKvs []*commonPb.KeyValuePair
+	// 原子增加总发送交易计数器
+	atomic.AddInt64(&totalSentTxs, 1)
+	// 遍历全局键值对配置列表
+	for _, p := range globalPairs {
+		var val []byte
+		// 根据配置特性生成键值对的值
+		switch {
+		case p.Unique:
+			// 如果要求唯一性，格式化字符串并加入requestId和当前时间戳
+			val = []byte(fmt.Sprintf(templateStr, p.Value, requestId, time.Now().UnixNano()))
+		case 0 < p.RandomRate && p.RandomRate < 100:
+			// 按照随机率判断是否生成随机数据，如果满足则同样加入requestId和时间戳
+			if isRandom(p.RandomRate) {
+				val = []byte(fmt.Sprintf(templateStr, p.Value, requestId, time.Now().UnixNano()))
+				// 原子增加随机发送交易计数器
+				atomic.AddInt64(&totalRandomSentTxs, 1)
+			} else {
+				val = []byte(p.Value)
+			}
+		case p.Decrease:
+			// 如果配置了递减，锁定并递减整数值，然后使用新值
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue--
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		case p.Increase:
+			// 如果配置了递增，同上，但递增整数值
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue++
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		default:
+			val = []byte(p.Value)
+		}
+		// 将键值对添加到输出列表
+		outKvs = append(outKvs, &commonPb.KeyValuePair{
+			Key:   p.Key,
+			Value: val,
+		})
+	}
+	return outKvs
+}
+
+// buildRequestParam 是一个辅助函数，用于构建TxRequest的通用部分，如签名、发送者信息等。
+// 它接收私钥、组织ID、证书路径、Payload以及背书者列表作为参数，并返回一个完整的TxRequest实例。
+func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
+	payload *commonPb.Payload, endorsers []*commonPb.EndorsementEntry) (*commonPb.TxRequest, error) {
+	req := &commonPb.TxRequest{}
+	sender := &acPb.Member{}
+	switch {
+	case authType == sdk.Public || authType == sdk.PermissionedWithKey:
+		pubKey := sk3.PublicKey()
+		memberInfo, err := pubKey.String()
+		if err != nil {
+			return nil, err
+		}
+		if authType == sdk.PermissionedWithKey {
+			sender.OrgId = orgId
+		}
+		sender.MemberInfo = []byte(memberInfo)
+		sender.MemberType = acPb.MemberType_PUBLIC_KEY
+	default:
+		sender.OrgId = orgId
+		file := fileCache.Read(userCrtPath)
+		if useShortCrt {
+			certId, err := certCache.Read(userCrtPath, *file, hashAlgo)
+			if err != nil {
+				return nil, fmt.Errorf("fail to compute the identity for certificate [%v]", err)
+			}
+
+			sender.MemberInfo = *certId
+			sender.MemberType = acPb.MemberType_CERT_HASH
+		} else {
+			sender.MemberInfo = *file
+		}
+	}
+	hashType, err := getHashType(hashAlgo)
+	if err != nil {
+		return nil, err
+	}
+	req.Payload = payload
+	// 拼接后，计算Hash，对hash计算签名
+	rawTxBytes, err := utils.CalcUnsignedTxRequestBytes(req)
+	if err != nil {
+		return nil, err
+	}
+	signBytes, err := sdkutils.SignPayloadBytesWithHashType(sk3, hashType, rawTxBytes)
+	if err != nil {
+		return nil, err
+	}
+	if len(endorsers) > 0 {
+		req.Endorsers = endorsers
+	}
+	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
+	return req, nil
+}

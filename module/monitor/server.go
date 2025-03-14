@@ -12,6 +12,7 @@ import (
 	"net"
 	"net/http"
 
+	commonMonitor "chainmaker.org/chainmaker/common/v2/monitor"
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/logger/v2"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -27,7 +28,7 @@ func NewMonitorServer() *MonitorServer {
 
 	if localconf.ChainMakerConfig.MonitorConfig.Enabled {
 		mux := http.NewServeMux()
-		mux.Handle("/metrics", promhttp.Handler())
+		mux.Handle("/metrics", Handler())
 		return &MonitorServer{
 			httpServer: &http.Server{
 				Handler: mux,
@@ -60,4 +61,10 @@ func (s *MonitorServer) Start() error {
 	}
 
 	return nil
+}
+
+func Handler() http.Handler {
+	return promhttp.InstrumentMetricHandler(
+		commonMonitor.MetricRegisterer, promhttp.HandlerFor(commonMonitor.MetricGatherer, promhttp.HandlerOpts{}),
+	)
 }
