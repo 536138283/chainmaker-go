@@ -9,7 +9,7 @@ else
     endif
 endif
 
-VERSION=v2.4.0_alpha_qc
+VERSION=v2.4.0_alpha
 DATETIME=$(shell date "+%Y%m%d%H%M%S")
 GIT_BRANCH = $(shell git rev-parse --abbrev-ref HEAD)
 GIT_COMMIT = $(shell git log --pretty=format:'%h' -n 1)
@@ -173,7 +173,7 @@ generate-vendor:
 	go mod vendor
 	# 注意：执行此方法前需要切换common项目到对应分支或commit
 	# 密码学 gmssl 相关
-	cd ../common && git checkout v2.3.5_qc && git pull
+	cd ../common && git checkout v2.4.0_qc && git pull
 	cp -a ../common/opencrypto/gmssl/gmssl/include ./vendor/chainmaker.org/chainmaker/common/v2/opencrypto/gmssl/gmssl/
 	cp -a ../common/opencrypto/gmssl/gmssl/lib ./vendor/chainmaker.org/chainmaker/common/v2/opencrypto/gmssl/gmssl/lib/
 	# 密码学 tencentsm 相关
@@ -184,7 +184,7 @@ generate-vendor:
 	cp -a ../common/crypto/bulletproofs/bulletproofs_cgo/c_lib ./vendor/chainmaker.org/chainmaker/common/v2/crypto/bulletproofs/bulletproofs_cgo/c_lib/
 	# 虚拟机 wasmer-go 相关
 	mkdir -p ./vendor/chainmaker.org/chainmaker/vm-wasmer/v2/wasmer-go/
-	cp -a ${GOPATH}/pkg/mod/chainmaker.org/chainmaker/vm-wasmer/v2@v2.3.5_qc/wasmer-go ./vendor/chainmaker.org/chainmaker/vm-wasmer/v2/wasmer-go/
+	cp -a ${GOPATH}/pkg/mod/chainmaker.org/chainmaker/vm-wasmer/v2@v2.4.0_qc/wasmer-go ./vendor/chainmaker.org/chainmaker/vm-wasmer/v2/wasmer-go/
 #	cp -a ../common/crypto/bulletproofs/bulletproofs_cgo/c_lib ./vendor/chainmaker.org/chainmaker/common/v2/crypto/bulletproofs/bulletproofs_cgo
 #	cp -a ../chainmaker/common/crypto/bulletproofs/bulletproofs_cgo/c_lib/libbulletproofs.a /usr/lib/
 
