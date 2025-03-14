@@ -69,7 +69,6 @@ func (s *ShardCache) Iterate(f func(key string, value interface{})) {
 	}
 }
 
-//
 func (s *ShardCache) Long() int {
 	long := 0
 	for i := 0; i < ShardNum; i++ {

@@ -1770,13 +1770,12 @@ func (vb *VerifierBlock) computeTxHashAndRWSetHash(tx *commonPb.Transaction, ind
 	return txHash, rwSetHash, events, nil
 }
 
-//
 // DeserializeTxHashSet
-//  @Description:  deserialize txHashSet
-//  @param data
-//  @return *syncPb.TxHashSet
-//  @return error
 //
+//	@Description:  deserialize txHashSet
+//	@param data
+//	@return *syncPb.TxHashSet
+//	@return error
 func DeserializeTxHashSet(data []byte) (*syncPb.TxHashSet, error) {
 	txHashSet := new(syncPb.TxHashSet)
 	err := proto.Unmarshal(data, txHashSet)
