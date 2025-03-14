@@ -74,6 +74,56 @@ func TestDeleteBlockchainTaskListener(t *testing.T) {
 	time.Sleep(time.Second)
 }
 
+func TestUpdateSeedsTaskListerer(t *testing.T) {
+	t.Log("TestUpdateSeedsTaskListerer")
+
+	defer func() {
+		err := recover()
+		assert.Nil(t, err)
+	}()
+
+	chainmakerServerList := makeChainServer(t)
+	chainmakerServerList[0].blockchains.Store("chain1", &Blockchain{
+		chainId: "chain1",
+	})
+	ctrl := gomock.NewController(t)
+	chainmakerServerList[0].net = mock.NewMockNet(ctrl)
+	mockNet := chainmakerServerList[0].net.(*mock.MockNet)
+	mockNet.EXPECT().AddSeed("/ip4/127.0.0.1/tcp/11304/p2p/QmU1s1Tq6n2sy6yEAoYGV3xnQLuN5jHVP7o1jz6hZCV3FK").Times(1)
+	chainmakerServerList[0].blockchains.Store("chain1", &Blockchain{
+		chainId: "chain2",
+	})
+	go chainmakerServerList[0].updateSeedsTaskListerer()
+
+	localconf.UpdateSeedsNotifyC <- "/ip4/127.0.0.1/tcp/11304/p2p/QmU1s1Tq6n2sy6yEAoYGV3xnQLuN5jHVP7o1jz6hZCV3FK"
+	time.Sleep(time.Second)
+}
+
+func TestUpdateCustomChainTrustRootsTaskListerer(t *testing.T) {
+	t.Log("TestUpdateCustomChainTrustRootsTaskListerer")
+
+	defer func() {
+		err := recover()
+		assert.Nil(t, err)
+	}()
+
+	chainmakerServerList := makeChainServer(t)
+	chainmakerServerList[0].blockchains.Store("chain1", &Blockchain{
+		chainId: "chain1",
+	})
+	ctrl := gomock.NewController(t)
+	chainmakerServerList[0].net = mock.NewMockNet(ctrl)
+	chainmakerServerList[0].blockchains.Store("chain1", &Blockchain{
+		chainId: "chain2",
+	})
+	go chainmakerServerList[0].updateCustomChainTrustRootsTaskListerer()
+
+	localconf.UpdateCustomChainTrustRootsNotifyC <- "test"
+	time.Sleep(time.Second)
+	localconf.UpdateCustomChainTrustRootsNotifyC <- localconf.CustomChainTrustRoots
+	time.Sleep(time.Second)
+}
+
 func TestNewBlockchainTaskListener(t *testing.T) {
 	t.Log("TestDeleteBlockchainTaskListener")
 

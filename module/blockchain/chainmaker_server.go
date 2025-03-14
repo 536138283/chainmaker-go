@@ -353,8 +353,10 @@ func (server *ChainMakerServer) updateSeedsTaskListerer() {
 		// 网络层会处理节点连接和状态同步
 		// AddSeed支持重复添加seed，不需要特殊处理
 		log.Debugf("update Seeds,add new seed %s", seed)
-		server.net.AddSeed(seed)
-
+		err := server.net.AddSeed(seed)
+		if err != nil {
+			log.Warnf("add seed(%s) err, %s", seed, err.Error())
+		}
 		// 更新全局配置中的种子节点列表
 		// 采用追加的方式，没有考虑去重，经分析没有影响
 		localconf.ChainMakerConfig.NetConfig.Seeds =
