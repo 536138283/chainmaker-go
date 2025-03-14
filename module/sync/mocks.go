@@ -136,6 +136,7 @@ func newMockNet(ctrl *gomock.Controller) protocol.NetService {
 	mockNet.EXPECT().ReceiveMsg(gomock.Any(), gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelSubscribe(gomock.Any()).AnyTimes()
 	mockNet.EXPECT().CancelReceiveMsg(gomock.Any()).AnyTimes()
+	mockNet.EXPECT().CancelConsensusSubscribe(gomock.Any()).AnyTimes()
 	return mockNet
 }
 

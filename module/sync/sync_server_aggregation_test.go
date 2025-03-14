@@ -110,7 +110,7 @@ func TestBlockChainSyncAggregatorV1ToV2(t *testing.T) {
 	)
 	err := syncSvc.Start()
 	require.Nil(t, err)
-	aggregator := syncSvc.(*SyncServerAggregator)
+	aggregator := syncSvc.(*ServerAggregator)
 	syncV2 := aggregator.SyncService.(*BlockSyncServiceV2)
 	err = syncV2.netHandler.netMessageHandle("node2", getNodeStatusReq(t), netPb.NetMsg_SYNC_BLOCK_MSG)
 	require.Nil(t, err)

@@ -76,29 +76,29 @@ type BlockChainSyncServer struct {
 }
 
 // NewBlockChainewBlockChainSyncServernSyncServer Create a new BlockChainSyncServer instance
-func newBlockChainSyncServer(
-	chainId string,
-	net protocol.NetService,
-	msgBus msgbus.MessageBus,
-	blockchainStore protocol.BlockchainStore,
-	ledgerCache protocol.LedgerCache,
-	blockVerifier protocol.BlockVerifier,
-	blockCommitter protocol.BlockCommitter,
-	txPool protocol.TxPool,
-	log protocol.Logger) protocol.SyncService {
+// func newBlockChainSyncServer(
+// 	chainId string,
+// 	net protocol.NetService,
+// 	msgBus msgbus.MessageBus,
+// 	blockchainStore protocol.BlockchainStore,
+// 	ledgerCache protocol.LedgerCache,
+// 	blockVerifier protocol.BlockVerifier,
+// 	blockCommitter protocol.BlockCommitter,
+// 	txPool protocol.TxPool,
+// 	log protocol.Logger) protocol.SyncService {
 
-	return newBlockChainSyncServerV1(chainId,
-		net,
-		msgBus,
-		blockchainStore,
-		ledgerCache,
-		blockVerifier,
-		blockCommitter,
-		txPool,
-		newSyncNetHandler(net, log),
-		log,
-	)
-}
+// 	return newBlockChainSyncServerV1(chainId,
+// 		net,
+// 		msgBus,
+// 		blockchainStore,
+// 		ledgerCache,
+// 		blockVerifier,
+// 		blockCommitter,
+// 		txPool,
+// 		newSyncNetHandler(net, log),
+// 		log,
+// 	)
+// }
 
 func newBlockChainSyncServerV1(
 	chainId string,
@@ -787,8 +787,9 @@ func (sync *BlockChainSyncServer) Stop() {
 	sync.processor.end()
 	close(sync.close)
 	sync.closeWait.Wait()
-	_ = sync.net.CancelSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG)
-	_ = sync.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
+	if err := sync.net.CancelConsensusSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG); err != nil {
+		sync.log.Errorf("CancelConsensusSubscribe NetMsg_SYNC_BLOCK_MSG error: %v", err)
+	}
 }
 
 func (sync *BlockChainSyncServer) GetState(withPeers bool) (*syncPb.SyncState, error) {

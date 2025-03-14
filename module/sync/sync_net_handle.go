@@ -19,6 +19,8 @@ type syncMessageHandler interface {
 	HandleSyncMsg(string, *syncPb.SyncMsg) error
 }
 
+// syncNetHandler syncNetHandler is designed to replace different handles to handle the same type of message,
+// because net does not have the cancel capability before.
 type syncNetHandler struct {
 	// receive/broadcast messages from net module
 	net protocol.NetService
@@ -35,6 +37,7 @@ func newSyncNetHandler(net protocol.NetService, log protocol.Logger) *syncNetHan
 	}
 }
 
+// RegisterHandler register the handler to handle the sync message.
 func (h *syncNetHandler) RegisterHandler(handler syncMessageHandler) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -45,6 +48,7 @@ func (h *syncNetHandler) RegisterHandler(handler syncMessageHandler) error {
 	return nil
 }
 
+// UnregisterHandler unregister the handler.
 func (h *syncNetHandler) UnregisterHandler(handler syncMessageHandler) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
@@ -55,6 +59,7 @@ func (h *syncNetHandler) UnregisterHandler(handler syncMessageHandler) error {
 	return nil
 }
 
+// Start subscribe and receive the NetMsg_SYNC_BLOCK_MSG message from net.
 func (h *syncNetHandler) Start() error {
 	if err := h.net.Subscribe(netPb.NetMsg_SYNC_BLOCK_MSG, h.netMessageHandle); err != nil {
 		return err
@@ -62,8 +67,12 @@ func (h *syncNetHandler) Start() error {
 	return h.net.ReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG, h.netMessageHandle)
 }
 
+// Stop stop the handler.
 func (h *syncNetHandler) Stop() error {
-	return nil
+	if err := h.net.CancelSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG); err != nil {
+		return err
+	}
+	return h.net.CancelReceiveMsg(netPb.NetMsg_SYNC_BLOCK_MSG)
 }
 
 func (h *syncNetHandler) netMessageHandle(from string, msg []byte, msgType netPb.NetMsg_MsgType) error {

@@ -21,16 +21,16 @@ import (
 	syncPb "chainmaker.org/chainmaker/pb-go/v2/sync"
 	"chainmaker.org/chainmaker/protocol/v2"
 	blockSync "chainmaker.org/chainmaker/sync/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 	_ "chainmaker.org/chainmaker/vm-native/v2"
 	"github.com/gogo/protobuf/proto"
 )
 
 var (
-	v2Version = utils.GetBlockVersion("v2.4.0")
+	v2Version = protocol.BlockVersion240
 )
 
 // BlockSyncServiceV2 version 2.0 of the Sync Service
+// This service holds the new sync and retains the ability to provide sync data for v1 sync.
 type BlockSyncServiceV2 struct {
 	*blockSync.BlockSyncService
 	// receive/broadcast messages from net module
@@ -48,7 +48,7 @@ type BlockSyncServiceV2 struct {
 	netHandler *syncNetHandler
 }
 
-func newBlockChainSyncServerV2(chainId string,
+func newBlockChainSyncServerV2(chainID string,
 	net protocol.NetService,
 	msgBus msgbus.MessageBus,
 	chainConf protocol.ChainConf,
@@ -81,6 +81,10 @@ func newBlockChainSyncServerV2(chainId string,
 	}
 }
 
+// Start start the sync service.
+// When the v2 version of the sync service is started, tability to provide synchronous response to
+// v1 sync service needs to be enabled at the same time, because there may be v1 sync nodes
+// on the chain sending sync requests to the current node.
 func (s *BlockSyncServiceV2) Start() error {
 	if err := s.enableV1DataProvision(); err != nil {
 		return err
@@ -88,6 +92,7 @@ func (s *BlockSyncServiceV2) Start() error {
 	return s.BlockSyncService.Start()
 }
 
+// Stop stop the sync service.
 func (s *BlockSyncServiceV2) Stop() {
 	if err := s.disableV1DataProvision(); err != nil {
 		s.log.Errorf("disabling V1 data provision error: %v", err)
@@ -108,6 +113,7 @@ func (s *BlockSyncServiceV2) disableV1DataProvision() error {
 	return s.netHandler.UnregisterHandler(s)
 }
 
+// HandleSyncMsg process the v1 sync request message to v2 version.
 func (s *BlockSyncServiceV2) HandleSyncMsg(from string, syncMsg *syncPb.SyncMsg) error {
 	switch syncMsg.Type {
 	case syncPb.SyncMsg_NODE_STATUS_REQ:
@@ -275,7 +281,8 @@ func (s *BlockSyncServiceV2) blockRequestEntrance() {
 	}
 }
 
-type SyncServerAggregator struct {
+// ServerAggregator is a sync service aggregator based on the chain version
+type ServerAggregator struct {
 	protocol.SyncService
 	mu                 sync.Mutex
 	version            int32
@@ -286,7 +293,7 @@ type SyncServerAggregator struct {
 	createErr          error
 	netHandler         *syncNetHandler
 
-	chainId         string
+	chainID         string
 	net             protocol.NetService
 	msgBus          msgbus.MessageBus
 	chainConf       protocol.ChainConf
@@ -312,8 +319,8 @@ func NewBlockChainSyncServer(
 	txPool protocol.TxPool,
 	log protocol.Logger) protocol.SyncService {
 
-	srv := &SyncServerAggregator{
-		chainId:         chainID,
+	srv := &ServerAggregator{
+		chainID:         chainID,
 		net:             net,
 		msgBus:          msgBus,
 		chainConf:       chainConf,
@@ -341,7 +348,7 @@ func NewBlockChainSyncServer(
 			ledgerCache,
 			blockVerifier,
 			blockCommitter,
-			nil,
+			txPool,
 			srv.netHandler,
 			log,
 		)
@@ -364,7 +371,10 @@ func NewBlockChainSyncServer(
 	return srv
 }
 
-func (s *SyncServerAggregator) Start() error {
+// Start start the sync service.
+// If the version is 1, register the message bus to listen for chain configuration changes to
+// switch sync server version when the chain version is upgraded to 2400 or later.
+func (s *ServerAggregator) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.createErr != nil {
@@ -385,7 +395,8 @@ func (s *SyncServerAggregator) Start() error {
 	return nil
 }
 
-func (s *SyncServerAggregator) Stop() {
+// Stop stop the sync service.
+func (s *ServerAggregator) Stop() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.version == 0 {
@@ -404,18 +415,18 @@ func (s *SyncServerAggregator) Stop() {
 }
 
 // ListenSyncToIdealHeight listen local block height has synced to ideal height
-func (s *SyncServerAggregator) ListenSyncToIdealHeight() <-chan struct{} {
+func (s *ServerAggregator) ListenSyncToIdealHeight() <-chan struct{} {
 	return s.minLagReachC
 }
 
-func (s *SyncServerAggregator) notifyReachIdealHeight() {
+func (s *ServerAggregator) notifyReachIdealHeight() {
 	select {
 	case s.minLagReachC <- struct{}{}:
 	default:
 	}
 }
 
-func (s *SyncServerAggregator) listen() {
+func (s *ServerAggregator) listen() {
 	ch := s.SyncService.ListenSyncToIdealHeight()
 	for {
 		select {
@@ -432,8 +443,9 @@ func (s *SyncServerAggregator) listen() {
 	}
 }
 
-// StopBlockSync syncing blocks from other nodes, but still process other nodes synchronizing blocks from itself
-func (s *SyncServerAggregator) StopBlockSync() {
+// StopBlockSync syncing blocks from other nodes,
+// but still process other nodes synchronizing blocks from itself.
+func (s *ServerAggregator) StopBlockSync() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.syncRequestStopped = true
@@ -441,27 +453,24 @@ func (s *SyncServerAggregator) StopBlockSync() {
 }
 
 // StartBlockSync start request service
-func (s *SyncServerAggregator) StartBlockSync() {
+func (s *ServerAggregator) StartBlockSync() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.syncRequestStopped = false
 	s.SyncService.StartBlockSync()
 }
 
-func (s *SyncServerAggregator) switchVersion() {
+func (s *ServerAggregator) switchVersion() {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.version != 1 {
 		return
 	}
 	s.log.Infof("begin to switch sync server version")
-	// if !atomic.CompareAndSwapInt32(&s.version, 1, 0) {
-	// 	return
-	// }
 	s.SyncService.Stop()
 
 	v2 := newBlockChainSyncServerV2(
-		s.chainId,
+		s.chainID,
 		s.net,
 		s.msgBus,
 		s.chainConf,
@@ -487,11 +496,10 @@ func (s *SyncServerAggregator) switchVersion() {
 	case s.switchCh <- struct{}{}:
 	default:
 	}
-	// atomic.StoreInt32(&s.version, 2)
 }
 
-// OnMessage contract event data is a []string, hexToString(proto.Marshal(data))
-func (s *SyncServerAggregator) OnMessage(msg *msgbus.Message) {
+// OnMessage procrss chain config message for version change.
+func (s *ServerAggregator) OnMessage(msg *msgbus.Message) {
 	switch msg.Topic {
 	case msgbus.ChainConfig:
 		dataStr, _ := msg.Payload.([]string)
@@ -515,6 +523,6 @@ func (s *SyncServerAggregator) OnMessage(msg *msgbus.Message) {
 	}
 }
 
-func (bc *SyncServerAggregator) OnQuit() {
+func (bc *ServerAggregator) OnQuit() {
 	// nothing for implement interface msgbus.Subscriber
 }
