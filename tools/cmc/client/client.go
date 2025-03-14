@@ -85,9 +85,11 @@ var (
 	validator string
 	epochID   string
 
-	rule        string
-	beginHeight uint64
-	endHeight   uint64
+	syncrule       string
+	beginHeight    uint64
+	endHeight      uint64
+	syncRule1ToCmp string
+	syncRule2ToCmp string
 
 	grantContractList  []string
 	revokeContractList []string
@@ -189,6 +191,8 @@ const (
 	flagRule                             = "rule"
 	flagBeginHeight                      = "begin-height"
 	flagEndHeight                        = "end-height"
+	flagSyncRule1                        = "sync-rule1"
+	flagSyncRule2                        = "sync-rule2"
 )
 
 // ClientCMD new client series command
@@ -309,9 +313,11 @@ func init() {
 	flags.StringSliceVar(&revokeContractList, flagRevokeContractList, nil, "specify revoke list")
 
 	// sync 系统合约
-	flags.StringVar(&rule, flagRule, "", "specify use rule")
-	flags.Uint64Var(&beginHeight, flagBeginHeight, 0, "specify use begin height")
-	flags.Uint64Var(&endHeight, flagEndHeight, 0, "specify use end height")
+	flags.StringVar(&syncrule, flagRule, "", "specify sync rule")
+	flags.Uint64Var(&beginHeight, flagBeginHeight, 0, "specify begin height for the rule to take effect")
+	flags.Uint64Var(&endHeight, flagEndHeight, 0, "specify use end height for the rule to take effect")
+	flags.StringVar(&syncRule1ToCmp, flagSyncRule1, "", "specify sync rule1 to compare")
+	flags.StringVar(&syncRule2ToCmp, flagSyncRule2, "", "specify sync rule2 to compare")
 
 	// gas limit
 	flags.Uint64Var(&gasLimit, flagGasLimit, 0, "gas limit in uint64 type")

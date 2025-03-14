@@ -7,11 +7,9 @@
 package client
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -19,8 +17,8 @@ import (
 // @return *cobra.Command
 func syncAddRule() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "add-rule",
-		Short: "add-rule to the node",
+		Use:   "add-syncrule",
+		Short: "add rule to the node for syncing blocks",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			var (
 				err error
@@ -31,15 +29,7 @@ func syncAddRule() *cobra.Command {
 				return err
 			}
 			defer client.Stop()
-			pairs := make(map[string]string)
-			if params != "" {
-				err := json.Unmarshal([]byte(params), &pairs)
-				if err != nil {
-					return err
-				}
-			}
-			txId = sdkutils.GetTimestampTxId()
-			payload, err := client.CreateAddSyncRulePayload(nodeId, rule, int(beginHeight), int(endHeight))
+			payload, err := client.CreateAddSyncRulePayload(nodeId, syncrule, int(beginHeight), int(endHeight))
 			if err != nil {
 				return fmt.Errorf("get add rule payload failed, %s", err.Error())
 			}
@@ -72,8 +62,8 @@ func syncAddRule() *cobra.Command {
 // @return *cobra.Command
 func syncGetRule() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "get-rule",
-		Short: "get-rule of the node",
+		Use:   "get-syncrule",
+		Short: "get rule of the node for syncing blocks",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			var (
 				err error
@@ -84,14 +74,6 @@ func syncGetRule() *cobra.Command {
 				return err
 			}
 			defer client.Stop()
-			pairs := make(map[string]string)
-			if params != "" {
-				err := json.Unmarshal([]byte(params), &pairs)
-				if err != nil {
-					return err
-				}
-			}
-			txId = sdkutils.GetTimestampTxId()
 			resp, err := client.GetNodeRule(nodeId)
 			if err != nil {
 				return fmt.Errorf("get rule failed, %s", err.Error())
@@ -121,8 +103,8 @@ func syncGetRule() *cobra.Command {
 // @return *cobra.Command
 func syncClearRule() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "clear-rule",
-		Short: "clear-rule of the node",
+		Use:   "clear-syncrule",
+		Short: "clear all rules of the node for syncing blocks",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			var (
 				err error
@@ -133,14 +115,6 @@ func syncClearRule() *cobra.Command {
 				return err
 			}
 			defer client.Stop()
-			pairs := make(map[string]string)
-			if params != "" {
-				err := json.Unmarshal([]byte(params), &pairs)
-				if err != nil {
-					return err
-				}
-			}
-			txId = sdkutils.GetTimestampTxId()
 			payload := client.CreateClearNodeRulePayload(nodeId)
 			resp, err := client.SendSyncRuleRequest(payload, nil, DEFAULT_TIMEOUT, syncResult)
 			if err != nil {
@@ -163,5 +137,49 @@ func syncClearRule() *cobra.Command {
 
 	cmd.MarkFlagRequired(flagNodeId)
 
+	return cmd
+}
+
+func syncCompareRule() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "compare-syncrule",
+		Short: "compare whether rule1 contains rule2",
+		Long: "compare whether rule1 contains rule2 \n" +
+			"The \"contain\" here refers to whether the transaction " +
+			"scope defined by rule1 can include the transaction scope defined by rule2.\n" +
+			"The node can only synchronize blocks from the nodes whose's rule contains it's rule.",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			var (
+				err error
+			)
+			client, err := util.CreateChainClient(sdkConfPath, chainId, orgId, userTlsCrtFilePath, userTlsKeyFilePath,
+				userSignCrtFilePath, userSignKeyFilePath, enableCertHash)
+			if err != nil {
+				return err
+			}
+			defer client.Stop()
+			contained, err := client.CompareRuleContain(syncRule1ToCmp, syncRule2ToCmp)
+			if err != nil {
+				return fmt.Errorf("compare rule request failed, %s", err.Error())
+			}
+			if contained {
+				fmt.Printf("the rule1 [%s] contains rule2 [%s]\n", syncRule1ToCmp, syncRule2ToCmp)
+			} else {
+				fmt.Printf("the rule1 [%s] does not contains rule2[%s]\n", syncRule1ToCmp, syncRule2ToCmp)
+			}
+			return nil
+		},
+	}
+
+	attachFlags(cmd, []string{
+		flagSdkConfPath,
+		flagOrgId, flagChainId,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
+		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
+		flagSyncRule1, flagSyncRule2,
+	})
+
+	cmd.MarkFlagRequired(flagSyncRule1)
+	cmd.MarkFlagRequired(flagSyncRule2)
 	return cmd
 }
