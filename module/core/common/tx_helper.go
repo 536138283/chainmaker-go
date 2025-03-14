@@ -62,7 +62,7 @@ type RwSetVerifyFailTx struct {
 	BlockHeight uint64
 }
 
-// 判断相同分支上是否存在交易重复（防止双花）
+// IfExitInSameBranch 判断相同分支上是否存在交易重复（防止双花）
 func IfExitInSameBranch(height uint64, txId string, proposalCache protocol.ProposalCache, preBlockHash []byte) (
 	bool, error) {
 	hash := preBlockHash
@@ -645,6 +645,13 @@ func IntegersContains(array []int, val int) bool {
 	return false
 }
 
+// GetBatchIds
+//
+//	@Description: get batch ids from additional data when use batch pool
+//	@param block
+//	@return []string
+//	@return []uint32
+//	@return error
 func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 	if batchIdsByte, ok := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]; ok {
 		txBatchInfo, err := DeserializeTxBatchInfo(batchIdsByte)
@@ -655,6 +662,25 @@ func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 		return txBatchInfo.BatchIds, txBatchInfo.Index, nil
 	}
 	return []string{}, []uint32{}, nil
+}
+
+// GetTxHashSet
+//
+//	@Description: get tx hash set from additional data for sync.
+//	@param block
+//	@return []string
+//	@return []uint32
+//	@return error
+func GetTxHashSet(block *commonpb.Block) (map[string][]byte, error) {
+	if txHashSetBytes, ok := block.AdditionalData.ExtraData[protocol.SYNC_txHash_set_key]; ok {
+		txHashSet, err := DeserializeTxHashSet(txHashSetBytes)
+		if err != nil {
+			return nil, err
+		}
+
+		return txHashSet.TxHashSet, nil
+	}
+	return nil, nil
 }
 
 // calStatsAvg Calculate STATS averages

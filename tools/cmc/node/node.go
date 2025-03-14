@@ -32,7 +32,8 @@ func NewNodeCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "node",
 		Short: "node command",
-		Long:  "node command",
+		Long: "node command\n" +
+			"In principle, this command is only effective for the accessed node.",
 	}
 
 	cmd.AddCommand(newSyncStateCMD())
