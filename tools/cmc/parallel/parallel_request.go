@@ -49,7 +49,7 @@ func subNodes(statistician *Statistician) {
 // sendTx 向特定节点发送交易请求。如果请求超时，则返回错误信息
 func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.TxRequest) error {
 	// 防止在收到响应之前上链的数据不一致情况，这里提前记录交易id
-	txLatency.Store(req.Payload.TxId, time.Now().UnixMilli())
+	txLatency.Store(req.Payload.TxId, time.Now().UnixNano()/1e6)
 	// 发送请求
 	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(requestTimeout)*time.Second))
 	defer cancel()
