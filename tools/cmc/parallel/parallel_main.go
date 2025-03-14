@@ -162,7 +162,7 @@ func initProductFactor(factor int) {
 func parallel(method string) error {
 	switch method {
 	case invokerMethod:
-		return parallelInvoke(invokerMethod)
+		return parallelInvoke(method)
 	default:
 		return parallelOthers(method)
 	}
