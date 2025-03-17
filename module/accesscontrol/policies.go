@@ -19,6 +19,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policySpecialRead)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 		acs.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
+
+		//自己的管理员可以做链更新操作（如：添加/删除子链，更新Seeds、CustomTrustRoots）
+		//todo: self admin 校验失败，错误信息：
+		//	SELF keyword requires the owner of the affected target
+		//  txTypePolicyMap 不支持设置SELF
+		acs.txTypePolicyMap.Store(common.TxType_NODE_CONFIG.String(), policyAdmin)
 	}
 
 	// sender & endorsements policy map
@@ -206,6 +212,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId st
 		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policyWrite)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
 		acs.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), policyArchive)
+		acs.txTypePolicyMap.Store(common.TxType_NODE_CONFIG.String(), policyAdmin)
 	}
 
 	// sender policies
@@ -397,6 +404,8 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPK() {
 		pk.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
 		pk.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
 		pk.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
+
+		pk.txTypePolicyMap.Store(common.TxType_NODE_CONFIG.String(), policyAdmin)
 	}
 
 	// sender & endorsements policy map
@@ -588,6 +597,8 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 		pk.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), pubPolicyTransaction)
 		pk.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), pubPolicyTransaction)
 		pk.txTypePolicyMap.Store(common.TxType_ARCHIVE.String(), pubPolicyManage)
+
+		pk.txTypePolicyMap.Store(common.TxType_NODE_CONFIG.String(), policyAdmin)
 	}
 
 	// sender & endorsements policy map

@@ -16,7 +16,6 @@ import (
 	"io/ioutil"
 	"math"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -24,7 +23,6 @@ import (
 	"chainmaker.org/chainmaker/common/v2/ca"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	"chainmaker.org/chainmaker/logger/v2"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -32,84 +30,10 @@ import (
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
-	"github.com/spf13/cobra"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var log = logger.GetLogger(logger.MODULE_CLI)
-
-var (
-	threadNum      int
-	loopNum        int
-	timeout        int
-	printTime      int
-	sleepTime      int
-	climbTime      int
-	requestTimeout int
-	runTime        int32
-	checkResult    bool
-	recordLog      bool
-	showKey        bool
-	useTLS         bool
-	useShortCrt    bool
-
-	hostsString        string
-	hostnamesString    string
-	signCrtPathsString string
-	signKeyPathsString string
-	userCrtPathsString string
-	userKeyPathsString string
-	orgIDsString       string
-	hashAlgo           string
-	caPathsString      string
-	pairsFile          string
-	pairsString        string
-	globalPairs        []*KeyValuePair
-	abiPath            string
-	method             string
-	orgIds             string // 组织列表(多个用逗号隔开)
-	adminSignKeys      string // 管理员私钥列表(多个用逗号隔开)
-	adminSignCrts      string // 管理员证书列表(多个用逗号隔开)
-	chainId            string
-	contractName       string
-	version            string
-	wasmPath           string
-
-	caPaths      []string
-	hosts        []string
-	hostnames    []string
-	signCrtPaths []string
-	signKeyPaths []string
-	userCrtPaths []string
-	userKeyPaths []string
-	orgIDs       []string
-
-	nodeNum int
-
-	fileCache = NewFileCacheReader()
-	certCache = NewCertFileCacheReader()
-
-	abiCache     = NewFileCacheReader()
-	outputResult bool
-
-	authTypeUint32 uint32
-	authType       sdk.AuthType
-	gasLimit       uint64
-)
-
-type KeyValuePair struct {
-	Key        string `json:"key,omitempty"`
-	Value      string `json:"value,omitempty"`
-	Unique     bool   `json:"unique,omitempty"`
-	RandomRate int64  `json:"randomRate,omitempty"`
-	Increase   bool   `json:"increase"`
-	Decrease   bool   `json:"decrease"`
-	// mu protect IntValue in Increase/Decrease scene.
-	mu       sync.Mutex
-	IntValue int64 `json:"-"`
-}
 
 type Detail struct {
 	TPS          float32                `json:"tps"`
@@ -127,14 +51,14 @@ type Detail struct {
 	Nodes        map[string]interface{} `json:"nodes"`
 }
 
-type reqStat struct {
+type reqStatOther struct {
 	success bool
 	elapsed int64
 	nodeId  int
 }
 
-type Statistician struct {
-	reqStatC          chan *reqStat
+type StatisticianOther struct {
+	reqStatC          chan *reqStatOther
 	minSuccessElapsed int64
 	maxSuccessElapsed int64
 	sumSuccessElapsed int64
@@ -155,109 +79,7 @@ type Statistician struct {
 	nodeTotalReqCount     []int
 }
 
-// ParallelCMD parallel sub command
-// @return *cobra.Command
-func ParallelCMD() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "parallel",
-		Short: "Parallel",
-		Long:  "Parallel",
-		PersistentPreRun: func(_ *cobra.Command, _ []string) {
-			authType = sdk.AuthType(authTypeUint32)
-			caPaths = strings.Split(caPathsString, ",")
-			hosts = strings.Split(hostsString, ",")
-			hostnames = strings.Split(hostnamesString, ",")
-			signCrtPaths = strings.Split(signCrtPathsString, ",")
-			signKeyPaths = strings.Split(signKeyPathsString, ",")
-			userCrtPaths = strings.Split(userCrtPathsString, ",")
-			userKeyPaths = strings.Split(userKeyPathsString, ",")
-			orgIDs = strings.Split(orgIDsString, ",")
-
-			if authType == sdk.Public {
-				if len(hosts) != len(signKeyPaths) {
-					panic(fmt.Sprintf("hosts[%d], sign-keys[%d] length invalid", len(hosts), len(signKeyPaths)))
-				}
-			} else if authType == sdk.PermissionedWithKey {
-				if len(hosts) != len(signKeyPaths) || len(hosts) != len(orgIDs) {
-					panic(fmt.Sprintf("hosts[%d], sign-keys[%d], orgIDs[%d] length invalid",
-						len(hosts), len(signKeyPaths), len(orgIDs)))
-				}
-			} else {
-				if len(hosts) != len(signCrtPaths) || len(hosts) != len(signKeyPaths) || len(hosts) != len(caPaths) || len(hosts) != len(orgIDs) {
-					panic(fmt.Sprintf("hosts[%d], sign-crts[%d], sign-keys[%d], ca-path[%d], orgIDs[%d] length invalid",
-						len(hosts), len(signCrtPaths), len(signKeyPaths), len(caPaths), len(orgIDs)))
-				}
-			}
-
-			if useTLS && (len(hosts) != len(userCrtPaths) || len(hosts) != len(userKeyPaths)) {
-				panic(fmt.Sprintf("use tls, but hosts[%d], user-crts[%d], user-keys[%d] length invalid",
-					len(hosts), len(userCrtPaths), len(userKeyPaths)))
-			}
-
-			nodeNum = len(hosts)
-			if len(pairsFile) != 0 {
-				bytes, err := ioutil.ReadFile(pairsFile)
-				if err != nil {
-					panic(err)
-				}
-				pairsString = string(bytes)
-			}
-			var err error
-			globalPairs, err = getPairInfos()
-			if err != nil {
-				panic(err)
-			}
-			fmt.Println("tx content: ", pairsString)
-		},
-	}
-
-	flags := cmd.PersistentFlags()
-	flags.IntVarP(&threadNum, "threadNum", "N", 10, "specify thread number")
-	flags.IntVarP(&loopNum, "loopNum", "l", 1000, "specify loop number")
-	flags.IntVarP(&timeout, "timeout", "T", 2, "specify timeout(unit: s)")
-	flags.IntVarP(&printTime, "printTime", "r", 1, "specify print time(unit: s)")
-	flags.IntVarP(&sleepTime, "sleepTime", "S", 100, "specify sleep time(unit: ms)")
-	flags.IntVarP(&climbTime, "climbTime", "L", 10, "specify climb time(unit: s)")
-	flags.StringVarP(&hostsString, "hosts", "H", "localhost:17988,localhost:27988", "specify hosts")
-	flags.StringVarP(&signCrtPathsString, "sign-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.crt", "specify user crt path")
-	flags.StringVarP(&signKeyPathsString, "sign-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.key", "specify user key path")
-	flags.StringVar(&userCrtPathsString, "user-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify tls crt path")
-	flags.StringVar(&userKeyPathsString, "user-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify tls key path")
-	flags.StringVarP(&orgIDsString, "org-IDs", "I", "wx-org1,wx-org2", "specify user key path")
-	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
-	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
-	flags.BoolVarP(&outputResult, "output-result", "", false, "output rpc result, eg: txid")
-	flags.BoolVarP(&showKey, "showKey", "", false, "bool")
-	flags.StringVar(&hashAlgo, "hash-algorithm", "SHA256", "hash algorithm set in chain configuration")
-	flags.StringVarP(&caPathsString, "ca-path", "P", "../../config/crypto-config/wx-org1.chainmaker.org/ca,../../config/crypto-config/wx-org2.chainmaker.org/ca", "specify ca path")
-	flags.BoolVarP(&useTLS, "use-tls", "t", false, "specify whether use tls")
-	flags.StringVar(&orgIds, "org-ids", "wx-org1,wx-org2,wx-org3,wx-org4", "orgIds of admin")
-	flags.StringVar(&adminSignKeys, "admin-sign-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.key,../../config/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.key,../../config/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.sign.key", "adminSignKeys of admin")
-	flags.StringVar(&adminSignCrts, "admin-sign-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.crt,../../config/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.crt,../../config/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.sign.crt", "adminSignCrts of admin")
-	flags.StringVarP(&chainId, "chain-id", "C", "chain1", "specify chain id")
-	flags.StringVarP(&contractName, "contract-name", "n", "contract1", "specify contract name")
-	flags.BoolVar(&useShortCrt, "use-short-crt", false, "use compressed certificate in transactions")
-	flags.IntVar(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
-	flags.Uint32Var(&authTypeUint32, "auth-type", 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
-	flags.Uint64Var(&gasLimit, "gas-limit", 0, "gas limit in uint64 type")
-	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
-
-	cmd.AddCommand(invokeCMD())
-	cmd.AddCommand(queryCMD())
-	cmd.AddCommand(createContractCMD())
-	cmd.AddCommand(upgradeContractCMD())
-
-	return cmd
-}
-
-const (
-	invokerMethod      = "invoke"
-	queryMethod        = "query"
-	createContractStr  = "createContract"
-	upgradeContractStr = "upgradeContract"
-)
-
-func parallel(parallelMethod string) error {
+func parallelOthers(parallelMethod string) error {
 	if nodeNum > threadNum {
 		//fmt.Println("threadNum:", threadNum, "less nodeNum:", nodeNum, "change threadNum=nodeNum")
 		threadNum = nodeNum
@@ -267,8 +89,8 @@ func parallel(parallelMethod string) error {
 	doneCount := 0
 
 	// Statistician updater
-	statistician := &Statistician{
-		reqStatC: make(chan *reqStat, threadNum),
+	statistician := &StatisticianOther{
+		reqStatC: make(chan *reqStatOther, threadNum),
 
 		nodeMinSuccessElapsed: make([]int64, nodeNum),
 		nodeMaxSuccessElapsed: make([]int64, nodeNum),
@@ -281,9 +103,9 @@ func parallel(parallelMethod string) error {
 	}
 	go statistician.Start()
 
-	var threads []*Thread
+	var threads []*ThreadOthers
 	for i := 0; i < threadNum; i++ {
-		t := &Thread{
+		t := &ThreadOthers{
 			id:           i,
 			loopNum:      loopNum,
 			doneChan:     doneChan,
@@ -316,7 +138,7 @@ func parallel(parallelMethod string) error {
 		}
 	}
 
-	go parallelStart(threads)
+	go othersParallelStart(threads)
 
 	printTicker := time.NewTicker(time.Duration(printTime) * time.Second)
 	timeoutTicker := time.NewTicker(time.Duration(timeout) * time.Second)
@@ -356,7 +178,7 @@ func parallel(parallelMethod string) error {
 	return nil
 }
 
-func parallelStart(threads []*Thread) {
+func othersParallelStart(threads []*ThreadOthers) {
 	count := threadNum / 10
 	if count == 0 {
 		count = 1
@@ -374,7 +196,7 @@ func parallelStart(threads []*Thread) {
 	}
 }
 
-func (s *Statistician) Start() {
+func (s *StatisticianOther) Start() {
 	for {
 		select {
 		case stat := <-s.reqStatC:
@@ -407,7 +229,7 @@ func (s *Statistician) Start() {
 
 // PrintDetails print statistics results
 // @param all
-func (s *Statistician) PrintDetails(all bool) {
+func (s *StatisticianOther) PrintDetails(all bool) {
 	nowCount := atomic.LoadInt32(&s.totalCount)
 	nowTime := time.Now()
 
@@ -435,7 +257,7 @@ type numberResults struct {
 	nodeMin, nodeMax, nodeSum   []int64
 }
 
-func (s *Statistician) statisticsResults(ret *numberResults, all bool, nowTime time.Time) (detail *Detail) {
+func (s *StatisticianOther) statisticsResults(ret *numberResults, all bool, nowTime time.Time) (detail *Detail) {
 	detail = &Detail{
 		Nodes: make(map[string]interface{}),
 	}
@@ -480,14 +302,14 @@ func (s *Statistician) statisticsResults(ret *numberResults, all bool, nowTime t
 	return detail
 }
 
-// Thread for multi-thread object
-type Thread struct {
+// ThreadOthers for multi-thread object
+type ThreadOthers struct {
 	id            int
 	loopNum       int
 	doneChan      chan struct{}
 	timeoutChan   chan struct{}
 	handler       Handler
-	statistician  *Statistician
+	statistician  *StatisticianOther
 	operationName string
 
 	conn   *grpc.ClientConn
@@ -498,7 +320,7 @@ type Thread struct {
 
 // Init init thread data
 // @return error
-func (t *Thread) Init() error {
+func (t *ThreadOthers) Init() error {
 	var err error
 	t.index = t.id % len(hosts)
 	t.conn, err = t.initGRPCConnect(useTLS, t.index)
@@ -521,7 +343,7 @@ func (t *Thread) Init() error {
 }
 
 // Start thread start
-func (t *Thread) Start() {
+func (t *ThreadOthers) Start() {
 	for i := 0; i < t.loopNum; i++ {
 		select {
 		case <-t.timeoutChan:
@@ -541,7 +363,7 @@ func (t *Thread) Start() {
 			elapsed := time.Since(start)
 
 			atomic.AddInt32(&t.statistician.totalCount, 1)
-			t.statistician.reqStatC <- &reqStat{
+			t.statistician.reqStatC <- &reqStatOther{
 				success: err == nil,
 				elapsed: elapsed.Milliseconds(),
 				nodeId:  t.index,
@@ -557,7 +379,7 @@ func (t *Thread) Start() {
 	t.doneChan <- struct{}{}
 }
 
-func getPairInfos() ([]*KeyValuePair, error) {
+func getOtherPairInfos() ([]*KeyValuePair, error) {
 	var ps []*KeyValuePair
 	err := json.Unmarshal([]byte(pairsString), &ps)
 	if err != nil {
@@ -578,11 +400,11 @@ func getPairInfos() ([]*KeyValuePair, error) {
 }
 
 // Stop thread stop
-func (t *Thread) Stop() {
+func (t *ThreadOthers) Stop() {
 	t.conn.Close()
 }
 
-func (t *Thread) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, error) {
+func (t *ThreadOthers) initGRPCConnect(useTLS bool, index int) (*grpc.ClientConn, error) {
 	url := hosts[index]
 
 	if useTLS {
@@ -623,13 +445,13 @@ type invokeHandler struct {
 }
 
 var (
-	respStr     = "proposalRequest error, resp: %+v"
-	templateStr = "%s_%d_%d_%d"
-	resultStr   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
+	respStr           = "proposalRequest error, resp: %+v"
+	templateStrOthers = "%s_%d_%d_%d"
+	resultStrOthers   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
 )
 
-var totalSentTxs int64
-var totalRandomSentTxs int64
+var totalSentTxsOthers int64
+var totalRandomSentTxsOthers int64
 var resp *commonPb.TxResponse
 
 type InvokerMsg struct {
@@ -647,15 +469,15 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvs(h.threadId, loopId)
+	pairs := makeKvsOthers(h.threadId, loopId)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
 			fmt.Println(err)
 		}
-		rate := totalRandomSentTxs * 100 / totalSentTxs
-		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
-			totalSentTxs, totalRandomSentTxs, rate, string(j))
+		rate := totalRandomSentTxsOthers * 100 / totalSentTxsOthers
+		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxsOthers:%d\t randomRate:%d \t param:%s\t \n",
+			totalSentTxsOthers, totalRandomSentTxsOthers, rate, string(j))
 	}
 
 	// 支持evm
@@ -702,15 +524,15 @@ func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey,
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvs(h.threadId, loopId)
+	pairs := makeKvsOthers(h.threadId, loopId)
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
 			fmt.Println(err)
 		}
-		rate := totalRandomSentTxs * 100 / totalSentTxs
-		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
-			totalSentTxs, totalRandomSentTxs, rate, string(j))
+		rate := totalRandomSentTxsOthers * 100 / totalSentTxsOthers
+		fmt.Printf("totalSentTxsOthers:%d\t totalRandomSentTxsOthers:%d\t randomRate:%d \t param:%s\t \n",
+			totalSentTxsOthers, totalRandomSentTxsOthers, rate, string(j))
 	}
 
 	payloadBytes, err := constructQueryPayload(chainId, contractName, method, pairs, gasLimit)
@@ -928,4 +750,43 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 		return nil, fmt.Errorf("client.call err: %v\n", err)
 	}
 	return result, nil
+}
+
+func makeKvsOthers(threadId, loopId int) []*commonPb.KeyValuePair {
+	var outKvs []*commonPb.KeyValuePair
+	atomic.AddInt64(&totalSentTxsOthers, 1)
+	for _, p := range globalPairs {
+		var val []byte
+		switch {
+		case p.Unique:
+			val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+		case 0 < p.RandomRate && p.RandomRate < 100:
+			if isRandom(p.RandomRate) {
+				val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+				atomic.AddInt64(&totalRandomSentTxs, 1)
+			} else {
+				val = []byte(p.Value)
+			}
+		case p.Decrease:
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue--
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		case p.Increase:
+			p.mu.Lock()
+			val = []byte(fmt.Sprintf("%d", p.IntValue))
+			p.IntValue++
+			p.mu.Unlock()
+			atomic.AddInt64(&totalRandomSentTxs, 1)
+		default:
+			val = []byte(p.Value)
+		}
+
+		outKvs = append(outKvs, &commonPb.KeyValuePair{
+			Key:   p.Key,
+			Value: val,
+		})
+	}
+	return outKvs
 }

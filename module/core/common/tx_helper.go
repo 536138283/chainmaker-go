@@ -645,14 +645,13 @@ func IntegersContains(array []int, val int) bool {
 	return false
 }
 
-//
 // GetBatchIds
-//  @Description: get batch ids from additional data when use batch pool
-//  @param block
-//  @return []string
-//  @return []uint32
-//  @return error
 //
+//	@Description: get batch ids from additional data when use batch pool
+//	@param block
+//	@return []string
+//	@return []uint32
+//	@return error
 func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 	if batchIdsByte, ok := block.AdditionalData.ExtraData[batch.BatchPoolAddtionalDataKey]; ok {
 		txBatchInfo, err := DeserializeTxBatchInfo(batchIdsByte)
@@ -665,14 +664,13 @@ func GetBatchIds(block *commonpb.Block) ([]string, []uint32, error) {
 	return []string{}, []uint32{}, nil
 }
 
-//
 // GetTxHashSet
-//  @Description: get tx hash set from additional data for sync.
-//  @param block
-//  @return []string
-//  @return []uint32
-//  @return error
 //
+//	@Description: get tx hash set from additional data for sync.
+//	@param block
+//	@return []string
+//	@return []uint32
+//	@return error
 func GetTxHashSet(block *commonpb.Block) (map[string][]byte, error) {
 	if txHashSetBytes, ok := block.AdditionalData.ExtraData[protocol.SYNC_txHash_set_key]; ok {
 		txHashSet, err := DeserializeTxHashSet(txHashSetBytes)

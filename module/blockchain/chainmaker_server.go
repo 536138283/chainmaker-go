@@ -281,6 +281,9 @@ func (server *ChainMakerServer) initBlockchains() error {
 	}
 	go server.newBlockchainTaskListener()
 	go server.deleteBlockchainTaskListener()
+	go server.updateSeedsTaskListerer()
+	go server.updateCustomChainTrustRootsTaskListerer()
+
 	return nil
 }
 
@@ -339,6 +342,48 @@ func (server *ChainMakerServer) deleteBlockchainTaskListener() {
 		oldBlockChainS, _ := oldBlockChain.(*Blockchain)
 		oldBlockChainS.Stop()
 		server.blockchains.Delete(deleteChainId)
+	}
+}
+
+// updateSeedsTaskListerer 持续监听种子节点更新通知，动态添加新种子到网络模块和配置中
+func (server *ChainMakerServer) updateSeedsTaskListerer() {
+	// 长期运行的监听循环，通道关闭时自动退出
+	for seed := range localconf.UpdateSeedsNotifyC {
+		// 将新种子节点加入P2P网络模块
+		// 网络层会处理节点连接和状态同步
+		// AddSeed支持重复添加seed，不需要特殊处理
+		log.Debugf("update Seeds,add new seed %s", seed)
+		err := server.net.AddSeed(seed)
+		if err != nil {
+			log.Warnf("add seed(%s) err, %s", seed, err.Error())
+		}
+		// 更新全局配置中的种子节点列表
+		// 采用追加的方式，没有考虑去重，经分析没有影响
+		localconf.ChainMakerConfig.NetConfig.Seeds =
+			append(localconf.ChainMakerConfig.NetConfig.Seeds, seed)
+	}
+}
+
+func (server *ChainMakerServer) updateCustomChainTrustRootsTaskListerer() {
+	for message := range localconf.UpdateCustomChainTrustRootsNotifyC {
+		log.Debugf("update CustomChainTrustRoots,receive message:%s", message)
+		if message == localconf.CustomChainTrustRoots {
+			for _, chainTrustRoots := range localconf.ChainMakerConfig.NetConfig.CustomChainTrustRoots {
+				roots := make([][]byte, 0, len(chainTrustRoots.TrustRoots))
+				for _, r := range chainTrustRoots.TrustRoots {
+					rootBytes, err2 := ioutil.ReadFile(r.Root)
+					if err2 != nil {
+						log.Errorf("load custom chain trust roots failed, %s", err2.Error())
+						return
+					}
+
+					roots = append(roots, rootBytes)
+				}
+				log.Debugf("update CustomChainTrustRoots,set chainId:%s roots:%s",
+					chainTrustRoots.ChainId, chainTrustRoots.TrustRoots)
+				server.net.SetChainCustomTrustRoots(chainTrustRoots.ChainId, roots)
+			}
+		}
 	}
 }
 

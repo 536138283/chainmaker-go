@@ -55,6 +55,8 @@ var restrainedResourceList = map[string]bool{
 	common.TxType_INVOKE_CONTRACT.String(): true,
 	common.TxType_SUBSCRIBE.String():       true,
 	common.TxType_ARCHIVE.String():         true,
+
+	common.TxType_NODE_CONFIG.String(): true,
 }
 
 // predifined policies
