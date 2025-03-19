@@ -876,12 +876,12 @@ func (vb *VerifierBlock) ValidateBlockWithRWSets(
 	startRootsTick := utils.CurrentTimeMillisSeconds()
 	err = CheckBlockDigests(block, txHashes, hashType, vb.log)
 	if err != nil {
-		return contractEventMap, nil, err
+		return contractEventMap, timeLasts, err
 	}
 	rootsLast := utils.CurrentTimeMillisSeconds() - startRootsTick
 	timeLasts[TxRoot] = rootsLast
 
-	return contractEventMap, nil, nil
+	return contractEventMap, timeLasts, nil
 }
 
 // CheckPreBlock
