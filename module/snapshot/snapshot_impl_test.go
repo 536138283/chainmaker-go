@@ -1049,3 +1049,5059 @@ func TestConstructKey(t *testing.T) {
 	key := []byte("name")
 	fmt.Println(constructKey(contractName, key))
 }
+
+// oneKey scenario
+func TestSnapshotImpl_BuildDAGCaseOneKey(t *testing.T) {
+
+	txRWSetTable1 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	want1 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+		},
+	}
+
+	txRWSetTable2 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+	}
+	txRWSetTable3 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+	}
+	txRWSetTable4 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+	}
+	txRWSetTable5 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	want2 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{2},
+			},
+		},
+	}
+
+	txRWSetTable6 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	want3 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+			{
+				Neighbors: []uint32{2},
+			},
+		},
+	}
+
+	txRWSetTable7 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want4 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1, 2},
+			},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *commonPb.DAG
+	}{
+		// dag: vertexes:<> vertexes:<> vertexes:<> vertexes:<>
+		{
+			name: "txRWSetTable",
+			fields: fields{
+				txRWSetTable: txRWSetTable1,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want1,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:1> vertexes:<neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable2,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable3,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable4,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		{
+			name: "scenario4",
+			fields: fields{
+				txRWSetTable: txRWSetTable5,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		// dag: vertexes:<> vertexes:<> vertexes:<neighbors:0 neighbors:1> vertexes:<neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable6,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want3,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0> vertexes:<neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable7,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &SnapshotImpl{
+				lock:              sync.RWMutex{},
+				blockchainStore:   tt.fields.blockchainStore,
+				log:               tt.fields.log,
+				sealed:            tt.fields.sealed,
+				chainId:           tt.fields.chainId,
+				blockTimestamp:    tt.fields.blockTimestamp,
+				blockProposer:     tt.fields.blockProposer,
+				blockHeight:       tt.fields.blockHeight,
+				preBlockHash:      tt.fields.preBlockHash,
+				preSnapshot:       tt.fields.preSnapshot,
+				txRWSetTable:      tt.fields.txRWSetTable,
+				txTable:           tt.fields.txTable,
+				specialTxTable:    tt.fields.specialTxTable,
+				txResultMap:       tt.fields.txResultMap,
+				readTable:         newShardSet(),
+				writeTable:        newShardSet(),
+				applyConflictTime: uatomic.NewInt64(0),
+				applyAddReadTime:  uatomic.NewInt64(0),
+				applyAddWriteTime: uatomic.NewInt64(0),
+				txRoot:            tt.fields.txRoot,
+				dagHash:           tt.fields.dagHash,
+				rwSetHash:         tt.fields.rwSetHash,
+			}
+			got := s.BuildDAG(tt.args.isSql, nil)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BuildDAG() = %v, want %v", got, tt.want)
+			}
+
+			fmt.Println(got)
+		})
+	}
+}
+
+// twoKey scenario
+func TestSnapshotImpl_BuildDAGCaseTwoKey(t *testing.T) {
+
+	txRWSetTable1 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable2 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want1 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+		},
+	}
+
+	txRWSetTable3 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable4 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	txRWSetTable5 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want2 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1, 2},
+			},
+		},
+	}
+
+	txRWSetTable6 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable7 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable8 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want3 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{0, 2},
+			},
+		},
+	}
+
+	txRWSetTable9 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+			},
+		},
+	}
+	txRWSetTable10 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+			},
+		},
+	}
+	txRWSetTable11 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+			},
+		},
+	}
+	txRWSetTable12 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+			},
+		},
+	}
+	want4 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+		},
+	}
+
+	txRWSetTable13 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable14 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	txRWSetTable15 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want5 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+			{
+				Neighbors: []uint32{2},
+			},
+		},
+	}
+
+	txRWSetTable16 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	txRWSetTable17 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	txRWSetTable18 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want6 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{1, 2},
+			},
+		},
+	}
+
+	txRWSetTable19 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("5"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want7 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1, 2},
+			},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *commonPb.DAG
+	}{
+		// dag: vertexes:<> vertexes:<> vertexes:<> vertexes:<neighbors:1>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable1,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want1,
+		},
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable2,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want1,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0> vertexes:<neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable3,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable4,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: &commonPb.DAG{
+				Vertexes: []*commonPb.DAG_Neighbor{
+					{
+						Neighbors: []uint32{},
+					},
+					{
+						Neighbors: []uint32{0},
+					},
+					{
+						Neighbors: []uint32{0},
+					},
+					{
+						Neighbors: []uint32{1, 2},
+					},
+				},
+			},
+		},
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable5,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:1> vertexes:<neighbors:0 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable6,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want3,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable7,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want3,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable8,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want3,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:1> vertexes:<neighbors:0>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable9,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable10,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable11,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+		{
+			name: "scenario4",
+			fields: fields{
+				txRWSetTable: txRWSetTable12,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1> vertexes:<neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable13,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want5,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable14,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want5,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable15,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want5,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:1> vertexes:<neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable16,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want6,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable17,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want6,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable18,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want6,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable19,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want7,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &SnapshotImpl{
+				lock:              sync.RWMutex{},
+				blockchainStore:   tt.fields.blockchainStore,
+				log:               tt.fields.log,
+				sealed:            tt.fields.sealed,
+				chainId:           tt.fields.chainId,
+				blockTimestamp:    tt.fields.blockTimestamp,
+				blockProposer:     tt.fields.blockProposer,
+				blockHeight:       tt.fields.blockHeight,
+				preBlockHash:      tt.fields.preBlockHash,
+				preSnapshot:       tt.fields.preSnapshot,
+				txRWSetTable:      tt.fields.txRWSetTable,
+				txTable:           tt.fields.txTable,
+				specialTxTable:    tt.fields.specialTxTable,
+				txResultMap:       tt.fields.txResultMap,
+				readTable:         newShardSet(),
+				writeTable:        newShardSet(),
+				applyConflictTime: uatomic.NewInt64(0),
+				applyAddReadTime:  uatomic.NewInt64(0),
+				applyAddWriteTime: uatomic.NewInt64(0),
+				txRoot:            tt.fields.txRoot,
+				dagHash:           tt.fields.dagHash,
+				rwSetHash:         tt.fields.rwSetHash,
+			}
+			got := s.BuildDAG(tt.args.isSql, nil)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BuildDAG() = %v, want %v", got, tt.want)
+			}
+
+			fmt.Println(got)
+		})
+	}
+}
+
+// threeKey scenario
+func TestSnapshotImpl_BuildDAGCaseThreeKey(t *testing.T) {
+
+	txRWSetTable1 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable2 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	txRWSetTable3 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want1 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+		},
+	}
+
+	txRWSetTable4 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable5 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable6 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want2 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+		},
+	}
+
+	txRWSetTable7 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable8 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want3 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1, 2},
+			},
+		},
+	}
+
+	txRWSetTable9 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable10 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable11 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want4 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+			{
+				Neighbors: []uint32{0, 1, 2},
+			},
+		},
+	}
+
+	txRWSetTable12 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable13 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	want5 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{0, 1, 2},
+			},
+		},
+	}
+
+	txRWSetTable14 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable15 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable16 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want6 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{0, 2},
+			},
+		},
+	}
+
+	txRWSetTable17 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable18 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable19 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want7 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+			{
+				Neighbors: []uint32{2},
+			},
+		},
+	}
+
+	txRWSetTable20 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable21 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	want8 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+			{
+				Neighbors: []uint32{2},
+			},
+		},
+	}
+
+	txRWSetTable22 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable23 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want9 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+			{
+				Neighbors: []uint32{1, 2},
+			},
+		},
+	}
+
+	txRWSetTable24 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable25 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	txRWSetTable26 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("3"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("4"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("4"),
+				},
+			},
+		},
+	}
+	want10 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0, 2},
+			},
+		},
+	}
+
+	txRWSetTable27 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+			},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("3"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "44444444",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("4"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	want11 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0, 1},
+			},
+			{
+				Neighbors: []uint32{0, 1, 2},
+			},
+			{
+				Neighbors: []uint32{1},
+			},
+		},
+	}
+
+	txRWSetTable28 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId:    "11111111",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("1"),
+				},
+			},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+	}
+	txRWSetTable29 := []*commonPb.TxRWSet{
+		{
+			TxId:    "00000000",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("1"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "22222222",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("1"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId:    "33333333",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+			},
+		},
+	}
+	txRWSetTable30 := []*commonPb.TxRWSet{
+		{
+			TxId: "00000000",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+		{
+			TxId: "11111111",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("1"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("1"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k3"),
+					Value:        []byte("1"),
+				},
+			},
+		},
+		{
+			TxId:    "22222222",
+			TxReads: []*commonPb.TxRead{},
+			TxWrites: []*commonPb.TxWrite{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("1"),
+				},
+			},
+		},
+		{
+			TxId: "33333333",
+			TxReads: []*commonPb.TxRead{
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k1"),
+					Value:        []byte("2"),
+				},
+				{
+					ContractName: "E_CNY",
+					Key:          []byte("k2"),
+					Value:        []byte("2"),
+				},
+			},
+			TxWrites: []*commonPb.TxWrite{},
+		},
+	}
+	want12 := &commonPb.DAG{
+		Vertexes: []*commonPb.DAG_Neighbor{
+			{
+				Neighbors: []uint32{},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{0},
+			},
+			{
+				Neighbors: []uint32{1, 2},
+			},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+		want   *commonPb.DAG
+	}{
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0> vertexes:<neighbors:0>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable1,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want1,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable2,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want1,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable3,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want1,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable4,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable5,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable6,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want2,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable7,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want3,
+		},
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable8,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want3,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1> vertexes:<neighbors:0 neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable9,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable10,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable11,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want4,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:1> vertexes:<neighbors:0 neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable12,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want5,
+		},
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable13,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want5,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:1> vertexes:<neighbors:0 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable14,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want6,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable15,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want6,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable16,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want6,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:1> vertexes:<neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable17,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want7,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable18,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want7,
+		},
+		{
+			name: "scenario3",
+			fields: fields{
+				txRWSetTable: txRWSetTable19,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want7,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1> vertexes:<neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable20,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want8,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable21,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want8,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1> vertexes:<neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable22,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want9,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable23,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want9,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<> vertexes:<neighbors:0 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable24,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want10,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable25,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want10,
+		},
+		{
+			name: "scenario2",
+			fields: fields{
+				txRWSetTable: txRWSetTable26,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want10,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0 neighbors:1> vertexes:<neighbors:0 neighbors:1 neighbors:2> vertexes:<neighbors:1>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable27,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want11,
+		},
+		// dag: vertexes:<> vertexes:<neighbors:0> vertexes:<neighbors:0> vertexes:<neighbors:1 neighbors:2>
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable28,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want12,
+		},
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable29,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want12,
+		},
+		{
+			name: "scenario1",
+			fields: fields{
+				txRWSetTable: txRWSetTable30,
+				blockHeight:  1,
+				blockVersion: 221,
+				txTable: []*commonPb.Transaction{
+					{},
+					{},
+					{},
+					{},
+				},
+				log: logger.GetLogger("test"),
+			},
+			args: args{
+				isSql: false,
+			},
+			want: want12,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s := &SnapshotImpl{
+				lock:              sync.RWMutex{},
+				blockchainStore:   tt.fields.blockchainStore,
+				log:               tt.fields.log,
+				sealed:            tt.fields.sealed,
+				chainId:           tt.fields.chainId,
+				blockTimestamp:    tt.fields.blockTimestamp,
+				blockProposer:     tt.fields.blockProposer,
+				blockHeight:       tt.fields.blockHeight,
+				preBlockHash:      tt.fields.preBlockHash,
+				preSnapshot:       tt.fields.preSnapshot,
+				txRWSetTable:      tt.fields.txRWSetTable,
+				txTable:           tt.fields.txTable,
+				specialTxTable:    tt.fields.specialTxTable,
+				txResultMap:       tt.fields.txResultMap,
+				readTable:         newShardSet(),
+				writeTable:        newShardSet(),
+				applyConflictTime: uatomic.NewInt64(0),
+				applyAddReadTime:  uatomic.NewInt64(0),
+				applyAddWriteTime: uatomic.NewInt64(0),
+				txRoot:            tt.fields.txRoot,
+				dagHash:           tt.fields.dagHash,
+				rwSetHash:         tt.fields.rwSetHash,
+			}
+			got := s.BuildDAG(tt.args.isSql, nil)
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("BuildDAG() = %v, want %v", got, tt.want)
+			}
+
+			fmt.Println(got)
+		})
+	}
+}
