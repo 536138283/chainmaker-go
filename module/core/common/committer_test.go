@@ -140,6 +140,130 @@ func TestCommitBlock_CommitBlock(t *testing.T) {
 	require.Nil(t, err)
 }
 
+func TestCommitBlock_CommitBlock_DPOS(t *testing.T) {
+
+	ctl := gomock.NewController(t)
+	log := logger.GetLoggerByChain(logger.MODULE_CORE, "chain1")
+	b0 := createBlock(11)
+	block := createNewTestBlock(12)
+	block.Header.BlockVersion = blockVersion230
+	hash, err := utils.CalcBlockHash("SHA256", block)
+	require.Nil(t, err)
+
+	block.Header.BlockHash = hash
+
+	// snapshotManager
+	snapshotManager := mock.NewMockSnapshotManager(ctl)
+	//snapshotManager.EXPECT().NotifyBlockCommitted(block).Return(nil)
+
+	// 	ledgerCache
+	ledgerCache := mock.NewMockLedgerCache(ctl)
+	//ledgerCache.EXPECT().SetLastCommittedBlock(block)
+
+	// msgbus
+	msgbus := mbusmock.NewMockMessageBus(ctl)
+	msgbus.EXPECT().Publish(gomock.Any(), gomock.Any()).Return()
+
+	// storehelper
+	storeHelper := mock.NewMockStoreHelper(ctl)
+
+	// txfilter
+	txFilter := mock.NewMockTxFilter(ctl)
+
+	// proposalCache
+	proposalCache := mock.NewMockProposalCache(ctl)
+
+	// txpool
+	txpool := mock.NewMockTxPool(ctl)
+
+	//chainConf mock
+	chainConf := mock.NewMockChainConf(ctl)
+
+	// Mock blockChain Store
+	store := mock.NewMockBlockchainStore(ctl)
+
+	log.Infof("init block(%d,%s)", block.Header.BlockHeight, hex.EncodeToString(block.Header.BlockHash))
+	//store.EXPECT().PutBlock(block, txRWSets).Return(nil)
+
+	ledgerCache.EXPECT().GetLastCommittedBlock().Return(b0)
+
+	txRWSetMap := make(map[string]*commonpb.TxRWSet)
+	tx0 := block.Txs[0]
+	contractName := "testContract"
+	txRWSetMap[tx0.Payload.TxId] = &commonpb.TxRWSet{
+		TxId: tx0.Payload.TxId,
+		TxReads: []*commonpb.TxRead{{
+			ContractName: contractName,
+			Key:          []byte("K1"),
+			Value:        []byte("V"),
+		}},
+		TxWrites: []*commonpb.TxWrite{{
+			ContractName: contractName,
+			Key:          []byte("K2"),
+			Value:        []byte("V"),
+		}},
+	}
+
+	conEventMap := make(map[string][]*commonpb.ContractEvent)
+	proposalCache.EXPECT().GetProposedBlock(gomock.Any()).Return(block, txRWSetMap, conEventMap)
+
+	config := &config.ChainConfig{
+		ChainId: "chain1",
+		Crypto: &config.CryptoConfig{
+			Hash: "SHA256",
+		},
+		Block: &config.BlockConfig{
+			BlockTxCapacity: 1000,
+			BlockSize:       1,
+			BlockInterval:   DEFAULTDURATION,
+		},
+		Consensus: &config.ConsensusConfig{
+			Type: consensusPb.ConsensusType_DPOS,
+		},
+		Core: &config.CoreConfig{
+			ConsensusTurboConfig: nil,
+		},
+	}
+
+	chainConf.EXPECT().ChainConfig().AnyTimes().Return(config)
+
+	txRWSets := []*commonpb.TxRWSet{
+		txRWSetMap[tx0.Payload.TxId],
+	}
+	store.EXPECT().PutBlock(block, txRWSets).Return(nil)
+
+	ledgerCache.EXPECT().SetLastCommittedBlock(gomock.Any()).Times(1)
+
+	snapshotManager.EXPECT().NotifyBlockCommitted(gomock.Any()).Times(1)
+
+	proposalCache.EXPECT().GetProposedBlocksAt(gomock.Any()).Return([]*commonpb.Block{block}).Times(1)
+
+	txpool.EXPECT().RetryAndRemoveTxs(gomock.Any(), gomock.Any()).Times(1)
+
+	proposalCache.EXPECT().ClearProposedBlockAt(gomock.Any()).Times(1)
+
+	msgbus.EXPECT().PublishSafe(gomock.Any(), gomock.Any()).Times(1)
+
+	cbConf := BlockCommitterConfig{
+		ChainId:         "chain1",
+		BlockchainStore: store,
+		SnapshotManager: snapshotManager,
+		TxPool:          txpool,
+		LedgerCache:     ledgerCache,
+		ProposedCache:   proposalCache,
+		ChainConf:       chainConf,
+		MsgBus:          msgbus,
+		StoreHelper:     storeHelper,
+		TxFilter:        txFilter,
+	}
+
+	committer, err := NewBlockCommitter(cbConf, log)
+	require.Nil(t, err)
+
+	err = committer.AddBlock(block)
+	require.Nil(t, err)
+}
+
 func createNewTestBlock(height uint64) *commonpb.Block {
 	var hash = []byte("0123456789")
 	var block = &commonpb.Block{

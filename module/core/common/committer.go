@@ -110,11 +110,14 @@ func (cb *CommitBlock) CommitBlock(
 				if string(w.Key) == syscontract.SystemContract_CHAIN_CONFIG.String() &&
 					w.ContractName == syscontract.SystemContract_CHAIN_CONFIG.String() {
 					chainConf := &config.ChainConfig{}
-					err := proto.Unmarshal(w.Value, chainConf)
+					err = proto.Unmarshal(w.Value, chainConf)
 					if err != nil {
 						return 0, 0, 0, 0, 0, 0, nil, err
 					}
-					cb.chainConf.SetChainConfig(chainConf)
+					err = cb.chainConf.SetChainConfig(chainConf)
+					if err != nil {
+						return 0, 0, 0, 0, 0, 0, nil, err
+					}
 				}
 			}
 			config := cb.chainConf.ChainConfig()
