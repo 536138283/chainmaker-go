@@ -6,15 +6,19 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
+	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
+	"encoding/hex"
 	"fmt"
+	"github.com/gogo/protobuf/proto"
 	"strconv"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
-	"chainmaker.org/chainmaker/localconf/v2"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"chainmaker.org/chainmaker/pb-go/v2/config"
-	"chainmaker.org/chainmaker/protocol/v2"
-	"chainmaker.org/chainmaker/utils/v2"
 )
 
 const (
@@ -91,6 +95,39 @@ func (cb *CommitBlock) CommitBlock(
 			return 0, 0, 0, 0, 0, 0, nil, err
 		}
 		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
+	} else {
+		//如果是dpos，需要识别chainconf并发消息
+		if utils.HasDPosTxWritesInHeader(block, cb.chainConf) {
+			cb.log.Infof("wcx debug:Publish(msgbus.ChainConfig, cb.chainConf),chainConf=[%s]", cb.chainConf)
+			consensusArgs := &consensus.BlockHeaderConsensusArgs{}
+			err := proto.Unmarshal(block.Header.ConsensusArgs, consensusArgs)
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, nil, err
+			}
+			//解析区块中consensusArgs中chainconf更新当前配置，并将最新chainconf发送给其他模块
+			for _, w := range consensusArgs.ConsensusData.TxWrites {
+				if string(w.Key) == syscontract.SystemContract_CHAIN_CONFIG.String() &&
+					w.ContractName == syscontract.SystemContract_CHAIN_CONFIG.String() {
+					chainConf := &config.ChainConfig{}
+					err := proto.Unmarshal(w.Value, chainConf)
+					if err != nil {
+						return 0, 0, 0, 0, 0, 0, nil, err
+					}
+					cb.chainConf.SetChainConfig(chainConf)
+				}
+			}
+			config := cb.chainConf.ChainConfig()
+			//需要从block中读最新读chainconf
+			//block.Header.ConsensusArgs
+			cb.log.Infof("wcx debug:config=[%s]", config)
+			configBytes, err := proto.Marshal(config)
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, nil, err
+			}
+			cb.log.Infof("wcx debug:configBytes=[%v], blockHeight=[%d]", configBytes, block.Header.BlockHeight)
+
+			cb.msgBus.PublishSync(msgbus.ChainConfig, []string{hex.EncodeToString(configBytes)})
+		}
 	}
 	// contract event
 	pubEventLasts = cb.publishContractEvent(block, events)
