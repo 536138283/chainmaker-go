@@ -87,66 +87,66 @@ func initParallel() error {
 
 func initChainClient() error {
 	for i := range hosts {
-		clientConf := clientConf{
-			host:    hosts[i],
-			tls:     hostnames[i],
-			caPath:  caPaths[i],
-			orgId:   orgIDs[i],
-			chainId: chainId,
-			userKey: userKeyPaths[i],
-			userCrt: userCrtPaths[i],
-			signKey: signKeyPaths[i],
-			signCrt: signCrtPaths[i],
+		var sdkClient *sdk.ChainClient
+		var err error
+		nodeConf := sdk.NewNodeConfig(
+			// 节点地址，格式：127.0.0.1:12301
+			sdk.WithNodeAddr(hosts[i]),
+			// 节点连接数
+			sdk.WithNodeConnCnt(threadNum),
+			// 节点是否启用TLS认证
+			sdk.WithNodeUseTLS(useTLS),
+			// 根证书路径，支持多个
+			sdk.WithNodeCAPaths(caPaths),
+			// TLS Hostname
+			sdk.WithNodeTLSHostName(hostnamesString),
+		)
+		switch sdk.AuthType(authTypeUint32) {
+		case sdk.Public:
+			sdkClient, err = sdk.NewChainClient(
+				sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]),
+				sdk.WithChainClientChainId(chainId),
+				// 设置客户端签名私钥
+				sdk.WithUserSignKeyFilePath(signKeyPaths[i]),
+				sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))),
+				// 添加节点1
+				sdk.AddChainClientNodeConfig(nodeConf),
+			)
+		case sdk.PermissionedWithCert:
+			sdkClient, err = sdk.NewChainClient(
+				sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]),
+				// 设置归属组织
+				sdk.WithChainClientOrgId(orgIDs[i]),
+				sdk.WithChainClientChainId(chainId),
+				// 设置客户端用户私钥路径
+				sdk.WithUserKeyFilePath(userKeyPaths[i]),
+				// 设置客户端用户证书
+				sdk.WithUserCrtFilePath(userCrtPaths[i]),
+				// 设置客户端签名证书
+				sdk.WithUserSignCrtFilePath(signCrtPaths[i]),
+				// 设置客户端签名私钥
+				sdk.WithUserSignKeyFilePath(signKeyPaths[i]),
+				// 添加节点1
+				sdk.AddChainClientNodeConfig(nodeConf),
+			)
+		case sdk.PermissionedWithKey:
+			sdkClient, err = sdk.NewChainClient(
+				sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]),
+				sdk.WithChainClientChainId(chainId),
+				// 设置客户端签名私钥
+				sdk.WithUserSignKeyFilePath(signKeyPaths[i]),
+				sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))),
+				sdk.WithChainClientOrgId(orgIDs[i]),
+				// 添加节点1
+				sdk.AddChainClientNodeConfig(nodeConf),
+			)
 		}
-		chainClient, err := newChainClient(clientConf)
 		if err != nil {
 			return err
 		}
-		chainClients = append(chainClients, chainClient)
+		chainClients = append(chainClients, sdkClient)
 	}
 	return nil
-}
-
-type clientConf struct {
-	host    string
-	tls     string
-	caPath  string
-	orgId   string
-	chainId string
-	userKey string
-	userCrt string
-	signKey string
-	signCrt string
-}
-
-func newChainClient(cf clientConf) (*sdk.ChainClient, error) {
-	nodeConf := sdk.NewNodeConfig(
-		// 节点地址，格式：127.0.0.1:12301
-		sdk.WithNodeAddr(cf.host),
-		// 节点连接数
-		sdk.WithNodeConnCnt(threadNum),
-		// 节点是否启用TLS认证
-		sdk.WithNodeUseTLS(true),
-		// 根证书路径，支持多个
-		sdk.WithNodeCAPaths([]string{cf.caPath}),
-		// TLS Hostname
-		sdk.WithNodeTLSHostName(cf.tls),
-	)
-	return sdk.NewChainClient(
-		// 设置归属组织
-		sdk.WithChainClientOrgId(cf.orgId),
-		sdk.WithChainClientChainId(chainId),
-		// 设置客户端用户私钥路径
-		sdk.WithUserKeyFilePath(cf.userKey),
-		// 设置客户端用户证书
-		sdk.WithUserCrtFilePath(cf.userCrt),
-		// 设置客户端签名证书
-		sdk.WithUserSignCrtFilePath(cf.signCrt),
-		// 设置客户端签名私钥
-		sdk.WithUserSignKeyFilePath(cf.signKey),
-		// 添加节点1
-		sdk.AddChainClientNodeConfig(nodeConf),
-	)
 }
 
 // initProductFactor 对半法加载生产因子
