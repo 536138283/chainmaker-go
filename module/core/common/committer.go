@@ -118,7 +118,6 @@ func (cb *CommitBlock) CommitBlock(
 			}
 			config := cb.chainConf.ChainConfig()
 			//需要从block中读最新读chainconf
-			//block.Header.ConsensusArgs
 			cb.log.Debugf("config=[%s]", config)
 			configBytes, err := proto.Marshal(config)
 			if err != nil {
