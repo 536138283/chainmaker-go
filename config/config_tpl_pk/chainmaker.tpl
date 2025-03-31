@@ -467,7 +467,7 @@ storage:
   # file size of stored block file
   # if disable_block_file_db: false, we use block filedb, this means .fdb file size(MB), default: 64
   # if disable_block_file_db: true, we use wal, this means .wal file size(MB), default: 20
-  logdb_segment_size: 128
+  logdb_segment_size: 64
 
   # read bfdb block file time out(ms), default: 1000
   read_bfdb_timeout: 1000
@@ -475,7 +475,7 @@ storage:
   # bigfilter config, default false
   enable_bigfilter: false
 
-  # effective when enable_bigfilter: true
+  # effective when enable_bigfilter is true
   bigfilter_config:
     # redis host:port
     redis_hosts_port: "127.0.0.1:6300,127.0.0.1:6301"
@@ -556,7 +556,7 @@ storage:
       # Key and value are stored separately when value is greater than this byte, default is 1024 * 10
       # value_threshold: 256
       # Number of key value pairs written in batch. default is 128
-      # write_batch_size: 1024
+      # write_batch_size: 128
 
     # Example for tikv provider
     # provider: tikvdb
@@ -575,7 +575,7 @@ storage:
     provider: leveldb
     leveldb_config:
       store_path: ../data/{org_id}/state
-      write_buffer_size: 256
+      write_buffer_size: 64
 
     # bloom config for state db, it only takes effect when using kvdb
     # bloom_config:

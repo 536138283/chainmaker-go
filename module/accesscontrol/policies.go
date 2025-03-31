@@ -197,6 +197,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
 			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
 
+		// for sync rule
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_ADD.String(), policyConfig)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_CLEAR.String(), policyConfig)
+
 	}
 }
 func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId string) {
@@ -388,6 +394,12 @@ func (acs *accessControlService) createDefaultResourcePolicyForPWK(localOrgId st
 			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyRelayCross)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
 			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
+
+		// for sync rule
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_ADD.String(), policyConfig)
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_CLEAR.String(), policyConfig)
 	}
 }
 
@@ -581,6 +593,13 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPK() {
 			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyRelayCross)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
 			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
+
+		// for sync rule
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_ADD.String(), policyConfig)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_CLEAR.String(), policyConfig)
+
 	}
 }
 
@@ -785,6 +804,12 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 			syscontract.RelayCrossFunction_SET_CROSS_ADMIN.String(), policyRelayCross)
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_RELAY_CROSS.String()+"-"+
 			syscontract.RelayCrossFunction_DELETE_CROSS_ADEMIN.String(), policyRelayCross)
+
+		// for sync rule
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_ADD.String(), policyConfig)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_SYNC_RULE.String()+"-"+
+			syscontract.SyncRuleFunction_CLEAR.String(), policyConfig)
 
 	}
 }
