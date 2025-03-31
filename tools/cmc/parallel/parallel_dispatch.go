@@ -347,6 +347,12 @@ func (t *Thread) initGRPCConnect(useTLS bool, index int) ([]*grpc.ClientConn, er
 				CertFile:   userCrtPaths[index],
 				KeyFile:    userKeyPaths[index],
 			}
+			if userEncCrtPathsString != "" && userEncKeyPathsString != "" {
+				tlsClient.EncKeyBytes = encKeyBytes[i]
+				tlsClient.EncCertBytes = encCrtBytes[i]
+				tlsClient.EncKeyFile = encKeyPaths[i]
+				tlsClient.EncCertFile = encCrtPaths[i]
+			}
 			// 获取 TLS 凭证
 			c, err := tlsClient.GetCredentialsByCA()
 			if err != nil {

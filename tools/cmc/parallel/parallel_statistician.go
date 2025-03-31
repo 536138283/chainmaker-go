@@ -463,7 +463,7 @@ type ChainResultSet struct {
 	MinTxBlock struct {
 		BlockHeight uint64 `json:"blockHeight"` // 该区块的高度。
 		TxCount     uint32 `json:"txCount"`     // 该区块中的交易数量
-	} `json:"minTxBlock"`                                         // 结构体表示交易数量最少的区块信息
+	} `json:"minTxBlock"` // 结构体表示交易数量最少的区块信息
 	SuccessCount    uint32               `json:"successCount"`    // 上链的交易数
 	DealMax         uint32               `json:"dealMax"`         // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
 	DealMin         uint32               `json:"dealMin"`         // 处理能力的最小值，与DealMax相对应
@@ -477,13 +477,13 @@ type ChainResultSet struct {
 // NodeInfo 节点信息
 type NodeInfo struct {
 	BlockInfo               // 节点的区块信息
-	SuccessCount    uint32  `json:"successCount"` // 上链的交易数
-	DealMax         uint32  `json:"dealMax"` // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
-	DealMin         uint32  `json:"dealMin"` // 处理能力的最小值，与DealMax相对应
-	AvgTxLatency    float64 `json:"avgTxLatency"` // 交易平均响应延时
-	TxVariance      float64 `json:"txVariance"` // 交易响应时延方差
+	SuccessCount    uint32  `json:"successCount"`    // 上链的交易数
+	DealMax         uint32  `json:"dealMax"`         // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
+	DealMin         uint32  `json:"dealMin"`         // 处理能力的最小值，与DealMax相对应
+	AvgTxLatency    float64 `json:"avgTxLatency"`    // 交易平均响应延时
+	TxVariance      float64 `json:"txVariance"`      // 交易响应时延方差
 	AvgBlockLatency float64 `json:"avgBlockLatency"` // 平均出块时延
-	BlockVariance   float64 `json:"blockVariance"` // 平均出块时延方差
+	BlockVariance   float64 `json:"blockVariance"`   // 平均出块时延方差
 }
 
 // RpcResultSet 结构体用于汇总RPC请求的统计结果，主要关注于性能指标和请求成功率。

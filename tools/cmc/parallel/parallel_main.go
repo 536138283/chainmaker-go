@@ -87,8 +87,6 @@ func initParallel() error {
 
 func initChainClient() error {
 	for i := range hosts {
-		var sdkClient *sdk.ChainClient
-		var err error
 		nodeConf := sdk.NewNodeConfig(
 			// 节点地址，格式：127.0.0.1:12301
 			sdk.WithNodeAddr(hosts[i]),
@@ -101,46 +99,42 @@ func initChainClient() error {
 			// TLS Hostname
 			sdk.WithNodeTLSHostName(hostnamesString),
 		)
+		opts := make([]sdk.ChainClientOption, 0)
 		switch sdk.AuthType(authTypeUint32) {
 		case sdk.Public:
-			sdkClient, err = sdk.NewChainClient(
-				sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]),
-				sdk.WithChainClientChainId(chainId),
-				// 设置客户端签名私钥
-				sdk.WithUserSignKeyFilePath(signKeyPaths[i]),
-				sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))),
-				// 添加节点1
-				sdk.AddChainClientNodeConfig(nodeConf),
-			)
+			opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
+			opts = append(opts, sdk.WithChainClientChainId(chainId))
+			opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
+			opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
+			opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
+			opts = append(opts, sdk.WithUserSignCrtFilePath(caPaths[i]))
+			if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
+				opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
+				opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))
+			}
+			opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
 		case sdk.PermissionedWithCert:
-			sdkClient, err = sdk.NewChainClient(
-				sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]),
-				// 设置归属组织
-				sdk.WithChainClientOrgId(orgIDs[i]),
-				sdk.WithChainClientChainId(chainId),
-				// 设置客户端用户私钥路径
-				sdk.WithUserKeyFilePath(userKeyPaths[i]),
-				// 设置客户端用户证书
-				sdk.WithUserCrtFilePath(userCrtPaths[i]),
-				// 设置客户端签名证书
-				sdk.WithUserSignCrtFilePath(signCrtPaths[i]),
-				// 设置客户端签名私钥
-				sdk.WithUserSignKeyFilePath(signKeyPaths[i]),
-				// 添加节点1
-				sdk.AddChainClientNodeConfig(nodeConf),
-			)
+			opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
+			opts = append(opts, sdk.WithChainClientOrgId(orgIDs[i]))
+			opts = append(opts, sdk.WithChainClientChainId(chainId))
+			opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
+			opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
+			opts = append(opts, sdk.WithUserSignCrtFilePath(signCrtPaths[i]))
+			opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
+			opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
+			if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
+				opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
+				opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))
+			}
 		case sdk.PermissionedWithKey:
-			sdkClient, err = sdk.NewChainClient(
-				sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]),
-				sdk.WithChainClientChainId(chainId),
-				// 设置客户端签名私钥
-				sdk.WithUserSignKeyFilePath(signKeyPaths[i]),
-				sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))),
-				sdk.WithChainClientOrgId(orgIDs[i]),
-				// 添加节点1
-				sdk.AddChainClientNodeConfig(nodeConf),
-			)
+			opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
+			opts = append(opts, sdk.WithChainClientChainId(chainId))
+			opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
+			opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
+			opts = append(opts, sdk.WithChainClientOrgId(orgIDs[i]))
+			opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
 		}
+		sdkClient, err := sdk.NewChainClient(opts...)
 		if err != nil {
 			return err
 		}
