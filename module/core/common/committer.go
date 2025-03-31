@@ -6,15 +6,16 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"encoding/hex"
+	"fmt"
+	"strconv"
+
 	"chainmaker.org/chainmaker/localconf/v2"
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
-	"encoding/hex"
-	"fmt"
 	"github.com/gogo/protobuf/proto"
-	"strconv"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"

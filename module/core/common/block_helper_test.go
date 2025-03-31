@@ -7,6 +7,8 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	configpb "chainmaker.org/chainmaker/pb-go/v2/config"
+	consensusPb "chainmaker.org/chainmaker/pb-go/v2/consensus"
 	"fmt"
 	"testing"
 
@@ -2254,6 +2256,52 @@ func TestBlockCommitterImpl_AddBlock(t *testing.T) {
 			chain := &BlockCommitterImpl{
 				storeHelper: tt.fields.storeHelper,
 			}
+			// 不需要关注err
+			_ = chain.AddBlock(tt.args.block)
+		})
+	}
+}
+
+func TestBlockCommitterImpl_AddBlock_Dpos(t *testing.T) {
+	controller := gomock.NewController(t)
+	helper := mock2.NewMockStoreHelper(controller)
+	helper.EXPECT().RollBack(gomock.Any(), gomock.Any()).AnyTimes().Return(nil)
+	type fields struct {
+		storeHelper conf.StoreHelper
+	}
+	type args struct {
+		block *commonpb.Block
+	}
+	tests := []struct {
+		name   string
+		fields fields
+		args   args
+	}{
+		{
+			name: "异常流",
+			fields: fields{
+				storeHelper: helper,
+			},
+			args: args{
+				block: &commonpb.Block{
+					Header: &commonpb.BlockHeader{BlockHeight: 666, BlockVersion: protocol.BlockVersion240},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if panicError := recover(); panicError == nil {
+					t.Errorf("AddBlock() panic is nil")
+				}
+			}()
+			chain := &BlockCommitterImpl{
+				storeHelper: tt.fields.storeHelper,
+			}
+			consensus := &configpb.ConsensusConfig{Type: consensusPb.ConsensusType_DPOS}
+			config := &configpb.ChainConfig{Consensus: consensus}
+			chain.chainConf.SetChainConfig(config)
 			// 不需要关注err
 			_ = chain.AddBlock(tt.args.block)
 		})
