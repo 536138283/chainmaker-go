@@ -7,10 +7,114 @@ SPDX-License-Identifier: Apache-2.0
 package util
 
 import (
-	"encoding/json"
-
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
+	"encoding/json"
+	"fmt"
+	"math/big"
+	"reflect"
+	"regexp"
+	"strconv"
 )
+
+const (
+	stringType = "string"
+	// solidity 全部int类型
+	intType    = "int"
+	int8Type   = "int8"
+	int16Type  = "int16"
+	int24Type  = "int24"
+	int32Type  = "int32"
+	int40Type  = "int40"
+	int48Type  = "int48"
+	int56Type  = "int56"
+	int64Type  = "int64"
+	int72Type  = "int72"
+	int80Type  = "int80"
+	int88Type  = "int88"
+	int96Type  = "int96"
+	int104Type = "int114"
+	int112Type = "int112"
+	int120Type = "int120"
+	int128Type = "int128"
+	int136Type = "int136"
+	int144Type = "int144"
+	int152Type = "int152"
+	int160Type = "int160"
+	int168Type = "int168"
+	int176Type = "int176"
+	int184Type = "int184"
+	int192Type = "int192"
+	int200Type = "int200"
+	int208Type = "int208"
+	int216Type = "int216"
+	int224Type = "int224"
+	int232Type = "int232"
+	int240Type = "int240"
+	int248Type = "int248"
+	int256Type = "int256"
+	// 全部uint类型
+	uintType        = "uint"
+	uint8Type       = "uint8"
+	uint16Type      = "uint16"
+	uint24Type      = "uint24"
+	uint32Type      = "uint32"
+	uint40Type      = "uint40"
+	uint48Type      = "uint48"
+	uint56Type      = "uint56"
+	uint64Type      = "uint64"
+	uint72Type      = "uint72"
+	uint80Type      = "uint80"
+	uint88Type      = "uint88"
+	uint96Type      = "uint96"
+	uint104Type     = "uint114"
+	uint112Type     = "uint112"
+	uint120Type     = "uint120"
+	uint128Type     = "uint128"
+	uint136Type     = "uint136"
+	uint144Type     = "uint144"
+	uint152Type     = "uint152"
+	uint160Type     = "uint160"
+	uint168Type     = "uint168"
+	uint176Type     = "uint176"
+	uint184Type     = "uint184"
+	uint192Type     = "uint192"
+	uint200Type     = "uint200"
+	uint208Type     = "uint208"
+	uint216Type     = "uint216"
+	uint224Type     = "uint224"
+	uint232Type     = "uint232"
+	uint240Type     = "uint240"
+	uint248Type     = "uint248"
+	uint256Type     = "uint256"
+	boolType        = "bool"
+	stringArrayType = "string[]"
+	addressType     = "address"
+)
+
+// parse 把interface{}类型，解析成为solidity类型中对应的go的类型
+func parse(sType string, value interface{}) (arg interface{}, err error) {
+	switch sType {
+	case stringType:
+		return parseStr(value), nil
+	case intType, int8Type, int16Type, int24Type, int32Type, int40Type, int48Type, int56Type, int64Type, int72Type,
+		int80Type, int88Type, int96Type, int104Type, int112Type, int120Type, int128Type, int136Type, int144Type,
+		int152Type, int160Type, int168Type, int176Type, int184Type, int192Type, int200Type, int208Type, int216Type,
+		int224Type, int232Type, int240Type, int248Type, int256Type:
+		return parseInt(sType, value)
+	case uintType, uint8Type, uint16Type, uint24Type, uint32Type, uint40Type, uint48Type, uint56Type, uint64Type,
+		uint72Type, uint80Type, uint88Type, uint96Type, uint104Type, uint112Type, uint120Type, uint128Type, uint136Type,
+		uint144Type, uint152Type, uint160Type, uint168Type, uint176Type, uint184Type, uint192Type, uint200Type,
+		uint224Type, uint232Type, uint240Type, uint248Type, uint256Type, uint208Type, uint216Type:
+		return parseUInt(sType, value)
+	case boolType:
+		return parseBool(value)
+	case addressType:
+
+	default:
+		return value, nil
+	}
+	return
+}
 
 // Param list
 type Param map[string]interface{}
@@ -34,12 +138,158 @@ func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	args := []interface{}{}
+
+	var args []interface{}
 	for _, p := range param {
-		for _, v := range p {
-			args = append(args, v)
+		for k, v := range p {
+			arg, err := parse(k, v)
+			if err != nil {
+				return nil, err
+			}
+			fmt.Println("qqqq", reflect.TypeOf(arg))
+			args = append(args, arg)
 		}
 	}
-	return a.Pack(method, args...)
+	fmt.Println(args)
+	return nil, nil
+}
 
+func ParseString(value interface{}) string {
+	return value.(string)
+}
+
+// parseInt 处理int类型数据
+func parseInt(key string, value interface{}) (interface{}, error) {
+	// solidity 不支持浮点数所以直接转换成int类型
+	isM := regexp.MustCompile("(int)([0-9]+)")
+	bitStr := isM.FindStringSubmatch(key)
+	// 先把value转换成string类型
+	valueStr := fmt.Sprint(value)
+	if bitStr != nil {
+		bitNum, err := strconv.ParseInt(bitStr[2], 10, 32)
+		if err != nil {
+			panic(fmt.Sprintf("parse int err: %s", err.Error()))
+		}
+		var result interface{}
+		switch {
+		case bitNum <= 8:
+			num, err := strconv.ParseInt(valueStr, 10, 8)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int8: %s", err.Error())
+			}
+			result = int8(num)
+		case bitNum <= 16:
+			num, err := strconv.ParseInt(valueStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int16: %s", err.Error())
+			}
+			result = int16(num)
+		case bitNum <= 32:
+			num, err := strconv.ParseInt(valueStr, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int32: %s", err.Error())
+			}
+			result = int32(num)
+		case bitNum <= 64:
+			num, err := strconv.ParseInt(valueStr, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int64: %s", err.Error())
+			}
+			result = int64(num)
+		default:
+			// 对于大于 64 位的整数，使用 math/big 包
+			bigInt := new(big.Int)
+			num, ok := bigInt.SetString(valueStr, 10)
+			if !ok {
+				return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+			}
+			result = num
+		}
+		return result, nil
+	} else {
+		// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
+		bigInt := new(big.Int)
+		num, ok := bigInt.SetString(valueStr, 10)
+		if !ok {
+			return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+		}
+		return num, nil
+	}
+}
+
+// parseUInt 处理uint类型数据
+func parseUInt(key string, value interface{}) (interface{}, error) {
+	// solidity 不支持浮点数所以直接转换成uint类型
+	isM := regexp.MustCompile("(uint)([0-9]+)")
+	bitStr := isM.FindStringSubmatch(key)
+	// 先把value转换成string类型
+	valueStr := fmt.Sprint(value)
+	if bitStr != nil {
+		bitNum, err := strconv.ParseUint(bitStr[2], 10, 32)
+		if err != nil {
+			panic(fmt.Sprintf("parse int err: %s", err.Error()))
+		}
+		var result interface{}
+		switch {
+		case bitNum <= 8:
+			num, err := strconv.ParseUint(valueStr, 10, 8)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int8: %s", err.Error())
+			}
+			result = uint8(num)
+		case bitNum <= 16:
+			num, err := strconv.ParseUint(valueStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int16: %s", err.Error())
+			}
+			result = uint16(num)
+		case bitNum <= 32:
+			num, err := strconv.ParseUint(valueStr, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int32: %s", err.Error())
+			}
+			result = uint32(num)
+		case bitNum <= 64:
+			num, err := strconv.ParseUint(valueStr, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int64: %s", err.Error())
+			}
+			result = uint64(num)
+		default:
+			// 对于大于 64 位的整数，使用 math/big 包
+			bigInt := new(big.Int)
+			num, ok := bigInt.SetString(valueStr, 10)
+			if !ok {
+				return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+			}
+			result = num
+		}
+		return result, nil
+	} else {
+		// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
+		bigInt := new(big.Int)
+		num, ok := bigInt.SetString(valueStr, 10)
+		if !ok {
+			return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+		}
+		return num, nil
+	}
+}
+
+// 处理string类型数据
+func parseStr(value interface{}) string {
+	return fmt.Sprint(value)
+}
+
+// 处理布尔类型数据
+func parseBool(value interface{}) (interface{}, error) {
+	v, ok := value.(bool)
+	if !ok {
+		fmt.Printf("value %v is not bool\n", value)
+	}
+	return v, nil
+}
+
+func parseAddress() (interface{}, error) {
+	
 }
