@@ -99,7 +99,9 @@ func (cb *CommitBlock) CommitBlock(
 	} else {
 		//如果是dpos，需要识别chainconf并发消息
 		if utils.HasDPosTxWritesInHeader(block, cb.chainConf) {
-			cb.log.Debugf("Publish(msgbus.ChainConfig, cb.chainConf),chainConf=[%s]", cb.chainConf)
+			cb.log.Debugf("ChainConfig before change,(block %d) chainConf=[%s]",
+				block.Header.BlockHeight,
+				cb.chainConf.ChainConfig())
 			consensusArgs := &consensus.BlockHeaderConsensusArgs{}
 			err := proto.Unmarshal(block.Header.ConsensusArgs, consensusArgs)
 			if err != nil {
@@ -120,9 +122,11 @@ func (cb *CommitBlock) CommitBlock(
 					}
 				}
 			}
-			config := cb.chainConf.ChainConfig()
 			//需要从block中读最新读chainconf
-			cb.log.Debugf("config=[%s]", config)
+			config := cb.chainConf.ChainConfig()
+			cb.log.Debugf("ChainConfig after change,(block %d) chainConf=[%s]",
+				block.Header.BlockHeight,
+				config)
 			configBytes, err := proto.Marshal(config)
 			if err != nil {
 				return 0, 0, 0, 0, 0, 0, nil, err
