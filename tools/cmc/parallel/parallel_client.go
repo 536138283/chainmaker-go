@@ -15,12 +15,13 @@ func initSubClient() error {
 }
 
 // getSdkClient 用来获取一个SdkClient对象， i为对应node的数组下标
+// 初始化sdk配置，与sdk_config.yml对应
 func getSdkClient(i int) (*sdk.ChainClient, error) {
 	nodeConf := sdk.NewNodeConfig(
 		// 节点地址，格式：127.0.0.1:12301
 		sdk.WithNodeAddr(hosts[i]),
 		// 节点连接数
-		sdk.WithNodeConnCnt(threadNum),
+		sdk.WithNodeConnCnt(threadNum*len(hosts)),
 		// 节点是否启用TLS认证
 		sdk.WithNodeUseTLS(useTLS),
 		// 根证书路径，支持多个

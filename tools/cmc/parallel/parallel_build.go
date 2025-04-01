@@ -80,8 +80,12 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+	endorsement, err := acSign(payload)
+	if err != nil {
+		return nil, err
+	}
 	// 构建完整的交易请求
-	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
+	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
 }
 
 type Create struct{}
@@ -248,5 +252,6 @@ func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 		req.Endorsers = endorsers
 	}
 	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
+	fmt.Printf("qqqqqq %s\n", req.String())
 	return req, nil
 }

@@ -149,10 +149,6 @@ func ParallelCMD() *cobra.Command {
 			}
 
 			if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 && len(hosts) > 0 {
-				fmt.Println(len(encCrtPaths), len(encKeyPaths), len(hosts))
-				fmt.Println(encCrtPaths)
-				fmt.Println(encKeyPaths)
-				fmt.Println(hosts)
 				for i := range encCrtPaths {
 					keyBytes, err := ioutil.ReadFile(encKeyPaths[i])
 					if err != nil {
@@ -180,7 +176,6 @@ func ParallelCMD() *cobra.Command {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("tx content: ", pairsString)
 		},
 	}
 

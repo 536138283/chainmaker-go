@@ -158,7 +158,6 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 			return
 		}
 		if height == lastHeight {
-			fmt.Println(height)
 			printTicker.Stop()
 			fmt.Println("all thread word done finish print")
 			statistician.printDetails()
