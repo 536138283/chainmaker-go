@@ -29,7 +29,7 @@ var (
 	printTime      int
 	sleepTime      int
 	climbTime      int
-	requestTimeout int
+	requestTimeout int64
 	runTime        int32
 	checkResult    bool
 	recordLog      bool
@@ -212,7 +212,7 @@ func ParallelCMD() *cobra.Command {
 	flags.StringVarP(&chainId, "chain-id", "C", "chain1", "specify chain id")
 	flags.StringVarP(&contractName, "contract-name", "n", "contract1", "specify contract name")
 	flags.BoolVar(&useShortCrt, "use-short-crt", false, "use compressed certificate in transactions")
-	flags.IntVar(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
+	flags.Int64Var(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
 	flags.Uint32Var(&authTypeUint32, "auth-type", 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
 	flags.Uint64Var(&gasLimit, "gas-limit", 0, "gas limit in uint64 type")
 	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
