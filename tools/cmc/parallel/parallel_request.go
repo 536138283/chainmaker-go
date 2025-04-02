@@ -1,8 +1,8 @@
 package parallel
 
 import (
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"context"
 	"fmt"
 	"google.golang.org/grpc/codes"
@@ -20,7 +20,7 @@ func subNodes(statistician *Statistician) {
 		go func(index int) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			blockChan, err := chainClients[index].SubscribeBlock(context.Background(), math.MaxInt64,
+			blockChan, err := defaultSdkClients[index].SubscribeBlock(context.Background(), math.MaxInt64,
 				-1, false, false)
 			if err != nil {
 				fmt.Println("error sendSubscribe :", err)
@@ -47,13 +47,10 @@ func subNodes(statistician *Statistician) {
 }
 
 // sendTx 向特定节点发送交易请求。如果请求超时，则返回错误信息
-func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.TxRequest) error {
+func sendTx(client *sdk.ChainClient, orgId string, loopId int, req *commonPb.TxRequest) error {
 	// 防止在收到响应之前上链的数据不一致情况，这里提前记录交易id
 	txLatency.Store(req.Payload.TxId, time.Now().UnixNano()/1e6)
-	// 发送请求
-	ctx, cancel := context.WithDeadline(context.Background(), time.Now().Add(time.Duration(requestTimeout)*time.Second))
-	defer cancel()
-	result, err := client.SendRequest(ctx, req)
+	result, err := client.SendTxRequest(req, requestTimeout, true)
 	if err != nil {
 		if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.DeadlineExceeded {
 			return fmt.Errorf("client.call err: deadline\n")
@@ -69,7 +66,7 @@ func sendTx(client apiPb.RpcNodeClient, orgId string, loopId int, req *commonPb.
 
 // getBlockHeight 查询当前区块链的高度。首先创建一个查询线程，然后构建查询高度的请求并发送，最后解析返回的区块信息以获取高度
 func getBlockHeight() (uint64, error) {
-	blockInfo, err := chainClients[0].GetBlockByHeight(math.MaxUint64, false)
+	blockInfo, err := defaultSdkClients[0].GetBlockByHeight(math.MaxUint64, false)
 	if err != nil {
 		return 0, err
 	}

@@ -29,7 +29,7 @@ var (
 	printTime      int
 	sleepTime      int
 	climbTime      int
-	requestTimeout int
+	requestTimeout int64
 	runTime        int32
 	checkResult    bool
 	recordLog      bool
@@ -37,38 +37,46 @@ var (
 	useTLS         bool
 	useShortCrt    bool
 
-	hostsString        string
-	hostnamesString    string
-	statisticalType    string
-	checkInterval      int
-	signCrtPathsString string
-	signKeyPathsString string
-	userCrtPathsString string
-	userKeyPathsString string
-	orgIDsString       string
-	hashAlgo           string
-	caPathsString      string
-	pairsFile          string
-	pairsString        string
-	globalPairs        []*KeyValuePair
-	abiPath            string
-	method             string
-	orgIds             string // 组织列表(多个用逗号隔开)
-	adminSignKeys      string // 管理员私钥列表(多个用逗号隔开)
-	adminSignCrts      string // 管理员证书列表(多个用逗号隔开)
-	chainId            string
-	contractName       string
-	version            string
-	wasmPath           string
+	hostsString           string
+	hostnamesString       string
+	statisticalType       string
+	checkInterval         int
+	signCrtPathsString    string
+	signKeyPathsString    string
+	userCrtPathsString    string
+	userKeyPathsString    string
+	userEncKeyPathsString string
+	userEncCrtPathsString string
+	orgIDsString          string
+	hashAlgo              string
+	caPathsString         string
+	pairsFile             string
+	pairsString           string
+	globalPairs           []*KeyValuePair
+	abiPath               string
+	method                string
+	orgIds                string // 组织列表(多个用逗号隔开)
+	adminSignKeys         string // 管理员私钥列表(多个用逗号隔开)
+	adminSignCrts         string // 管理员证书列表(多个用逗号隔开)
+	chainId               string
+	contractName          string
+	version               string
+	wasmPath              string
 
-	caPaths      []string
-	hosts        []string
-	hostnames    []string
-	signCrtPaths []string
-	signKeyPaths []string
-	userCrtPaths []string
-	userKeyPaths []string
-	orgIDs       []string
+	caPaths       []string
+	hosts         []string
+	hostnames     []string
+	signCrtPaths  []string
+	signKeyPaths  []string
+	encKeyPaths   []string
+	encCrtPaths   []string
+	encCrtBytes   [][]byte
+	encKeyBytes   [][]byte
+	userCrtPaths  []string
+	userKeyPaths  []string
+	adminKeyPaths []string
+	adminCrtPaths []string
+	orgIDs        []string
 
 	nodeNum int
 
@@ -111,6 +119,12 @@ func ParallelCMD() *cobra.Command {
 			signKeyPaths = strings.Split(signKeyPathsString, ",")
 			userCrtPaths = strings.Split(userCrtPathsString, ",")
 			userKeyPaths = strings.Split(userKeyPathsString, ",")
+			adminKeyPaths = strings.Split(adminSignKeys, ",")
+			adminCrtPaths = strings.Split(adminSignCrts, ",")
+			if userEncCrtPathsString != "" && userEncKeyPathsString != "" {
+				encCrtPaths = strings.Split(userEncCrtPathsString, ",")
+				encKeyPaths = strings.Split(userEncKeyPathsString, ",")
+			}
 			orgIDs = strings.Split(orgIDsString, ",")
 
 			if authType == sdk.Public {
@@ -133,7 +147,26 @@ func ParallelCMD() *cobra.Command {
 				panic(fmt.Sprintf("use tls, but hosts[%d], user-crts[%d], user-keys[%d] length invalid",
 					len(hosts), len(userCrtPaths), len(userKeyPaths)))
 			}
+			if len(encCrtPaths) != len(encKeyPaths) && len(encKeyPaths) != len(hosts) && len(encCrtPaths) > 0 {
+				panic(fmt.Sprintf("use env but encCrtPaths[%d], encKeyPaths[%d], hosts[%d]", len(encCrtPaths),
+					len(encKeyPaths), len(hosts)))
+			}
 
+			if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 && len(hosts) > 0 {
+				for i := range encCrtPaths {
+					keyBytes, err := ioutil.ReadFile(encKeyPaths[i])
+					if err != nil {
+						panic(err)
+					}
+					encKeyBytes = append(encKeyBytes, keyBytes)
+					crtBytes, err := ioutil.ReadFile(encCrtPaths[i])
+					if err != nil {
+						panic(err)
+					}
+					encCrtBytes = append(encCrtBytes, crtBytes)
+				}
+
+			}
 			nodeNum = len(hosts)
 			if len(pairsFile) != 0 {
 				bytes, err := ioutil.ReadFile(pairsFile)
@@ -147,7 +180,6 @@ func ParallelCMD() *cobra.Command {
 			if err != nil {
 				panic(err)
 			}
-			fmt.Println("tx content: ", pairsString)
 		},
 	}
 
@@ -163,6 +195,8 @@ func ParallelCMD() *cobra.Command {
 	flags.StringVarP(&signKeyPathsString, "sign-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.key", "specify user key path")
 	flags.StringVar(&userCrtPathsString, "user-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify tls crt path")
 	flags.StringVar(&userKeyPathsString, "user-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify tls key path")
+	flags.StringVar(&userEncKeyPathsString, "user-enc-keys", "", "enc key path")
+	flags.StringVar(&userEncCrtPathsString, "user-enc-crts", "", "enc certificate path")
 	flags.StringVarP(&orgIDsString, "org-IDs", "I", "wx-org1,wx-org2", "specify user key path")
 	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
 	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
@@ -177,7 +211,7 @@ func ParallelCMD() *cobra.Command {
 	flags.StringVarP(&chainId, "chain-id", "C", "chain1", "specify chain id")
 	flags.StringVarP(&contractName, "contract-name", "n", "contract1", "specify contract name")
 	flags.BoolVar(&useShortCrt, "use-short-crt", false, "use compressed certificate in transactions")
-	flags.IntVar(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
+	flags.Int64Var(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
 	flags.Uint32Var(&authTypeUint32, "auth-type", 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
 	flags.Uint64Var(&gasLimit, "gas-limit", 0, "gas limit in uint64 type")
 	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")

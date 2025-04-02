@@ -1,6 +1,7 @@
 package parallel
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -75,13 +76,23 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	var limit *commonPb.Limit
+	if gasLimit > 0 {
+		limit = &commonPb.Limit{GasLimit: gasLimit}
+	}
 	// 构造调用智能合约的Payload
-	payload, err := constructInvokePayload(chainId, contractName, method1, pairs1, gasLimit)
+	payload := defaultSdkClients[index].CreatePayload("", commonPb.TxType_INVOKE_CONTRACT, contractName, method1, pairs1, 0, limit)
 	if err != nil {
 		return nil, err
 	}
+	endorsers, err := util.MakeEndorsement(adminKeyPaths, adminCrtPaths, orgIDs, defaultSdkClients[index], payload)
+	if err != nil {
+		fmt.Printf("MakeEndorsement failed, %s", err)
+		return nil, err
+	}
 	// 构建完整的交易请求
-	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
+	return defaultSdkClients[index].GenerateTxRequest(payload, endorsers)
 }
 
 type Create struct{}
@@ -248,5 +259,6 @@ func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 		req.Endorsers = endorsers
 	}
 	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
+	fmt.Printf("qqqqqq %s\n", req.String())
 	return req, nil
 }

@@ -53,14 +53,14 @@ var productFactor int
 // 中断信号 不可逆中断状态，一旦检测到中断信号为true，停止所有的生产行为
 var interruptSignal bool
 
-// 节点的sdk客户端
-var chainClients []*sdk.ChainClient
+// 默认存在节点数量的sdk客户端，用来生成请求参数，开启订阅等
+var defaultSdkClients []*sdk.ChainClient
 
 func initParallel() error {
 	if nodeNum > threadNum {
 		threadNum = nodeNum
 	}
-	if err := initChainClient(); err != nil {
+	if err := initSubClient(); err != nil {
 		return err
 	}
 	initProductFactor(threadNum * loopNum)
@@ -83,70 +83,6 @@ func initParallel() error {
 	}
 	txLatency = sync.Map{}
 	return nil
-}
-
-func initChainClient() error {
-	for i := range hosts {
-		clientConf := clientConf{
-			host:    hosts[i],
-			tls:     hostnames[i],
-			caPath:  caPaths[i],
-			orgId:   orgIDs[i],
-			chainId: chainId,
-			userKey: userKeyPaths[i],
-			userCrt: userCrtPaths[i],
-			signKey: signKeyPaths[i],
-			signCrt: signCrtPaths[i],
-		}
-		chainClient, err := newChainClient(clientConf)
-		if err != nil {
-			return err
-		}
-		chainClients = append(chainClients, chainClient)
-	}
-	return nil
-}
-
-type clientConf struct {
-	host    string
-	tls     string
-	caPath  string
-	orgId   string
-	chainId string
-	userKey string
-	userCrt string
-	signKey string
-	signCrt string
-}
-
-func newChainClient(cf clientConf) (*sdk.ChainClient, error) {
-	nodeConf := sdk.NewNodeConfig(
-		// 节点地址，格式：127.0.0.1:12301
-		sdk.WithNodeAddr(cf.host),
-		// 节点连接数
-		sdk.WithNodeConnCnt(threadNum),
-		// 节点是否启用TLS认证
-		sdk.WithNodeUseTLS(true),
-		// 根证书路径，支持多个
-		sdk.WithNodeCAPaths([]string{cf.caPath}),
-		// TLS Hostname
-		sdk.WithNodeTLSHostName(cf.tls),
-	)
-	return sdk.NewChainClient(
-		// 设置归属组织
-		sdk.WithChainClientOrgId(cf.orgId),
-		sdk.WithChainClientChainId(chainId),
-		// 设置客户端用户私钥路径
-		sdk.WithUserKeyFilePath(cf.userKey),
-		// 设置客户端用户证书
-		sdk.WithUserCrtFilePath(cf.userCrt),
-		// 设置客户端签名证书
-		sdk.WithUserSignCrtFilePath(cf.signCrt),
-		// 设置客户端签名私钥
-		sdk.WithUserSignKeyFilePath(cf.signKey),
-		// 添加节点1
-		sdk.AddChainClientNodeConfig(nodeConf),
-	)
 }
 
 // initProductFactor 对半法加载生产因子
@@ -198,10 +134,6 @@ func parallelInvoke(method string) error {
 	// 等待超时或请求执行完毕
 	listenAndExit(timeoutChan, doneChan)
 	finalPrint(statistician, printTicker)
-	// 关闭client
-	for _, t := range threads {
-		t.stop()
-	}
 	return nil
 }
 
@@ -226,7 +158,6 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 			return
 		}
 		if height == lastHeight {
-			fmt.Println(height)
 			printTicker.Stop()
 			fmt.Println("all thread word done finish print")
 			statistician.printDetails()
