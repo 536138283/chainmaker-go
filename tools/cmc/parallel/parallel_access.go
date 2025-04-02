@@ -147,7 +147,7 @@ func ParallelCMD() *cobra.Command {
 				panic(fmt.Sprintf("use tls, but hosts[%d], user-crts[%d], user-keys[%d] length invalid",
 					len(hosts), len(userCrtPaths), len(userKeyPaths)))
 			}
-			if len(encCrtPaths) != len(encKeyPaths) && len(encKeyPaths) != len(hosts) && len(hosts) > 0 {
+			if len(encCrtPaths) != len(encKeyPaths) && len(encKeyPaths) != len(hosts) && len(encCrtPaths) > 0 {
 				panic(fmt.Sprintf("use env but encCrtPaths[%d], encKeyPaths[%d], hosts[%d]", len(encCrtPaths),
 					len(encKeyPaths), len(hosts)))
 			}
