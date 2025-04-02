@@ -63,18 +63,20 @@ var (
 	version               string
 	wasmPath              string
 
-	caPaths      []string
-	hosts        []string
-	hostnames    []string
-	signCrtPaths []string
-	signKeyPaths []string
-	encKeyPaths  []string
-	encCrtPaths  []string
-	encCrtBytes  [][]byte
-	encKeyBytes  [][]byte
-	userCrtPaths []string
-	userKeyPaths []string
-	orgIDs       []string
+	caPaths       []string
+	hosts         []string
+	hostnames     []string
+	signCrtPaths  []string
+	signKeyPaths  []string
+	encKeyPaths   []string
+	encCrtPaths   []string
+	encCrtBytes   [][]byte
+	encKeyBytes   [][]byte
+	userCrtPaths  []string
+	userKeyPaths  []string
+	adminKeyPaths []string
+	adminCrtPaths []string
+	orgIDs        []string
 
 	nodeNum int
 
@@ -117,6 +119,8 @@ func ParallelCMD() *cobra.Command {
 			signKeyPaths = strings.Split(signKeyPathsString, ",")
 			userCrtPaths = strings.Split(userCrtPathsString, ",")
 			userKeyPaths = strings.Split(userKeyPathsString, ",")
+			adminKeyPaths = strings.Split(adminSignKeys, ",")
+			adminCrtPaths = strings.Split(adminSignCrts, ",")
 			if userEncCrtPathsString != "" && userEncKeyPathsString != "" {
 				encCrtPaths = strings.Split(userEncCrtPathsString, ",")
 				encKeyPaths = strings.Split(userEncKeyPathsString, ",")

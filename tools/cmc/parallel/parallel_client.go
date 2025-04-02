@@ -9,7 +9,7 @@ func initSubClient() error {
 		if err != nil {
 			return err
 		}
-		subSdkClients = append(subSdkClients, sdkClient)
+		defaultSdkClients = append(defaultSdkClients, sdkClient)
 	}
 	return nil
 }

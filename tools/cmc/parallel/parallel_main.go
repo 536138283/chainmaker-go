@@ -53,8 +53,8 @@ var productFactor int
 // 中断信号 不可逆中断状态，一旦检测到中断信号为true，停止所有的生产行为
 var interruptSignal bool
 
-// 节点的sdk客户端
-var subSdkClients []*sdk.ChainClient
+// 默认存在节点数量的sdk客户端，用来生成请求参数，开启订阅等
+var defaultSdkClients []*sdk.ChainClient
 
 func initParallel() error {
 	if nodeNum > threadNum {
