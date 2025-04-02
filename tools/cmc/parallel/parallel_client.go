@@ -49,6 +49,7 @@ func getSdkClient(i int) (*sdk.ChainClient, error) {
 		opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
 		opts = append(opts, sdk.WithChainClientOrgId(orgIDs[i]))
 		opts = append(opts, sdk.WithChainClientChainId(chainId))
+		opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
 		opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
 		opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
 		opts = append(opts, sdk.WithUserSignCrtFilePath(signCrtPaths[i]))
