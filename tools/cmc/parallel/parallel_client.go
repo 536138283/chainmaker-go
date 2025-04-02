@@ -1,6 +1,8 @@
 package parallel
 
-import sdk "chainmaker.org/chainmaker/sdk-go/v2"
+import (
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+)
 
 // initSubClient 初始化订阅节点使用的sdkClient
 func initSubClient() error {
@@ -27,17 +29,17 @@ func getSdkClient(i int) (*sdk.ChainClient, error) {
 		// 根证书路径，支持多个
 		sdk.WithNodeCAPaths(caPaths),
 		// TLS Hostname
-		sdk.WithNodeTLSHostName(hostnamesString),
+		sdk.WithNodeTLSHostName(hostnames[i]),
 	)
 	opts := make([]sdk.ChainClientOption, 0)
 	switch sdk.AuthType(authTypeUint32) {
 	case sdk.Public:
 		opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
 		opts = append(opts, sdk.WithChainClientChainId(chainId))
-		opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
 		opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
+		opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
 		opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
-		opts = append(opts, sdk.WithUserSignCrtFilePath(caPaths[i]))
+		opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
 		if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
 			opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
 			opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))
