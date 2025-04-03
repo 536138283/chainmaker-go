@@ -33,7 +33,10 @@ type Query struct{}
 // Build 实现StressBuilder接口，用于构建查询智能合约的交易请求
 func (i Query) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	// 构建交易Payload，包含一组键值对（kvs）
-	pairs := makeKvs(requestId)
+	pairs, err := makeKvs(requestId)
+	if err != nil {
+		return nil, err
+	}
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -56,7 +59,10 @@ type Invoke struct{}
 
 // Build 实现StressBuilder接口，用于构建调用智能合约的交易请求
 func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
-	pairs := makeKvs(requestId)
+	pairs, err := makeKvs(requestId)
+	if err != nil {
+		return nil, err
+	}
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -161,7 +167,7 @@ func (u Upgrade) Build(requestId int64, index int) (*commonPb.TxRequest, error) 
 // 随机生成的比率（RandomRate）、以及整数值的递增或递减（Increase/Decrease）。
 // 函数内部通过原子操作来安全地更新全局统计变量，如总发送交易数（totalSentTxs）和
 // 随机发送的交易数（totalRandomSentTxs）。
-func makeKvs(requestId int64) []*commonPb.KeyValuePair {
+func makeKvs(requestId int64) ([]*commonPb.KeyValuePair, error) {
 	var outKvs []*commonPb.KeyValuePair
 	// 原子增加总发送交易计数器
 	atomic.AddInt64(&totalSentTxs, 1)
@@ -196,6 +202,13 @@ func makeKvs(requestId int64) []*commonPb.KeyValuePair {
 			p.IntValue++
 			p.mu.Unlock()
 			atomic.AddInt64(&totalRandomSentTxs, 1)
+		case p.ValueFormat != "":
+			fmt.Println("qqq: ", p.ValueFormat)
+			var err error
+			val, err = addFormatValue(p)
+			if err != nil {
+				return nil, err
+			}
 		default:
 			val = []byte(p.Value)
 		}
@@ -205,7 +218,7 @@ func makeKvs(requestId int64) []*commonPb.KeyValuePair {
 			Value: val,
 		})
 	}
-	return outKvs
+	return outKvs, nil
 }
 
 // buildRequestParam 是一个辅助函数，用于构建TxRequest的通用部分，如签名、发送者信息等。

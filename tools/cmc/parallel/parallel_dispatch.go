@@ -87,6 +87,7 @@ func produce(builder StressBuilder, index int) {
 		param, err := builder.Build(requestId, index)
 		if err != nil {
 			fmt.Printf("producer err: %s\n", err.Error())
+			return
 		}
 		paramQueues[index] <- RequestParam{
 			Param:     param,

@@ -35,6 +35,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var ArriveTargetError = errors.New("arrive target value")
+
 type Detail struct {
 	TPS          float32                `json:"tps"`
 	SuccessCount int                    `json:"successCount"`
@@ -359,7 +361,10 @@ func (t *ThreadOthers) Start() {
 			} else {
 				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], signCrtPaths[t.index], i)
 			}
-
+			if errors.Is(err, ArriveTargetError) {
+				t.doneChan <- struct{}{}
+				return
+			}
 			elapsed := time.Since(start)
 
 			atomic.AddInt32(&t.statistician.totalCount, 1)
@@ -470,8 +475,8 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 
 	// 构造Payload
 	pairs, err := makeKvsOthers(h.threadId, loopId)
-	if errors.Is() {
-		
+	if err != nil {
+		return err
 	}
 	if showKey {
 		j, err := json.Marshal(pairs)
@@ -527,7 +532,10 @@ func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey,
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvsOthers(h.threadId, loopId)
+	pairs, err := makeKvsOthers(h.threadId, loopId)
+	if err != nil {
+		return err
+	}
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
