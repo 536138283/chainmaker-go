@@ -170,7 +170,10 @@ func baseTypeParse(sType string, value interface{}) (interface{}, error) {
 		return parseBool(value)
 	case addressType:
 		return parseAddress(value), nil
-	case bytesType:
+	case bytesType, bytes1Type, bytes2Type, bytes3Type, bytes4Type, bytes5Type, bytes6Type, bytes7Type, bytes8Type,
+		bytes9Type, bytes10Type, bytes11Type, bytes12Type, bytes13Type, bytes14Type, bytes15Type, bytes16Type,
+		bytes17Type, bytes18Type, bytes19Type, bytes20Type, bytes21Type, bytes22Type, bytes23Type, bytes24Type,
+		bytes25Type, bytes26Type, bytes27Type, bytes28Type, bytes29Type, bytes30Type, bytes31Type, bytes32Type:
 		return parseBytes(sType, value), nil
 	default:
 		return value, nil
