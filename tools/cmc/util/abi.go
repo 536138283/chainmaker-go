@@ -88,12 +88,66 @@ const (
 	uint256Type = "uint256"
 	boolType    = "bool"
 	addressType = "address"
+	// solidity中的bytes类型
 	bytesType   = "bytes"
+	bytes1Type  = "bytes1"
+	bytes2Type  = "bytes2"
+	bytes3Type  = "bytes3"
+	bytes4Type  = "bytes4"
+	bytes5Type  = "bytes5"
+	bytes6Type  = "bytes6"
+	bytes7Type  = "bytes7"
+	bytes8Type  = "bytes8"
+	bytes9Type  = "bytes9"
+	bytes10Type = "bytes10"
+	bytes11Type = "bytes11"
+	bytes12Type = "bytes12"
+	bytes13Type = "bytes13"
+	bytes14Type = "bytes14"
+	bytes15Type = "bytes15"
+	bytes16Type = "bytes16"
+	bytes17Type = "bytes17"
+	bytes18Type = "bytes18"
+	bytes19Type = "bytes19"
+	bytes20Type = "bytes20"
+	bytes21Type = "bytes21"
+	bytes22Type = "bytes22"
+	bytes23Type = "bytes23"
+	bytes24Type = "bytes24"
+	bytes25Type = "bytes25"
+	bytes26Type = "bytes26"
+	bytes27Type = "bytes27"
+	bytes28Type = "bytes28"
+	bytes29Type = "bytes29"
+	bytes30Type = "bytes30"
+	bytes31Type = "bytes31"
+	bytes32Type = "bytes32"
 )
 
 // parse 把interface{}类型，解析成为solidity类型中对应的go的类型
 func parse(sType string, value interface{}) (arg interface{}, err error) {
-	parseArray(sType, value)
+	// 将solidity分割成两部分 以string[8]为例子 分割成 string [8]
+	typeRegex := regexp.MustCompile(`^([a-zA-Z]+[0-9]*)((?:\[[0-9]*\])*)$`)
+	matches := typeRegex.FindStringSubmatch(sType)
+	if matches == nil {
+		return nil, fmt.Errorf("invalid type format: %s", sType)
+	}
+	arrayPart := matches[2]
+	// 处理非数组类型
+	if arrayPart == "" {
+		return baseTypeParse(sType, value)
+	} else {
+		// 数组类型
+		//arrayType := matches[1]
+		// 处理数组类型
+
+	}
+
+	return
+}
+
+// baseTypeParse 基本数据类型解析
+func baseTypeParse(sType string, value interface{}) (interface{}, error) {
 	switch sType {
 	case stringType:
 		return parseStr(value), nil
@@ -110,13 +164,12 @@ func parse(sType string, value interface{}) (arg interface{}, err error) {
 	case boolType:
 		return parseBool(value)
 	case addressType:
-		return parseBytes(value), nil
+		return parseAddress(value), nil
 	case bytesType:
-		return parseBytes(value), nil
+		return parseBytes(sType, value), nil
 	default:
 		return value, nil
 	}
-	return
 }
 
 // Param list
@@ -155,10 +208,6 @@ func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
 	}
 	fmt.Println(args)
 	return nil, nil
-}
-
-func ParseString(value interface{}) string {
-	return value.(string)
 }
 
 // parseInt 处理int类型数据
@@ -293,11 +342,39 @@ func parseBool(value interface{}) (interface{}, error) {
 	return v, nil
 }
 
-func parseBytes(value interface{}) interface{} {
-	bytes := make([]byte, 0)
+func parseAddress(value interface{}) interface{} {
 	sAddress := fmt.Sprint(value)
+	bytes := make([]byte, 0)
 	bytes = append(bytes, []byte(sAddress)...)
 	return bytes
+}
+
+func parseBytes(key string, value interface{}) (interface{}, error) {
+	rest := key[len("bytes"):]
+
+	sAddress := fmt.Sprint(value)
+	// bytes为空代表动态的byte数组否则为定长byte数组
+	if rest == "" {
+		bytes := make([]byte, 0)
+
+		bytes = append(bytes, []byte(sAddress)...)
+		return bytes, nil
+	}
+	// 将剩余部分转换为整数
+	n, err := strconv.Atoi(rest)
+	if err != nil {
+		return 0, fmt.Errorf("invalid number: %s", rest)
+	}
+	// 检查 N 是否在 1 到 32 之间
+	if n < 1 || n > 32 {
+		return 0, fmt.Errorf("bytes number must be between 1 and 32")
+	}
+	// 创建定长切片并返回
+	bytes := make([]byte, n)
+	for i := range []byte(sAddress) {
+		bytes[i] = []byte(sAddress)[i]
+	}
+	return bytes, nil
 }
 
 // 解析int类型数组
