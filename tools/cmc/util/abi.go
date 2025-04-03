@@ -9,6 +9,7 @@ package util
 import (
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/big"
 	"reflect"
@@ -138,12 +139,16 @@ func parse(sType string, value interface{}) (arg interface{}, err error) {
 		return baseTypeParse(sType, value)
 	} else {
 		// 数组类型
-		//arrayType := matches[1]
+		arrayType := matches[1]
 		// 处理数组类型
-
+		arrayRegex := regexp.MustCompile(`\[([0-9]*)\]`)
+		arrayMatches := arrayRegex.FindStringSubmatch(arrayPart)
+		N, err := strconv.Atoi(arrayMatches[1])
+		if err != nil {
+			return nil, err
+		}
+		return parseArray(arrayType, value, N)
 	}
-
-	return
 }
 
 // baseTypeParse 基本数据类型解析
@@ -378,11 +383,30 @@ func parseBytes(key string, value interface{}) (interface{}, error) {
 }
 
 // 解析int类型数组
-func parseArray(key string, value interface{}) {
-	fmt.Println(key)
-	// 使用正则表达式匹配类型和数组大小
-	re := regexp.MustCompile(`^([a-zA-Z]+[0-9]*)((?:\[[0-9]*\])*)$`)
-	matches := re.FindStringSubmatch(key)
-	fmt.Println(matches)
-	//fmt.Println(dataType, size)
+func parseArray(key string, value interface{}, N int) (interface{}, error) {
+	slice, ok := value.([]interface{})
+	if !ok {
+		return nil, errors.New("value is not a []interface{}")
+	}
+	if N == 0 {
+		array := make([]interface{}, 0)
+		for _, v := range slice {
+			parseV, err := baseTypeParse(key, v)
+			if err != nil {
+				return nil, err
+			}
+			array = append(array, parseV)
+		}
+		return array, nil
+	} else {
+		array := make([]interface{}, 0)
+		for i, v := range slice {
+			parseV, err := parse(key, v)
+			if err != nil {
+				return nil, err
+			}
+			array[i] = parseV
+		}
+		return array, nil
+	}
 }
