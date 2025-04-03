@@ -752,7 +752,7 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 	return result, nil
 }
 
-func makeKvsOthers(threadId, loopId int) []*commonPb.KeyValuePair {
+func makeKvsOthers(threadId, loopId int) ([]*commonPb.KeyValuePair, error) {
 	var outKvs []*commonPb.KeyValuePair
 	atomic.AddInt64(&totalSentTxsOthers, 1)
 	for _, p := range globalPairs {
@@ -779,6 +779,12 @@ func makeKvsOthers(threadId, loopId int) []*commonPb.KeyValuePair {
 			p.IntValue++
 			p.mu.Unlock()
 			atomic.AddInt64(&totalRandomSentTxs, 1)
+		case p.ValueFormat != "":
+			var err error
+			val, err = addFormatValue(p)
+			if err != nil {
+				return nil, err
+			}
 		default:
 			val = []byte(p.Value)
 		}
@@ -788,5 +794,55 @@ func makeKvsOthers(threadId, loopId int) []*commonPb.KeyValuePair {
 			Value: val,
 		})
 	}
-	return outKvs
+	return outKvs, nil
+}
+
+func addFormatValue(p *KeyValuePair) ([]byte, error) {
+	valueParams := make([]int64, len(p.ValueParams))
+	p.mu.Lock()
+	for i := 0; i < len(p.ValueParams); i++ {
+		v := p.ValueParams[i]
+		valueParams[i] = p.Values[i]
+		if v.Increase {
+			if v.EndValue < p.Values[i] && v.LoopType == LoopTypeEnd {
+				if !p.ArriveArr[i] {
+					p.ArriveArr[i] = true
+					p.ArriveCount++
+				}
+				if p.EndCount == len(p.ValueParams) && p.ArriveCount >= len(p.Values) {
+					p.mu.Unlock()
+					return nil, ArriveTargetError
+				}
+				continue
+			} else if v.EndValue < p.Values[i] && v.LoopType == LoopTypeRestart {
+				p.Values[i] = v.TempIntValue
+			}
+			p.Values[i]++
+			if p.Values[i] > p.IntPows[i] {
+				p.Values[i] = p.Values[i] % p.IntPows[i]
+			}
+		} else {
+			if v.EndValue > p.Values[i] && v.LoopType == LoopTypeEnd {
+				if !p.ArriveArr[i] {
+					p.ArriveArr[i] = true
+					p.ArriveCount++
+				}
+				if p.EndCount == len(p.ValueParams) && p.ArriveCount >= len(p.Values) {
+					p.mu.Unlock()
+					return nil, ArriveTargetError
+				}
+				continue
+			} else if v.EndValue > p.Values[i] && v.LoopType == LoopTypeRestart {
+				p.Values[i] = v.TempIntValue
+			}
+			p.Values[i]--
+		}
+	}
+	args := make([]interface{}, len(valueParams))
+	for i, v := range valueParams {
+		args[i] = v
+	}
+	val := []byte(fmt.Sprintf(p.ValueFormat, args...))
+	p.mu.Unlock()
+	return val, nil
 }

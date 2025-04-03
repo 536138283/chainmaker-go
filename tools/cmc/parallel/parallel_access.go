@@ -99,6 +99,7 @@ type ValueParam struct {
 	TempIntValue int64 `json:"-"`
 	LoopType     int8  `json:"loopType"`
 }
+
 type KeyValuePair struct {
 	Key        string `json:"key,omitempty"`
 	Value      string `json:"value,omitempty"`
@@ -111,6 +112,9 @@ type KeyValuePair struct {
 	IntValue    int64         `json:"-"`
 	ValueFormat string        `json:"valueFormat,omitempty"`
 	ValueParams []*ValueParam `json:"valueParams,omitempty"`
+	EndCount    int           `json:"-"` // 需要终止的参数数量，如果全部需要终止则停止压测
+	ArriveCount int           `json:"-"` // 已经达成目标值的数量,与ArriveArr互相配合，主要记录ArriveArr中为true的值
+	ArriveArr   []bool        `json:"-"` // 判断每个valueParam是否达成条件值如果达成则设置为true
 	Values      []int64       `json:"-"`
 	IntPows     []int64       `json:"-"`
 }
