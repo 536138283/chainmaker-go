@@ -469,7 +469,10 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvsOthers(h.threadId, loopId)
+	pairs, err := makeKvsOthers(h.threadId, loopId)
+	if errors.Is() {
+		
+	}
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {

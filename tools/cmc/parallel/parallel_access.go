@@ -282,3 +282,11 @@ func getPairInfos() ([]*KeyValuePair, error) {
 
 	return ps, nil
 }
+
+func intPow(base, exp int64) int64 {
+	result := int64(1)
+	for i := int64(0); i < exp; i++ {
+		result *= base
+	}
+	return result
+}
