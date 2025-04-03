@@ -53,46 +53,47 @@ const (
 	int248Type = "int248"
 	int256Type = "int256"
 	// 全部uint类型
-	uintType        = "uint"
-	uint8Type       = "uint8"
-	uint16Type      = "uint16"
-	uint24Type      = "uint24"
-	uint32Type      = "uint32"
-	uint40Type      = "uint40"
-	uint48Type      = "uint48"
-	uint56Type      = "uint56"
-	uint64Type      = "uint64"
-	uint72Type      = "uint72"
-	uint80Type      = "uint80"
-	uint88Type      = "uint88"
-	uint96Type      = "uint96"
-	uint104Type     = "uint114"
-	uint112Type     = "uint112"
-	uint120Type     = "uint120"
-	uint128Type     = "uint128"
-	uint136Type     = "uint136"
-	uint144Type     = "uint144"
-	uint152Type     = "uint152"
-	uint160Type     = "uint160"
-	uint168Type     = "uint168"
-	uint176Type     = "uint176"
-	uint184Type     = "uint184"
-	uint192Type     = "uint192"
-	uint200Type     = "uint200"
-	uint208Type     = "uint208"
-	uint216Type     = "uint216"
-	uint224Type     = "uint224"
-	uint232Type     = "uint232"
-	uint240Type     = "uint240"
-	uint248Type     = "uint248"
-	uint256Type     = "uint256"
-	boolType        = "bool"
-	stringArrayType = "string[]"
-	addressType     = "address"
+	uintType    = "uint"
+	uint8Type   = "uint8"
+	uint16Type  = "uint16"
+	uint24Type  = "uint24"
+	uint32Type  = "uint32"
+	uint40Type  = "uint40"
+	uint48Type  = "uint48"
+	uint56Type  = "uint56"
+	uint64Type  = "uint64"
+	uint72Type  = "uint72"
+	uint80Type  = "uint80"
+	uint88Type  = "uint88"
+	uint96Type  = "uint96"
+	uint104Type = "uint114"
+	uint112Type = "uint112"
+	uint120Type = "uint120"
+	uint128Type = "uint128"
+	uint136Type = "uint136"
+	uint144Type = "uint144"
+	uint152Type = "uint152"
+	uint160Type = "uint160"
+	uint168Type = "uint168"
+	uint176Type = "uint176"
+	uint184Type = "uint184"
+	uint192Type = "uint192"
+	uint200Type = "uint200"
+	uint208Type = "uint208"
+	uint216Type = "uint216"
+	uint224Type = "uint224"
+	uint232Type = "uint232"
+	uint240Type = "uint240"
+	uint248Type = "uint248"
+	uint256Type = "uint256"
+	boolType    = "bool"
+	addressType = "address"
+	bytesType   = "bytes"
 )
 
 // parse 把interface{}类型，解析成为solidity类型中对应的go的类型
 func parse(sType string, value interface{}) (arg interface{}, err error) {
+	parseArray(sType, value)
 	switch sType {
 	case stringType:
 		return parseStr(value), nil
@@ -109,7 +110,9 @@ func parse(sType string, value interface{}) (arg interface{}, err error) {
 	case boolType:
 		return parseBool(value)
 	case addressType:
-
+		return parseBytes(value), nil
+	case bytesType:
+		return parseBytes(value), nil
 	default:
 		return value, nil
 	}
@@ -290,6 +293,19 @@ func parseBool(value interface{}) (interface{}, error) {
 	return v, nil
 }
 
-func parseAddress() (interface{}, error) {
-	
+func parseBytes(value interface{}) interface{} {
+	bytes := make([]byte, 0)
+	sAddress := fmt.Sprint(value)
+	bytes = append(bytes, []byte(sAddress)...)
+	return bytes
+}
+
+// 解析int类型数组
+func parseArray(key string, value interface{}) {
+	fmt.Println(key)
+	// 使用正则表达式匹配类型和数组大小
+	re := regexp.MustCompile(`^([a-zA-Z]+[0-9]*)((?:\[[0-9]*\])*)$`)
+	matches := re.FindStringSubmatch(key)
+	fmt.Println(matches)
+	//fmt.Println(dataType, size)
 }

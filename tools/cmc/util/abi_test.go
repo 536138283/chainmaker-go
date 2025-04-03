@@ -1287,7 +1287,7 @@ func TestPack2(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	param := `[{"uint16":}]`
+	param := `[{"address":"0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"}]`
 	_, err := Pack(nil, "mint", param)
 	if err != nil {
 		t.Error(err)
