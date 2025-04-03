@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"io/ioutil"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -91,6 +92,13 @@ var (
 	gasLimit       uint64
 )
 
+type ValueParam struct {
+	Initial      int64 `json:"initial"`
+	Increase     bool  `json:"increase"`
+	EndValue     int64 `json:"endValue"`
+	TempIntValue int64 `json:"-"`
+	LoopType     int8  `json:"loopType"`
+}
 type KeyValuePair struct {
 	Key        string `json:"key,omitempty"`
 	Value      string `json:"value,omitempty"`
@@ -99,8 +107,12 @@ type KeyValuePair struct {
 	Increase   bool   `json:"increase"`
 	Decrease   bool   `json:"decrease"`
 	// mu protect IntValue in Increase/Decrease scene.
-	mu       sync.Mutex
-	IntValue int64 `json:"-"`
+	mu          sync.Mutex
+	IntValue    int64         `json:"-"`
+	ValueFormat string        `json:"valueFormat,omitempty"`
+	ValueParams []*ValueParam `json:"valueParams,omitempty"`
+	Values      []int64       `json:"-"`
+	IntPows     []int64       `json:"-"`
 }
 
 // ParallelCMD parallel sub command
@@ -224,6 +236,11 @@ func ParallelCMD() *cobra.Command {
 	return cmd
 }
 
+const (
+	LoopTypeEnd     = int8(1)
+	LoopTypeRestart = int8(2)
+)
+
 func getPairInfos() ([]*KeyValuePair, error) {
 	var ps []*KeyValuePair
 	err := json.Unmarshal([]byte(pairsString), &ps)
@@ -231,12 +248,30 @@ func getPairInfos() ([]*KeyValuePair, error) {
 		log.Errorf("unmarshal pair content failed, origin content: %s, err: %s", pairsString, err)
 		return nil, err
 	}
-
 	for _, p := range ps {
 		if p.Decrease || p.Increase {
 			p.IntValue, err = strconv.ParseInt(p.Value, 10, 64)
 			if err != nil {
 				return nil, err
+			}
+		}
+		if p.ValueFormat != "" {
+			re := regexp.MustCompile(`%0(\d+)d`)
+			matches := re.FindAllStringSubmatch(p.ValueFormat, -1)
+			if len(matches) != len(p.ValueParams) {
+				return nil, fmt.Errorf("not enough (or more) values to fill the value format template")
+			}
+			p.Values = make([]int64, len(p.ValueParams))
+			p.IntPows = make([]int64, len(p.ValueParams))
+			for i, match := range matches {
+				if p.ValueParams[i].LoopType == LoopTypeEnd {
+					p.EndCount++
+				}
+				p.ArriveArr = make([]bool, len(p.ValueParams))
+				p.Values[i] = p.ValueParams[i].Initial
+				p.ValueParams[i].TempIntValue = p.Values[i]
+				width, _ := strconv.Atoi(match[1])
+				p.IntPows[i] = intPow(10, int64(width))
 			}
 		}
 	}
