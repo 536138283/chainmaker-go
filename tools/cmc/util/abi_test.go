@@ -1305,5 +1305,5 @@ func TestParse(t *testing.T) {
 	//TestDemo("transfer", `[{"uint32[3]":[1,2,3]}]`)
 	//TestDemo("transfer", `[{"uint64[]":[1,2,3]}]`)
 	//TestDemo("transfer", `[{"uint64[3]":[1,2,3]}]`)
-	TestDemo("a", `[{"bytes1[3]":["0x00","0x02","0x03"]}]`)
+	TestDemo("a", `[{"bytes1[3]":["1","2","3"]}]`)
 }
