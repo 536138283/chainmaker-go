@@ -208,7 +208,6 @@ func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	var args []interface{}
 	for _, p := range param {
 		for k, v := range p {
@@ -216,11 +215,11 @@ func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
 			if err != nil {
 				return nil, err
 			}
-			fmt.Println("qqqq", reflect.TypeOf(arg))
 			args = append(args, arg)
 		}
 	}
-	return nil, nil
+	return a.Pack(method, args...)
+
 }
 
 // parseInt 处理int类型数据
@@ -365,12 +364,12 @@ func parseAddress(value interface{}) []byte {
 func parseBytes(key string, value interface{}) ([]byte, error) {
 	rest := key[len("bytes"):]
 
-	sAddress := fmt.Sprint(value)
+	bytesStr := fmt.Sprint(value)
 	// bytes为空代表动态的byte数组否则为定长byte数组
 	if rest == "" {
 		bytes := make([]byte, 0)
 
-		bytes = append(bytes, []byte(sAddress)...)
+		bytes = append(bytes, []byte(bytesStr)...)
 		return bytes, nil
 	}
 	// 将剩余部分转换为整数
@@ -384,8 +383,12 @@ func parseBytes(key string, value interface{}) ([]byte, error) {
 	}
 	// 创建定长切片并返回
 	bytes := make([]byte, n)
-	for i := range []byte(sAddress) {
-		bytes[i] = []byte(sAddress)[i]
+	fmt.Println(len(bytes))
+	fmt.Println(value)
+	fmt.Println(len([]byte(bytesStr)))
+	fmt.Println([]byte(bytesStr))
+	for i := range []byte(bytesStr) {
+		bytes[i] = []byte(bytesStr)[i]
 	}
 	return bytes, nil
 }
@@ -398,7 +401,7 @@ func parseArr(key string, value interface{}, N int) (interface{}, error) {
 	switch {
 	case key == stringType:
 		return parseStrArr(slice, N), nil
-	case strings.Contains(key, "int") && strings.Contains(key, "uint"):
+	case strings.Contains(key, "int") && !strings.Contains(key, "uint"):
 		return parseIntArray(key, slice, N)
 	case strings.Contains(key, "uint"):
 		return parseUintArray(key, slice, N)
@@ -406,7 +409,7 @@ func parseArr(key string, value interface{}, N int) (interface{}, error) {
 		return parseBoolArr(slice, N)
 	case key == addressType:
 		return parseAddressArr(slice, N)
-	case key == bytesType:
+	case strings.Contains(key, "bytes"):
 		return parseBytesArr(key, slice, N)
 	default:
 		return value, nil
@@ -457,7 +460,7 @@ func int8Arr(value []interface{}, N int) ([]int8, error) {
 	if N != 0 {
 		arr := make([]int8, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 8)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int8 N: %s", err.Error())
@@ -468,7 +471,7 @@ func int8Arr(value []interface{}, N int) ([]int8, error) {
 	}
 	arr := make([]int8, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseInt(valueStr, 10, 8)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int8: %s", err.Error())
@@ -482,7 +485,7 @@ func int16Arr(value []interface{}, N int) ([]int16, error) {
 	if N != 0 {
 		arr := make([]int16, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 16)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int16 N: %s", err.Error())
@@ -493,7 +496,7 @@ func int16Arr(value []interface{}, N int) ([]int16, error) {
 	}
 	arr := make([]int16, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseInt(valueStr, 10, 16)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int16: %s", err.Error())
@@ -504,11 +507,11 @@ func int16Arr(value []interface{}, N int) ([]int16, error) {
 }
 
 func int32Arr(value []interface{}, N int) ([]int32, error) {
-	valueStr := fmt.Sprint(value)
 
 	if N != 0 {
 		arr := make([]int32, N)
 		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int32 N: %s", err.Error())
@@ -519,6 +522,7 @@ func int32Arr(value []interface{}, N int) ([]int32, error) {
 	}
 	arr := make([]int32, 0)
 	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseInt(valueStr, 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int32: %s", err.Error())
@@ -532,7 +536,7 @@ func int64Arr(value []interface{}, N int) ([]int64, error) {
 	if N != 0 {
 		arr := make([]int64, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int64 N: %s", err.Error())
@@ -543,7 +547,7 @@ func int64Arr(value []interface{}, N int) ([]int64, error) {
 	}
 	arr := make([]int64, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseInt(valueStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int64 N: %s", err.Error())
@@ -553,13 +557,12 @@ func int64Arr(value []interface{}, N int) ([]int64, error) {
 	return arr, nil
 }
 
-func bigIntArr(value []interface{}, N int) (interface{}, error) {
-
+func bigIntArr(value []interface{}, N int) ([]*big.Int, error) {
 	if N != 0 {
 		arr := make([]*big.Int, N)
 		for i := 0; i < len(value); i++ {
 			bigInt := new(big.Int)
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, ok := bigInt.SetString(valueStr, 10)
 			if !ok {
 				return nil, fmt.Errorf("failed to set big.Int from value N: %s", valueStr)
@@ -571,7 +574,7 @@ func bigIntArr(value []interface{}, N int) (interface{}, error) {
 		arr := make([]*big.Int, N)
 		for i := 0; i < len(value); i++ {
 			bigInt := new(big.Int)
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, ok := bigInt.SetString(valueStr, 10)
 			if !ok {
 				return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
@@ -611,7 +614,7 @@ func uint8Arr(value []interface{}, N int) ([]uint8, error) {
 	if N != 0 {
 		arr := make([]uint8, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 8)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int8 N: %s", err.Error())
@@ -622,7 +625,7 @@ func uint8Arr(value []interface{}, N int) ([]uint8, error) {
 	}
 	arr := make([]uint8, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseUint(valueStr, 10, 8)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int8: %s", err.Error())
@@ -636,7 +639,7 @@ func uint16Arr(value []interface{}, N int) ([]uint16, error) {
 	if N != 0 {
 		arr := make([]uint16, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 16)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int16 N: %s", err.Error())
@@ -647,7 +650,7 @@ func uint16Arr(value []interface{}, N int) ([]uint16, error) {
 	}
 	arr := make([]uint16, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseUint(valueStr, 10, 16)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int16: %s", err.Error())
@@ -661,7 +664,7 @@ func uint32Arr(value []interface{}, N int) ([]uint32, error) {
 	if N != 0 {
 		arr := make([]uint32, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 32)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int32 N: %s", err.Error())
@@ -672,7 +675,7 @@ func uint32Arr(value []interface{}, N int) ([]uint32, error) {
 	}
 	arr := make([]uint32, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseUint(valueStr, 10, 32)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int32: %s", err.Error())
@@ -686,7 +689,7 @@ func uint64Arr(value []interface{}, N int) ([]uint64, error) {
 	if N != 0 {
 		arr := make([]uint64, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 64)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse int64 N: %s", err.Error())
@@ -697,7 +700,7 @@ func uint64Arr(value []interface{}, N int) ([]uint64, error) {
 	}
 	arr := make([]uint64, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		num, err := strconv.ParseUint(valueStr, 10, 64)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse int64: %s", err.Error())
@@ -711,7 +714,7 @@ func parseBoolArr(value []interface{}, N int) ([]bool, error) {
 	if N != 0 {
 		arr := make([]bool, N)
 		for i := 0; i < len(value); i++ {
-			valueStr := fmt.Sprint(value)
+			valueStr := fmt.Sprint(value[i])
 			b, err := strconv.ParseBool(valueStr)
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse bool N: %s", err.Error())
@@ -722,7 +725,7 @@ func parseBoolArr(value []interface{}, N int) ([]bool, error) {
 	}
 	arr := make([]bool, 0)
 	for i := 0; i < len(value); i++ {
-		valueStr := fmt.Sprint(value)
+		valueStr := fmt.Sprint(value[i])
 		b, err := strconv.ParseBool(valueStr)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse bool: %s", err.Error())
@@ -772,4 +775,27 @@ func parseBytesArr(key string, value []interface{}, N int) (interface{}, error) 
 		}
 		return arr, nil
 	}
+}
+
+func TestDemo(method string, paramsJson string) {
+	param, err := loadFromJSON(paramsJson)
+	if err != nil {
+		fmt.Println(err.Error())
+		return
+	}
+
+	var args []interface{}
+	for _, p := range param {
+		for k, v := range p {
+			arg, err := parse(k, v)
+			if err != nil {
+				fmt.Println(err.Error())
+				return
+			}
+			fmt.Println("qqqq", reflect.TypeOf(arg))
+			args = append(args, arg)
+		}
+	}
+	fmt.Println(method, args)
+	return
 }
