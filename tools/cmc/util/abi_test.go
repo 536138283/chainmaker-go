@@ -1287,7 +1287,7 @@ func TestPack2(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	param := `[{"string[8]":"0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"}]`
+	param := `[{"string[]":["0x5B38Da6a701c568545dCfcB03FcB875f56beddC4", "0x5B38Da6a701c568545dCfcB03FcB875f56beddC4"]}]`
 	_, err := Pack(nil, "mint", param)
 	if err != nil {
 		t.Error(err)

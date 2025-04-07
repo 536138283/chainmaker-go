@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 const (
@@ -140,14 +141,19 @@ func parse(sType string, value interface{}) (arg interface{}, err error) {
 	} else {
 		// 数组类型
 		arrayType := matches[1]
-		// 处理数组类型
+		// 处理数组类型 拿出数组大小N，如果不存在就是0
 		arrayRegex := regexp.MustCompile(`\[([0-9]*)\]`)
 		arrayMatches := arrayRegex.FindStringSubmatch(arrayPart)
-		N, err := strconv.Atoi(arrayMatches[1])
-		if err != nil {
-			return nil, err
+		var err error
+		N := 0
+		if arrayMatches[1] != "" {
+			N, err = strconv.Atoi(arrayMatches[1])
+			if err != nil {
+				return nil, err
+			}
 		}
-		return parseArray(arrayType, value, N)
+		fmt.Println(arrayType, value, N)
+		return parseArr(arrayType, value, N)
 	}
 }
 
@@ -165,7 +171,7 @@ func baseTypeParse(sType string, value interface{}) (interface{}, error) {
 		uint72Type, uint80Type, uint88Type, uint96Type, uint104Type, uint112Type, uint120Type, uint128Type, uint136Type,
 		uint144Type, uint152Type, uint160Type, uint168Type, uint176Type, uint184Type, uint192Type, uint200Type,
 		uint224Type, uint232Type, uint240Type, uint248Type, uint256Type, uint208Type, uint216Type:
-		return parseUInt(sType, value)
+		return parseUint(sType, value)
 	case boolType:
 		return parseBool(value)
 	case addressType:
@@ -174,7 +180,7 @@ func baseTypeParse(sType string, value interface{}) (interface{}, error) {
 		bytes9Type, bytes10Type, bytes11Type, bytes12Type, bytes13Type, bytes14Type, bytes15Type, bytes16Type,
 		bytes17Type, bytes18Type, bytes19Type, bytes20Type, bytes21Type, bytes22Type, bytes23Type, bytes24Type,
 		bytes25Type, bytes26Type, bytes27Type, bytes28Type, bytes29Type, bytes30Type, bytes31Type, bytes32Type:
-		return parseBytes(sType, value), nil
+		return parseBytes(sType, value)
 	default:
 		return value, nil
 	}
@@ -214,7 +220,6 @@ func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
 			args = append(args, arg)
 		}
 	}
-	fmt.Println(args)
 	return nil, nil
 }
 
@@ -278,7 +283,7 @@ func parseInt(key string, value interface{}) (interface{}, error) {
 }
 
 // parseUInt 处理uint类型数据
-func parseUInt(key string, value interface{}) (interface{}, error) {
+func parseUint(key string, value interface{}) (interface{}, error) {
 	// solidity 不支持浮点数所以直接转换成uint类型
 	isM := regexp.MustCompile("(uint)([0-9]+)")
 	bitStr := isM.FindStringSubmatch(key)
@@ -342,7 +347,7 @@ func parseStr(value interface{}) string {
 }
 
 // 处理布尔类型数据
-func parseBool(value interface{}) (interface{}, error) {
+func parseBool(value interface{}) (bool, error) {
 	v, ok := value.(bool)
 	if !ok {
 		fmt.Printf("value %v is not bool\n", value)
@@ -350,14 +355,14 @@ func parseBool(value interface{}) (interface{}, error) {
 	return v, nil
 }
 
-func parseAddress(value interface{}) interface{} {
+func parseAddress(value interface{}) []byte {
 	sAddress := fmt.Sprint(value)
 	bytes := make([]byte, 0)
 	bytes = append(bytes, []byte(sAddress)...)
 	return bytes
 }
 
-func parseBytes(key string, value interface{}) (interface{}, error) {
+func parseBytes(key string, value interface{}) ([]byte, error) {
 	rest := key[len("bytes"):]
 
 	sAddress := fmt.Sprint(value)
@@ -371,11 +376,11 @@ func parseBytes(key string, value interface{}) (interface{}, error) {
 	// 将剩余部分转换为整数
 	n, err := strconv.Atoi(rest)
 	if err != nil {
-		return 0, fmt.Errorf("invalid number: %s", rest)
+		return nil, fmt.Errorf("invalid number: %s", rest)
 	}
 	// 检查 N 是否在 1 到 32 之间
 	if n < 1 || n > 32 {
-		return 0, fmt.Errorf("bytes number must be between 1 and 32")
+		return nil, fmt.Errorf("bytes number must be between 1 and 32")
 	}
 	// 创建定长切片并返回
 	bytes := make([]byte, n)
@@ -385,31 +390,386 @@ func parseBytes(key string, value interface{}) (interface{}, error) {
 	return bytes, nil
 }
 
-// 解析int类型数组
-func parseArray(key string, value interface{}, N int) (interface{}, error) {
+func parseArr(key string, value interface{}, N int) (interface{}, error) {
 	slice, ok := value.([]interface{})
 	if !ok {
 		return nil, errors.New("value is not a []interface{}")
 	}
-	if N == 0 {
-		array := make([]interface{}, 0)
-		for _, v := range slice {
-			parseV, err := baseTypeParse(key, v)
-			if err != nil {
-				return nil, err
-			}
-			array = append(array, parseV)
+	switch {
+	case key == stringType:
+		return parseStrArr(slice, N), nil
+	case strings.Contains(key, "int") && strings.Contains(key, "uint"):
+		return parseIntArray(key, slice, N)
+	case strings.Contains(key, "uint"):
+		return parseUintArray(key, slice, N)
+	case key == boolType:
+		return parseBoolArr(slice, N)
+	case key == addressType:
+		return parseAddressArr(slice, N)
+	case key == bytesType:
+		return parseBytesArr(key, slice, N)
+	default:
+		return value, nil
+	}
+}
+
+func parseStrArr(value []interface{}, N int) []string {
+	if N != 0 {
+		s := make([]string, N)
+		for i := 0; i < len(value); i++ {
+			s[i] = parseStr(value[i])
 		}
-		return array, nil
+		return s
+	}
+	s := make([]string, 0)
+	for i := 0; i < len(value); i++ {
+		s = append(s, parseStr(value[i]))
+	}
+	return s
+}
+
+func parseIntArray(key string, value []interface{}, N int) (interface{}, error) {
+	isM := regexp.MustCompile("(int)([0-9]+)")
+	bitStr := isM.FindStringSubmatch(key)
+	if bitStr != nil {
+		bitNum, err := strconv.ParseInt(bitStr[2], 10, 32)
+		if err != nil {
+			panic(fmt.Sprintf("parse int err: %s", err.Error()))
+		}
+		switch {
+		case bitNum <= 8:
+			return int8Arr(value, N)
+		case bitNum <= 16:
+			return int16Arr(value, N)
+		case bitNum <= 32:
+			return int32Arr(value, N)
+		case bitNum <= 64:
+			return int64Arr(value, N)
+		default:
+			return bigIntArr(value, N)
+		}
 	} else {
-		array := make([]interface{}, 0)
-		for i, v := range slice {
-			parseV, err := parse(key, v)
+		return bigIntArr(value, N)
+	}
+}
+
+func int8Arr(value []interface{}, N int) ([]int8, error) {
+	if N != 0 {
+		arr := make([]int8, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			num, err := strconv.ParseInt(valueStr, 10, 8)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("failed to parse int8 N: %s", err.Error())
 			}
-			array[i] = parseV
+			arr[i] = int8(num)
 		}
-		return array, nil
+		return arr, nil
+	}
+	arr := make([]int8, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		num, err := strconv.ParseInt(valueStr, 10, 8)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int8: %s", err.Error())
+		}
+		arr = append(arr, int8(num))
+	}
+	return arr, nil
+}
+
+func int16Arr(value []interface{}, N int) ([]int16, error) {
+	if N != 0 {
+		arr := make([]int16, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			num, err := strconv.ParseInt(valueStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int16 N: %s", err.Error())
+			}
+			arr[i] = int16(num)
+		}
+		return arr, nil
+	}
+	arr := make([]int16, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		num, err := strconv.ParseInt(valueStr, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int16: %s", err.Error())
+		}
+		arr = append(arr, int16(num))
+	}
+	return arr, nil
+}
+
+func int32Arr(value []interface{}, N int) ([]int32, error) {
+	valueStr := fmt.Sprint(value)
+
+	if N != 0 {
+		arr := make([]int32, N)
+		for i := 0; i < len(value); i++ {
+			num, err := strconv.ParseInt(valueStr, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int32 N: %s", err.Error())
+			}
+			arr[i] = int32(num)
+		}
+		return arr, nil
+	}
+	arr := make([]int32, 0)
+	for i := 0; i < len(value); i++ {
+		num, err := strconv.ParseInt(valueStr, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int32: %s", err.Error())
+		}
+		arr = append(arr, int32(num))
+	}
+	return arr, nil
+}
+
+func int64Arr(value []interface{}, N int) ([]int64, error) {
+	if N != 0 {
+		arr := make([]int64, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			num, err := strconv.ParseInt(valueStr, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int64 N: %s", err.Error())
+			}
+			arr[i] = int64(num)
+		}
+		return arr, nil
+	}
+	arr := make([]int64, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		num, err := strconv.ParseInt(valueStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int64 N: %s", err.Error())
+		}
+		arr = append(arr, int64(num))
+	}
+	return arr, nil
+}
+
+func bigIntArr(value []interface{}, N int) (interface{}, error) {
+
+	if N != 0 {
+		arr := make([]*big.Int, N)
+		for i := 0; i < len(value); i++ {
+			bigInt := new(big.Int)
+			valueStr := fmt.Sprint(value)
+			num, ok := bigInt.SetString(valueStr, 10)
+			if !ok {
+				return nil, fmt.Errorf("failed to set big.Int from value N: %s", valueStr)
+			}
+			arr[i] = num
+		}
+		return arr, nil
+	} else {
+		arr := make([]*big.Int, N)
+		for i := 0; i < len(value); i++ {
+			bigInt := new(big.Int)
+			valueStr := fmt.Sprint(value)
+			num, ok := bigInt.SetString(valueStr, 10)
+			if !ok {
+				return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+			}
+			arr = append(arr, num)
+		}
+		return arr, nil
+	}
+}
+
+func parseUintArray(key string, value []interface{}, N int) (interface{}, error) {
+	isM := regexp.MustCompile("(uint)([0-9]+)")
+	bitStr := isM.FindStringSubmatch(key)
+	if bitStr != nil {
+		bitNum, err := strconv.ParseInt(bitStr[2], 10, 32)
+		if err != nil {
+			panic(fmt.Sprintf("parse int err: %s", err.Error()))
+		}
+		switch {
+		case bitNum <= 8:
+			return uint8Arr(value, N)
+		case bitNum <= 16:
+			return uint16Arr(value, N)
+		case bitNum <= 32:
+			return uint32Arr(value, N)
+		case bitNum <= 64:
+			return uint64Arr(value, N)
+		default:
+			return bigIntArr(value, N)
+		}
+	} else {
+		return bigIntArr(value, N)
+	}
+}
+
+func uint8Arr(value []interface{}, N int) ([]uint8, error) {
+	if N != 0 {
+		arr := make([]uint8, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			num, err := strconv.ParseUint(valueStr, 10, 8)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int8 N: %s", err.Error())
+			}
+			arr[i] = uint8(num)
+		}
+		return arr, nil
+	}
+	arr := make([]uint8, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		num, err := strconv.ParseUint(valueStr, 10, 8)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int8: %s", err.Error())
+		}
+		arr = append(arr, uint8(num))
+	}
+	return arr, nil
+}
+
+func uint16Arr(value []interface{}, N int) ([]uint16, error) {
+	if N != 0 {
+		arr := make([]uint16, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			num, err := strconv.ParseUint(valueStr, 10, 16)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int16 N: %s", err.Error())
+			}
+			arr[i] = uint16(num)
+		}
+		return arr, nil
+	}
+	arr := make([]uint16, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		num, err := strconv.ParseUint(valueStr, 10, 16)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int16: %s", err.Error())
+		}
+		arr = append(arr, uint16(num))
+	}
+	return arr, nil
+}
+
+func uint32Arr(value []interface{}, N int) ([]uint32, error) {
+	if N != 0 {
+		arr := make([]uint32, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			num, err := strconv.ParseUint(valueStr, 10, 32)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int32 N: %s", err.Error())
+			}
+			arr[i] = uint32(num)
+		}
+		return arr, nil
+	}
+	arr := make([]uint32, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		num, err := strconv.ParseUint(valueStr, 10, 32)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int32: %s", err.Error())
+		}
+		arr = append(arr, uint32(num))
+	}
+	return arr, nil
+}
+
+func uint64Arr(value []interface{}, N int) ([]uint64, error) {
+	if N != 0 {
+		arr := make([]uint64, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			num, err := strconv.ParseUint(valueStr, 10, 64)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse int64 N: %s", err.Error())
+			}
+			arr[i] = uint64(num)
+		}
+		return arr, nil
+	}
+	arr := make([]uint64, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		num, err := strconv.ParseUint(valueStr, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse int64: %s", err.Error())
+		}
+		arr = append(arr, uint64(num))
+	}
+	return arr, nil
+}
+
+func parseBoolArr(value []interface{}, N int) ([]bool, error) {
+	if N != 0 {
+		arr := make([]bool, N)
+		for i := 0; i < len(value); i++ {
+			valueStr := fmt.Sprint(value)
+			b, err := strconv.ParseBool(valueStr)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse bool N: %s", err.Error())
+			}
+			arr[i] = b
+		}
+		return arr, nil
+	}
+	arr := make([]bool, 0)
+	for i := 0; i < len(value); i++ {
+		valueStr := fmt.Sprint(value)
+		b, err := strconv.ParseBool(valueStr)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse bool: %s", err.Error())
+		}
+		arr = append(arr, b)
+	}
+	return arr, nil
+}
+
+func parseAddressArr(value []interface{}, N int) (interface{}, error) {
+	if N != 0 {
+		arr := make([][]byte, N)
+		for i := 0; i < len(value); i++ {
+			addr := parseAddress(value[i])
+			arr[i] = addr
+		}
+		return arr, nil
+	} else {
+		arr := make([][]byte, 0)
+		for i := 0; i < len(value); i++ {
+			addr := parseAddress(value[i])
+			arr = append(arr, addr)
+		}
+		return arr, nil
+	}
+}
+
+func parseBytesArr(key string, value []interface{}, N int) (interface{}, error) {
+	if N != 0 {
+		arr := make([][]byte, N)
+		for i := 0; i < len(value); i++ {
+			b, err := parseBytes(key, value[i])
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse bytes N: %s", err.Error())
+			}
+			arr[i] = b
+		}
+		return arr, nil
+	} else {
+		arr := make([][]byte, 0)
+		for i := 0; i < len(value); i++ {
+			b, err := parseBytes(key, value[i])
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse bytes : %s", err.Error())
+			}
+			arr = append(arr, b)
+		}
+		return arr, nil
 	}
 }
