@@ -635,6 +635,15 @@ vm:
       # Max number of connection created to connect docker vm service
       max_connection: 5
 
+      # Preload contract processes or not when starting
+      preload_disable: false
+
+      # The number of preload processes calculated by use frequency
+      preload_num_by_use_frequency: 10
+
+      # The number of preload processes calculated by recent invocation time
+      preload_num_by_last_time: 10
+
 
   # Java runtime in docker container
   java:
