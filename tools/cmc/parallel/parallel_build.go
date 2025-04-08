@@ -203,7 +203,6 @@ func makeKvs(requestId int64) ([]*commonPb.KeyValuePair, error) {
 			p.mu.Unlock()
 			atomic.AddInt64(&totalRandomSentTxs, 1)
 		case p.ValueFormat != "":
-			fmt.Println("qqq: ", p.ValueFormat)
 			var err error
 			val, err = addFormatValue(p)
 			if err != nil {
