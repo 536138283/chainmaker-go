@@ -135,6 +135,9 @@ func parse(sType string, value interface{}) (arg interface{}, err error) {
 	if matches == nil {
 		return nil, fmt.Errorf("invalid type format: %s", sType)
 	}
+	if len(matches) < 3 {
+		return nil, fmt.Errorf("irregular solidity type input: %s", sType)
+	}
 	arrayPart := matches[2]
 	// 处理非数组类型
 	if arrayPart == "" {
@@ -176,7 +179,7 @@ func baseTypeParse(sType string, value interface{}) (interface{}, error) {
 	case boolType:
 		return parseBool(value)
 	case addressType:
-		return parseAddress(value), nil
+		return parseAddress(value)
 	case bytesType, bytes1Type, bytes2Type, bytes3Type, bytes4Type, bytes5Type, bytes6Type, bytes7Type, bytes8Type,
 		bytes9Type, bytes10Type, bytes11Type, bytes12Type, bytes13Type, bytes14Type, bytes15Type, bytes16Type,
 		bytes17Type, bytes18Type, bytes19Type, bytes20Type, bytes21Type, bytes22Type, bytes23Type, bytes24Type,
@@ -355,11 +358,18 @@ func parseBool(value interface{}) (bool, error) {
 	return v, nil
 }
 
-func parseAddress(value interface{}) []byte {
+func parseAddress(value interface{}) ([]byte, error) {
 	sAddress := fmt.Sprint(value)
-	bytes := make([]byte, 0)
-	bytes = append(bytes, []byte(sAddress)...)
-	return bytes
+	hexStr := fmt.Sprint(value)
+	if len(hexStr) > 2 && hexStr[:2] == "0x" {
+		hexStr = hexStr[2:]
+	}
+	// 将 uint64 编码为字节（小端字节序）
+	b, err := hex.DecodeString(sAddress)
+	if err != nil {
+		return nil, fmt.Errorf("invalid hex string: %s", value)
+	}
+	return b, nil
 }
 
 func parseBytes(key string, value interface{}) ([]byte, error) {
@@ -732,14 +742,20 @@ func parseAddressArr(value []interface{}, N int) (interface{}, error) {
 	if N != 0 {
 		arr := make([][]byte, N)
 		for i := 0; i < len(value); i++ {
-			addr := parseAddress(value[i])
+			addr, err := parseAddress(value[i])
+			if err != nil {
+				return nil, err
+			}
 			arr[i] = addr
 		}
 		return arr, nil
 	} else {
 		arr := make([][]byte, 0)
 		for i := 0; i < len(value); i++ {
-			addr := parseAddress(value[i])
+			addr, err := parseAddress(value[i])
+			if err != nil {
+				return nil, err
+			}
 			arr = append(arr, addr)
 		}
 		return arr, nil

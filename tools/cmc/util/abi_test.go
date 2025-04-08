@@ -1394,3 +1394,822 @@ func TestDynamicStringABI(t *testing.T) {
 	expect7 := `6b7036f5000000000000000000000000000000000000000000000000000000000000008000000000000000000000000000000000000000000000000000000000000001c0000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000003800000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e00000000000000000000000000000000000000000000000000000000000000001310000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000013200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000133000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000006000000000000000000000000000000000000000000000000000000000000000a000000000000000000000000000000000000000000000000000000000000000e000000000000000000000000000000000000000000000000000000000000000013400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000135000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001360000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000200000000000000000000000000000000000000000000000000000000000000030000000000000000000000000000000000000000000000000000000000000003000000000000000000000000000000000000000000000000000000000000000400000000000000000000000000000000000000000000000000000000000000050000000000000000000000000000000000000000000000000000000000000006`
 	fmt.Println(expect7 == fmt.Sprintf("%x", string(data7)))
 }
+
+// 长三角json
+var cJson string = `[
+        {
+                "inputs": [
+                        {
+                                "internalType": "string",
+                                "name": "name",
+                                "type": "string"
+                        },
+                        {
+                                "internalType": "string",
+                                "name": "symbol",
+                                "type": "string"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "titleEscrowFactory_",
+                                "type": "address"
+                        }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "constructor"
+        },
+        {
+                "inputs": [],
+                "name": "AccessControlBadConfirmation",
+                "type": "error"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        },
+                        {
+                                "internalType": "bytes32",
+                                "name": "neededRole",
+                                "type": "bytes32"
+                        }
+                ],
+                "name": "AccessControlUnauthorizedAccount",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "EnforcedPause",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "ExpectedPause",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "InvalidAdminAddress",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "InvalidInitialization",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "InvalidTokenId",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "NotInitializing",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "RemarkLengthExceeded",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "TokenExists",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "TokenNotReturnedToIssuer",
+                "type": "error"
+        },
+        {
+                "inputs": [],
+                "name": "TransferFailure",
+                "type": "error"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": false,
+                                "internalType": "uint64",
+                                "name": "version",
+                                "type": "uint64"
+                        }
+                ],
+                "name": "Initialized",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": false,
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        },
+                        {
+                                "indexed": false,
+                                "internalType": "bytes",
+                                "name": "remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "PauseWithRemark",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": false,
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        }
+                ],
+                "name": "Paused",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": true,
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "bytes32",
+                                "name": "previousAdminRole",
+                                "type": "bytes32"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "bytes32",
+                                "name": "newAdminRole",
+                                "type": "bytes32"
+                        }
+                ],
+                "name": "RoleAdminChanged",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": true,
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "address",
+                                "name": "sender",
+                                "type": "address"
+                        }
+                ],
+                "name": "RoleGranted",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": true,
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "address",
+                                "name": "sender",
+                                "type": "address"
+                        }
+                ],
+                "name": "RoleRevoked",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": true,
+                                "internalType": "address",
+                                "name": "from",
+                                "type": "address"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "address",
+                                "name": "to",
+                                "type": "address"
+                        },
+                        {
+                                "indexed": true,
+                                "internalType": "uint256",
+                                "name": "tokenId",
+                                "type": "uint256"
+                        }
+                ],
+                "name": "Transfer",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": false,
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        },
+                        {
+                                "indexed": false,
+                                "internalType": "bytes",
+                                "name": "remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "UnpauseWithRemark",
+                "type": "event"
+        },
+        {
+                "anonymous": false,
+                "inputs": [
+                        {
+                                "indexed": false,
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        }
+                ],
+                "name": "Unpaused",
+                "type": "event"
+        },
+        {
+                "inputs": [],
+                "name": "ACCEPTER_ROLE",
+                "outputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "",
+                                "type": "bytes32"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "DEFAULT_ADMIN_ROLE",
+                "outputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "",
+                                "type": "bytes32"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "MINTER_ROLE",
+                "outputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "",
+                                "type": "bytes32"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "RESTORER_ROLE",
+                "outputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "",
+                                "type": "bytes32"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "owner",
+                                "type": "address"
+                        }
+                ],
+                "name": "balanceOf",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "tokenId",
+                                "type": "uint256"
+                        },
+                        {
+                                "internalType": "bytes",
+                                "name": "_remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "burn",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "genesis",
+                "outputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        }
+                ],
+                "name": "getRoleAdmin",
+                "outputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "",
+                                "type": "bytes32"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        }
+                ],
+                "name": "grantRole",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        }
+                ],
+                "name": "hasRole",
+                "outputs": [
+                        {
+                                "internalType": "bool",
+                                "name": "",
+                                "type": "bool"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "beneficiary",
+                                "type": "address"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "holder",
+                                "type": "address"
+                        },
+                        {
+                                "internalType": "uint256",
+                                "name": "tokenId",
+                                "type": "uint256"
+                        },
+                        {
+                                "internalType": "bytes",
+                                "name": "_remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "mint",
+                "outputs": [
+                        {
+                                "internalType": "address",
+                                "name": "",
+                                "type": "address"
+                        }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "name",
+                "outputs": [
+                        {
+                                "internalType": "string",
+                                "name": "",
+                                "type": "string"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "",
+                                "type": "address"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "",
+                                "type": "address"
+                        },
+                        {
+                                "internalType": "uint256",
+                                "name": "",
+                                "type": "uint256"
+                        },
+                        {
+                                "internalType": "bytes",
+                                "name": "",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "onERC721Received",
+                "outputs": [
+                        {
+                                "internalType": "bytes4",
+                                "name": "",
+                                "type": "bytes4"
+                        }
+                ],
+                "stateMutability": "pure",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "tokenId",
+                                "type": "uint256"
+                        }
+                ],
+                "name": "ownerOf",
+                "outputs": [
+                        {
+                                "internalType": "address",
+                                "name": "",
+                                "type": "address"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes",
+                                "name": "_remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "pause",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "paused",
+                "outputs": [
+                        {
+                                "internalType": "bool",
+                                "name": "",
+                                "type": "bool"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "remark",
+                "outputs": [
+                        {
+                                "internalType": "bytes",
+                                "name": "",
+                                "type": "bytes"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "callerConfirmation",
+                                "type": "address"
+                        }
+                ],
+                "name": "renounceRole",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "tokenId",
+                                "type": "uint256"
+                        },
+                        {
+                                "internalType": "bytes",
+                                "name": "_remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "restore",
+                "outputs": [
+                        {
+                                "internalType": "address",
+                                "name": "",
+                                "type": "address"
+                        }
+                ],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "account",
+                                "type": "address"
+                        }
+                ],
+                "name": "revokeRole",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "string",
+                                "name": "baseURI",
+                                "type": "string"
+                        }
+                ],
+                "name": "setBaseURI",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes32",
+                                "name": "role",
+                                "type": "bytes32"
+                        },
+                        {
+                                "internalType": "bytes32",
+                                "name": "adminRole",
+                                "type": "bytes32"
+                        }
+                ],
+                "name": "setRoleAdmin",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes4",
+                                "name": "interfaceId",
+                                "type": "bytes4"
+                        }
+                ],
+                "name": "supportsInterface",
+                "outputs": [
+                        {
+                                "internalType": "bool",
+                                "name": "",
+                                "type": "bool"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "symbol",
+                "outputs": [
+                        {
+                                "internalType": "string",
+                                "name": "",
+                                "type": "string"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [],
+                "name": "titleEscrowFactory",
+                "outputs": [
+                        {
+                                "internalType": "contract ITitleEscrowFactory",
+                                "name": "",
+                                "type": "address"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "uint256",
+                                "name": "tokenId",
+                                "type": "uint256"
+                        }
+                ],
+                "name": "tokenURI",
+                "outputs": [
+                        {
+                                "internalType": "string",
+                                "name": "",
+                                "type": "string"
+                        }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "address",
+                                "name": "from",
+                                "type": "address"
+                        },
+                        {
+                                "internalType": "address",
+                                "name": "to",
+                                "type": "address"
+                        },
+                        {
+                                "internalType": "uint256",
+                                "name": "tokenId",
+                                "type": "uint256"
+                        },
+                        {
+                                "internalType": "bytes",
+                                "name": "_remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "transferFrom",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        },
+        {
+                "inputs": [
+                        {
+                                "internalType": "bytes",
+                                "name": "_remark",
+                                "type": "bytes"
+                        }
+                ],
+                "name": "unpause",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+        }
+]`
+
+func TestPack3(t *testing.T) {
+	param := "[{\"address\": \"cba11b60be305cb0c778c37873d0ff9c595d7789\"},{\"address\": \"cba11b60be305cb0c778c37873d0ff9c595d7789\"},{\"uint256\": \"15\"},{\"bytes\": \"cba11b60be305cb0c778c37873d0ff9c595d7789\"}]"
+	abi, err := ethabi.JSON(strings.NewReader(cJson))
+	if err != nil {
+		t.Error(err)
+	}
+
+	b, err := Pack(abi, "mint", param)
+	if err != nil {
+		t.Error(err)
+	}
+	fmt.Printf("%x\n", b)
+}
+
+//6010a5e7 2.4.0
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000000000000000000000000000000000000000000f
+//0000000000000000000000000000000000000000000000000000000000000080
+//0000000000000000000000000000000000000000000000000000000000000014
+//cba11b60be305cb0c778c37873d0ff9c595d7789000000000000000000000000
+//6010a5e7 evm
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000000000000000000000000000000000000000000f
+
+//0000000000000000000000000000000000000000000000000000000000000080
+//0000000000000000000000000000000000000000000000000000000000000028
+//63626131316236306265333035636230633737386333373837336430666639633539356437373839000000000000000000000000000000000000000000000000
+
+// 234
+// 6010a5e7
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000000000000000000000000000000000000000000f
+//0000000000000000000000000000000000000000000000000000000000000080
+//0000000000000000000000000000000000000000000000000000000000000028
+//63626131316236306265333035636230633737386333373837336430666639633539356437373839000000000000000000000000000000000000000000000000
+
+// 240 new
+//6010a5e7
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000cba11b60be305cb0c778c37873d0ff9c595d7789
+//000000000000000000000000000000000000000000000000000000000000000f
+//0000000000000000000000000000000000000000000000000000000000000080
+//0000000000000000000000000000000000000000000000000000000000000014
+//cba11b60be305cb0c778c37873d0ff9c595d7789000000000000000000000000
