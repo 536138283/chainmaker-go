@@ -8,6 +8,7 @@ package util
 
 import (
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -363,34 +364,26 @@ func parseAddress(value interface{}) []byte {
 
 func parseBytes(key string, value interface{}) ([]byte, error) {
 	rest := key[len("bytes"):]
-
-	bytesStr := fmt.Sprint(value)
-	// bytes为空代表动态的byte数组否则为定长byte数组
-	if rest == "" {
-		bytes := make([]byte, 0)
-
-		bytes = append(bytes, []byte(bytesStr)...)
-		return bytes, nil
-	}
 	// 将剩余部分转换为整数
-	n, err := strconv.Atoi(rest)
+	if rest != "" {
+		n, err := strconv.Atoi(rest)
+		if err != nil {
+			return nil, fmt.Errorf("invalid number: %s", rest)
+		}
+		if n < 1 || n > 32 {
+			return nil, fmt.Errorf("bytes number must be between 1 and 32")
+		}
+	}
+	hexStr := fmt.Sprint(value)
+	if len(hexStr) > 2 && hexStr[:2] == "0x" {
+		hexStr = hexStr[2:]
+	}
+	// 将 uint64 编码为字节（小端字节序）
+	b, err := hex.DecodeString(hexStr)
 	if err != nil {
-		return nil, fmt.Errorf("invalid number: %s", rest)
+		return nil, fmt.Errorf("invalid hex string: %s", value)
 	}
-	// 检查 N 是否在 1 到 32 之间
-	if n < 1 || n > 32 {
-		return nil, fmt.Errorf("bytes number must be between 1 and 32")
-	}
-	// 创建定长切片并返回
-	bytes := make([]byte, n)
-	fmt.Println(len(bytes))
-	fmt.Println(value)
-	fmt.Println(len([]byte(bytesStr)))
-	fmt.Println([]byte(bytesStr))
-	for i := range []byte(bytesStr) {
-		bytes[i] = []byte(bytesStr)[i]
-	}
-	return bytes, nil
+	return b, nil
 }
 
 func parseArr(key string, value interface{}, N int) (interface{}, error) {
