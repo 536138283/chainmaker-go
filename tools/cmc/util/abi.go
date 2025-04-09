@@ -19,117 +19,45 @@ import (
 	"strings"
 )
 
-const (
-	stringType = "string"
-	// solidity 全部int类型
-	intType    = "int"
-	int8Type   = "int8"
-	int16Type  = "int16"
-	int24Type  = "int24"
-	int32Type  = "int32"
-	int40Type  = "int40"
-	int48Type  = "int48"
-	int56Type  = "int56"
-	int64Type  = "int64"
-	int72Type  = "int72"
-	int80Type  = "int80"
-	int88Type  = "int88"
-	int96Type  = "int96"
-	int104Type = "int114"
-	int112Type = "int112"
-	int120Type = "int120"
-	int128Type = "int128"
-	int136Type = "int136"
-	int144Type = "int144"
-	int152Type = "int152"
-	int160Type = "int160"
-	int168Type = "int168"
-	int176Type = "int176"
-	int184Type = "int184"
-	int192Type = "int192"
-	int200Type = "int200"
-	int208Type = "int208"
-	int216Type = "int216"
-	int224Type = "int224"
-	int232Type = "int232"
-	int240Type = "int240"
-	int248Type = "int248"
-	int256Type = "int256"
-	// 全部uint类型
-	uintType    = "uint"
-	uint8Type   = "uint8"
-	uint16Type  = "uint16"
-	uint24Type  = "uint24"
-	uint32Type  = "uint32"
-	uint40Type  = "uint40"
-	uint48Type  = "uint48"
-	uint56Type  = "uint56"
-	uint64Type  = "uint64"
-	uint72Type  = "uint72"
-	uint80Type  = "uint80"
-	uint88Type  = "uint88"
-	uint96Type  = "uint96"
-	uint104Type = "uint114"
-	uint112Type = "uint112"
-	uint120Type = "uint120"
-	uint128Type = "uint128"
-	uint136Type = "uint136"
-	uint144Type = "uint144"
-	uint152Type = "uint152"
-	uint160Type = "uint160"
-	uint168Type = "uint168"
-	uint176Type = "uint176"
-	uint184Type = "uint184"
-	uint192Type = "uint192"
-	uint200Type = "uint200"
-	uint208Type = "uint208"
-	uint216Type = "uint216"
-	uint224Type = "uint224"
-	uint232Type = "uint232"
-	uint240Type = "uint240"
-	uint248Type = "uint248"
-	uint256Type = "uint256"
-	boolType    = "bool"
-	addressType = "address"
-	// solidity中的bytes类型
-	bytesType   = "bytes"
-	bytes1Type  = "bytes1"
-	bytes2Type  = "bytes2"
-	bytes3Type  = "bytes3"
-	bytes4Type  = "bytes4"
-	bytes5Type  = "bytes5"
-	bytes6Type  = "bytes6"
-	bytes7Type  = "bytes7"
-	bytes8Type  = "bytes8"
-	bytes9Type  = "bytes9"
-	bytes10Type = "bytes10"
-	bytes11Type = "bytes11"
-	bytes12Type = "bytes12"
-	bytes13Type = "bytes13"
-	bytes14Type = "bytes14"
-	bytes15Type = "bytes15"
-	bytes16Type = "bytes16"
-	bytes17Type = "bytes17"
-	bytes18Type = "bytes18"
-	bytes19Type = "bytes19"
-	bytes20Type = "bytes20"
-	bytes21Type = "bytes21"
-	bytes22Type = "bytes22"
-	bytes23Type = "bytes23"
-	bytes24Type = "bytes24"
-	bytes25Type = "bytes25"
-	bytes26Type = "bytes26"
-	bytes27Type = "bytes27"
-	bytes28Type = "bytes28"
-	bytes29Type = "bytes29"
-	bytes30Type = "bytes30"
-	bytes31Type = "bytes31"
-	bytes32Type = "bytes32"
-)
+// loadFromJSON string into ABI data
+func loadFromJSON(jString string) ([]Param, error) {
+	if len(jString) == 0 {
+		return nil, nil
+	}
+	data := []Param{}
+	err := json.Unmarshal([]byte(jString), &data)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
+}
+
+// Pack data into bytes
+func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
+	param, err := loadFromJSON(paramsJson)
+	if err != nil {
+		return nil, err
+	}
+	var args []interface{}
+	for _, p := range param {
+		for k, v := range p {
+			arg, err := parse(k, v)
+			if err != nil {
+				return nil, err
+			}
+			args = append(args, arg)
+		}
+	}
+	data, _ := a.Pack(method, args...)
+	fmt.Printf("%x \n", data)
+	return a.Pack(method, args...)
+
+}
 
 // parse 把interface{}类型，解析成为solidity类型中对应的go的类型
 func parse(sType string, value interface{}) (arg interface{}, err error) {
-	// 将solidity分割成两部分 以string[8]为例子 分割成 string [8]
+	// 正则表达式将解析solidity中的类型
+	// 例：string[3] 分解为长度为3的string数组：matches[0] = string[3] ,matches[1] = string, matches[2] = [3]
 	typeRegex := regexp.MustCompile(`^([a-zA-Z]+[0-9]*)((?:\[[0-9]*\])*)$`)
 	matches := typeRegex.FindStringSubmatch(sType)
 	if matches == nil {
@@ -163,74 +91,100 @@ func parse(sType string, value interface{}) (arg interface{}, err error) {
 
 // baseTypeParse 基本数据类型解析
 func baseTypeParse(sType string, value interface{}) (interface{}, error) {
-	switch sType {
-	case stringType:
+	switch {
+	case isStringType(sType):
 		return parseStr(value), nil
-	case intType, int8Type, int16Type, int24Type, int32Type, int40Type, int48Type, int56Type, int64Type, int72Type,
-		int80Type, int88Type, int96Type, int104Type, int112Type, int120Type, int128Type, int136Type, int144Type,
-		int152Type, int160Type, int168Type, int176Type, int184Type, int192Type, int200Type, int208Type, int216Type,
-		int224Type, int232Type, int240Type, int248Type, int256Type:
+	case isIntType(sType):
 		return parseInt(sType, value)
-	case uintType, uint8Type, uint16Type, uint24Type, uint32Type, uint40Type, uint48Type, uint56Type, uint64Type,
-		uint72Type, uint80Type, uint88Type, uint96Type, uint104Type, uint112Type, uint120Type, uint128Type, uint136Type,
-		uint144Type, uint152Type, uint160Type, uint168Type, uint176Type, uint184Type, uint192Type, uint200Type,
-		uint224Type, uint232Type, uint240Type, uint248Type, uint256Type, uint208Type, uint216Type:
+	case isUintType(sType):
 		return parseUint(sType, value)
-	case boolType:
+	case isBoolType(sType):
 		return parseBool(value)
-	case addressType:
+	case isAddressType(sType):
 		return parseAddress(value)
-	case bytesType, bytes1Type, bytes2Type, bytes3Type, bytes4Type, bytes5Type, bytes6Type, bytes7Type, bytes8Type,
-		bytes9Type, bytes10Type, bytes11Type, bytes12Type, bytes13Type, bytes14Type, bytes15Type, bytes16Type,
-		bytes17Type, bytes18Type, bytes19Type, bytes20Type, bytes21Type, bytes22Type, bytes23Type, bytes24Type,
-		bytes25Type, bytes26Type, bytes27Type, bytes28Type, bytes29Type, bytes30Type, bytes31Type, bytes32Type:
+	case isBytesType(sType):
 		return parseBytes(sType, value)
 	default:
 		return value, nil
 	}
 }
 
+// isStringType 检查给定的字符串是否为Solidity中的string类型。
+func isStringType(sType string) bool {
+	return sType == "string"
+}
+
+// isIntType 检查给定的字符串是否为Solidity中的int类型。
+func isIntType(sType string) bool {
+	// solidity中的全部int类型列表
+	intTypes := []string{
+		"int", "int8", "int16", "int24", "int32", "int40", "int48", "int56", "int64",
+		"int72", "int80", "int88", "int96", "int104", "int112", "int120", "int128",
+		"int136", "int144", "int152", "int160", "int168", "int176", "int184", "int192",
+		"int200", "int208", "int216", "int224", "int232", "int240", "int248", "int256",
+	}
+	for _, iType := range intTypes {
+		if iType == sType {
+			return true
+		}
+	}
+	return false
+}
+
+// isIntType 检查给定的字符串是否为Solidity中的uint类型。
+func isUintType(sType string) bool {
+	uintTypes := []string{
+		"uint", "uint8", "uint16", "uint24", "uint32", "uint40", "uint48", "uint56", "uint64",
+		"uint72", "uint80", "uint88", "uint96", "uint104", "uint112", "uint120", "uint128",
+		"uint136", "uint144", "uint152", "uint160", "uint168", "uint176", "uint184", "uint192",
+		"uint200", "uint208", "uint216", "uint224", "uint232", "uint240", "uint248", "uint256",
+	}
+	for _, iType := range uintTypes {
+		if iType == sType {
+			return true
+		}
+	}
+	return false
+}
+
+// isBoolType 检查给定的字符串是否为Solidity中的bool类型。
+func isBoolType(sType string) bool {
+	return sType == "bool"
+}
+
+// isBoolType 检查给定的字符串是否为Solidity中的address类型。
+func isAddressType(sType string) bool {
+	return sType == "address"
+}
+
+// isBoolType 检查给定的字符串是否为Solidity中的bytes类型。
+func isBytesType(sType string) bool {
+	// solidity中全部的bytes类型列表
+	bytesTypes := []string{
+		"bytes", "bytes1", "bytes2", "bytes3", "bytes4", "bytes5", "bytes6", "bytes7", "bytes8",
+		"bytes9", "bytes10", "bytes11", "bytes12", "bytes13", "bytes14", "bytes15", "bytes16",
+		"bytes17", "bytes18", "bytes19", "bytes20", "bytes21", "bytes22", "bytes23", "bytes24",
+		"bytes25", "bytes26", "bytes27", "bytes28", "bytes29", "bytes30", "bytes31", "bytes32",
+	}
+	for _, iType := range bytesTypes {
+		if iType == sType {
+			return true
+		}
+	}
+	return false
+}
+
 // Param list
 type Param map[string]interface{}
 
-// loadFromJSON string into ABI data
-func loadFromJSON(jString string) ([]Param, error) {
-	if len(jString) == 0 {
-		return nil, nil
-	}
-	data := []Param{}
-	err := json.Unmarshal([]byte(jString), &data)
-	if err != nil {
-		return nil, err
-	}
-	return data, nil
-}
-
-// Pack data into bytes
-func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
-	param, err := loadFromJSON(paramsJson)
-	if err != nil {
-		return nil, err
-	}
-	var args []interface{}
-	for _, p := range param {
-		for k, v := range p {
-			arg, err := parse(k, v)
-			if err != nil {
-				return nil, err
-			}
-			args = append(args, arg)
-		}
-	}
-	return a.Pack(method, args...)
-
-}
-
 // parseInt 处理int类型数据
 func parseInt(key string, value interface{}) (interface{}, error) {
-	// solidity 不支持浮点数所以直接转换成int类型
+	// 如果是intN类型的数据则使用正则表达式取出N的值
 	isM := regexp.MustCompile("(int)([0-9]+)")
 	bitStr := isM.FindStringSubmatch(key)
+	if len(bitStr) < 3 {
+		return nil, fmt.Errorf("irregular solidity int type input: %s", key)
+	}
 	// 先把value转换成string类型
 	valueStr := fmt.Sprint(value)
 	if bitStr != nil {
@@ -239,6 +193,7 @@ func parseInt(key string, value interface{}) (interface{}, error) {
 			panic(fmt.Sprintf("parse int err: %s", err.Error()))
 		}
 		var result interface{}
+		// 根据solidity中int类型的大小赋予合适的int类型
 		switch {
 		case bitNum <= 8:
 			num, err := strconv.ParseInt(valueStr, 10, 8)
@@ -402,15 +357,15 @@ func parseArr(key string, value interface{}, N int) (interface{}, error) {
 		return nil, errors.New("value is not a []interface{}")
 	}
 	switch {
-	case key == stringType:
+	case isStringType(key):
 		return parseStrArr(slice, N), nil
 	case strings.Contains(key, "int") && !strings.Contains(key, "uint"):
 		return parseIntArray(key, slice, N)
 	case strings.Contains(key, "uint"):
 		return parseUintArray(key, slice, N)
-	case key == boolType:
+	case isBoolType(key):
 		return parseBoolArr(slice, N)
-	case key == addressType:
+	case isAddressType(key):
 		return parseAddressArr(slice, N)
 	case strings.Contains(key, "bytes"):
 		return parseBytesArr(key, slice, N)
