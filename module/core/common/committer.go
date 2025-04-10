@@ -31,7 +31,7 @@ type CommitBlock struct {
 	msgBus          msgbus.MessageBus
 }
 
-// CommitBlock the action that all consensus types do when a block is committed
+// CommitBlock the action that all consensus types do when a block is committed.
 func (cb *CommitBlock) CommitBlock(
 	block *commonpb.Block,
 	rwSetMap map[string]*commonpb.TxRWSet,
