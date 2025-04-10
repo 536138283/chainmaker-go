@@ -48,8 +48,6 @@ func Pack(a *abi.ABI, method string, paramsJson string) ([]byte, error) {
 			args = append(args, arg)
 		}
 	}
-	data, _ := a.Pack(method, args...)
-	fmt.Printf("%x \n", data)
 	return a.Pack(method, args...)
 
 }
@@ -221,7 +219,7 @@ func parseInt(key string, value interface{}) (interface{}, error) {
 			result = int64(num)
 		default:
 			// 对于大于 64 位的整数，使用 math/big 包
-			bigInt := new(big.Int)
+			bigInt := big.NewInt(0)
 			num, ok := bigInt.SetString(valueStr, 10)
 			if !ok {
 				return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
@@ -231,7 +229,7 @@ func parseInt(key string, value interface{}) (interface{}, error) {
 		return result, nil
 	} else {
 		// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
-		bigInt := new(big.Int)
+		bigInt := big.NewInt(0)
 		num, ok := bigInt.SetString(valueStr, 10)
 		if !ok {
 			return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
@@ -280,7 +278,7 @@ func parseUint(key string, value interface{}) (interface{}, error) {
 			result = uint64(num)
 		default:
 			// 对于大于 64 位的整数，使用 math/big 包
-			bigInt := new(big.Int)
+			bigInt := big.NewInt(0)
 			num, ok := bigInt.SetString(valueStr, 10)
 			if !ok {
 				return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
@@ -290,7 +288,7 @@ func parseUint(key string, value interface{}) (interface{}, error) {
 		return result, nil
 	} else {
 		// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
-		bigInt := new(big.Int)
+		bigInt := big.NewInt(0)
 		num, ok := bigInt.SetString(valueStr, 10)
 		if !ok {
 			return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
@@ -519,7 +517,7 @@ func bigIntArr(value []interface{}, N int) ([]*big.Int, error) {
 	if N != 0 {
 		arr := make([]*big.Int, N)
 		for i := 0; i < len(value); i++ {
-			bigInt := new(big.Int)
+			bigInt := big.NewInt(0)
 			valueStr := fmt.Sprint(value[i])
 			num, ok := bigInt.SetString(valueStr, 10)
 			if !ok {
@@ -531,7 +529,7 @@ func bigIntArr(value []interface{}, N int) ([]*big.Int, error) {
 	} else {
 		arr := make([]*big.Int, N)
 		for i := 0; i < len(value); i++ {
-			bigInt := new(big.Int)
+			bigInt := big.NewInt(0)
 			valueStr := fmt.Sprint(value[i])
 			num, ok := bigInt.SetString(valueStr, 10)
 			if !ok {
