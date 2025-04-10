@@ -6,15 +6,20 @@ SPDX-License-Identifier: Apache-2.0
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strconv"
 
-	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
-	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/config"
+	"chainmaker.org/chainmaker/pb-go/v2/consensus"
+	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/utils/v2"
+	"github.com/gogo/protobuf/proto"
+
+	"chainmaker.org/chainmaker/common/v2/msgbus"
+	commonpb "chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker/pb-go/v2/config"
 )
 
 const (
@@ -91,6 +96,44 @@ func (cb *CommitBlock) CommitBlock(
 			return 0, 0, 0, 0, 0, 0, nil, err
 		}
 		confLasts = utils.CurrentTimeMillisSeconds() - startConfTick
+	} else {
+		//如果是dpos，需要识别chainconf并发消息
+		if utils.HasDPosTxWritesInHeader(block, cb.chainConf) {
+			cb.log.Debugf("ChainConfig before change,(block %d) chainConf=[%s]",
+				block.Header.BlockHeight,
+				cb.chainConf.ChainConfig())
+			consensusArgs := &consensus.BlockHeaderConsensusArgs{}
+			err := proto.Unmarshal(block.Header.ConsensusArgs, consensusArgs)
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, nil, err
+			}
+			//解析区块中consensusArgs中chainconf更新当前配置，并将最新chainconf发送给其他模块
+			for _, w := range consensusArgs.ConsensusData.TxWrites {
+				if string(w.Key) == syscontract.SystemContract_CHAIN_CONFIG.String() &&
+					w.ContractName == syscontract.SystemContract_CHAIN_CONFIG.String() {
+					chainConf := &config.ChainConfig{}
+					err = proto.Unmarshal(w.Value, chainConf)
+					if err != nil {
+						return 0, 0, 0, 0, 0, 0, nil, err
+					}
+					err = cb.chainConf.SetChainConfig(chainConf)
+					if err != nil {
+						return 0, 0, 0, 0, 0, 0, nil, err
+					}
+				}
+			}
+			//需要从block中读最新读chainconf
+			config := cb.chainConf.ChainConfig()
+			cb.log.Debugf("ChainConfig after change,(block %d) chainConf=[%s]",
+				block.Header.BlockHeight,
+				config)
+			configBytes, err := proto.Marshal(config)
+			if err != nil {
+				return 0, 0, 0, 0, 0, 0, nil, err
+			}
+
+			cb.msgBus.PublishSync(msgbus.ChainConfig, []string{hex.EncodeToString(configBytes)})
+		}
 	}
 	// contract event
 	pubEventLasts = cb.publishContractEvent(block, events)

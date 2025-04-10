@@ -388,6 +388,10 @@ func (sch *scheduler) selectPeer(pendingHeight uint64) string {
 		return ""
 	}
 
+	if len(peers) == 1 {
+		return peers[0]
+	}
+
 	pendingReqInPeers := make(map[int][]string)
 	for i := 0; i < len(peers); i++ {
 		reqNum := sch.getPendingReqInPeer(peers[i])
@@ -400,10 +404,6 @@ func (sch *scheduler) selectPeer(pendingHeight uint64) string {
 		}
 	}
 	peers = pendingReqInPeers[min]
-	if len(peers) == 1 {
-
-		return peers[0]
-	}
 	// sort.Strings(peers) //Sorting seems useless in random scenarios
 	// select a node randomly to avoid one or some nodes being selected all the time,
 	// which may cause sync process to be blocked.

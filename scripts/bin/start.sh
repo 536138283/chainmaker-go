@@ -114,6 +114,9 @@ function start_vm_go() {
   slow_step_time=$chainmaker_vm_go_slow_step_time
   slow_tx_time=$chainmaker_vm_go_slow_tx_time
   process_timeout=$chainmaker_vm_go_process_timeout
+  preload_disable=$chainmaker_vm_go_contract_engine_preload_disable
+  preload_num_by_use_frequency=$chainmaker_vm_go_contract_engine_preload_num_by_use_frequency
+  preload_num_by_last_time=$chainmaker_vm_go_contract_engine_preload_num_by_last_time
 
   if [[ $dockervm_config_path != "" ]];then
     if [[ "${dockervm_config_path:0:1}" != "/" ]];then
@@ -144,6 +147,9 @@ function start_vm_go() {
   -e SLOW_STEP_TIME="$slow_step_time" \
   -e SLOW_TX_TIME="$slow_tx_time" \
   -e PROCESS_TIMEOUT="$process_timeout" \
+  -e PROCESS_PRELOAD_DISABLE="$preload_disable" \
+  -e PROCESS_PRELOAD_NUM_BY_USE_FREQUENCY="$preload_num_by_use_frequency" \
+  -e PROCESS_PRELOAD_NUM_BY_LAST_TIME="$preload_num_by_last_time" \
   --name $container_name \
   --privileged $VM_GO_IMAGE_NAME \
    > /dev/null

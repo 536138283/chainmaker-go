@@ -36,7 +36,7 @@ func TestInitAccessControlService(t *testing.T) {
 		resourceNamePolicyNum++
 		return true
 	})
-	require.Equal(t, resourceNamePolicyNum, 56)
+	require.Equal(t, resourceNamePolicyNum, 58)
 
 	// check sender policy number
 	senderPolicyNum := 0

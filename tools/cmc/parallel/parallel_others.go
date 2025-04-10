@@ -35,6 +35,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var ArriveTargetError = errors.New("arrive target value")
+
 type Detail struct {
 	TPS          float32                `json:"tps"`
 	SuccessCount int                    `json:"successCount"`
@@ -359,7 +361,10 @@ func (t *ThreadOthers) Start() {
 			} else {
 				err = t.handler.handle(t.client, t.sk3, orgIDs[t.index], signCrtPaths[t.index], i)
 			}
-
+			if errors.Is(err, ArriveTargetError) {
+				t.doneChan <- struct{}{}
+				return
+			}
 			elapsed := time.Since(start)
 
 			atomic.AddInt32(&t.statistician.totalCount, 1)
@@ -469,7 +474,10 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvsOthers(h.threadId, loopId)
+	pairs, err := makeKvsOthers(h.threadId, loopId)
+	if err != nil {
+		return err
+	}
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -524,7 +532,10 @@ func (h *queryHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey,
 	txId := utils.GetTimestampTxId()
 
 	// 构造Payload
-	pairs := makeKvsOthers(h.threadId, loopId)
+	pairs, err := makeKvsOthers(h.threadId, loopId)
+	if err != nil {
+		return err
+	}
 	if showKey {
 		j, err := json.Marshal(pairs)
 		if err != nil {
@@ -752,7 +763,7 @@ func sendRequest(sk3 crypto.PrivateKey, client apiPb.RpcNodeClient, msg *Invoker
 	return result, nil
 }
 
-func makeKvsOthers(threadId, loopId int) []*commonPb.KeyValuePair {
+func makeKvsOthers(threadId, loopId int) ([]*commonPb.KeyValuePair, error) {
 	var outKvs []*commonPb.KeyValuePair
 	atomic.AddInt64(&totalSentTxsOthers, 1)
 	for _, p := range globalPairs {
@@ -779,6 +790,12 @@ func makeKvsOthers(threadId, loopId int) []*commonPb.KeyValuePair {
 			p.IntValue++
 			p.mu.Unlock()
 			atomic.AddInt64(&totalRandomSentTxs, 1)
+		case p.ValueFormat != "":
+			var err error
+			val, err = addFormatValue(p)
+			if err != nil {
+				return nil, err
+			}
 		default:
 			val = []byte(p.Value)
 		}
@@ -788,5 +805,55 @@ func makeKvsOthers(threadId, loopId int) []*commonPb.KeyValuePair {
 			Value: val,
 		})
 	}
-	return outKvs
+	return outKvs, nil
+}
+
+func addFormatValue(p *KeyValuePair) ([]byte, error) {
+	valueParams := make([]int64, len(p.ValueParams))
+	p.mu.Lock()
+	for i := 0; i < len(p.ValueParams); i++ {
+		v := p.ValueParams[i]
+		valueParams[i] = p.Values[i]
+		if v.Increase {
+			if v.EndValue < p.Values[i] && v.LoopType == LoopTypeEnd {
+				if !p.ArriveArr[i] {
+					p.ArriveArr[i] = true
+					p.ArriveCount++
+				}
+				if p.EndCount == len(p.ValueParams) && p.ArriveCount >= len(p.Values) {
+					p.mu.Unlock()
+					return nil, ArriveTargetError
+				}
+				continue
+			} else if v.EndValue < p.Values[i] && v.LoopType == LoopTypeRestart {
+				p.Values[i] = v.TempIntValue
+			}
+			p.Values[i]++
+			if p.Values[i] > p.IntPows[i] {
+				p.Values[i] = p.Values[i] % p.IntPows[i]
+			}
+		} else {
+			if v.EndValue > p.Values[i] && v.LoopType == LoopTypeEnd {
+				if !p.ArriveArr[i] {
+					p.ArriveArr[i] = true
+					p.ArriveCount++
+				}
+				if p.EndCount == len(p.ValueParams) && p.ArriveCount >= len(p.Values) {
+					p.mu.Unlock()
+					return nil, ArriveTargetError
+				}
+				continue
+			} else if v.EndValue > p.Values[i] && v.LoopType == LoopTypeRestart {
+				p.Values[i] = v.TempIntValue
+			}
+			p.Values[i]--
+		}
+	}
+	args := make([]interface{}, len(valueParams))
+	for i, v := range valueParams {
+		args[i] = v
+	}
+	val := []byte(fmt.Sprintf(p.ValueFormat, args...))
+	p.mu.Unlock()
+	return val, nil
 }

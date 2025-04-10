@@ -1,11 +1,8 @@
 package parallel
 
 import (
-	"chainmaker.org/chainmaker/common/v2/ca"
-	apiPb "chainmaker.org/chainmaker/pb-go/v2/api"
-	"errors"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"fmt"
-	"google.golang.org/grpc"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -90,6 +87,7 @@ func produce(builder StressBuilder, index int) {
 		param, err := builder.Build(requestId, index)
 		if err != nil {
 			fmt.Printf("producer err: %s\n", err.Error())
+			return
 		}
 		paramQueues[index] <- RequestParam{
 			Param:     param,
@@ -182,47 +180,40 @@ func listenAndExit(timeoutChan, doneChan chan struct{}) {
 // Thread 结构体表示一个执行特定任务的线程或协程实例，
 // 包含了执行循环次数、通信通道、统计信息以及与 gRPC 服务的连接信息。
 type Thread struct {
-	id           int                   // 是线程的唯一标识符，用于区分不同的线程实例
-	loopNum      int                   // 指定线程需要执行循环操作的次数
-	doneChan     chan struct{}         // 是一个通道，用于传递完成信号。当线程完成其指定任务后，会向此通道发送信号
-	timeoutChan  chan struct{}         // 用于接收超时信号。当接收到信号时，表明当前线程可能需要根据超时情况做出响应或终止操作
-	statistician *Statistician         // 是一个指向 Statistician 实例的指针，用于收集和统计线程执行过程中的性能数据或其他相关信息
-	conns        []*grpc.ClientConn    // conn 表示与 gRPC 服务建立的客户端连接，通过此连接可以发起 RPC 调用 conns与clients是相互对应关系
-	clients      []apiPb.RpcNodeClient // 是 gRPC 客户端，类型为 apiPb.RpcNodeClient，封装了对远程节点服务的所有调用能力
-	index        int                   // 用来线程去消费的队列索引
+	id           int                // 是线程的唯一标识符，用于区分不同的线程实例
+	loopNum      int                // 指定线程需要执行循环操作的次数
+	doneChan     chan struct{}      // 是一个通道，用于传递完成信号。当线程完成其指定任务后，会向此通道发送信号
+	timeoutChan  chan struct{}      // 用于接收超时信号。当接收到信号时，表明当前线程可能需要根据超时情况做出响应或终止操作
+	statistician *Statistician      // 是一个指向 Statistician 实例的指针，用于收集和统计线程执行过程中的性能数据或其他相关信息
+	sdkClients   []*sdk.ChainClient // sdkClient对象用来发起请求,每个线程包含host数组数量的client以向不同节点发起请求
+	index        int                // 用来线程去消费的队列索引
 }
 
-// threadFactory 函数负责创建并初始化一组 Thread 实例，每个实例代表一个工作线程，准备就绪以执行特定任务。
+// threadFactory 是一个工厂方法，用于创建指定数量的线程实例。
+// 每个线程实例都会被分配一个唯一的ID，并且配置了执行循环次数、通信通道、统计信息以及与gRPC服务的连接信息。
 // 参数:
-// - number: 指定要创建的工作线程数量。
-// - doneChan: 一个通道，各线程通过它来通知其已完成任务。
-// - timeoutChan: 用于向线程发送超时信号的通道。
-// - statistician: 一个指向 Statistician 对象的指针，用于跨线程收集运行时统计数据。
-// 返回:
-// - []*Thread: 初始化后的线程实例切片。
-// - error: 如果在初始化过程中遇到错误（如 gRPC 连接失败），则返回具体的错误信息。
-// 功能实现:
-// 1. 首先，根据指定的数量创建一个空的线程切片。
-// 2. 循环遍历，为每个线程分配唯一 ID、循环执行次数以及其他共享资源（doneChan, timeoutChan, statistician）。
-// 3. 计算每个线程对应的主机索引（基于线程 ID 和主机列表长度取模），用于 gRPC 连接初始化。
-// 4. 初始化每个线程的 gRPC 连接，使用 TLS 参数和计算出的主机索引。
-// 5. 若 gRPC 连接成功，则创建相应的 gRPC 客户端实例并将其附加到线程上。
-// 6. 将构建好的线程添加到线程切片中。
-// 7. 若在任一环节遇到错误，则立即停止创建过程并返回错误。
+//   - number: 需要创建的线程数量。
+//   - doneChan: 用于传递完成信号的通道。
+//   - timeoutChan: 用于接收超时信号的通道。
+//   - statistician: 用于收集和统计线程执行过程中的性能数据或其他相关信息的统计器实例。
+//
+// 返回值:
+//   - []*Thread: 创建的线程实例列表。
+//   - error: 如果在创建过程中发生错误，将返回非nil的error。
 func threadFactory(number int, doneChan, timeoutChan chan struct{}, statistician *Statistician) ([]*Thread, error) {
 	threads := make([]*Thread, number)
-	var err error
 	for i := 0; i < number; i++ {
 		t := &Thread{id: i, loopNum: loopNum, doneChan: doneChan, timeoutChan: timeoutChan, statistician: statistician}
 		t.index = t.id % len(hosts)
-		t.conns, err = t.initGRPCConnect(useTLS, t.index)
-		if err != nil {
-			return nil, err
-		}
-		for _, conn := range t.conns {
-			t.clients = append(t.clients, apiPb.NewRpcNodeClient(conn))
+		for i := range hosts {
+			sdkClient, err := getSdkClient(i)
+			if err != nil {
+				return nil, err
+			}
+			t.sdkClients = append(t.sdkClients, sdkClient)
 		}
 		threads[i] = t
+
 	}
 	return threads, nil
 }
@@ -272,7 +263,7 @@ func (t *Thread) consume() {
 				start := time.Now()
 
 				var err error
-				err = sendTx(t.clients[loopNum%nodeNum], orgIDs[t.index], i, req.Param)
+				err = sendTx(t.sdkClients[loopNum%nodeNum], orgIDs[t.index], i, req.Param)
 				// 结果进入结果集
 				atomic.AddUint32(&t.statistician.totalCount, 1)
 				t.statistician.reqStatC <- &reqStat{
@@ -289,81 +280,4 @@ func (t *Thread) consume() {
 	}
 	// 自然循环结束，发送完成信号
 	t.doneChan <- struct{}{}
-}
-
-// stop 停止线程并关闭其关联的连接
-func (t *Thread) stop() {
-	for _, conn := range t.conns {
-		err := conn.Close()
-		if err != nil {
-			return
-		}
-	}
-}
-
-// initGRPCConnect 初始化 gRPC 连接给定的 Thread 实例。
-// 参数:
-// - useTLS: 布尔值，指示是否使用 TLS 安全连接。
-// - index: 整数，用于从配置的主机列表、CA 路径、用户证书路径和用户密钥路径中选择相应的项。
-//
-// 函数行为:
-// 1. **选择地址: 根据提供的索引值选取主机地址。
-// 2. TLS 配置:
-//   - 如果 useTLS 为 true，根据主机名（或默认值）配置 TLS 客户端。
-//   - 从对应索引获取 CA 路径、用户证书路径和用户密钥路径，创建 TLS 客户端凭证。
-//   - 使用这些凭证通过 gRPC 的 WithTransportCredentials 方法建立安全连接。
-//
-// 3. 非 TLS 连接:
-//   - 如果 useTLS 为 false，则直接使用 grpc.Dial 并通过 WithInsecure 方法创建不安全的连接。
-//
-// 4. 错误处理:
-//   - 在初始化 TLS 凭证或建立连接过程中遇到的任何错误都将被捕获并作为错误返回。
-//
-// 返回:
-// - *grpc.ClientConn: 成功建立的 gRPC 客户端连接。
-// - error: 初始化连接过程中发生的错误，如果成功则为 nil。
-func (t *Thread) initGRPCConnect(useTLS bool, index int) ([]*grpc.ClientConn, error) {
-	// 设置 gRPC 服务端地址
-	var conns []*grpc.ClientConn
-	for i := 0; i < len(hosts); i++ {
-		url := hosts[i]
-		// 根据 useTLS 配置选择不同的连接方式
-		if useTLS {
-			var serverName string
-			// 初始化 serverName，如果没有指定 hostnames，则使用默认域名
-			if hostnamesString == "" {
-				serverName = "chainmaker.org"
-			} else {
-				if len(hosts) != len(hostnames) {
-					return nil, errors.New("required len(hosts) == len(hostnames)")
-				}
-				// 根据索引选择对应的主机名
-				serverName = hostnames[index]
-			}
-			// 使用 TLS 凭证创建安全的 gRPC 连接
-			tlsClient := ca.CAClient{
-				ServerName: serverName,
-				CaPaths:    []string{caPaths[index]},
-				CertFile:   userCrtPaths[index],
-				KeyFile:    userKeyPaths[index],
-			}
-			// 获取 TLS 凭证
-			c, err := tlsClient.GetCredentialsByCA()
-			if err != nil {
-				return nil, err
-			}
-			conn, err := grpc.Dial(url, grpc.WithTransportCredentials(*c))
-			if err != nil {
-				return nil, err
-			}
-			conns = append(conns, conn)
-		} else {
-			conn, err := grpc.Dial(url, grpc.WithInsecure())
-			if err != nil {
-				return nil, err
-			}
-			conns = append(conns, conn)
-		}
-	}
-	return conns, nil
 }

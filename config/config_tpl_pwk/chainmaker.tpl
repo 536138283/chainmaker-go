@@ -503,25 +503,27 @@ storage:
 
   # effective when disable_state_cache is false
   state_cache_config:
-    # provider include slru, bigcache. default bigcache.
-    provider: bigcache
+    # provider include slru, bigcache. default slru. 
+    # if slru is enabled, make sure spec item is configured.
+    provider: slru
     
-    # key/value ttl time, ns
-    life_window: 3000000000000
+    # key/value ttl time, ns, just for bigcache
+    # life_window: 3000000000000
 
-    # interval between removing expired keys and values(clean up).
-    clean_window: 1000000000
+    # interval between removing expired keys and values(clean up). just for bigcache
+    # clean_window: 1000000000
 
-    # max size of entry in bytes.
-    max_entry_size: 500
+    # max size of entry in bytes. just for bigcache
+    # max_entry_size: 500
 
-    # max cache size MB
-    hard_max_cache_size: 1024
+    # max cache size MB, just for bigcache
+    # hard_max_cache_size: 1024
 
-    # the cache spec, currently used by slru
-    # spec: 
-    #   memory: 1024  # maximum memory usage in MB
-    #   capacity: 10000  # maximum number of cache entries
+    # the cache specification, currently only used by slru
+    spec: 
+      # at least one of memory and capacity is greater than 0.
+      memory: 1024  # maximum memory usage in MB
+      capacity: 10000  # maximum number of cache entries
 
   # Block db config
   blockdb_config:
@@ -673,6 +675,15 @@ vm:
       port: {docker_go_engine_port}
       # Max number of connection created to connect docker vm service
       max_connection: 5
+
+      # Preload contract processes or not when starting
+      preload_disable: false
+
+      # The number of preload processes calculated by use frequency
+      preload_num_by_use_frequency: 10
+
+      # The number of preload processes calculated by recent invocation time
+      preload_num_by_last_time: 10
 
 
   # Java runtime in docker container
