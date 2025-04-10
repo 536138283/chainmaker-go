@@ -538,6 +538,13 @@ storage:
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
+  # Symmetric encryption key:16 bytes key
+  # If pkcs11 is enabled, it is the keyID
+  # encrypt_key: "1234567890123456"
+
+  # wal encrypt mode: "sync: sync encrypt, "async": async encrypt; default no encrypt
+  # wal_encrypt_mode: "sync"
+
   # Disable block file db, default: true
   disable_block_file_db: false  # [*]
 
@@ -576,10 +583,6 @@ storage:
   # suggest greater than max_txpool_size*1.1
   rolling_window_cache_capacity: 55000
 
-  # Symmetric encryption key:16 bytes key
-  # If pkcs11 is enabled, it is the keyID
-  # encrypt_key: "1234567890123456"
-
   # 0 common write，1 quick write
   write_block_type: 0
 
@@ -591,6 +594,9 @@ storage:
 
   # effective when disable_state_cache is false
   state_cache_config:
+    # provider include slru, bigcache. default bigcache.
+    provider: bigcache
+    
     # key/value ttl time, ns
     life_window: 3000000000000
 
@@ -602,6 +608,11 @@ storage:
 
     # max cache size MB
     hard_max_cache_size: 1024
+
+    # the cache spec, currently used by slru
+    # spec: 
+    #   memory: 1024  # maximum memory usage in MB
+    #   capacity: 10000  # maximum number of cache entries
 
   # Block db config
   blockdb_config:
