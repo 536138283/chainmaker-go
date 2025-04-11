@@ -22,6 +22,7 @@ const (
 	queryMethod        = "query"
 	createContractStr  = "createContract"
 	upgradeContractStr = "upgradeContract"
+	statChain          = "stat"
 )
 
 var totalSentTxs int64
@@ -121,7 +122,7 @@ func parallelInvoke(method string) error {
 		return err
 	}
 	// 开启节点订阅
-	go subNodes(statistician)
+	go subNodes(statistician, -1, -1)
 	// 开启结果收集
 	go statistician.collect()
 	// 订阅后记录当前时间

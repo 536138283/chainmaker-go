@@ -14,7 +14,7 @@ import (
 // subNodes 函数负责初始化并管理一组并发任务，这些任务针对每个区块链节点订阅新区块事件。
 // 参数:
 // statistician (*Statistician): 一个Statistician实例，用于在整个订阅过程中收集统计数据和管理线程。
-func subNodes(statistician *Statistician) {
+func subNodes(statistician *Statistician, start, end int64) {
 	// 并发启动订阅任务
 	for i := 0; i < nodeNum; i++ {
 		go func(index int) {

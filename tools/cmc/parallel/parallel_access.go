@@ -90,6 +90,9 @@ var (
 	authTypeUint32 uint32
 	authType       sdk.AuthType
 	gasLimit       uint64
+
+	startBlock int64 // 订阅的起始区块高度
+	endBlock   int64 // 订阅的结束区块高度
 )
 
 type ValueParam struct {

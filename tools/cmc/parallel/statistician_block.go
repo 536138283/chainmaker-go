@@ -1,0 +1,152 @@
+package parallel
+
+import (
+	"encoding/json"
+	"fmt"
+	"github.com/spf13/cobra"
+	"sync"
+	"time"
+)
+
+// 提供从某一个区块高度区间范围内的性能指标统计
+func statCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   statChain,
+		Short: "stat",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return statMain()
+		},
+	}
+
+	flags := cmd.Flags()
+	flags.Int64VarP(&startBlock, "start-block", "sb", 0, "subscribe start block height")
+	flags.Int64VarP(&endBlock, "end-block", "eb", 0, "subscribe end block height")
+	if endBlock == 0 && printTime == 0 {
+		fmt.Println("printTime or endBlock at least  exist 1 param")
+		return nil
+	}
+	return cmd
+}
+
+func statMain() error {
+	// 初始化订阅节点客户端
+	err := initSubClient()
+	if err != nil {
+		return err
+	}
+	txLatency = sync.Map{}
+	statistician := getStatistician()
+	go subNodes(statistician, startBlock, endBlock)
+	go statistician.collectStat(endBlock)
+	if printTime > 0 {
+		ticker := time.NewTicker(time.Second * time.Duration(printTime))
+		printChainResult(ticker, statistician)
+	} else {
+		printChainResult(nil, statistician)
+	}
+	return nil
+}
+
+// 为区块统计功能定制的参数收集功能，用来收集指定告区块高度区间范围内的需计算的参数指标
+func (s *Statistician) collectStat(endBlock int64) {
+	isFirst := true
+	for {
+		select {
+		case stat := <-s.cReqStatC:
+			var firstBlock *cReqStat
+			if isFirst {
+				firstBlock = stat
+				isFirst = false
+			}
+			// 统计区块信息（非节点）
+			milliSec := firstBlock.blockHeader.BlockTimestamp * 1000
+			s.statisticianTxBlock(stat, milliSec)
+			// 统计节点区块信息（节点）
+			s.statisticianNodeTxBlock(stat, milliSec)
+			// 开启另一协程，统计完毕回收内存
+			go func() {
+				for _, v := range stat.txs {
+					txLatency.Delete(v)
+				}
+			}()
+			// 计算交易处理速度
+			computeSpeed(stat, s)
+			if stat.blockHeader.BlockHeight == uint64(endBlock) {
+				return
+			}
+		}
+	}
+}
+
+// statCompute 指标计算
+// 这里要以第一个区块的出块时间开始时间计算后面的区块的平均指标，所以没有复用压测的逻辑
+// 统计链上交易的性能指标
+func (s *Statistician) statCompute(stat *cReqStat, milliSec int64) {
+	// 统计交易最多的区块高度，块交易数量
+	if s.maxTxBlockCount < stat.blockHeader.TxCount {
+		s.maxTxBlockHeight = stat.blockHeader.BlockHeight
+		s.maxTxBlockCount = stat.blockHeader.TxCount
+	}
+	// 统计交易最少的区块高度，块交易数量
+	if s.minTxBlockCount == 0 {
+		s.minTxBlockHeight = stat.blockHeader.BlockHeight
+		s.minTxBlockCount = stat.blockHeader.TxCount
+	}
+	if s.minTxBlockCount > stat.blockHeader.TxCount {
+		s.minTxBlockHeight = stat.blockHeader.BlockHeight
+		s.minTxBlockCount = stat.blockHeader.TxCount
+	}
+	// 统计第一次出块时间和最后一次出块时间
+	if s.firstBlockTime == 0 {
+		s.firstBlockTime = stat.blockHeader.BlockTimestamp
+	}
+	if s.firstBlockHeight == 0 {
+		s.firstBlockHeight = stat.blockHeader.BlockHeight
+	}
+	// 记录交易总数，区块总数
+	s.txTotal += stat.blockHeader.TxCount
+	s.blockTotal++
+	// 更新最后一次出块的时间，区块高度
+	s.lastBlockTime = stat.blockHeader.BlockTimestamp
+	s.lastBlockHeight = stat.blockHeader.BlockHeight
+	// 当前区块的交易时延记录在一个数组
+	for _, v := range stat.txs {
+		start, ok := txLatency.Load(v.Payload.TxId)
+		if !ok {
+			continue
+		}
+		s.txLatencyMilli = append(s.txLatencyMilli, float64(milliSec-start.(int64)))
+	}
+	if s.preBlockTimeMilli == 0 {
+		s.preBlockTimeMilli = milliSec - s.preBlockTimeMilli
+	}
+	s.blockMilli = append(s.blockMilli, float64(milliSec-s.preBlockTimeMilli))
+	s.preBlockTimeMilli = milliSec
+}
+
+func printChainDetail(s *Statistician) error {
+	chainResult := &ChainResultSet{}
+	s.outBlockInfo(chainResult)
+	s.outNodeBlockInfo(chainResult)
+	jsonByte, err := json.Marshal(chainResult)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(jsonByte))
+	return nil
+}
+
+// printChainResult 打印链上统计结果
+// 如果只想查看最新的上链指标就必须填写printTime参数
+func printChainResult(printTicker *time.Ticker, statistician *Statistician) {
+	if printTicker != nil {
+		for {
+			select {
+			case <-printTicker.C:
+				go printChainDetail(statistician)
+			}
+		}
+	} else {
+		printChainDetail(statistician)
+	}
+}
