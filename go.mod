@@ -4,7 +4,7 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.5-0.20250311080552-f8fcda132e53
-	chainmaker.org/chainmaker/common/v2 v2.3.8-0.20250320101543-98075d47d48f
+	chainmaker.org/chainmaker/common/v2 v2.3.8-0.20250410075213-09b6125a2b00
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.6-0.20250311094610-74896255665a
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.6-0.20250311095343-67773d8b289f
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.6-0.20250311095625-334be7cafa6f
@@ -17,13 +17,13 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250401025910-d8c66cb5986b
 	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250407103320-79c9c0f76846
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250401105640-e23358ea9dba
-	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250313101430-bdbec3a8595c
+	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250410100900-e1d91f9716dd
 	chainmaker.org/chainmaker/utils/v2 v2.3.7-0.20250314025122-dfc83b8bd7bc
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.7-0.20250311090804-13f0c6990fc3
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250407095944-6b20789ad2d9
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7-0.20250314090743-1e67d63f6959
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.7-0.20250311090020-29edd5bd803a
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250408021925-50299d2d6fdf
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250320015539-8ffcc6aef6f4
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.7-0.20250314030658-1a38448392a1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.7-0.20250311090156-dd46d6a91839
 	chainmaker.org/chainmaker/vm/v2 v2.3.7-0.20250313033547-c4c814d9a06e
@@ -63,10 +63,10 @@ require (
 require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.6-0.20250311095505-0688f55394a0
 	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6-0.20250407095729-b4e7e4b06373
-	chainmaker.org/chainmaker/sync/v2 v2.0.0-20250314014915-5adf29041580
+	chainmaker.org/chainmaker/sync/v2 v2.0.0-20250410074739-b955c364c201
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.5-0.20250407020642-f4ec65daa72f
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.5-0.20250407020622-d14fe5fd1889
-	chainmaker.org/chainmaker/txpool-single/v2 v2.3.5-0.20250311080945-16e5b888dc5c
+	chainmaker.org/chainmaker/txpool-single/v2 v2.3.5-0.20250408023157-f6d52d1f81e3
 	github.com/go-echarts/go-echarts/v2 v2.2.4
 	github.com/google/flatbuffers v2.0.0+incompatible // indirect
 	github.com/gosuri/uilive v0.0.4 // indirect

@@ -54,6 +54,45 @@ node:
     # Enable it or not, true means do not execute smart contract
     enabled: true  # [*]
 
+sync:
+#  #---The following configuration items are used in version v1.
+#  # Timeout for waiting for block request response, unit second.
+#  wait_time_requested: 30
+#  # The number of blocks requested at a time.
+#  batch_size_from_one_node: 1
+#  # The time interval for verifying cached block, unit millisecond.
+#  process_block_tick: 20
+#  # The time interval for broadcasting a request to obtain the status of other nodes, unit second.
+#  node_status_tick: 2
+#  # The time interval for checking whether there is a block request timeout, unit second.
+#  liveness_tick: 1
+#  # The time interval between sending a block request, unit millisecond.
+#  scheduler_tick: 20
+#  # The time interval between sending a block request when the difference between own block height and the highest block height is 1
+#  # unit second.
+#  req_time_threshold: 1
+#  # The time interval for processing block requests of the same height from the same node.
+#  # Requests within this time will be ignored. Unit second.
+#  block_request_time: 5
+#  # broadcast node status once when {broadcast_status_per_blocks_committed} blocks are committed.
+#  broadcast_status_per_blocks_committed: 3
+
+#  #----The following two configurations are shared by v1 and v2
+#  # Maximum number of blocks cached waiting to be verified and committed.
+#  block_pool_size: 128
+#  # Synchronize blocks from the configured nodes.
+#  from_nodes: 
+#  #- {nodeId}
+#  #- {nodeId}
+
+#  # ---The following configuration items are used in version v2.
+#  # The base time of connection timeout(ms). The timeout for various type of messages is an multiple of this value.
+#  conn_timeout_scale: 1
+#  # the difference between the local height has been synchronized and the latest height is within the specified range.
+#  ideal_height_distance: 1
+#  # the time interval for checking whether there are new blocks to be synced after syncing to the latest block.
+#  wait_period_seconds_after_latest: 5
+
 # Network Settings
 net:
   # Network provider, can be libp2p or liquid.
@@ -408,6 +447,13 @@ storage:
   # Symmetric encryption algorithm for writing data to disk. can be sm4 or aes
   # encryptor: sm4    # [*]
 
+  # Symmetric encryption key:16 bytes key
+  # If pkcs11 is enabled, it is the keyID
+  # encrypt_key: "1234567890123456"
+
+  # wal encrypt mode: "sync: sync encrypt, "async": async encrypt; default no encrypt
+  # wal_encrypt_mode: "sync"
+
   # Disable block file db, default: true
   disable_block_file_db: false  # [*]
 
@@ -417,7 +463,7 @@ storage:
   # file size of stored block file
   # if disable_block_file_db: false, we use block filedb, this means .fdb file size(MB), default: 64
   # if disable_block_file_db: true, we use wal, this means .wal file size(MB), default: 20
-  logdb_segment_size: 128
+  logdb_segment_size: 64
 
   # read bfdb block file time out(ms), default: 1000
   read_bfdb_timeout: 1000
@@ -446,10 +492,6 @@ storage:
   # suggest greater than max_txpool_size*1.1
   rolling_window_cache_capacity: 55000
 
-  # Symmetric encryption key:16 bytes key
-  # If pkcs11 is enabled, it is the keyID
-  # encrypt_key: "1234567890123456"
-
   # 0 common write，1 quick write
   write_block_type: 0
 
@@ -461,17 +503,27 @@ storage:
 
   # effective when disable_state_cache is false
   state_cache_config:
-    # key/value ttl time, ns
-    life_window: 3000000000000
+    # provider include slru, bigcache. default slru. 
+    # if slru is enabled, make sure spec item is configured.
+    provider: slru
+    
+    # key/value ttl time, ns, just for bigcache
+    # life_window: 3000000000000
 
-    # interval between removing expired keys and values(clean up).
-    clean_window: 1000000000
+    # interval between removing expired keys and values(clean up). just for bigcache
+    # clean_window: 1000000000
 
-    # max size of entry in bytes.
-    max_entry_size: 500
+    # max size of entry in bytes. just for bigcache
+    # max_entry_size: 500
 
-    # max cache size MB
-    hard_max_cache_size: 1024
+    # max cache size MB, just for bigcache
+    # hard_max_cache_size: 1024
+
+    # the cache specification, currently only used by slru
+    spec: 
+      # at least one of memory and capacity is greater than 0.
+      memory: 1024  # maximum memory usage in MB
+      capacity: 10000  # maximum number of cache entries
 
   # Block db config
   blockdb_config:
@@ -506,7 +558,7 @@ storage:
       # Key and value are stored separately when value is greater than this byte, default is 1024 * 10
       # value_threshold: 256
       # Number of key value pairs written in batch. default is 128
-      # write_batch_size: 1024
+      # write_batch_size: 128
 
     # Example for tikv provider
     # provider: tikvdb
@@ -525,7 +577,7 @@ storage:
     provider: leveldb
     leveldb_config:
       store_path: ../data/{org_id}/state
-      write_buffer_size: 256
+      write_buffer_size: 64
 
     # bloom config for state db, it only takes effect when using kvdb
     # bloom_config:
