@@ -21,8 +21,8 @@ func statCMD() *cobra.Command {
 	flags := cmd.Flags()
 	flags.Int64VarP(&startBlock, "start-block", "sb", 0, "subscribe start block height")
 	flags.Int64VarP(&endBlock, "end-block", "eb", 0, "subscribe end block height")
-	if endBlock == 0 && printTime == 0 {
-		fmt.Println("printTime or endBlock at least  exist 1 param")
+	if endBlock == 0 || startBlock == 0 {
+		fmt.Println("start and end block number must be greater than -1")
 		return nil
 	}
 	return cmd
@@ -48,21 +48,23 @@ func statMain() error {
 }
 
 // 为区块统计功能定制的参数收集功能，用来收集指定告区块高度区间范围内的需计算的参数指标
+// 因为无法得知开始请求的时间，所以以第二个区块为开始区块，第一个区块作为时间依据，
+// 以统计范围为 （start, end] 即左开右闭区间开始统计
 func (s *Statistician) collectStat(endBlock int64) {
 	isFirst := true
+	startTime := int64(0)
 	for {
 		select {
 		case stat := <-s.cReqStatC:
 			var firstBlock *cReqStat
 			if isFirst {
-				firstBlock = stat
+				startTime = firstBlock.blockHeader.BlockTimestamp * 1000
 				isFirst = false
+				continue
 			}
-			// 统计区块信息（非节点）
-			milliSec := firstBlock.blockHeader.BlockTimestamp * 1000
-			s.statisticianTxBlock(stat, milliSec)
+			s.statisticianTxBlock(stat, startTime)
 			// 统计节点区块信息（节点）
-			s.statisticianNodeTxBlock(stat, milliSec)
+			s.statisticianNodeTxBlock(stat, startTime)
 			// 开启另一协程，统计完毕回收内存
 			go func() {
 				for _, v := range stat.txs {
