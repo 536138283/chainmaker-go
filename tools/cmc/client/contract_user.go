@@ -9,18 +9,18 @@ package client
 
 import (
 	"bytes"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io/ioutil"
-
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"context"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"github.com/spf13/cobra"
+	"io/ioutil"
 )
 
 // CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT define CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT error fmt
@@ -66,7 +66,7 @@ func userContractCMD() *cobra.Command {
 	userContractCmd.AddCommand(unfreezeUserContractCMD())
 	userContractCmd.AddCommand(revokeUserContractCMD())
 	userContractCmd.AddCommand(getUserContractCMD())
-
+	userContractCmd.AddCommand(subscribeUserContractCMD())
 	return userContractCmd
 }
 
@@ -283,6 +283,68 @@ func unfreezeUserContractCMD() *cobra.Command {
 	})
 
 	return cmd
+}
+
+func subscribeUserContractCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "subscribe",
+		Short: "revoke user contract command",
+		Long:  "revoke user contract command",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return subscribe()
+		},
+	}
+	util.AttachFlags(cmd, flags, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
+		flagConcurrency, flagTotalCountPerGoroutine, flagOrgId, flagChainId, flagSendTimes,
+		flagEnableCertHash, flagContractName, flagMethod, flagParams, flagTimeout, flagSyncResult, flagAbiFilePath,
+		flagGasLimit, flagTxId, flagContractAddress, flagRespResultToString,
+		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagSdkConfPath, flagPayerKeyFilePath,
+		flagPayerCrtFilePath, flagPayerOrgId,
+	})
+	return cmd
+}
+
+func subscribe() error {
+	cc, err := sdk.NewChainClient(
+		sdk.WithConfPath(sdkConfPath),
+		sdk.WithChainClientChainId(chainId),
+		sdk.WithChainClientOrgId(orgId),
+		sdk.WithUserCrtFilePath(userTlsCrtFilePath),
+		sdk.WithUserKeyFilePath(userTlsKeyFilePath),
+		sdk.WithUserSignCrtFilePath(userSignCrtFilePath),
+		sdk.WithUserSignKeyFilePath(userSignKeyFilePath),
+	)
+	if err != nil {
+		return err
+	}
+	defer cc.Stop()
+	blockChan, err := cc.SubscribeBlock(context.Background(), -1,
+		-1, false, false)
+	if err != nil {
+		fmt.Println("error sendSubscribe :", err)
+		return err
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	// 接收区块并发送到统计对象
+	for {
+		select {
+		case block, ok := <-blockChan:
+			if !ok {
+				fmt.Println("subscribe interrupt check log please")
+				return nil
+			}
+			blockInfo, ok := block.(*common.BlockInfo)
+			if !ok {
+				return errors.New("block info error")
+			}
+			fmt.Println(blockInfo.Block.Header.BlockHeight, ": ", blockInfo.Block.Header.TxCount)
+		case <-ctx.Done():
+			return nil
+		}
+	}
+
 }
 
 // revokeUserContractCMD revoke user contract command

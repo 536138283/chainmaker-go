@@ -20,7 +20,7 @@ func subNodes(statistician *Statistician) {
 		go func(index int) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			blockChan, err := defaultSdkClients[index].SubscribeBlock(context.Background(), math.MaxInt64,
+			blockChan, err := defaultSdkClients[index].SubscribeBlock(context.Background(), -1,
 				-1, false, false)
 			if err != nil {
 				fmt.Println("error sendSubscribe :", err)
@@ -29,7 +29,11 @@ func subNodes(statistician *Statistician) {
 			// 接收区块并发送到统计对象
 			for {
 				select {
-				case block := <-blockChan:
+				case block, ok := <-blockChan:
+					if !ok {
+						fmt.Println("subscribe interrupt, check node log")
+						return
+					}
 					blockInfo, ok := block.(*commonPb.BlockInfo)
 					if !ok {
 						return

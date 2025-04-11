@@ -258,18 +258,12 @@ func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 
 // 收集参数
 func (s *Statistician) collect() {
-	flag := true
 	for {
 		select {
 		case stat := <-s.reqStatC:
 			// 统计rpc压测指标
 			s.statisticianRpc(stat)
 		case stat := <-s.cReqStatC:
-			// 第一个区块为上一次执行时的最后一个区块，所以跳过第一个区块
-			if flag {
-				flag = false
-				continue
-			}
 			// 统计区块信息（非节点）
 			milliSec := time.Now().UnixNano() / 1e6
 			s.statisticianTxBlock(stat, milliSec)
