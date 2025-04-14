@@ -20,8 +20,8 @@ func subNodes(statistician *Statistician, start, end int64) {
 		go func(index int) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			blockChan, err := defaultSdkClients[index].SubscribeBlock(context.Background(), -1,
-				-1, false, false)
+			blockChan, err := defaultSdkClients[index].SubscribeBlock(context.Background(), start,
+				end, false, false)
 			if err != nil {
 				fmt.Println("error sendSubscribe :", err)
 				return
@@ -31,7 +31,7 @@ func subNodes(statistician *Statistician, start, end int64) {
 				select {
 				case block, ok := <-blockChan:
 					if !ok {
-						fmt.Println("subscribe interrupt, check node log")
+						fmt.Println("subscribe end")
 						return
 					}
 					blockInfo, ok := block.(*commonPb.BlockInfo)

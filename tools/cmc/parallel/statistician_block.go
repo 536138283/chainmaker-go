@@ -19,11 +19,15 @@ func statCMD() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.Int64VarP(&startBlock, "start-block", "sb", 0, "subscribe start block height")
-	flags.Int64VarP(&endBlock, "end-block", "eb", 0, "subscribe end block height")
-	if endBlock == 0 || startBlock == 0 {
+	flags.Int64VarP(&startBlock, "start-block", "", 0, "subscribe start block height")
+	flags.Int64VarP(&endBlock, "end-block", "", 1, "subscribe end block height")
+	if endBlock < 0 || startBlock < 0 {
 		fmt.Println("start and end block number must be greater than -1")
-		return nil
+		return cmd
+	}
+	if endBlock-startBlock < 1 {
+		fmt.Println("start height sub end block height must be greater than 1 or equals")
+		return cmd
 	}
 	return cmd
 }
@@ -37,13 +41,9 @@ func statMain() error {
 	txLatency = sync.Map{}
 	statistician := getStatistician()
 	go subNodes(statistician, startBlock, endBlock)
-	go statistician.collectStat(endBlock)
-	if printTime > 0 {
-		ticker := time.NewTicker(time.Second * time.Duration(printTime))
-		printChainResult(ticker, statistician)
-	} else {
-		printChainResult(nil, statistician)
-	}
+	statistician.collectStat(endBlock)
+	printChainDetail(statistician)
+	time.Sleep(5 * time.Second)
 	return nil
 }
 
@@ -53,18 +53,19 @@ func statMain() error {
 func (s *Statistician) collectStat(endBlock int64) {
 	isFirst := true
 	startTime := int64(0)
+	startTimeMilli := int64(0)
 	for {
 		select {
 		case stat := <-s.cReqStatC:
-			var firstBlock *cReqStat
 			if isFirst {
-				startTime = firstBlock.blockHeader.BlockTimestamp * 1000
+				startTime = stat.blockHeader.BlockTimestamp
+				startTimeMilli = stat.blockHeader.BlockTimestamp * 1000
 				isFirst = false
 				continue
 			}
-			s.statisticianTxBlock(stat, startTime)
+			s.statisticianTxBlock(stat, startTimeMilli)
 			// 统计节点区块信息（节点）
-			s.statisticianNodeTxBlock(stat, startTime)
+			s.statisticianNodeTxBlock(stat, startTimeMilli)
 			// 开启另一协程，统计完毕回收内存
 			go func() {
 				for _, v := range stat.txs {
@@ -74,6 +75,7 @@ func (s *Statistician) collectStat(endBlock int64) {
 			// 计算交易处理速度
 			computeSpeed(stat, s)
 			if stat.blockHeader.BlockHeight == uint64(endBlock) {
+				s.elapsedSeconds = float32(stat.blockHeader.BlockTimestamp - startTime)
 				return
 			}
 		}
@@ -132,23 +134,9 @@ func printChainDetail(s *Statistician) error {
 	s.outNodeBlockInfo(chainResult)
 	jsonByte, err := json.Marshal(chainResult)
 	if err != nil {
+		fmt.Println("marshal chain result error:", err)
 		return err
 	}
 	fmt.Println(string(jsonByte))
 	return nil
-}
-
-// printChainResult 打印链上统计结果
-// 如果只想查看最新的上链指标就必须填写printTime参数
-func printChainResult(printTicker *time.Ticker, statistician *Statistician) {
-	if printTicker != nil {
-		for {
-			select {
-			case <-printTicker.C:
-				go printChainDetail(statistician)
-			}
-		}
-	} else {
-		printChainDetail(statistician)
-	}
 }

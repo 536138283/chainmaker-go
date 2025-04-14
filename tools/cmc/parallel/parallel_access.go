@@ -240,6 +240,7 @@ func ParallelCMD() *cobra.Command {
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())
 	cmd.AddCommand(upgradeContractCMD())
+	cmd.AddCommand(statCMD())
 	return cmd
 }
 
