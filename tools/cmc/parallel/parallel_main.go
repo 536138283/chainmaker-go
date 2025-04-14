@@ -65,7 +65,7 @@ func initParallel() error {
 		return err
 	}
 	initProductFactor(threadNum * loopNum)
-	produceSignal = make(chan int, 1)
+	produceSignal = make(chan int, threadNum)
 	paramQueues = make([]chan RequestParam, nodeNum)
 	for i := 0; i < nodeNum; i++ {
 		paramQueues[i] = make(chan RequestParam, productFactor)

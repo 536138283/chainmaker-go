@@ -32,7 +32,10 @@ func producer(method string) {
 					produce(builder, nodeIndex)
 				}
 			} else {
-				go produce(builder, index)
+				// 如果生产的数量已经超过了既定值则停止生产
+				if requestId < int64(threadNum*loopNum) {
+					go produce(builder, index)
+				}
 			}
 		}
 	}
