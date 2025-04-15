@@ -771,16 +771,18 @@ func (bc *Blockchain) initConsensus() (err error) {
 	//var consensusFactory consensus.Factory
 	id := localconf.ChainMakerConfig.NodeConfig.NodeId
 	nodes := bc.chainConf.ChainConfig().Consensus.Nodes
-	nodeIds := make([]string, len(nodes))
+	nodeIds := []string{}
 	isConsensusNode := false
-	for i, node := range nodes {
+	for _, node := range nodes {
 		for _, nid := range node.NodeId {
-			nodeIds[i] = nid
+			nodeIds = append(nodeIds, nid)
 			if nid == id {
 				isConsensusNode = true
 			}
 		}
 	}
+	bc.log.Debugf("consensus nodeIds[%v]",
+		nodeIds)
 	//epoch1 [1,100]
 	//node7 ;
 	if !isConsensusNode &&
