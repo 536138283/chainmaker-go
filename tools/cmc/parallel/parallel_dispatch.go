@@ -178,6 +178,7 @@ func listenAndExit(timeoutChan, doneChan chan struct{}) {
 	close(timeoutChan)
 	close(doneChan)
 	close(produceSignal)
+	closeSubChan <- struct{}{}
 	timeoutTicker.Stop()
 }
 

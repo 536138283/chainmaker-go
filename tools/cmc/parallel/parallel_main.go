@@ -60,6 +60,9 @@ var interruptSignal bool
 // 默认存在节点数量的sdk客户端，用来生成请求参数，开启订阅等
 var defaultSdkClients []*sdk.ChainClient
 
+// 用来关闭订阅的chan
+var closeSubChan chan struct{}
+
 func initParallel() error {
 	if nodeNum > threadNum {
 		threadNum = nodeNum
@@ -70,6 +73,7 @@ func initParallel() error {
 	initProductFactor(threadNum * loopNum)
 	produceSignal = make(chan int, threadNum)
 	firstComplete = make(chan int, 1)
+	closeSubChan = make(chan struct{}, 1)
 	paramQueues = make([]chan RequestParam, threadNum*loopNum/nodeNum*3/2)
 	for i := 0; i < nodeNum; i++ {
 		paramQueues[i] = make(chan RequestParam, productFactor)

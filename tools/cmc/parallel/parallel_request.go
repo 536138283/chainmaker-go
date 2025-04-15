@@ -43,6 +43,13 @@ func subNodes(statistician *Statistician, start, end int64) {
 					}
 				case <-ctx.Done():
 					return
+				case _, ok := <-closeSubChan:
+					if !ok {
+						return
+					}
+					cancel()
+					close(closeSubChan)
+					return
 				}
 			}
 
@@ -54,7 +61,7 @@ func subNodes(statistician *Statistician, start, end int64) {
 func sendTx(client *sdk.ChainClient, orgId string, loopId int, req *commonPb.TxRequest) error {
 	// 防止在收到响应之前上链的数据不一致情况，这里提前记录交易id
 	txLatency.Store(req.Payload.TxId, time.Now().UnixNano()/1e6)
-	result, err := client.SendTxRequest(req, requestTimeout, true)
+	result, err := client.SendTxRequest(req, requestTimeout, false)
 	if err != nil {
 		if statusErr, ok := status.FromError(err); ok && statusErr.Code() == codes.DeadlineExceeded {
 			return fmt.Errorf("client.call err: deadline\n")
