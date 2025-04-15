@@ -28,8 +28,8 @@ func producer(method string) {
 		select {
 		case index := <-produceSignal:
 			if index == -1 {
-				for nodeIndex := 0; nodeIndex < nodeNum; nodeIndex++ {
-					produce(builder, nodeIndex)
+				for i := 0; i < paramChanCount; i++ {
+					produce(builder, i)
 				}
 				firstComplete <- 1
 			} else {
@@ -209,7 +209,7 @@ func threadFactory(number int, doneChan, timeoutChan chan struct{}, statistician
 	threads := make([]*Thread, number)
 	for i := 0; i < number; i++ {
 		t := &Thread{id: i, loopNum: loopNum, doneChan: doneChan, timeoutChan: timeoutChan, statistician: statistician}
-		t.index = t.id % len(hosts)
+		t.index = t.id / computeFactor
 		for i := range hosts {
 			sdkClient, err := getSdkClient(i)
 			if err != nil {
@@ -267,7 +267,8 @@ func (t *Thread) consume() {
 				}
 				start := time.Now()
 				var err error
-				err = sendTx(t.sdkClients[loopNum%nodeNum], orgIDs[t.index], i, req.Param)
+				nodeIndex := loopNum % nodeNum
+				err = sendTx(t.sdkClients[nodeIndex], orgIDs[nodeIndex], i, req.Param)
 				// 计算请求时延
 				elapsed := time.Since(start).Milliseconds()
 				go func(e error, elapsed int64) {
@@ -276,7 +277,7 @@ func (t *Thread) consume() {
 					t.statistician.reqStatC <- &reqStat{
 						success: e == nil,
 						elapsed: elapsed,
-						nodeId:  t.index,
+						nodeId:  nodeIndex,
 					}
 				}(err, elapsed)
 				if recordLog && err != nil {

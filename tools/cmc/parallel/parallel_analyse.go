@@ -5,14 +5,13 @@ import (
 	"fmt"
 	"github.com/spf13/cobra"
 	"sync"
-	"time"
 )
 
 // 提供从某一个区块高度区间范围内的性能指标统计
 func statCMD() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "analyse",
-		Short: "",
+		Short: "Analyse",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return statMain()
 		},
@@ -21,18 +20,20 @@ func statCMD() *cobra.Command {
 	flags := cmd.Flags()
 	flags.Int64VarP(&startBlock, "start-block", "", 0, "subscribe start block height")
 	flags.Int64VarP(&endBlock, "end-block", "", 1, "subscribe end block height")
-	if endBlock < 0 || startBlock < 0 {
-		fmt.Println("start and end block number must be greater than -1")
-		return cmd
-	}
-	if endBlock-startBlock < 1 {
-		fmt.Println("start height sub end block height must be greater than 1 or equals")
-		return cmd
-	}
 	return cmd
 }
 
 func statMain() error {
+	if endBlock < 0 || startBlock < 0 {
+		fmt.Println("start and end block number must be greater than -1")
+		return nil
+	}
+	if endBlock-startBlock < 1 {
+		fmt.Println("start height sub end block height must be greater than 1 or equals")
+		return nil
+	}
+	// 初始化关闭订阅的chan
+	closeSubChan = make(chan struct{}, 1)
 	// 初始化订阅节点客户端
 	err := initSubClient()
 	if err != nil {
@@ -43,7 +44,7 @@ func statMain() error {
 	go subNodes(statistician, startBlock, endBlock)
 	statistician.collectStat(endBlock)
 	printChainDetail(statistician)
-	time.Sleep(5 * time.Second)
+
 	return nil
 }
 
@@ -76,6 +77,8 @@ func (s *Statistician) collectStat(endBlock int64) {
 			computeSpeed(stat, s)
 			if stat.blockHeader.BlockHeight == uint64(endBlock) {
 				s.elapsedSeconds = float32(stat.blockHeader.BlockTimestamp - startTime)
+				// 打印结果后关闭订阅
+				closeSubChan <- struct{}{}
 				return
 			}
 		}

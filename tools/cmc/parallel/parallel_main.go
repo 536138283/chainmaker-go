@@ -63,6 +63,13 @@ var defaultSdkClients []*sdk.ChainClient
 // 用来关闭订阅的chan
 var closeSubChan chan struct{}
 
+// ComputeFactor 计算因子，最短请求平均时延为2ms 参数构建时间为0.66ms 2/0.66 = 3所以这里使用3作为计算因子
+// 所以为每3个线程分配1个chan使其达到生产消费协调
+var computeFactor = 3
+
+// paramChanCount 参数队列的数量,根据线程数量动态增加
+var paramChanCount int
+
 func initParallel() error {
 	if nodeNum > threadNum {
 		threadNum = nodeNum
@@ -70,13 +77,30 @@ func initParallel() error {
 	if err := initSubClient(); err != nil {
 		return err
 	}
-	initProductFactor(threadNum * loopNum)
 	produceSignal = make(chan int, threadNum)
 	firstComplete = make(chan int, 1)
 	closeSubChan = make(chan struct{}, 1)
-	paramQueues = make([]chan RequestParam, threadNum*loopNum/nodeNum*3/2)
+	// 每次为每个线程生产5个待处理的请求参数, 这个参数作为生产因此，使生产>消费切占用最少内存
+	// 确保有足够的生产时间，所以预留一个productFactor作为buffer用来给消费端消耗
+	if loopNum > computeFactor*5 {
+		productFactor = computeFactor * 5
+	} else {
+		productFactor = computeFactor
+	}
+	if threadNum < computeFactor && threadNum < 100 {
+		computeFactor = 1
+	}
+	if threadNum%computeFactor > 0 {
+		paramChanCount = threadNum/computeFactor + 1
+	} else {
+		paramChanCount = threadNum / computeFactor
+	}
+	paramQueues = make([]chan RequestParam, paramChanCount)
+	for i := 0; i < paramChanCount; i++ {
+		paramQueues[i] = make(chan RequestParam, productFactor*2)
+	}
+	// 解析每个节点的签名文件
 	for i := 0; i < nodeNum; i++ {
-		paramQueues[i] = make(chan RequestParam, productFactor)
 		// 解析签名私钥
 		file, err := os.ReadFile(signKeyPaths[i])
 		if err != nil {
@@ -92,16 +116,6 @@ func initParallel() error {
 	}
 	txLatency = sync.Map{}
 	return nil
-}
-
-// initProductFactor 对半法加载生产因子
-// 在一个chan内每个线程分配一个请求参数和一个预处理请求参数
-func initProductFactor(factor int) {
-	if factor/nodeNum > threadNum/nodeNum*2 {
-		initProductFactor(factor / 2)
-	} else {
-		productFactor = factor
-	}
 }
 
 func parallel(method string) error {

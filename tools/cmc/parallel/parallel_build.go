@@ -59,6 +59,7 @@ type Invoke struct{}
 
 // Build 实现StressBuilder接口，用于构建调用智能合约的交易请求
 func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	index = index % nodeNum
 	pairs, err := makeKvs(requestId)
 	if err != nil {
 		return nil, err
