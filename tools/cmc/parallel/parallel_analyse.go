@@ -11,8 +11,8 @@ import (
 // 提供从某一个区块高度区间范围内的性能指标统计
 func statCMD() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   statChain,
-		Short: "analyse",
+		Use:   "analyse",
+		Short: "",
 		RunE: func(_ *cobra.Command, _ []string) error {
 			return statMain()
 		},
