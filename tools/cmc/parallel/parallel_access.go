@@ -42,6 +42,7 @@ var (
 	hostnamesString       string
 	statisticalType       string
 	checkInterval         int
+	onlySend              bool
 	signCrtPathsString    string
 	signKeyPathsString    string
 	userCrtPathsString    string
@@ -236,6 +237,7 @@ func ParallelCMD() *cobra.Command {
 	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
 	flags.StringVarP(&statisticalType, "statistical-type", "", "default", "normal statistical type or block based statistical type, input normal or block default:normal ")
 	flags.IntVarP(&checkInterval, "check-interval", "", 1, "After all threads are done,check the interval time of the last block generation. ")
+	flags.BoolVarP(&onlySend, "only-send", "", false, "The result statistics are open, and the result is true. Only RPC request data is counted, and the on chain results are not counted")
 	cmd.AddCommand(invokeCMD())
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())

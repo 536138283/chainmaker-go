@@ -48,6 +48,9 @@ var requestId int64
 // 生产信号，当该chan接收到数据时，开始生产请求参数
 var produceSignal chan int
 
+// 首次生产完毕信号这个chan只会使用一次，收到值的时候记录开始时间
+var firstComplete chan int
+
 // 生产因子，用来控制生产消息的数量
 var productFactor int
 
@@ -66,7 +69,8 @@ func initParallel() error {
 	}
 	initProductFactor(threadNum * loopNum)
 	produceSignal = make(chan int, threadNum)
-	paramQueues = make([]chan RequestParam, nodeNum)
+	firstComplete = make(chan int, 1)
+	paramQueues = make([]chan RequestParam, threadNum*loopNum/nodeNum*3/2)
 	for i := 0; i < nodeNum; i++ {
 		paramQueues[i] = make(chan RequestParam, productFactor)
 		// 解析签名私钥
@@ -121,12 +125,14 @@ func parallelInvoke(method string) error {
 	if err != nil {
 		return err
 	}
-	// 开启节点订阅
-	go subNodes(statistician, -1, -1)
+	if !onlySend {
+		// 开启节点订阅
+		go subNodes(statistician, -1, -1)
+	}
 	// 开启结果收集
 	go statistician.collect()
-	// 订阅后记录当前时间
-	statistician.startTime = time.Now()
+	// 首批请求参数生产完毕记录时间
+	recordStartTime(statistician)
 	// 启动线程，并发请求
 	go parallelStart(threads)
 	// 定时打印结果
@@ -136,6 +142,21 @@ func parallelInvoke(method string) error {
 	listenAndExit(timeoutChan, doneChan)
 	finalPrint(statistician, printTicker)
 	return nil
+}
+
+func recordStartTime(statistician *Statistician) error {
+	for {
+		select {
+		case _, ok := <-firstComplete:
+			if !ok {
+				fmt.Println("chan close exit;")
+				return nil
+			}
+			// 订阅后记录当前时间
+			statistician.startTime = time.Now()
+			return nil
+		}
+	}
 }
 
 // finalPrint函数用于在区块链高度不再增长时输出统计信息。
@@ -191,7 +212,10 @@ func (s *Statistician) printDetails() {
 	m := make(map[string]interface{})
 	s.endTime = time.Now()
 	s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
-	s.run(m, s.usualPrint(), s.chainPrint(), s.rpcPrint())
+	s.run(m, s.rpcPrint())
+	if !onlySend {
+		s.run(m, s.usualPrint(), s.chainPrint())
+	}
 	jsonChainByte, err := json.Marshal(m)
 	if err != nil {
 		return

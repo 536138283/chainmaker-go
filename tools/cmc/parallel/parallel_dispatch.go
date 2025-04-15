@@ -31,6 +31,7 @@ func producer(method string) {
 				for nodeIndex := 0; nodeIndex < nodeNum; nodeIndex++ {
 					produce(builder, nodeIndex)
 				}
+				firstComplete <- 1
 			} else {
 				// 如果生产的数量已经超过了既定值则停止生产
 				if requestId < int64(threadNum*loopNum) {
@@ -264,16 +265,19 @@ func (t *Thread) consume() {
 					produceSignal <- t.index
 				}
 				start := time.Now()
-
 				var err error
 				err = sendTx(t.sdkClients[loopNum%nodeNum], orgIDs[t.index], i, req.Param)
-				// 结果进入结果集
-				atomic.AddUint32(&t.statistician.totalCount, 1)
-				t.statistician.reqStatC <- &reqStat{
-					success: err == nil,
-					elapsed: time.Since(start).Milliseconds(),
-					nodeId:  t.index,
-				}
+				// 计算请求时延
+				elapsed := time.Since(start).Milliseconds()
+				go func(e error, elapsed int64) {
+					// 结果进入结果集
+					atomic.AddUint32(&t.statistician.totalCount, 1)
+					t.statistician.reqStatC <- &reqStat{
+						success: e == nil,
+						elapsed: elapsed,
+						nodeId:  t.index,
+					}
+				}(err, elapsed)
 				if recordLog && err != nil {
 					log.Errorf("threadId: %d, loopId: %d, nodeId: %d, err: %s", t.id, i, t.index, err)
 				}
