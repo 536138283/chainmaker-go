@@ -14,7 +14,7 @@ import (
 
 var (
 	templateStr = "%s_%d_%d_%d"
-	resultStr   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
+	resultStr   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v"
 )
 
 const (
@@ -158,6 +158,7 @@ func parallelInvoke(method string) error {
 	go printResult(printTicker, statistician)
 	// 等待超时或请求执行完毕
 	listenAndExit(timeoutChan, doneChan)
+	printTicker.Stop()
 	finalPrint(statistician, printTicker)
 	return nil
 }

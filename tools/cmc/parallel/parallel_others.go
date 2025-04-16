@@ -452,7 +452,7 @@ type invokeHandler struct {
 var (
 	respStr           = "proposalRequest error, resp: %+v"
 	templateStrOthers = "%s_%d_%d_%d"
-	resultStrOthers   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
+	resultStrOthers   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v"
 )
 
 var totalSentTxsOthers int64

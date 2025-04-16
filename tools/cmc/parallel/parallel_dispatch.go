@@ -21,10 +21,6 @@ import (
 func producer(method string) {
 	builder := stressBuilderFactory(method)
 	for {
-		if requestId >= int64(threadNum*loopNum) {
-			interruptSignal = true
-			return
-		}
 		select {
 		case index := <-produceSignal:
 			if index == -1 {
@@ -34,9 +30,7 @@ func producer(method string) {
 				firstComplete <- 1
 			} else {
 				// 如果生产的数量已经超过了既定值则停止生产
-				if requestId < int64(threadNum*loopNum) {
-					go produce(builder, index)
-				}
+				go produce(builder, index)
 			}
 		}
 	}
