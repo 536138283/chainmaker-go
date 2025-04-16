@@ -1459,6 +1459,13 @@ func (ts *TxScheduler) createChargeGasTx(
 		txTable := snapshot.GetTxTable()
 		txMap := snapshot.GetTxResultMap()
 		for _, tx := range txTable {
+			// calling a normal system contract does not require charging gas
+			if blockVersion >= protocol.BlockVersion240 {
+				if !ts.checkNativeFilter(blockVersion, tx.Payload.ContractName, tx.Payload.Method, tx, snapshot) ||
+					tx.Payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
+					continue
+				}
+			}
 			address, ok := addressCache[tx.Payload.TxId]
 			if !ok {
 				ts.log.Warnf("load address from cache failed for unknown reason")
