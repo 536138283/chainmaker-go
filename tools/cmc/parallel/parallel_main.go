@@ -26,6 +26,11 @@ const (
 	statChain          = "stat"
 )
 
+const (
+	FinalPrint    = true
+	NorFinalPrint = false
+)
+
 var totalSentTxs int64
 var totalRandomSentTxs int64
 
@@ -70,6 +75,8 @@ var computeFactor = 3
 
 // paramChanCount 参数队列的数量,根据线程数量动态增加
 var paramChanCount int
+
+var endTime time.Time
 
 func initParallel() error {
 	if nodeNum > threadNum {
@@ -159,6 +166,7 @@ func parallelInvoke(method string) error {
 	go printResult(printTicker, statistician)
 	// 等待超时或请求执行完毕
 	listenAndExit(timeoutChan, doneChan)
+	endTime = time.Now()
 	finalPrint(statistician, printTicker)
 	return nil
 }
@@ -201,14 +209,14 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 		if height == lastHeight {
 			printTicker.Stop()
 			fmt.Println("all thread word done finish print")
-			statistician.printDetails()
+			statistician.printDetails(FinalPrint)
+			closeSubChan <- struct{}{}
 			return
 		} else {
 			lastHeight = height
 			time.Sleep(time.Second * time.Duration(checkInterval))
 		}
 	}
-	closeSubChan <- struct{}{}
 }
 
 // 函数负责定时输出统计信息
@@ -219,7 +227,7 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 	for {
 		select {
 		case <-printTicker.C:
-			go statistician.printDetails()
+			go statistician.printDetails(NorFinalPrint)
 		}
 	}
 }
@@ -228,10 +236,15 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 // 成员变量修改:
 // endTime (time.Time): 更新为当前时间，表示统计结束的时间点。
 // elapsedSeconds (float32): 计算从开始到结束的持续时间（以秒为单位）。
-func (s *Statistician) printDetails() {
+func (s *Statistician) printDetails(isFinal bool) {
 	m := make(map[string]interface{})
-	s.endTime = time.Now()
-	s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
+	if isFinal {
+		s.endTime = endTime
+		s.elapsedSeconds = float32(endTime.Sub(s.startTime).Seconds())
+	} else {
+		s.endTime = time.Now()
+		s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
+	}
 	s.run(m, s.rpcPrint())
 	if !onlySend {
 		s.run(m, s.usualPrint(), s.chainPrint())
