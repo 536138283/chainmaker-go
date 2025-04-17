@@ -64,15 +64,6 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	if showKey {
-		j, err := json.Marshal(pairs)
-		if err != nil {
-			fmt.Println(err)
-		}
-		rate := totalRandomSentTxs * 100 / totalSentTxs
-		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
-			totalSentTxs, totalRandomSentTxs, rate, string(j))
-	}
 	// 如果有ABI路径，则读取ABI数据，并根据ABI调整方法名和参数对
 	var abiData *[]byte
 	if abiPath != "" {

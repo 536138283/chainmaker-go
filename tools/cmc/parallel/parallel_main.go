@@ -13,8 +13,9 @@ import (
 )
 
 var (
-	templateStr = "%s_%d_%d_%d"
-	resultStr   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v"
+	templateStr    = "%s_%d_%d_%d"
+	resultFmtStr   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
+	resultFmtStrPk = "exec result, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
 )
 
 const (
@@ -158,7 +159,6 @@ func parallelInvoke(method string) error {
 	go printResult(printTicker, statistician)
 	// 等待超时或请求执行完毕
 	listenAndExit(timeoutChan, doneChan)
-	printTicker.Stop()
 	finalPrint(statistician, printTicker)
 	return nil
 }
@@ -192,12 +192,12 @@ func recordStartTime(statistician *Statistician) error {
 // 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
 func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 	lastHeight := uint64(0)
+	height, err := getBlockHeight()
+	if err != nil {
+		fmt.Printf("get block height err: %s\n", err.Error())
+		return
+	}
 	for {
-		height, err := getBlockHeight()
-		if err != nil {
-			fmt.Printf("get block height err: %s\n", err.Error())
-			return
-		}
 		if height == lastHeight {
 			printTicker.Stop()
 			fmt.Println("all thread word done finish print")
@@ -208,6 +208,7 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 			time.Sleep(time.Second * time.Duration(checkInterval))
 		}
 	}
+	closeSubChan <- struct{}{}
 }
 
 // 函数负责定时输出统计信息

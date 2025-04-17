@@ -511,7 +511,7 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	}
 
 	if outputResult {
-		msg := fmt.Sprintf(resultStr, orgId, loopId, method1, txId, resp)
+		msg := fmt.Sprintf(resultStrOthers, orgId, loopId, method1, txId, resp)
 		fmt.Println(msg)
 	}
 

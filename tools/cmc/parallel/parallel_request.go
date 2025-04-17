@@ -4,10 +4,12 @@ import (
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"context"
+	"encoding/json"
 	"fmt"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"math"
+	"sync/atomic"
 	"time"
 )
 
@@ -42,12 +44,10 @@ func subNodes(statistician *Statistician, start, end int64) {
 						blockInfo.Block.Header, index, blockInfo.Block.Txs,
 					}
 				case <-ctx.Done():
-					return
 				case _, ok := <-closeSubChan:
 					if !ok {
 						return
 					}
-					cancel()
 					close(closeSubChan)
 					return
 				}
@@ -58,6 +58,8 @@ func subNodes(statistician *Statistician, start, end int64) {
 }
 
 // sendTx 向特定节点发送交易请求。如果请求超时，则返回错误信息
+var reqIndex uint64
+
 func sendTx(client *sdk.ChainClient, orgId string, loopId int, req *commonPb.TxRequest) error {
 	// 防止在收到响应之前上链的数据不一致情况，这里提前记录交易id
 	txLatency.Store(req.Payload.TxId, time.Now().UnixNano()/1e6)
@@ -68,10 +70,23 @@ func sendTx(client *sdk.ChainClient, orgId string, loopId int, req *commonPb.TxR
 		}
 		return fmt.Errorf("client.call err: %v\n", err)
 	}
-	if outputResult {
-		msg := fmt.Sprintf(resultStr, orgId, loopId, result.ContractResult, result.TxId, result)
-		fmt.Println(msg)
+	if showKey {
+		j, err := json.Marshal(req.Payload.Parameters)
+		if err != nil {
+			fmt.Println(err)
+		}
+		atomic.AddUint64(&reqIndex, 1)
+		fmt.Printf("request Index:%d\t param:%s\t \n", reqIndex, string(j))
 	}
+	if outputResult {
+		switch sdk.AuthType(authTypeUint32) {
+		case sdk.Public:
+			fmt.Printf(resultFmtStrPk, loopId, method, result.TxId, result)
+		default:
+			fmt.Printf(resultFmtStr, orgId, loopId, method, result.TxId, result)
+		}
+	}
+
 	return nil
 }
 
