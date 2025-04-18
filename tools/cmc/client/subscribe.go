@@ -168,7 +168,7 @@ func subscribeContractEventCMD() *cobra.Command {
 		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
 		flagOrgId, flagChainId, flagSendTimes, flagEnableCertHash, flagSdkConfPath, flagPayerKeyFilePath,
 		flagAdminCrtFilePaths, flagAdminKeyFilePaths, flagAdminOrgIds, flagPayerCrtFilePath,
-		flagStartBlockHeight, flagEndBlockHeight, flagContractName,
+		flagStartBlockHeight, flagEndBlockHeight, flagContractName, flagTopic,
 	})
 	return cmd
 }
