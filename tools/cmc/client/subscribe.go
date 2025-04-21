@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 	"strings"
 )
@@ -80,13 +81,15 @@ func subscribeBlock() error {
 				if !ok {
 					return errors.New("not a blockHeader type")
 				}
-				fmt.Println(header.String())
+				str := spew.Sdump(header)
+				fmt.Println(str)
 			} else {
 				blockInfo, ok := block.(*common.BlockInfo)
 				if !ok {
 					return errors.New("not a blockInfo type")
 				}
-				fmt.Println(blockInfo.String())
+				str := spew.Sdump(blockInfo)
+				fmt.Println(str)
 			}
 
 		case <-ctx.Done():
