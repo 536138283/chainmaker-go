@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/spf13/cobra"
 	"strings"
 )
@@ -81,17 +80,14 @@ func subscribeBlock() error {
 				if !ok {
 					return errors.New("not a blockHeader type")
 				}
-				str := spew.Sdump(header)
-				fmt.Println(str)
+				util.PrintJson(util.FormatHeader(header))
 			} else {
 				blockInfo, ok := block.(*common.BlockInfo)
 				if !ok {
 					return errors.New("not a blockInfo type")
 				}
-				str := spew.Sdump(blockInfo)
-				fmt.Println(str)
+				util.PrintJson(util.FormatBlockInfo(blockInfo))
 			}
-
 		case <-ctx.Done():
 			return nil
 		}
@@ -151,7 +147,7 @@ func subscribeTx() error {
 			if !ok {
 				return errors.New("not a transaction type")
 			}
-			fmt.Println(t.String())
+			util.PrintJson(util.FormatTxs([]*common.Transaction{t}))
 		case <-ctx.Done():
 			return nil
 		}

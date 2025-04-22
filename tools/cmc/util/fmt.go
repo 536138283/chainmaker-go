@@ -1,0 +1,231 @@
+package util
+
+import (
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"encoding/base64"
+	"encoding/json"
+	"fmt"
+)
+
+func FormatBlockInfo(bi *common.BlockInfo) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["block"] = formatBlock(bi.Block)
+	m["rwset_list"] = formatTxRWSet(bi.RwsetList)
+	return m
+}
+
+func formatTxRWSet(tr []*common.TxRWSet) interface{} {
+	arr := make([]interface{}, 0)
+	for _, tx := range tr {
+		m := make(map[string]interface{})
+		m["tx_id"] = tx.TxId
+		m["tx_reads"] = formatTxReads(tx.TxReads)
+		m["tx_writes"] = formatTxWrites(tx.TxWrites)
+		arr = append(arr, m)
+	}
+	return arr
+}
+
+func formatTxReads(reads []*common.TxRead) []interface{} {
+	arr := make([]interface{}, 0)
+	for _, read := range reads {
+		m := make(map[string]interface{})
+		m["key"] = string(read.Key)
+		var dest []byte
+		_, err := base64.StdEncoding.Decode(dest, read.Value)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		m["value"] = string(dest)
+		m["contract_name"] = read.ContractName
+		m["version"] = formatKeyVersion(read.Version)
+		arr = append(arr, m)
+	}
+	return arr
+}
+
+func formatKeyVersion(kv *common.KeyVersion) interface{} {
+	m := make(map[string]interface{})
+	m["ref_tx_id"] = kv.RefTxId
+	m["ref_offset"] = kv.RefOffset
+	return m
+}
+
+func formatTxWrites(writes []*common.TxWrite) []interface{} {
+	arr := make([]interface{}, 0)
+	for _, write := range writes {
+		m := make(map[string]interface{})
+		m["key"] = string(write.Key)
+		var dest []byte
+		_, err := base64.StdEncoding.Decode(dest, write.Value)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		m["value"] = string(dest)
+		m["contract_name"] = write.ContractName
+		arr = append(arr, m)
+	}
+	return arr
+}
+
+func formatBlock(b *common.Block) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["header"] = FormatHeader(b.Header)
+	m["dag"] = b.Dag
+	m["txs"] = FormatTxs(b.Txs)
+	m["additional_data"] = b.AdditionalData
+	return m
+}
+
+func FormatHeader(h *common.BlockHeader) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["block_version"] = h.BlockVersion
+	m["block_type"] = h.BlockType
+	m["chain_id"] = h.ChainId
+	m["block_height"] = h.BlockHeight
+	m["block_hash"] = fmt.Sprintf("%x", h.BlockHash)
+	m["pre_block_hash"] = fmt.Sprintf("%x", h.PreBlockHash)
+	m["pre_conf_height"] = h.PreConfHeight
+	m["tx_count"] = h.TxCount
+	m["tx_root"] = string(h.TxRoot)
+	m["dag_hash"] = fmt.Sprintf("%x", h.DagHash)
+	m["rw_set_root"] = string(h.RwSetRoot)
+	m["block_timestamp"] = h.BlockTimestamp
+	m["consensus_args"] = string(h.ConsensusArgs)
+	m["proposer"] = formatMember(h.Proposer)
+	m["signature"] = fmt.Sprintf("%x", h.Signature)
+	return m
+}
+
+func FormatTxs(h []*common.Transaction) interface{} {
+	arr := make([]interface{}, len(h))
+	for _, v := range h {
+		m := make(map[string]interface{})
+		m["payload"] = formatPayload(v.Payload)
+		m["sender"] = formatSender(v.Sender)
+		m["endorsers"] = formatEndorsers(v.Endorsers)
+		m["result"] = formatResult(v.Result)
+		m["payer"] = formatSender(v.Payer)
+		arr = append(arr, m)
+	}
+	return arr
+}
+
+func formatPayload(h *common.Payload) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["chain_id"] = h.ChainId
+	m["tx_type"] = h.TxType
+	m["tx_id"] = h.TxId
+	m["timestamp"] = h.Timestamp
+	m["expiration_time"] = h.ExpirationTime
+	m["contract_name"] = h.ContractName
+	m["method"] = h.Method
+	m["parameters"] = FormatParameters(h.Parameters)
+	m["sequence"] = h.Sequence
+	m["parameters"] = FormatParameters(h.Parameters)
+	return m
+}
+
+func formatSender(e *common.EndorsementEntry) map[string]interface{} {
+	if e == nil {
+		return nil
+	}
+	m := make(map[string]interface{})
+	m["signer"] = formatMember(e.Signer)
+	m["signature"] = fmt.Sprintf("%x", e.Signature)
+	return m
+}
+
+func formatEndorsers(e []*common.EndorsementEntry) interface{} {
+	arr := make([]interface{}, len(e))
+	for _, v := range e {
+		m := make(map[string]interface{})
+		m["signer"] = formatMember(v.Signer)
+		m["signature"] = fmt.Sprintf("%x", v.Signature)
+		arr = append(arr, m)
+	}
+	return arr
+}
+
+func formatMember(mem *accesscontrol.Member) map[string]interface{} {
+	if mem == nil {
+		return nil
+	}
+	m := make(map[string]interface{})
+	m["org_id"] = mem.OrgId
+	m["member_type"] = mem.MemberType
+	m["member_info"] = fmt.Sprintf("%x", mem.MemberInfo)
+	return m
+}
+
+func formatResult(r *common.Result) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["code"] = r.Code
+	m["contract_result"] = formatContractResult(r.ContractResult)
+	m["rw_set_hash"] = fmt.Sprintf("%x", r.RwSetHash)
+	m["message"] = r.Message
+	return m
+}
+
+func formatContractResult(cr *common.ContractResult) map[string]interface{} {
+	m := make(map[string]interface{})
+	m["code"] = cr.Code
+	m["contract_result"] = string(cr.Result)
+	m["message"] = cr.Message
+	m["gas_used"] = cr.GasUsed
+	m["contract_event"] = formatContractEvent(cr.ContractEvent)
+	return m
+}
+
+func formatContractEvent(ce []*common.ContractEvent) interface{} {
+	arr := make([]interface{}, 0)
+	for _, v := range ce {
+		m := make(map[string]interface{})
+		m["topic"] = v.Topic
+		m["tx_id"] = v.TxId
+		m["contract_name"] = v.ContractName
+		m["contract_version"] = v.ContractVersion
+		m["event_data"] = v.EventData
+		arr = append(arr, m)
+	}
+	return arr
+}
+
+func formatLimit(l *common.Limit) map[string]interface{} {
+	m := make(map[string]interface{})
+	if l == nil {
+		return nil
+	}
+	m["gas_limit"] = l.GasLimit
+	return m
+}
+
+type kvParam struct {
+	key   string      `json:"key"`
+	value interface{} `json:"value"`
+}
+
+func FormatParameters(p []*common.KeyValuePair) interface{} {
+	arr := make([]kvParam, 0)
+	for _, kv := range p {
+		if kv.Key == "CHAIN_CONFIG" {
+			arr = append(arr, kvParam{
+				key:   kv.Key,
+				value: string(kv.Value),
+			})
+		}
+	}
+	return arr
+}
+
+func PrintJson(info interface{}) {
+	j, err := json.Marshal(info)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	fmt.Println(string(j))
+}
