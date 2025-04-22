@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"strconv"
 
-	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
-
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	configPb "chainmaker.org/chainmaker/pb-go/v2/config"
 	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	"chainmaker.org/chainmaker/protocol/v2"
+	"chainmaker.org/chainmaker/utils/v2"
 )
 
 func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot,
@@ -38,6 +38,10 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 				gasNeedToCharge[kv.Key] = total
 			}
 		} else {
+			needToCharge := true
+			if !checkNativeFilter(tx) || tx.GetPayload().GetTxType() != commonPb.TxType_INVOKE_CONTRACT {
+				needToCharge = false
+			}
 			gasUsed := tx.Result.ContractResult.GasUsed
 			address, _, err2 := getPayerAddressAndPkFromTx(tx, snapshot, ac)
 			if err2 != nil {
@@ -45,9 +49,13 @@ func VerifyOptimizeChargeGasTx(block *commonPb.Block, snapshot protocol.Snapshot
 			}
 
 			if totalGas, exists := gasCalc[address]; exists {
-				gasCalc[address] = totalGas + gasUsed
-			} else {
+				if needToCharge {
+					gasCalc[address] = totalGas + gasUsed
+				}
+			} else if needToCharge {
 				gasCalc[address] = gasUsed
+			} else {
+				gasCalc[address] = 0
 			}
 		}
 	}
@@ -83,4 +91,22 @@ func getMultiSignEnableManualRun(chainConfig *configPb.ChainConfig) bool {
 	}
 
 	return chainConfig.Vm.Native.Multisign.EnableManualRun
+}
+
+// check the tx need to charge gas or not, normal native contract need not to charge gas in v240
+func checkNativeFilter(tx *commonPb.Transaction) bool {
+	// user contracts need to charge gas
+	if !utils.IsNativeContract(tx.GetPayload().GetContractName()) {
+		return true
+	}
+
+	// install & upgrade contracts need to charge gas
+	if tx.GetPayload().GetContractName() == syscontract.SystemContract_CONTRACT_MANAGE.String() {
+		if tx.GetPayload().GetMethod() == syscontract.ContractManageFunction_INIT_CONTRACT.String() ||
+			tx.GetPayload().GetMethod() == syscontract.ContractManageFunction_UPGRADE_CONTRACT.String() {
+			return true
+		}
+	}
+	// multi sign contracts need to charge gas
+	return tx.GetPayload().GetContractName() == syscontract.SystemContract_MULTI_SIGN.String()
 }
