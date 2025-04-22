@@ -90,13 +90,13 @@ func FormatHeader(h *common.BlockHeader) map[string]interface{} {
 	m["pre_block_hash"] = fmt.Sprintf("%x", h.PreBlockHash)
 	m["pre_conf_height"] = h.PreConfHeight
 	m["tx_count"] = h.TxCount
-	m["tx_root"] = string(h.TxRoot)
+	m["tx_root"] = fmt.Sprintf("%x", h.TxRoot)
 	m["dag_hash"] = fmt.Sprintf("%x", h.DagHash)
-	m["rw_set_root"] = string(h.RwSetRoot)
+	m["rw_set_root"] = fmt.Sprintf("%x", h.RwSetRoot)
 	m["block_timestamp"] = h.BlockTimestamp
 	m["consensus_args"] = string(h.ConsensusArgs)
 	m["proposer"] = formatMember(h.Proposer)
-	m["signature"] = fmt.Sprintf("%x", h.Signature)
+	m["signature"] = base64.StdEncoding.EncodeToString(h.Signature)
 	return m
 }
 
@@ -135,7 +135,7 @@ func formatSender(e *common.EndorsementEntry) map[string]interface{} {
 	}
 	m := make(map[string]interface{})
 	m["signer"] = formatMember(e.Signer)
-	m["signature"] = fmt.Sprintf("%x", e.Signature)
+	m["signature"] = base64.StdEncoding.EncodeToString(e.Signature)
 	return m
 }
 
@@ -157,7 +157,7 @@ func formatMember(mem *accesscontrol.Member) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["org_id"] = mem.OrgId
 	m["member_type"] = mem.MemberType
-	m["member_info"] = fmt.Sprintf("%x", mem.MemberInfo)
+	m["member_info"] = base64.StdEncoding.EncodeToString(mem.MemberInfo)
 	return m
 }
 
@@ -173,7 +173,7 @@ func formatResult(r *common.Result) map[string]interface{} {
 func formatContractResult(cr *common.ContractResult) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["code"] = cr.Code
-	m["contract_result"] = string(cr.Result)
+	m["result"] = base64.StdEncoding.EncodeToString(cr.Result)
 	m["message"] = cr.Message
 	m["gas_used"] = cr.GasUsed
 	m["contract_event"] = formatContractEvent(cr.ContractEvent)
