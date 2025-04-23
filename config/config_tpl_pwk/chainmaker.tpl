@@ -639,6 +639,27 @@ vm:
       # Runtime server port, default 32351
       port: {docker_vm_runtime_port}
 
+    contract_engine:
+    # cgroup is used to limit the resource usage of contract processes on the host machine
+      cgroup:
+        # disable the cgroup function means that there will be no restrictions
+        # on the resource usage of the contract process on the host machine
+        disable: true
+        # max memory size per sandbox(MiB), -1 means no limit
+        max_mem_size_per_process: -1
+        # max cpu percent per sandbox, -1 means no limit
+        max_cpu_percent_per_process: -1
+
+        # allow devices list
+        # detailed information can be found in the document:
+        #     https://access.redhat.com/documentation/zh-cn/red_hat_enterprise_linux/7/html/resource_management_guide/sec-devices//
+        devices_allow: ""
+
+        # deny devices list
+        # detailed information can be found in the document:
+        #     https://access.redhat.com/documentation/zh-cn/red_hat_enterprise_linux/7/html/resource_management_guide/sec-devices//
+        devices_deny: ""
+
   # Golang runtime in docker container
   go:
     # Enable docker go virtual machine, default: false
