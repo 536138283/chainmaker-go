@@ -93,7 +93,7 @@ func getMultiSignEnableManualRun(chainConfig *configPb.ChainConfig) bool {
 	return chainConfig.Vm.Native.Multisign.EnableManualRun
 }
 
-// check the tx need to charge gas or not, normal native contract need not to charge gas in v240
+// checkNativeFilter checks the tx need to charge gas or not, normal native contract need not to charge gas in v240
 func checkNativeFilter(tx *commonPb.Transaction) bool {
 	// user contracts need to charge gas
 	if !utils.IsNativeContract(tx.GetPayload().GetContractName()) {
