@@ -35,7 +35,7 @@ linters:
     - rowserrcheck
     - errcheck
     - misspell
-    - unused
+#    - unused # 允许存在不调用的代码，防止反射处理
     - varcheck
     - sqlclosecheck
     - gosec
