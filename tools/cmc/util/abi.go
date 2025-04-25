@@ -13,7 +13,6 @@ import (
 	"errors"
 	"fmt"
 	"math/big"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -68,23 +67,20 @@ func parse(sType string, value interface{}) (arg interface{}, err error) {
 	// 处理非数组类型
 	if arrayPart == "" {
 		return baseTypeParse(sType, value)
-	} else {
-		// 数组类型
-		arrayType := matches[1]
-		// 处理数组类型 拿出数组大小N，如果不存在就是0
-		arrayRegex := regexp.MustCompile(`\[([0-9]*)\]`)
-		arrayMatches := arrayRegex.FindStringSubmatch(arrayPart)
-		var err error
-		N := 0
-		if arrayMatches[1] != "" {
-			N, err = strconv.Atoi(arrayMatches[1])
-			if err != nil {
-				return nil, err
-			}
-		}
-		fmt.Println(arrayType, value, N)
-		return parseArr(arrayType, value, N)
 	}
+	// 数组类型
+	arrayType := matches[1]
+	// 处理数组类型 拿出数组大小N，如果不存在就是0
+	arrayRegex := regexp.MustCompile(`\[([0-9]*)\]`)
+	arrayMatches := arrayRegex.FindStringSubmatch(arrayPart)
+	n := 0
+	if arrayMatches[1] != "" {
+		n, err = strconv.Atoi(arrayMatches[1])
+		if err != nil {
+			return nil, err
+		}
+	}
+	return parseArr(arrayType, value, n)
 }
 
 // baseTypeParse 基本数据类型解析
@@ -227,15 +223,14 @@ func parseInt(key string, value interface{}) (interface{}, error) {
 			result = num
 		}
 		return result, nil
-	} else {
-		// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
-		bigInt := big.NewInt(0)
-		num, ok := bigInt.SetString(valueStr, 10)
-		if !ok {
-			return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
-		}
-		return num, nil
 	}
+	// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
+	bigInt := big.NewInt(0)
+	num, ok := bigInt.SetString(valueStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+	}
+	return num, nil
 }
 
 // parseUInt 处理uint类型数据
@@ -286,15 +281,14 @@ func parseUint(key string, value interface{}) (interface{}, error) {
 			result = num
 		}
 		return result, nil
-	} else {
-		// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
-		bigInt := big.NewInt(0)
-		num, ok := bigInt.SetString(valueStr, 10)
-		if !ok {
-			return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
-		}
-		return num, nil
 	}
+	// 如果 key 不是有效的 int 类型，尝试将其转换为 big.Int
+	bigInt := big.NewInt(0)
+	num, ok := bigInt.SetString(valueStr, 10)
+	if !ok {
+		return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+	}
+	return num, nil
 }
 
 // 处理string类型数据
@@ -349,32 +343,32 @@ func parseBytes(key string, value interface{}) ([]byte, error) {
 	return b, nil
 }
 
-func parseArr(key string, value interface{}, N int) (interface{}, error) {
+func parseArr(key string, value interface{}, n int) (interface{}, error) {
 	slice, ok := value.([]interface{})
 	if !ok {
 		return nil, errors.New("value is not a []interface{}")
 	}
 	switch {
 	case isStringType(key):
-		return parseStrArr(slice, N), nil
+		return parseStrArr(slice, n), nil
 	case strings.Contains(key, "int") && !strings.Contains(key, "uint"):
-		return parseIntArray(key, slice, N)
+		return parseIntArray(key, slice, n)
 	case strings.Contains(key, "uint"):
-		return parseUintArray(key, slice, N)
+		return parseUintArray(key, slice, n)
 	case isBoolType(key):
-		return parseBoolArr(slice, N)
+		return parseBoolArr(slice, n)
 	case isAddressType(key):
-		return parseAddressArr(slice, N)
+		return parseAddressArr(slice, n)
 	case strings.Contains(key, "bytes"):
-		return parseBytesArr(key, slice, N)
+		return parseBytesArr(key, slice, n)
 	default:
 		return value, nil
 	}
 }
 
-func parseStrArr(value []interface{}, N int) []string {
-	if N != 0 {
-		s := make([]string, N)
+func parseStrArr(value []interface{}, n int) []string {
+	if n != 0 {
+		s := make([]string, n)
 		for i := 0; i < len(value); i++ {
 			s[i] = parseStr(value[i])
 		}
@@ -387,7 +381,7 @@ func parseStrArr(value []interface{}, N int) []string {
 	return s
 }
 
-func parseIntArray(key string, value []interface{}, N int) (interface{}, error) {
+func parseIntArray(key string, value []interface{}, n int) (interface{}, error) {
 	isM := regexp.MustCompile("(int)([0-9]+)")
 	bitStr := isM.FindStringSubmatch(key)
 	if bitStr != nil {
@@ -397,24 +391,24 @@ func parseIntArray(key string, value []interface{}, N int) (interface{}, error) 
 		}
 		switch {
 		case bitNum <= 8:
-			return int8Arr(value, N)
+			return int8Arr(value, n)
 		case bitNum <= 16:
-			return int16Arr(value, N)
+			return int16Arr(value, n)
 		case bitNum <= 32:
-			return int32Arr(value, N)
+			return int32Arr(value, n)
 		case bitNum <= 64:
-			return int64Arr(value, N)
+			return int64Arr(value, n)
 		default:
-			return bigIntArr(value, N)
+			return bigIntArr(value, n)
 		}
 	} else {
-		return bigIntArr(value, N)
+		return bigIntArr(value, n)
 	}
 }
 
-func int8Arr(value []interface{}, N int) ([]int8, error) {
-	if N != 0 {
-		arr := make([]int8, N)
+func int8Arr(value []interface{}, n int) ([]int8, error) {
+	if n != 0 {
+		arr := make([]int8, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 8)
@@ -437,9 +431,9 @@ func int8Arr(value []interface{}, N int) ([]int8, error) {
 	return arr, nil
 }
 
-func int16Arr(value []interface{}, N int) ([]int16, error) {
-	if N != 0 {
-		arr := make([]int16, N)
+func int16Arr(value []interface{}, n int) ([]int16, error) {
+	if n != 0 {
+		arr := make([]int16, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 16)
@@ -462,10 +456,10 @@ func int16Arr(value []interface{}, N int) ([]int16, error) {
 	return arr, nil
 }
 
-func int32Arr(value []interface{}, N int) ([]int32, error) {
+func int32Arr(value []interface{}, n int) ([]int32, error) {
 
-	if N != 0 {
-		arr := make([]int32, N)
+	if n != 0 {
+		arr := make([]int32, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 32)
@@ -488,9 +482,9 @@ func int32Arr(value []interface{}, N int) ([]int32, error) {
 	return arr, nil
 }
 
-func int64Arr(value []interface{}, N int) ([]int64, error) {
-	if N != 0 {
-		arr := make([]int64, N)
+func int64Arr(value []interface{}, n int) ([]int64, error) {
+	if n != 0 {
+		arr := make([]int64, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseInt(valueStr, 10, 64)
@@ -513,9 +507,9 @@ func int64Arr(value []interface{}, N int) ([]int64, error) {
 	return arr, nil
 }
 
-func bigIntArr(value []interface{}, N int) ([]*big.Int, error) {
-	if N != 0 {
-		arr := make([]*big.Int, N)
+func bigIntArr(value []interface{}, n int) ([]*big.Int, error) {
+	if n != 0 {
+		arr := make([]*big.Int, n)
 		for i := 0; i < len(value); i++ {
 			bigInt := big.NewInt(0)
 			valueStr := fmt.Sprint(value[i])
@@ -526,22 +520,21 @@ func bigIntArr(value []interface{}, N int) ([]*big.Int, error) {
 			arr[i] = num
 		}
 		return arr, nil
-	} else {
-		arr := make([]*big.Int, N)
-		for i := 0; i < len(value); i++ {
-			bigInt := big.NewInt(0)
-			valueStr := fmt.Sprint(value[i])
-			num, ok := bigInt.SetString(valueStr, 10)
-			if !ok {
-				return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
-			}
-			arr = append(arr, num)
-		}
-		return arr, nil
 	}
+	arr := make([]*big.Int, n)
+	for i := 0; i < len(value); i++ {
+		bigInt := big.NewInt(0)
+		valueStr := fmt.Sprint(value[i])
+		num, ok := bigInt.SetString(valueStr, 10)
+		if !ok {
+			return nil, fmt.Errorf("failed to set big.Int from value: %s", valueStr)
+		}
+		arr = append(arr, num)
+	}
+	return arr, nil
 }
 
-func parseUintArray(key string, value []interface{}, N int) (interface{}, error) {
+func parseUintArray(key string, value []interface{}, n int) (interface{}, error) {
 	isM := regexp.MustCompile("(uint)([0-9]+)")
 	bitStr := isM.FindStringSubmatch(key)
 	if bitStr != nil {
@@ -551,18 +544,18 @@ func parseUintArray(key string, value []interface{}, N int) (interface{}, error)
 		}
 		switch {
 		case bitNum <= 8:
-			return uint8Arr(value, N)
+			return uint8Arr(value, n)
 		case bitNum <= 16:
-			return uint16Arr(value, N)
+			return uint16Arr(value, n)
 		case bitNum <= 32:
-			return uint32Arr(value, N)
+			return uint32Arr(value, n)
 		case bitNum <= 64:
-			return uint64Arr(value, N)
+			return uint64Arr(value, n)
 		default:
-			return bigIntArr(value, N)
+			return bigIntArr(value, n)
 		}
 	} else {
-		return bigIntArr(value, N)
+		return bigIntArr(value, n)
 	}
 }
 
@@ -591,9 +584,9 @@ func uint8Arr(value []interface{}, N int) ([]uint8, error) {
 	return arr, nil
 }
 
-func uint16Arr(value []interface{}, N int) ([]uint16, error) {
-	if N != 0 {
-		arr := make([]uint16, N)
+func uint16Arr(value []interface{}, n int) ([]uint16, error) {
+	if n != 0 {
+		arr := make([]uint16, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 16)
@@ -616,9 +609,9 @@ func uint16Arr(value []interface{}, N int) ([]uint16, error) {
 	return arr, nil
 }
 
-func uint32Arr(value []interface{}, N int) ([]uint32, error) {
-	if N != 0 {
-		arr := make([]uint32, N)
+func uint32Arr(value []interface{}, n int) ([]uint32, error) {
+	if n != 0 {
+		arr := make([]uint32, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 32)
@@ -641,9 +634,9 @@ func uint32Arr(value []interface{}, N int) ([]uint32, error) {
 	return arr, nil
 }
 
-func uint64Arr(value []interface{}, N int) ([]uint64, error) {
-	if N != 0 {
-		arr := make([]uint64, N)
+func uint64Arr(value []interface{}, n int) ([]uint64, error) {
+	if n != 0 {
+		arr := make([]uint64, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 64)
@@ -666,9 +659,9 @@ func uint64Arr(value []interface{}, N int) ([]uint64, error) {
 	return arr, nil
 }
 
-func parseBoolArr(value []interface{}, N int) ([]bool, error) {
-	if N != 0 {
-		arr := make([]bool, N)
+func parseBoolArr(value []interface{}, n int) ([]bool, error) {
+	if n != 0 {
+		arr := make([]bool, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			b, err := strconv.ParseBool(valueStr)
@@ -691,9 +684,9 @@ func parseBoolArr(value []interface{}, N int) ([]bool, error) {
 	return arr, nil
 }
 
-func parseAddressArr(value []interface{}, N int) (interface{}, error) {
-	if N != 0 {
-		arr := make([][]byte, N)
+func parseAddressArr(value []interface{}, n int) (interface{}, error) {
+	if n != 0 {
+		arr := make([][]byte, n)
 		for i := 0; i < len(value); i++ {
 			addr, err := parseAddress(value[i])
 			if err != nil {
@@ -702,22 +695,21 @@ func parseAddressArr(value []interface{}, N int) (interface{}, error) {
 			arr[i] = addr
 		}
 		return arr, nil
-	} else {
-		arr := make([][]byte, 0)
-		for i := 0; i < len(value); i++ {
-			addr, err := parseAddress(value[i])
-			if err != nil {
-				return nil, err
-			}
-			arr = append(arr, addr)
-		}
-		return arr, nil
 	}
+	arr := make([][]byte, 0)
+	for i := 0; i < len(value); i++ {
+		addr, err := parseAddress(value[i])
+		if err != nil {
+			return nil, err
+		}
+		arr = append(arr, addr)
+	}
+	return arr, nil
 }
 
-func parseBytesArr(key string, value []interface{}, N int) (interface{}, error) {
-	if N != 0 {
-		arr := make([][]byte, N)
+func parseBytesArr(key string, value []interface{}, n int) (interface{}, error) {
+	if n != 0 {
+		arr := make([][]byte, n)
 		for i := 0; i < len(value); i++ {
 			b, err := parseBytes(key, value[i])
 			if err != nil {
@@ -726,17 +718,16 @@ func parseBytesArr(key string, value []interface{}, N int) (interface{}, error) 
 			arr[i] = b
 		}
 		return arr, nil
-	} else {
-		arr := make([][]byte, 0)
-		for i := 0; i < len(value); i++ {
-			b, err := parseBytes(key, value[i])
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse bytes : %s", err.Error())
-			}
-			arr = append(arr, b)
-		}
-		return arr, nil
 	}
+	arr := make([][]byte, 0)
+	for i := 0; i < len(value); i++ {
+		b, err := parseBytes(key, value[i])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse bytes : %s", err.Error())
+		}
+		arr = append(arr, b)
+	}
+	return arr, nil
 }
 
 func TestDemo(method string, paramsJson string) {
@@ -754,10 +745,7 @@ func TestDemo(method string, paramsJson string) {
 				fmt.Println(err.Error())
 				return
 			}
-			fmt.Println("qqqq", reflect.TypeOf(arg))
 			args = append(args, arg)
 		}
 	}
-	fmt.Println(method, args)
-	return
 }

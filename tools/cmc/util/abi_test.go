@@ -1397,7 +1397,7 @@ func TestDynamicStringABI(t *testing.T) {
 }
 
 // 长三角json
-var cJson string = `[
+var cJson = `[
         {
                 "inputs": [
                         {
