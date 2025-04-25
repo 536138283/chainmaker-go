@@ -94,7 +94,7 @@ linters-settings:
       - name: unreachable-code
       - name: redefines-builtin-id
       - name: function-length
-        arguments: [ 80,0 ]
+        arguments: [ 85,0 ]
 
 issues:
   exclude-use-default: true

@@ -231,7 +231,8 @@ func init() {
 
 	// 压测参数
 	flags.IntVarP(&concurrency, flagConcurrency, "c", 1, "specify concurrency count")
-	flags.IntVarP(&totalCntPerGoroutine, flagTotalCountPerGoroutine, "t", 1, "specify total count per goroutine")
+	flags.IntVarP(&totalCntPerGoroutine, flagTotalCountPerGoroutine, "t", 1,
+		"specify total count per goroutine")
 
 	// sdk配置路径
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")

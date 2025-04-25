@@ -1,14 +1,15 @@
 package client
 
 import (
-	"chainmaker.org/chainmaker-go/tools/cmc/util"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"context"
 	"errors"
 	"fmt"
-	"github.com/spf13/cobra"
 	"strings"
+
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"github.com/spf13/cobra"
 )
 
 // subscribeCMD subscribe command

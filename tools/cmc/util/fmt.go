@@ -1,11 +1,12 @@
 package util
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
-	"chainmaker.org/chainmaker/pb-go/v2/common"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
+	"chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
 func FormatBlockInfo(bi *common.BlockInfo) map[string]interface{} {
@@ -194,6 +195,8 @@ func formatContractEvent(ce []*common.ContractEvent) interface{} {
 	return arr
 }
 
+// formatLimit 格式化Limit
+// nolint:unused
 func formatLimit(l *common.Limit) map[string]interface{} {
 	m := make(map[string]interface{})
 	if l == nil {

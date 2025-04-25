@@ -9,17 +9,18 @@ package client
 
 import (
 	"bytes"
+	"encoding/hex"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+
 	"chainmaker.org/chainmaker-go/tools/cmc/types"
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
-	"encoding/hex"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"github.com/spf13/cobra"
-	"io/ioutil"
 )
 
 // CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT define CHECK_PROPOSAL_RESPONSE_FAILED_FORMAT error fmt
