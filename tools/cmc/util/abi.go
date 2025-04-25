@@ -7,7 +7,6 @@ SPDX-License-Identifier: Apache-2.0
 package util
 
 import (
-	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,6 +15,8 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+
+	"chainmaker.org/chainmaker/common/v2/evmutils/abi"
 )
 
 // loadFromJSON string into ABI data
