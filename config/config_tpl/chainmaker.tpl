@@ -171,17 +171,6 @@ net:
       # node_ids:
       #   - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
 
-sync:
-  # enable tx pool sync or not
-  # Independent configuration, will not affect other configurations under the sync tag,
-  # nor will it be affected by other configurations
-  tx_pool_sync_enable: false
-  # tx pool sync tick duration(second)
-  tx_pool_status_tick: 10
-  # tx pool sync proportion (tx num in queue / tx pool size)
-  # when it is less than this ratio, re broadcast will be triggered
-  tx_pool_sync_proportion: 0.1
-
 #  #---The following configuration items are used in version v1.
 #  # Timeout for waiting for block request response, unit second.
 #  wait_time_requested: 30
@@ -249,6 +238,16 @@ txpool:
 
   # Interval of creating a transaction batch, for normal and batch tx_pool, in millisecond(ms).
   batch_create_timeout: 50
+
+# common node tx pool secondary broadcast to prevent stranded txs in common tx pool
+  rebroadcast:
+    # enable tx pool re sync or not
+    tx_pool_sync_enable: false
+    # tx pool sync tick duration(second)
+    tx_pool_status_tick: 10
+    # tx pool sync proportion (tx num in queue / tx pool size)
+    # when it is less than this ratio, re broadcast will be triggered
+    tx_pool_sync_proportion: 0.1
 
 # RPC service setting
 rpc:
@@ -731,6 +730,27 @@ vm:
       # host: 127.0.0.1
       # Runtime server port, default 32351
       port: {docker_vm_runtime_port}
+
+    contract_engine:
+    # cgroup is used to limit the resource usage of contract processes on the host machine
+      cgroup:
+        # disable the cgroup function means that there will be no restrictions
+        # on the resource usage of the contract process on the host machine
+        disable: true
+        # max memory size per sandbox(MiB), -1 means no limit
+        max_mem_size_per_process: -1
+        # max cpu percent per sandbox, -1 means no limit
+        max_cpu_percent_per_process: -1
+
+        # allow devices list
+        # detailed information can be found in the document:
+        #     https://access.redhat.com/documentation/zh-cn/red_hat_enterprise_linux/7/html/resource_management_guide/sec-devices//
+        devices_allow: ""
+
+        # deny devices list
+        # detailed information can be found in the document:
+        #     https://access.redhat.com/documentation/zh-cn/red_hat_enterprise_linux/7/html/resource_management_guide/sec-devices//
+        devices_deny: ""
 
   # Golang runtime in docker container
   go:

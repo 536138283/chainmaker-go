@@ -1459,6 +1459,11 @@ func (ts *TxScheduler) createChargeGasTx(
 		txTable := snapshot.GetTxTable()
 		txMap := snapshot.GetTxResultMap()
 		for _, tx := range txTable {
+			// calling a normal system contract does not require charging gas
+			if !ts.checkNativeFilter(blockVersion, tx.Payload.ContractName, tx.Payload.Method, tx, snapshot) ||
+				tx.Payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
+				continue
+			}
 			address, ok := addressCache[tx.Payload.TxId]
 			if !ok {
 				ts.log.Warnf("load address from cache failed for unknown reason")
@@ -1494,6 +1499,10 @@ func (ts *TxScheduler) createChargeGasTx(
 			for _, tx := range txCollection.txs {
 				// 不在resultMap中意味着调度超时了，且该笔交易不会被打包进block中，因此不计算在totalGasUsed中
 				if _, ok := resultMap[tx.Payload.TxId]; !ok {
+					continue
+				}
+				if !ts.checkNativeFilter(blockVersion, tx.Payload.ContractName, tx.Payload.Method, tx, snapshot) ||
+					tx.Payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
 					continue
 				}
 				if tx.Result != nil {
