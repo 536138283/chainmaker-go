@@ -678,8 +678,8 @@ func (ts *TxScheduler) getContractBytecode(txSimContext protocol.TxSimContext,
 	}
 	ts.log.DebugDynamic(func() string {
 		contractData, _ := json.Marshal(contract)
-		return fmt.Sprintf("contract[%s] is a native contract, definition:%s",
-			contract.Name, string(contractData))
+		return fmt.Sprintf("contract[%s] is a [%s] contract, definition:%s",
+			contract.Name, contract.RuntimeType.String(), string(contractData))
 	})
 	return nil, nil
 }
