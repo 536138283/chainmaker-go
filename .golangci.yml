@@ -19,7 +19,7 @@ run:
 linters:
   disable-all: true
   enable:
-    - deadcode
+#    - deadcode # 允许存在不调用的代码，防止反射处理
 #    - goconst  # 常量检查可能导致代码可读性变差，因此关闭
     - gocyclo
     - gofmt
