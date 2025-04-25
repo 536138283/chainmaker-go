@@ -117,6 +117,11 @@ function start_vm_go() {
   preload_disable=$chainmaker_vm_go_contract_engine_preload_disable
   preload_num_by_use_frequency=$chainmaker_vm_go_contract_engine_preload_num_by_use_frequency
   preload_num_by_last_time=$chainmaker_vm_go_contract_engine_preload_num_by_last_time
+  cgroup_disable=$chainmaker_vm_common_contract_engine_cgroup_disable
+  max_mem_size_per_process=$chainmaker_vm_common_contract_engine_cgroup_max_mem_size_per_process
+  max_cpu_percent_per_process=$chainmaker_vm_common_contract_engine_cgroup_max_cpu_percent_per_process
+  devices_allow=$chainmaker_vm_common_contract_engine_cgroup_devices_allow
+  devices_deny=$chainmaker_vm_common_contract_engine_cgroup_devices_deny
 
   if [[ $dockervm_config_path != "" ]];then
     if [[ "${dockervm_config_path:0:1}" != "/" ]];then
@@ -150,6 +155,11 @@ function start_vm_go() {
   -e PROCESS_PRELOAD_DISABLE="$preload_disable" \
   -e PROCESS_PRELOAD_NUM_BY_USE_FREQUENCY="$preload_num_by_use_frequency" \
   -e PROCESS_PRELOAD_NUM_BY_LAST_TIME="$preload_num_by_last_time" \
+  -e CGROUP_DISABLE="$cgroup_disable" \
+  -e MAX_MEM_SIZE_PER_PROCESS="$max_mem_size_per_process" \
+  -e MAX_CPU_PERCENT_PER_PROCESS="$max_cpu_percent_per_process" \
+  -e DEVICES_ALLOW="$devices_allow" \
+  -e DEVICES_DENY="$devices_deny" \
   --name $container_name \
   --privileged $VM_GO_IMAGE_NAME \
    > /dev/null
@@ -219,6 +229,11 @@ function start_vm_java() {
   slow_step_time=$chainmaker_vm_java_slow_step_time
   slow_tx_time=$chainmaker_vm_java_slow_tx_time
   process_timeout=$chainmaker_vm_java_process_timeout
+  cgroup_disable=$chainmaker_vm_common_contract_engine_cgroup_disable
+  max_mem_size_per_process=$chainmaker_vm_common_contract_engine_cgroup_max_mem_size_per_process
+  max_cpu_percent_per_process=$chainmaker_vm_common_contract_engine_cgroup_max_cpu_percent_per_process
+  devices_allow=$chainmaker_vm_common_contract_engine_cgroup_devices_allow
+  devices_deny=$chainmaker_vm_common_contract_engine_cgroup_devices_deny
 
   if [[ $dockervm_config_path != "" ]];then
     if [[ "${dockervm_config_path:0:1}" != "/" ]];then
@@ -250,6 +265,11 @@ function start_vm_java() {
   -e SLOW_STEP_TIME="$slow_step_time" \
   -e SLOW_TX_TIME="$slow_tx_time" \
   -e PROCESS_TIMEOUT="$process_timeout" \
+  -e CGROUP_DISABLE="$cgroup_disable" \
+  -e MAX_MEM_SIZE_PER_PROCESS="$max_mem_size_per_process" \
+  -e MAX_CPU_PERCENT_PER_PROCESS="$max_cpu_percent_per_process" \
+  -e DEVICES_ALLOW="$devices_allow" \
+  -e DEVICES_DENY="$devices_deny" \
   --name $container_name \
   --privileged $VM_JAVA_IMAGE_NAME \
    > /dev/null
