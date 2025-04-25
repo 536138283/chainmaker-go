@@ -196,7 +196,7 @@ func formatContractEvent(ce []*common.ContractEvent) interface{} {
 }
 
 // formatLimit 格式化Limit
-// nolint:unused
+//nolint:unused
 func formatLimit(l *common.Limit) map[string]interface{} {
 	m := make(map[string]interface{})
 	if l == nil {
