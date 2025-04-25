@@ -166,7 +166,7 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	netHandler := newSyncNetHandler(mockNet, log)
 	service := &serverV1{
 		BlockChainSyncServer: newBlockChainSyncServerV1(
-			"chain1", mockNet, mockMsgBus,
+			"chain1", "localhost", mockNet, mockMsgBus,
 			mockStore, mockLedger, mockVerify,
 			mockCommit, mockTxPool, netHandler, log).(*BlockChainSyncServer),
 		netHandler: netHandler,
@@ -387,7 +387,7 @@ func initTestSync2(t *testing.T) (protocol.SyncService, func()) {
 	netHandler := newSyncNetHandler(mockNet, log)
 	service := &serverV1{
 		BlockChainSyncServer: newBlockChainSyncServerV1(
-			"chain1", mockNet, mockMsgBus,
+			"chain1", "localhost", mockNet, mockMsgBus,
 			mockStore, mockLedger, mockVerify,
 			mockCommit, mockTxPool, netHandler, log).(*BlockChainSyncServer),
 		netHandler: netHandler,

@@ -494,6 +494,8 @@ storage:
 
   # 0 common write，1 quick write
   write_block_type: 0
+  # must be greater than 0 otherwise the default value 100 is used.
+  quick_write_channel_size: 100
 
   # record DB slow log (INFO level) when query spend time more than this value (millisecond), 0 means no record
   slow_log: 0
