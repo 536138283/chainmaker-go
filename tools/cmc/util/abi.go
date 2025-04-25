@@ -559,9 +559,9 @@ func parseUintArray(key string, value []interface{}, n int) (interface{}, error)
 	}
 }
 
-func uint8Arr(value []interface{}, N int) ([]uint8, error) {
-	if N != 0 {
-		arr := make([]uint8, N)
+func uint8Arr(value []interface{}, n int) ([]uint8, error) {
+	if n != 0 {
+		arr := make([]uint8, n)
 		for i := 0; i < len(value); i++ {
 			valueStr := fmt.Sprint(value[i])
 			num, err := strconv.ParseUint(valueStr, 10, 8)
