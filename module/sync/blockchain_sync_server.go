@@ -34,6 +34,8 @@ var _ protocol.SyncService = (*BlockChainSyncServer)(nil)
 // BlockChainSyncServer Service for synchronizing blocks
 type BlockChainSyncServer struct {
 	chainId string
+	// self node id
+	nodeID string
 	// receive/broadcast messages from net module
 	net protocol.NetService
 	// receive/broadcast messages from internal modules
@@ -102,6 +104,7 @@ type BlockChainSyncServer struct {
 
 func newBlockChainSyncServerV1(
 	chainId string,
+	nodeID string,
 	net protocol.NetService,
 	msgBus msgbus.MessageBus,
 	blockchainStore protocol.BlockchainStore,
@@ -114,6 +117,7 @@ func newBlockChainSyncServerV1(
 
 	syncServer := &BlockChainSyncServer{
 		chainId:         chainId,
+		nodeID:          nodeID,
 		net:             net,
 		msgBus:          msgBus,
 		blockChainStore: blockchainStore,
@@ -807,6 +811,7 @@ func (sync *BlockChainSyncServer) GetState(withPeers bool) (*syncPb.SyncState, e
 		BlocksInCache:   int32(basicState.blocksInCache),
 		ConfigShow:      sync.conf.print(),
 		Timestamp:       time.Now().Unix(),
+		NodeId:          sync.nodeID,
 	}
 	if withPeers {
 		state.Others = sync.nodeList.GetAll()

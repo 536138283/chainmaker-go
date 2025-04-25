@@ -342,6 +342,7 @@ func NewBlockChainSyncServer(
 	if uint32(version) < v2Version {
 		srv.SyncService = newBlockChainSyncServerV1(
 			chainID,
+			localconf.ChainMakerConfig.NodeConfig.NodeId,
 			net,
 			msgBus,
 			blockchainStore,
