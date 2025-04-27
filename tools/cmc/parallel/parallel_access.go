@@ -9,16 +9,17 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
-	"chainmaker.org/chainmaker/logger/v2"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+
+	"chainmaker.org/chainmaker/logger/v2"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"github.com/spf13/cobra"
 )
 
 var log = logger.GetLogger(logger.MODULE_CLI)
@@ -170,6 +171,11 @@ func ParallelCMD() *cobra.Command {
 			if len(encCrtPaths) != len(encKeyPaths) && len(encKeyPaths) != len(hosts) && len(encCrtPaths) > 0 {
 				panic(fmt.Sprintf("use env but encCrtPaths[%d], encKeyPaths[%d], hosts[%d]", len(encCrtPaths),
 					len(encKeyPaths), len(hosts)))
+			}
+
+			if len(hostnames) != len(hosts) {
+				panic(fmt.Sprintf("use env but tlsHost[%d], hosts[%d]", len(hostnames),
+					len(hosts)))
 			}
 
 			if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 && len(hosts) > 0 {
