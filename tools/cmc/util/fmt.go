@@ -34,12 +34,16 @@ func formatTxReads(reads []*common.TxRead) []interface{} {
 		m := make(map[string]interface{})
 		m["key"] = string(read.Key)
 		var dest []byte
-		_, err := base64.StdEncoding.Decode(dest, read.Value)
-		if err != nil {
-			fmt.Println(err)
-			continue
+		if len(read.Value) > 0 {
+			_, err := base64.StdEncoding.Decode(dest, read.Value)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			m["value"] = string(dest)
+		} else {
+			m["value"] = ""
 		}
-		m["value"] = string(dest)
 		m["contract_name"] = read.ContractName
 		m["version"] = formatKeyVersion(read.Version)
 		arr = append(arr, m)
@@ -60,12 +64,16 @@ func formatTxWrites(writes []*common.TxWrite) []interface{} {
 		m := make(map[string]interface{})
 		m["key"] = string(write.Key)
 		var dest []byte
-		_, err := base64.StdEncoding.Decode(dest, write.Value)
-		if err != nil {
-			fmt.Println(err)
-			continue
+		if len(write.Value) > 0 {
+			_, err := base64.StdEncoding.Decode(dest, write.Value)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			m["value"] = string(dest)
+		} else {
+			m["value"] = ""
 		}
-		m["value"] = string(dest)
 		m["contract_name"] = write.ContractName
 		arr = append(arr, m)
 	}
