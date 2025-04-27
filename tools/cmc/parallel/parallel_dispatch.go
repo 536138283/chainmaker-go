@@ -1,11 +1,12 @@
 package parallel
 
 import (
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
 // producer 是一个生成器函数，根据给定的方法名执行压力测试构建任务。
@@ -261,7 +262,14 @@ func (t *Thread) consume() {
 				start := time.Now()
 				var err error
 				nodeIndex := loopNum % nodeNum
-				err = sendTx(t.sdkClients[nodeIndex], orgIDs[nodeIndex], i, req.Param)
+				var orgId = "public"
+				if sdk.AuthType(authTypeUint32) != sdk.Public {
+					if len(orgIDs) <= nodeIndex {
+						panic("orgId count not equals host count")
+					}
+					orgId = orgIDs[nodeIndex]
+				}
+				err = sendTx(t.sdkClients[nodeIndex], orgId, i, req.Param)
 				// 计算请求时延
 				elapsed := time.Since(start).Milliseconds()
 				go func(e error, elapsed int64) {
