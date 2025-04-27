@@ -653,7 +653,16 @@ vm:
       port: {docker_vm_runtime_port}
 
     contract_engine:
-    # cgroup is used to limit the resource usage of contract processes on the host machine
+      # Preload contract processes or not when starting
+      preload_disable: false
+
+      # The number of preload processes calculated by use frequency
+      preload_num_by_use_frequency: 10
+
+      # The number of preload processes calculated by recent invocation time
+      preload_num_by_last_time: 10
+
+      # cgroup is used to limit the resource usage of contract processes on the host machine
       cgroup:
         # disable the cgroup function means that there will be no restrictions
         # on the resource usage of the contract process on the host machine
@@ -709,16 +718,6 @@ vm:
       port: {docker_go_engine_port}
       # Max number of connection created to connect docker vm service
       max_connection: 5
-
-      # Preload contract processes or not when starting
-      preload_disable: false
-
-      # The number of preload processes calculated by use frequency
-      preload_num_by_use_frequency: 10
-
-      # The number of preload processes calculated by recent invocation time
-      preload_num_by_last_time: 10
-
 
   # Java runtime in docker container
   java:
