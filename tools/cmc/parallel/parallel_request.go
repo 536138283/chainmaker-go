@@ -1,16 +1,16 @@
 package parallel
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"context"
 	"encoding/json"
 	"fmt"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-	"math"
 	"sync/atomic"
 	"time"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 // subNodes 函数负责初始化并管理一组并发任务，这些任务针对每个区块链节点订阅新区块事件。
@@ -92,7 +92,7 @@ func sendTx(client *sdk.ChainClient, orgId string, loopId int, req *commonPb.TxR
 
 // getBlockHeight 查询当前区块链的高度。首先创建一个查询线程，然后构建查询高度的请求并发送，最后解析返回的区块信息以获取高度
 func getBlockHeight() (uint64, error) {
-	blockInfo, err := defaultSdkClients[0].GetBlockByHeight(math.MaxUint64, false)
+	blockInfo, err := defaultSdkClients[0].GetLastBlock(false)
 	if err != nil {
 		return 0, err
 	}
