@@ -25,7 +25,7 @@ func createContractCMD() *cobra.Command {
 	}
 
 	flags := cmd.Flags()
-	flags.StringVarP(&wasmPath, "wasm-path", "w", "../wasm/counter-go.wasm", "specify wasm path")
+	flags.StringVarP(&wasmPath, "wasm-path", "w", "", "specify wasm path")
 	flags.Int32VarP(&runTime, "run-time", "m", int32(commonPb.RuntimeType_GASM), "specify run time")
 
 	return cmd
