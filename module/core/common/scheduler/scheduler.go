@@ -1458,11 +1458,13 @@ func (ts *TxScheduler) createChargeGasTx(
 		addressCache := senderCollection.txAddressCache
 		txTable := snapshot.GetTxTable()
 		txMap := snapshot.GetTxResultMap()
+		var needToChargeGas bool
 		for _, tx := range txTable {
+			needToChargeGas = true
 			// calling a normal system contract does not require charging gas
 			if !ts.checkNativeFilter(blockVersion, tx.Payload.ContractName, tx.Payload.Method, tx, snapshot) ||
 				tx.Payload.TxType != commonPb.TxType_INVOKE_CONTRACT {
-				continue
+				needToChargeGas = false
 			}
 			address, ok := addressCache[tx.Payload.TxId]
 			if !ok {
@@ -1480,8 +1482,10 @@ func (ts *TxScheduler) createChargeGasTx(
 				address2TotalGas[address] = totalGas
 			}
 
-			txResult := txMap[tx.Payload.TxId]
-			totalGas += txResult.ContractResult.GasUsed
+			if needToChargeGas {
+				txResult := txMap[tx.Payload.TxId]
+				totalGas += txResult.ContractResult.GasUsed
+			}
 
 			address2TotalGas[address] = totalGas
 		}
