@@ -392,7 +392,6 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 
 	// Only when the virtual machine is running normally can the read-write set be saved, or write fake conflicted key
 	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
-	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", txSimContext.GetTx().Payload.TxId, txRWSet)
 	txResult = txSimContext.GetTxResult()
 	// 实现准备好要处理的数据
 	finalReadKvs := make(map[string]*sv, len(txRWSet.TxReads))
