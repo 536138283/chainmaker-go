@@ -29,5 +29,5 @@ file_config:
         mail_config:
           <<: *mail_ref
 
-alram_center_config:
+alarm_center_config:
   send_mail_url: http://127.0.0.1:12091/alarm-api/v1/mail
