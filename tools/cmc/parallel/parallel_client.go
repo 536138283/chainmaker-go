@@ -27,7 +27,7 @@ func getSdkClient(i int) (*sdk.ChainClient, error) {
 		// 节点是否启用TLS认证
 		sdk.WithNodeUseTLS(useTLS),
 		// 根证书路径，支持多个
-		sdk.WithNodeCAPaths(caPaths),
+		sdk.WithNodeCAPaths([]string{caPaths[i]}),
 		// TLS Hostname
 		sdk.WithNodeTLSHostName(hostnames[i]),
 	)
