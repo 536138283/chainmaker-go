@@ -2189,5 +2189,6 @@ func TestPack4(t *testing.T) {
 	var args []interface{}
 	args = append(args, a)
 	b := reflect.ValueOf(args[0])
-	fmt.Println(b.Kind() == reflect.Ptr)
+	//fmt.Println(b.Kind() == reflect.Ptr)
+	fmt.Println(b.Kind())
 }
