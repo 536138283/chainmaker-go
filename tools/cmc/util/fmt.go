@@ -166,7 +166,7 @@ func formatSender(e *common.EndorsementEntry) map[string]interface{} {
 	return m
 }
 
-// formatSender 格式化签名
+// formatEndorsers 格式化签名
 func formatEndorsers(e []*common.EndorsementEntry) interface{} {
 	arr := make([]interface{}, len(e))
 	for _, v := range e {
