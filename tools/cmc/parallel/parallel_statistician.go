@@ -1,10 +1,17 @@
+/*
+ * Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package parallel
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"fmt"
 	"math"
 	"time"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
 // 用于记录单次rpc请求的统计信息对象
@@ -180,6 +187,7 @@ func (s *Statistician) outBlockInfo(resultSet *ChainResultSet) {
 	resultSet.BlockVariance = fcBlock
 }
 
+// outNodeBlockInfo 将节点的区块交易统计结果输出到结果集对象
 func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 	resultSet.Nodes = make(map[string]*NodeInfo)
 	for i, _ := range hosts {
@@ -232,6 +240,7 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 	}
 }
 
+// outRpcInfo 将rpc的统计结果输出到结果集对象
 func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 	if s.totalCount > 0 {
 		resultSet.SuccessCount = s.successCount
@@ -241,9 +250,12 @@ func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 		resultSet.MaxTime = s.maxSuccessElapsed
 		resultSet.AvgTime = float32(s.sumSuccessElapsed) / float32(s.successCount)
 		for i := 0; i < nodeNum; i++ {
+			if s.nodeSuccessCount[i] == 0 {
+				continue
+			}
 			nodeName := fmt.Sprintf("node%d", i)
 			nodeInfo := &RpcInfo{}
-			nodeInfo.TPS = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Seconds())
+			nodeInfo.TPS = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Milliseconds()) * 1000
 			nodeInfo.Count = s.nodeTotalReqCount[i]
 			nodeInfo.SuccessCount = s.nodeSuccessCount[i]
 			nodeInfo.FailCount = s.nodeTotalReqCount[i] - s.nodeSuccessCount[i]
@@ -258,18 +270,12 @@ func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 
 // 收集参数
 func (s *Statistician) collect() {
-	flag := true
 	for {
 		select {
 		case stat := <-s.reqStatC:
 			// 统计rpc压测指标
 			s.statisticianRpc(stat)
 		case stat := <-s.cReqStatC:
-			// 第一个区块为上一次执行时的最后一个区块，所以跳过第一个区块
-			if flag {
-				flag = false
-				continue
-			}
 			// 统计区块信息（非节点）
 			milliSec := time.Now().UnixNano() / 1e6
 			s.statisticianTxBlock(stat, milliSec)

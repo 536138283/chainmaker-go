@@ -452,7 +452,7 @@ type invokeHandler struct {
 var (
 	respStr           = "proposalRequest error, resp: %+v"
 	templateStrOthers = "%s_%d_%d_%d"
-	resultStrOthers   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
+	resultStrOthers   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v"
 )
 
 var totalSentTxsOthers int64
@@ -511,7 +511,7 @@ func (h *invokeHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.PrivateKey
 	}
 
 	if outputResult {
-		msg := fmt.Sprintf(resultStr, orgId, loopId, method1, txId, resp)
+		msg := fmt.Sprintf(resultStrOthers, orgId, loopId, method1, txId, resp)
 		fmt.Println(msg)
 	}
 

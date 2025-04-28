@@ -32,7 +32,7 @@ func jsonCMD() *cobra.Command {
 	}
 
 	flags := jsonCmd.PersistentFlags()
-	flags.StringVarP(&jsonInput, "input", "i", "./collect.pb", "specify input file")
+	flags.StringVarP(&jsonInput, "input", "i", "", "specify input file")
 
 	jsonCmd.AddCommand(printConfigUpdatePayloadCMD())
 	jsonCmd.AddCommand(printContractMgmtPayloadCMD())

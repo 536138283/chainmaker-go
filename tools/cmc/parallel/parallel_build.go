@@ -1,6 +1,19 @@
+/*
+ * Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package parallel
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"sync/atomic"
+	"time"
+
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -9,12 +22,6 @@ import (
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"sync/atomic"
-	"time"
 )
 
 // StressBuilder 构建不同场景下压测所需请求参数的接口，并返回请求对象
@@ -59,18 +66,10 @@ type Invoke struct{}
 
 // Build 实现StressBuilder接口，用于构建调用智能合约的交易请求
 func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
+	index = index % nodeNum
 	pairs, err := makeKvs(requestId)
 	if err != nil {
 		return nil, err
-	}
-	if showKey {
-		j, err := json.Marshal(pairs)
-		if err != nil {
-			fmt.Println(err)
-		}
-		rate := totalRandomSentTxs * 100 / totalSentTxs
-		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
-			totalSentTxs, totalRandomSentTxs, rate, string(j))
 	}
 	// 如果有ABI路径，则读取ABI数据，并根据ABI调整方法名和参数对
 	var abiData *[]byte

@@ -66,7 +66,6 @@ func userContractCMD() *cobra.Command {
 	userContractCmd.AddCommand(unfreezeUserContractCMD())
 	userContractCmd.AddCommand(revokeUserContractCMD())
 	userContractCmd.AddCommand(getUserContractCMD())
-
 	return userContractCmd
 }
 

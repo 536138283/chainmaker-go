@@ -39,7 +39,12 @@ var (
 	syncResult       bool
 	enableCertHash   bool
 	blockHeight      uint64
+	startBlock       int64
+	endBlock         int64
 	withRWSet        bool
+	onlyHeader       bool
+	txIds            string
+	topic            string
 	truncateValue    bool
 	truncateValueLen string
 	truncateModel    string
@@ -127,6 +132,11 @@ const (
 	flagSyncResult             = "sync-result"
 	flagEnableCertHash         = "enable-cert-hash"
 	flagBlockHeight            = "block-height"
+	flagStartBlockHeight       = "start-block"
+	flagEndBlockHeight         = "end-block"
+	flagTxIds                  = "tx-ids"
+	flagTopic                  = "topic"
+	flagOnlyHeader             = "only-header"
 	flagWithRWSet              = "with-rw-set"
 	flagTruncateModel          = "truncate-model"
 	flagTruncateValueLen       = "truncate-value-len"
@@ -202,7 +212,7 @@ func ClientCMD() *cobra.Command {
 		Short: "client command",
 		Long:  "client command",
 	}
-
+	clientCmd.AddCommand(subscribeCMD())
 	clientCmd.AddCommand(contractCMD())
 	clientCmd.AddCommand(chainConfigCMD())
 	clientCmd.AddCommand(getChainMakerServerVersionCMD())
@@ -221,7 +231,8 @@ func init() {
 
 	// 压测参数
 	flags.IntVarP(&concurrency, flagConcurrency, "c", 1, "specify concurrency count")
-	flags.IntVarP(&totalCntPerGoroutine, flagTotalCountPerGoroutine, "t", 1, "specify total count per goroutine")
+	flags.IntVarP(&totalCntPerGoroutine, flagTotalCountPerGoroutine, "t", 1,
+		"specify total count per goroutine")
 
 	// sdk配置路径
 	flags.StringVar(&sdkConfPath, flagSdkConfPath, "", "specify sdk config path")
@@ -248,7 +259,11 @@ func init() {
 	flags.Uint64Var(&blockHeight, flagBlockHeight, 0, "specify block height, default 0")
 	flags.StringVar(&txId, flagTxId, "", "specify tx id")
 	flags.BoolVar(&isAgree, flagIsAgree, true, "specify multi sign vote choice")
-
+	flags.Int64Var(&startBlock, flagStartBlockHeight, -1, "subscribe start block height, default -1")
+	flags.Int64Var(&endBlock, flagEndBlockHeight, -1, "subscribe end block height, default -1")
+	flags.BoolVar(&onlyHeader, flagOnlyHeader, false, "is only return blocker header if false return all block info")
+	flags.StringVar(&txIds, flagTxIds, "", "transaction ids,if many use , ")
+	flags.StringVar(&topic, flagTopic, "", "contract event topic")
 	// Admin秘钥和证书列表
 	//    - 使用逗号','分割
 	//    - 列表中的key与crt需一一对应

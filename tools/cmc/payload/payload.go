@@ -50,14 +50,14 @@ func init() {
 	flags = &pflag.FlagSet{}
 
 	flags.StringVarP(&chainId, "chain-id", "c", "chain1", "specify chain id")
-	flags.StringVarP(&contractName, "contract-name", "n", "contract", "specify contract name")
-	flags.StringVarP(&version, "version", "v", "version", "specify contract version")
-	flags.StringVarP(&runtime, "runtime", "r", "WASMER_RUST", "specify contract runtime")
-	flags.StringVarP(&method, "method", "m", "init", "specify method")
-	flags.StringVarP(&kvPairs, "kv-pairs", "k", "tx_scheduler_timeout:15;tx_scheduler_validate_timeout:20",
+	flags.StringVarP(&contractName, "contract-name", "n", "", "specify contract name")
+	flags.StringVarP(&version, "version", "v", "", "specify contract version")
+	flags.StringVarP(&runtime, "runtime", "r", "", "specify contract runtime")
+	flags.StringVarP(&method, "method", "m", "", "specify method")
+	flags.StringVarP(&kvPairs, "kv-pairs", "k", "",
 		"specify key value pairs")
 	flags.IntVarP(&sequence, "sequence", "s", 1, "specify sequence")
-	flags.StringVarP(&byteCodePath, "byte-code-path", "p", "./fact.wasm", "specify byte code path")
+	flags.StringVarP(&byteCodePath, "byte-code-path", "p", "", "specify byte code path")
 	flags.StringVar(&sdkConfPath, "sdk-conf-path", "", "specify sdk config path")
 
 	if sdkConfPath == "" {

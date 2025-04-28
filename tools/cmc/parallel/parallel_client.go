@@ -1,3 +1,9 @@
+/*
+ * Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package parallel
 
 import (
@@ -23,11 +29,11 @@ func getSdkClient(i int) (*sdk.ChainClient, error) {
 		// 节点地址，格式：127.0.0.1:12301
 		sdk.WithNodeAddr(hosts[i]),
 		// 节点连接数
-		sdk.WithNodeConnCnt(threadNum*len(hosts)),
+		sdk.WithNodeConnCnt(10),
 		// 节点是否启用TLS认证
 		sdk.WithNodeUseTLS(useTLS),
 		// 根证书路径，支持多个
-		sdk.WithNodeCAPaths(caPaths),
+		sdk.WithNodeCAPaths([]string{caPaths[i]}),
 		// TLS Hostname
 		sdk.WithNodeTLSHostName(hostnames[i]),
 	)

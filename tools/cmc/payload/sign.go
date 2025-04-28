@@ -37,11 +37,11 @@ func signCMD() *cobra.Command {
 	}
 
 	flags := signCmd.PersistentFlags()
-	flags.StringVarP(&signInput, "input", "i", "./collect.pb", "specify input file")
-	flags.StringVarP(&signOutput, "output", "o", "./collect-signed.pb", "specify output file")
-	flags.StringVarP(&orgId, "org-id", "O", "wx-org1.chainmaker.org", "specify organization identity")
-	flags.StringVarP(&adminKeyPath, "admin-key-path", "k", "./admin1.sign.key", "specify admin key path")
-	flags.StringVarP(&adminCertPath, "admin-crt-path", "c", "./admin1.sign.crt", "specify admin certificate path")
+	flags.StringVarP(&signInput, "input", "i", "", "specify input file")
+	flags.StringVarP(&signOutput, "output", "o", "", "specify output file")
+	flags.StringVarP(&orgId, "org-id", "O", "", "specify organization identity")
+	flags.StringVarP(&adminKeyPath, "admin-key-path", "k", "", "specify admin key path")
+	flags.StringVarP(&adminCertPath, "admin-crt-path", "c", "", "specify admin certificate path")
 
 	signCmd.AddCommand(signSystemContractPayloadCMD())
 	signCmd.AddCommand(signContractMgmtPayloadCMD())

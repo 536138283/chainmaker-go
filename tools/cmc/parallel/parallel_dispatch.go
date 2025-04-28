@@ -1,11 +1,18 @@
+/*
+ * Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package parallel
 
 import (
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"fmt"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
 // producer 是一个生成器函数，根据给定的方法名执行压力测试构建任务。
@@ -21,16 +28,13 @@ import (
 func producer(method string) {
 	builder := stressBuilderFactory(method)
 	for {
-		if requestId >= int64(threadNum*loopNum) {
-			interruptSignal = true
-			return
-		}
 		select {
 		case index := <-produceSignal:
 			if index == -1 {
-				for nodeIndex := 0; nodeIndex < nodeNum; nodeIndex++ {
-					produce(builder, nodeIndex)
+				for i := 0; i < paramChanCount; i++ {
+					produce(builder, i)
 				}
+				firstComplete <- 1
 			} else {
 				go produce(builder, index)
 			}
@@ -120,11 +124,11 @@ func parallelStart(threads []*Thread) {
 	for index := 0; index < threadNum; {
 		// 内循环控制每批内线程的并发启动
 		for j := 0; j < 10; j++ {
-			go threads[index].consume()
-			index++
 			if index >= threadNum {
 				break
 			}
+			go threads[index].consume()
+			index++
 		}
 		time.Sleep(interval)
 	}
@@ -204,7 +208,7 @@ func threadFactory(number int, doneChan, timeoutChan chan struct{}, statistician
 	threads := make([]*Thread, number)
 	for i := 0; i < number; i++ {
 		t := &Thread{id: i, loopNum: loopNum, doneChan: doneChan, timeoutChan: timeoutChan, statistician: statistician}
-		t.index = t.id % len(hosts)
+		t.index = t.id / computeFactor
 		for i := range hosts {
 			sdkClient, err := getSdkClient(i)
 			if err != nil {
@@ -261,16 +265,27 @@ func (t *Thread) consume() {
 					produceSignal <- t.index
 				}
 				start := time.Now()
-
 				var err error
-				err = sendTx(t.sdkClients[loopNum%nodeNum], orgIDs[t.index], i, req.Param)
-				// 结果进入结果集
-				atomic.AddUint32(&t.statistician.totalCount, 1)
-				t.statistician.reqStatC <- &reqStat{
-					success: err == nil,
-					elapsed: time.Since(start).Milliseconds(),
-					nodeId:  t.index,
+				nodeIndex := i % nodeNum
+				var orgId = "public"
+				if sdk.AuthType(authTypeUint32) != sdk.Public {
+					if len(orgIDs) <= nodeIndex {
+						panic("orgId count not equals host count")
+					}
+					orgId = orgIDs[nodeIndex]
 				}
+				err = sendTx(t.sdkClients[nodeIndex], orgId, i, req.Param)
+				// 计算请求时延
+				elapsed := time.Since(start).Milliseconds()
+				go func(e error, elapsed int64) {
+					// 结果进入结果集
+					atomic.AddUint32(&t.statistician.totalCount, 1)
+					t.statistician.reqStatC <- &reqStat{
+						success: e == nil,
+						elapsed: elapsed,
+						nodeId:  nodeIndex,
+					}
+				}(err, elapsed)
 				if recordLog && err != nil {
 					log.Errorf("threadId: %d, loopId: %d, nodeId: %d, err: %s", t.id, i, t.index, err)
 				}

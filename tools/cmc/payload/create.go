@@ -35,7 +35,7 @@ func createCMD() *cobra.Command {
 	}
 
 	flags := createCmd.PersistentFlags()
-	flags.StringVarP(&createOutput, "output", "o", "./collect.pb", "specify output file")
+	flags.StringVarP(&createOutput, "output", "o", "", "specify output file")
 
 	createCmd.AddCommand(createConfigUpdatePayloadCMD())
 	createCmd.AddCommand(createContractMgmtPayloadCMD())

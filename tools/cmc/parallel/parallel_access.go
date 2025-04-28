@@ -9,16 +9,17 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
-	"chainmaker.org/chainmaker/logger/v2"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"io/ioutil"
 	"regexp"
 	"strconv"
 	"strings"
 	"sync"
+
+	"chainmaker.org/chainmaker/logger/v2"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
+	"github.com/spf13/cobra"
 )
 
 var log = logger.GetLogger(logger.MODULE_CLI)
@@ -42,6 +43,7 @@ var (
 	hostnamesString       string
 	statisticalType       string
 	checkInterval         int
+	onlySend              bool
 	signCrtPathsString    string
 	signKeyPathsString    string
 	userCrtPathsString    string
@@ -90,6 +92,9 @@ var (
 	authTypeUint32 uint32
 	authType       sdk.AuthType
 	gasLimit       uint64
+
+	startBlock int64 // 订阅的起始区块高度
+	endBlock   int64 // 订阅的结束区块高度
 )
 
 type ValueParam struct {
@@ -168,6 +173,11 @@ func ParallelCMD() *cobra.Command {
 					len(encKeyPaths), len(hosts)))
 			}
 
+			if len(hostnames) != len(hosts) {
+				panic(fmt.Sprintf("use env but tlsHost[%d], hosts[%d]", len(hostnames),
+					len(hosts)))
+			}
+
 			if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 && len(hosts) > 0 {
 				for i := range encCrtPaths {
 					keyBytes, err := ioutil.ReadFile(encKeyPaths[i])
@@ -206,26 +216,26 @@ func ParallelCMD() *cobra.Command {
 	flags.IntVarP(&printTime, "printTime", "r", 1, "specify print time(unit: s)")
 	flags.IntVarP(&sleepTime, "sleepTime", "S", 100, "specify sleep time(unit: ms)")
 	flags.IntVarP(&climbTime, "climbTime", "L", 10, "specify climb time(unit: s)")
-	flags.StringVarP(&hostsString, "hosts", "H", "localhost:17988,localhost:27988", "specify hosts")
-	flags.StringVarP(&signCrtPathsString, "sign-crts", "K", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.crt", "specify user crt path")
-	flags.StringVarP(&signKeyPathsString, "sign-keys", "u", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.sign.key", "specify user key path")
-	flags.StringVar(&userCrtPathsString, "user-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.crt", "specify tls crt path")
-	flags.StringVar(&userKeyPathsString, "user-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/client1/client1.tls.key,../../config/crypto-config/wx-org2.chainmaker.org/user/client1/client1.tls.key", "specify tls key path")
+	flags.StringVarP(&hostsString, "hosts", "H", "", "specify hosts")
+	flags.StringVarP(&signCrtPathsString, "sign-crts", "K", "", "specify user crt path")
+	flags.StringVarP(&signKeyPathsString, "sign-keys", "u", "", "specify user key path")
+	flags.StringVar(&userCrtPathsString, "user-crts", "", "specify tls crt path")
+	flags.StringVar(&userKeyPathsString, "user-keys", "", "specify tls key path")
 	flags.StringVar(&userEncKeyPathsString, "user-enc-keys", "", "enc key path")
 	flags.StringVar(&userEncCrtPathsString, "user-enc-crts", "", "enc certificate path")
-	flags.StringVarP(&orgIDsString, "org-IDs", "I", "wx-org1,wx-org2", "specify user key path")
+	flags.StringVarP(&orgIDsString, "org-IDs", "I", "", "specify user key path")
 	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
 	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
 	flags.BoolVarP(&outputResult, "output-result", "", false, "output rpc result, eg: txid")
 	flags.BoolVarP(&showKey, "showKey", "", false, "bool")
 	flags.StringVar(&hashAlgo, "hash-algorithm", "SHA256", "hash algorithm set in chain configuration")
-	flags.StringVarP(&caPathsString, "ca-path", "P", "../../config/crypto-config/wx-org1.chainmaker.org/ca,../../config/crypto-config/wx-org2.chainmaker.org/ca", "specify ca path")
+	flags.StringVarP(&caPathsString, "ca-path", "P", "", "specify ca path")
 	flags.BoolVarP(&useTLS, "use-tls", "t", false, "specify whether use tls")
-	flags.StringVar(&orgIds, "org-ids", "wx-org1,wx-org2,wx-org3,wx-org4", "orgIds of admin")
-	flags.StringVar(&adminSignKeys, "admin-sign-keys", "../../config/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.key,../../config/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.key,../../config/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.key,../../config/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.sign.key", "adminSignKeys of admin")
-	flags.StringVar(&adminSignCrts, "admin-sign-crts", "../../config/crypto-config/wx-org1.chainmaker.org/user/admin1/admin1.sign.crt,../../config/crypto-config/wx-org2.chainmaker.org/user/admin1/admin1.sign.crt,../../config/crypto-config/wx-org3.chainmaker.org/user/admin1/admin1.sign.crt,../../config/crypto-config/wx-org4.chainmaker.org/user/admin1/admin1.sign.crt", "adminSignCrts of admin")
+	flags.StringVar(&orgIds, "org-ids", "", "orgIds of admin")
+	flags.StringVar(&adminSignKeys, "admin-sign-keys", "", "adminSignKeys of admin")
+	flags.StringVar(&adminSignCrts, "admin-sign-crts", "", "adminSignCrts of admin")
 	flags.StringVarP(&chainId, "chain-id", "C", "chain1", "specify chain id")
-	flags.StringVarP(&contractName, "contract-name", "n", "contract1", "specify contract name")
+	flags.StringVarP(&contractName, "contract-name", "n", "", "specify contract name")
 	flags.BoolVar(&useShortCrt, "use-short-crt", false, "use compressed certificate in transactions")
 	flags.Int64Var(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
 	flags.Uint32Var(&authTypeUint32, "auth-type", 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
@@ -233,10 +243,12 @@ func ParallelCMD() *cobra.Command {
 	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
 	flags.StringVarP(&statisticalType, "statistical-type", "", "default", "normal statistical type or block based statistical type, input normal or block default:normal ")
 	flags.IntVarP(&checkInterval, "check-interval", "", 1, "After all threads are done,check the interval time of the last block generation. ")
+	flags.BoolVarP(&onlySend, "only-send", "", false, "The result statistics are open, and the result is true. Only RPC request data is counted, and the on chain results are not counted")
 	cmd.AddCommand(invokeCMD())
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())
 	cmd.AddCommand(upgradeContractCMD())
+	cmd.AddCommand(statCMD())
 	return cmd
 }
 

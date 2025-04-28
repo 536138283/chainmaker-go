@@ -1,20 +1,28 @@
+/*
+ * Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package parallel
 
 import (
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
 var (
-	templateStr = "%s_%d_%d_%d"
-	resultStr   = "exec result, orgid: %s, loop_id: %d, method1: %s, txid: %s, resp: %+v"
+	templateStr    = "%s_%d_%d_%d"
+	resultFmtStr   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
+	resultFmtStrPk = "exec result, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
 )
 
 const (
@@ -22,11 +30,20 @@ const (
 	queryMethod        = "query"
 	createContractStr  = "createContract"
 	upgradeContractStr = "upgradeContract"
+	analyse            = "analyse"
 )
 
+// 用来控制是否是最后一次打印结果信息
+const (
+	FinalPrint    = true
+	NorFinalPrint = false
+)
+
+// 用来控制随机生成参数的数据（需要确认）
 var totalSentTxs int64
 var totalRandomSentTxs int64
 
+// RequestParam 封装交易请求的结构体
 type RequestParam struct {
 	Param     *commonPb.TxRequest
 	RequestId int64
@@ -47,6 +64,9 @@ var requestId int64
 // 生产信号，当该chan接收到数据时，开始生产请求参数
 var produceSignal chan int
 
+// 首次生产完毕信号这个chan只会使用一次，收到值的时候记录开始时间
+var firstComplete chan int
+
 // 生产因子，用来控制生产消息的数量
 var productFactor int
 
@@ -56,6 +76,20 @@ var interruptSignal bool
 // 默认存在节点数量的sdk客户端，用来生成请求参数，开启订阅等
 var defaultSdkClients []*sdk.ChainClient
 
+// 用来关闭订阅的chan
+var closeSubChan chan struct{}
+
+// ComputeFactor 计算因子，最短请求平均时延为2ms 参数构建时间为0.66ms 2/0.66 = 3所以这里使用3作为计算因子
+// 所以为每3个线程分配1个chan使其达到生产消费协调
+var computeFactor = 3
+
+// paramChanCount 参数队列的数量,根据线程数量动态增加
+var paramChanCount int
+
+// endTime 用来记录请求结束的时间
+var endTime time.Time
+
+// initParallel 初始化压测的参数
 func initParallel() error {
 	if nodeNum > threadNum {
 		threadNum = nodeNum
@@ -63,11 +97,30 @@ func initParallel() error {
 	if err := initSubClient(); err != nil {
 		return err
 	}
-	initProductFactor(threadNum * loopNum)
-	produceSignal = make(chan int, 1)
-	paramQueues = make([]chan RequestParam, nodeNum)
+	produceSignal = make(chan int, threadNum)
+	firstComplete = make(chan int, 1)
+	closeSubChan = make(chan struct{}, 1)
+	// 每次为每个线程生产5个待处理的请求参数, 这个参数作为生产因此，使生产>消费切占用最少内存
+	// 确保有足够的生产时间，所以预留一个productFactor作为buffer用来给消费端消耗
+	if loopNum > computeFactor*5 {
+		productFactor = computeFactor * 5
+	} else {
+		productFactor = computeFactor
+	}
+	if threadNum < computeFactor && threadNum < 100 {
+		computeFactor = 1
+	}
+	if threadNum%computeFactor > 0 {
+		paramChanCount = threadNum/computeFactor + 1
+	} else {
+		paramChanCount = threadNum / computeFactor
+	}
+	paramQueues = make([]chan RequestParam, paramChanCount)
+	for i := 0; i < paramChanCount; i++ {
+		paramQueues[i] = make(chan RequestParam, productFactor*2)
+	}
+	// 解析每个节点的签名文件
 	for i := 0; i < nodeNum; i++ {
-		paramQueues[i] = make(chan RequestParam, productFactor)
 		// 解析签名私钥
 		file, err := os.ReadFile(signKeyPaths[i])
 		if err != nil {
@@ -85,16 +138,7 @@ func initParallel() error {
 	return nil
 }
 
-// initProductFactor 对半法加载生产因子
-// 在一个chan内每个线程分配一个请求参数和一个预处理请求参数
-func initProductFactor(factor int) {
-	if factor/nodeNum > threadNum/nodeNum*2 {
-		initProductFactor(factor / 2)
-	} else {
-		productFactor = factor
-	}
-}
-
+// parallel 压测入口方法，如果是执行交易使用新逻辑否则使用旧逻辑
 func parallel(method string) error {
 	switch method {
 	case invokerMethod:
@@ -120,12 +164,14 @@ func parallelInvoke(method string) error {
 	if err != nil {
 		return err
 	}
-	// 开启节点订阅
-	go subNodes(statistician)
+	if !onlySend {
+		// 开启节点订阅
+		go subNodes(statistician, -1, -1)
+	}
 	// 开启结果收集
 	go statistician.collect()
-	// 订阅后记录当前时间
-	statistician.startTime = time.Now()
+	// 首批请求参数生产完毕记录时间
+	recordStartTime(statistician)
 	// 启动线程，并发请求
 	go parallelStart(threads)
 	// 定时打印结果
@@ -133,8 +179,24 @@ func parallelInvoke(method string) error {
 	go printResult(printTicker, statistician)
 	// 等待超时或请求执行完毕
 	listenAndExit(timeoutChan, doneChan)
+	endTime = time.Now()
 	finalPrint(statistician, printTicker)
 	return nil
+}
+
+func recordStartTime(statistician *Statistician) error {
+	for {
+		select {
+		case _, ok := <-firstComplete:
+			if !ok {
+				fmt.Println("chan close exit;")
+				return nil
+			}
+			// 订阅后记录当前时间
+			statistician.startTime = time.Now()
+			return nil
+		}
+	}
 }
 
 // finalPrint函数用于在区块链高度不再增长时输出统计信息。
@@ -157,10 +219,12 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 			fmt.Printf("get block height err: %s\n", err.Error())
 			return
 		}
+		fmt.Printf("current latest block height [%d, %d] \n", height, lastHeight)
 		if height == lastHeight {
 			printTicker.Stop()
 			fmt.Println("all thread word done finish print")
-			statistician.printDetails()
+			statistician.printDetails(FinalPrint)
+			closeSubChan <- struct{}{}
 			return
 		} else {
 			lastHeight = height
@@ -177,7 +241,7 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 	for {
 		select {
 		case <-printTicker.C:
-			go statistician.printDetails()
+			go statistician.printDetails(NorFinalPrint)
 		}
 	}
 }
@@ -186,13 +250,24 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 // 成员变量修改:
 // endTime (time.Time): 更新为当前时间，表示统计结束的时间点。
 // elapsedSeconds (float32): 计算从开始到结束的持续时间（以秒为单位）。
-func (s *Statistician) printDetails() {
+func (s *Statistician) printDetails(isFinal bool) {
 	m := make(map[string]interface{})
-	s.endTime = time.Now()
-	s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
-	s.run(m, s.usualPrint(), s.chainPrint(), s.rpcPrint())
+	if isFinal {
+		s.endTime = endTime
+		s.elapsedSeconds = float32(endTime.Sub(s.startTime).Seconds())
+	} else {
+		s.endTime = time.Now()
+		s.elapsedSeconds = float32(time.Now().Sub(s.startTime).Seconds())
+	}
+	s.run(m, s.rpcPrint())
+	if !onlySend {
+		s.run(m, s.usualPrint(), s.chainPrint())
+	}
 	jsonChainByte, err := json.Marshal(m)
 	if err != nil {
+		fmt.Printf("printDetails json marshal err: %s\n", err.Error())
+		fmt.Println("It may be due to the short pressure testing time or " +
+			"insufficient quantity. Please adjust the pressure testing parameters")
 		return
 	}
 	fmt.Println("result set: ", string(jsonChainByte))

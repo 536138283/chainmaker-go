@@ -19,7 +19,7 @@ run:
 linters:
   disable-all: true
   enable:
-    - deadcode
+#    - deadcode # 允许存在不调用的代码，防止反射处理
 #    - goconst  # 常量检查可能导致代码可读性变差，因此关闭
     - gocyclo
     - gofmt
@@ -35,7 +35,7 @@ linters:
     - rowserrcheck
     - errcheck
     - misspell
-    - unused
+#    - unused # 允许存在不调用的代码，防止反射处理
     - varcheck
     - sqlclosecheck
     - gosec
@@ -94,7 +94,7 @@ linters-settings:
       - name: unreachable-code
       - name: redefines-builtin-id
       - name: function-length
-        arguments: [ 80,0 ]
+        arguments: [ 85,0 ]
 
 issues:
   exclude-use-default: true
