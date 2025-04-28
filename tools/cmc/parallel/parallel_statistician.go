@@ -1,10 +1,11 @@
 package parallel
 
 import (
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	"fmt"
 	"math"
 	"time"
+
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
 // 用于记录单次rpc请求的统计信息对象
@@ -241,8 +242,12 @@ func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 		resultSet.MaxTime = s.maxSuccessElapsed
 		resultSet.AvgTime = float32(s.sumSuccessElapsed) / float32(s.successCount)
 		for i := 0; i < nodeNum; i++ {
+			if s.nodeSuccessCount[i] == 0 {
+				continue
+			}
 			nodeName := fmt.Sprintf("node%d", i)
 			nodeInfo := &RpcInfo{}
+			// todo 用毫秒数计算结果*1000
 			nodeInfo.TPS = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Seconds())
 			nodeInfo.Count = s.nodeTotalReqCount[i]
 			nodeInfo.SuccessCount = s.nodeSuccessCount[i]

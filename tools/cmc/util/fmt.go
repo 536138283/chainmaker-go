@@ -12,7 +12,9 @@ import (
 func FormatBlockInfo(bi *common.BlockInfo) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["block"] = formatBlock(bi.Block)
-	m["rwset_list"] = formatTxRWSet(bi.RwsetList)
+	if len(bi.RwsetList) > 0 {
+		m["rwset_list"] = formatTxRWSet(bi.RwsetList)
+	}
 	return m
 }
 

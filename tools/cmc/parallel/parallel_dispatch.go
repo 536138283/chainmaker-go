@@ -261,7 +261,7 @@ func (t *Thread) consume() {
 				}
 				start := time.Now()
 				var err error
-				nodeIndex := loopNum % nodeNum
+				nodeIndex := i % nodeNum
 				var orgId = "public"
 				if sdk.AuthType(authTypeUint32) != sdk.Public {
 					if len(orgIDs) <= nodeIndex {

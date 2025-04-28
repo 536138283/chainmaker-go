@@ -3,8 +3,9 @@ package parallel
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/cobra"
 	"sync"
+
+	"github.com/spf13/cobra"
 )
 
 // 提供从某一个区块高度区间范围内的性能指标统计

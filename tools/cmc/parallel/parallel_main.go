@@ -1,15 +1,16 @@
 package parallel
 
 import (
-	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
-	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"encoding/json"
 	"fmt"
 	"os"
 	"sync"
 	"time"
+
+	"chainmaker.org/chainmaker/common/v2/crypto"
+	"chainmaker.org/chainmaker/common/v2/crypto/asym"
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
 var (
@@ -200,12 +201,13 @@ func recordStartTime(statistician *Statistician) error {
 // 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
 func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 	lastHeight := uint64(0)
-	height, err := getBlockHeight()
-	if err != nil {
-		fmt.Printf("get block height err: %s\n", err.Error())
-		return
-	}
 	for {
+		height, err := getBlockHeight()
+		if err != nil {
+			fmt.Printf("get block height err: %s\n", err.Error())
+			return
+		}
+		fmt.Printf("current latest block height [%d, %d] \n", height, lastHeight)
 		if height == lastHeight {
 			printTicker.Stop()
 			fmt.Println("all thread word done finish print")
@@ -251,6 +253,9 @@ func (s *Statistician) printDetails(isFinal bool) {
 	}
 	jsonChainByte, err := json.Marshal(m)
 	if err != nil {
+		fmt.Printf("printDetails json marshal err: %s\n", err.Error())
+		fmt.Println("It may be due to the short pressure testing time or " +
+			"insufficient quantity. Please adjust the pressure testing parameters")
 		return
 	}
 	fmt.Println("result set: ", string(jsonChainByte))

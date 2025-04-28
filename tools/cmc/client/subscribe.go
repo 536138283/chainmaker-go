@@ -59,20 +59,27 @@ func subscribeBlock() error {
 	if err != nil {
 		return err
 	}
-	defer cc.Stop()
-	blockChan, err := cc.SubscribeBlock(context.Background(), startBlock, endBlock,
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+		_ = cc.Stop()
+	}()
+	blockChan, err := cc.SubscribeBlock(ctx, startBlock, endBlock,
 		withRWSet, onlyHeader)
 	if err != nil {
 		fmt.Println("error sendSubscribe :", err)
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	receivedBlockHeight := uint64(0)
 	// 接收区块并发送到统计对象
 	for {
 		select {
 		case block, ok := <-blockChan:
 			if !ok {
+				if endBlock != -1 && receivedBlockHeight >= uint64(endBlock) {
+					fmt.Println("received enough block, will exit")
+					return nil
+				}
 				fmt.Println("subscribe interrupt check log please")
 				return nil
 			}
@@ -81,12 +88,14 @@ func subscribeBlock() error {
 				if !ok {
 					return errors.New("not a blockHeader type")
 				}
+				receivedBlockHeight = header.BlockHeight
 				util.PrintJson(util.FormatHeader(header))
 			} else {
 				blockInfo, ok := block.(*common.BlockInfo)
 				if !ok {
 					return errors.New("not a blockInfo type")
 				}
+				receivedBlockHeight = blockInfo.Block.Header.BlockHeight
 				util.PrintJson(util.FormatBlockInfo(blockInfo))
 			}
 		case <-ctx.Done():
@@ -127,15 +136,17 @@ func subscribeTx() error {
 	if err != nil {
 		return err
 	}
-	defer cc.Stop()
-	txChan, err := cc.SubscribeTx(context.Background(), startBlock, endBlock,
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+		_ = cc.Stop()
+	}()
+	txChan, err := cc.SubscribeTx(ctx, startBlock, endBlock,
 		contractName, strings.Split(txIds, ","))
 	if err != nil {
 		fmt.Println("error sendSubscribe :", err)
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	// 接收区块并发送到统计对象
 	for {
 		select {
@@ -186,15 +197,17 @@ func subscribeEvent() error {
 	if err != nil {
 		return err
 	}
-	defer cc.Stop()
-	txChan, err := cc.SubscribeContractEvent(context.Background(), startBlock, endBlock,
+	ctx, cancel := context.WithCancel(context.Background())
+	defer func() {
+		cancel()
+		_ = cc.Stop()
+	}()
+	txChan, err := cc.SubscribeContractEvent(ctx, startBlock, endBlock,
 		contractName, topic)
 	if err != nil {
 		fmt.Println("error sendSubscribe :", err)
 		return err
 	}
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
 	// 接收区块并发送到统计对象
 	for {
 		select {

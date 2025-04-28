@@ -22,12 +22,13 @@ func subNodes(statistician *Statistician, start, end int64) {
 		go func(index int) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
-			blockChan, err := defaultSdkClients[index].SubscribeBlock(context.Background(), start,
+			blockChan, err := defaultSdkClients[index].SubscribeBlock(ctx, start,
 				end, false, false)
 			if err != nil {
 				fmt.Println("error sendSubscribe :", err)
 				return
 			}
+			fmt.Printf("subscribe block success [%d,%d] \n", start, end)
 			// 接收区块并发送到统计对象
 			for {
 				select {
@@ -40,10 +41,10 @@ func subNodes(statistician *Statistician, start, end int64) {
 					if !ok {
 						return
 					}
+					fmt.Printf("receive block: %d \n", blockInfo.Block.Header.BlockHeight)
 					statistician.cReqStatC <- &cReqStat{
 						blockInfo.Block.Header, index, blockInfo.Block.Txs,
 					}
-				case <-ctx.Done():
 				case _, ok := <-closeSubChan:
 					if !ok {
 						return
