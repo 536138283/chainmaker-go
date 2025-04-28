@@ -15,6 +15,7 @@ import (
 	"chainmaker.org/chainmaker/pb-go/v2/common"
 )
 
+// FormatBlockInfo 格式化区块信息到map
 func FormatBlockInfo(bi *common.BlockInfo) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["block"] = formatBlock(bi.Block)
@@ -24,6 +25,7 @@ func FormatBlockInfo(bi *common.BlockInfo) map[string]interface{} {
 	return m
 }
 
+// formatTxRWSet 读写集格式化到map
 func formatTxRWSet(tr []*common.TxRWSet) interface{} {
 	arr := make([]interface{}, 0)
 	for _, tx := range tr {
@@ -36,6 +38,7 @@ func formatTxRWSet(tr []*common.TxRWSet) interface{} {
 	return arr
 }
 
+// formatTxReads 格式化读集
 func formatTxReads(reads []*common.TxRead) []interface{} {
 	arr := make([]interface{}, 0)
 	for _, read := range reads {
@@ -59,6 +62,7 @@ func formatTxReads(reads []*common.TxRead) []interface{} {
 	return arr
 }
 
+// formatKeyVersion 格式化key version
 func formatKeyVersion(kv *common.KeyVersion) interface{} {
 	m := make(map[string]interface{})
 	m["ref_tx_id"] = kv.RefTxId
@@ -66,6 +70,7 @@ func formatKeyVersion(kv *common.KeyVersion) interface{} {
 	return m
 }
 
+// 格式化写集
 func formatTxWrites(writes []*common.TxWrite) []interface{} {
 	arr := make([]interface{}, 0)
 	for _, write := range writes {
@@ -88,6 +93,7 @@ func formatTxWrites(writes []*common.TxWrite) []interface{} {
 	return arr
 }
 
+// formatBlock 格式化区块
 func formatBlock(b *common.Block) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["header"] = FormatHeader(b.Header)
@@ -97,6 +103,7 @@ func formatBlock(b *common.Block) map[string]interface{} {
 	return m
 }
 
+// FormatHeader 格式化区块头
 func FormatHeader(h *common.BlockHeader) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["block_version"] = h.BlockVersion
@@ -117,6 +124,7 @@ func FormatHeader(h *common.BlockHeader) map[string]interface{} {
 	return m
 }
 
+// FormatTxs 格式化交易
 func FormatTxs(h []*common.Transaction) interface{} {
 	arr := make([]interface{}, len(h))
 	for _, v := range h {
@@ -131,6 +139,7 @@ func FormatTxs(h []*common.Transaction) interface{} {
 	return arr
 }
 
+// formatPayload 格式化交易的payload
 func formatPayload(h *common.Payload) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["chain_id"] = h.ChainId
@@ -146,6 +155,7 @@ func formatPayload(h *common.Payload) map[string]interface{} {
 	return m
 }
 
+// formatSender 格式化发送对象
 func formatSender(e *common.EndorsementEntry) map[string]interface{} {
 	if e == nil {
 		return nil
@@ -156,6 +166,7 @@ func formatSender(e *common.EndorsementEntry) map[string]interface{} {
 	return m
 }
 
+// formatSender 格式化签名
 func formatEndorsers(e []*common.EndorsementEntry) interface{} {
 	arr := make([]interface{}, len(e))
 	for _, v := range e {
@@ -167,6 +178,7 @@ func formatEndorsers(e []*common.EndorsementEntry) interface{} {
 	return arr
 }
 
+// formatMember 格式化member对象
 func formatMember(mem *accesscontrol.Member) map[string]interface{} {
 	if mem == nil {
 		return nil
@@ -178,6 +190,7 @@ func formatMember(mem *accesscontrol.Member) map[string]interface{} {
 	return m
 }
 
+// formatResult 格式化交易的执行结果
 func formatResult(r *common.Result) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["code"] = r.Code
@@ -187,6 +200,7 @@ func formatResult(r *common.Result) map[string]interface{} {
 	return m
 }
 
+// formatContractResult 格式化合约的result
 func formatContractResult(cr *common.ContractResult) map[string]interface{} {
 	m := make(map[string]interface{})
 	m["code"] = cr.Code
@@ -197,6 +211,7 @@ func formatContractResult(cr *common.ContractResult) map[string]interface{} {
 	return m
 }
 
+// formatContractEvent 格式化合约事件
 func formatContractEvent(ce []*common.ContractEvent) interface{} {
 	arr := make([]interface{}, 0)
 	for _, v := range ce {
@@ -226,6 +241,7 @@ type kvParam struct {
 	value interface{} `json:"value"`
 }
 
+// FormatParameters 格式化用户自定义参数
 func FormatParameters(p []*common.KeyValuePair) interface{} {
 	arr := make([]kvParam, 0)
 	for _, kv := range p {
@@ -239,6 +255,7 @@ func FormatParameters(p []*common.KeyValuePair) interface{} {
 	return arr
 }
 
+// PrintJson 转换成json格式并输出到控制台
 func PrintJson(info interface{}) {
 	j, err := json.Marshal(info)
 	if err != nil {

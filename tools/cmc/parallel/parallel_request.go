@@ -47,7 +47,6 @@ func subNodes(statistician *Statistician, start, end int64) {
 					if !ok {
 						return
 					}
-					fmt.Printf("receive block: %d \n", blockInfo.Block.Header.BlockHeight)
 					statistician.cReqStatC <- &cReqStat{
 						blockInfo.Block.Header, index, blockInfo.Block.Txs,
 					}

@@ -30,6 +30,7 @@ func statCMD() *cobra.Command {
 	return cmd
 }
 
+// statMain 对于发起订阅统计前做检查以及必要的初始化操作
 func statMain() error {
 	if endBlock < 0 || startBlock < 0 {
 		fmt.Println("start and end block number must be greater than -1")
@@ -51,7 +52,6 @@ func statMain() error {
 	go subNodes(statistician, startBlock, endBlock)
 	statistician.collectStat(endBlock)
 	printChainDetail(statistician)
-
 	return nil
 }
 
@@ -138,6 +138,7 @@ func (s *Statistician) statCompute(stat *cReqStat, milliSec int64) {
 	s.preBlockTimeMilli = milliSec
 }
 
+// printChainDetail 以json格式输出统计的结果集
 func printChainDetail(s *Statistician) error {
 	chainResult := &ChainResultSet{}
 	s.outBlockInfo(chainResult)

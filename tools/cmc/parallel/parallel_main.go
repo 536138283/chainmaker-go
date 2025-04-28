@@ -30,17 +30,20 @@ const (
 	queryMethod        = "query"
 	createContractStr  = "createContract"
 	upgradeContractStr = "upgradeContract"
-	statChain          = "stat"
+	analyse            = "analyse"
 )
 
+// 用来控制是否是最后一次打印结果信息
 const (
 	FinalPrint    = true
 	NorFinalPrint = false
 )
 
+// 用来控制随机生成参数的数据（需要确认）
 var totalSentTxs int64
 var totalRandomSentTxs int64
 
+// RequestParam 封装交易请求的结构体
 type RequestParam struct {
 	Param     *commonPb.TxRequest
 	RequestId int64
@@ -83,8 +86,10 @@ var computeFactor = 3
 // paramChanCount 参数队列的数量,根据线程数量动态增加
 var paramChanCount int
 
+// endTime 用来记录请求结束的时间
 var endTime time.Time
 
+// initParallel 初始化压测的参数
 func initParallel() error {
 	if nodeNum > threadNum {
 		threadNum = nodeNum
@@ -133,6 +138,7 @@ func initParallel() error {
 	return nil
 }
 
+// parallel 压测入口方法，如果是执行交易使用新逻辑否则使用旧逻辑
 func parallel(method string) error {
 	switch method {
 	case invokerMethod:

@@ -187,6 +187,7 @@ func (s *Statistician) outBlockInfo(resultSet *ChainResultSet) {
 	resultSet.BlockVariance = fcBlock
 }
 
+// outNodeBlockInfo 将节点的区块交易统计结果输出到结果集对象
 func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 	resultSet.Nodes = make(map[string]*NodeInfo)
 	for i, _ := range hosts {
@@ -239,6 +240,7 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 	}
 }
 
+// outRpcInfo 将rpc的统计结果输出到结果集对象
 func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 	if s.totalCount > 0 {
 		resultSet.SuccessCount = s.successCount
@@ -253,8 +255,7 @@ func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 			}
 			nodeName := fmt.Sprintf("node%d", i)
 			nodeInfo := &RpcInfo{}
-			// todo 用毫秒数计算结果*1000
-			nodeInfo.TPS = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Seconds())
+			nodeInfo.TPS = float32(s.nodeSuccessCount[i]) / float32(s.endTime.Sub(s.startTime).Milliseconds()) * 1000
 			nodeInfo.Count = s.nodeTotalReqCount[i]
 			nodeInfo.SuccessCount = s.nodeSuccessCount[i]
 			nodeInfo.FailCount = s.nodeTotalReqCount[i] - s.nodeSuccessCount[i]

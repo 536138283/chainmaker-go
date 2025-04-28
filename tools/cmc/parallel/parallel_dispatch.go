@@ -36,7 +36,6 @@ func producer(method string) {
 				}
 				firstComplete <- 1
 			} else {
-				// 如果生产的数量已经超过了既定值则停止生产
 				go produce(builder, index)
 			}
 		}

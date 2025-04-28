@@ -252,7 +252,7 @@ func init() {
 	flags.StringVar(&params, flagParams, "", "specify invoke contract params, json format, "+
 		"such as: \"{\\\"key\\\":\\\"value\\\",\\\"key1\\\":\\\"value1\\\"}\"")
 	flags.StringVar(&orgId, flagOrgId, "", "specify the orgId, such as wx-org1.chainmaker.com")
-	flags.BoolVar(&syncResult, flagSyncResult, false, "whether wait th 	e result of the transaction, default false")
+	flags.BoolVar(&syncResult, flagSyncResult, false, "whether wait the result of the transaction, default false")
 	flags.BoolVar(&enableCertHash, flagEnableCertHash, true, "whether enable cert hash, default true")
 	flags.BoolVar(&withRWSet, flagWithRWSet, true, "whether with RWSet, default true")
 	flags.BoolVar(&truncateValue, flagTruncateValue, false, "enable truncate value, default false")
