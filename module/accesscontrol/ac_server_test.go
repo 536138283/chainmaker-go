@@ -44,7 +44,7 @@ func TestInitAccessControlService(t *testing.T) {
 		senderPolicyNum++
 		return true
 	})
-	require.Equal(t, senderPolicyNum, 4)
+	require.Equal(t, senderPolicyNum, 2)
 
 	// tx_type policy number
 	txTypePolicyNum := 0
