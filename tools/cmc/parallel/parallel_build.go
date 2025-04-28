@@ -1,6 +1,19 @@
+/*
+ * Copyright (C) THL A29 Limited, a Tencent company. All rights reserved.
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
 package parallel
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"sync/atomic"
+	"time"
+
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
@@ -9,12 +22,6 @@ import (
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
-	"encoding/json"
-	"fmt"
-	"io/ioutil"
-	"os"
-	"sync/atomic"
-	"time"
 )
 
 // StressBuilder 构建不同场景下压测所需请求参数的接口，并返回请求对象
