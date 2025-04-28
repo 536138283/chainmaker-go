@@ -26,10 +26,11 @@ import (
 // 一个典型的例子，该例子表示的策略是交易中的背书数量必须满足大多数组织中的Admin或Client背书
 // protocol.RuleMajority,
 // nil,
-// []protocol.Role{
-//   protocol.RoleAdmin,
-//   protocol.RoleClient,
-//	},
+//
+//	[]protocol.Role{
+//	  protocol.RoleAdmin,
+//	  protocol.RoleClient,
+//		},
 type policy struct {
 	rule     protocol.Rule
 	orgList  []string
