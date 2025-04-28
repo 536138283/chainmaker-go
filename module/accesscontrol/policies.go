@@ -15,6 +15,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 
 	// for tx_type
 	{
+		// 任意的查询请求对应的读
 		acs.txTypePolicyMap.Store(common.TxType_QUERY_CONTRACT.String(), policySpecialRead)
 		acs.txTypePolicyMap.Store(common.TxType_INVOKE_CONTRACT.String(), policySpecialRead)
 		acs.txTypePolicyMap.Store(common.TxType_SUBSCRIBE.String(), policySubscribe)
@@ -38,7 +39,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyWrite)
 
 		// cert alias management
-		acs.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 			syscontract.CertManageFunction_CERT_ALIAS_ADD.String(), policySpecialWrite)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 			syscontract.CertManageFunction_CERT_ALIAS_UPDATE.String(), policyAdmin)
@@ -46,7 +47,7 @@ func (acs *accessControlService) createDefaultResourcePolicyForCert(localOrgId s
 			syscontract.CertManageFunction_CERTS_ALIAS_DELETE.String(), policyAdmin)
 
 		// cert management
-		acs.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
+		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 			syscontract.CertManageFunction_CERT_ADD.String(), policySpecialWrite)
 		acs.resourceNamePolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
 			syscontract.CertManageFunction_CERTS_FREEZE.String(), policyAdmin)

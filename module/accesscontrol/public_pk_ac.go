@@ -88,6 +88,7 @@ var (
 			protocol.RoleConsensusNode,
 		},
 	)
+	// 表示orgList中的任意一个管理员即可，orgList为空表示所有组织
 	pubPolicyManage = newPolicy(
 		protocol.RuleAny,
 		nil,

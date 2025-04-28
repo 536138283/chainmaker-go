@@ -55,8 +55,7 @@ var restrainedResourceList = map[string]bool{
 	common.TxType_INVOKE_CONTRACT.String(): true,
 	common.TxType_SUBSCRIBE.String():       true,
 	common.TxType_ARCHIVE.String():         true,
-
-	common.TxType_NODE_CONFIG.String(): true,
+	common.TxType_NODE_CONFIG.String():     true,
 }
 
 // predifined policies
@@ -72,6 +71,7 @@ var (
 		},
 	)
 
+	// policySpecialRead 任意一个角色{RoleClient/RoleAdmin/RoleLight/RoleConsensusNode/RoleCommonNode}
 	policySpecialRead = newPolicy(
 		protocol.RuleAny,
 		nil,
@@ -84,6 +84,7 @@ var (
 		},
 	)
 
+	// policySpecialWrite 任意一个客户端{RoleClient/RoleAdmin/RoleLight}
 	policySpecialWrite = newPolicy(
 		protocol.RuleAny,
 		nil,
@@ -103,7 +104,7 @@ var (
 			protocol.RoleConsensusNode,
 		},
 	)
-
+	// policyConsensus 任意一个共识节点
 	policyConsensus = newPolicy(
 		protocol.RuleAny,
 		nil,
@@ -111,7 +112,7 @@ var (
 			protocol.RoleConsensusNode,
 		},
 	)
-
+	// policyP2P 任意一个节点
 	policyP2P = newPolicy(
 		protocol.RuleAny,
 		nil,
@@ -132,7 +133,8 @@ var (
 		protocol.RuleAny,
 		nil,
 		[]protocol.Role{
-			protocol.RoleLight, protocol.RoleClient,
+			protocol.RoleLight,
+			protocol.RoleClient,
 			protocol.RoleAdmin,
 		},
 	)
@@ -211,15 +213,31 @@ var (
 	)
 )
 
+// accessControlService ac模块控制服务
+// 对于任何一笔交易请求、网络消息等都会涉及到对该部分的检查
+// 其检查顺序为：txType、sender、resource
+// txType：即对交易类型进行检查，包括QUERY、INVOKE、SUBSCRIBE等，其优先检查latestPolicyMap，不存在的情况再检查txTypePolicyMap
+// sender：即对交易的Sender进行检查（即签发这笔交易的用户，非endorsement(背书)），
+// 其优先检查latestPolicyMap，不存在的情况下再检查senderPolicyMap
+// resource：即对交易的Sender和Endorsement进行检查，会将Sender也算作Endorsement的一部分，
+// 同样的，优先检查latestPolicyMap，不存在的情况下再检查resourceNamePolicyMap
+// 上述检查中Invoke交易会全部检查，其他交易仅检查txType
+// 网络消息会检查latestPolicyMap和msgTypePolicyMap
 type accessControlService struct {
 	orgNum  int32
 	orgList *sync.Map // map[string]interface{} , orgId -> interface{}
-
-	txTypePolicyMap       *sync.Map
-	msgTypePolicyMap      *sync.Map // map[string]*policy , messageType  -> *policy
-	senderPolicyMap       *sync.Map // map[string]*policy , resourceName -> *policy
+	// 交易类型对应的策略，query、invoke等
+	txTypePolicyMap *sync.Map
+	// 网络消息对应检查策略，如p2p交易广播、共识消息等
+	msgTypePolicyMap *sync.Map // map[string]*policy , messageType  -> *policy
+	// 合约（含方法）对应的默认检查策略，key为合约名+方法，value目前设置为policyForbidden，用于拒绝
+	// 后续可将名称修改为forbiddenPolicyMap
+	senderPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
+	// 合约（含方法）对应的默认检查策略，key为合约名+方法，value目前设置为对应的策略
 	resourceNamePolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
-	latestPolicyMap       *sync.Map // map[string]*policy , resourceName -> *policy
+	// 用户配置的策略，优先级最高，会覆盖txTypePolicyMap、msgTypePolicyMap、senderPolicyMap、resourceNamePolicyMap
+	// 该配置策略可由配置文件(bc.yml)中resource_policies部分进行设置
+	latestPolicyMap *sync.Map // map[string]*policy , resourceName -> *policy
 
 	resourceNamePolicyMap220 *sync.Map
 	exceptionalPolicyMap220  *sync.Map
