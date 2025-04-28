@@ -49,7 +49,7 @@ var flags *pflag.FlagSet
 func init() {
 	flags = &pflag.FlagSet{}
 
-	flags.StringVarP(&chainId, "chain-id", "c", "", "specify chain id")
+	flags.StringVarP(&chainId, "chain-id", "c", "chain1", "specify chain id")
 	flags.StringVarP(&contractName, "contract-name", "n", "", "specify contract name")
 	flags.StringVarP(&version, "version", "v", "", "specify contract version")
 	flags.StringVarP(&runtime, "runtime", "r", "", "specify contract runtime")

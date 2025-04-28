@@ -119,11 +119,11 @@ func parallelStart(threads []*Thread) {
 	for index := 0; index < threadNum; {
 		// 内循环控制每批内线程的并发启动
 		for j := 0; j < 10; j++ {
-			go threads[index].consume()
-			index++
 			if index >= threadNum {
 				break
 			}
+			go threads[index].consume()
+			index++
 		}
 		time.Sleep(interval)
 	}

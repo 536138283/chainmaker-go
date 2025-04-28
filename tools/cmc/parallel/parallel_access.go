@@ -234,7 +234,7 @@ func ParallelCMD() *cobra.Command {
 	flags.StringVar(&orgIds, "org-ids", "", "orgIds of admin")
 	flags.StringVar(&adminSignKeys, "admin-sign-keys", "", "adminSignKeys of admin")
 	flags.StringVar(&adminSignCrts, "admin-sign-crts", "", "adminSignCrts of admin")
-	flags.StringVarP(&chainId, "chain-id", "C", "", "specify chain id")
+	flags.StringVarP(&chainId, "chain-id", "C", "chain1", "specify chain id")
 	flags.StringVarP(&contractName, "contract-name", "n", "", "specify contract name")
 	flags.BoolVar(&useShortCrt, "use-short-crt", false, "use compressed certificate in transactions")
 	flags.Int64Var(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
