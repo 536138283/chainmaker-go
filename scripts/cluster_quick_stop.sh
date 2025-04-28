@@ -31,7 +31,7 @@ function stop_all() {
         if [ -d $file ]; then
             echo "STOP ==> " $RELEASE_PATH/$file
             cd $file/bin && ./stop.sh full && cd - > /dev/null
-            ((stop_count++))
+            stop_count=$((stop_count + 1))
         fi
     done
     if [ $stop_count -eq 0 ]; then
