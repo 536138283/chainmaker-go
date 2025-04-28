@@ -453,6 +453,10 @@ if [ "$ENABLE_VM_GO" == "" ] ;then
                     xsed "s%{org${c}_peerid}%$peerId%g" node$i/chainmaker.yml
                 fi
 
+                # cp ca
+                mkdir -p $BUILD_CONFIG_PATH/node$i/keys/ca/$file
+                cp $BUILD_CRYPTO_CONFIG_PATH/$file/ca/ca.crt $BUILD_CONFIG_PATH/node$i/keys/ca/$file
+
                 #cp admin
                 mkdir -p $BUILD_CONFIG_PATH/node$i/keys/admin/$file
                 cp $BUILD_CRYPTO_CONFIG_PATH/$file/admin/admin.pem $BUILD_CONFIG_PATH/node$i/keys/admin/$file
@@ -461,13 +465,16 @@ if [ "$ENABLE_VM_GO" == "" ] ;then
                     if [ $c -gt $NODE_CNT ]; then
                       xsed "s%{node_pk_path}%node\/common1\/common1%g" node$i/chainmaker.yml
                       xsed "s%{net_pk_path}%node\/common1\/common1%g" node$i/chainmaker.yml
+                      xsed "s%{rpc_cert_path}%node\/common1\/common1.tls%g" node$i/chainmaker.yml
                     else
                       xsed "s%{node_pk_path}%node\/consensus1\/consensus1%g" node$i/chainmaker.yml
                       xsed "s%{net_pk_path}%node\/consensus1\/consensus1%g" node$i/chainmaker.yml
+                      xsed "s%{rpc_cert_path}%node\/consensus1\/consensus1.tls%g" node$i/chainmaker.yml
                     fi
                     xsed "s%{org_path}%$file%g" node$i/chainconfig/bc$j.yml
                     xsed "s%{node_pk_path}%node\/consensus1\/consensus1%g" node$i/chainmaker.yml
                     xsed "s%{net_pk_path}%node\/consensus1\/consensus1%g" node$i/chainmaker.yml
+                    xsed "s%{rpc_cert_path}%node\/consensus1\/consensus1.tls%g" node$i/chainmaker.yml
                     xsed "s%{org_id}%$file%g" node$i/chainmaker.yml
                     xsed "s%{org_path}%$file%g" node$i/chainmaker.yml
                     xsed "s%{org_path$j}%$file%g" node$i/chainmaker.yml
