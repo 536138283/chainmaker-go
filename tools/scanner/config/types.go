@@ -33,5 +33,5 @@ type AlarmCenterConfig struct {
 
 type ScanConfig struct {
 	FileConfigs       []*FileConfig      `mapstructure:"file_config"`
-	AlarmCenterConfig *AlarmCenterConfig `mapstructure:"alram_center_config"`
+	AlarmCenterConfig *AlarmCenterConfig `mapstructure:"alarm_center_config"`
 }
