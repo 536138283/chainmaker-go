@@ -14,7 +14,7 @@ require (
 	chainmaker.org/chainmaker/net-common v1.2.7-0.20250423065129-61d9092537b1
 	chainmaker.org/chainmaker/net-libp2p v1.2.9-0.20250425105106-b418145739b1
 	chainmaker.org/chainmaker/net-liquid v1.1.3
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250425064057-79eb07707c9a
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250430061131-1cfb417b3df3
 	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250407103320-79c9c0f76846
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250427030911-d16163eef9ab
 	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250425083527-9765973e8520
@@ -23,7 +23,7 @@ require (
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250427070610-0b3a1267dbbd
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7-0.20250314090743-1e67d63f6959
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.7-0.20250421030112-c78da87d83a3
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250425091943-af21fb7c18b9
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250430091550-7d66a4024edb
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.7-0.20250314030658-1a38448392a1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.7-0.20250311090156-dd46d6a91839
 	chainmaker.org/chainmaker/vm/v2 v2.3.7-0.20250313033547-c4c814d9a06e
