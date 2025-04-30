@@ -247,7 +247,14 @@ func verifyTxPrincipal2320(t *commonPb.Transaction, resourceId string, ac acProv
 		return fmt.Errorf("get tx bytes failed, err = %v", err)
 	}
 
-	endorsements := []*commonPb.EndorsementEntry{t.Sender}
+	endorsements := t.Endorsers
+	if endorsements == nil {
+		endorsements = []*commonPb.EndorsementEntry{t.Sender}
+	} else {
+		if t.Sender != nil {
+			endorsements = append(endorsements, t.Sender)
+		}
+	}
 	txType := t.Payload.TxType
 
 	// sender authentication
