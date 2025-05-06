@@ -25,6 +25,13 @@ func initSubClient() error {
 // getSdkClient 用来获取一个SdkClient对象， i为对应node的数组下标
 // 初始化sdk配置，与sdk_config.yml对应
 func getSdkClient(i int) (*sdk.ChainClient, error) {
+	var caPath, tlsHost string
+	if len(caPaths) > 0 && sdk.AuthType(authTypeUint32) == sdk.Public {
+		caPath = caPaths[i]
+	}
+	if len(tlsHost) > 0 && sdk.AuthType(authTypeUint32) == sdk.Public && useTLS {
+		tlsHost = hostnames[i]
+	}
 	nodeConf := sdk.NewNodeConfig(
 		// 节点地址，格式：127.0.0.1:12301
 		sdk.WithNodeAddr(hosts[i]),
@@ -33,9 +40,9 @@ func getSdkClient(i int) (*sdk.ChainClient, error) {
 		// 节点是否启用TLS认证
 		sdk.WithNodeUseTLS(useTLS),
 		// 根证书路径，支持多个
-		sdk.WithNodeCAPaths([]string{caPaths[i]}),
+		sdk.WithNodeCAPaths([]string{caPath}),
 		// TLS Hostname
-		sdk.WithNodeTLSHostName(hostnames[i]),
+		sdk.WithNodeTLSHostName(tlsHost),
 	)
 	opts := make([]sdk.ChainClientOption, 0)
 	switch sdk.AuthType(authTypeUint32) {
@@ -45,7 +52,9 @@ func getSdkClient(i int) (*sdk.ChainClient, error) {
 		opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
 		opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
 		opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
-		opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
+		if len(userCrtPaths) > 0 {
+			opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
+		}
 		if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
 			opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
 			opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))

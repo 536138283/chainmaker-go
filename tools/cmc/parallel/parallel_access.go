@@ -133,15 +133,19 @@ func ParallelCMD() *cobra.Command {
 		Long:  "Parallel",
 		PersistentPreRun: func(_ *cobra.Command, _ []string) {
 			authType = sdk.AuthType(authTypeUint32)
-			caPaths = strings.Split(caPathsString, ",")
 			hosts = strings.Split(hostsString, ",")
 			hostnames = strings.Split(hostnamesString, ",")
 			signCrtPaths = strings.Split(signCrtPathsString, ",")
 			signKeyPaths = strings.Split(signKeyPathsString, ",")
-			userCrtPaths = strings.Split(userCrtPathsString, ",")
 			userKeyPaths = strings.Split(userKeyPathsString, ",")
 			adminKeyPaths = strings.Split(adminSignKeys, ",")
 			adminCrtPaths = strings.Split(adminSignCrts, ",")
+			if userCrtPathsString != "" {
+				userCrtPaths = strings.Split(userCrtPathsString, ",")
+			}
+			if caPathsString != "" {
+				caPaths = strings.Split(caPathsString, ",")
+			}
 			if userEncCrtPathsString != "" && userEncKeyPathsString != "" {
 				encCrtPaths = strings.Split(userEncCrtPathsString, ",")
 				encKeyPaths = strings.Split(userEncKeyPathsString, ",")
@@ -173,7 +177,7 @@ func ParallelCMD() *cobra.Command {
 					len(encKeyPaths), len(hosts)))
 			}
 
-			if len(hostnames) != len(hosts) {
+			if len(hostnames) != len(hosts) && useTLS {
 				panic(fmt.Sprintf("use env but tlsHost[%d], hosts[%d]", len(hostnames),
 					len(hosts)))
 			}

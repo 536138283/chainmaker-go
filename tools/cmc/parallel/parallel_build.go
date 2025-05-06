@@ -14,7 +14,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
@@ -91,13 +90,8 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	endorsers, err := util.MakeEndorsement(adminKeyPaths, adminCrtPaths, orgIDs, defaultSdkClients[index], payload)
-	if err != nil {
-		fmt.Printf("MakeEndorsement failed, %s", err)
-		return nil, err
-	}
 	// 构建完整的交易请求
-	return defaultSdkClients[index].GenerateTxRequest(payload, endorsers)
+	return defaultSdkClients[index].GenerateTxRequest(payload, nil)
 }
 
 type Create struct{}
