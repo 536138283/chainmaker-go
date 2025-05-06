@@ -156,6 +156,9 @@ func ParallelCMD() *cobra.Command {
 				if len(hosts) != len(signKeyPaths) {
 					panic(fmt.Sprintf("hosts[%d], sign-keys[%d] length invalid", len(hosts), len(signKeyPaths)))
 				}
+				if len(caPaths) > 0 && len(caPaths) != len(hosts) {
+					panic(fmt.Sprintf("caPaths[%d],hosts[%d]  length invalid", len(caPaths), len(hosts)))
+				}
 			} else if authType == sdk.PermissionedWithKey {
 				if len(hosts) != len(signKeyPaths) || len(hosts) != len(orgIDs) {
 					panic(fmt.Sprintf("hosts[%d], sign-keys[%d], orgIDs[%d] length invalid",
