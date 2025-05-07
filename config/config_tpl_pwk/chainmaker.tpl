@@ -239,20 +239,20 @@ rpc:
     mode: disable
 
     # TLS private key file path.
-    #priv_key_file: ../config/{org_path}/keys/{rpc_cert_path}.key
+    priv_key_file: ../config/{org_path}/keys/{rpc_cert_path}.key
 
     # TLS Certificate file path.
-    #cert_file: ../config/{org_path}/keys/{rpc_cert_path}.crt
+    cert_file: ../config/{org_path}/keys/{rpc_cert_path}.crt
 
     # TLS enc private key file path. (only for gmtls1.1)
-    #priv_enc_key_file: ../config/{org_path}/keys/{rpc_cert_path}.enc.key
+    priv_enc_key_file: ../config/{org_path}/keys/{rpc_cert_path}.enc.key
 
     # TLS enc Certificate file path.
-    #cert_enc_file: ../config/{org_path}/keys/{rpc_cert_path}.enc.crt
+    cert_enc_file: ../config/{org_path}/keys/{rpc_cert_path}.enc.crt
 
     # TLS certificate file path (only for gmtls1.1)
-    #client_root_ca_paths:
-    #  - ../config/{org_path}/keys/ca
+    client_root_ca_paths:
+      - ../config/{org_path}/keys/ca
 
   # RPC blacklisted ip addresses
   blacklist:
