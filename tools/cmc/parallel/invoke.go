@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 )
 
@@ -18,15 +19,28 @@ func invokeCMD() *cobra.Command {
 		Use:   invokerMethod,
 		Short: "Invoke",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			if err := paramCheck(); err != nil {
+				return err
+			}
 			return parallel(invokerMethod)
 		},
 	}
-
-	flags := cmd.Flags()
-	flags.StringVarP(&pairsString, "pairs", "a", "[{\"key\":\"key\",\"value\":\"counter1\",\"unique\":false}]", "specify pairs")
-	flags.StringVarP(&pairsFile, "pairs-file", "A", "", "specify pairs file, if used, set --pairs=\"\"")
-	flags.StringVarP(&method, "method", "m", "increase", "specify contract method")
-	flags.StringVarP(&abiPath, "abi-path", "", "", "abi file path")
-	flags.StringVarP(&statisticalType, "statistical-type", "", "default", "normal statistical type or block based statistical type, input normal or block default:normal ")
+	util.AttachFlags(cmd, flags, []string{
+		// 压力测试配置
+		threadNumFlag, loopNumFlag, timeoutFlag, printTimeFlag, sleepTimeFlag, climbTimeFlag,
+		// 证书配置
+		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag, orgIdsFlag,
+		userCrtPathsStringFlag, userKeyPathsStringFlag, caPathsStringFlag, useTLSFlag,
+		userEncKeyPathsStringFlag, userEncCrtPathsStringFlag,
+		adminSignKeysFlag, adminSignCrtsFlag,
+		// 压测请求配置
+		checkResultFlag, recordLogFlag, outputResultFlag, showKeyFlag, requestTimeoutFlag,
+		checkIntervalFlag, onlySendFlag,
+		// 链配置
+		hostsStringFlag, hashAlgoFlag, chainIdFlag, contractNameFlag, useShortCrtFlag,
+		authTypeUint32Flag, gasLimitFlag, hostnamesStringFlag,
+		methodFlag, abiPathFlag,
+		pairsStringFlag, pairsFileFlag,
+	})
 	return cmd
 }

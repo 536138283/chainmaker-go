@@ -25,62 +25,100 @@ func initSubClient() error {
 // getSdkClient 用来获取一个SdkClient对象， i为对应node的数组下标
 // 初始化sdk配置，与sdk_config.yml对应
 func getSdkClient(i int) (*sdk.ChainClient, error) {
-	var caPath, tlsHost string
-	if len(caPaths) > 0 && sdk.AuthType(authTypeUint32) == sdk.Public {
-		caPath = caPaths[i]
-	}
-	if len(tlsHost) > 0 && sdk.AuthType(authTypeUint32) == sdk.Public && useTLS {
-		tlsHost = hostnames[i]
-	}
-	nodeConf := sdk.NewNodeConfig(
-		// 节点地址，格式：127.0.0.1:12301
-		sdk.WithNodeAddr(hosts[i]),
-		// 节点连接数
-		sdk.WithNodeConnCnt(10),
-		// 节点是否启用TLS认证
-		sdk.WithNodeUseTLS(useTLS),
-		// 根证书路径，支持多个
-		sdk.WithNodeCAPaths([]string{caPath}),
-		// TLS Hostname
-		sdk.WithNodeTLSHostName(tlsHost),
-	)
-	opts := make([]sdk.ChainClientOption, 0)
 	switch sdk.AuthType(authTypeUint32) {
 	case sdk.Public:
-		opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
-		opts = append(opts, sdk.WithChainClientChainId(chainId))
-		opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
-		opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
-		opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
-		if len(userCrtPaths) > 0 {
-			opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
-		}
-		if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
-			opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
-			opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))
-		}
-		opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
+		return pkClient(i)
 	case sdk.PermissionedWithCert:
-		opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
-		opts = append(opts, sdk.WithChainClientOrgId(orgIDs[i]))
-		opts = append(opts, sdk.WithChainClientChainId(chainId))
-		opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
+		return certClient(i)
+	default:
+		return pwkClient(i)
+	}
+}
+
+func pkClient(i int) (*sdk.ChainClient, error) {
+	nodeConf := newNodeConfig(i)
+	opts := make([]sdk.ChainClientOption, 0)
+	opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
+	opts = append(opts, sdk.WithChainClientChainId(chainId))
+	opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
+	opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
+	// 如果开启tls校验userKey和userCrt
+	if useTLS {
 		opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
 		opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
-		opts = append(opts, sdk.WithUserSignCrtFilePath(signCrtPaths[i]))
-		opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
-		opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
-		if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
-			opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
-			opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))
-		}
-	case sdk.PermissionedWithKey:
-		opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
-		opts = append(opts, sdk.WithChainClientChainId(chainId))
-		opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
-		opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
-		opts = append(opts, sdk.WithChainClientOrgId(orgIDs[i]))
-		opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
 	}
+	// 如果传入这两个参数则默认开启了双证书模式
+	if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
+		opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
+		opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))
+	}
+	opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
 	return sdk.NewChainClient(opts...)
+}
+
+func certClient(i int) (*sdk.ChainClient, error) {
+	nodeConf := newNodeConfig(i)
+	opts := make([]sdk.ChainClientOption, 0)
+	opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
+	opts = append(opts, sdk.WithChainClientOrgId(orgIDs[i]))
+	opts = append(opts, sdk.WithChainClientChainId(chainId))
+	opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
+	opts = append(opts, sdk.WithUserSignCrtFilePath(signCrtPaths[i]))
+	opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
+	// 如果开启tls校验userKey和userCrt
+	if useTLS {
+		opts = append(opts, sdk.WithUserKeyFilePath(userKeyPaths[i]))
+		opts = append(opts, sdk.WithUserCrtFilePath(userCrtPaths[i]))
+	}
+	// 如果传入这两个参数则默认开启了双证书模式
+	if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 {
+		opts = append(opts, sdk.WithUserEncKeyBytes(encKeyBytes[i]))
+		opts = append(opts, sdk.WithUserEncCrtBytes(encCrtBytes[i]))
+	}
+	opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
+	return sdk.NewChainClient(opts...)
+}
+
+func pwkClient(i int) (*sdk.ChainClient, error) {
+	nodeConf := newNodeConfig(i)
+	opts := make([]sdk.ChainClientOption, 0)
+	opts = append(opts, sdk.WithAuthType(sdk.AuthTypeToStringMap[sdk.AuthType(authTypeUint32)]))
+	opts = append(opts, sdk.WithChainClientChainId(chainId))
+	opts = append(opts, sdk.WithUserSignKeyFilePath(signKeyPaths[i]))
+	opts = append(opts, sdk.WithCryptoConfig(sdk.NewCryptoConfig(sdk.WithHashAlgo(hashAlgo))))
+	opts = append(opts, sdk.WithChainClientOrgId(orgIDs[i]))
+	opts = append(opts, sdk.AddChainClientNodeConfig(nodeConf))
+	return sdk.NewChainClient(opts...)
+}
+
+func newNodeConfig(i int) *sdk.NodeConfig {
+	var nodeConf *sdk.NodeConfig
+	if useTLS {
+		var tlsHost string
+		if len(tlsHost) > 0 {
+			tlsHost = hostnames[i]
+		}
+		nodeConf = sdk.NewNodeConfig(
+			// 节点地址，格式：127.0.0.1:12301
+			sdk.WithNodeAddr(hosts[i]),
+			// 节点连接数
+			sdk.WithNodeConnCnt(10),
+			// 节点是否启用TLS认证
+			sdk.WithNodeUseTLS(useTLS),
+			// 根证书路径，支持多个
+			sdk.WithNodeCAPaths(caPaths),
+			// TLS Hostname
+			sdk.WithNodeTLSHostName(tlsHost),
+		)
+	} else {
+		nodeConf = sdk.NewNodeConfig(
+			// 节点地址，格式：127.0.0.1:12301
+			sdk.WithNodeAddr(hosts[i]),
+			// 节点连接数
+			sdk.WithNodeConnCnt(10),
+			// 节点是否启用TLS认证
+			sdk.WithNodeUseTLS(useTLS),
+		)
+	}
+	return nodeConf
 }

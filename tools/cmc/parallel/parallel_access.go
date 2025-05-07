@@ -18,12 +18,17 @@ import (
 	"sync"
 
 	"chainmaker.org/chainmaker/logger/v2"
+	"chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
+
+var flags *pflag.FlagSet
 
 var log = logger.GetLogger(logger.MODULE_CLI)
 
+// 用来接受cmd参数的变量
 var (
 	threadNum      int
 	loopNum        int
@@ -97,6 +102,57 @@ var (
 	endBlock   int64 // 订阅的结束区块高度
 )
 
+// 用来定义cmd中flag常量
+const (
+	threadNumFlag             = "threadNum"
+	loopNumFlag               = "loopNum"
+	timeoutFlag               = "timeout"
+	printTimeFlag             = "printTime"
+	sleepTimeFlag             = "sleepTime"
+	climbTimeFlag             = "climbTime"
+	hostsStringFlag           = "hosts"
+	signCrtPathsStringFlag    = "sign-crts"
+	signKeyPathsStringFlag    = "sign-keys"
+	userCrtPathsStringFlag    = "user-crts"
+	userKeyPathsStringFlag    = "user-keys"
+	userEncKeyPathsStringFlag = "user-enc-keys"
+	userEncCrtPathsStringFlag = "user-enc-crts"
+	orgIDsStringFlag          = "org-IDs"
+	checkResultFlag           = "check-result"
+	recordLogFlag             = "record-log"
+	outputResultFlag          = "output-result"
+	showKeyFlag               = "showKey"
+	hashAlgoFlag              = "hash-algorithm"
+	caPathsStringFlag         = "ca-path"
+	useTLSFlag                = "use-tls"
+	orgIdsFlag                = "org-ids"
+	adminSignKeysFlag         = "admin-sign-keys"
+	adminSignCrtsFlag         = "admin-sign-crts"
+	chainIdFlag               = "chain-id"
+	contractNameFlag          = "contract-name"
+	useShortCrtFlag           = "use-short-crt"
+	requestTimeoutFlag        = "requestTimeout"
+	authTypeUint32Flag        = "auth-type"
+	gasLimitFlag              = "gas-limit"
+	hostnamesStringFlag       = "tls-host-names"
+	checkIntervalFlag         = "check-interval"
+	onlySendFlag              = "onlySend"
+	pairsStringFlag           = "pairs"
+	pairsFileFlag             = "pairs-file"
+	methodFlag                = "method"
+	abiPathFlag               = "abi-path"
+	wasmPathFlag              = "wasm-path"
+	runTimeFlag               = "run-time"
+	versionFlag               = "version"
+)
+
+// 用来控制pairs参数的常量
+const (
+	LoopTypeEnd     = int8(1)
+	LoopTypeRestart = int8(2)
+)
+
+// ValueParam pairs参数控制接口题
 type ValueParam struct {
 	Initial      int64 `json:"initial"`
 	Increase     bool  `json:"increase"`
@@ -105,6 +161,7 @@ type ValueParam struct {
 	LoopType     int8  `json:"loopType"`
 }
 
+// KeyValuePair pairs参数结构体
 type KeyValuePair struct {
 	Key        string `json:"key,omitempty"`
 	Value      string `json:"value,omitempty"`
@@ -124,6 +181,59 @@ type KeyValuePair struct {
 	IntPows     []int64       `json:"-"`
 }
 
+func init() {
+	flags = &pflag.FlagSet{}
+	flags.IntVarP(&threadNum, threadNumFlag, "N", 10, "specify thread number")
+	flags.IntVarP(&loopNum, loopNumFlag, "l", 1000, "specify loop number")
+	flags.IntVarP(&timeout, timeoutFlag, "T", 2, "specify timeout(unit: s)")
+	flags.IntVarP(&printTime, printTimeFlag, "r", 1, "specify print time(unit: s)")
+	flags.IntVarP(&sleepTime, sleepTimeFlag, "S", 100, "specify sleep time(unit: ms)")
+	flags.IntVarP(&climbTime, climbTimeFlag, "L", 10, "specify climb time(unit: s)")
+	flags.StringVarP(&hostsString, hostsStringFlag, "H", "", "specify hosts")
+	flags.StringVarP(&signCrtPathsString, signCrtPathsStringFlag, "K", "", "specify user crt path")
+	flags.StringVarP(&signKeyPathsString, signKeyPathsStringFlag, "u", "", "specify user key path")
+	flags.StringVar(&userCrtPathsString, userCrtPathsStringFlag, "", "specify tls crt path")
+	flags.StringVar(&userKeyPathsString, userKeyPathsStringFlag, "", "specify tls key path")
+	flags.StringVar(&userEncKeyPathsString, userEncKeyPathsStringFlag, "", "enc key path")
+	flags.StringVar(&userEncCrtPathsString, userEncCrtPathsStringFlag, "", "enc certificate path")
+	flags.StringVarP(&orgIDsString, orgIDsStringFlag, "I", "", "specify user key path")
+	flags.BoolVarP(&checkResult, checkResultFlag, "Y", false, "specify whether check result")
+	flags.BoolVarP(&recordLog, recordLogFlag, "g", false, "specify whether record log")
+	flags.BoolVarP(&outputResult, outputResultFlag, "", false, "output rpc result, eg: txid")
+	flags.BoolVarP(&showKey, showKeyFlag, "", false, "bool")
+	flags.StringVar(&hashAlgo, hashAlgoFlag, "SHA256", "hash algorithm set in chain configuration")
+	flags.StringVarP(&caPathsString, caPathsStringFlag, "P", "", "specify ca path")
+	flags.BoolVarP(&useTLS, useTLSFlag, "t", false, "specify whether use tls")
+	flags.StringVar(&orgIds, orgIdsFlag, "", "orgIds of admin")
+	flags.StringVar(&adminSignKeys, adminSignKeysFlag, "", "adminSignKeys of admin")
+	flags.StringVar(&adminSignCrts, adminSignCrtsFlag, "", "adminSignCrts of admin")
+	flags.StringVarP(&chainId, chainIdFlag, "C", "chain1", "specify chain id")
+	flags.StringVarP(&contractName, contractNameFlag, "n", "", "specify contract name")
+	flags.BoolVar(&useShortCrt, useShortCrtFlag, false, "use compressed certificate in transactions")
+	flags.Int64Var(&requestTimeout, requestTimeoutFlag, 5, "specify request timeout(unit: s)")
+	flags.Uint32Var(&authTypeUint32, authTypeUint32Flag, 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
+	flags.Uint64Var(&gasLimit, gasLimitFlag, 0, "gas limit in uint64 type")
+	flags.StringVarP(&hostnamesString, hostnamesStringFlag, "", "", "specify hostname, the sequence is the same as --hosts")
+	flags.IntVarP(&checkInterval, checkIntervalFlag, "", 1, "After all threads are done,check the interval time of the last block generation. ")
+	flags.BoolVarP(&onlySend, onlySendFlag, "", false, "The result statistics are open, and the result is true. Only RPC request data is counted, and the on chain results are not counted")
+	// invoke
+	flags.StringVarP(&pairsString, pairsStringFlag, "a", "[{\"key\":\"key\",\"value\":\"counter1\",\"unique\":false}]", "specify pairs")
+	flags.StringVarP(&pairsFile, pairsFileFlag, "A", "", "specify pairs file, if used, set --pairs=\"\"")
+	flags.StringVarP(&method, methodFlag, "m", "increase", "specify contract method")
+	flags.StringVarP(&abiPath, abiPathFlag, "", "", "abi file path")
+	// query
+	flags.StringVarP(&pairsString, "pairs", "a", "[{\"key\":\"key\",\"value\":\"counter1\",\"unique\":false}]", "specify pairs")
+	flags.StringVarP(&pairsFile, "pairs-file", "A", "", "specify pairs file, if used, set --pairs=\"\"")
+	flags.StringVarP(&method, "method", "m", "increase", "specify contract method")
+	// upgrade
+	flags.StringVarP(&wasmPath, wasmPathFlag, "w", "", "specify wasm path")
+	flags.Int32VarP(&runTime, runTimeFlag, "R", int32(common.RuntimeType_GASM), "specify run time")
+	flags.StringVarP(&version, versionFlag, "v", "", "specify contract version")
+	// create
+	flags.StringVarP(&wasmPath, "wasm-path", "w", "", "specify wasm path")
+	flags.Int32VarP(&runTime, "run-time", "m", int32(common.RuntimeType_GASM), "specify run time")
+}
+
 // ParallelCMD parallel sub command
 // @return *cobra.Command
 func ParallelCMD() *cobra.Command {
@@ -131,126 +241,7 @@ func ParallelCMD() *cobra.Command {
 		Use:   "parallel",
 		Short: "Parallel",
 		Long:  "Parallel",
-		PersistentPreRun: func(_ *cobra.Command, _ []string) {
-			authType = sdk.AuthType(authTypeUint32)
-			hosts = strings.Split(hostsString, ",")
-			hostnames = strings.Split(hostnamesString, ",")
-			signCrtPaths = strings.Split(signCrtPathsString, ",")
-			signKeyPaths = strings.Split(signKeyPathsString, ",")
-			userKeyPaths = strings.Split(userKeyPathsString, ",")
-			adminKeyPaths = strings.Split(adminSignKeys, ",")
-			adminCrtPaths = strings.Split(adminSignCrts, ",")
-			if userCrtPathsString != "" {
-				userCrtPaths = strings.Split(userCrtPathsString, ",")
-			}
-			if caPathsString != "" {
-				caPaths = strings.Split(caPathsString, ",")
-			}
-			if userEncCrtPathsString != "" && userEncKeyPathsString != "" {
-				encCrtPaths = strings.Split(userEncCrtPathsString, ",")
-				encKeyPaths = strings.Split(userEncKeyPathsString, ",")
-			}
-			orgIDs = strings.Split(orgIDsString, ",")
-
-			if authType == sdk.Public {
-				if len(hosts) != len(signKeyPaths) {
-					panic(fmt.Sprintf("hosts[%d], sign-keys[%d] length invalid", len(hosts), len(signKeyPaths)))
-				}
-				if len(caPaths) > 0 && len(caPaths) != len(hosts) {
-					panic(fmt.Sprintf("caPaths[%d],hosts[%d]  length invalid", len(caPaths), len(hosts)))
-				}
-			} else if authType == sdk.PermissionedWithKey {
-				if len(hosts) != len(signKeyPaths) || len(hosts) != len(orgIDs) {
-					panic(fmt.Sprintf("hosts[%d], sign-keys[%d], orgIDs[%d] length invalid",
-						len(hosts), len(signKeyPaths), len(orgIDs)))
-				}
-			} else {
-				if len(hosts) != len(signCrtPaths) || len(hosts) != len(signKeyPaths) || len(hosts) != len(caPaths) || len(hosts) != len(orgIDs) {
-					panic(fmt.Sprintf("hosts[%d], sign-crts[%d], sign-keys[%d], ca-path[%d], orgIDs[%d] length invalid",
-						len(hosts), len(signCrtPaths), len(signKeyPaths), len(caPaths), len(orgIDs)))
-				}
-			}
-
-			if useTLS && (len(hosts) != len(userCrtPaths) || len(hosts) != len(userKeyPaths)) {
-				panic(fmt.Sprintf("use tls, but hosts[%d], user-crts[%d], user-keys[%d] length invalid",
-					len(hosts), len(userCrtPaths), len(userKeyPaths)))
-			}
-			if len(encCrtPaths) != len(encKeyPaths) && len(encKeyPaths) != len(hosts) && len(encCrtPaths) > 0 {
-				panic(fmt.Sprintf("use env but encCrtPaths[%d], encKeyPaths[%d], hosts[%d]", len(encCrtPaths),
-					len(encKeyPaths), len(hosts)))
-			}
-
-			if len(hostnames) != len(hosts) && useTLS {
-				panic(fmt.Sprintf("use env but tlsHost[%d], hosts[%d]", len(hostnames),
-					len(hosts)))
-			}
-
-			if len(encCrtPaths) > 0 && len(encKeyPaths) > 0 && len(hosts) > 0 {
-				for i := range encCrtPaths {
-					keyBytes, err := ioutil.ReadFile(encKeyPaths[i])
-					if err != nil {
-						panic(err)
-					}
-					encKeyBytes = append(encKeyBytes, keyBytes)
-					crtBytes, err := ioutil.ReadFile(encCrtPaths[i])
-					if err != nil {
-						panic(err)
-					}
-					encCrtBytes = append(encCrtBytes, crtBytes)
-				}
-
-			}
-			nodeNum = len(hosts)
-			if len(pairsFile) != 0 {
-				bytes, err := ioutil.ReadFile(pairsFile)
-				if err != nil {
-					panic(err)
-				}
-				pairsString = string(bytes)
-			}
-			var err error
-			globalPairs, err = getPairInfos()
-			if err != nil {
-				panic(err)
-			}
-		},
 	}
-
-	flags := cmd.PersistentFlags()
-	flags.IntVarP(&threadNum, "threadNum", "N", 10, "specify thread number")
-	flags.IntVarP(&loopNum, "loopNum", "l", 1000, "specify loop number")
-	flags.IntVarP(&timeout, "timeout", "T", 2, "specify timeout(unit: s)")
-	flags.IntVarP(&printTime, "printTime", "r", 1, "specify print time(unit: s)")
-	flags.IntVarP(&sleepTime, "sleepTime", "S", 100, "specify sleep time(unit: ms)")
-	flags.IntVarP(&climbTime, "climbTime", "L", 10, "specify climb time(unit: s)")
-	flags.StringVarP(&hostsString, "hosts", "H", "", "specify hosts")
-	flags.StringVarP(&signCrtPathsString, "sign-crts", "K", "", "specify user crt path")
-	flags.StringVarP(&signKeyPathsString, "sign-keys", "u", "", "specify user key path")
-	flags.StringVar(&userCrtPathsString, "user-crts", "", "specify tls crt path")
-	flags.StringVar(&userKeyPathsString, "user-keys", "", "specify tls key path")
-	flags.StringVar(&userEncKeyPathsString, "user-enc-keys", "", "enc key path")
-	flags.StringVar(&userEncCrtPathsString, "user-enc-crts", "", "enc certificate path")
-	flags.StringVarP(&orgIDsString, "org-IDs", "I", "", "specify user key path")
-	flags.BoolVarP(&checkResult, "check-result", "Y", false, "specify whether check result")
-	flags.BoolVarP(&recordLog, "record-log", "g", false, "specify whether record log")
-	flags.BoolVarP(&outputResult, "output-result", "", false, "output rpc result, eg: txid")
-	flags.BoolVarP(&showKey, "showKey", "", false, "bool")
-	flags.StringVar(&hashAlgo, "hash-algorithm", "SHA256", "hash algorithm set in chain configuration")
-	flags.StringVarP(&caPathsString, "ca-path", "P", "", "specify ca path")
-	flags.BoolVarP(&useTLS, "use-tls", "t", false, "specify whether use tls")
-	flags.StringVar(&orgIds, "org-ids", "", "orgIds of admin")
-	flags.StringVar(&adminSignKeys, "admin-sign-keys", "", "adminSignKeys of admin")
-	flags.StringVar(&adminSignCrts, "admin-sign-crts", "", "adminSignCrts of admin")
-	flags.StringVarP(&chainId, "chain-id", "C", "chain1", "specify chain id")
-	flags.StringVarP(&contractName, "contract-name", "n", "", "specify contract name")
-	flags.BoolVar(&useShortCrt, "use-short-crt", false, "use compressed certificate in transactions")
-	flags.Int64Var(&requestTimeout, "requestTimeout", 5, "specify request timeout(unit: s)")
-	flags.Uint32Var(&authTypeUint32, "auth-type", 1, "chainmaker auth type. PermissionedWithCert:1,PermissionedWithKey:2,Public:3")
-	flags.Uint64Var(&gasLimit, "gas-limit", 0, "gas limit in uint64 type")
-	flags.StringVarP(&hostnamesString, "tls-host-names", "", "", "specify hostname, the sequence is the same as --hosts")
-	flags.StringVarP(&statisticalType, "statistical-type", "", "default", "normal statistical type or block based statistical type, input normal or block default:normal ")
-	flags.IntVarP(&checkInterval, "check-interval", "", 1, "After all threads are done,check the interval time of the last block generation. ")
-	flags.BoolVarP(&onlySend, "only-send", "", false, "The result statistics are open, and the result is true. Only RPC request data is counted, and the on chain results are not counted")
 	cmd.AddCommand(invokeCMD())
 	cmd.AddCommand(queryCMD())
 	cmd.AddCommand(createContractCMD())
@@ -259,10 +250,231 @@ func ParallelCMD() *cobra.Command {
 	return cmd
 }
 
-const (
-	LoopTypeEnd     = int8(1)
-	LoopTypeRestart = int8(2)
-)
+func pairsRead() {
+	if len(pairsFile) != 0 {
+		bytes, err := ioutil.ReadFile(pairsFile)
+		if err != nil {
+			panic(err)
+		}
+		pairsString = string(bytes)
+	}
+	var err error
+	globalPairs, err = getPairInfos()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func paramRead() {
+	nodeNum = len(hosts)
+	authType = sdk.AuthType(authTypeUint32)
+	// 这个是节点的ip
+	if hostsString != "" {
+		hosts = strings.Split(hostsString, ",")
+	}
+	// 之前起的名字有问题留到下个版本修改，这个是tls
+	if hostnamesString != "" {
+		hostnames = strings.Split(hostnamesString, ",")
+	}
+	if signKeyPathsString != "" {
+		signKeyPaths = strings.Split(signKeyPathsString, ",")
+	}
+	if signCrtPathsString != "" {
+		signCrtPaths = strings.Split(signCrtPathsString, ",")
+	}
+	if caPathsString != "" {
+		caPaths = strings.Split(caPathsString, ",")
+	}
+	if userKeyPathsString != "" {
+		userKeyPaths = strings.Split(userKeyPathsString, ",")
+	}
+	if userCrtPathsString != "" {
+		userCrtPaths = strings.Split(userCrtPathsString, ",")
+	}
+	if adminSignKeys != "" {
+		adminKeyPaths = strings.Split(adminSignKeys, ",")
+	}
+	if adminSignCrts != "" {
+		adminCrtPaths = strings.Split(adminSignCrts, ",")
+	}
+	if userEncKeyPathsString != "" {
+		encKeyPaths = strings.Split(userEncKeyPathsString, ",")
+	}
+	if userEncCrtPathsString != "" {
+		encCrtPaths = strings.Split(userEncCrtPathsString, ",")
+	}
+	if orgIDsString != "" {
+		orgIDs = strings.Split(orgIDsString, ",")
+	}
+	// 读取pair文件
+	if len(pairsFile) != 0 {
+		bytes, err := ioutil.ReadFile(pairsFile)
+		if err != nil {
+			panic(err)
+		}
+		pairsString = string(bytes)
+	}
+	var err error
+	globalPairs, err = getPairInfos()
+	if err != nil {
+		panic(err)
+	}
+}
+
+// paramCheck 参数校验
+func paramCheck() error {
+	// 解析host
+	if hostsString == "" {
+		return fmt.Errorf("hosts is required")
+	}
+	// 校验不同认证模式下的证书
+	authType = sdk.AuthType(authTypeUint32)
+	switch authType {
+	case sdk.Public:
+		return pkCheck()
+	case sdk.PermissionedWithCert:
+		return certCheck()
+	}
+	// 先做tls校验
+	if err := tlsCheck(); err != nil {
+		return err
+	}
+	// 再做双证书校验
+	// 先做tls校验
+	if err := twoWayCheck(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// pk模式的参数校验
+func pkCheck() error {
+	if len(signKeyPaths) == 0 {
+		return fmt.Errorf("pk mode need input sign key paths")
+	}
+	// 判断是否传入了多个host
+	if len(hosts) > 1 {
+		if len(hosts) == len(signKeyPaths) {
+			return fmt.Errorf("input multiple host names , but host number nor equals "+
+				"sign-keys number [%d|%d]", len(hosts), len(signKeyPaths))
+		}
+	}
+	return nil
+}
+
+// cert模式的参数校验
+func certCheck() error {
+	if signKeyPathsString == "" || signCrtPathsString == "" {
+		return fmt.Errorf("no cert path or no cert crt")
+	}
+	if len(hosts) > 1 {
+		if len(hosts) != len(signKeyPaths) {
+			return fmt.Errorf("input multiple host names , but host number nor equals "+
+				"sign-keys number [%d|%d]", len(hosts), len(signKeyPaths))
+		}
+		if len(hosts) != len(signCrtPaths) {
+			return fmt.Errorf("input multiple host names , but host number nor equals "+
+				"sign-crts number [%d|%d]", len(hosts), len(signCrtPaths))
+		}
+	}
+	return nil
+}
+
+// tls校验当，开启tls时需要做的一些必要的验证
+func tlsCheck() error {
+	if !useTLS {
+		return nil
+	}
+	if len(caPaths) == 0 {
+		return fmt.Errorf("tls is true need input ca-paths")
+	}
+	// 这里hostname是tls host
+	if len(hostnames) == 0 {
+		return fmt.Errorf("tls is true need input hostnames")
+	}
+	if len(userKeyPaths) == 0 || len(userCrtPaths) == 0 {
+		return fmt.Errorf("no user cert path or no user key path")
+	}
+	if len(hosts) > 1 {
+		if len(hosts) != len(userCrtPaths) {
+			return fmt.Errorf("input multiple host names , but host number nor equals "+
+				"user-crts number [%d|%d]", len(hosts), len(userCrtPaths))
+		}
+		if len(hosts) != len(userKeyPaths) {
+			return fmt.Errorf("input multiple host names , but host number nor equals "+
+				"user-keys number [%d|%d]", len(hosts), len(userKeyPaths))
+		}
+		if len(hosts) != len(hostnames) {
+			fmt.Errorf("input multiple host names , but host number nor equals "+
+				"hostnames number [%d|%d]", len(hosts), len(hostnames))
+		}
+	}
+	return nil
+}
+
+// endorserCheck 如果创建或者升级合约则需要校验背书信息
+func endorserCheck() error {
+	if len(adminKeyPaths) == 0 {
+		return fmt.Errorf("endorser is true need input admin key paths")
+	}
+	if authType != sdk.Public && len(adminCrtPaths) == 0 {
+		return fmt.Errorf("endorser is true need input admin crt paths")
+	}
+	if len(hosts) > 1 {
+		if len(hosts) != len(adminKeyPaths) {
+			return fmt.Errorf("use two way mod input user-enc-crts but not input user-enc-keys")
+		}
+		if authType != sdk.Public && len(hosts) != len(adminCrtPaths) {
+			return fmt.Errorf("endorser is true need input admin crt paths")
+		}
+	}
+	return nil
+}
+
+// 双证书校验
+func twoWayCheck() error {
+	if userEncCrtPathsString == "" && userEncKeyPathsString == "" {
+		return nil
+	}
+	if userEncCrtPathsString != "" && userEncKeyPathsString == "" {
+		return fmt.Errorf("use two way input user-enc-crts but not input user-enc-keys")
+	}
+	if userEncCrtPathsString == "" && userEncKeyPathsString != "" {
+		return fmt.Errorf("use two way input user-enc-keys but not input user-enc-crts")
+	}
+	if len(hosts) > 1 {
+		if len(hosts) != len(encCrtPaths) {
+			return fmt.Errorf("input multiple host names , but host number not equals "+
+				"user-enc-crts [%d|%d]", len(hosts), len(encCrtPaths))
+		}
+		if len(hosts) != len(encKeyPaths) {
+			return fmt.Errorf("input multiple host names , but host number not equals "+
+				"user-enc-keys [%d|%d]", len(hosts), len(encKeyPaths))
+		}
+	}
+	// 读取证书
+	for i := range encCrtPaths {
+		keyBytes, err := ioutil.ReadFile(encKeyPaths[i])
+		if err != nil {
+			panic(err)
+		}
+		encKeyBytes = append(encKeyBytes, keyBytes)
+		crtBytes, err := ioutil.ReadFile(encCrtPaths[i])
+		if err != nil {
+			panic(err)
+		}
+		encCrtBytes = append(encCrtBytes, crtBytes)
+	}
+	return nil
+}
+
+func intPow(base, exp int64) int64 {
+	result := int64(1)
+	for i := int64(0); i < exp; i++ {
+		result *= base
+	}
+	return result
+}
 
 func getPairInfos() ([]*KeyValuePair, error) {
 	var ps []*KeyValuePair
@@ -300,12 +512,4 @@ func getPairInfos() ([]*KeyValuePair, error) {
 	}
 
 	return ps, nil
-}
-
-func intPow(base, exp int64) int64 {
-	result := int64(1)
-	for i := int64(0); i < exp; i++ {
-		result *= base
-	}
-	return result
 }

@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"sync"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 )
 
@@ -23,7 +24,18 @@ func statCMD() *cobra.Command {
 			return statMain()
 		},
 	}
-
+	util.AttachFlags(cmd, flags, []string{
+		// 证书配置
+		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag, orgIdsFlag,
+		userCrtPathsStringFlag, userKeyPathsStringFlag, caPathsStringFlag, useTLSFlag,
+		userEncKeyPathsStringFlag, userEncCrtPathsStringFlag,
+		adminSignKeysFlag, adminSignCrtsFlag,
+		// 压测请求配置
+		checkIntervalFlag,
+		// 链配置
+		hostsStringFlag, hashAlgoFlag, chainIdFlag, contractNameFlag, useShortCrtFlag,
+		authTypeUint32Flag, gasLimitFlag, hostnamesStringFlag,
+	})
 	flags := cmd.Flags()
 	flags.Int64VarP(&startBlock, "start-block", "", 0, "subscribe start block height")
 	flags.Int64VarP(&endBlock, "end-block", "", 1, "subscribe end block height")
