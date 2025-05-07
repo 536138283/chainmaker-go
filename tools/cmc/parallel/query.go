@@ -20,6 +20,7 @@ func queryCMD() *cobra.Command {
 		Short: "Query",
 		Long:  "Query",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			paramRead()
 			if err := paramCheck(); err != nil {
 				return err
 			}

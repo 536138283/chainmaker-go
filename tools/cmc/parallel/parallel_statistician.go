@@ -190,11 +190,19 @@ func (s *Statistician) outBlockInfo(resultSet *ChainResultSet) {
 // outNodeBlockInfo 将节点的区块交易统计结果输出到结果集对象
 func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 	resultSet.Nodes = make(map[string]*NodeInfo)
+	// 如果订阅不到区块，跳过计算
+	if s.blockTotal == 0 {
+		return
+	}
 	for i, _ := range hosts {
 		// 第一次计算是以第一个区块的高度为准，所以这里定义一个加数防止少计算一个区块
 		nodeInfo := &NodeInfo{}
 		// 节点的区块数量
 		nodeInfo.BlockNum = s.nodeLastBlockHeight[i] - s.nodeFirstBlockHeight[i] + 1
+		// 如果节点没有出块跳过计算
+		if nodeInfo.BlockNum == 0 || s.nodeTxTotal[i] == 0 {
+			continue
+		}
 		// 节点的平均区出块时间
 		nodeInfo.BlockOutAvg = float32(nodeInfo.BlockNum) / s.elapsedSeconds
 		// 第一个区块的出块时间, 高度
@@ -228,7 +236,9 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 		for _, v := range s.nodeBlockMilli[i] {
 			sumBlockLatency += v
 		}
-		nodeInfo.AvgBlockLatency = sumBlockLatency / float64(len(s.nodeBlockMilli[i])) / 1000
+		if len(s.nodeBlockMilli[i]) > 0 {
+			nodeInfo.AvgBlockLatency = sumBlockLatency / float64(len(s.nodeBlockMilli[i])) / 1000
+		}
 		// 计算平均出块时延方差
 		fcBlock := float64(0)
 		for _, v := range s.blockMilli {
@@ -242,13 +252,19 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 
 // outRpcInfo 将rpc的统计结果输出到结果集对象
 func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
+	// 如果没有请求则跳过计算
+	if s.totalCount == 0 {
+		return
+	}
 	if s.totalCount > 0 {
 		resultSet.SuccessCount = s.successCount
 		resultSet.FailCount = s.totalCount - s.successCount
 		resultSet.Count = s.totalCount
 		resultSet.MinTime = s.minSuccessElapsed
 		resultSet.MaxTime = s.maxSuccessElapsed
-		resultSet.AvgTime = float32(s.sumSuccessElapsed) / float32(s.successCount)
+		if s.successCount > 0 {
+			resultSet.AvgTime = float32(s.sumSuccessElapsed) / float32(s.successCount)
+		}
 		for i := 0; i < nodeNum; i++ {
 			if s.nodeSuccessCount[i] == 0 {
 				continue
@@ -261,7 +277,9 @@ func (s *Statistician) outRpcInfo(resultSet *RpcResultSet) {
 			nodeInfo.FailCount = s.nodeTotalReqCount[i] - s.nodeSuccessCount[i]
 			nodeInfo.MaxTime = s.nodeMaxSuccessElapsed[i]
 			nodeInfo.MinTime = s.nodeMinSuccessElapsed[i]
-			nodeInfo.AvgTime = float32(s.nodeSumSuccessElapsed[i]) / float32(s.nodeSuccessCount[i])
+			if s.nodeSuccessCount[i] > 0 {
+				nodeInfo.AvgTime = float32(s.nodeSumSuccessElapsed[i]) / float32(s.nodeSuccessCount[i])
+			}
 			resultSet.Nodes[nodeName] = nodeInfo
 		}
 	}

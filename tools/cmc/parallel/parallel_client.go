@@ -95,7 +95,7 @@ func newNodeConfig(i int) *sdk.NodeConfig {
 	var nodeConf *sdk.NodeConfig
 	if useTLS {
 		var tlsHost string
-		if len(tlsHost) > 0 {
+		if len(hostnames) > 0 {
 			tlsHost = hostnames[i]
 		}
 		nodeConf = sdk.NewNodeConfig(

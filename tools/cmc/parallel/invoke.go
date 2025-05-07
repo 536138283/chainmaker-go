@@ -19,6 +19,7 @@ func invokeCMD() *cobra.Command {
 		Use:   invokerMethod,
 		Short: "Invoke",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			paramRead()
 			if err := paramCheck(); err != nil {
 				return err
 			}

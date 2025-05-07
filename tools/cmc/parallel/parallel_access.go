@@ -104,12 +104,12 @@ var (
 
 // 用来定义cmd中flag常量
 const (
-	threadNumFlag             = "threadNum"
-	loopNumFlag               = "loopNum"
+	threadNumFlag             = "thread-num"
+	loopNumFlag               = "loop-num"
 	timeoutFlag               = "timeout"
-	printTimeFlag             = "printTime"
-	sleepTimeFlag             = "sleepTime"
-	climbTimeFlag             = "climbTime"
+	printTimeFlag             = "print-time"
+	sleepTimeFlag             = "sleep-time"
+	climbTimeFlag             = "climb-time"
 	hostsStringFlag           = "hosts"
 	signCrtPathsStringFlag    = "sign-crts"
 	signKeyPathsStringFlag    = "sign-keys"
@@ -121,7 +121,7 @@ const (
 	checkResultFlag           = "check-result"
 	recordLogFlag             = "record-log"
 	outputResultFlag          = "output-result"
-	showKeyFlag               = "showKey"
+	showKeyFlag               = "show-key"
 	hashAlgoFlag              = "hash-algorithm"
 	caPathsStringFlag         = "ca-path"
 	useTLSFlag                = "use-tls"
@@ -136,7 +136,7 @@ const (
 	gasLimitFlag              = "gas-limit"
 	hostnamesStringFlag       = "tls-host-names"
 	checkIntervalFlag         = "check-interval"
-	onlySendFlag              = "onlySend"
+	onlySendFlag              = "only-send"
 	pairsStringFlag           = "pairs"
 	pairsFileFlag             = "pairs-file"
 	methodFlag                = "method"
@@ -222,16 +222,16 @@ func init() {
 	flags.StringVarP(&method, methodFlag, "m", "increase", "specify contract method")
 	flags.StringVarP(&abiPath, abiPathFlag, "", "", "abi file path")
 	// query
-	flags.StringVarP(&pairsString, "pairs", "a", "[{\"key\":\"key\",\"value\":\"counter1\",\"unique\":false}]", "specify pairs")
-	flags.StringVarP(&pairsFile, "pairs-file", "A", "", "specify pairs file, if used, set --pairs=\"\"")
-	flags.StringVarP(&method, "method", "m", "increase", "specify contract method")
+	//flags.StringVarP(&pairsString, "pairs", "a", "[{\"key\":\"key\",\"value\":\"counter1\",\"unique\":false}]", "specify pairs")
+	//flags.StringVarP(&pairsFile, "pairs-file", "A", "", "specify pairs file, if used, set --pairs=\"\"")
+	//flags.StringVarP(&method, "method", "m", "increase", "specify contract method")
 	// upgrade
 	flags.StringVarP(&wasmPath, wasmPathFlag, "w", "", "specify wasm path")
 	flags.Int32VarP(&runTime, runTimeFlag, "R", int32(common.RuntimeType_GASM), "specify run time")
 	flags.StringVarP(&version, versionFlag, "v", "", "specify contract version")
 	// create
-	flags.StringVarP(&wasmPath, "wasm-path", "w", "", "specify wasm path")
-	flags.Int32VarP(&runTime, "run-time", "m", int32(common.RuntimeType_GASM), "specify run time")
+	//flags.StringVarP(&wasmPath, "wasm-path", "w", "", "specify wasm path")
+	//flags.Int32VarP(&runTime, "run-time", "m", int32(common.RuntimeType_GASM), "specify run time")
 }
 
 // ParallelCMD parallel sub command
@@ -266,12 +266,12 @@ func pairsRead() {
 }
 
 func paramRead() {
-	nodeNum = len(hosts)
 	authType = sdk.AuthType(authTypeUint32)
 	// 这个是节点的ip
 	if hostsString != "" {
 		hosts = strings.Split(hostsString, ",")
 	}
+	nodeNum = len(hosts)
 	// 之前起的名字有问题留到下个版本修改，这个是tls
 	if hostnamesString != "" {
 		hostnames = strings.Split(hostnamesString, ",")
@@ -331,9 +331,13 @@ func paramCheck() error {
 	authType = sdk.AuthType(authTypeUint32)
 	switch authType {
 	case sdk.Public:
-		return pkCheck()
+		if err := pkCheck(); err != nil {
+			return err
+		}
 	case sdk.PermissionedWithCert:
-		return certCheck()
+		if err := certCheck(); err != nil {
+			return err
+		}
 	}
 	// 先做tls校验
 	if err := tlsCheck(); err != nil {
@@ -354,8 +358,8 @@ func pkCheck() error {
 	}
 	// 判断是否传入了多个host
 	if len(hosts) > 1 {
-		if len(hosts) == len(signKeyPaths) {
-			return fmt.Errorf("input multiple host names , but host number nor equals "+
+		if len(hosts) != len(signKeyPaths) {
+			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"sign-keys number [%d|%d]", len(hosts), len(signKeyPaths))
 		}
 	}
@@ -364,17 +368,27 @@ func pkCheck() error {
 
 // cert模式的参数校验
 func certCheck() error {
-	if signKeyPathsString == "" || signCrtPathsString == "" {
-		return fmt.Errorf("no cert path or no cert crt")
+	if len(signKeyPaths) == 0 {
+		return fmt.Errorf("cert mode neer input sign-keys")
+	}
+	if len(signCrtPaths) == 0 {
+		return fmt.Errorf("cert mode neer input sign-crts")
+	}
+	if len(orgIDs) == 0 {
+		return fmt.Errorf("cert mode need input org-IDs")
 	}
 	if len(hosts) > 1 {
 		if len(hosts) != len(signKeyPaths) {
-			return fmt.Errorf("input multiple host names , but host number nor equals "+
+			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"sign-keys number [%d|%d]", len(hosts), len(signKeyPaths))
 		}
 		if len(hosts) != len(signCrtPaths) {
-			return fmt.Errorf("input multiple host names , but host number nor equals "+
+			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"sign-crts number [%d|%d]", len(hosts), len(signCrtPaths))
+		}
+		if len(hosts) != len(orgIDs) {
+			return fmt.Errorf("input multiple host names , but host number not equals "+
+				"org-IDs number [%d|%d]", len(hosts), len(orgIDs))
 		}
 	}
 	return nil
@@ -397,15 +411,15 @@ func tlsCheck() error {
 	}
 	if len(hosts) > 1 {
 		if len(hosts) != len(userCrtPaths) {
-			return fmt.Errorf("input multiple host names , but host number nor equals "+
+			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"user-crts number [%d|%d]", len(hosts), len(userCrtPaths))
 		}
 		if len(hosts) != len(userKeyPaths) {
-			return fmt.Errorf("input multiple host names , but host number nor equals "+
+			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"user-keys number [%d|%d]", len(hosts), len(userKeyPaths))
 		}
 		if len(hosts) != len(hostnames) {
-			fmt.Errorf("input multiple host names , but host number nor equals "+
+			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"hostnames number [%d|%d]", len(hosts), len(hostnames))
 		}
 	}
@@ -433,13 +447,13 @@ func endorserCheck() error {
 
 // 双证书校验
 func twoWayCheck() error {
-	if userEncCrtPathsString == "" && userEncKeyPathsString == "" {
+	if len(encCrtPaths) == 0 && len(encKeyPaths) == 0 {
 		return nil
 	}
-	if userEncCrtPathsString != "" && userEncKeyPathsString == "" {
+	if len(encCrtPaths) != 0 && len(encKeyPaths) == 0 {
 		return fmt.Errorf("use two way input user-enc-crts but not input user-enc-keys")
 	}
-	if userEncCrtPathsString == "" && userEncKeyPathsString != "" {
+	if len(encCrtPaths) == 0 && len(encKeyPaths) != 0 {
 		return fmt.Errorf("use two way input user-enc-keys but not input user-enc-crts")
 	}
 	if len(hosts) > 1 {

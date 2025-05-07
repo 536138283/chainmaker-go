@@ -20,6 +20,7 @@ func createContractCMD() *cobra.Command {
 		Short: "Create Contract",
 		Long:  "Create Contract",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			paramRead()
 			if err := endorserCheck(); err != nil {
 				return err
 			}

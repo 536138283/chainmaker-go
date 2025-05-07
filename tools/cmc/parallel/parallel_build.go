@@ -274,6 +274,5 @@ func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 		req.Endorsers = endorsers
 	}
 	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
-	fmt.Printf("qqqqqq %s\n", req.String())
 	return req, nil
 }
