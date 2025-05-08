@@ -316,7 +316,6 @@ func NewBlockChainSyncServer(
 	chainConf protocol.ChainConf,
 	blockVerifier protocol.BlockVerifier,
 	blockCommitter protocol.BlockCommitter,
-	txPool protocol.TxPool,
 	log protocol.Logger) protocol.SyncService {
 
 	srv := &ServerAggregator{
@@ -349,7 +348,6 @@ func NewBlockChainSyncServer(
 			ledgerCache,
 			blockVerifier,
 			blockCommitter,
-			txPool,
 			srv.netHandler,
 			log,
 		)

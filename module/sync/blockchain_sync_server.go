@@ -10,12 +10,9 @@ package sync
 import (
 	"fmt"
 	"reflect"
-	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	txpoolPb "chainmaker.org/chainmaker/pb-go/v2/txpool"
 
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
@@ -71,8 +68,6 @@ type BlockChainSyncServer struct {
 	nodeList *NodeList
 	//getStateFn used to get some running state
 	getStateFn getStateFn
-	// tx pool for getting and store tx
-	txPool protocol.TxPool
 	// net message handler
 	netHandler *syncNetHandler
 }
@@ -111,7 +106,6 @@ func newBlockChainSyncServerV1(
 	ledgerCache protocol.LedgerCache,
 	blockVerifier protocol.BlockVerifier,
 	blockCommitter protocol.BlockCommitter,
-	txPool protocol.TxPool,
 	netHandler *syncNetHandler,
 	log protocol.Logger) protocol.SyncService {
 
@@ -130,7 +124,6 @@ func newBlockChainSyncServerV1(
 		minLagReachC:    make(chan struct{}),
 		commitBlockC:    make(chan struct{}),
 		nodeList:        NewNodeList(),
-		txPool:          txPool,
 		netHandler:      netHandler,
 	}
 
@@ -175,10 +168,6 @@ func (sync *BlockChainSyncServer) Start() error {
 	// 	return err
 	// }
 	if err := sync.netHandler.RegisterHandler(sync); err != nil {
-		return err
-	}
-
-	if err := sync.net.ConsensusSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG, sync.blockSyncMsgHandler); err != nil {
 		return err
 	}
 
@@ -248,15 +237,6 @@ func (sync *BlockChainSyncServer) initSyncConfIfRequire() {
 		sync.conf.SetBroadcastStatusPerBlocksCommitted(
 			localconf.ChainMakerConfig.SyncConfig.BroadcastStatusPerBlocksCommitted)
 	}
-	if localconf.ChainMakerConfig.SyncConfig.TxPoolSyncEnable {
-		sync.conf.SetTxPoolSyncEnable(localconf.ChainMakerConfig.SyncConfig.TxPoolSyncEnable)
-	}
-	if localconf.ChainMakerConfig.SyncConfig.TxPoolStatusTick > 0 {
-		sync.conf.SetTxPoolStatusTick(localconf.ChainMakerConfig.SyncConfig.TxPoolStatusTick)
-	}
-	if localconf.ChainMakerConfig.SyncConfig.TxPoolSyncProportion > 0 {
-		sync.conf.SetTxPoolSyncProportion(localconf.ChainMakerConfig.SyncConfig.TxPoolSyncProportion)
-	}
 }
 
 // handle messages received from the network that care about
@@ -292,14 +272,6 @@ func (sync *BlockChainSyncServer) blockSyncMsgHandler(from string, msg []byte, m
 		//received a response with block data from other nodes
 		sync.log.Debug("receive [SyncMsg_BLOCK_SYNC_RESP] msg, put into scheduler...")
 		return sync.scheduler.addTask(&SyncedBlockMsg{msg: syncMsg.Payload, from: from})
-		// received a request to get current node tx pool status
-		// if the current node is an old node and there is no case branch below
-		// when receiving a TX_POOL_STATUS_REQ from a new node, an error will be returned.
-	case syncPb.SyncMsg_TX_POOL_STATUS_REQ:
-		return sync.handleTxPoolStatusReq(&syncMsg, from)
-	case syncPb.SyncMsg_TX_POOL_STATUS_RESP:
-		//received a response with block data from other nodes
-		return sync.handleTxPoolStatusResp(&syncMsg, from)
 	}
 	return fmt.Errorf("not support the syncPb.SyncMsg.Type as %d", syncMsg.Type)
 }
@@ -321,54 +293,6 @@ func (sync *BlockChainSyncServer) HandleSyncMsg(from string, syncMsg *syncPb.Syn
 		return sync.scheduler.addTask(&SyncedBlockMsg{msg: syncMsg.Payload, from: from})
 	}
 	return fmt.Errorf("not support the syncPb.SyncMsg.Type as %d", syncMsg.Type)
-}
-
-// handleNodeStatusReq get own block state information and send it to where the request is from
-func (sync *BlockChainSyncServer) handleTxPoolStatusReq(syncMsg *syncPb.SyncMsg, from string) error {
-	sync.log.Debugf("receive tx pool status request from node [%s]", from)
-	var (
-		ts  []byte
-		err error
-	)
-	reqId, err := strconv.ParseUint(string(syncMsg.Payload), 10, 64)
-	if err != nil {
-		return err
-	}
-	txPoolStatus := sync.txPool.GetPoolStatus()
-	txPoolSyncMsg := syncPb.TxPoolSyncMsg{TxPoolSyncReqId: reqId, TxPoolStatus: txPoolStatus}
-
-	if ts, err = proto.Marshal(&txPoolSyncMsg); err != nil {
-		return err
-	}
-	return sync.sendMsg(syncPb.SyncMsg_TX_POOL_STATUS_RESP, ts, from)
-}
-
-func (sync *BlockChainSyncServer) handleTxPoolStatusResp(syncMsg *syncPb.SyncMsg, from string) error {
-	msg := syncPb.TxPoolSyncMsg{}
-	if err := proto.Unmarshal(syncMsg.Payload, &msg); err != nil {
-		return err
-	}
-	reqId := msg.TxPoolSyncReqId
-	sync.log.Debugf("receive tx pool status resp [%v-%v], "+
-		"common in queue: %v", reqId, from, msg.TxPoolStatus.CommonTxNumInQueue)
-	if float64(msg.TxPoolStatus.CommonTxNumInQueue)/float64(msg.TxPoolStatus.CommonTxPoolSize) <=
-		sync.conf.txPoolSyncProportion {
-		sync.conf.txPoolReq.mux.Lock()
-		defer sync.conf.txPoolReq.mux.Unlock()
-		// if the received message reqId has been processed or an outdated reqId is received,
-		// it will be returned directly without processing.
-		if sync.conf.txPoolReq.reqIdMap[reqId] || reqId < sync.conf.txPoolReq.maxReqId {
-			return nil
-		}
-		sync.log.Infof("reBroadcast [%v,%v], common tx in queue: %v", reqId, from, msg.TxPoolStatus.CommonTxNumInQueue)
-		// sync re broadcast tx
-		sync.txPool.ReBroadcastTx(txpoolPb.TxType_ALL_TYPE, txpoolPb.TxStage_IN_QUEUE)
-		delete(sync.conf.txPoolReq.reqIdMap, sync.conf.txPoolReq.maxReqId)
-		// update maxReqId to mark which reqId is currently processed and to discard outdated reqId
-		sync.conf.txPoolReq.maxReqId = reqId
-		sync.conf.txPoolReq.reqIdMap[reqId] = true
-	}
-	return nil
 }
 
 // handleNodeStatusReq get own block state information and send it to where the request is from
@@ -548,10 +472,6 @@ func (sync *BlockChainSyncServer) loop() {
 		doLivenessTk = time.NewTicker(sync.conf.livenessTick)
 		// task: trigger the check of the data in processor and scheduler
 		doDataDetect = time.NewTicker(sync.conf.dataDetectionTick)
-		// task: trigger the request of tx pool status
-		txPoolStatusTk = time.NewTicker(sync.conf.txPoolStatusTick)
-		// tx pool request id
-		txPoolReqId = 0
 	)
 	defer func() {
 		doProcessBlockTk.Stop()
@@ -559,7 +479,6 @@ func (sync *BlockChainSyncServer) loop() {
 		doLivenessTk.Stop()
 		doNodeStatusTk.Stop()
 		doDataDetect.Stop()
-		txPoolStatusTk.Stop()
 	}()
 	_ = sync.broadcastMsg(syncPb.SyncMsg_NODE_STATUS_REQ, nil)
 	for {
@@ -611,54 +530,6 @@ func (sync *BlockChainSyncServer) loop() {
 			if err := sync.scheduler.addTask(resp); err != nil {
 				sync.log.Errorf("add processor task to scheduler failed, reason: %s", err)
 			}
-			// timing drive to request to get the tx pool status of other nodes
-		case <-txPoolStatusTk.C:
-			if !sync.conf.txPoolSyncEnable {
-				txPoolStatusTk.Stop()
-				continue
-			}
-			sync.handleTxPoolStatus(txPoolReqId)
-		}
-	}
-}
-
-// handleTxPoolStatus handle tx pool status
-// send tx pool status request to other consensus node
-func (sync *BlockChainSyncServer) handleTxPoolStatus(txPoolReqId int) {
-	poolStatus := sync.txPool.GetPoolStatus()
-
-	sync.log.Debugf("tx pool status tick trigger, local tx pool [%v, %v]",
-		poolStatus.ConfigTxNumInQueue, poolStatus.CommonTxNumInQueue)
-
-	if poolStatus.ConfigTxNumInQueue > 0 {
-		sync.log.Debugf("re broadcast config tx in queue, nums: %v", poolStatus.ConfigTxNumInQueue)
-		// sync re broadcast
-		// The config tx has a higher priority and will be broadcast if there is one.
-		sync.txPool.ReBroadcastTx(txpoolPb.TxType_CONFIG_TX, txpoolPb.TxStage_IN_QUEUE)
-	}
-
-	if poolStatus.CommonTxNumInQueue > 0 {
-		//Because it will be broadcast to all consensus nodes, all consensus nodes will return a response.
-		//In order to trigger only one broadcast for each request,
-		//The requesting node needs to maintain a txPoolReqId and +1 every time the clock is triggered.
-		txPoolReqId++
-		sync.log.Debugf("broadcast tx pool status request [%v] to consensus nodes", txPoolReqId)
-		data := []byte(strconv.Itoa(txPoolReqId))
-		var (
-			ts  []byte
-			err error
-		)
-		if ts, err = proto.Marshal(&syncPb.SyncMsg{
-			Type:    syncPb.SyncMsg_TX_POOL_STATUS_REQ,
-			Payload: data,
-		}); err != nil {
-			sync.log.Error(err)
-			return
-		}
-		// sync broadcast TX_POOL_STATUS_REQ msg to all consensus nodes
-		// reuse msg header NetMsg_SYNC_BLOCK_MSG
-		if err = sync.net.ConsensusBroadcastMsg(ts, netPb.NetMsg_SYNC_BLOCK_MSG); err != nil {
-			sync.log.Error(err)
 		}
 	}
 }
@@ -791,9 +662,6 @@ func (sync *BlockChainSyncServer) Stop() {
 	sync.processor.end()
 	close(sync.close)
 	sync.closeWait.Wait()
-	if err := sync.net.CancelConsensusSubscribe(netPb.NetMsg_SYNC_BLOCK_MSG); err != nil {
-		sync.log.Errorf("CancelConsensusSubscribe NetMsg_SYNC_BLOCK_MSG error: %v", err)
-	}
 }
 
 func (sync *BlockChainSyncServer) GetState(withPeers bool) (*syncPb.SyncState, error) {
