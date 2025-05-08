@@ -171,6 +171,7 @@ net:
       # node_ids:
       #   - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
 
+sync:
 #  #---The following configuration items are used in version v1.
 #  # Timeout for waiting for block request response, unit second.
 #  wait_time_requested: 30
@@ -208,6 +209,9 @@ net:
 #  ideal_height_distance: 1
 #  # the time interval for checking whether there are new blocks to be synced after syncing to the latest block.
 #  wait_period_seconds_after_latest: 5
+#  # the maximum number of nodes selected from the node pool for syncing.
+#  # This means that at the same time it will only find {max_nodes_selected_count} nodes to synchronize data.
+#  max_nodes_selected_count: 10
 
 # Transaction pool settings
 # Other tx_pool settings can be found in tx_Pool_config.go

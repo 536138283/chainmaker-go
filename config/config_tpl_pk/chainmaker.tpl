@@ -87,6 +87,10 @@ sync:
 #  ideal_height_distance: 1
 #  # the time interval for checking whether there are new blocks to be synced after syncing to the latest block.
 #  wait_period_seconds_after_latest: 5
+#  # the maximum number of nodes selected from the node pool for syncing.
+#  # This means that at the same time it will only find {max_nodes_selected_count} nodes to synchronize data.
+#  max_nodes_selected_count: 10
+
 
 # Network Settings
 net:
