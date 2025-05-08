@@ -269,10 +269,13 @@ func (t *Thread) consume() {
 				nodeIndex := i % nodeNum
 				var orgId = "public"
 				if sdk.AuthType(authTypeUint32) != sdk.Public {
-					if len(orgIDs) <= nodeIndex {
+					if len(orgIDs) == 1 {
+						orgId = orgIDs[0]
+					} else if len(orgIDs) <= nodeIndex {
 						panic("orgId count not equals host count")
+					} else {
+						orgId = orgIDs[nodeIndex]
 					}
-					orgId = orgIDs[nodeIndex]
 				}
 				err = sendTx(t.sdkClients[nodeIndex], orgId, i, req.Param)
 				// 计算请求时延

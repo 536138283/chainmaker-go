@@ -9,8 +9,12 @@ package parallel
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/signal"
 	"sync"
+	"time"
 
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 )
 
@@ -20,18 +24,40 @@ func statCMD() *cobra.Command {
 		Use:   analyse,
 		Short: "Analyse",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			paramRead()
+			if err := paramCheck(); err != nil {
+				return err
+			}
 			return statMain()
 		},
 	}
-
+	util.AttachFlags(cmd, flags, []string{
+		// 证书配置
+		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag, orgIdsFlag,
+		userCrtPathsStringFlag, userKeyPathsStringFlag, caPathsStringFlag, useTLSFlag,
+		userEncKeyPathsStringFlag, userEncCrtPathsStringFlag,
+		adminSignKeysFlag, adminSignCrtsFlag,
+		// 压测请求配置
+		checkIntervalFlag,
+		// 链配置
+		hostsStringFlag, hashAlgoFlag, chainIdFlag, contractNameFlag, useShortCrtFlag,
+		authTypeUint32Flag, gasLimitFlag, hostnamesStringFlag,
+	})
 	flags := cmd.Flags()
 	flags.Int64VarP(&startBlock, "start-block", "", 0, "subscribe start block height")
 	flags.Int64VarP(&endBlock, "end-block", "", 1, "subscribe end block height")
 	return cmd
 }
 
-// statMain 对于发起订阅统计前做检查以及必要的初始化操作
-func statMain() error {
+// 定义退出信号
+var (
+	systemExitChan  chan os.Signal // 操作系统级别结束程序时使用该信号接收
+	timeoutExitChan chan struct{}  // 等待超时使用该信号退出
+	doneExitChan    chan struct{}  // 程序正常结束使用该退出信号退出
+)
+
+// 执行解析前需要做的一些必要的初始化操作，以及检查操作
+func analysePrepare() error {
 	if endBlock < 0 || startBlock < 0 {
 		fmt.Println("start and end block number must be greater than -1")
 		return nil
@@ -40,19 +66,70 @@ func statMain() error {
 		fmt.Println("start height sub end block height must be greater than 1 or equals")
 		return nil
 	}
-	// 初始化关闭订阅的chan
+	// 初始化用来关闭订阅的chan
 	closeSubChan = make(chan struct{}, 1)
+	// 初始化用来计算交易延时的map
+	txLatency = sync.Map{}
 	// 初始化订阅节点客户端
 	err := initSubClient()
 	if err != nil {
 		return err
 	}
-	txLatency = sync.Map{}
-	statistician := getStatistician()
-	go subNodes(statistician, startBlock, endBlock)
-	statistician.collectStat(endBlock)
-	printChainDetail(statistician)
+	// 检查最新区块高度
+	maxBlockHeight, err := getBlockHeight()
+	if err != nil {
+		return err
+	}
+	if startBlock > int64(maxBlockHeight) {
+		return fmt.Errorf("start block height %d is greater than latest block height %d")
+	}
+	// 初始化退出信号的chan
+	systemExitChan = make(chan os.Signal, 1)
+	signal.Notify(systemExitChan, os.Interrupt)
+	timeoutExitChan = make(chan struct{}, 1)
+	doneExitChan = make(chan struct{}, 1)
 	return nil
+}
+
+// statMain 对于发起订阅统计前做检查以及必要的初始化操作
+func statMain() error {
+	if err := analysePrepare(); err != nil {
+		return err
+	}
+	// 获取结果统计对象
+	statistician := getStatistician()
+	// 订阅节点
+	go subNodes(statistician, startBlock, endBlock)
+	// 收集结果
+	go statistician.collectStat(endBlock)
+	// 接收信号并退出
+	select {
+	case <-systemExitChan:
+		fmt.Println("system exit")
+		close(statistician.cReqStatC)
+		printChainDetail(statistician)
+		closeChan()
+		return nil
+	case <-timeoutExitChan:
+		fmt.Println("timeout exit")
+		close(statistician.cReqStatC)
+		printChainDetail(statistician)
+		return nil
+	case <-doneExitChan:
+		fmt.Println("done")
+		close(statistician.cReqStatC)
+		printChainDetail(statistician)
+		closeChan()
+		return nil
+	}
+	return nil
+}
+
+func closeChan() {
+	closeSubChan <- struct{}{}
+	close(systemExitChan)
+	close(timeoutExitChan)
+	close(doneExitChan)
 }
 
 // 为区块统计功能定制的参数收集功能，用来收集指定告区块高度区间范围内的需计算的参数指标
@@ -62,9 +139,15 @@ func (s *Statistician) collectStat(endBlock int64) {
 	isFirst := true
 	startTime := int64(0)
 	startTimeMilli := int64(0)
+	// 启动定时任务
+	go timeOutCtrl(s, startBlock)
 	for {
 		select {
-		case stat := <-s.cReqStatC:
+		case stat, ok := <-s.cReqStatC:
+			// 如果从外部被关闭则结束循环停止统计
+			if !ok {
+				return
+			}
 			if isFirst {
 				startTime = stat.blockHeader.BlockTimestamp
 				startTimeMilli = stat.blockHeader.BlockTimestamp * 1000
@@ -82,10 +165,28 @@ func (s *Statistician) collectStat(endBlock int64) {
 			}()
 			// 计算交易处理速度
 			computeSpeed(stat, s)
+			s.elapsedSeconds = float32(stat.blockHeader.BlockTimestamp - startTime)
+			// 订阅到endBlock的区块高度则发送退出信号
 			if stat.blockHeader.BlockHeight == uint64(endBlock) {
-				s.elapsedSeconds = float32(stat.blockHeader.BlockTimestamp - startTime)
-				// 打印结果后关闭订阅
-				closeSubChan <- struct{}{}
+				// 达到endBlock的时候发送退出信号
+				doneExitChan <- struct{}{}
+				return
+			}
+		}
+	}
+}
+
+// timeOutCtrl 订阅超时控制
+func timeOutCtrl(s *Statistician, latestHeight int64) {
+	timeoutTicker := time.NewTicker(time.Duration(checkInterval) * time.Second)
+	for {
+		select {
+		case <-timeoutTicker.C:
+			if int64(s.lastBlockHeight) > latestHeight {
+				latestHeight = int64(s.lastBlockHeight)
+			} else {
+				timeoutExitChan <- struct{}{}
+				timeoutTicker.Stop()
 				return
 			}
 		}
@@ -143,6 +244,10 @@ func printChainDetail(s *Statistician) error {
 	chainResult := &ChainResultSet{}
 	s.outBlockInfo(chainResult)
 	s.outNodeBlockInfo(chainResult)
+	// 如果没有产出区块则不记录统计直接返回
+	if chainResult.BlockNum == 0 {
+		return nil
+	}
 	jsonByte, err := json.Marshal(chainResult)
 	if err != nil {
 		fmt.Println("marshal chain result error:", err)

@@ -9,12 +9,10 @@ package parallel
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
 	"chainmaker.org/chainmaker/common/v2/crypto"
-	"chainmaker.org/chainmaker/common/v2/crypto/asym"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
@@ -118,21 +116,6 @@ func initParallel() error {
 	paramQueues = make([]chan RequestParam, paramChanCount)
 	for i := 0; i < paramChanCount; i++ {
 		paramQueues[i] = make(chan RequestParam, productFactor*2)
-	}
-	// 解析每个节点的签名文件
-	for i := 0; i < nodeNum; i++ {
-		// 解析签名私钥
-		file, err := os.ReadFile(signKeyPaths[i])
-		if err != nil {
-			fmt.Printf("read node[%s] sign key err: %s\n", hosts[i], err.Error())
-			return err
-		}
-		signKey, err := asym.PrivateKeyFromPEM(file, nil)
-		if err != nil {
-			fmt.Printf("analysis node[%s] sign key err: %s\n", hosts[i], err.Error())
-			return err
-		}
-		privateKeys = append(privateKeys, signKey)
 	}
 	txLatency = sync.Map{}
 	return nil
