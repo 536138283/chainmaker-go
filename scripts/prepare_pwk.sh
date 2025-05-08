@@ -454,8 +454,16 @@ if [ "$ENABLE_VM_GO" == "" ] ;then
                 fi
 
                 # cp ca
-                mkdir -p $BUILD_CONFIG_PATH/node$i/keys/ca/$file
-                cp $BUILD_CRYPTO_CONFIG_PATH/$file/ca/ca.crt $BUILD_CONFIG_PATH/node$i/keys/ca/$file
+                # 检查文件是否存在
+                if [ ! -f "$BUILD_CRYPTO_CONFIG_PATH/$file/ca/ca.crt" ]; then
+                    # 输出 WARN 日志（带时间戳，写入标准错误）
+                    echo "WARN: File $BUILD_CRYPTO_CONFIG_PATH/$file/ca/ca.crt does not exist."
+                    echo "WARN：Requires chainmaker-cryptogen v2.4.0+"
+                else
+                    mkdir -p $BUILD_CONFIG_PATH/node$i/keys/ca/$file
+                    cp $BUILD_CRYPTO_CONFIG_PATH/$file/ca/ca.crt $BUILD_CONFIG_PATH/node$i/keys/ca/$file
+                fi
+
 
                 #cp admin
                 mkdir -p $BUILD_CONFIG_PATH/node$i/keys/admin/$file
