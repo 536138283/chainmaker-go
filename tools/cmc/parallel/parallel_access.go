@@ -356,11 +356,24 @@ func pkCheck() error {
 	if len(signKeyPaths) == 0 {
 		return fmt.Errorf("pk mode need input sign key paths")
 	}
-	// 判断是否传入了多个host
-	if len(hosts) > 1 {
+	// 如果填写多个signKey那么必须和节点数量保持一致
+	if len(hosts) > 1 && len(signKeyPaths) > 1 {
 		if len(hosts) != len(signKeyPaths) {
 			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"sign-keys number [%d|%d]", len(hosts), len(signKeyPaths))
+		}
+	}
+	if useTLS {
+		// tlsCheck 方法会校验 user-key 与 user-crt是否与节点数量一致，所以这里只对比4个证书的数量是否一致
+		if !equal(len(signKeyPaths), len(userKeyPaths), len(userCrtPaths)) {
+			return fmt.Errorf("sign key , user key, user crt not equals num[%d|%d|%d]",
+				len(signKeyPaths), len(userKeyPaths), len(userCrtPaths))
+		}
+		if len(encKeyPaths) > 1 || len(encCrtPaths) > 1 {
+			if !equal(len(signKeyPaths), len(encKeyPaths), len(encCrtPaths)) {
+				return fmt.Errorf("sign key , enc key, enc crt not equals num[%d|%d|%d]",
+					len(signKeyPaths), len(encKeyPaths), len(encCrtPaths))
+			}
 		}
 	}
 	return nil
@@ -377,7 +390,8 @@ func certCheck() error {
 	if len(orgIDs) == 0 {
 		return fmt.Errorf("cert mode need input org-IDs")
 	}
-	if len(hosts) > 1 {
+	// 如果填写了多个key或crt那么key与crt的数量必须要和节点的数量保持一致
+	if len(hosts) > 1 && (len(signKeyPaths) > 1 || len(signCrtPaths) > 1) {
 		if len(hosts) != len(signKeyPaths) {
 			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"sign-keys number [%d|%d]", len(hosts), len(signKeyPaths))
@@ -389,6 +403,20 @@ func certCheck() error {
 		if len(hosts) != len(orgIDs) {
 			return fmt.Errorf("input multiple host names , but host number not equals "+
 				"org-IDs number [%d|%d]", len(hosts), len(orgIDs))
+		}
+	}
+	// tlsCheck 方法会校验 user-key 与 user-crt是否与节点数量一致，所以这里只对比4个证书的数量是否一致
+	if useTLS {
+		if !equal(len(signKeyPaths), len(signCrtPaths), len(userKeyPaths), len(userCrtPaths)) {
+			return fmt.Errorf("sign key ,sign crt , user key, user crt not equals num[%d|%d|%d|%d]",
+				len(signKeyPaths), len(signCrtPaths), len(userKeyPaths), len(userCrtPaths))
+		}
+		// 如果开启了国密就校验国密的证书数量一致性
+		if len(encKeyPaths) > 1 || len(encCrtPaths) > 1 {
+			if !equal(len(signKeyPaths), len(signCrtPaths), len(encKeyPaths), len(encCrtPaths)) {
+				return fmt.Errorf("sign key ,sign crt , enc key, enc crt not equals num[%d|%d|%d|%d]",
+					len(signKeyPaths), len(signCrtPaths), len(encKeyPaths), len(encCrtPaths))
+			}
 		}
 	}
 	return nil
@@ -409,19 +437,10 @@ func tlsCheck() error {
 	if len(userKeyPaths) == 0 || len(userCrtPaths) == 0 {
 		return fmt.Errorf("no user cert path or no user key path")
 	}
-	if len(hosts) > 1 {
-		if len(hosts) != len(userCrtPaths) {
-			return fmt.Errorf("input multiple host names , but host number not equals "+
-				"user-crts number [%d|%d]", len(hosts), len(userCrtPaths))
-		}
-		if len(hosts) != len(userKeyPaths) {
-			return fmt.Errorf("input multiple host names , but host number not equals "+
-				"user-keys number [%d|%d]", len(hosts), len(userKeyPaths))
-		}
-		if len(hosts) != len(hostnames) {
-			return fmt.Errorf("input multiple host names , but host number not equals "+
-				"hostnames number [%d|%d]", len(hosts), len(hostnames))
-		}
+	// tls host要么填1个要么和节点的数量保持一致
+	if len(hostnames) > 1 && len(hosts) != len(hostnames) {
+		return fmt.Errorf("input multiple host names , but host number not equals "+
+			"hostnames number [%d|%d]", len(hosts), len(hostnames))
 	}
 	return nil
 }
@@ -434,19 +453,14 @@ func endorserCheck() error {
 	if authType != sdk.Public && len(adminCrtPaths) == 0 {
 		return fmt.Errorf("endorser is true need input admin crt paths")
 	}
-	if len(hosts) > 1 {
-		if len(hosts) != len(adminKeyPaths) {
-			return fmt.Errorf("use two way mod input user-enc-crts but not input user-enc-keys")
-		}
-		if authType != sdk.Public && len(hosts) != len(adminCrtPaths) {
-			return fmt.Errorf("endorser is true need input admin crt paths")
-		}
-	}
 	return nil
 }
 
 // 双证书校验
 func twoWayCheck() error {
+	if !useTLS {
+		return nil
+	}
 	if len(encCrtPaths) == 0 && len(encKeyPaths) == 0 {
 		return nil
 	}
@@ -455,29 +469,6 @@ func twoWayCheck() error {
 	}
 	if len(encCrtPaths) == 0 && len(encKeyPaths) != 0 {
 		return fmt.Errorf("use two way input user-enc-keys but not input user-enc-crts")
-	}
-	if len(hosts) > 1 {
-		if len(hosts) != len(encCrtPaths) {
-			return fmt.Errorf("input multiple host names , but host number not equals "+
-				"user-enc-crts [%d|%d]", len(hosts), len(encCrtPaths))
-		}
-		if len(hosts) != len(encKeyPaths) {
-			return fmt.Errorf("input multiple host names , but host number not equals "+
-				"user-enc-keys [%d|%d]", len(hosts), len(encKeyPaths))
-		}
-	}
-	// 读取证书
-	for i := range encCrtPaths {
-		keyBytes, err := ioutil.ReadFile(encKeyPaths[i])
-		if err != nil {
-			panic(err)
-		}
-		encKeyBytes = append(encKeyBytes, keyBytes)
-		crtBytes, err := ioutil.ReadFile(encCrtPaths[i])
-		if err != nil {
-			panic(err)
-		}
-		encCrtBytes = append(encCrtBytes, crtBytes)
 	}
 	return nil
 }
@@ -526,4 +517,17 @@ func getPairInfos() ([]*KeyValuePair, error) {
 	}
 
 	return ps, nil
+}
+
+func equal(nums ...int) bool {
+	if len(nums) == 0 {
+		return true // 无元素视为相等，或根据需求返回 false
+	}
+	first := nums[0]
+	for _, num := range nums[1:] {
+		if num != first {
+			return false
+		}
+	}
+	return true
 }

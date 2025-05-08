@@ -103,40 +103,26 @@ func statMain() error {
 	// 收集结果
 	go statistician.collectStat(endBlock)
 	// 接收信号并退出
-	for {
-		select {
-		case <-systemExitChan:
-			fmt.Println("system exit")
-			close(statistician.cReqStatC)
-			printChainDetail(statistician)
-			closeChan()
-			return nil
-		case <-timeoutExitChan:
-			fmt.Println("timeout exit")
-			close(statistician.cReqStatC)
-			printChainDetail(statistician)
-			return nil
-		case <-doneExitChan:
-			fmt.Println("done")
-			close(statistician.cReqStatC)
-			printChainDetail(statistician)
-			closeChan()
-			return nil
-		default:
-			go func(s *Statistician) {
-				current := s.blockTotal
-				for {
-					time.Sleep(time.Duration(checkInterval) * time.Second)
-					if current == s.blockTotal {
-						timeoutExitChan <- struct{}{}
-						return
-					}
-					current = s.blockTotal
-				}
-			}(statistician)
-		}
+	select {
+	case <-systemExitChan:
+		fmt.Println("system exit")
+		close(statistician.cReqStatC)
+		printChainDetail(statistician)
+		closeChan()
+		return nil
+	case <-timeoutExitChan:
+		fmt.Println("timeout exit")
+		close(statistician.cReqStatC)
+		printChainDetail(statistician)
+		return nil
+	case <-doneExitChan:
+		fmt.Println("done")
+		close(statistician.cReqStatC)
+		printChainDetail(statistician)
+		closeChan()
+		return nil
 	}
-	//return nil
+	return nil
 }
 
 func closeChan() {
@@ -146,21 +132,6 @@ func closeChan() {
 	close(doneExitChan)
 }
 
-func listenCtrlC(s *Statistician) {
-	// 监听 SIGINT 和 SIGTERM 信号
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
-	// 3. 启动协程处理信号
-	go func() {
-		<-sigCh
-		fmt.Printf("system exit\n")
-		printChainDetail(s)
-		// 关闭chan
-		closeSubChan <- struct{}{}
-		os.Exit(1)
-	}()
-}
-
 // 为区块统计功能定制的参数收集功能，用来收集指定告区块高度区间范围内的需计算的参数指标
 // 因为无法得知开始请求的时间，所以以第二个区块为开始区块，第一个区块作为时间依据，
 // 以统计范围为 （start, end] 即左开右闭区间开始统计
@@ -168,6 +139,8 @@ func (s *Statistician) collectStat(endBlock int64) {
 	isFirst := true
 	startTime := int64(0)
 	startTimeMilli := int64(0)
+	// 启动定时任务
+	go timeOutCtrl(s, startBlock)
 	for {
 		select {
 		case stat, ok := <-s.cReqStatC:
@@ -193,9 +166,27 @@ func (s *Statistician) collectStat(endBlock int64) {
 			// 计算交易处理速度
 			computeSpeed(stat, s)
 			s.elapsedSeconds = float32(stat.blockHeader.BlockTimestamp - startTime)
+			// 订阅到endBlock的区块高度则发送退出信号
 			if stat.blockHeader.BlockHeight == uint64(endBlock) {
 				// 达到endBlock的时候发送退出信号
 				doneExitChan <- struct{}{}
+				return
+			}
+		}
+	}
+}
+
+// timeOutCtrl 订阅超时控制
+func timeOutCtrl(s *Statistician, latestHeight int64) {
+	timeoutTicker := time.NewTicker(time.Duration(checkInterval) * time.Second)
+	for {
+		select {
+		case <-timeoutTicker.C:
+			if int64(s.lastBlockHeight) > latestHeight {
+				latestHeight = int64(s.lastBlockHeight)
+			} else {
+				timeoutExitChan <- struct{}{}
+				timeoutTicker.Stop()
 				return
 			}
 		}
