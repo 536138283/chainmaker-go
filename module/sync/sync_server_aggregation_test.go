@@ -43,7 +43,6 @@ func TestBlockChainSyncAggregator(t *testing.T) {
 	mockLedger := newMockLedgerCache(ctrl, block)
 	mockCommit := newMockCommitter(ctrl, mockLedger)
 	chainConf := newMockChainConf(ctrl, "2030100")
-	mockTxPool := newMockTxPool(ctrl)
 	mockStore.PutBlock(block, nil)
 	log := &test.GoLogger{}
 	aggregator := NewBlockChainSyncServer(
@@ -55,7 +54,6 @@ func TestBlockChainSyncAggregator(t *testing.T) {
 		chainConf,
 		mockVerify,
 		mockCommit,
-		mockTxPool,
 		log,
 	)
 	go func() {
@@ -93,7 +91,6 @@ func TestBlockChainSyncAggregatorV1ToV2(t *testing.T) {
 	mockLedger240 := newMockLedgerCache(ctrl, block240)
 	mockCommit240 := newMockCommitter(ctrl, mockLedger240)
 	chainConf240 := newMockChainConf(ctrl, "2040001")
-	mockTxPool := newMockTxPool(ctrl)
 	mockStore240.PutBlock(block240, nil)
 	log := &test.GoLogger{}
 	syncSvc := NewBlockChainSyncServer(
@@ -105,7 +102,6 @@ func TestBlockChainSyncAggregatorV1ToV2(t *testing.T) {
 		chainConf240,
 		mockVerify,
 		mockCommit240,
-		mockTxPool,
 		log,
 	)
 	err := syncSvc.Start()

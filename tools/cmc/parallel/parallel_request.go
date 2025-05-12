@@ -32,6 +32,7 @@ func subNodes(statistician *Statistician, start, end int64) {
 				end, false, false)
 			if err != nil {
 				fmt.Println("error sendSubscribe :", err)
+				panic(err)
 				return
 			}
 			fmt.Printf("subscribe block success [%d,%d] \n", start, end)

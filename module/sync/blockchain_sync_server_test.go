@@ -9,13 +9,8 @@ package sync
 
 import (
 	"fmt"
-	"strconv"
 	"testing"
 	"time"
-
-	"chainmaker.org/chainmaker/pb-go/v2/txpool"
-	"github.com/gogo/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
@@ -26,6 +21,7 @@ import (
 	"chainmaker.org/chainmaker/protocol/v2"
 	"chainmaker.org/chainmaker/protocol/v2/mock"
 	"chainmaker.org/chainmaker/protocol/v2/test"
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/require"
 )
@@ -35,39 +31,6 @@ func getNodeStatusReq(t *testing.T) []byte {
 	bz, err := msg.Marshal()
 	require.NoError(t, err)
 	return bz
-}
-
-func getTxPoolReq(t *testing.T) []byte {
-	data := []byte(strconv.Itoa(3))
-	var (
-		ts  []byte
-		err error
-	)
-	ts, err = proto.Marshal(&syncPb.SyncMsg{
-		Type:    syncPb.SyncMsg_TX_POOL_STATUS_REQ,
-		Payload: data,
-	})
-	assert.Nil(t, err)
-	return ts
-}
-
-func getTxPoolResp(t *testing.T) []byte {
-	txPoolSyncMsg := syncPb.TxPoolSyncMsg{TxPoolSyncReqId: 3, TxPoolStatus: &txpool.TxPoolStatus{
-		ConfigTxPoolSize:   100,
-		CommonTxPoolSize:   5120,
-		ConfigTxNumInQueue: 0,
-		CommonTxNumInQueue: 10,
-	}}
-	txPoolSyncMsgBytes, err := proto.Marshal(&txPoolSyncMsg)
-	assert.Nil(t, err)
-
-	syncMsg := syncPb.SyncMsg{
-		Type:    syncPb.SyncMsg_TX_POOL_STATUS_RESP,
-		Payload: txPoolSyncMsgBytes,
-	}
-	ts, err := proto.Marshal(&syncMsg)
-	assert.Nil(t, err)
-	return ts
 }
 
 func getNodeStatusResp(t *testing.T, height uint64) []byte {
@@ -159,7 +122,6 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 	mockStore := newMockBlockChainStore(ctrl)
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
 	mockCommit := newMockCommitter(ctrl, mockLedger)
-	mockTxPool := newMockTxPool(ctrl)
 	log := &test.GoLogger{}
 	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
 	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
@@ -168,7 +130,7 @@ func initTestSync(t *testing.T) (protocol.SyncService, func()) {
 		BlockChainSyncServer: newBlockChainSyncServerV1(
 			"chain1", "localhost", mockNet, mockMsgBus,
 			mockStore, mockLedger, mockVerify,
-			mockCommit, mockTxPool, netHandler, log).(*BlockChainSyncServer),
+			mockCommit, netHandler, log).(*BlockChainSyncServer),
 		netHandler: netHandler,
 	}
 	// service := newBlockChainSyncServerV1("chain1", mockNet, mockMsgBus, mockStore, mockLedger, mockVerify, mockCommit, mockTxPool, log)
@@ -215,23 +177,6 @@ func TestSyncMsg_NODE_STATUS_REQ(t *testing.T) {
 	require.NoError(t, implSync.blockSyncMsgHandler("node2", getNodeStatusReq(t), netPb.NetMsg_SYNC_BLOCK_MSG))
 	//require.EqualValues(t, 2, len(implSync.net.(*MockNet).sendMsgs))
 	//require.EqualValues(t, "msgType: 6, to: [node2]", implSync.net.(*MockNet).sendMsgs[1])
-}
-
-func TestSyncMsg_TX_POOL_STATUS_REQ(t *testing.T) {
-	service, fn := initTestSync(t)
-	defer fn()
-	implSync := service.(*serverV1)
-	require.NoError(t, implSync.blockSyncMsgHandler("node1", getTxPoolReq(t), netPb.NetMsg_SYNC_BLOCK_MSG))
-	require.NoError(t, implSync.blockSyncMsgHandler("node2", getTxPoolReq(t), netPb.NetMsg_SYNC_BLOCK_MSG))
-}
-
-func TestSyncMsg_TX_POOL_STATUS_RESP(t *testing.T) {
-	service, fn := initTestSync(t)
-	defer fn()
-	implSync := service.(*serverV1)
-
-	bz := getTxPoolResp(t)
-	require.NoError(t, implSync.blockSyncMsgHandler("node2", bz, netPb.NetMsg_SYNC_BLOCK_MSG))
 }
 
 func TestSyncBlock_Req(t *testing.T) {
@@ -379,7 +324,6 @@ func initTestSync2(t *testing.T) (protocol.SyncService, func()) {
 	mockStore := newMockBlockChainStore(ctrl)
 	mockLedger := newMockLedgerCache(ctrl, &commonPb.Block{Header: &commonPb.BlockHeader{BlockHeight: 10}})
 	mockCommit := newMockCommitter(ctrl, mockLedger)
-	mockTxPool := mock.NewMockTxPool(ctrl)
 	log := &test.GoLogger{}
 	// localconf.ChainMakerConfig.SyncConfig.SchedulerTick = 10
 	// localconf.ChainMakerConfig.SyncConfig.ProcessBlockTick = 10
@@ -389,7 +333,7 @@ func initTestSync2(t *testing.T) (protocol.SyncService, func()) {
 		BlockChainSyncServer: newBlockChainSyncServerV1(
 			"chain1", "localhost", mockNet, mockMsgBus,
 			mockStore, mockLedger, mockVerify,
-			mockCommit, mockTxPool, netHandler, log).(*BlockChainSyncServer),
+			mockCommit, netHandler, log).(*BlockChainSyncServer),
 		netHandler: netHandler,
 	}
 	require.NoError(t, service.Start())

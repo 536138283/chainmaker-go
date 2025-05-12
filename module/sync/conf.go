@@ -9,7 +9,6 @@ package sync
 
 import (
 	"fmt"
-	"sync"
 	"time"
 )
 
@@ -44,21 +43,6 @@ type BlockSyncServerConf struct {
 	preferenceNodes []string
 	// a node status broadcast is triggered every 'broadcastStatusPerBlocksCommitted' blocks committed
 	broadcastStatusPerBlocksCommitted int
-
-	// enable tx pool sync or not。 false means not request, but still respond to requests from other nodes.
-	txPoolSyncEnable bool
-	// The ticker to request consensus nodes tx pool status
-	txPoolStatusTick time.Duration
-	// The transactions in the tx pool occupy the largest proportion of the tx pool capacity
-	txPoolSyncProportion float64
-	// filter responses in the same request
-	txPoolReq *txPoolReq
-}
-
-type txPoolReq struct {
-	reqIdMap map[uint64]bool
-	maxReqId uint64
-	mux      sync.RWMutex
 }
 
 // NewBlockSyncServerConf create a new BlockSyncServerConf instance with default values
@@ -77,13 +61,6 @@ func NewBlockSyncServerConf() *BlockSyncServerConf {
 		minLagThreshold:                   5,
 		minLagThresholdTime:               3 * time.Second,
 		broadcastStatusPerBlocksCommitted: 3,
-		txPoolSyncEnable:                  false,
-		txPoolStatusTick:                  10 * time.Second,
-		txPoolSyncProportion:              0,
-		txPoolReq: &txPoolReq{
-			reqIdMap: make(map[uint64]bool),
-			maxReqId: uint64(0),
-		},
 	}
 }
 
@@ -176,31 +153,11 @@ func (c *BlockSyncServerConf) SetBroadcastStatusPerBlocksCommitted(n int) *Block
 	return c
 }
 
-// SetTxPoolSyncEnable set tx pool sync flag
-func (c *BlockSyncServerConf) SetTxPoolSyncEnable(b bool) *BlockSyncServerConf {
-	c.txPoolSyncEnable = b
-	return c
-}
-
-// SetTxPoolStatusTick set tx pool status tick
-func (c *BlockSyncServerConf) SetTxPoolStatusTick(n float64) *BlockSyncServerConf {
-	c.txPoolStatusTick = time.Duration(n * float64(time.Second))
-	return c
-}
-
-// SetTxPoolSyncProportion set tx pool sync proportion
-func (c *BlockSyncServerConf) SetTxPoolSyncProportion(n float64) *BlockSyncServerConf {
-	c.txPoolSyncProportion = n
-	return c
-}
-
 func (c *BlockSyncServerConf) print() string {
 	return fmt.Sprintf("blockPoolSize: %d, request timeout: %dms, batchSizeFromOneNode: %d"+
 		", processBlockTick: %dms, schedulerTick: %dms, livenessTick: %dms, nodeStatusTick: %dms,"+
-		"broadcastStatusPerBlocksCommitted: %d, preferenceNodes %+v,"+
-		"txPoolSyncEnable: %v, txPoolStatusTick: %v, txPoolSyncProportion: %v\n",
+		"broadcastStatusPerBlocksCommitted: %d, preferenceNodes %+v\n",
 		c.blockPoolSize, c.timeOut.Milliseconds(), c.batchSizeFromOneNode, c.processBlockTick.Milliseconds(),
 		c.schedulerTick.Milliseconds(), c.livenessTick.Milliseconds(),
-		c.nodeStatusTick.Milliseconds(), c.broadcastStatusPerBlocksCommitted, c.preferenceNodes,
-		c.txPoolSyncEnable, c.txPoolStatusTick, c.txPoolSyncProportion)
+		c.nodeStatusTick.Milliseconds(), c.broadcastStatusPerBlocksCommitted, c.preferenceNodes)
 }

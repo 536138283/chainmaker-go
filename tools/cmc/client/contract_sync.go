@@ -20,9 +20,7 @@ var (
 		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
 		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
 	}
-	ruleEndorsementFlags = []string{
-		flagAdminKeyFilePaths, flagAdminCrtFilePaths,
-	}
+	ruleEndorsementFlags = []string{flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds}
 )
 
 // syncAddRule 同步模块添加规则

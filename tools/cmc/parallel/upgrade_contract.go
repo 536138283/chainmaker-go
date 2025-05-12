@@ -8,7 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package parallel
 
 import (
-	"chainmaker.org/chainmaker/pb-go/v2/common"
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
 	"github.com/spf13/cobra"
 )
 
@@ -20,14 +20,31 @@ func upgradeContractCMD() *cobra.Command {
 		Short: "Upgrade Contract",
 		Long:  "Upgrade Contract",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			paramRead()
+			if err := endorserCheck(); err != nil {
+				return err
+			}
+			if err := paramCheck(); err != nil {
+				return err
+			}
 			return parallel(upgradeContractStr)
 		},
 	}
-
-	flags := cmd.Flags()
-	flags.StringVarP(&wasmPath, "wasm-path", "w", "", "specify wasm path")
-	flags.Int32VarP(&runTime, "run-time", "R", int32(common.RuntimeType_GASM), "specify run time")
-	flags.StringVarP(&version, "version", "v", "", "specify contract version")
-
+	util.AttachFlags(cmd, flags, []string{
+		// 压力测试配置
+		threadNumFlag, loopNumFlag, timeoutFlag, printTimeFlag, sleepTimeFlag, climbTimeFlag,
+		// 证书配置
+		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag, orgIdsFlag,
+		userCrtPathsStringFlag, userKeyPathsStringFlag, caPathsStringFlag, useTLSFlag,
+		userEncKeyPathsStringFlag, userEncCrtPathsStringFlag,
+		adminSignKeysFlag, adminSignCrtsFlag,
+		// 压测请求配置
+		checkResultFlag, recordLogFlag, outputResultFlag, showKeyFlag, requestTimeoutFlag,
+		checkIntervalFlag, onlySendFlag,
+		// 链配置
+		hostsStringFlag, hashAlgoFlag, chainIdFlag, contractNameFlag, useShortCrtFlag,
+		authTypeUint32Flag, gasLimitFlag, hostnamesStringFlag,
+		wasmPathFlag, runTimeFlag, versionFlag,
+	})
 	return cmd
 }

@@ -7,7 +7,10 @@ SPDX-License-Identifier: Apache-2.0
 
 package parallel
 
-import "github.com/spf13/cobra"
+import (
+	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	"github.com/spf13/cobra"
+)
 
 // queryCMD query contract
 // @return *cobra.Command
@@ -17,14 +20,28 @@ func queryCMD() *cobra.Command {
 		Short: "Query",
 		Long:  "Query",
 		RunE: func(_ *cobra.Command, _ []string) error {
+			paramRead()
+			if err := paramCheck(); err != nil {
+				return err
+			}
 			return parallel(queryMethod)
 		},
 	}
-
-	flags := cmd.Flags()
-	flags.StringVarP(&pairsString, "pairs", "a", "[{\"key\":\"key\",\"value\":\"counter1\",\"unique\":false}]", "specify pairs")
-	flags.StringVarP(&pairsFile, "pairs-file", "A", "", "specify pairs file, if used, set --pairs=\"\"")
-	flags.StringVarP(&method, "method", "m", "increase", "specify contract method")
-
+	util.AttachFlags(cmd, flags, []string{
+		// 压力测试配置
+		threadNumFlag, loopNumFlag, timeoutFlag, printTimeFlag, sleepTimeFlag, climbTimeFlag,
+		// 证书配置
+		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag, orgIdsFlag,
+		userCrtPathsStringFlag, userKeyPathsStringFlag, caPathsStringFlag, useTLSFlag,
+		userEncKeyPathsStringFlag, userEncCrtPathsStringFlag,
+		adminSignKeysFlag, adminSignCrtsFlag,
+		// 压测请求配置
+		checkResultFlag, recordLogFlag, outputResultFlag, showKeyFlag, requestTimeoutFlag,
+		checkIntervalFlag, onlySendFlag,
+		// 链配置
+		hostsStringFlag, hashAlgoFlag, chainIdFlag, contractNameFlag, useShortCrtFlag,
+		authTypeUint32Flag, gasLimitFlag, hostnamesStringFlag, methodFlag,
+		pairsStringFlag, pairsFileFlag,
+	})
 	return cmd
 }

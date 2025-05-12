@@ -91,10 +91,14 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	if err != nil {
 		return nil, err
 	}
-	endorsers, err := util.MakeEndorsement(adminKeyPaths, adminCrtPaths, orgIDs, defaultSdkClients[index], payload)
-	if err != nil {
-		fmt.Printf("MakeEndorsement failed, %s", err)
-		return nil, err
+	var endorsers []*commonPb.EndorsementEntry = nil
+	// 这里如果输入了adminKey则默认需要背书， 否则不需要
+	if len(adminKeyPaths) > 0 {
+		endorsers, err = util.MakeEndorsement(adminKeyPaths, adminCrtPaths, orgIDs, defaultSdkClients[index], payload)
+		if err != nil {
+			fmt.Printf("MakeEndorsement failed, %s", err)
+			return nil, err
+		}
 	}
 	// 构建完整的交易请求
 	return defaultSdkClients[index].GenerateTxRequest(payload, endorsers)
@@ -270,6 +274,5 @@ func buildRequestParam(sk3 crypto.PrivateKey, orgId, userCrtPath string,
 		req.Endorsers = endorsers
 	}
 	req.Sender = &commonPb.EndorsementEntry{Signer: sender, Signature: signBytes}
-	fmt.Printf("qqqqqq %s\n", req.String())
 	return req, nil
 }
