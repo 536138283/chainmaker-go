@@ -13,6 +13,16 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var (
+	ruleCommonFlags = []string{
+		flagSdkConfPath,
+		flagOrgId, flagChainId,
+		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
+		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
+	}
+	ruleEndorsementFlags = []string{flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds}
+)
+
 // syncAddRule 同步模块添加规则
 // @return *cobra.Command
 func syncAddRule() *cobra.Command {
@@ -29,11 +39,24 @@ func syncAddRule() *cobra.Command {
 				return err
 			}
 			defer client.Stop()
-			payload, err := client.CreateAddSyncRulePayload(nodeId, syncrule, int(beginHeight), int(endHeight))
+
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client,
+				adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+
+			payload, err := client.CreateAddSyncRulePayload(nodeId, syncRule, int(beginHeight), int(endHeight))
 			if err != nil {
 				return fmt.Errorf("get add rule payload failed, %s", err.Error())
 			}
-			resp, err := client.SendSyncRuleRequest(payload, nil, DEFAULT_TIMEOUT, syncResult)
+
+			endorsementEntries, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := client.SendSyncRuleRequest(payload, endorsementEntries, DEFAULT_TIMEOUT, syncResult)
 			if err != nil {
 				return fmt.Errorf("send request failed, %s", err.Error())
 			}
@@ -43,12 +66,10 @@ func syncAddRule() *cobra.Command {
 		},
 	}
 
+	attachFlags(cmd, ruleCommonFlags)
+	attachFlags(cmd, ruleEndorsementFlags)
 	attachFlags(cmd, []string{
 		flagNodeId, flagRule, flagBeginHeight, flagEndHeight,
-		flagSdkConfPath,
-		flagOrgId, flagChainId,
-		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
-		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
 		flagSyncResult,
 	})
 
@@ -85,12 +106,9 @@ func syncGetRule() *cobra.Command {
 		},
 	}
 
+	attachFlags(cmd, ruleCommonFlags)
 	attachFlags(cmd, []string{
 		flagNodeId,
-		flagSdkConfPath,
-		flagOrgId, flagChainId,
-		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
-		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
 		flagSyncResult,
 	})
 
@@ -115,8 +133,21 @@ func syncClearRule() *cobra.Command {
 				return err
 			}
 			defer client.Stop()
+
+			adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(client,
+				adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+			if err != nil {
+				return err
+			}
+
 			payload := client.CreateClearNodeRulePayload(nodeId)
-			resp, err := client.SendSyncRuleRequest(payload, nil, DEFAULT_TIMEOUT, syncResult)
+
+			endorsementEntries, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, client, payload)
+			if err != nil {
+				return err
+			}
+
+			resp, err := client.SendSyncRuleRequest(payload, endorsementEntries, DEFAULT_TIMEOUT, syncResult)
 			if err != nil {
 				return fmt.Errorf("send request failed, %s", err.Error())
 			}
@@ -126,12 +157,10 @@ func syncClearRule() *cobra.Command {
 		},
 	}
 
+	attachFlags(cmd, ruleCommonFlags)
+	attachFlags(cmd, ruleEndorsementFlags)
 	attachFlags(cmd, []string{
 		flagNodeId,
-		flagSdkConfPath,
-		flagOrgId, flagChainId,
-		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
-		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
 		flagSyncResult,
 	})
 
@@ -171,11 +200,8 @@ func syncCompareRule() *cobra.Command {
 		},
 	}
 
+	attachFlags(cmd, ruleCommonFlags)
 	attachFlags(cmd, []string{
-		flagSdkConfPath,
-		flagOrgId, flagChainId,
-		flagUserTlsCrtFilePath, flagUserTlsKeyFilePath,
-		flagUserSignCrtFilePath, flagUserSignKeyFilePath,
 		flagSyncRule1, flagSyncRule2,
 	})
 

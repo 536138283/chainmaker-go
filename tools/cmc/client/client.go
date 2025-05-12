@@ -90,7 +90,7 @@ var (
 	validator string
 	epochID   string
 
-	syncrule       string
+	syncRule       string
 	beginHeight    uint64
 	endHeight      uint64
 	syncRule1ToCmp string
@@ -328,7 +328,7 @@ func init() {
 	flags.StringSliceVar(&revokeContractList, flagRevokeContractList, nil, "specify revoke list")
 
 	// sync 系统合约
-	flags.StringVar(&syncrule, flagRule, "", "specify sync rule")
+	flags.StringVar(&syncRule, flagRule, "", "specify sync rule")
 	flags.Uint64Var(&beginHeight, flagBeginHeight, 0, "specify begin height for the rule to take effect")
 	flags.Uint64Var(&endHeight, flagEndHeight, 0, "specify use end height for the rule to take effect")
 	flags.StringVar(&syncRule1ToCmp, flagSyncRule1, "", "specify sync rule1 to compare")
