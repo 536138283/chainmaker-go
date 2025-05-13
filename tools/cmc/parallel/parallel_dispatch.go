@@ -61,12 +61,6 @@ func stressBuilderFactory(method string) (builder StressBuilder) {
 	switch method {
 	case invokerMethod:
 		builder = Invoke{}
-	case queryMethod:
-		builder = Query{}
-	case createContractStr:
-		builder = Create{}
-	case upgradeContractStr:
-		builder = Upgrade{}
 	}
 	return
 }
