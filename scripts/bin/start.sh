@@ -421,8 +421,8 @@ if [ -z "${pid}" ];then
     fi
 
     # start chainmaker
-    #nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml {tagName} > /dev/null 2>&1 &
-    nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml {tagName} > panic.log 2>&1 &
+    # use >> to append to prevent log loss due to restart
+    nohup ./chainmaker start -c ../config/{org_id}/chainmaker.yml {tagName} >> panic.log 2>&1 &
     echo "chainmaker is starting, pls check log..."
 else
     echo "chainmaker is already started"
