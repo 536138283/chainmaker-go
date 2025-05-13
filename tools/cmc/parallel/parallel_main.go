@@ -195,7 +195,7 @@ func recordStartTime(statistician *Statistician) error {
 // 5. 比较当前高度与上一次的高度，如果两者相同，说明区块高度未发生变化，此时调用statistician.PrintDetails()方法输出统计详情，并结束循环。
 // 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
 func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
-	if !onlySend {
+	if onlySend {
 		fmt.Println("all thread word done finish print")
 		statistician.printDetails(FinalPrint)
 		return
