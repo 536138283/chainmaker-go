@@ -131,7 +131,7 @@ const (
 	chainIdFlag               = "chain-id"
 	contractNameFlag          = "contract-name"
 	useShortCrtFlag           = "use-short-crt"
-	requestTimeoutFlag        = "requestTimeout"
+	requestTimeoutFlag        = "request-timeout"
 	authTypeUint32Flag        = "auth-type"
 	gasLimitFlag              = "gas-limit"
 	hostnamesStringFlag       = "tls-host-names"
