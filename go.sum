@@ -15,8 +15,8 @@ chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5 h1:jTFguedrZn31aHVJg5xlb++LCz
 chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5/go.mod h1:z7j1kauKJAks9TQ5JRDSDMc1E1+TwikgpdsxGpZyJTE=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5 h1:3a9Fq34Pzzmbg9OydiobSqgv1iNmHIAT87QW1vVpgEo=
 chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5/go.mod h1:vIGGFfNKgGYdIBj2N/ruaO3QL4MityftT5A3TJtuMuE=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6 h1:QdPFkxCLMf6YlZo1KDWUVdk6AlQ8oCqEsRX99m+Fi7E=
-chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6/go.mod h1:5HSVWxCTkeH51mlFCcDJ3gDP1lHrMZOQQQGD9uXLAgo=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.7-0.20250514072304-b96dae5cc8a5 h1:MoTqmZ/VMgzGxCCKGYZh98HyPKb6UVRjDPZ/ZCmcsa8=
+chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.7-0.20250514072304-b96dae5cc8a5/go.mod h1:5HSVWxCTkeH51mlFCcDJ3gDP1lHrMZOQQQGD9uXLAgo=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.5 h1:olWjIdYhVyx9PVc4dMrw5AOsNbsNiWvCeEWBzkCsXxE=
 chainmaker.org/chainmaker/consensus-utils/v2 v2.3.5/go.mod h1:CKZL+fgw6gGj4tdAvFRHwUNslRuJD1hM48T8KC1TErw=
 chainmaker.org/chainmaker/libp2p-core v1.1.1 h1:i3WIbJyKevs+Tv0PzMqMI7l1rOnxY4/oeE5G1Psgnfo=
@@ -93,7 +93,7 @@ chainmaker.org/chainmaker/vm/v2 v2.3.7 h1:wSh0kNVJYCC14rw7GV9IquAnyDFkQNlkpyXaOc
 chainmaker.org/chainmaker/vm/v2 v2.3.7/go.mod h1:zwhyhJ4sGwJYXPq6S0hLGL8rB7IL3y4TxIXIPTc0IbA=
 chainmaker.org/third_party/badger/v3 v3.0.0 h1:8fPIUB8dyCCPu2QbQbp6r4QcixYVK7KOdfSEUeMZPVc=
 chainmaker.org/third_party/badger/v3 v3.0.0/go.mod h1:RHo4/GmYcKKh5Lxu63wLEMHJ70Pac2JqZRYGhlyAo2M=
-chainmaker.org/third_party/btcd v1.0.0 h1:f91kXHbez+nzPcppW9U5Cb+sInQGHlx3O2KZ1E5hwsE=
+chainmaker.org/third_party/btcd v1.0.0 h1:lAkOf3PC7YKQmgnJGVBAbPMfBaQI4Szsgk7DgopYl4A=
 chainmaker.org/third_party/btcd v1.0.0/go.mod h1:wqgTSL29+50LRkmOVknEdmt8ZojIzhuWvgu/iptuN7Y=
 chainmaker.org/third_party/cuckoo-filter v1.0.0 h1:YLeHR9IxaIxZDoODQSRDe7glygrWYEGGMbiDDxoYufw=
 chainmaker.org/third_party/cuckoo-filter v1.0.0/go.mod h1:L3YZEEsEkbEEWCA2r4sVk1dkrqz+TZ+uxGihtb6BwwI=
