@@ -578,7 +578,7 @@ func (h *createContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.Pr
 		return err
 	}
 	var pairs []*commonPb.KeyValuePair
-	payload, _ := utils.GenerateInstallContractPayload(fmt.Sprintf(templateStr, contractName, h.threadId, loopId, time.Now().Unix()),
+	payload, _ := utils.GenerateInstallContractPayload(fmt.Sprintf(templateStrOthers, contractName, h.threadId, loopId, time.Now().Unix()),
 		"1.0.0", commonPb.RuntimeType(runTime), wasmBin, pairs)
 	// gas limit
 	if gasLimit > 0 {
@@ -635,7 +635,7 @@ func (h *upgradeContractHandler) handle(client apiPb.RpcNodeClient, sk3 crypto.P
 	}
 
 	var pairs []*commonPb.KeyValuePair
-	payload, _ := GenerateUpgradeContractPayload(fmt.Sprintf(templateStr, contractName, h.threadId, loopId, time.Now().Unix()),
+	payload, _ := GenerateUpgradeContractPayload(fmt.Sprintf(templateStrOthers, contractName, h.threadId, loopId, time.Now().Unix()),
 		version, commonPb.RuntimeType(runTime), wasmBin, pairs)
 	// gas limit
 	if gasLimit > 0 {
@@ -770,10 +770,10 @@ func makeKvsOthers(threadId, loopId int) ([]*commonPb.KeyValuePair, error) {
 		var val []byte
 		switch {
 		case p.Unique:
-			val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+			val = []byte(fmt.Sprintf(templateStrOthers, p.Value, threadId, loopId, time.Now().UnixNano()))
 		case 0 < p.RandomRate && p.RandomRate < 100:
 			if isRandom(p.RandomRate) {
-				val = []byte(fmt.Sprintf(templateStr, p.Value, threadId, loopId, time.Now().UnixNano()))
+				val = []byte(fmt.Sprintf(templateStrOthers, p.Value, threadId, loopId, time.Now().UnixNano()))
 				atomic.AddInt64(&totalRandomSentTxs, 1)
 			} else {
 				val = []byte(p.Value)

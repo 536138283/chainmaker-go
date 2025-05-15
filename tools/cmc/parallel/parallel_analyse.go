@@ -242,12 +242,8 @@ func (s *Statistician) statCompute(stat *cReqStat, milliSec int64) {
 // printChainDetail 以json格式输出统计的结果集
 func printChainDetail(s *Statistician) error {
 	chainResult := &ChainResultSet{}
-	s.outBlockInfo(chainResult)
 	s.outNodeBlockInfo(chainResult)
 	// 如果没有产出区块则不记录统计直接返回
-	if chainResult.BlockNum == 0 {
-		return nil
-	}
 	jsonByte, err := json.Marshal(chainResult)
 	if err != nil {
 		fmt.Println("marshal chain result error:", err)

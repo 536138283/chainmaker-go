@@ -8,10 +8,12 @@ package parallel
 
 import (
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 )
 
@@ -61,12 +63,6 @@ func stressBuilderFactory(method string) (builder StressBuilder) {
 	switch method {
 	case invokerMethod:
 		builder = Invoke{}
-	case queryMethod:
-		builder = Query{}
-	case createContractStr:
-		builder = Create{}
-	case upgradeContractStr:
-		builder = Upgrade{}
 	}
 	return
 }
@@ -127,7 +123,7 @@ func parallelStart(threads []*Thread) {
 			if index >= threadNum {
 				break
 			}
-			go threads[index].consume()
+			go threads[index].invoke()
 			index++
 		}
 		time.Sleep(interval)
@@ -174,10 +170,13 @@ func listenAndExit(timeoutChan, doneChan chan struct{}) {
 			})
 		}
 	}
+	fmt.Println(time.Now())
 	interruptSignal = true
 	close(timeoutChan)
 	close(doneChan)
-	close(produceSignal)
+	if prepareBuild {
+		close(produceSignal)
+	}
 	timeoutTicker.Stop()
 }
 
@@ -244,7 +243,7 @@ func threadFactory(number int, doneChan, timeoutChan chan struct{}, statistician
 // - 收到超时信号。
 // - 请求队列关闭。
 // 最终，无论循环是否自然结束，都会通过 t.doneChan 发送完成信号。
-func (t *Thread) consume() {
+func (t *Thread) invoke() {
 	for i := 0; i < t.loopNum; i++ {
 		select {
 		case <-t.timeoutChan:
@@ -252,50 +251,74 @@ func (t *Thread) consume() {
 			t.doneChan <- struct{}{}
 			return
 		default:
-			// 尝试从队列接收请求参数
-			select {
-			case req, ok := <-paramQueues[t.index]:
-				// 如果chan 关闭，被分配到该chan的线程也一起关闭
-				if !ok {
-					t.doneChan <- struct{}{}
-					return
-				}
-				// 如果队列中数量小于生产因子，发送生产信号
-				if len(paramQueues[t.index]) < productFactor && !interruptSignal {
-					produceSignal <- t.index
-				}
-				start := time.Now()
-				var err error
-				nodeIndex := i % nodeNum
-				var orgId = "public"
-				if sdk.AuthType(authTypeUint32) != sdk.Public {
-					if len(orgIDs) == 1 {
-						orgId = orgIDs[0]
-					} else if len(orgIDs) <= nodeIndex {
-						panic("orgId count not equals host count")
-					} else {
-						orgId = orgIDs[nodeIndex]
-					}
-				}
-				err = sendTx(t.sdkClients[nodeIndex], orgId, i, req.Param)
-				// 计算请求时延
-				elapsed := time.Since(start).Milliseconds()
-				go func(e error, elapsed int64) {
-					// 结果进入结果集
-					atomic.AddUint32(&t.statistician.totalCount, 1)
-					t.statistician.reqStatC <- &reqStat{
-						success: e == nil,
-						elapsed: elapsed,
-						nodeId:  nodeIndex,
-					}
-				}(err, elapsed)
-				if recordLog && err != nil {
-					log.Errorf("threadId: %d, loopId: %d, nodeId: %d, err: %s", t.id, i, t.index, err)
-				}
-				time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+			reqParam := t.getParam(i)
+			if reqParam == nil {
+				return
 			}
+			start := time.Now()
+			var err error
+			nodeIndex := i % nodeNum
+			var orgId = "public"
+			if sdk.AuthType(authTypeUint32) != sdk.Public {
+				if len(orgIDs) == 1 {
+					orgId = orgIDs[0]
+				} else if len(orgIDs) <= nodeIndex {
+					panic("orgId count not equals host count")
+				} else {
+					orgId = orgIDs[nodeIndex]
+				}
+			}
+			err = sendTx(t.sdkClients[nodeIndex], orgId, i, reqParam)
+			// 计算请求时延
+			elapsed := time.Since(start).Milliseconds()
+			go func(e error, elapsed int64) {
+				// 结果进入结果集
+				atomic.AddUint32(&t.statistician.totalCount, 1)
+				t.statistician.reqStatC <- &reqStat{
+					success: e == nil,
+					elapsed: elapsed,
+					nodeId:  nodeIndex,
+				}
+			}(err, elapsed)
+			if recordLog && err != nil {
+				log.Errorf("threadId: %d, loopId: %d, nodeId: %d, err: %s", t.id, i, t.index, err)
+			}
+			time.Sleep(time.Duration(sleepTime) * time.Millisecond)
+
 		}
 	}
 	// 自然循环结束，发送完成信号
 	t.doneChan <- struct{}{}
+}
+
+func (t *Thread) getParam(loop int) *commonPb.TxRequest {
+	// 如果开启了预构建则从预先设计好的channel中获取param, 否则
+	if prepareBuild {
+		// 如果chan 关闭，被分配到该chan的线程也一起关闭
+		param, ok := <-paramQueues[t.index]
+		if !ok {
+			t.doneChan <- struct{}{}
+			return nil
+		}
+		// 如果队列中数量小于生产因子，发送生产信号
+		if len(paramQueues[t.index]) < productFactor && !interruptSignal {
+			produceSignal <- t.index
+		}
+		return param.Param
+	}
+	// 使用线程id+当前的loop作为唯一id
+	builder := stressBuilderFactory(invokerMethod)
+	s := strconv.Itoa(t.id) + strconv.Itoa(loop)
+	id, err := strconv.Atoi(s)
+	if err != nil {
+		t.doneChan <- struct{}{}
+		return nil
+	}
+	param, err := builder.Build(int64(id), t.index)
+	if err != nil {
+		fmt.Println("param build err:", err.Error())
+		t.doneChan <- struct{}{}
+		return nil
+	}
+	return param
 }

@@ -7,10 +7,7 @@
 package parallel
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sync/atomic"
 	"time"
 
@@ -18,7 +15,6 @@ import (
 	"chainmaker.org/chainmaker/common/v2/crypto"
 	acPb "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/pb-go/v2/syscontract"
 	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	sdkutils "chainmaker.org/chainmaker/sdk-go/v2/utils"
 	"chainmaker.org/chainmaker/utils/v2"
@@ -33,33 +29,6 @@ import (
 // - Upgrade：构建升级智能合约的交易请求。
 type StressBuilder interface {
 	Build(requestId int64, index int) (*commonPb.TxRequest, error)
-}
-
-type Query struct{}
-
-// Build 实现StressBuilder接口，用于构建查询智能合约的交易请求
-func (i Query) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
-	// 构建交易Payload，包含一组键值对（kvs）
-	pairs, err := makeKvs(requestId)
-	if err != nil {
-		return nil, err
-	}
-	if showKey {
-		j, err := json.Marshal(pairs)
-		if err != nil {
-			fmt.Println(err)
-		}
-		rate := totalRandomSentTxs * 100 / totalSentTxs
-		fmt.Printf("totalSentTxs:%d\t totalRandomSentTxs:%d\t randomRate:%d \t param:%s\t \n",
-			totalSentTxs, totalRandomSentTxs, rate, string(j))
-	}
-	// 使用构造的键值对创建查询Payload
-	payload, err := constructQueryPayload(chainId, contractName, method, pairs, gasLimit)
-	if err != nil {
-		return nil, err
-	}
-	// 构建完整的交易请求
-	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, nil)
 }
 
 type Invoke struct{}
@@ -102,65 +71,6 @@ func (i Invoke) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
 	}
 	// 构建完整的交易请求
 	return defaultSdkClients[index].GenerateTxRequest(payload, endorsers)
-}
-
-type Create struct{}
-
-// Build 实现StressBuilder接口，用于构建部署（安装）智能合约的交易请求
-func (c Create) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
-	// 读取WASM字节码文件
-	wasmBin, err := os.ReadFile(wasmPath)
-	if err != nil {
-		return nil, err
-	}
-	var pairs []*commonPb.KeyValuePair
-	// 使用模板字符串、版本信息、运行时类型等生成Payload
-	payload, _ := utils.GenerateInstallContractPayload(fmt.Sprintf(templateStr, contractName, index,
-		requestId, time.Now().Unix()), "1.0.0", commonPb.RuntimeType(runTime), wasmBin, pairs)
-	// 如果设置了gas限制，则添加到Payload
-	if gasLimit > 0 {
-		var limit = &commonPb.Limit{GasLimit: gasLimit}
-		payload.Limit = limit
-	}
-	endorsement, err := acSign(payload)
-	if err != nil {
-		return nil, err
-	}
-	// 签名并构建交易请求
-	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
-}
-
-type Upgrade struct{}
-
-// Build 实现StressBuilder接口，用于构建升级智能合约的交易请求
-func (u Upgrade) Build(requestId int64, index int) (*commonPb.TxRequest, error) {
-	// 生成唯一的交易ID，读取WASM字节码
-	txId := utils.GetTimestampTxId()
-	wasmBin, err := ioutil.ReadFile(wasmPath)
-	if err != nil {
-		return nil, err
-	}
-	var pairs []*commonPb.KeyValuePair
-	payload, err := utils.GenerateInstallContractPayload(
-		fmt.Sprintf(templateStr, contractName, index, requestId, time.Now().Unix()),
-		version, commonPb.RuntimeType(runTime), wasmBin, pairs)
-	if err != nil {
-		return nil, err
-	}
-	payload.Method = syscontract.ContractManageFunction_UPGRADE_CONTRACT.String()
-	// gas limit
-	if gasLimit > 0 {
-		var limit = &commonPb.Limit{GasLimit: gasLimit}
-		payload.Limit = limit
-	}
-	payload.TxId = txId
-	payload.ChainId = chainId
-	payload.Timestamp = time.Now().Unix()
-	endorsement, err := acSign(payload)
-	if err != nil {
-		return nil, err
-	}
-	return buildRequestParam(privateKeys[index], orgIDs[index], signCrtPaths[index], payload, endorsement)
 }
 
 // makeKvs 生成一组键值对（KeyValuePairs）基于全局配置的规则，用于构造交易请求的Payload。

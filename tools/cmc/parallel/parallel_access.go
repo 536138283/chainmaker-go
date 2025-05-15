@@ -70,21 +70,21 @@ var (
 	contractName          string
 	version               string
 	wasmPath              string
-
-	caPaths       []string
-	hosts         []string
-	hostnames     []string
-	signCrtPaths  []string
-	signKeyPaths  []string
-	encKeyPaths   []string
-	encCrtPaths   []string
-	encCrtBytes   [][]byte
-	encKeyBytes   [][]byte
-	userCrtPaths  []string
-	userKeyPaths  []string
-	adminKeyPaths []string
-	adminCrtPaths []string
-	orgIDs        []string
+	prepareBuild          bool
+	caPaths               []string
+	hosts                 []string
+	hostnames             []string
+	signCrtPaths          []string
+	signKeyPaths          []string
+	encKeyPaths           []string
+	encCrtPaths           []string
+	encCrtBytes           [][]byte
+	encKeyBytes           [][]byte
+	userCrtPaths          []string
+	userKeyPaths          []string
+	adminKeyPaths         []string
+	adminCrtPaths         []string
+	orgIDs                []string
 
 	nodeNum int
 
@@ -131,7 +131,7 @@ const (
 	chainIdFlag               = "chain-id"
 	contractNameFlag          = "contract-name"
 	useShortCrtFlag           = "use-short-crt"
-	requestTimeoutFlag        = "requestTimeout"
+	requestTimeoutFlag        = "request-timeout"
 	authTypeUint32Flag        = "auth-type"
 	gasLimitFlag              = "gas-limit"
 	hostnamesStringFlag       = "tls-host-names"
@@ -144,6 +144,7 @@ const (
 	wasmPathFlag              = "wasm-path"
 	runTimeFlag               = "run-time"
 	versionFlag               = "version"
+	prepareBuildFlag          = "prepare-build"
 )
 
 // 用来控制pairs参数的常量
@@ -229,6 +230,7 @@ func init() {
 	flags.StringVarP(&wasmPath, wasmPathFlag, "w", "", "specify wasm path")
 	flags.Int32VarP(&runTime, runTimeFlag, "R", int32(common.RuntimeType_GASM), "specify run time")
 	flags.StringVarP(&version, versionFlag, "v", "", "specify contract version")
+	flags.BoolVarP(&prepareBuild, prepareBuildFlag, "", false, "prepare build request param")
 	// create
 	//flags.StringVarP(&wasmPath, "wasm-path", "w", "", "specify wasm path")
 	//flags.Int32VarP(&runTime, "run-time", "m", int32(common.RuntimeType_GASM), "specify run time")
@@ -248,21 +250,6 @@ func ParallelCMD() *cobra.Command {
 	cmd.AddCommand(upgradeContractCMD())
 	cmd.AddCommand(statCMD())
 	return cmd
-}
-
-func pairsRead() {
-	if len(pairsFile) != 0 {
-		bytes, err := ioutil.ReadFile(pairsFile)
-		if err != nil {
-			panic(err)
-		}
-		pairsString = string(bytes)
-	}
-	var err error
-	globalPairs, err = getPairInfos()
-	if err != nil {
-		panic(err)
-	}
 }
 
 func paramRead() {

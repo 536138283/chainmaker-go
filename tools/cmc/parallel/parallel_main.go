@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	templateStr    = "%s_%d_%d_%d"
+	templateStr    = "%s_%d_%d"
 	resultFmtStr   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
 	resultFmtStrPk = "exec result, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
 )
@@ -95,28 +95,36 @@ func initParallel() error {
 	if err := initSubClient(); err != nil {
 		return err
 	}
-	produceSignal = make(chan int, threadNum)
-	firstComplete = make(chan int, 1)
 	closeSubChan = make(chan struct{}, 1)
-	// 每次为每个线程生产5个待处理的请求参数, 这个参数作为生产因此，使生产>消费切占用最少内存
-	// 确保有足够的生产时间，所以预留一个productFactor作为buffer用来给消费端消耗
-	if loopNum > computeFactor*5 {
-		productFactor = computeFactor * 5
-	} else {
-		productFactor = computeFactor
+	// 以下的参数在预构建时才会用到，所以使用开关判断
+	if prepareBuild {
+		produceSignal = make(chan int, threadNum)
+		firstComplete = make(chan int, 1)
+		// 每次为每个线程生产5个待处理的请求参数, 这个参数作为生产因此，使生产>消费切占用最少内存
+		// 确保有足够的生产时间，所以预留一个productFactor作为buffer用来给消费端消耗
+		if loopNum > computeFactor*5 {
+			productFactor = computeFactor * 5
+		} else {
+			productFactor = computeFactor
+		}
+		if threadNum < computeFactor && threadNum < 100 {
+			computeFactor = 1
+		}
+		if threadNum%computeFactor > 0 {
+			paramChanCount = threadNum/computeFactor + 1
+		} else {
+			paramChanCount = threadNum / computeFactor
+		}
+		paramQueues = make([]chan RequestParam, paramChanCount)
+		for i := 0; i < paramChanCount; i++ {
+			paramQueues[i] = make(chan RequestParam, productFactor*2)
+		}
+		// 初始化完成开始生产请求参数
+		// 开始生产请求参数
+		go producer(invokerMethod)
+		produceSignal <- -1
 	}
-	if threadNum < computeFactor && threadNum < 100 {
-		computeFactor = 1
-	}
-	if threadNum%computeFactor > 0 {
-		paramChanCount = threadNum/computeFactor + 1
-	} else {
-		paramChanCount = threadNum / computeFactor
-	}
-	paramQueues = make([]chan RequestParam, paramChanCount)
-	for i := 0; i < paramChanCount; i++ {
-		paramQueues[i] = make(chan RequestParam, productFactor*2)
-	}
+	// 初始化记录交易延时的map
 	txLatency = sync.Map{}
 	return nil
 }
@@ -139,9 +147,6 @@ func parallelInvoke(method string) error {
 	timeoutChan := make(chan struct{}, threadNum)
 	doneChan := make(chan struct{}, threadNum)
 	statistician := getStatistician()
-	// 开始生产请求参数
-	go producer(invokerMethod)
-	produceSignal <- -1
 	// 创建线程对象
 	threads, err := threadFactory(threadNum, doneChan, timeoutChan, statistician)
 	if err != nil {
@@ -167,7 +172,13 @@ func parallelInvoke(method string) error {
 	return nil
 }
 
+// recordStartTime 记录压测的开始时间
+// 如果开启了请求参数预构建则等构建完毕后才开始记录，否则直接记录当前时间为开始时间并返回
 func recordStartTime(statistician *Statistician) error {
+	if !prepareBuild {
+		statistician.startTime = time.Now()
+		return nil
+	}
 	for {
 		select {
 		case _, ok := <-firstComplete:
@@ -195,6 +206,11 @@ func recordStartTime(statistician *Statistician) error {
 // 5. 比较当前高度与上一次的高度，如果两者相同，说明区块高度未发生变化，此时调用statistician.PrintDetails()方法输出统计详情，并结束循环。
 // 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
 func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
+	if onlySend {
+		fmt.Println("all thread word done finish print")
+		statistician.printDetails(FinalPrint)
+		return
+	}
 	lastHeight := uint64(0)
 	for {
 		height, err := getBlockHeight()
@@ -284,7 +300,6 @@ func (s *Statistician) usualPrint() printOpt {
 func (s *Statistician) chainPrint() printOpt {
 	return func(m map[string]interface{}) {
 		chainResult := &ChainResultSet{}
-		s.outBlockInfo(chainResult)
 		s.outNodeBlockInfo(chainResult)
 		m["chainResult"] = *chainResult
 	}
