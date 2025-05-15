@@ -131,72 +131,6 @@ func getStatistician() *Statistician {
 	return s
 }
 
-// 将结果输出到result set结果集
-func (s *Statistician) outBlockInfo(resultSet *ChainResultSet) {
-	if s.blockTotal == 0 {
-		fmt.Println("no block")
-		return
-	}
-	// 区块数量
-	resultSet.BlockNum = s.lastBlockHeight - s.firstBlockHeight + 1
-	// 计算平均出块时间
-	if s.elapsedSeconds > 0 {
-		resultSet.BlockOutAvg = float32(resultSet.BlockNum) / float32(s.elapsedSeconds)
-	}
-	// 第一个区块的出块时间, 高度
-	resultSet.FirstBlockTime = time.Unix(s.firstBlockTime, 0).Format("2006-01-02 15:04:05.000")
-	resultSet.FirstBlockHeight = s.firstBlockHeight
-	// 最后一个区块的出块时间，高度
-	resultSet.LastBlockHeight = s.lastBlockHeight
-	resultSet.LastBlockTime = time.Unix(s.lastBlockTime, 0).Format("2006-01-02 15:04:05.000")
-	// 计算ctps
-	if s.elapsedSeconds > 0 {
-		resultSet.CTps = float32(s.txTotal) / float32(s.elapsedSeconds)
-	}
-	// 计算区块内平均的交易数
-	if resultSet.BlockNum > 0 {
-		resultSet.BlockTxNumAvg = float32(s.txTotal) / float32(resultSet.BlockNum)
-	}
-	// 成功上链交易数量
-	resultSet.SuccessCount = s.txTotal
-	// 获取包含最大最小交易数的区块的区块高度和交易数量
-	resultSet.MaxTxBlock.BlockHeight = s.maxTxBlockHeight
-	resultSet.MaxTxBlock.TxCount = s.maxTxBlockCount
-	resultSet.MinTxBlock.BlockHeight = s.minTxBlockHeight
-	resultSet.MinTxBlock.TxCount = s.minTxBlockCount
-	// 获取到处理速度
-	resultSet.DealMax = s.MaxTxDealSpeed
-	resultSet.DealMin = s.MinTxDealSpeed
-	// 获取到平均响应时延
-	sumTxLatency := float64(0)
-	for _, v := range s.txLatencyMilli {
-		sumTxLatency = sumTxLatency + v
-	}
-	if s.txTotal > 0 {
-		resultSet.AvgTxLatency = sumTxLatency / 1000 / float64(s.txTotal)
-	}
-	// 计算交易时延方差
-	fcTx := float64(0) // 差值之和
-	for _, v := range s.txLatencyMilli {
-		fcTx += math.Pow(v/1000-resultSet.AvgTxLatency, 2)
-	}
-	resultSet.TxVariance = fcTx / float64(s.txTotal)
-	// 计算平均出块时延
-	sumBlockLatency := float64(0)
-	for _, v := range s.blockMilli {
-		sumBlockLatency += v
-	}
-	if len(s.blockMilli) > 0 {
-		resultSet.AvgBlockLatency = sumBlockLatency / float64(len(s.blockMilli)) / 1000
-	}
-	// 计算平均出块时延方差
-	fcBlock := float64(0)
-	for _, v := range s.blockMilli {
-		fcBlock += math.Pow((v-resultSet.AvgBlockLatency)/1000, 2)
-	}
-	resultSet.BlockVariance = fcBlock
-}
-
 // outNodeBlockInfo 将节点的区块交易统计结果输出到结果集对象
 func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 	resultSet.Nodes = make(map[string]*NodeInfo)
@@ -244,7 +178,7 @@ func (s *Statistician) outNodeBlockInfo(resultSet *ChainResultSet) {
 		// 计算交易时延方差
 		fc := float64(0) // 差值之和
 		for _, v := range s.txLatencyMilli {
-			fc += math.Pow(v/1000-resultSet.AvgTxLatency, 2)
+			fc += math.Pow(v/1000-nodeInfo.AvgTxLatency, 2)
 		}
 		if s.nodeTxTotal[i] > 0 {
 			nodeInfo.TxVariance = fc / float64(s.nodeTxTotal[i])
@@ -497,35 +431,19 @@ type BlockInfo struct {
 
 // ChainResultSet 统计结果集
 type ChainResultSet struct {
-	BlockInfo  // 区块信息
-	MaxTxBlock struct {
-		BlockHeight uint64 `json:"blockHeight"` // 该区块的高度。
-		TxCount     uint32 `json:"txCount"`     // 该区块中的交易数量
-	} `json:"maxTxBlock"` // 结构体表示交易数量最多的区块信息
-	MinTxBlock struct {
-		BlockHeight uint64 `json:"blockHeight"` // 该区块的高度。
-		TxCount     uint32 `json:"txCount"`     // 该区块中的交易数量
-	} `json:"minTxBlock"`                                         // 结构体表示交易数量最少的区块信息
-	SuccessCount    uint32               `json:"successCount"`    // 上链的交易数
-	DealMax         uint32               `json:"dealMax"`         // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
-	DealMin         uint32               `json:"dealMin"`         // 处理能力的最小值，与DealMax相对应
-	AvgTxLatency    float64              `json:"avgTxLatency"`    // 交易平均响应延时
-	TxVariance      float64              `json:"txVariance"`      // 交易响应时延方差
-	AvgBlockLatency float64              `json:"avgBlockLatency"` // 平均出块时延
-	BlockVariance   float64              `json:"blockVariance"`   // 平均出块时延方差
-	Nodes           map[string]*NodeInfo `json:"nodes"`           // 字符串键映射到NodeInfo指针的字典，用于存储节点的区块信息
+	Nodes map[string]*NodeInfo `json:"nodes"` // 字符串键映射到NodeInfo指针的字典，用于存储节点的区块信息
 }
 
 // NodeInfo 节点信息
 type NodeInfo struct {
 	BlockInfo               // 节点的区块信息
-	SuccessCount    uint32  `json:"successCount"` // 上链的交易数
-	DealMax         uint32  `json:"dealMax"` // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
-	DealMin         uint32  `json:"dealMin"` // 处理能力的最小值，与DealMax相对应
-	AvgTxLatency    float64 `json:"avgTxLatency"` // 交易平均响应延时
-	TxVariance      float64 `json:"txVariance"` // 交易响应时延方差
+	SuccessCount    uint32  `json:"successCount"`    // 上链的交易数
+	DealMax         uint32  `json:"dealMax"`         // 处理能力的最大值，可能指最大交易处理量等单位：笔/秒
+	DealMin         uint32  `json:"dealMin"`         // 处理能力的最小值，与DealMax相对应
+	AvgTxLatency    float64 `json:"avgTxLatency"`    // 交易平均响应延时
+	TxVariance      float64 `json:"txVariance"`      // 交易响应时延方差
 	AvgBlockLatency float64 `json:"avgBlockLatency"` // 平均出块时延
-	BlockVariance   float64 `json:"blockVariance"` // 平均出块时延方差
+	BlockVariance   float64 `json:"blockVariance"`   // 平均出块时延方差
 }
 
 // RpcResultSet 结构体用于汇总RPC请求的统计结果，主要关注于性能指标和请求成功率。
