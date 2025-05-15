@@ -300,7 +300,6 @@ func (s *Statistician) usualPrint() printOpt {
 func (s *Statistician) chainPrint() printOpt {
 	return func(m map[string]interface{}) {
 		chainResult := &ChainResultSet{}
-		s.outBlockInfo(chainResult)
 		s.outNodeBlockInfo(chainResult)
 		m["chainResult"] = *chainResult
 	}
