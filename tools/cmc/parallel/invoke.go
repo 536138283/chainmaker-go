@@ -28,7 +28,7 @@ func invokeCMD() *cobra.Command {
 	}
 	util.AttachFlags(cmd, flags, []string{
 		// 压力测试配置
-		threadNumFlag, loopNumFlag, timeoutFlag, printTimeFlag, sleepTimeFlag, climbTimeFlag,
+		threadNumFlag, loopNumFlag, timeoutFlag, printTimeFlag, sleepTimeFlag, climbTimeFlag, prepareBuildFlag,
 		// 证书配置
 		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag, orgIdsFlag,
 		userCrtPathsStringFlag, userKeyPathsStringFlag, caPathsStringFlag, useTLSFlag,
