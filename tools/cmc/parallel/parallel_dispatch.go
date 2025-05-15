@@ -247,6 +247,7 @@ func (t *Thread) consume() {
 			return
 		default:
 			// 尝试从队列接收请求参数
+			fmt.Println("default : ", i)
 			select {
 			case req, ok := <-paramQueues[t.index]:
 				// 如果chan 关闭，被分配到该chan的线程也一起关闭
