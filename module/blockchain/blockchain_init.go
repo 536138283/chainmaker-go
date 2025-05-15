@@ -53,7 +53,7 @@ const (
 
 // Init all the modules.
 func (bc *Blockchain) Init() (err error) {
-	chainConfig, err := chainconf.Genesis(bc.genesis)
+	chainConfig, _, err := chainconf.Genesis(bc.genesis)
 	if err != nil {
 		bc.log.Errorf("invoke chain config genesis failed, %s", err)
 		return err
@@ -407,7 +407,7 @@ func (bc *Blockchain) initCache() (err error) {
 			hex.EncodeToString(bc.lastBlock.GetHeader().BlockHash),
 		)
 	} else {
-		chainConfig, err := chainconf.Genesis(bc.genesis)
+		chainConfig, genesisNote, err := chainconf.Genesis(bc.genesis)
 		if err != nil {
 			bc.log.Errorf("invoke chain config genesis failed, %s", err)
 			return err
@@ -436,7 +436,7 @@ func (bc *Blockchain) initCache() (err error) {
 			return fmt.Errorf("auth type of chain config mismatch the local config")
 		}
 
-		genesisBlock, rwSetList, err := utils.CreateGenesis(chainConfig)
+		genesisBlock, rwSetList, err := utils.CreateGenesis(chainConfig, genesisNote)
 		if err != nil {
 			return fmt.Errorf("create chain [%s] genesis failed, %s", bc.chainId, err.Error())
 		}
@@ -444,7 +444,9 @@ func (bc *Blockchain) initCache() (err error) {
 			&storePb.BlockWithRWSet{Block: genesisBlock, TxRWSets: rwSetList, ContractEvents: nil}); err != nil {
 			return fmt.Errorf("put chain[%s] genesis block failed, %s", bc.chainId, err.Error())
 		}
-
+		if chainConfig.GetGenesisExt() != nil && chainConfig.GetGenesisExt().GetNotes() != "" {
+			bc.log.Infof("genesis notes: %v", chainConfig.GetGenesisExt().GetNotes())
+		}
 		bc.lastBlock = genesisBlock
 	}
 
