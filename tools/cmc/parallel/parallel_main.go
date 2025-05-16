@@ -209,7 +209,8 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 	fmt.Println("[TRANSACTION] Sending complete")
 	if onlySend {
 		fmt.Println("├─ Start time: ", statistician.startTime)
-		fmt.Println("├─ End  time: ", endTime)
+		fmt.Println("└─ End  time: ", endTime)
+		fmt.Println()
 		printTicker.Stop()
 		statistician.printDetails(FinalPrint)
 		return
@@ -225,7 +226,8 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 			printTicker.Stop()
 			fmt.Println("├─ Latest block height: ", lastHeight)
 			fmt.Println("├─ Start time: ", statistician.startTime)
-			fmt.Println("├─ End  time: ", endTime)
+			fmt.Println("└─ End  time: ", endTime)
+			fmt.Println()
 			statistician.printDetails(FinalPrint)
 			closeSubChan <- struct{}{}
 			return
@@ -241,6 +243,8 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 // printTicker (*time.Ticker): 一个时间ticker，每隔一定周期发送一个信号。
 // statistician (*Statistician): 一个指向Statistician结构体的指针，封装了统计数据及其打印方法。
 func printResult(printTicker *time.Ticker, statistician *Statistician) {
+	// 输出统计结果前的换行
+	fmt.Println()
 	for {
 		select {
 		case <-printTicker.C:

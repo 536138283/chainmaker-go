@@ -170,7 +170,6 @@ func listenAndExit(timeoutChan, doneChan chan struct{}) {
 			})
 		}
 	}
-	fmt.Println(time.Now())
 	interruptSignal = true
 	close(timeoutChan)
 	close(doneChan)
