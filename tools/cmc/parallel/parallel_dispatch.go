@@ -268,7 +268,7 @@ func (t *Thread) invoke() {
 					orgId = orgIDs[nodeIndex]
 				}
 			}
-			err = sendTx(t.sdkClients[nodeIndex], orgId, i, reqParam)
+			err = sendTx(t.sdkClients[nodeIndex], orgId, nodeIndex, reqParam)
 			// 计算请求时延
 			elapsed := time.Since(start).Milliseconds()
 			go func(e error, elapsed int64) {

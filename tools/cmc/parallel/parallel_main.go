@@ -19,8 +19,8 @@ import (
 
 var (
 	templateStr    = "%s_%d_%d"
-	resultFmtStr   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
-	resultFmtStrPk = "exec result, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
+	resultFmtStr   = "exec result, orgid: %s, host: %s, method: %s, txid: %s, resp: %+v \n"
+	resultFmtStrPk = "exec result, host: %s, method: %s, txid: %s, resp: %+v \n"
 )
 
 const (
