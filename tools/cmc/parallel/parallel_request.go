@@ -49,7 +49,7 @@ func subNodes(statistician *Statistician, start, end int64) {
 							fmt.Printf("[BLOCK SUBSCRIPTION] Node%d: Subscribe to real-time blocks [%d,%d] | "+
 								"Status: Inactive \n", index, start, end)
 						}
-						fmt.Println("subscribe end")
+						fmt.Println("[BLOCK SUBSCRIPTION] Subscription end")
 						return
 					}
 					blockInfo, ok := block.(*commonPb.BlockInfo)
