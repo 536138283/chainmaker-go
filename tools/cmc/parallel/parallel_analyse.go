@@ -106,19 +106,19 @@ func statMain() error {
 	// 接收信号并退出
 	select {
 	case <-systemExitChan:
-		fmt.Println("[BLOCK SUBSCRIPTION] Subscription system shutdown")
+		fmt.Printf("\n[BLOCK SUBSCRIPTION] Subscription system shutdown\n")
 		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
 		return nil
 	case <-timeoutExitChan:
-		fmt.Println("[BLOCK SUBSCRIPTION] Subscription timeout")
+		fmt.Printf("\n[BLOCK SUBSCRIPTION] Subscription timeout\n")
 		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
 		return nil
 	case <-doneExitChan:
-		fmt.Println("[BLOCK SUBSCRIPTION] Subscription done")
+		fmt.Printf("\n[BLOCK SUBSCRIPTION] Subscription done\n")
 		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
@@ -251,6 +251,6 @@ func printChainDetail(s *Statistician) error {
 		fmt.Println("marshal chain result error:", err)
 		return err
 	}
-	fmt.Printf("[PERFORMANCE] Metrics result set: %s", string(jsonByte))
+	fmt.Printf("\n[PERFORMANCE] Metrics result set: %s", string(jsonByte))
 	return nil
 }
