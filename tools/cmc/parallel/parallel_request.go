@@ -31,17 +31,25 @@ func subNodes(statistician *Statistician, start, end int64) {
 			blockChan, err := defaultSdkClients[index].SubscribeBlock(ctx, start,
 				end, false, false)
 			if err != nil {
-				fmt.Println("error sendSubscribe :", err)
+				fmt.Printf("[BLOCK SUBSCRIPTION]Node%d: Subscribe to real-time blocks [%d,%d] | Status: %s\n",
+					index, start, end, err.Error())
 				panic(err)
 				return
 			}
-			fmt.Printf("subscribe block success [%d,%d] \n", start, end)
+			// 调试日志，需要调试测试时接触下方代码注释
+			//fmt.Printf("subscribe block success [%d,%d] \n", start, end)
+			fmt.Printf("[BLOCK SUBSCRIPTION] Node%d: Subscribe to real-time blocks [%d,%d] | "+
+				"Status: Active \n", index, start, end)
 			// 接收区块并发送到统计对象
 			for {
 				select {
 				case block, ok := <-blockChan:
 					if !ok {
-						fmt.Println("subscribe end")
+						if end == -1 && start == -1 {
+							fmt.Printf("[BLOCK SUBSCRIPTION] Node%d: Subscribe to real-time blocks [%d,%d] | "+
+								"Status: Inactive \n", index, start, end)
+						}
+						fmt.Println("[BLOCK SUBSCRIPTION] Subscription end")
 						return
 					}
 					blockInfo, ok := block.(*commonPb.BlockInfo)
@@ -67,7 +75,7 @@ func subNodes(statistician *Statistician, start, end int64) {
 // sendTx 向特定节点发送交易请求。如果请求超时，则返回错误信息
 var reqIndex uint64
 
-func sendTx(client *sdk.ChainClient, orgId string, loopId int, req *commonPb.TxRequest) error {
+func sendTx(client *sdk.ChainClient, orgId string, nodeIndex int, req *commonPb.TxRequest) error {
 	// 防止在收到响应之前上链的数据不一致情况，这里提前记录交易id
 	txLatency.Store(req.Payload.TxId, time.Now().UnixNano()/1e6)
 	result, err := client.SendTxRequest(req, requestTimeout, false)
@@ -88,9 +96,9 @@ func sendTx(client *sdk.ChainClient, orgId string, loopId int, req *commonPb.TxR
 	if outputResult {
 		switch sdk.AuthType(authTypeUint32) {
 		case sdk.Public:
-			fmt.Printf(resultFmtStrPk, loopId, method, result.TxId, result)
+			fmt.Printf(resultFmtStrPk, hosts[nodeIndex], method, result.TxId, result)
 		default:
-			fmt.Printf(resultFmtStr, orgId, loopId, method, result.TxId, result)
+			fmt.Printf(resultFmtStr, orgId, hosts[nodeIndex], method, result.TxId, result)
 		}
 	}
 

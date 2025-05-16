@@ -81,7 +81,8 @@ func analysePrepare() error {
 		return err
 	}
 	if startBlock > int64(maxBlockHeight) {
-		return fmt.Errorf("start block height %d is greater than latest block height %d")
+		return fmt.Errorf("start block height %d is greater than latest block "+
+			"height %d", startBlock, maxBlockHeight)
 	}
 	// 初始化退出信号的chan
 	systemExitChan = make(chan os.Signal, 1)
@@ -105,21 +106,22 @@ func statMain() error {
 	// 接收信号并退出
 	select {
 	case <-systemExitChan:
-		fmt.Println("system exit")
+		fmt.Printf("\n[BLOCK SUBSCRIPTION] Subscription system shutdown\n")
+		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
-		closeChan()
 		return nil
 	case <-timeoutExitChan:
-		fmt.Println("timeout exit")
+		fmt.Printf("\n[BLOCK SUBSCRIPTION] Subscription timeout\n")
+		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
 		return nil
 	case <-doneExitChan:
-		fmt.Println("done")
+		fmt.Printf("\n[BLOCK SUBSCRIPTION] Subscription done\n")
+		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
-		closeChan()
 		return nil
 	}
 	return nil
@@ -249,6 +251,6 @@ func printChainDetail(s *Statistician) error {
 		fmt.Println("marshal chain result error:", err)
 		return err
 	}
-	fmt.Println(string(jsonByte))
+	fmt.Printf("\n[PERFORMANCE] Metrics result set: %s", string(jsonByte))
 	return nil
 }

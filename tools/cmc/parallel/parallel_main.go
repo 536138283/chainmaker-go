@@ -19,8 +19,8 @@ import (
 
 var (
 	templateStr    = "%s_%d_%d"
-	resultFmtStr   = "exec result, orgid: %s, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
-	resultFmtStrPk = "exec result, loop_id: %d, method: %s, txid: %s, resp: %+v \n"
+	resultFmtStr   = "exec result, orgid: %s, host: %s, method: %s, txid: %s, resp: %+v \n"
+	resultFmtStrPk = "exec result, host: %s, method: %s, txid: %s, resp: %+v \n"
 )
 
 const (
@@ -34,7 +34,7 @@ const (
 // 用来控制是否是最后一次打印结果信息
 const (
 	FinalPrint    = true
-	NorFinalPrint = false
+	NotFinalPrint = false
 )
 
 // 用来控制随机生成参数的数据（需要确认）
@@ -206,8 +206,12 @@ func recordStartTime(statistician *Statistician) error {
 // 5. 比较当前高度与上一次的高度，如果两者相同，说明区块高度未发生变化，此时调用statistician.PrintDetails()方法输出统计详情，并结束循环。
 // 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
 func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
+	fmt.Printf("\n[TRANSACTION] Sending complete")
 	if onlySend {
-		fmt.Println("all thread word done finish print")
+		fmt.Println("├─ Start time: ", statistician.startTime)
+		fmt.Println("└─ End  time: ", endTime)
+		fmt.Println()
+		printTicker.Stop()
 		statistician.printDetails(FinalPrint)
 		return
 	}
@@ -218,10 +222,12 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 			fmt.Printf("get block height err: %s\n", err.Error())
 			return
 		}
-		fmt.Printf("current latest block height [%d, %d] \n", height, lastHeight)
 		if height == lastHeight {
 			printTicker.Stop()
-			fmt.Println("all thread word done finish print")
+			fmt.Println("├─ Latest block height: ", lastHeight)
+			fmt.Println("├─ Start time: ", statistician.startTime)
+			fmt.Println("└─ End  time: ", endTime)
+			fmt.Println()
 			statistician.printDetails(FinalPrint)
 			closeSubChan <- struct{}{}
 			return
@@ -240,7 +246,7 @@ func printResult(printTicker *time.Ticker, statistician *Statistician) {
 	for {
 		select {
 		case <-printTicker.C:
-			go statistician.printDetails(NorFinalPrint)
+			go statistician.printDetails(NotFinalPrint)
 		}
 	}
 }
@@ -269,8 +275,11 @@ func (s *Statistician) printDetails(isFinal bool) {
 			"insufficient quantity. Please adjust the pressure testing parameters")
 		return
 	}
-	fmt.Println("result set: ", string(jsonChainByte))
-	fmt.Println()
+	if !isFinal {
+		fmt.Printf("\n[PROCESSING] Result set: %s \n", string(jsonChainByte))
+	} else {
+		fmt.Printf("[PERFORMANCE] Metrics result set: %s", string(jsonChainByte))
+	}
 }
 
 // 定义打印选项类型为一个函数，该函数接收一个map[string]interface{}作为参数
