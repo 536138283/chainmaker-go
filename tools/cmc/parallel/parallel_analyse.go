@@ -251,6 +251,7 @@ func printChainDetail(s *Statistician) error {
 		fmt.Println("marshal chain result error:", err)
 		return err
 	}
-	fmt.Printf("\n[PERFORMANCE] Metrics result set: %s", string(jsonByte))
+	fmt.Println()
+	fmt.Println("[PERFORMANCE] Metrics result set: ", string(jsonByte))
 	return nil
 }

@@ -207,11 +207,11 @@ func recordStartTime(statistician *Statistician) error {
 // 6. 如果区块高度有变化，则更新lastHeight为当前高度，并让程序暂停一秒后继续下一次循环，以避免频繁查询。
 func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 	fmt.Printf("\n[TRANSACTION] Sending complete")
+	printTicker.Stop()
 	if onlySend {
 		fmt.Println("├─ Start time: ", statistician.startTime)
 		fmt.Println("└─ End  time: ", endTime)
 		fmt.Println()
-		printTicker.Stop()
 		statistician.printDetails(FinalPrint)
 		return
 	}
@@ -223,7 +223,6 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 			return
 		}
 		if height == lastHeight {
-			printTicker.Stop()
 			fmt.Println("├─ Latest block height: ", lastHeight)
 			fmt.Println("├─ Start time: ", statistician.startTime)
 			fmt.Println("└─ End  time: ", endTime)
