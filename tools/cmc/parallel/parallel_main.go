@@ -243,8 +243,6 @@ func finalPrint(statistician *Statistician, printTicker *time.Ticker) {
 // printTicker (*time.Ticker): 一个时间ticker，每隔一定周期发送一个信号。
 // statistician (*Statistician): 一个指向Statistician结构体的指针，封装了统计数据及其打印方法。
 func printResult(printTicker *time.Ticker, statistician *Statistician) {
-	// 输出统计结果前的换行
-	fmt.Println()
 	for {
 		select {
 		case <-printTicker.C:
@@ -278,12 +276,10 @@ func (s *Statistician) printDetails(isFinal bool) {
 		return
 	}
 	if !isFinal {
-		fmt.Println("[PROCESSING] Result set: ", string(jsonChainByte))
+		fmt.Printf("\n [PROCESSING] Result set: %s \n", string(jsonChainByte))
 	} else {
 		fmt.Println("[PERFORMANCE] Metrics result set: ", string(jsonChainByte))
 	}
-
-	fmt.Println()
 }
 
 // 定义打印选项类型为一个函数，该函数接收一个map[string]interface{}作为参数
