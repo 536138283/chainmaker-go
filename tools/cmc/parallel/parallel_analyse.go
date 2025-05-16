@@ -67,7 +67,7 @@ func analysePrepare() error {
 		return nil
 	}
 	// 初始化用来关闭订阅的chan
-	closeSubChan = make(chan struct{}, 1)
+	closeSubChan = make(chan struct{}, 0)
 	// 初始化用来计算交易延时的map
 	txLatency = sync.Map{}
 	// 初始化订阅节点客户端
