@@ -106,20 +106,21 @@ func statMain() error {
 	select {
 	case <-systemExitChan:
 		fmt.Println("system exit")
+		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
-		closeChan()
 		return nil
 	case <-timeoutExitChan:
 		fmt.Println("timeout exit")
+		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
 		return nil
 	case <-doneExitChan:
 		fmt.Println("done")
+		closeChan()
 		close(statistician.cReqStatC)
 		printChainDetail(statistician)
-		closeChan()
 		return nil
 	}
 	return nil
