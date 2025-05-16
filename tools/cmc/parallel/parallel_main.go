@@ -276,9 +276,9 @@ func (s *Statistician) printDetails(isFinal bool) {
 		return
 	}
 	if !isFinal {
-		fmt.Printf("\n [PROCESSING] Result set: %s \n", string(jsonChainByte))
+		fmt.Printf("\n[PROCESSING] Result set: %s \n", string(jsonChainByte))
 	} else {
-		fmt.Println("[PERFORMANCE] Metrics result set: ", string(jsonChainByte))
+		fmt.Println("\n[PERFORMANCE] Metrics result set: ", string(jsonChainByte))
 	}
 }
 
