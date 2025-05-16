@@ -31,16 +31,24 @@ func subNodes(statistician *Statistician, start, end int64) {
 			blockChan, err := defaultSdkClients[index].SubscribeBlock(ctx, start,
 				end, false, false)
 			if err != nil {
-				fmt.Println("error sendSubscribe :", err)
+				fmt.Printf("[BLOCK SUBSCRIPTION]Node%d: Subscribe to real-time blocks [%d,%d] | Status: %s\n",
+					index, start, end, err.Error())
 				panic(err)
 				return
 			}
-			fmt.Printf("subscribe block success [%d,%d] \n", start, end)
+			// 调试日志，需要调试测试时接触下方代码注释
+			//fmt.Printf("subscribe block success [%d,%d] \n", start, end)
+			fmt.Printf("[BLOCK SUBSCRIPTION] Node%d: Subscribe to real-time blocks [%d,%d] | "+
+				"Status: Active \n", index, start, end)
 			// 接收区块并发送到统计对象
 			for {
 				select {
 				case block, ok := <-blockChan:
 					if !ok {
+						if end == -1 && start == -1 {
+							fmt.Printf("[BLOCK SUBSCRIPTION] Node%d: Subscribe to real-time blocks [%d,%d] | "+
+								"Status: Inactive \n", index, start, end)
+						}
 						fmt.Println("subscribe end")
 						return
 					}
