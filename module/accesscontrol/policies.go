@@ -624,21 +624,13 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 	// sender & endorsements policy map
 	{
 		// gas management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_RECHARGE_GAS.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_REFUND_GAS_VM.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_REFUND_GAS.String(), pubPolicyForbidden)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyMajorityAdmin)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), policyConsensus)
 
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_SET_ADMIN.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_CHARGE_GAS_FOR_MULTI_ACCOUNT.String(), pubPolicyForbidden)
-		pk.senderPolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
-			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), pubPolicyForbidden)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_ACCOUNT_MANAGER.String()+"-"+
+			syscontract.GasAccountFunction_SET_CONTRACT_METHOD_PAYER.String(), policyWrite)
 
 		// certs alias management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CERT_MANAGE.String()+"-"+
@@ -685,8 +677,8 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 			syscontract.ChainConfigFunction_CORE_UPDATE.String(), pubPolicyManage)
 
 		// enable gas flag management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyForbidden)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_ENABLE_OR_DISABLE_GAS.String(), pubPolicyMajorityAdmin)
 
 		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
 			syscontract.ChainConfigFunction_ENABLE_ONLY_CREATOR_UPGRADE.String(), policyConfig)
@@ -722,8 +714,8 @@ func (pk *pkACProvider) createDefaultResourcePolicyForPKDPoS() {
 			syscontract.ChainConfigFunction_PERMISSION_DELETE.String(), pubPolicyMajorityAdmin)
 
 		// account-manager management
-		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
-			syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyForbidden)
+		pk.resourceNamePolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
+			syscontract.ChainConfigFunction_SET_ACCOUNT_MANAGER_ADMIN.String(), pubPolicyMajorityAdmin)
 
 		// gas calculation management
 		pk.senderPolicyMap.Store(syscontract.SystemContract_CHAIN_CONFIG.String()+"-"+
