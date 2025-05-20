@@ -17,13 +17,13 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250515075633-a0b2ad4099ed
 	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250407103320-79c9c0f76846
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250509092703-b13228993c0f
-	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250425083527-9765973e8520
+	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250520062843-7e966c2be18f
 	chainmaker.org/chainmaker/utils/v2 v2.3.7-0.20250515084641-2ece4f3000db
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.7-0.20250311090804-13f0c6990fc3
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250516074904-2be2b53b29c1
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7-0.20250314090743-1e67d63f6959
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.7-0.20250421030112-c78da87d83a3
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250430091550-7d66a4024edb
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250520023418-dd590f804ab3
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.7-0.20250314030658-1a38448392a1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.7-0.20250311090156-dd46d6a91839
 	chainmaker.org/chainmaker/vm/v2 v2.3.7-0.20250313033547-c4c814d9a06e
