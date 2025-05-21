@@ -6,7 +6,7 @@ require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.5-0.20250515091628-cdefec16c2ec
 	chainmaker.org/chainmaker/common/v2 v2.3.8-0.20250516023834-5646f9628717
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.6-0.20250311094610-74896255665a
-	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.6-0.20250311095343-67773d8b289f
+	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.6-0.20250520095258-6285199f5c41
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.6-0.20250311095625-334be7cafa6f
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.6-0.20250311094111-c601485b5411
 	chainmaker.org/chainmaker/localconf/v2 v2.3.6-0.20250508094008-1e0c553ac2a6
@@ -20,7 +20,7 @@ require (
 	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250520062843-7e966c2be18f
 	chainmaker.org/chainmaker/utils/v2 v2.3.7-0.20250515084641-2ece4f3000db
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.7-0.20250311090804-13f0c6990fc3
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250516074904-2be2b53b29c1
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250521024105-567076984379
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7-0.20250314090743-1e67d63f6959
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.7-0.20250421030112-c78da87d83a3
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250520023418-dd590f804ab3
