@@ -83,6 +83,8 @@ func findFromSenderPolicies(resourceName string, blockVersion uint32,
 		panic(fmt.Errorf("bad blockVersion(%d) for calling blockVersion specified func(>=2030300)", blockVersion))
 	}
 
+	//这里不能从latestPolicyMap中取自定义权限
+	//比如一个资源设置为权限 Majorty-Admin，那么在sender时校验会失败。
 	if pol, ok := policyMap.Load(resourceName); ok {
 		return pol.(*policy), nil
 	}
