@@ -149,15 +149,12 @@ func checkVmType() error {
 	if vmType == "" {
 		return fmt.Errorf("vm type is empty")
 	}
-	supportList := map[string]struct{}{
-		"wasmer":     struct{}{},
-		"gasm":       struct{}{},
-		"evm":        struct{}{},
-		"dockergo":   struct{}{},
-		"wxvm":       struct{}{},
-		"dockerjava": struct{}{},
+	supportList := []string{"wasmer", "gasm", "evm", "dockergo", "wxvm", "dockerjava"}
+	supportM := make(map[string]struct{})
+	for _, value := range supportList {
+		supportM[value] = struct{}{}
 	}
-	if _, ok := supportList[vmType]; !ok {
+	if _, ok := supportM[vmType]; !ok {
 		return fmt.Errorf("vm type %s is not support", vmType)
 	}
 	return nil
