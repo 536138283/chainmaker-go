@@ -34,6 +34,7 @@ func chainConfigCMD() *cobra.Command {
 	chainConfigCmd.AddCommand(alterAddrTypeCMD())
 	chainConfigCmd.AddCommand(permissionResourceCMD())
 	chainConfigCmd.AddCommand(enableMultiSignManualRunCMD())
+	chainConfigCmd.AddCommand(vmSupportCMD())
 	return chainConfigCmd
 }
 
