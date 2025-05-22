@@ -11,6 +11,7 @@ import (
 	"fmt"
 
 	"chainmaker.org/chainmaker-go/tools/cmc/util"
+	sdk "chainmaker.org/chainmaker/sdk-go/v2"
 	"github.com/hokaccha/go-prettyjson"
 	"github.com/spf13/cobra"
 )
@@ -74,5 +75,89 @@ func queryChainConfig() error {
 		return err
 	}
 	fmt.Println(string(output))
+	return nil
+}
+
+// vmCmd vmSupportCMD command
+// @return *cobra.Command
+func vmSupportCMD() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "vm-support",
+		Short: "vm support command",
+		Long:  "vm support command",
+	}
+	cmd.AddCommand(addVmCommand())
+	return cmd
+}
+
+func addVmCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "add",
+		Short: "add vm support command",
+		Long:  "add vm support command",
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return addVmSupport()
+		},
+	}
+	util.AttachFlags(cmd, flags, []string{
+		flagUserSignKeyFilePath, flagUserSignCrtFilePath, flagUserTlsKeyFilePath, flagUserTlsCrtFilePath,
+		flagOrgId, flagChainId, flagSendTimes, flagEnableCertHash, flagSdkConfPath, flagPayerKeyFilePath,
+		flagTimeout, flagSyncResult, flagAdminKeyFilePaths, flagAdminCrtFilePaths, flagAdminOrgIds,
+		flagVmType,
+	})
+	return cmd
+}
+
+func addVmSupport() error {
+	if err := checkVmType(); err != nil {
+		return err
+	}
+	cc, err := sdk.NewChainClient(
+		sdk.WithConfPath(sdkConfPath),
+		sdk.WithChainClientChainId(chainId),
+		sdk.WithChainClientOrgId(orgId),
+		sdk.WithUserCrtFilePath(userTlsCrtFilePath),
+		sdk.WithUserKeyFilePath(userTlsKeyFilePath),
+		sdk.WithUserSignCrtFilePath(userSignCrtFilePath),
+		sdk.WithUserSignKeyFilePath(userSignKeyFilePath),
+	)
+	if err != nil {
+		return err
+	}
+	payload, err := cc.CreateChainConfigVMSupportListAddPayload(vmType)
+	if err != nil {
+		return err
+	}
+	adminKeys, adminCrts, adminOrgs, err := util.MakeAdminInfo(cc, adminKeyFilePaths, adminCrtFilePaths, adminOrgIds)
+	if err != nil {
+		return err
+	}
+	endorsementEntrys, err := util.MakeEndorsement(adminKeys, adminCrts, adminOrgs, cc, payload)
+	if err != nil {
+		return err
+	}
+	resp, err := cc.SendChainConfigUpdateRequest(payload, endorsementEntrys, timeout, syncResult)
+	if err != nil {
+		return err
+	}
+	util.PrintPrettyJson(resp)
+	return nil
+}
+
+func checkVmType() error {
+	if vmType == "" {
+		return fmt.Errorf("vm type is empty")
+	}
+	supportList := map[string]struct{}{
+		"wasmer":     struct{}{},
+		"gasm":       struct{}{},
+		"evm":        struct{}{},
+		"dockergo":   struct{}{},
+		"wxvm":       struct{}{},
+		"dockerjava": struct{}{},
+	}
+	if _, ok := supportList[vmType]; !ok {
+		return fmt.Errorf("vm type %s is not support", vmType)
+	}
 	return nil
 }
