@@ -18,11 +18,11 @@ version: {version}
 # default timestamp is "2020-11-30 00:00:00"
 genesis_time: "2024-10-30T00:00:00+08:00"
 
-#genesis extern config
-#genesis_ext:
+# genesis extern config
+# genesis_ext:
     # Starting from version 2.4.0, Additional extensions to display information in Genesis tx.
     # Do not configure this tag in other chain clusters that do not configure this tag.
-    #notes: ""
+    # notes: ""
 
 # chain config sequence
 sequence: 0

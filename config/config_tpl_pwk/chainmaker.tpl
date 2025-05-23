@@ -54,48 +54,6 @@ node:
     # Enable it or not, true means do not execute smart contract
     enabled: true  # [*]
 
-sync:
-#  #---The following configuration items are used in version v1.
-#  # Timeout for waiting for block request response, unit second.
-#  wait_time_requested: 30
-#  # The number of blocks requested at a time.
-#  batch_size_from_one_node: 1
-#  # The time interval for verifying cached block, unit millisecond.
-#  process_block_tick: 20
-#  # The time interval for broadcasting a request to obtain the status of other nodes, unit second.
-#  node_status_tick: 2
-#  # The time interval for checking whether there is a block request timeout, unit second.
-#  liveness_tick: 1
-#  # The time interval between sending a block request, unit millisecond.
-#  scheduler_tick: 20
-#  # The time interval between sending a block request when the difference between own block height and the highest block height is 1
-#  # unit second.
-#  req_time_threshold: 1
-#  # The time interval for processing block requests of the same height from the same node.
-#  # Requests within this time will be ignored. Unit second.
-#  block_request_time: 5
-#  # broadcast node status once when {broadcast_status_per_blocks_committed} blocks are committed.
-#  broadcast_status_per_blocks_committed: 3
-
-#  #----The following two configurations are shared by v1 and v2
-#  # Maximum number of blocks cached waiting to be verified and committed.
-#  block_pool_size: 128
-#  # Synchronize blocks from the configured nodes.
-#  from_nodes: 
-#  #- {nodeId}
-#  #- {nodeId}
-
-#  # ---The following configuration items are used in version v2.
-#  # The base time of connection timeout(ms). The timeout for various type of messages is an multiple of this value.
-#  conn_timeout_scale: 1
-#  # the difference between the local height has been synchronized and the latest height is within the specified range.
-#  ideal_height_distance: 1
-#  # the time interval for checking whether there are new blocks to be synced after syncing to the latest block.
-#  wait_period_seconds_after_latest: 5
-#  # the maximum number of nodes selected from the node pool for syncing.
-#  # This means that at the same time it will only find {max_nodes_selected_count} nodes to synchronize data.
-#  max_nodes_selected_count: 10
-
 # Network Settings
 net:
   # Network provider, can be libp2p or liquid.
@@ -143,6 +101,61 @@ net:
       # The node ids in blacklist.
       # node_ids:
       #   - "QmeyNRs2DwWjcHTpcVHoUSaDAAif4VQZ2wQDQAUNDP33gH"
+
+# Sync Settings
+sync:
+  # ---The following configuration items are used in version v1.
+  # Timeout for waiting for block request response, unit second.
+  # wait_time_requested: 30
+
+  # The number of blocks requested at a time.
+  # batch_size_from_one_node: 1
+
+  # The time interval for verifying cached block, unit millisecond.
+  # process_block_tick: 20
+
+  # The time interval for broadcasting a request to obtain the status of other nodes, unit second.
+  # node_status_tick: 2
+
+  # The time interval for checking whether there is a block request timeout, unit second.
+  # liveness_tick: 1
+
+  # The time interval between sending a block request, unit millisecond.
+  # scheduler_tick: 20
+
+  # The time interval between sending a block request when the difference between own block height and the highest block height is 1
+  # unit second.
+  # req_time_threshold: 1
+
+  # The time interval for processing block requests of the same height from the same node.
+  # Requests within this time will be ignored. Unit second.
+  # block_request_time: 5
+
+  # broadcast node status once when {broadcast_status_per_blocks_committed} blocks are committed.
+  # broadcast_status_per_blocks_committed: 3
+
+  # ----The following two configurations are shared by v1 and v2
+  # Maximum number of blocks cached waiting to be verified and committed.
+  # block_pool_size: 128
+
+  # Synchronize blocks from the configured nodes.
+  # from_nodes:
+  #   - {nodeId}
+  #   - {nodeId}
+
+  # ---The following configuration items are used in version v2.
+  # The base time of connection timeout(ms). The timeout for various type of messages is an multiple of this value.
+  # conn_timeout_scale: 1
+
+  # the difference between the local height has been synchronized and the latest height is within the specified range.
+  # ideal_height_distance: 1
+
+  # the time interval for checking whether there are new blocks to be synced after syncing to the latest block.
+  # wait_period_seconds_after_latest: 5
+
+  # the maximum number of nodes selected from the node pool for syncing.
+  # This means that at the same time it will only find {max_nodes_selected_count} nodes to synchronize data.
+  # max_nodes_selected_count: 10
 
 # Transaction pool settings
 # Other txpool settings can be found in tx_Pool_config.go

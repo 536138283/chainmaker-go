@@ -17,13 +17,13 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250515075633-a0b2ad4099ed
 	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250407103320-79c9c0f76846
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250509092703-b13228993c0f
-	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250520062843-7e966c2be18f
+	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250522090740-4287524e1915
 	chainmaker.org/chainmaker/utils/v2 v2.3.7-0.20250515084641-2ece4f3000db
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.7-0.20250311090804-13f0c6990fc3
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250521024105-567076984379
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7-0.20250314090743-1e67d63f6959
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.7-0.20250421030112-c78da87d83a3
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250520023418-dd590f804ab3
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250521104319-c3382ed006cf
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.7-0.20250314030658-1a38448392a1
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.7-0.20250311090156-dd46d6a91839
 	chainmaker.org/chainmaker/vm/v2 v2.3.7-0.20250313033547-c4c814d9a06e
@@ -62,8 +62,8 @@ require (
 
 require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.6-0.20250311095505-0688f55394a0
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6-0.20250513032830-124e2c2f6981
-	chainmaker.org/chainmaker/sync/v2 v2.0.0-20250519073320-19f428798cba
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.6-0.20250522111004-73227c7a51ca
+	chainmaker.org/chainmaker/sync/v2 v2.0.0-20250522091434-a6036572b72e
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.5-0.20250407020642-f4ec65daa72f
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.5-0.20250407020622-d14fe5fd1889
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.5-0.20250408023157-f6d52d1f81e3
