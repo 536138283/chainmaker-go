@@ -33,14 +33,13 @@ func statCMD() *cobra.Command {
 	}
 	util.AttachFlags(cmd, flags, []string{
 		// 证书配置
-		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag, orgIdsFlag,
+		signCrtPathsStringFlag, signKeyPathsStringFlag, orgIDsStringFlag,
 		userCrtPathsStringFlag, userKeyPathsStringFlag, caPathsStringFlag, useTLSFlag,
 		userEncKeyPathsStringFlag, userEncCrtPathsStringFlag,
-		adminSignKeysFlag, adminSignCrtsFlag,
 		// 压测请求配置
 		checkIntervalFlag,
 		// 链配置
-		hostsStringFlag, hashAlgoFlag, chainIdFlag, contractNameFlag, useShortCrtFlag,
+		hostsStringFlag, hashAlgoFlag, chainIdFlag,
 		authTypeUint32Flag, gasLimitFlag, hostnamesStringFlag,
 	})
 	flags := cmd.Flags()
