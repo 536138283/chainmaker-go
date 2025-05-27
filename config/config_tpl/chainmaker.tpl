@@ -173,7 +173,7 @@ net:
 
 # Sync Settings
 sync:
-  # ----The following two configurations are shared by v1 and v2
+  # ----The following two configurations are shared by new sync after version 240 and old sync before version 240
   # Maximum number of blocks cached waiting to be verified and committed.
   block_pool_size: 128
   # Synchronize blocks from the configured nodes.
@@ -181,7 +181,7 @@ sync:
   #  - {nodeId}
   #  - {nodeId}
 
-  # ---The following configuration items are used in version v2.
+  # ---The following configuration items are used by new sync after version 240.
 
   # The base time of connection timeout(ms). The timeout for various type of messages is an multiple of this value.
   conn_timeout_scale: 1000
@@ -196,7 +196,7 @@ sync:
   # This means that at the same time it will only find {max_nodes_selected_count} nodes to synchronize data.
   max_nodes_selected_count: 10
 
-  # ---The following configuration items are used in version v1.
+  # ---The following configuration items are used by old sync before version 240.
 
   # Timeout for waiting for block request response, unit second.
   # wait_time_requested: 30
