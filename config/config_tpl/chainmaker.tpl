@@ -173,6 +173,29 @@ net:
 
 # Sync Settings
 sync:
+  # ----The following two configurations are shared by v1 and v2
+  # Maximum number of blocks cached waiting to be verified and committed.
+  block_pool_size: 128
+  # Synchronize blocks from the configured nodes.
+  from_nodes:
+  #  - {nodeId}
+  #  - {nodeId}
+
+  # ---The following configuration items are used in version v2.
+
+  # The base time of connection timeout(ms). The timeout for various type of messages is an multiple of this value.
+  conn_timeout_scale: 1000
+
+  # the difference between the local height has been synchronized and the latest height is within the specified range.
+  ideal_height_distance: 1
+
+  # the time interval for checking whether there are new blocks to be synced after syncing to the latest block.
+  wait_period_seconds_after_latest: 5
+
+  # the maximum number of nodes selected from the node pool for syncing.
+  # This means that at the same time it will only find {max_nodes_selected_count} nodes to synchronize data.
+  max_nodes_selected_count: 10
+
   # ---The following configuration items are used in version v1.
 
   # Timeout for waiting for block request response, unit second.
@@ -204,29 +227,6 @@ sync:
   # broadcast node status once when {broadcast_status_per_blocks_committed} blocks are committed.
   # broadcast_status_per_blocks_committed: 3
 
-  # ----The following two configurations are shared by v1 and v2
-  # Maximum number of blocks cached waiting to be verified and committed.
-  # block_pool_size: 128
-
-  # Synchronize blocks from the configured nodes.
-  # from_nodes:
-  #   - {nodeId}
-  #   - {nodeId}
-
-  # ---The following configuration items are used in version v2.
-
-  # The base time of connection timeout(ms). The timeout for various type of messages is an multiple of this value.
-  # conn_timeout_scale: 1
-
-  # the difference between the local height has been synchronized and the latest height is within the specified range.
-  # ideal_height_distance: 1
-
-  # the time interval for checking whether there are new blocks to be synced after syncing to the latest block.
-  # wait_period_seconds_after_latest: 5
-
-  # the maximum number of nodes selected from the node pool for syncing.
-  # This means that at the same time it will only find {max_nodes_selected_count} nodes to synchronize data.
-  # max_nodes_selected_count: 10
 
 # Transaction pool settings
 # Other tx_pool settings can be found in tx_Pool_config.go
@@ -692,14 +692,14 @@ storage:
       write_buffer_size: 64
 
     # bloom config for state db, it only takes effect when using kvdb
-    # bloom_config:
-    #   enable: true # enable bloom filter or not
-    #   dump_path: "../data/{org_id}/state/bloom" # bloom filter data dump to file in the path
-    #   # bloom filter calculates the number of enabled hash functions and the number of bits used
-    #   # based on the key capacity and false positive rate.
-    #   keys_capacity: 1000000000
-    #   false_positive_rate: 0.01
-    #   dump_per_blocks_committed: 1000 # do dump every n blocks added to bloom filter
+    bloom_config:
+      enable: true # enable bloom filter or not
+      dump_path: "../data/{org_id}/state/bloom" # bloom filter data dump to file in the path
+      # bloom filter calculates the number of enabled hash functions and the number of bits used
+      # based on the key capacity and false positive rate.
+      keys_capacity: 1000000000
+      false_positive_rate: 0.01
+      dump_per_blocks_committed: 1000 # do dump every n blocks added to bloom filter
 
   # History db config, default enable history db
   disable_historydb: false
