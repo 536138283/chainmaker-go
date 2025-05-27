@@ -100,6 +100,7 @@ function start_vm_go() {
   mkdir -p "$mount_path"
   mkdir -p "$log_path"
 
+  protocol=$chainmaker_vm_go_protocol
   vm_go_log_level=$chainmaker_vm_go_log_level
   dockervm_config_path=$chainmaker_vm_go_dockervm_config_path
   runtime_server_host=$chainmaker_vm_common_runtime_server_host
@@ -133,37 +134,67 @@ function start_vm_go() {
     cp $dockervm_config_path $mount_path/config/vm.yml
   fi
 
-  EXPOSE_PORT=$contract_engine_port
-  docker run -itd \
-  --net=host \
-  -v "$mount_path":/mount \
-  -v "$log_path":/log \
-  -e CHAIN_HOST="$runtime_server_host" \
-  -e CHAIN_RPC_PORT="$contract_engine_port" \
-  -e SANDBOX_RPC_PORT="$runtime_server_port" \
-  -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
-  -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
-  -e MAX_CONN_TIMEOUT="$rpc_timeout" \
-  -e MAX_ORIGINAL_PROCESS_NUM="$max_concurrency" \
-  -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
-  -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
-  -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
-  -e SLOW_DISABLE="$slow_disable" \
-  -e SLOW_STEP_TIME="$slow_step_time" \
-  -e SLOW_TX_TIME="$slow_tx_time" \
-  -e PROCESS_TIMEOUT="$process_timeout" \
-  -e PROCESS_PRELOAD_DISABLE="$preload_disable" \
-  -e PROCESS_PRELOAD_NUM_BY_USE_FREQUENCY="$preload_num_by_use_frequency" \
-  -e PROCESS_PRELOAD_NUM_BY_LAST_TIME="$preload_num_by_last_time" \
-  -e CGROUP_DISABLE="$cgroup_disable" \
-  -e MAX_MEM_SIZE_PER_PROCESS="$max_mem_size_per_process" \
-  -e MAX_CPU_PERCENT_PER_PROCESS="$max_cpu_percent_per_process" \
-  -e DEVICES_ALLOW="$devices_allow" \
-  -e DEVICES_DENY="$devices_deny" \
-  --name $container_name \
-  --privileged $VM_GO_IMAGE_NAME \
-   > /dev/null
-
+  if [[ $protocol = "uds" ]]
+  then
+    docker run -itd \
+    -v "$mount_path":/mount \
+    -v "$log_path":/log \
+    -e CHAIN_RPC_PROTOCOL="0" \
+    -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
+    -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
+    -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+    -e MAX_ORIGINAL_PROCESS_NUM="$max_concurrency" \
+    -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+    -e SLOW_DISABLE="$slow_disable" \
+    -e SLOW_STEP_TIME="$slow_step_time" \
+    -e SLOW_TX_TIME="$slow_tx_time" \
+    -e PROCESS_TIMEOUT="$process_timeout" \
+    -e PROCESS_PRELOAD_DISABLE="$preload_disable" \
+    -e PROCESS_PRELOAD_NUM_BY_USE_FREQUENCY="$preload_num_by_use_frequency" \
+    -e PROCESS_PRELOAD_NUM_BY_LAST_TIME="$preload_num_by_last_time" \
+    -e CGROUP_DISABLE="$cgroup_disable" \
+    -e MAX_MEM_SIZE_PER_PROCESS="$max_mem_size_per_process" \
+    -e MAX_CPU_PERCENT_PER_PROCESS="$max_cpu_percent_per_process" \
+    -e DEVICES_ALLOW="$devices_allow" \
+    -e DEVICES_DENY="$devices_deny" \
+    --name $container_name \
+    --privileged $VM_GO_IMAGE_NAME \
+    > /dev/null
+  else
+    EXPOSE_PORT=$contract_engine_port
+    docker run -itd \
+    --net=host \
+    -v "$mount_path":/mount \
+    -v "$log_path":/log \
+    -e CHAIN_RPC_PROTOCOL="1" \
+    -e CHAIN_HOST="$runtime_server_host" \
+    -e CHAIN_RPC_PORT="$contract_engine_port" \
+    -e SANDBOX_RPC_PORT="$runtime_server_port" \
+    -e MAX_SEND_MSG_SIZE="$rpc_max_send_size" \
+    -e MAX_RECV_MSG_SIZE="$rpc_max_recv_size" \
+    -e MAX_CONN_TIMEOUT="$rpc_timeout" \
+    -e MAX_ORIGINAL_PROCESS_NUM="$max_concurrency" \
+    -e DOCKERVM_CONTRACT_ENGINE_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_SANDBOX_LOG_LEVEL="$vm_go_log_level" \
+    -e DOCKERVM_LOG_IN_CONSOLE="$log_in_console" \
+    -e SLOW_DISABLE="$slow_disable" \
+    -e SLOW_STEP_TIME="$slow_step_time" \
+    -e SLOW_TX_TIME="$slow_tx_time" \
+    -e PROCESS_TIMEOUT="$process_timeout" \
+    -e PROCESS_PRELOAD_DISABLE="$preload_disable" \
+    -e PROCESS_PRELOAD_NUM_BY_USE_FREQUENCY="$preload_num_by_use_frequency" \
+    -e PROCESS_PRELOAD_NUM_BY_LAST_TIME="$preload_num_by_last_time" \
+    -e CGROUP_DISABLE="$cgroup_disable" \
+    -e MAX_MEM_SIZE_PER_PROCESS="$max_mem_size_per_process" \
+    -e MAX_CPU_PERCENT_PER_PROCESS="$max_cpu_percent_per_process" \
+    -e DEVICES_ALLOW="$devices_allow" \
+    -e DEVICES_DENY="$devices_deny" \
+    --name $container_name \
+    --privileged $VM_GO_IMAGE_NAME \
+     > /dev/null
+  fi
 
   retval="$?"
   if [ $retval -ne 0 ]; then
