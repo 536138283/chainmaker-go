@@ -60,7 +60,7 @@ func syncAddRule() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("send request failed, %s", err.Error())
 			}
-			fmt.Printf("resp: %+v\n", resp)
+			util.PrintPrettyJson(resp)
 
 			return nil
 		},
@@ -100,7 +100,7 @@ func syncGetRule() *cobra.Command {
 				return fmt.Errorf("get rule failed, %s", err.Error())
 			}
 
-			fmt.Printf("resp: %+v\n", resp)
+			util.PrintPrettyJson(resp)
 
 			return nil
 		},
@@ -151,7 +151,7 @@ func syncClearRule() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("send request failed, %s", err.Error())
 			}
-			fmt.Printf("resp: %+v\n", resp)
+			util.PrintPrettyJson(resp)
 
 			return nil
 		},
