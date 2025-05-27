@@ -705,19 +705,19 @@ func (ts *TxScheduler) executeTx(
 		if txResult, specialTxType, err = ts.runVM2300(tx, txSimContext, enableOptimizeChargeGas); err != nil {
 			runVmSuccess = false
 			ts.log.Errorf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
-				tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
+				tx.Payload.GetTxId(), tx.Payload.ContractName, truncateTxResult(txResult, 1024), err)
 		}
 	} else if blockVersion >= 2220 {
 		if txResult, specialTxType, err = ts.runVM2220(tx, txSimContext, enableOptimizeChargeGas); err != nil {
 			runVmSuccess = false
 			ts.log.Errorf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
-				tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
+				tx.Payload.GetTxId(), tx.Payload.ContractName, truncateTxResult(txResult, 1024), err)
 		}
 	} else {
 		if txResult, specialTxType, err = ts.runVM2210(tx, txSimContext); err != nil {
 			runVmSuccess = false
 			ts.log.Errorf("failed to run vm for tx id:%s,contractName:%s, tx result:%+v, error:%+v",
-				tx.Payload.GetTxId(), tx.Payload.ContractName, txResult, err)
+				tx.Payload.GetTxId(), tx.Payload.ContractName, truncateTxResult(txResult, 1024), err)
 		}
 	}
 	if blockVersion >= blockVersion2340 && enableOptimizeChargeGas {
@@ -1857,5 +1857,23 @@ func appendSpecialTxsToDag(dag *commonPb.DAG, txExecOrderSpecialCount uint32) {
 		// this special tx (txExecOrderNormalCount+i) only depend on previous special tx (txExecOrderNormalCount+i-1)
 		dagNeighbors.Neighbors = append(dagNeighbors.Neighbors, txExecOrderNormalCount+i-1)
 		dag.Vertexes = append(dag.Vertexes, dagNeighbors)
+	}
+}
+
+// truncateTxResult 如果message消息太大，对其进行裁剪后打印到日志中
+func truncateTxResult(txResult *commonPb.Result, maxLength int) *commonPb.Result {
+	if txResult == nil {
+		return txResult
+	}
+
+	if len(txResult.Message) <= maxLength {
+		return txResult
+	}
+
+	return &commonPb.Result{
+		Code:           txResult.Code,
+		ContractResult: txResult.ContractResult,
+		RwSetHash:      txResult.RwSetHash,
+		Message:        txResult.Message[:maxLength] + "...",
 	}
 }
