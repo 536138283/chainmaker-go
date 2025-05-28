@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	pbac "chainmaker.org/chainmaker/pb-go/v2/accesscontrol"
+
 	"chainmaker.org/chainmaker-go/module/rpcserver/rateLimiter"
 
 	"chainmaker.org/chainmaker/pb-go/v2/consensus"
@@ -198,11 +200,22 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 	blockVersion := chainConfig.ChainConfig().GetBlockVersion()
 	if err = utils.VerifyTxWithoutPayload(tx, tx.Payload.ChainId, bc.GetAccessControl(), blockVersion); err != nil {
 		errCode = commonErr.ERR_CODE_TX_VERIFY_FAILED
+		sender := ""
+		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH {
+			sender = fmt.Sprintf("%x", tx.Sender.Signer.MemberInfo)
+		} else {
+			sender = string(tx.Sender.Signer.MemberInfo)
+		}
 		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s, endorsers-len:%d,\nendorsers:\n",
 			errCode.String(), err.Error(), tx.Payload.TxId,
-			tx.Sender.Signer.MemberInfo, len(tx.Endorsers))
+			sender, len(tx.Endorsers))
 		for _, endorser := range tx.Endorsers {
-			errMsg += fmt.Sprintf("%s ", endorser.Signer.MemberInfo)
+			if endorser.Signer.MemberType == pbac.MemberType_CERT_HASH {
+				errMsg += fmt.Sprintf("%x", endorser.Signer.MemberInfo)
+			} else {
+				errMsg += fmt.Sprintf("%s ", endorser.Signer.MemberInfo)
+			}
+
 		}
 		s.log.Error(errMsg)
 		if localconf.ChainMakerConfig.MonitorConfig.Enabled {
