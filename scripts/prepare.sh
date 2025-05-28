@@ -25,6 +25,21 @@ checkEnv
 set -e
 
 VERSION='"2040000"'
+GENESIS_TIME='"2020-11-30T01:01:01+08:00"'
+
+if [ "$(uname)" = "Darwin" ]; then
+    echo "当前系统是 macOS"
+    time_part=$(date "+%Y-%m-%dT%H:%M:%S")
+    tz_part=$(date "+%z")
+    gt_tmp="${time_part}${tz_part:0:3}:${tz_part:3:2}"
+    GENESIS_TIME="\"${gt_tmp}\""
+elif [ "$(uname)" = "Linux" ]; then
+    echo "当前系统是 Linux"
+    gt_tmp="$(date "+%Y-%m-%dT%H:%M:%S%:z")"
+    GENESIS_TIME="\"${gt_tmp}\""
+else
+    echo "未知系统"
+fi
 
 NODE_CNT=$1
 CHAIN_CNT=$2
@@ -407,6 +422,7 @@ function generate_config() {
 
             xsed "s%{chain_id}%chain$j%g" node$i/chainconfig/bc$j.yml
             xsed "s%{version}%$VERSION%g" node$i/chainconfig/bc$j.yml
+            xsed "s%{genesis_time}%$GENESIS_TIME%g" node$i/chainconfig/bc$j.yml
             xsed "s%{org_top_path}%$file%g" node$i/chainconfig/bc$j.yml
 
             if  [ $NODE_CNT -eq 7 ] || [ $NODE_CNT -eq 13 ] || [ $NODE_CNT -eq 16 ]; then
