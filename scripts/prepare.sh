@@ -28,13 +28,11 @@ VERSION='"2040000"'
 GENESIS_TIME='"2020-11-30T01:01:01+08:00"'
 
 if [ "$(uname)" = "Darwin" ]; then
-    echo "当前系统是 macOS"
     time_part=$(date "+%Y-%m-%dT%H:%M:%S")
     tz_part=$(date "+%z")
     gt_tmp="${time_part}${tz_part:0:3}:${tz_part:3:2}"
     GENESIS_TIME="\"${gt_tmp}\""
 elif [ "$(uname)" = "Linux" ]; then
-    echo "当前系统是 Linux"
     gt_tmp="$(date "+%Y-%m-%dT%H:%M:%S%:z")"
     GENESIS_TIME="\"${gt_tmp}\""
 else
