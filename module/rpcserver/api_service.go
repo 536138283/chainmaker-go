@@ -204,7 +204,7 @@ func (s *ApiService) validate(tx *commonPb.Transaction) (errCode commonErr.ErrCo
 		if tx.Sender.Signer.MemberType == pbac.MemberType_CERT_HASH {
 			sender = fmt.Sprintf("%x", tx.Sender.Signer.MemberInfo)
 		} else {
-			sender = fmt.Sprintf("%s", tx.Sender.Signer.MemberInfo)
+			sender = string(tx.Sender.Signer.MemberInfo)
 		}
 		errMsg = fmt.Sprintf("%s, %s, txId:%s, sender:%s, endorsers-len:%d,\nendorsers:\n",
 			errCode.String(), err.Error(), tx.Payload.TxId,
