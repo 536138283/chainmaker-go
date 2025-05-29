@@ -13,7 +13,7 @@ PRE_BRANCH="v2.3.4_qc"
 LAST_PRE_BRANCH="v2.3.5_qc"
 NET_COMMON_BRANCH='v1.2.7_qc'
 NET_LIBP2P_BRANCH='v1.2.9_qc'
-NET_LIQUID_BRANCH='v1.1.3_qc'
+NET_LIQUID_BRANCH='v1.1.4_qc'
 
 if [[ ! -n $BRANCH ]]; then
 				  BRANCH="v2.4.0_qc"
