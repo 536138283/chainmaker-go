@@ -59,8 +59,6 @@ chainmaker.org/chainmaker/txpool-single/v2 v2.4.0 h1:4SbQCMTmVy/TurdA4AzpJbYh5Mk
 chainmaker.org/chainmaker/txpool-single/v2 v2.4.0/go.mod h1:oS4RKtDA7GBNh6c4wpp+YaDcRDA7Sm3xUOL+NiBEziM=
 chainmaker.org/chainmaker/utils/v2 v2.4.0 h1:4xkAjX4TVnQ9ENchu3gfZ4EsdUEbZbValiyzH63HXPM=
 chainmaker.org/chainmaker/utils/v2 v2.4.0/go.mod h1:P1ub7BRgYCxswxGcSDptxJWBVctPXLdXZnxRITlaqBk=
-chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.7-0.20250528103744-183ec0bc6d6f h1:tGFOFlY+vjcnbj2zu6aVOEw9Ll4MDFze4mIrSRkk91w=
-chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.7-0.20250528103744-183ec0bc6d6f/go.mod h1:ssbeK+L+38Fim5aOAybDQFstLMwvLmwUzkhvhuLwS24=
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.4.0 h1:sBNXlf8ZkG4SLr2C6Yyi/VXEjIHUSGyG3fvB2OLEePQ=
 chainmaker.org/chainmaker/vm-docker-go/v2 v2.4.0/go.mod h1:ssbeK+L+38Fim5aOAybDQFstLMwvLmwUzkhvhuLwS24=
 chainmaker.org/chainmaker/vm-engine/v2 v2.4.0 h1:FjmloLu1JCE7ylrtEavqWTEGJDIUNf9Kjw869hWXSGo=
