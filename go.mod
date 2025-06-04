@@ -4,29 +4,29 @@ go 1.16
 
 require (
 	chainmaker.org/chainmaker/chainconf/v2 v2.3.4
-	chainmaker.org/chainmaker/common/v2 v2.3.8-0.20250514100110-720e69a8bc6a
+	chainmaker.org/chainmaker/common/v2 v2.3.8-0.20250604070049-70f07dd63f27
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-solo/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.5
 	chainmaker.org/chainmaker/localconf/v2 v2.3.7
 	chainmaker.org/chainmaker/logger/v2 v2.3.4
-	chainmaker.org/chainmaker/net-common v1.2.6
+	chainmaker.org/chainmaker/net-common v1.2.7-0.20250604074024-73b6a888714c
 	chainmaker.org/chainmaker/net-libp2p v1.2.8
 	chainmaker.org/chainmaker/net-liquid v1.1.3
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20241118082230-ef33c9a99849
-	chainmaker.org/chainmaker/protocol/v2 v2.3.8
-	chainmaker.org/chainmaker/sdk-go/v2 v2.3.7
-	chainmaker.org/chainmaker/store/v2 v2.3.7
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250604032631-8c8884782f4f
+	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250604070741-123de79ed6b4
+	chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250604083129-6736c26e99cf
+	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250604071614-e31201980b39
 	chainmaker.org/chainmaker/utils/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.6
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.7
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250604073339-755d6b7f61cb
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.6
-	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20241230061330-f5ac76438de9
+	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250604072007-4615bd2af71a
 	chainmaker.org/chainmaker/vm-wasmer/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-wxvm/v2 v2.3.6
-	chainmaker.org/chainmaker/vm/v2 v2.3.7
+	chainmaker.org/chainmaker/vm/v2 v2.3.8-0.20250604072336-66f08b090102
 	code.cloudfoundry.org/bytefmt v0.0.0-20211005130812-5bb3c17173e5
 	github.com/Rican7/retry v0.1.0
 	github.com/Workiva/go-datastructures v1.0.53
@@ -62,7 +62,7 @@ require (
 
 require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.5
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.7-0.20250514072304-b96dae5cc8a5
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.7-0.20250604075734-a1859d204139
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.4
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.4
