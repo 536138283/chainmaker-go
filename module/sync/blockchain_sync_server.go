@@ -365,6 +365,8 @@ func (sync *BlockChainSyncServer) sendInfos(req *syncPb.BlockSyncReq, from strin
 			sync.log.Errorf("fail to send message to [%s] error: %s", from, err.Error())
 			return err
 		}
+		sync.log.Infof("send block [height: %d, batch_size: %d] to node [%s] with rwset [%v]",
+			req.BlockHeight+i, req.BatchSize, from, req.WithRwset)
 	}
 	return nil
 }
