@@ -12,7 +12,7 @@ require (
 	chainmaker.org/chainmaker/localconf/v2 v2.3.7
 	chainmaker.org/chainmaker/logger/v2 v2.3.4
 	chainmaker.org/chainmaker/net-common v1.2.7-0.20250604074024-73b6a888714c
-	chainmaker.org/chainmaker/net-libp2p v1.2.8
+	chainmaker.org/chainmaker/net-libp2p v1.2.9-0.20250604075339-2716a0798069
 	chainmaker.org/chainmaker/net-liquid v1.1.3
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250604032631-8c8884782f4f
 	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250604070741-123de79ed6b4
@@ -20,7 +20,7 @@ require (
 	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250604071614-e31201980b39
 	chainmaker.org/chainmaker/utils/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.6
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250604073339-755d6b7f61cb
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250604104117-679ba6e58271
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250604072007-4615bd2af71a
@@ -62,7 +62,7 @@ require (
 
 require (
 	chainmaker.org/chainmaker/consensus-maxbft/v2 v2.3.5
-	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.7-0.20250604075734-a1859d204139
+	chainmaker.org/chainmaker/consensus-tbft/v2 v2.3.7-0.20250604101857-f10551326693
 	chainmaker.org/chainmaker/txpool-batch/v2 v2.3.4
 	chainmaker.org/chainmaker/txpool-normal/v2 v2.3.4
 	chainmaker.org/chainmaker/txpool-single/v2 v2.3.4
