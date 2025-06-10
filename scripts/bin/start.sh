@@ -34,8 +34,8 @@ config_file="../config/{org_id}/chainmaker.yml"
 # config_file="../../config/wx-org1-solo/chainmaker.yml"
 eval $(parse_yaml "$config_file" "chainmaker_")
 
-VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0_qc"
-VM_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine-java:v2.4.0_qc"
+VM_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0"
+VM_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine-java:v2.4.0"
 DOCKER_VM_IMAGE_NAME="chainmakerofficial/chainmaker-vm-docker-go:v2.3.1"
 START_FULL_MODE=""
 

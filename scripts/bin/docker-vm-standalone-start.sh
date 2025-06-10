@@ -11,8 +11,8 @@ EXPOSE_PORT=22351
 RUNTIME_PORT=32351
 CONTAINER_NAME=chainmaker-vm-go
 IMAGE_NAME=""
-DOCKER_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0_qc"
-DOCKER_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine-java:v2.4.0_qc"
+DOCKER_GO_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine:v2.4.0"
+DOCKER_JAVA_IMAGE_NAME="chainmakerofficial/chainmaker-vm-engine-java:v2.4.0"
 
 if [ "$1" = "" ]; then
   vm_type="go"

@@ -15,7 +15,7 @@ function buildImage() {
 }
 
 
-dockerGoImage=$( docker images | grep "^chainmakerofficial/chainmaker-vm-engine" | grep "v2.4.0_qc\s" )
+dockerGoImage=$( docker images | grep "^chainmakerofficial/chainmaker-vm-engine" | grep "v2.4.0\s" )
 echo "image:" $dockerGoImage
 if [[ -n $dockerGoImage ]] ;then
     echo "docker go image exist, don't need build again"
