@@ -20,7 +20,7 @@ require (
 	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250606081255-c6f643c8f3a0
 	chainmaker.org/chainmaker/utils/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.6
-	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250610101328-19699d914043
+	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250610104632-30efc12fd8e5
 	chainmaker.org/chainmaker/vm-evm/v2 v2.3.7
 	chainmaker.org/chainmaker/vm-gasm/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-native/v2 v2.3.7-0.20250610060657-54771fa403b9
