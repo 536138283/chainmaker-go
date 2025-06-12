@@ -17,7 +17,7 @@ require (
 	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250609084007-a3aa8a507eea
 	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250604070741-123de79ed6b4
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250610110714-1ceaf6db5170
-	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250606081255-c6f643c8f3a0
+	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250612062902-25cbb2ee691d
 	chainmaker.org/chainmaker/utils/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-docker-go/v2 v2.3.6
 	chainmaker.org/chainmaker/vm-engine/v2 v2.3.8-0.20250610104632-30efc12fd8e5
