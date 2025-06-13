@@ -920,8 +920,17 @@ func (cp *certACProvider) verifyMember(mem protocol.Member) ([]*bcx509.Certifica
 		return nil, fmt.Errorf("invalid member: member type err")
 	}
 
+	// 检查证书中是否有组织信息
+	if len(certMember.cert.Subject.Organization) == 0 {
+		return nil, fmt.Errorf("certificate does not contain organization information")
+	}
+
 	orgIdFromCert := certMember.cert.Subject.Organization[0]
-	org := cp.acService.getOrgInfoByOrgId(orgIdFromCert)
+
+	// 验证 orgIdFromCert 不为空字符串
+	if orgIdFromCert == "" {
+		return nil, fmt.Errorf("organization ID from certificate is empty")
+	}
 
 	if mem.GetOrgId() != orgIdFromCert {
 		return nil, fmt.Errorf(
@@ -931,6 +940,7 @@ func (cp *certACProvider) verifyMember(mem protocol.Member) ([]*bcx509.Certifica
 		)
 	}
 
+	org := cp.acService.getOrgInfoByOrgId(orgIdFromCert)
 	if org == nil {
 		return nil, fmt.Errorf("no orgnization found")
 	}
