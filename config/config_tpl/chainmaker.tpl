@@ -295,19 +295,19 @@ rpc:
   # RPC TLS settings
   tls:
     # TLS mode, can be disable, twoway.
-    mode:           twoway
+    mode: twoway
 
     # RPC TLS private key file path
-    priv_key_file:  ../config/{org_path}/certs/{rpc_cert_path}.key
+    priv_key_file: ../config/{org_path}/certs/{rpc_cert_path}.key
 
     # RPC TLS public key file path
-    cert_file:      ../config/{org_path}/certs/{rpc_cert_path}.crt
+    cert_file: ../config/{org_path}/certs/{rpc_cert_path}.crt
 
     # RPC enc TLS private key file path (only for gmtls1.1)
-    priv_enc_key_file:  ../config/{org_path}/certs/{rpc_cert_path}.enc.key
+    # priv_enc_key_file: ../config/{org_path}/certs/{rpc_cert_path}.enc.key
 
     # RPC enc TLS public key file path
-    cert_enc_file:      ../config/{org_path}/certs/{rpc_cert_path}.enc.crt
+    # cert_enc_file: ../config/{org_path}/certs/{rpc_cert_path}.enc.crt
 
   # RPC blacklisted ip addresses
   blacklist:
