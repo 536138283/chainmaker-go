@@ -923,23 +923,6 @@ func (cp *certACProvider) verifyMember(mem protocol.Member) ([]*bcx509.Certifica
 	orgIdFromCert := certMember.cert.Subject.Organization[0]
 	org := cp.acService.getOrgInfoByOrgId(orgIdFromCert)
 
-	// the Third-party CA
-	if certMember.cert.IsCA && org == nil {
-		cp.acService.log.Info("the Third-party CA verify the member")
-		certChain := []*bcx509.Certificate{certMember.cert}
-		err := cp.checkCRL(certChain)
-		if err != nil {
-			return nil, err
-		}
-
-		err = cp.checkCertFrozenList(certChain)
-		if err != nil {
-			return nil, err
-		}
-
-		return certChain, nil
-	}
-
 	if mem.GetOrgId() != orgIdFromCert {
 		return nil, fmt.Errorf(
 			"signer does not belong to the organization it claims [claim: %s, certificate: %s]",
