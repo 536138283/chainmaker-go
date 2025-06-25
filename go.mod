@@ -3,7 +3,7 @@ module chainmaker.org/chainmaker-go
 go 1.20
 
 require (
-	chainmaker.org/chainmaker/chainconf/v2 v2.3.4
+	chainmaker.org/chainmaker/chainconf/v2 v2.3.5-0.20250620072009-835bbff245fe
 	chainmaker.org/chainmaker/common/v2 v2.3.8-0.20250613102044-a7eb17c6e094
 	chainmaker.org/chainmaker/consensus-dpos/v2 v2.3.5
 	chainmaker.org/chainmaker/consensus-raft/v2 v2.3.5
