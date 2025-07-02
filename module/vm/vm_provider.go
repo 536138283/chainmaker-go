@@ -11,18 +11,17 @@ import (
 	"strings"
 
 	"chainmaker.org/chainmaker/pb-go/v2/common"
-	"chainmaker.org/chainmaker/protocol/v2"
+	chainmakerVM "chainmaker.org/chainmaker/vm/v2"
 )
 
-type Provider func(chainId string, config map[string]interface{}) (protocol.VmInstancesManager, error)
+var vmProviders = make(map[string]chainmakerVM.Provider)
 
-var vmProviders = make(map[string]Provider)
-
-func RegisterVmProvider(t string, f Provider) {
+func RegisterVmProvider(t string, f chainmakerVM.Provider) {
 	vmProviders[strings.ToUpper(t)] = f
+	chainmakerVM.RegisterVmProvider(t, f)
 }
 
-func GetVmProvider(t string) Provider {
+func GetVmProvider(t string) chainmakerVM.Provider {
 	provider, ok := vmProviders[strings.ToUpper(t)]
 	if !ok {
 		return nil

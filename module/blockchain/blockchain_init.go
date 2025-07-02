@@ -710,6 +710,9 @@ func (bc *Blockchain) initVM() (err error) {
 			vmlog,
 		)
 	}
+
+	bc.msgBus.Register(msgbus.ChainConfig, bc.vmMgr)
+
 	bc.initVMNative()
 	bc.initModuleLock.Lock()
 	defer bc.initModuleLock.Unlock()
@@ -727,6 +730,7 @@ func (bc *Blockchain) initVMNative() {
 
 func (bc *Blockchain) addVmManager(vmType string,
 	supportedVmManagerList map[common.RuntimeType]protocol.VmInstancesManager) error {
+	bc.log.Infof("addVmManager,vmType:%s", vmType)
 	vmInstancesManagerProvider := componentVm.GetVmProvider(vmType)
 	vmInstancesManager, err := vmInstancesManagerProvider(bc.chainId, nil)
 	if err != nil {
