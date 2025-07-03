@@ -132,8 +132,8 @@ func (s *ApiService) dealTxSubscription(tx *commonPb.Transaction, server apiPb.R
 		return status.Error(codes.InvalidArgument, errMsg)
 	}
 
-	s.log.Infof("Recv tx subscribe request: [start:%d]/[end:%d]/[contractName:%s]/[txIds:%+v]/[reqTxId:%s]",
-		startBlock, endBlock, contractName, txIds, txId)
+	s.log.Infof("Recv tx subscribe request: [start:%d]/[end:%d]/[contractName:%s]/[txIds:%+v]/[reqTxId:%s]/[sender:%s]",
+		startBlock, endBlock, contractName, txIds, txId, senderAddr)
 
 	reqSender, err = s.getRoleFromTx(tx)
 	if err != nil {

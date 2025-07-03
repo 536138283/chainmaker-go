@@ -125,8 +125,8 @@ func (s *ApiService) dealBlockSubscription(tx *commonPb.Transaction,
 	}
 
 	s.log.Infof(
-		"Recv block subscribe request: [start:%d]/[end:%d]/[withRWSet:%v]/[onlyHeader:%v]/[txId:%s,chainId:%s]",
-		startBlock, endBlock, withRWSet, onlyHeader, txId, chainId)
+		"Recv block subscribe request: [start:%d]/[end:%d]/[withRWSet:%v]/[onlyHeader:%v]/[txId:%s,chainId:%s, sender:%s]",
+		startBlock, endBlock, withRWSet, onlyHeader, txId, chainId, senderAddr)
 
 	// 计算addr之前，统一在日志中返回string的tx.Sender.Signer.MemberInfo
 	if lastBlockHeight, err = s.checkAndGetLastBlockHeight(db, startBlock); err != nil {
