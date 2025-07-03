@@ -11,11 +11,11 @@ require (
 	chainmaker.org/chainmaker/consensus-utils/v2 v2.3.5
 	chainmaker.org/chainmaker/localconf/v2 v2.3.7
 	chainmaker.org/chainmaker/logger/v2 v2.3.4
-	chainmaker.org/chainmaker/net-common v1.2.7-0.20250605073838-d9246cc37811
-	chainmaker.org/chainmaker/net-libp2p v1.2.9-0.20250619022830-f0637af1b4b5
-	chainmaker.org/chainmaker/net-liquid v1.1.3
-	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250701065541-ad6d1665a25c
-	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250702032650-9c1295bf824e
+	chainmaker.org/chainmaker/net-common v1.2.7-0.20250703074613-ec7767176fda
+	chainmaker.org/chainmaker/net-libp2p v1.2.9-0.20250703083312-0e9142830677
+	chainmaker.org/chainmaker/net-liquid v1.3.2-0.20250703083724-4734c58a3867
+	chainmaker.org/chainmaker/pb-go/v2 v2.3.7-0.20250609084007-a3aa8a507eea
+	chainmaker.org/chainmaker/protocol/v2 v2.3.9-0.20250604070741-123de79ed6b4
 	chainmaker.org/chainmaker/sdk-go/v2 v2.3.8-0.20250617102356-dce5a6a6588c
 	chainmaker.org/chainmaker/store/v2 v2.3.8-0.20250612062902-25cbb2ee691d
 	chainmaker.org/chainmaker/utils/v2 v2.3.6
@@ -185,6 +185,7 @@ require (
 	github.com/marten-seemann/qtls-go1-17 v0.1.0 // indirect
 	github.com/marten-seemann/qtls-go1-18 v0.1.0 // indirect
 	github.com/marten-seemann/qtls-go1-19 v0.1.1 // indirect
+	github.com/marten-seemann/qtls-go1-20 v0.1.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/mattn/go-sqlite3 v2.0.1+incompatible // indirect
@@ -298,11 +299,12 @@ replace (
 	github.com/libp2p/go-conn-security-multistream v0.2.0 => chainmaker.org/third_party/go-conn-security-multistream v1.0.5
 	github.com/libp2p/go-libp2p-core => chainmaker.org/chainmaker/libp2p-core v1.1.1
 	github.com/linvon/cuckoo-filter => chainmaker.org/third_party/cuckoo-filter v1.0.0
-	github.com/lucas-clemente/quic-go v0.26.0 => chainmaker.org/third_party/quic-go v1.2.2
+	github.com/lucas-clemente/quic-go v0.26.0 => chainmaker.org/third_party/quic-go v1.2.3-0.20250703073227-9e1279c1eb93
 	github.com/marten-seemann/qtls-go1-16 => chainmaker.org/third_party/qtls-go1-16 v1.1.0
 	github.com/marten-seemann/qtls-go1-17 => chainmaker.org/third_party/qtls-go1-17 v1.1.0
 	github.com/marten-seemann/qtls-go1-18 => chainmaker.org/third_party/qtls-go1-18 v1.1.0
 	github.com/marten-seemann/qtls-go1-19 => chainmaker.org/third_party/qtls-go1-19 v1.0.0
+	github.com/marten-seemann/qtls-go1-20 => chainmaker.org/third_party/qtls-go1-20 v0.0.0-20250701072625-cdc938ae5cd5
 	github.com/syndtr/goleveldb => chainmaker.org/third_party/goleveldb v1.1.0
 	github.com/tikv/client-go => chainmaker.org/third_party/tikv-client-go v1.0.0
 	golang.org/x/crypto => golang.org/x/crypto v0.31.0
