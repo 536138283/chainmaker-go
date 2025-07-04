@@ -118,8 +118,8 @@ func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 
 	startBlock, endBlock, contractName, topic, err = s.checkDealContractEventSubscriptionParams(tx)
 	if err != nil {
-		s.log.Warnf(fmt.Sprintf("check deal contract event subscription params failed, err:%s. [txId:%s]",
-			err, txId))
+		s.log.Warnf(fmt.Sprintf("check deal contract event subscription params failed, err:%s. [txId:%s, sender:%s]",
+			err, txId, senderAddr))
 		return err
 	}
 
@@ -138,8 +138,8 @@ func (s *ApiService) dealContractEventSubscription(tx *commonPb.Transaction,
 	}
 
 	s.log.Infof(
-		"Recv contract event subscribe request: [start:%d]/[end:%d]/[contractName:%s]/[topic:%s]/[txId:%s]",
-		startBlock, endBlock, contractName, topic, txId)
+		"Recv contract event subscribe request: [start:%d]/[end:%d]/[contractName:%s]/[topic:%s]/[txId:%s]/[sender:%s]",
+		startBlock, endBlock, contractName, topic, txId, senderAddr)
 
 	return s.doSendContractEvent(tx, db, server, startBlock, endBlock, contractName, topic)
 }
