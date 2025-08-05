@@ -8,6 +8,7 @@ SPDX-License-Identifier: Apache-2.0
 package blockchain
 
 import (
+	"chainmaker.org/chainmaker-go/module/bridge"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -321,6 +322,8 @@ func (server *ChainMakerServer) newBlockchainTaskListener() {
 					log.Error(err.Error())
 					continue
 				}
+				// 通知Dispatcher更新
+				bridge.RpcDispatcherChan <- newChainId
 				newBlockchain, _ := server.blockchains.Load(newChainId)
 				go startBlockchain(newBlockchain.(*Blockchain))
 			}
@@ -339,6 +342,8 @@ func (server *ChainMakerServer) deleteBlockchainTaskListener() {
 		oldBlockChainS, _ := oldBlockChain.(*Blockchain)
 		oldBlockChainS.Stop()
 		server.blockchains.Delete(deleteChainId)
+		// 通知Dispatcher更新
+		bridge.RpcDispatcherChan <- deleteChainId
 	}
 }
 
