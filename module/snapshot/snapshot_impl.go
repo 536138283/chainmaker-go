@@ -335,17 +335,10 @@ func (s *SnapshotImpl) getBatchFromReadSet(keys []*vmPb.BatchKey) ([]*vmPb.Batch
 	return txReads, emptyTxReadsKeys, false
 }
 
-// ApplyTxSimContext add TxSimContext to the snapshot, return current applied tx num whether success of not
-func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
-	runVmSuccess bool, applySpecialTx bool) (bool, int) {
-
-	tx := txSimContext.GetTx()
-	s.log.DebugDynamic(func() string {
-		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v", tx.Payload.TxId,
-			specialTxType, runVmSuccess, applySpecialTx)
-	})
-
-	if !applySpecialTx && s.IsSealed() {
+// applyOptimize apply the normal tx to snapshot
+func (s *SnapshotImpl) applyNormalTxSimContext(tx *commonPb.Transaction,
+	txSimContext protocol.TxSimContext, runVmSuccess bool) (bool, int) {
+	if s.IsSealed() {
 		return false, s.GetSnapshotSize()
 	}
 	// 乐观处理，以所有交易都不冲突的情况进行优先处理
@@ -357,7 +350,7 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	txRWSet = txSimContext.GetTxRWSet(runVmSuccess)
 	s.log.Debugf("【gas calc】%v, ApplyTxSimContext, txRWSet = %v", txSimContext.GetTx().Payload.TxId, txRWSet)
 	txResult = txSimContext.GetTxResult()
-	// 实现准备好要处理的数据
+	// 提前准备好要处理的数据
 	finalReadKvs := make(map[string]*sv, len(txRWSet.TxReads))
 	for _, txRead := range txRWSet.TxReads {
 		finalKey := constructKey(txRead.ContractName, txRead.Key)
@@ -365,9 +358,10 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 		if sv, ok := s.writeTable.getByLock(finalKey); ok {
 			if sv.seq >= txExecSeq {
 				s.log.Debugf("Key Conflicted %+v-%+v, tx id:%s", sv.seq, txExecSeq, tx.Payload.TxId)
-				return false, len(s.txTable) + len(s.specialTxTable)
+				return false, s.GetSnapshotSize() + len(s.specialTxTable)
 			}
 		}
+
 		finalReadKvs[finalKey] = &sv{
 			value: txRead.Value,
 		}
@@ -384,18 +378,14 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	s.lock.Lock()
 	defer s.lock.Unlock()
 	// it is necessary to check sealed secondly
-	if !applySpecialTx && s.IsSealed() {
+	if s.IsSealed() {
 		return false, s.GetSnapshotSize()
 	}
 
-	if !applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator {
-		s.specialTxTable = append(s.specialTxTable, tx)
-		return true, s.GetSnapshotSize() + len(s.specialTxTable)
-	}
-
-	if specialTxType == protocol.ExecOrderTxTypeIterator || txExecSeq >= len(s.txTable) {
+	if txExecSeq >= s.GetSnapshotSize() {
 		s.applyOptimize(tx, txRWSet, txResult, runVmSuccess, finalReadKvs, finalWriteKvs)
-		return true, s.GetSnapshotSize()
+		// 普通交易的snapshot 大小需要加上 specialTxTable，否则可能第一次schedule无法退出
+		return true, s.GetSnapshotSize() + len(s.specialTxTable)
 	}
 
 	// Double-Check
@@ -412,7 +402,96 @@ func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, spe
 	micro := time.Since(start).Microseconds()
 	s.applyConflictTime.Add(micro)
 	s.applyOptimize(tx, txRWSet, txResult, runVmSuccess, finalReadKvs, finalWriteKvs)
+	return true, s.GetSnapshotSize() + len(s.specialTxTable)
+}
+
+// 迭代器交易第一次执行，先缓存该笔交易到specialTxTable中，返回true
+func (s *SnapshotImpl) applyIteratorFirstRun(tx *commonPb.Transaction) (bool, int) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	if s.IsSealed() {
+		return false, s.GetSnapshotSize()
+	}
+
+	// 迭代器交易且不符合apply special 交易的情况下，往specialTxTable添加该笔交易，且返回true && snapshot的大小以及special交易列表长度
+	// 返回true是由于防止将迭代器交易重复执行导致卡死
+	s.specialTxTable = append(s.specialTxTable, tx)
+	return true, s.GetSnapshotSize() + len(s.specialTxTable)
+}
+
+// 迭代器交易第二次执行，正式apply到snapshot中
+func (s *SnapshotImpl) applyIteratorSecondRun(tx *commonPb.Transaction,
+	txSimContext protocol.TxSimContext, runVmSuccess bool) (bool, int) {
+
+	txRWSet := txSimContext.GetTxRWSet(runVmSuccess)
+	txResult := txSimContext.GetTxResult()
+
+	finalReadKvs, finalWriteKvs := buildKVMaps(txRWSet)
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	s.applyOptimize(tx, txRWSet, txResult, runVmSuccess, finalReadKvs, finalWriteKvs)
 	return true, s.GetSnapshotSize()
+}
+
+// applyGasTxSimContext apply gas tx to snapshot
+func (s *SnapshotImpl) applyGasTxSimContext(tx *commonPb.Transaction,
+	txSimContext protocol.TxSimContext, runVmSuccess bool) (bool, int) {
+
+	txRWSet := txSimContext.GetTxRWSet(runVmSuccess)
+	txResult := txSimContext.GetTxResult()
+
+	finalReadKvs, finalWriteKvs := buildKVMaps(txRWSet)
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	// // gas 交易的snapshot 大小已经是完整的了，不需要加 len(s.specialTxTable)
+	s.applyOptimize(tx, txRWSet, txResult, runVmSuccess, finalReadKvs, finalWriteKvs)
+	return true, s.GetSnapshotSize()
+}
+
+func buildKVMaps(txRWSet *commonPb.TxRWSet) (map[string]*sv, map[string]*sv) {
+	finalReadKvs := make(map[string]*sv, len(txRWSet.TxReads))
+	for _, txRead := range txRWSet.TxReads {
+		finalKey := constructKey(txRead.ContractName, txRead.Key)
+		finalReadKvs[finalKey] = &sv{value: txRead.Value}
+	}
+
+	finalWriteKvs := make(map[string]*sv, len(txRWSet.TxWrites))
+	for _, txWrite := range txRWSet.TxWrites {
+		finalKey := constructKey(txWrite.ContractName, txWrite.Key)
+		finalWriteKvs[finalKey] = &sv{value: txWrite.Value}
+	}
+	return finalReadKvs, finalWriteKvs
+}
+
+// ApplyTxSimContext add TxSimContext to the snapshot, return current applied tx num whether success of not
+func (s *SnapshotImpl) ApplyTxSimContext(txSimContext protocol.TxSimContext, specialTxType protocol.ExecOrderTxType,
+	runVmSuccess bool, applySpecialTx bool) (bool, int) {
+	tx := txSimContext.GetTx()
+
+	s.log.DebugDynamic(func() string {
+		return fmt.Sprintf("apply tx: %s, execOrderTxType:%d, runVmSuccess:%v, applySpecialTx:%v",
+			tx.Payload.TxId, specialTxType, runVmSuccess, applySpecialTx)
+	})
+
+	switch {
+	// 第一次调度执行时，迭代器交易处理逻辑，仅将该笔交易缓存到specialTxTable中
+	case !applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator:
+		return s.applyIteratorFirstRun(tx)
+	// 第二次调度执行时，迭代器交易处理逻辑，正式apply到snapshot
+	case applySpecialTx && specialTxType == protocol.ExecOrderTxTypeIterator:
+		return s.applyIteratorSecondRun(tx, txSimContext, runVmSuccess)
+	// gas交易处理逻辑，apply gas 交易到snapshot（有gas交易，该逻辑最后执行，否则不执行）
+	case specialTxType == protocol.ExecOrderTxTypeChargeGas:
+		return s.applyGasTxSimContext(tx, txSimContext, runVmSuccess)
+	// 普通交易处理逻辑
+	default:
+		return s.applyNormalTxSimContext(tx, txSimContext, runVmSuccess)
+	}
 }
 
 // ApplyBlock apply tx rwset map to block
