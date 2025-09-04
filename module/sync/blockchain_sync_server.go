@@ -17,6 +17,7 @@ import (
 	commonErrors "chainmaker.org/chainmaker/common/v2/errors"
 	"chainmaker.org/chainmaker/common/v2/msgbus"
 	"chainmaker.org/chainmaker/localconf/v2"
+	"chainmaker.org/chainmaker/net-libp2p/libp2pnet"
 	commonPb "chainmaker.org/chainmaker/pb-go/v2/common"
 	netPb "chainmaker.org/chainmaker/pb-go/v2/net"
 	storePb "chainmaker.org/chainmaker/pb-go/v2/store"
@@ -57,14 +58,14 @@ type BlockChainSyncServer struct {
 	processor *Routine
 	// ignore repeat block sync request when in process
 	requestCache sync.Map
-	//If the synced block height reaches the conf.minLabValue put a event to this channel
+	// If the synced block height reaches the conf.minLabValue put a event to this channel
 	minLagReachC chan struct{}
-	//if a synced block is committed to local ledger put a event to this channel
+	// if a synced block is committed to local ledger put a event to this channel
 	commitBlockC chan struct{}
 	closeWait    sync.WaitGroup
 	// node list store all peer node never delete
 	nodeList *NodeList
-	//getStateFn used to get some running state
+	// getStateFn used to get some running state
 	getStateFn getStateFn
 	// buffer broadcast to avoid network congestion that can cause important processes to get stuck.
 	broadcastCh chan uint64
@@ -79,8 +80,8 @@ func NewBlockChainSyncServer(
 	ledgerCache protocol.LedgerCache,
 	blockVerifier protocol.BlockVerifier,
 	blockCommitter protocol.BlockCommitter,
-	log protocol.Logger) protocol.SyncService {
-
+	log protocol.Logger,
+) protocol.SyncService {
 	syncServer := &BlockChainSyncServer{
 		chainId:         chainId,
 		net:             net,
@@ -90,7 +91,7 @@ func NewBlockChainSyncServer(
 		blockVerifier:   blockVerifier,
 		blockCommitter:  blockCommitter,
 		close:           make(chan bool),
-		log:             log, //logger.GetLoggerByChain(logger.MODULE_SYNC, chainId),
+		log:             log, // logger.GetLoggerByChain(logger.MODULE_SYNC, chainId),
 		requestCache:    sync.Map{},
 		minLagReachC:    make(chan struct{}),
 		commitBlockC:    make(chan struct{}),
@@ -130,7 +131,7 @@ func (sync *BlockChainSyncServer) Start() error {
 	if sync.msgBus != nil && sync.conf.broadcastStatusPerBlocksCommitted > 0 {
 		sync.msgBus.Register(msgbus.BlockInfo, sync)
 	}
-	//3. register net subscribe handler
+	// 3. register net subscribe handler
 	if err := sync.net.Subscribe(netPb.NetMsg_SYNC_BLOCK_MSG, sync.blockSyncMsgHandler); err != nil {
 		return err
 	}
@@ -231,16 +232,16 @@ func (sync *BlockChainSyncServer) blockSyncMsgHandler(from string, msg []byte, m
 
 	switch syncMsg.Type {
 	case syncPb.SyncMsg_NODE_STATUS_REQ:
-		//received a request to get own state from other nodes
+		// received a request to get own state from other nodes
 		return sync.handleNodeStatusReq(from)
 	case syncPb.SyncMsg_NODE_STATUS_RESP:
-		//received a response with peer state data from other nodes
+		// received a response with peer state data from other nodes
 		return sync.handleNodeStatusResp(&syncMsg, from)
 	case syncPb.SyncMsg_BLOCK_SYNC_REQ:
-		//received a request to sync blocks from other nodes
+		// received a request to sync blocks from other nodes
 		return sync.handleBlockReq(&syncMsg, from)
 	case syncPb.SyncMsg_BLOCK_SYNC_RESP:
-		//received a response with block data from other nodes
+		// received a response with block data from other nodes
 		sync.log.Debug("receive [SyncMsg_BLOCK_SYNC_RESP] msg, put into scheduler...")
 		return sync.scheduler.addTask(&SyncedBlockMsg{msg: syncMsg.Payload, from: from})
 	}
@@ -356,7 +357,8 @@ func (sync *BlockChainSyncServer) sendInfos(req *syncPb.BlockSyncReq, from strin
 		info := &commonPb.BlockInfo{Block: blkRwInfo.Block, RwsetList: blkRwInfo.TxRWSets}
 		if bz, err = proto.Marshal(&syncPb.SyncBlockBatch{
 			Data: &syncPb.SyncBlockBatch_BlockinfoBatch{BlockinfoBatch: &syncPb.BlockInfoBatch{
-				Batch: []*commonPb.BlockInfo{info}}}, WithRwset: req.WithRwset,
+				Batch: []*commonPb.BlockInfo{info},
+			}}, WithRwset: req.WithRwset,
 		}); err != nil {
 			sync.log.Errorf("fail to proto.Marshal the syncPb.SyncBlockBatch:%s", err.Error())
 			return err
@@ -384,7 +386,11 @@ func (sync *BlockChainSyncServer) sendMsg(msgType syncPb.SyncMsg_MsgType, msg []
 		return err
 	}
 	if err = sync.net.SendMsg(bs, netPb.NetMsg_SYNC_BLOCK_MSG, to); err != nil {
-		sync.log.Warnf("send [%s] message to [%s] error: %v", netPb.NetMsg_SYNC_BLOCK_MSG.String(), to, err)
+		if err == libp2pnet.ErrorNotConnected {
+			sync.log.Debugf("send [%s] message to [%s] fail: %v", netPb.NetMsg_SYNC_BLOCK_MSG.String(), to, err)
+		} else {
+			sync.log.Warnf("send [%s] message to [%s] fail: %v", netPb.NetMsg_SYNC_BLOCK_MSG.String(), to, err)
+		}
 		return err
 	}
 	return nil
@@ -437,7 +443,7 @@ func (sync *BlockChainSyncServer) loop() {
 	_ = sync.broadcastMsg(syncPb.SyncMsg_NODE_STATUS_REQ, nil)
 	for {
 		select {
-		//service close
+		// service close
 		case <-sync.close:
 			return
 
@@ -472,13 +478,13 @@ func (sync *BlockChainSyncServer) loop() {
 			}
 
 		// State processing results in state machine
-		//send the result obtained from scheduler to processor for processing
+		// send the result obtained from scheduler to processor for processing
 		case resp := <-sync.scheduler.out:
 			sync.log.Debugf("sync.processor add task, type: %v", reflect.TypeOf(resp))
 			if err := sync.processor.addTask(resp); err != nil {
 				sync.log.Errorf("add scheduler task to processor failed, reason: %s", err)
 			}
-			//send the result obtained from processor to scheduler for processing
+			// send the result obtained from processor to scheduler for processing
 		case resp := <-sync.processor.out:
 			sync.log.Debugf("sync.scheduler add task, type: %v", reflect.TypeOf(resp))
 			if err := sync.scheduler.addTask(resp); err != nil {
@@ -560,9 +566,10 @@ func (sync *BlockChainSyncServer) validateAndCommitBlock(block *commonPb.Block) 
 // commit failed if block has been committed return hasProcessed, if not return addErr
 // all succeeded return ok
 func (sync *BlockChainSyncServer) validateAndCommitBlockWithRwSets(block *commonPb.Block,
-	rwsets []*commonPb.TxRWSet) processedBlockStatus {
-	//if the height of the local ledger is not lower than this block height
-	//indicates that the block has been processed
+	rwsets []*commonPb.TxRWSet,
+) processedBlockStatus {
+	// if the height of the local ledger is not lower than this block height
+	// indicates that the block has been processed
 	if blk := sync.ledgerCache.GetLastCommittedBlock(); blk != nil && blk.Header.BlockHeight >= block.Header.BlockHeight {
 		sync.log.Infof("the block: %d has been committed in the blockChainStore ", block.Header.BlockHeight)
 		return hasProcessed
